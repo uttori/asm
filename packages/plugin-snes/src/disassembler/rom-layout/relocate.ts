@@ -1,4 +1,4 @@
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
 /** Explicitly reviewed free space in the original ROM. Unexecuted bytes are never inferred free. */
 export interface SnesFreeSpace {

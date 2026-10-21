@@ -3,20 +3,22 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  acquireSourceOperationLease,
+  applySourceFileTransaction,
+  readSourceFileTransaction,
+} from "@uttori/asm-disassembler/source-project";
+import {
+  executeAssetOperation,
+  somSpriteSourceAdapter,
+} from "@uttori/asm-game-secret-of-mana/workflows";
+import {
   AssetInterchangeService,
   AssetRecordStore,
   assetHash,
   cleanupAssetInterchange,
-  executeAssetOperation,
   recoverAssetInterchange,
   readAssetRetentionPolicy,
-  somSpriteSourceAdapter,
-} from "@uttori/asm-cli/asset-interchange";
-import {
-  acquireSourceOperationLease,
-  applySourceFileTransaction,
-  readSourceFileTransaction,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-workflows/asset-interchange";
 
 import { test } from "./ava-helper.js";
 import { spriteSourceFixture } from "./fixtures/sprite-source.js";

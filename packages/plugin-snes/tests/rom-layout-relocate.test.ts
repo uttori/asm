@@ -1,4 +1,4 @@
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
 import { test } from "../../../tests/ava-helper.js";
 import {

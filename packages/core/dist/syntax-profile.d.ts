@@ -4,6 +4,8 @@ export interface SyntaxRewriteContext {
 }
 export interface SyntaxProfile {
     readonly id: string;
+    /** Bump when a rewrite hook changes grammar; functions themselves never enter cache identities. */
+    readonly grammarVersion?: string;
     /** Preserve leading whitespace so column-sensitive dialects can inspect it later. */
     readonly preserveLeadingWhitespace: boolean;
     /** Split Asar-style ` : ` statement chains outside quotes. */

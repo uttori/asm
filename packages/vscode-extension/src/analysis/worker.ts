@@ -4,14 +4,16 @@ import { parentPort } from "node:worker_threads";
 
 import type { DebugMapRange } from "@uttori/asm-core/debug-map";
 import {
-  ANALYSIS_PROJECT_SQLITE_FILE,
-  SqliteAnalysisStore,
   buildInstructionAnalysisAnnotations,
   openAnalysisProjectStore,
   readCaptureImportNotes,
   type ShardKind,
   type InstructionAnalysisAnnotation,
 } from "@uttori/asm-disassembler";
+import {
+  ANALYSIS_PROJECT_SQLITE_FILE,
+  SqliteAnalysisStore,
+} from "@uttori/asm-disassembler/storage";
 
 import { formatInstructionAnnotationSummary } from "../editor-info/format.js";
 import {

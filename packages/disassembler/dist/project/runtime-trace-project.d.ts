@@ -17,6 +17,17 @@ export interface RuntimeTraceProjectImportOptions extends RuntimeTraceFileOption
     readonly onStage?: (message: string) => void;
     /** Counts validated records merged so far. All remain provisional until publication commits. */
     readonly onMergeProgress?: RuntimeTraceImporterStorage["onMergeProgress"];
+    /**
+     * Optional complete-archive cache identity, including companion manifest and importer version.
+     * verify must recheck that identity after parsing; cached reuse also rechecks present companions.
+     * Prefix recovery is never cached. Counters are disposable and removed after successful publication.
+     */
+    readonly validatedIndex?: {
+        /** Private disposable storage, normally under the source project's .uttori-local directory. */
+        readonly directory: string;
+        readonly identity: string;
+        readonly verify: () => Promise<void>;
+    };
 }
 /** Compact import result. Complete runtime records remain in the SQLite working store. */
 export interface RuntimeTraceProjectImportResult extends Omit<RuntimeInstructionTraceImportResult, "batch"> {
@@ -48,19 +59,30 @@ export interface RuntimeTraceProjectImportResult extends Omit<RuntimeInstruction
  * @returns {Promise<RuntimeTraceProjectImportResult>} Committed counts, execution seeds, and maintenance warnings.
  */
 export declare const importRuntimeTraceIntoProject: (file: string, directory: string, context: RuntimeInstructionTraceImportContext, options?: RuntimeTraceProjectImportOptions) => Promise<RuntimeTraceProjectImportResult>;
+/** Same committed evidence and exact per-import counts, without scanning all historical storage rows. */
+type CompactRuntimeTraceProjectImportResult = Omit<RuntimeTraceProjectImportResult, "storage">;
 /**
  * Import decoded producer chunks without an intermediate JSON artifact. Chunk memory is released
  * after each push. Distinct facts use the existing SQLite index and atomic publication path.
  * The caller owns the source and its cancellation behavior. This function closes its SQLite connection.
  * Cancellation is cooperative at read/merge boundaries, not preemptive during synchronous finalization.
  * Storage-policy changes and post-commit pointer failures follow importRuntimeTraceIntoProject.
- * @param {RuntimeTraceSource} source Ordered reader that rejects any invalid or incomplete envelope.
+ * storageStatistics:false omits global storage accounting; validation and exact per-import counts remain.
+ * @param {RuntimeTraceSource} source Ordered reader that verifies completion or supplies explicit prefix recovery metadata.
  * @param {string} directory Destination SQLite project root.
  * @param {RuntimeInstructionTraceImportContext} context Expected ROM, source name and index budget.
  * @param {RuntimeTraceProjectImportOptions} options Cancellation and progress. Byte limits belong to the source.
- * @returns {Promise<RuntimeTraceProjectImportResult>} Committed facts. Reader failures publish nothing.
+ * @returns {Promise} Committed facts and requested storage accounting. Reader failures publish nothing.
  */
-export declare const importRuntimeTraceSourceIntoProject: (source: RuntimeTraceSource, directory: string, context: RuntimeInstructionTraceImportContext, options?: RuntimeTraceProjectImportOptions) => Promise<RuntimeTraceProjectImportResult>;
+export declare function importRuntimeTraceSourceIntoProject(source: RuntimeTraceSource, directory: string, context: RuntimeInstructionTraceImportContext, options: RuntimeTraceProjectImportOptions & {
+    readonly storageStatistics: false;
+}): Promise<CompactRuntimeTraceProjectImportResult>;
+export declare function importRuntimeTraceSourceIntoProject(source: RuntimeTraceSource, directory: string, context: RuntimeInstructionTraceImportContext, options?: RuntimeTraceProjectImportOptions & {
+    readonly storageStatistics?: true;
+}): Promise<RuntimeTraceProjectImportResult>;
+export declare function importRuntimeTraceSourceIntoProject(source: RuntimeTraceSource, directory: string, context: RuntimeInstructionTraceImportContext, options: RuntimeTraceProjectImportOptions & {
+    readonly storageStatistics: boolean;
+}): Promise<RuntimeTraceProjectImportResult | CompactRuntimeTraceProjectImportResult>;
 /** Publish a combined offline batch without expanding the destination runtime history.
  * @param {string} directory Existing SQL project root.
  * @param {AnalysisProjectRevision} expected Revision used to verify the import ROM/mapper.
@@ -81,4 +103,5 @@ export declare const commitRuntimeEvidenceBatch: (directory: string, expected: A
     };
     updated: Readonly<Record<keyof AnalysisProjectShards, number>>;
 };
+export {};
 //# sourceMappingURL=runtime-trace-project.d.ts.map

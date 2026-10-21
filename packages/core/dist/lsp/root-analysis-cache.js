@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
-// Older entries can contain assertion failures calculated with skipped assets contributing zero bytes.
-const CACHE_VERSION = 5;
+// Older entries predate macro body locations and expansion provenance; recompute their artifacts.
+// Typed operand occurrences change references and rename ranges in persisted analysis.
+const CACHE_VERSION = 8;
 /**
  * Disk-backed cache of full-pass workspace analysis artifacts.
  *
@@ -33,9 +34,10 @@ export class RootAnalysisCache {
      * @param {string} root Absolute root source path.
      * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
      * @param {(file: string) => string | undefined} hashFile Content hasher.
+     * @param {(file: string) => boolean} allowMtime False for live overlays whose disk timestamp cannot establish freshness.
      * @returns {CachedRootAnalysis | undefined} The cached artifacts, or undefined on miss.
      */
-    read(root, identity, hashFile) {
+    read(root, identity, hashFile, allowMtime = () => true) {
         const file = this.entryPath(root);
         if (!existsSync(file)) {
             return undefined;
@@ -56,9 +58,11 @@ export class RootAnalysisCache {
             for (const recorded of recordedFiles) {
                 const recordedHash = payload.fileHashes[recorded];
                 const recordedMtime = payload.fileMtimes?.[recorded];
+                // A live overlay has no disk timestamp; the host must force hashing before this shortcut.
                 // Source files use the mtime fast path. Binary inputs always rehash so
                 // copy tools that preserve timestamps cannot leave a stale dependency graph.
-                if (recordedMtime !== undefined &&
+                if (allowMtime(recorded) &&
+                    recordedMtime !== undefined &&
                     !Object.hasOwn(payload.analysis.assetDependencies, recorded)) {
                     try {
                         const currentMtime = statSync(recorded).mtimeMs;

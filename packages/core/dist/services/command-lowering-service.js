@@ -1,12 +1,137 @@
-import { incrementInternalCounter } from "../internal-instrumentation.js";
+import { isCoreDataDirective } from "../directives/data.js";
+import { recordExecutionParser, incrementInternalCounter } from "../internal-instrumentation.js";
+import { parseLabelStatement, parseNumericDataStatement, materializeNumericData, } from "../ir/statement-node.js";
+import { deriveTokenSpans } from "../source-location.js";
 /**
  * Lowers stable front-end commands into directive or instruction work units used
  * by later layout and emission stages.
  */
 export class CommandLoweringService {
     host;
+    /** Command snapshots are immutable; weak ownership releases included/reparsed programs. */
+    statements = new WeakMap();
+    /** Pure syntax is cached by command and selected grammar, never by resolved values or processor state. */
+    instructionSyntax = new WeakMap();
     constructor(host) {
         this.host = host;
+    }
+    /** Select a native statement without bypassing directive ownership or macro-template syntax. */
+    lowerStatement(command) {
+        const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
+        const registry = this.host.directiveRegistry;
+        if (/<[^>]+>/.test(command.command) || /\\[A-Z_a-z]/.test(command.command)) {
+            return undefined;
+        }
+        const hasDirective = registry.has(keyword);
+        const coreData = registry.lookup && isCoreDataDirective({ lookup: registry.lookup.bind(registry) }, keyword);
+        // Prefixed directives outrank dot labels; assignments retain their semantic priority.
+        if (hasDirective &&
+            !coreData &&
+            (command.keyword.startsWith(".") || command.kind !== "staticAssignment")) {
+            return undefined;
+        }
+        const cached = this.statements.get(command);
+        if (cached !== undefined) {
+            return cached ?? undefined;
+        }
+        let lowered;
+        const common = { command, source: command.source };
+        // Named label consumption precedes assignments in the source dialect, including malformed
+        // `.local = value` forms. Keep that ordering instead of silently accepting a new declaration.
+        const namedLabelPrefix = command.words[0]?.endsWith(":") ||
+            (this.host.syntaxProfile.leadingDotLabels && command.keyword.startsWith("."));
+        if (command.kind === "staticAssignment" && command.parsed.assignment && !namedLabelPrefix) {
+            lowered = {
+                ...common,
+                kind: "assignment",
+                statement: {
+                    ...command.parsed.assignment,
+                    text: command.words[2],
+                    span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+                },
+            };
+        }
+        else if ((command.kind === "labelDefinition" ||
+            (command.kind === "staticAssignment" && namedLabelPrefix)) &&
+            !hasDirective) {
+            // Inline function declarations have historically been captured before their label prefix.
+            if (!command.parsed.labelSplit?.trailing?.toLowerCase().startsWith("function")) {
+                let statement;
+                if (command.syntax?.kind === "sequence") {
+                    let trailing;
+                    const following = command.syntax.following;
+                    if (following.kind === "numericDataFragment") {
+                        // The cache shares the physical occurrence and tokens; no grammar is reparsed here.
+                        const words = command.words.slice(following.wordOffset);
+                        trailing = {
+                            kind: "directive",
+                            command: following.command,
+                            words,
+                            keyword: words[0],
+                            source: {
+                                ...command.source,
+                                normalized: following.command,
+                                tokenSpans: command.source.tokenSpans.length
+                                    ? deriveTokenSpans(command.source.raw, words, command.source.line)
+                                    : [],
+                            },
+                            parsed: {
+                                dataDirective: {
+                                    directive: words[0],
+                                    operands: materializeNumericData(following.statement).operands.map((operand) => operand.text),
+                                },
+                            },
+                            syntax: { kind: "numericData", statement: following.statement },
+                        };
+                    }
+                    else {
+                        trailing = following;
+                    }
+                    statement = { ...command.syntax.declaration, trailing };
+                }
+                else if (command.syntax?.kind === "label") {
+                    statement = command.syntax.statement;
+                }
+                else {
+                    statement = parseLabelStatement(command, this.host.syntaxProfile.leadingDotLabels ?? false);
+                }
+                if (statement) {
+                    lowered = { ...common, kind: "label", statement };
+                }
+            }
+        }
+        else if (coreData) {
+            const statement = command.syntax?.kind === "numericData"
+                ? command.syntax.statement
+                : parseNumericDataStatement(command);
+            if (statement) {
+                lowered = { ...common, kind: "numericData", statement };
+            }
+        }
+        this.statements.set(command, lowered ?? null);
+        return lowered;
+    }
+    /** Parse once per command/grammar for analysis and execution; never prepare or evaluate operands here. */
+    parseInstruction(command) {
+        const grammar = this.host.resolveActiveArchitecture().definition?.operandGrammar;
+        if (!grammar) {
+            return undefined;
+        }
+        const mnemonic = command.parsed.opcodeOperands?.mnemonic ?? command.keyword;
+        const operandText = command.parsed.opcodeOperands?.operandText ?? command.words.slice(1).join(" ");
+        const cache = this.instructionSyntax.get(command) ??
+            new Map();
+        this.instructionSyntax.set(command, cache);
+        let parsed = cache.get(grammar);
+        if (!parsed || parsed.version !== grammar.version) {
+            recordExecutionParser("operand");
+            parsed = {
+                version: grammar.version,
+                instruction: { mnemonic, operands: grammar.parse(mnemonic, operandText) },
+            };
+            cache.set(grammar, parsed);
+        }
+        return parsed.instruction;
     }
     /**
      * Lowers a normalized command into the execution-layer representation.
@@ -16,43 +141,33 @@ export class CommandLoweringService {
     lowerCommand(command) {
         const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
         if (this.host.directiveRegistry.has(keyword)) {
-            let directiveWords = command.words;
-            if (command.parsed.includeTarget && command.parsed.includeTarget.directive !== "incbin") {
-                directiveWords = [
-                    command.parsed.includeTarget.directive,
-                    command.parsed.includeTarget.target,
-                ];
+            const syntax = command.syntax?.kind === "plugin"
+                ? command.syntax
+                : this.host.directiveRegistry.parseSyntax?.(command);
+            if (syntax) {
+                return { kind: "pluginSyntax", statement: syntax, command, source: command.source };
             }
-            return {
-                kind: "directive",
-                keyword,
-                words: directiveWords,
-                source: command.source,
-                command,
-            };
+            throw new Error(`Directive '${keyword}' requires parsed syntax.`);
         }
         const architecture = this.host.resolveActiveArchitecture();
-        const parsedOperands = command.parsed.opcodeOperands;
-        const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-        const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-        const operands = parsedOperands?.operands ??
-            architecture.definition?.splitOperands(operandText) ??
-            (operandText ? [operandText] : []);
-        const loweredOperands = operands.map((operand) => this.host.classifyOperandForActiveArchitecture(operand));
-        const loweredOperand = this.host.classifyOperandForActiveArchitecture(operandText);
-        return {
-            kind: "instruction",
-            command,
-            mnemonic,
-            operandText,
-            operands,
-            loweredOperands,
-            loweredOperand,
-            words: command.words,
-            sourceFile: command.source.file,
-            sourceLine: command.source.line,
-            sourceRaw: command.source.raw,
-        };
+        const grammar = architecture.definition?.operandGrammar;
+        if (architecture.definition?.encoder.typed) {
+            if (!grammar) {
+                throw new Error(`Typed encoder '${architecture.name}' requires an operand grammar.`);
+            }
+            const instruction = this.parseInstruction(command);
+            const node = {
+                kind: "typedInstruction",
+                architecture: architecture.name,
+                grammarVersion: grammar.version,
+                instruction,
+                command,
+                source: command.source,
+            };
+            this.host.prepareTypedInstruction?.(node);
+            return node;
+        }
+        throw new Error(`Architecture '${architecture.name}' requires a typed encoder and operand grammar.`);
     }
     /**
      * Lowers an executable tree node into a durable execution-layer node.
@@ -62,18 +177,59 @@ export class CommandLoweringService {
      * @param {ExecutableNode} node The node to lower.
      * @returns {LoweredExecutableNode} The lowered node.
      */
-    lowerExecutableNode(node) {
+    lowerExecutableNode(node, scope) {
         incrementInternalCounter("runtimeNodesLowered");
         if ("source" in node) {
-            if (this.shouldPreserveCommand(node)) {
+            const source = node.source;
+            const operation = node.parsed.operation;
+            if (operation) {
+                return { kind: "operation", operation, command: node, source };
+            }
+            const declaration = node.parsed.declaration;
+            if (declaration &&
+                (declaration.kind === "function" ||
+                    declaration.kind === "character" ||
+                    declaration.kind === "dataStructRow" ||
+                    (declaration.kind === "invalid" && declaration.context !== "struct") ||
+                    (scope === "struct" && declaration.kind === "structField"))) {
+                return { kind: "declaration", declaration, command: node, source };
+            }
+            if (scope === "struct" && !["endstruct", "struct"].includes(node.keyword.toLowerCase())) {
+                // Struct bodies historically ignore executable instructions; only field declarations reserve bytes.
                 return {
-                    kind: "command",
+                    kind: "operation",
+                    operation: { kind: "empty", seedBaseImage: false },
                     command: node,
-                    source: node.source,
-                    passthroughReason: this.getPassthroughReason(node) ?? "unknown",
+                    source,
                 };
             }
+            if (/<[^>]+>/.test(node.command) || /\\[A-Z_a-z]/.test(node.command)) {
+                const data = node.parsed.dataDirective && parseNumericDataStatement(node);
+                // Placeholder-looking text inside quoted data is a string value, including outside macros.
+                if (data && data.operands.every((operand) => operand.expression.type === "string")) {
+                    return { kind: "numericData", statement: data, command: node, source };
+                }
+                return { kind: "sourceTemplate", command: node, source };
+            }
+            const statement = this.lowerStatement(node);
+            if (statement) {
+                return statement;
+            }
+            if (this.host.syntaxProfile.bareMacroInvocations && node.kind === "opcodeCandidate") {
+                const invocation = node.parsed.bareInvocation;
+                if (invocation) {
+                    return { kind: "bareInvocation", invocation, command: node, source };
+                }
+            }
             return this.lowerCommand(node);
+        }
+        if (node.type === "capture") {
+            const { type: _type, commands, ...syntax } = node;
+            return {
+                ...syntax,
+                kind: "capture",
+                commands,
+            };
         }
         if (node.type === "for" || node.type === "while") {
             return {
@@ -87,7 +243,7 @@ export class CommandLoweringService {
                 end: node.end,
                 startExpression: node.startExpression,
                 endExpression: node.endExpression,
-                commands: node.commands.map((command) => this.lowerExecutableNode(command)),
+                commands: node.commands.map((command) => this.lowerExecutableNode(command, scope)),
                 startLine: node.startLine,
                 endLine: node.endLine,
             };
@@ -100,7 +256,7 @@ export class CommandLoweringService {
                 kind: branch.kind,
                 header: branch.header,
                 conditionNode: branch.conditionNode,
-                commands: branch.commands.map((command) => this.lowerExecutableNode(command)),
+                commands: branch.commands.map((command) => this.lowerExecutableNode(command, scope)),
                 startLine: branch.startLine,
                 endLine: branch.endLine,
             })),
@@ -120,62 +276,6 @@ export class CommandLoweringService {
             startLine: program.startLine,
             nodes: program.nodes.map((node) => this.lowerExecutableNode(node)),
         };
-    }
-    /**
-     * Commands that still require legacy preprocess / control handlers must remain
-     * as command snapshots rather than direct lowered directives. Dispatch clones
-     * these snapshots before running the mutable legacy preprocessing pipeline.
-     * @param {NormalizedCommand} command The command to inspect.
-     * @returns {boolean} True when the command should stay in passthrough form.
-     */
-    shouldPreserveCommand(command) {
-        return this.getPassthroughReason(command) !== undefined;
-    }
-    /**
-     * Names the ordered preprocessing requirement that prevents direct lowering.
-     * @param {NormalizedCommand} command The command to inspect.
-     * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
-     */
-    getPassthroughReason(command) {
-        const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
-        if (/<[^>]+>/.test(command.command) || /\\[A-Z_a-z]/.test(command.command)) {
-            // Macro bodies use ASAR-style `<param>` placeholders that are resolved
-            // and ca65-style `\param` placeholders that are resolved during normalized
-            // dispatch. Lowering them early would send placeholders straight into
-            // numeric evaluation.
-            return "macroPlaceholder";
-        }
-        if (command.keyword.startsWith(".") && this.host.directiveRegistry.has(keyword)) {
-            if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
-                return undefined;
-            }
-            if (command.parsed.dataDirective) {
-                return "dataDirective";
-            }
-            return "registeredPreprocessDirective";
-        }
-        if (command.kind !== "unknown" &&
-            command.kind !== "opcodeCandidate" &&
-            command.kind !== "directive") {
-            // Semantic front-end forms require the ordered preprocess chain. This also
-            // keeps forms such as `FillByte = $EE` from colliding with directives.
-            return command.kind;
-        }
-        if (this.host.syntaxProfile.bareMacroInvocations && command.kind === "opcodeCandidate") {
-            // Bare ca65 macro calls cannot be distinguished from opcodes until earlier
-            // definitions have executed in this stage. Preserve them for ordered preprocessing.
-            return "bareMacroCandidate";
-        }
-        if (this.host.directiveRegistry.has(keyword)) {
-            if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
-                return undefined;
-            }
-            if (command.parsed.dataDirective) {
-                return "dataDirective";
-            }
-            return "registeredPreprocessDirective";
-        }
-        return command.kind === "opcodeCandidate" ? undefined : "unknown";
     }
 }
 function assertConditionalNode(node) {

@@ -3,8 +3,8 @@
  * Implementations and their contracts live in asm-core; transport and LSP payload conversion
  * belong in this package. Keeping this bridge free of target setup allows plugin-provided tooling.
  */
+export { Assembler } from "@uttori/asm-core";
 export {
-  Assembler,
   WorkspaceIndex,
   OverlayFileProvider,
   findInstruction,
@@ -21,4 +21,4 @@ export {
   symbolAt,
   resolveDefinition,
   findReferences,
-} from "@uttori/asm-core";
+} from "@uttori/asm-core/tooling";

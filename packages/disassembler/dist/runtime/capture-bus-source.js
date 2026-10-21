@@ -8,7 +8,7 @@ import { DEFAULT_RUNTIME_TRACE_MAX_BYTES, } from "./runtime-trace-file.js";
  * @returns {Promise<RuntimeBusTraceSource>} Provisional stream. Read rejects torn tails or changed identity.
  */
 export const createRuntimeBusCaptureSource = async (file, options = {}) => {
-    const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-debug-adapter");
+    const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-capture");
     const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
     options.signal?.throwIfAborted();
     const header = await readCaptureFileHeader(file, limits);

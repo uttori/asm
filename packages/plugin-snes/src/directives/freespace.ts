@@ -1,7 +1,8 @@
-import type { Assembler } from "@uttori/asm-core";
+import type { PluginSessionCapabilities } from "@uttori/asm-core/plugin";
 
 import { isFreespaceAvailable } from "../asar/compatibility.js";
 import type { SnesSessionState } from "../session-state.js";
+import { parseSnesDirective } from "./syntax-parser.js";
 
 /**
  * Allocates an Asar-style freespace block (`freecode` / `freespace` / `freedata`).
@@ -16,17 +17,26 @@ import type { SnesSessionState } from "../session-state.js";
  *
  * `norom` has no cartridge map, so allocation is refused.
  *
- * @param {Assembler} session Host assembler.
+ * @param {PluginSessionCapabilities} session Host assembler.
  * @param {SnesSessionState} state Mutable SNES session.
  * @param {readonly string[]} words Tokenized line (keyword used only in the SPC-block error).
  */
 export function handleFreespace(
-  session: Assembler,
+  session: PluginSessionCapabilities,
   state: SnesSessionState,
   words: readonly string[],
 ): void {
+  allocateFreespace(session, state, words[0]);
+}
+
+/** Allocate after validating the current mapper/block state; the keyword is diagnostic attribution. */
+export function allocateFreespace(
+  session: PluginSessionCapabilities,
+  state: SnesSessionState,
+  keyword: string,
+): void {
   if (state.inSpcBlock) {
-    throw new Error(`${words[0]} is unavailable inside spcblock.`);
+    throw new Error(`${keyword} is unavailable inside spcblock.`);
   }
   if (!isFreespaceAvailable(state.mapper)) {
     throw new Error("No freespace available in norom.");
@@ -59,19 +69,20 @@ export function handleFreespace(
  * Sets the fill byte used when expanding output (`freespacebyte <value>`).
  * Mirrored onto the session so later `expandOutput` calls match Asar.
  *
- * @param {Assembler} session Host assembler.
+ * @param {PluginSessionCapabilities} session Host assembler.
  * @param {SnesSessionState} state Mutable SNES session.
  * @param {readonly string[]} words Tokenized line.
  */
 export function handleFreespaceByte(
-  session: Assembler,
+  session: PluginSessionCapabilities,
   state: SnesSessionState,
   words: readonly string[],
 ): void {
-  if (words.length !== 2) {
-    throw new Error("FREESPACEBYTE requires exactly one parameter.");
+  const node = parseSnesDirective("snes.directive.freespacebyte", { words });
+  if (node.operation !== "freespacebyte") {
+    throw new Error("Unexpected SNES directive operation.");
   }
-  state.outputFillByte = session.operandResolver.getnum(session.resolvedefines(words[1])) & 0xff;
+  state.outputFillByte = session.operandResolver.getnum(node.expression) & 0xff;
   session.outputFillByte = state.outputFillByte;
 }
 
@@ -83,16 +94,24 @@ export function handleFreespaceByte(
  * The length byte is `labelCount * 3` truncated to 8 bits - Asar's format has
  * no 16-bit count, so >85 labels wrap.
  *
- * @param {Assembler} session Host assembler.
+ * @param {PluginSessionCapabilities} session Host assembler.
  * @param {readonly string[]} words Tokenized line. Labels after the keyword, comma-separated.
  */
-export function handleProt(session: Assembler, words: readonly string[]): void {
+export function handleProt(session: PluginSessionCapabilities, words: readonly string[]): void {
   const labels = words
     .slice(1)
     .join(" ")
     .split(",")
     .map((label) => label.trim())
     .filter(Boolean);
+  emitProtectionRecord(session, labels);
+}
+
+/** Emit the parsed label sequence in source order; unresolved labels retain the provisional zero value. */
+export function emitProtectionRecord(
+  session: PluginSessionCapabilities,
+  labels: readonly string[],
+): void {
   if (labels.length === 0) {
     throw new Error("PROT command requires at least one label parameter.");
   }

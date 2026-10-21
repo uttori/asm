@@ -1,4 +1,8 @@
-import { assertSourceObjectId, assertSourcePath, sourceGit } from "@uttori/asm-disassembler";
+import {
+  assertSourceObjectId,
+  assertSourcePath,
+  sourceGit,
+} from "@uttori/asm-disassembler/source-project";
 import {
   EventEmitter,
   FileSystemError,

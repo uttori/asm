@@ -293,6 +293,53 @@ test("analysis publication never promotes projected research records into observ
   t.true(store.loadTable("comments").some((record) => record.id === "derived-note"));
 });
 
+test("revision-pinned publication validates the complete projected graph and rolls back a bad reference", (t) => {
+  const { root, store, read } = fixture();
+  t.teardown(() => {
+    store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const research = read();
+  store.transaction(() => store.synchronizeResearchInputs(research));
+  const view = {
+    labels: store.loadTable("labels"),
+    comments: store.loadTable("comments"),
+    annotations: store.loadTable("annotations"),
+    regions: store.loadTable("regions"),
+    evidence: store.loadTable("evidence"),
+    analysis: store.loadTable("analysis"),
+    imports: [],
+    runtime: [],
+  };
+  const revision = store.revision();
+  const comment = {
+    id: "derived",
+    addressSpace: "rom.file",
+    address: 0,
+    text: "Derived",
+    evidence: ["missing"],
+  };
+  t.throws(
+    () =>
+      store.transaction(() =>
+        store.replaceResearchAnalysis(research, { comments: [comment] }, undefined, view),
+      ),
+    { message: /missing/ },
+  );
+  t.is(store.revision(), revision);
+  t.is(store.researchInputsIdentity(), research.hash);
+  t.deepEqual(store.loadTable("comments"), view.comments);
+  store.transaction(() =>
+    store.replaceResearchAnalysis(
+      research,
+      { comments: [{ ...comment, evidence: ["import-1"] }] },
+      undefined,
+      view,
+    ),
+  );
+  t.is(store.loadTable("comments")[0].id, "derived");
+});
+
 test("invalid research publication rolls back rows, baseline shadows, and revision", (t) => {
   const { root, store, document, read } = fixture();
   t.teardown(() => {
@@ -427,7 +474,7 @@ test("research file errors distinguish missing inputs, malformed JSON and invali
   });
   fs.writeFileSync(path.join(root, relative), JSON.stringify({ ...document, decisions: [null] }));
   t.throws(() => readResearchInputs(root, [relative], document), {
-    message: /broken\.json: decisions\[0\]:.*known collection and stable ID/,
+    message: /broken\.json: decisions\[0]:.*known collection and stable ID/,
   });
 });
 

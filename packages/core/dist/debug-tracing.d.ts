@@ -1,4 +1,5 @@
 import type { AssemblyStageName } from "./plugin/contracts.js";
+import type { SourceOrigin } from "./source-provenance.js";
 /**
  * Per-byte write emitted after the logical address has been mapped to output.
  */
@@ -10,6 +11,8 @@ export type AssemblerTraceWriteEvent = {
     line: number;
     raw: string;
     normalized: string;
+    /** Source expansion chain for this emitted occurrence. */
+    origin?: SourceOrigin;
     logicalAddress: number;
     /** Active target address width. Older callers default to 24-bit formatting. */
     addressWidth?: number;
@@ -29,6 +32,8 @@ export type AssemblerTraceCommandEvent = {
     line: number;
     raw: string;
     normalized: string;
+    /** Source expansion chain for this emitted occurrence. */
+    origin?: SourceOrigin;
     logicalAddress: number;
     /** Active target address width. Older callers default to 24-bit formatting. */
     addressWidth?: number;

@@ -1,9 +1,4 @@
-import {
-  DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
-  runDebugBackendConformance,
-  type DebugBackendConformanceFixture,
-  type DebugSubscription,
-} from "@uttori/asm-debug-adapter";
+import { DEBUG_BACKEND_CONFORMANCE_SCENARIOS, runDebugBackendConformance, type DebugBackendConformanceFixture, type DebugSubscription } from "@uttori/asm-debug-adapter";
 
 import { test } from "../../../tests/ava-helper.js";
 import {

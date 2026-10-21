@@ -1,6 +1,7 @@
 import { fork, type ChildProcess } from "node:child_process";
 import * as path from "node:path";
 
+import { WorkerRequestSlots, readWorkerReply, workerTimeout } from "../workers/lifecycle.js";
 import type { AnalysisWorkerOperation, AnalysisWorkerRequest } from "./worker.js";
 
 /**
@@ -11,8 +12,12 @@ interface PendingProjection {
   readonly message: AnalysisWorkerRequest;
   readonly resolve: (value: unknown) => void;
   readonly reject: (error: Error) => void;
+  readonly coalesceKey?: string;
   timer?: ReturnType<typeof setTimeout>;
 }
+
+/** Expected lifecycle cancellation; callers still reject, but diagnostics need no error entry. */
+class AnalysisRequestCancelled extends Error {}
 
 /**
  * Resource limits and optional process isolation for projection requests.
@@ -26,6 +31,8 @@ export interface AnalysisWorkerOptions {
   readonly sourceRoot?: () => string | undefined;
   readonly maxMemoryMiB?: (directory: string) => number;
   readonly timeoutMs?: number;
+  /** Active plus queued distinct reads per lane. Identical requests share one slot; default 32. */
+  readonly maxPending?: number;
   /** Separate manifests, viewport previews, and bulk views so one timeout cannot cancel unrelated work. */
   readonly isolateAnnotations?: boolean;
 }
@@ -52,14 +59,22 @@ export class AnalysisWorkerClient {
   #previews?: AnalysisWorkerClient;
   #worker?: ChildProcess;
   #memoryMiB = 0;
-  #nextId = 0;
+  readonly #slots: WorkerRequestSlots;
+  readonly #timeoutMs: number;
   #active?: PendingProjection;
   readonly #queue: PendingProjection[] = [];
   readonly #inflight = new Map<string, Promise<unknown>>();
   constructor(
     readonly workerFile: string,
     readonly options: AnalysisWorkerOptions = {},
-  ) {}
+  ) {
+    this.#slots = new WorkerRequestSlots(options.maxPending ?? 32);
+    this.#timeoutMs = workerTimeout(options.timeoutMs, 60_000);
+  }
+
+  get disposed(): boolean {
+    return this.#slots.disposed;
+  }
 
   request(
     directory: string,
@@ -69,6 +84,9 @@ export class AnalysisWorkerClient {
       "offset" | "ranges" | "sourceId" | "navigationTarget" | "evidenceSelection" | "evidenceRecord"
     > = {},
   ): Promise<unknown> {
+    if (this.disposed) {
+      return Promise.reject(new Error("Analysis worker disposed."));
+    }
     if (this.options.isolateAnnotations && interactiveOperations.has(operation)) {
       this.#manifests ??= new AnalysisWorkerClient(this.workerFile, {
         ...this.options,
@@ -89,12 +107,34 @@ export class AnalysisWorkerClient {
     if (previous) {
       return previous;
     }
-    const id = ++this.#nextId;
+    // A queued viewport is obsolete once a newer range for the same view arrives. Active work
+    // keeps its own result; independent bulk pages and project manifests are never coalesced.
+    const coalesceKey = previewOperations.has(operation)
+      ? JSON.stringify({ directory, operation, sourceRoot })
+      : undefined;
+    if (coalesceKey) {
+      for (let index = this.#queue.length - 1; index >= 0; index--) {
+        const stale = this.#queue[index];
+        if (stale.coalesceKey !== coalesceKey) {
+          continue;
+        }
+        this.#queue.splice(index, 1);
+        this.#slots.release(stale.message.id);
+        stale.reject(new AnalysisRequestCancelled("Analysis viewport request superseded."));
+      }
+    }
+    let id: number;
+    try {
+      id = this.#slots.acquire();
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
     const promise = new Promise<unknown>((resolve, reject) => {
       this.#queue.push({
         message: { id, directory, operation, sourceRoot, ...options },
         resolve,
         reject,
+        coalesceKey,
       });
     });
     this.#inflight.set(key, promise);
@@ -106,7 +146,10 @@ export class AnalysisWorkerClient {
     void promise.then(forget, (error: unknown) => {
       forget();
       if (operation !== "clear") {
-        this.options.log?.("error", `Analysis ${operation} (${directory}): ${String(error)}`);
+        // Refreshes deliberately reject stale reads so they cannot publish old evidence.
+        // Keep that lifecycle visible without presenting it as a failed analysis operation.
+        const level = error instanceof AnalysisRequestCancelled ? "debug" : "error";
+        this.options.log?.(level, `Analysis ${operation} (${directory}): ${String(error)}`);
       }
     });
     this.#dispatch();
@@ -145,7 +188,7 @@ export class AnalysisWorkerClient {
         this.#start(maxMemoryMiB);
       }
       // Queueing behind another view does not consume this operation's execution budget.
-      const timeoutMs = this.options.timeoutMs ?? 60_000;
+      const timeoutMs = this.#timeoutMs;
       pending.timer = setTimeout(
         () =>
           this.#fail(
@@ -178,27 +221,35 @@ export class AnalysisWorkerClient {
     worker.stderr?.on("data", (chunk: Buffer) => {
       stderr = (stderr + chunk.toString()).slice(-8192);
     });
-    worker.on(
-      "message",
-      (message: { id: number; value?: unknown; error?: string; stack?: string }) => {
-        const pending = this.#active;
-        if (this.#worker !== worker || pending?.message.id !== message.id) {
-          return;
+    worker.on("message", (value: unknown) => {
+      if (this.#worker !== worker) {
+        return;
+      }
+      let message;
+      try {
+        message = readWorkerReply(value);
+      } catch (error) {
+        this.#fail(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
+      const pending = this.#active;
+      if (this.#worker !== worker || pending?.message.id !== message.id) {
+        return;
+      }
+      clearTimeout(pending.timer);
+      this.#slots.release(pending.message.id);
+      this.#active = undefined;
+      if (message.error) {
+        const error = new Error(message.error);
+        if (message.stack) {
+          error.stack = message.stack;
         }
-        clearTimeout(pending.timer);
-        this.#active = undefined;
-        if (message.error) {
-          const error = new Error(message.error);
-          if (message.stack) {
-            error.stack = message.stack;
-          }
-          pending.reject(error);
-        } else {
-          pending.resolve(message.value);
-        }
-        this.#dispatch();
-      },
-    );
+        pending.reject(error);
+      } else {
+        pending.resolve(message.value);
+      }
+      this.#dispatch();
+    });
     worker.on("error", (error) => {
       if (this.#worker === worker) {
         this.#fail(error);
@@ -218,15 +269,15 @@ export class AnalysisWorkerClient {
   invalidate(): void {
     this.#manifests?.invalidate();
     this.#previews?.invalidate();
-    this.#inflight.clear();
-    if (this.#worker) {
-      void this.request("", "clear").catch(() => undefined);
-    }
+    // Replacing the process also drops its SQLite/cache handles. A clear queued behind old
+    // projections would let stale results publish after a project switch.
+    this.#fail(new AnalysisRequestCancelled("Analysis project invalidated."));
   }
   dispose(): void {
+    this.#slots.dispose();
     this.#manifests?.dispose();
     this.#previews?.dispose();
-    this.#fail(new Error("Analysis worker disposed."));
+    this.#fail(new AnalysisRequestCancelled("Analysis worker disposed."));
   }
   #fail(error: Error): void {
     const worker = this.#worker;
@@ -238,6 +289,7 @@ export class AnalysisWorkerClient {
     this.#active = undefined;
     for (const pending of pendingRequests) {
       clearTimeout(pending.timer);
+      this.#slots.release(pending.message.id);
       pending.reject(error);
     }
     this.#queue.length = 0;
@@ -262,11 +314,18 @@ let client: AnalysisWorkerClient | undefined;
 export const initializeAnalysisWorker = (
   extensionRoot: string,
   options?: AnalysisWorkerOptions,
-): AnalysisWorkerClient =>
-  (client ??= new AnalysisWorkerClient(path.join(extensionRoot, "out", "analysis-worker.cjs"), {
-    ...options,
-    isolateAnnotations: true,
-  }));
+): AnalysisWorkerClient => {
+  if (client?.disposed) {
+    client = undefined;
+  }
+  return (client ??= new AnalysisWorkerClient(
+    path.join(extensionRoot, "out", "analysis-worker.cjs"),
+    {
+      ...options,
+      isolateAnnotations: true,
+    },
+  ));
+};
 /**
  * Return the initialized shared projection client; throw if activation has not created it yet.
  * @returns {AnalysisWorkerClient} Shared client; throws before initialization.

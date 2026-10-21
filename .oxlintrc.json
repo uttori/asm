@@ -258,6 +258,12 @@
   },
   "overrides": [
     {
+      // B1 pins this exact harness hash before B2. Keep cosmetic edits out of the
+      // comparison; all other lint rules still apply to the frozen measurement code.
+      "files": ["scripts/benchmark-assembler-ast.ts"],
+      "rules": { "curly": "off", "unicorn/no-array-sort": "off" }
+    },
+    {
       "files": ["**/*.{js,mjs,cjs,ts,mts,jsx,tsx}"],
       "rules": {
         "security/detect-buffer-noassert": "warn",

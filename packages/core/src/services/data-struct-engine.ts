@@ -1,14 +1,18 @@
-import { setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
-import { splitCommandIntoWords } from "./command-text-service.js";
+import {
+  checkedDeclaration,
+  parseDeclarationNode,
+  type DeclarationNode,
+  type RecordReference,
+} from "../ir/declaration-node.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
 import type { OutputWriterService } from "./output-writer-service.js";
 import type { StructDefinition, StructEngine, StructField } from "./struct-engine.js";
-import { parseStructInitializer, splitInitializerList } from "./struct-initializer.js";
 
 export interface DataStructHost {
   structs: Map<string, StructDefinition>;
   currentTargetBaseAddress: number;
   canEmitBytes: boolean;
-  operandResolver: { getnum(input: string): number };
+  operandResolver: { getnum(input: string | ExpressionNode): number };
   outputWriter: Pick<OutputWriterService, "step" | "writeBytes">;
   /** Final scalar attribution before record bytes are written; offsets are relative to the record. */
   recordStructField?(reference: string, expression: string, offset: number, width: number): void;
@@ -42,38 +46,49 @@ export class DataStructEngine {
     }
   }
 
-  /**
-   * Rewrite a row into a normal directive so it retains source/trace ownership.
-   * @param {NormalizedCommand} command Per-dispatch mutable command, never the cached node.
-   */
-  prepareRow(command: NormalizedCommand): void {
-    const text = command.command.trim();
-    if (/^enddatastructs\b/i.test(text)) {
-      return;
-    }
-    const match = text.match(/^\[([^\]]+)]\s*=\s*({.*})$/s);
-    if (!this.table || !match) {
+  /** Bind a row's table name while retaining its parsed field values and source ranges. */
+  bindRow(
+    node: Extract<DeclarationNode, { kind: "dataStructRow" }>,
+  ): Extract<DeclarationNode, { kind: "dataStruct" }> {
+    if (!this.table) {
       throw new Error("dataStructs accepts only indexed records: [index] = { field = value }.");
     }
-    const rewritten = `dataStruct ${this.table.name}[${match[1]}], ${match[2]}`;
-    setCommandWords(command, splitCommandIntoWords(rewritten), rewritten);
+    return {
+      kind: "dataStruct",
+      reference: {
+        name: this.table.name,
+        index: node.index,
+        text: `${this.table.name}[${node.indexText}]`,
+      },
+      fields: node.fields,
+    };
   }
 
   begin(words: readonly string[]): void {
+    this.executeBegin(checkedDeclaration(parseDeclarationNode(words.join(" "), words)));
+  }
+
+  /** Enter a record table only after the referenced layout exists. */
+  executeBegin(node: Exclude<DeclarationNode, { kind: "invalid" }> | undefined): void {
     if (this.table) {
       throw new Error("Nested dataStructs blocks are not supported.");
     }
-    if (words.length !== 2 || !this.host.structs.has(words[1])) {
+    if (node?.kind !== "dataStructs" || !this.host.structs.has(node.name)) {
       throw new Error("dataStructs requires one previously defined struct name.");
     }
-    this.table = { name: words[1], rows: 0 };
+    this.table = { name: node.name, rows: 0 };
   }
 
   end(words: readonly string[]): void {
+    this.executeEnd(words.length - 1);
+  }
+
+  /** Closing a table checks its row invariant before releasing sequencing state. */
+  executeEnd(argumentCount: number): void {
     if (!this.table) {
       throw new Error("endDataStructs without dataStructs.");
     }
-    if (words.length !== 1) {
+    if (argumentCount !== 0) {
       throw new Error("endDataStructs takes no arguments.");
     }
     if (this.table.rows === 0) {
@@ -84,25 +99,26 @@ export class DataStructEngine {
 
   /**
    * Resolve an addressed record, keeping the established Asar index/stride rules.
-   * @param {string} reference Previously declared name with an optional logical index.
+   * @param {RecordReference} reference Previously declared name with an unevaluated logical index.
    * @returns {{ definition: StructDefinition; index: number }} Layout and checked index.
    */
-  private resolveRecord(reference: string): { definition: StructDefinition; index: number } {
-    // oxlint-disable-next-line security/detect-unsafe-regex -- Name and index have disjoint delimiters.
-    const match = reference.match(/^([A-Z_a-z][\w.]*)(?:\[([^\]]+)])?$/);
-    const definition = match && this.host.structs.get(match[1]);
-    if (!match || !definition) {
-      throw new Error(`Unknown dataStruct record '${reference}'.`);
+  private resolveRecord(reference: RecordReference): {
+    definition: StructDefinition;
+    index: number;
+  } {
+    const definition = this.host.structs.get(reference.name);
+    if (!definition) {
+      throw new Error(`Unknown dataStruct record '${reference.text}'.`);
     }
-    const indexText = match.length > 2 ? match[2] : undefined;
-    const index = indexText === undefined ? 0 : this.host.operandResolver.getnum(indexText);
+    const index =
+      reference.index === undefined ? 0 : this.host.operandResolver.getnum(reference.index);
     if (!Number.isSafeInteger(index) || index < 0) {
-      throw new Error(`Invalid record index '${reference}'.`);
+      throw new Error(`Invalid record index '${reference.text}'.`);
     }
     if (definition.indexRange) {
       const { first, count } = definition.indexRange;
       if (index < first || index >= first + count) {
-        throw new Error(`Record index out of bounds: '${reference}'.`);
+        throw new Error(`Record index out of bounds: '${reference.text}'.`);
       }
     }
     return { definition, index };
@@ -146,19 +162,24 @@ export class DataStructEngine {
   }
 
   emit(words: readonly string[]): void {
-    const args = splitInitializerList(words.slice(1).join(" "));
-    if (args.length !== 2) {
-      throw new Error("dataStruct syntax: dataStruct Record[index], { field = value }.");
+    const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
+    if (node?.kind !== "dataStruct") {
+      throw new Error("Expected dataStruct initializer.");
     }
-    const [reference, literal] = args;
-    const { definition, index } = this.resolveRecord(reference);
+    this.executeRecord(node);
+  }
+
+  /** Validate the entire typed record before committing bytes or field ownership. */
+  executeRecord(node: Extract<DeclarationNode, { kind: "dataStruct" }>): void {
+    const reference = node.reference.text;
+    const { definition, index } = this.resolveRecord(node.reference);
     if (this.table?.next !== undefined && index !== this.table.next) {
       throw new Error(
         `Non-contiguous dataStructs index: expected ${this.table.next}, received ${index}.`,
       );
     }
     const layout = this.fieldsFor(definition);
-    const values = parseStructInitializer(literal);
+    const values = new Map(node.fields.map((field) => [field.name, field.value]));
     const names = new Set(layout.map((field) => field.name));
     for (const name of values.keys()) {
       if (!names.has(name)) {
@@ -176,7 +197,7 @@ export class DataStructEngine {
       if (field.array !== Array.isArray(value)) {
         throw new Error(`Field '${name}' requires ${field.array ? "an array" : "a scalar"}.`);
       }
-      const items = typeof value === "string" ? [value] : value;
+      const items = Array.isArray(value) ? value : [value];
       if (items.length !== field.count) {
         throw new Error(
           `Field '${name}' requires ${field.count} value(s), received ${items.length}.`,
@@ -185,8 +206,9 @@ export class DataStructEngine {
       if (!this.host.canEmitBytes) {
         continue;
       }
-      for (const [itemIndex, expression] of items.entries()) {
-        const number = this.host.operandResolver.getnum(expression);
+      for (const [itemIndex, item] of items.entries()) {
+        const expression = item.text;
+        const number = this.host.operandResolver.getnum(item.expression);
         if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
           throw new Error(
             `Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`,
@@ -206,7 +228,7 @@ export class DataStructEngine {
       }
     }
     if (this.host.canEmitBytes) {
-      const expected = this.structs.resolveStructLabel(reference);
+      const expected = definition.base + index * (definition.size + definition.extensionSize);
       if (this.host.currentTargetBaseAddress !== expected) {
         throw new Error(
           `dataStruct '${reference}' requires pc() == $${expected.toString(16).toUpperCase()}, received $${this.host.currentTargetBaseAddress.toString(16).toUpperCase()}.`,

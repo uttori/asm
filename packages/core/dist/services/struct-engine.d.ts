@@ -1,4 +1,7 @@
+import { type DeclarationNode } from "../ir/declaration-node.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
+import type { ReferencePath } from "../ir/reference-path.js";
 import { DataStructEngine, type DataStructHost } from "./data-struct-engine.js";
 /** Encoding information is separate from Asar's address-only member labels. */
 export interface StructField {
@@ -38,7 +41,7 @@ export type StructHost = DataStructHost & {
     currentStruct: StructDefinition | null;
     structs: Map<string, StructDefinition>;
     operandResolver: {
-        getnum(input: string): number;
+        getnum(input: string | ExpressionNode): number;
     };
     enterStructDefinition(base: number): void;
     restoreStructDefinition(): void;
@@ -62,17 +65,27 @@ export declare class StructEngine {
      * @param {string[]} words The words of the command.
      */
     handleStruct(words: readonly string[]): void;
+    /** Bind a declaration's base in the current stage, before changing struct scope. */
+    executeStruct(node: Extract<DeclarationNode, {
+        kind: "struct";
+    }>): void;
     /**
      * Handles an endstruct command.
      * @param {string[]} words The words of the command.
      */
     handleEndStruct(words: readonly string[]): void;
+    /** Resolve options in source order; finalize the layout before restoring its enclosing cursor. */
+    executeEndStruct(node: Extract<DeclarationNode, {
+        kind: "endStruct";
+    }>): void;
     /**
      * Checks whether a reference starts with a known struct name.
      * @param {string} labelRef The reference to inspect.
      * @returns {boolean} Whether the reference belongs to a known struct.
      */
     hasStructReference(labelRef: string): boolean;
+    /** Resolve a parsed path directly; index values are refreshed in the caller's active stage. */
+    resolveStructPath(path: ReferencePath, evaluate: (node: ExpressionNode) => number): number | undefined;
     /**
      * Resolves a struct label.
      * @param {string} labelRef The label to resolve.

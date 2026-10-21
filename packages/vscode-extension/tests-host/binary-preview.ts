@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 
 import { pngImporter, type IndexedImage } from "@uttori/asm-assets/image";
-import { sourceGit, type SourceMergePreview } from "@uttori/asm-disassembler";
-import type { PreparedSnesGeneration } from "@uttori/asm-plugin-snes";
+import { sourceGit, type SourceMergePreview } from "@uttori/asm-disassembler/source-project";
+import type { PreparedSnesGeneration } from "@uttori/asm-plugin-snes/disassembler";
 import * as vscode from "vscode";
 
 import { BinaryDrafts } from "../src/assets/binary-drafts.js";

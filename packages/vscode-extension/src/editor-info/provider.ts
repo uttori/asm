@@ -10,10 +10,8 @@ import {
   type DebugMapRange,
   type DebugMapInstruction,
 } from "@uttori/asm-core/debug-map";
-import type {
-  InstructionAnalysisAnnotation,
-  InstructionExecutionSummaryRow,
-} from "@uttori/asm-disassembler";
+import type { InstructionAnalysisAnnotation } from "@uttori/asm-disassembler";
+import type { InstructionExecutionSummaryRow } from "@uttori/asm-disassembler/storage";
 
 import type { EditorLocation, InformationRequirements, LineInformation } from "./format.js";
 

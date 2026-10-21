@@ -1,6 +1,7 @@
+import type { NativeCaptureFilePosition } from "@uttori/asm-capture";
+
 import { test } from "../../../../tests/ava-helper.js";
 import { busPosition } from "../../../../tests/helpers/capture-bus.js";
-import type { NativeCaptureFilePosition } from "../../../debug-adapter/src/capture-file.js";
 import {
   handleLiveBusProcessMessage,
   runLiveBusAnalysis,

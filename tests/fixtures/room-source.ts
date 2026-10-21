@@ -3,14 +3,14 @@ import os from "node:os";
 import path from "node:path";
 
 import { loadSomRoomNative } from "@uttori/asm-assets/secret-of-mana/som-room-native";
+import { RomImage } from "@uttori/asm-disassembler";
 import {
-  RomImage,
   sourceGit,
   sourceRepository,
   retainSourceGeneration,
   adoptSourceGeneration,
   finishSourceGeneration,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
 
 import { somRoomNativeFixture } from "./som-room-native.js";
 import { buildSpriteSource } from "./sprite-source.js";
@@ -113,7 +113,7 @@ export async function roomSourceFixture(teardown: (cleanup: () => void) => void)
     includePaths: ["./"],
     plugins: [
       { module: "@uttori/asm-plugin-snes", options: { checksumEnabled: false } },
-      { module: "@uttori/asm-assets/secret-of-mana/som-asset-plugin" },
+      { module: "@uttori/asm-game-secret-of-mana" },
     ],
   });
   fs.writeFileSync(

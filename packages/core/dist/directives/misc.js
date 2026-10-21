@@ -1,3 +1,5 @@
+import { parseDirectiveExpression } from "../ir/directive-arguments.js";
+import { syntaxBoolean, syntaxExpression, syntaxOptional, syntaxRecord, syntaxString, } from "../ir/syntax-codec.js";
 import { splitRespectingFunctions } from "../services/command-text-service.js";
 /**
  * Restores the previously saved character mapping table.
@@ -79,21 +81,8 @@ const formatPrintArgs = (parts) => {
  * @param {string} raw Full command text.
  * @throws {Error} If the condition is missing or evaluates to zero.
  */
-export const handleAssert = ({ session }, _words, raw) => {
-    const payload = stripLeadingKeyword(raw, "assert");
-    const parts = splitRespectingFunctions(payload);
-    const condition = parts[0] ?? "";
-    if (condition === "") {
-        throw new Error("Broken conditional: assert");
-    }
-    if (session.evaluateAssertion(condition) !== false) {
-        return;
-    }
-    const messageParts = parts.slice(1);
-    if (messageParts.length === 0) {
-        throw new Error("Assertion failed.");
-    }
-    throw new Error(`Assertion failed: ${formatPrintArgs(messageParts)}`);
+export const handleAssert = (ctx, _words, raw) => {
+    executeAssert({ diagnostic: ctx }, parseAssert({ text: raw }));
 };
 /**
  * Asar `error [print-args...]`. Always fails the assemble.
@@ -102,12 +91,8 @@ export const handleAssert = ({ session }, _words, raw) => {
  * @param {string} raw Full command text.
  * @throws {Error} Always. Message matches asar's `Eerror_command`.
  */
-export const handleError = (_ctx, _words, raw) => {
-    const payload = stripLeadingKeyword(raw, "error");
-    if (payload === "") {
-        throw new Error("error command.");
-    }
-    throw new Error(`error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`);
+export const handleError = (ctx, _words, raw) => {
+    executeError({ diagnostic: ctx }, parseError({ text: raw }));
 };
 /**
  * Formats a logical address as 6-digit uppercase hex for asar `warnpc` messages.
@@ -182,19 +167,10 @@ export const handleClearTable = ({ session }) => {
  * @throws {Error} If the filename is missing or a table line is invalid.
  */
 export const handleTable = ({ session }, _words, raw) => {
-    let payload = stripLeadingKeyword(raw, "table");
-    let rtl = false;
-    if (/,\s*rtl\s*$/i.test(payload)) {
-        rtl = true;
-        payload = payload.replace(/,\s*rtl\s*$/i, "").trim();
-    }
-    else if (/,\s*ltr\s*$/i.test(payload)) {
-        payload = payload.replace(/,\s*ltr\s*$/i, "").trim();
-    }
-    const filename = unwrapQuoted(payload);
-    if (filename === "") {
-        throw new Error("table requires a filename");
-    }
+    executeTable({ session }, parseTable({ text: raw }));
+};
+/** File contents are table data; only the assembly path/direction grammar is parsed ahead of execution. */
+function executeTable({ session }, { filename, rtl }) {
     const contents = session.includeSource.readFile(filename, "utf8");
     if (typeof contents !== "string") {
         throw new Error(`Error reading file: ${filename}`);
@@ -215,7 +191,7 @@ export const handleTable = ({ session }, _words, raw) => {
         }
         session.characterMappings.set(parsed.char, parsed.value);
     }
-};
+}
 /**
  * Deprecated asar `warnpc addr`, equivalent to `assert pc() <= addr`.
  * Fails only when the logical program counter is strictly past the bound.
@@ -224,15 +200,8 @@ export const handleTable = ({ session }, _words, raw) => {
  * @param {string} raw Full command text.
  * @throws {Error} If the address is missing or `pc > addr`.
  */
-export const handleWarnpc = ({ session }, _words, raw) => {
-    const payload = stripLeadingKeyword(raw, "warnpc");
-    if (payload === "") {
-        throw new Error("warnpc requires an address");
-    }
-    const maxpos = session.operandResolver.getnum(session.resolvedefines(payload));
-    if (session.currentTargetAddress > maxpos) {
-        throw new Error(`warnpc failed: Current pc = $${hex6(session.currentTargetAddress)}, wanted <= $${hex6(maxpos)}`);
-    }
+export const handleWarnpc = (ctx, _words, raw) => {
+    executeWarnpc({ diagnostic: ctx }, parseWarnpc({ text: raw }));
 };
 /**
  * Registers table and diagnostic directives when those core groups are enabled.
@@ -241,17 +210,77 @@ export const handleWarnpc = ({ session }, _words, raw) => {
  * @param {ReadonlySet<CoreDirectiveGroup>} [enabledGroups] Groups to register. Defaults to both.
  * @returns {void}
  */
+const empty = () => ({});
 export const registerMiscDirectives = (registry, context, enabledGroups = new Set(["table", "diagnostic"])) => {
+    const emptySyntax = syntaxRecord({});
     if (enabledGroups.has("table")) {
-        registry.registerLowered("pulltable", context.table, handlePullTable);
-        registry.registerLowered("pushtable", context.table, handlePushTable);
-        registry.registerLowered("cleartable", context.table, handleClearTable);
-        registry.registerLowered("table", context.table, handleTable);
+        registry.registerTyped("pulltable", empty, emptySyntax, () => handlePullTable(context.table));
+        registry.registerTyped("pushtable", empty, emptySyntax, () => handlePushTable(context.table));
+        registry.registerTyped("cleartable", empty, emptySyntax, () => handleClearTable(context.table));
+        registry.registerTyped("table", parseTable, syntaxRecord({ filename: syntaxString, rtl: syntaxBoolean }), (payload) => executeTable(context.table, payload));
     }
     if (enabledGroups.has("diagnostic")) {
-        registry.registerLowered("assert", context.diagnostic, handleAssert);
-        registry.registerLowered("error", context.diagnostic, handleError);
-        registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+        registry.registerTyped("assert", parseAssert, syntaxRecord({ condition: syntaxExpression, message: syntaxOptional(syntaxString) }), (payload) => executeAssert(context, payload));
+        registry.registerTyped("error", parseError, syntaxRecord({ message: syntaxString }), (payload) => executeError(context, payload));
+        registry.registerTyped("warnpc", parseWarnpc, syntaxRecord({ address: syntaxExpression }), (payload) => executeWarnpc(context, payload));
     }
+};
+/** Shared source/public-entry grammar for `assert`. */
+const parseAssert = ({ text }) => {
+    const parts = splitRespectingFunctions(stripLeadingKeyword(text, "assert"));
+    if (!parts[0]) {
+        throw new Error("Broken conditional: assert");
+    }
+    return {
+        condition: parseDirectiveExpression(parts[0], false),
+        message: parts.length > 1 ? formatPrintArgs(parts.slice(1)) : undefined,
+    };
+};
+/** Applies a parsed `assert` operation to the current stage. */
+const executeAssert = (context, { condition, message }) => {
+    if (context.diagnostic.session.evaluateAssertion(condition) !== false) {
+        return;
+    }
+    throw new Error(message === undefined ? "Assertion failed." : `Assertion failed: ${message}`);
+};
+/** Shared source/public-entry grammar for `error`. */
+const parseError = ({ text }) => {
+    const payload = stripLeadingKeyword(text, "error");
+    return {
+        message: payload
+            ? `error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`
+            : "error command.",
+    };
+};
+/** Applies a parsed `error` operation to the current stage. */
+const executeError = (_context, { message }) => {
+    throw new Error(message);
+};
+/** Shared source/public-entry grammar for `warnpc`. */
+const parseWarnpc = ({ text }) => {
+    const payload = stripLeadingKeyword(text, "warnpc");
+    if (!payload) {
+        throw new Error("warnpc requires an address");
+    }
+    return { address: parseDirectiveExpression(payload) };
+};
+/** Applies a parsed `warnpc` operation to the current stage. */
+const executeWarnpc = (context, { address }) => {
+    const { session } = context.diagnostic;
+    const maxpos = session.operandResolver.getnum(address);
+    if (session.currentTargetAddress > maxpos) {
+        throw new Error(`warnpc failed: Current pc = $${hex6(session.currentTargetAddress)}, wanted <= $${hex6(maxpos)}`);
+    }
+};
+/** Shared assembly path and direction grammar; file contents remain table data. */
+const parseTable = ({ text }) => {
+    let payload = stripLeadingKeyword(text, "table");
+    const rtl = /,\s*rtl\s*$/i.test(payload);
+    payload = payload.replace(/,\s*(?:rtl|ltr)\s*$/i, "").trim();
+    const filename = unwrapQuoted(payload);
+    if (!filename) {
+        throw new Error("table requires a filename");
+    }
+    return { filename, rtl };
 };
 //# sourceMappingURL=misc.js.map

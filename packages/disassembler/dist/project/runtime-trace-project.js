@@ -1,7 +1,11 @@
+import { createHash } from "node:crypto";
+import path from "node:path";
+import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { createRuntimeRecordValidator, validateLoadedShards } from "../model/project-validation.js";
 import { createRuntimeCaptureSource } from "../runtime/capture-instruction-source.js";
 import { mergeRuntimeEvidence } from "../runtime/runtime-evidence.js";
 import { createRuntimeInstructionTraceImporter, } from "../runtime/runtime-trace.js";
+import { SqliteTraceStage } from "../storage/sqlite-trace-stage.js";
 import { openAnalysisProjectStore } from "./project-store.js";
 import { analysisProjectRevision, assertAnalysisProjectRevision, } from "./project-transaction.js";
 /**
@@ -20,21 +24,10 @@ export const importRuntimeTraceIntoProject = async (file, directory, context, op
     const source = await createRuntimeCaptureSource(file, options);
     return importRuntimeTraceSourceIntoProject(source, directory, context, options);
 };
-/**
- * Import decoded producer chunks without an intermediate JSON artifact. Chunk memory is released
- * after each push. Distinct facts use the existing SQLite index and atomic publication path.
- * The caller owns the source and its cancellation behavior. This function closes its SQLite connection.
- * Cancellation is cooperative at read/merge boundaries, not preemptive during synchronous finalization.
- * Storage-policy changes and post-commit pointer failures follow importRuntimeTraceIntoProject.
- * @param {RuntimeTraceSource} source Ordered reader that rejects any invalid or incomplete envelope.
- * @param {string} directory Destination SQLite project root.
- * @param {RuntimeInstructionTraceImportContext} context Expected ROM, source name and index budget.
- * @param {RuntimeTraceProjectImportOptions} options Cancellation and progress. Byte limits belong to the source.
- * @returns {Promise<RuntimeTraceProjectImportResult>} Committed facts. Reader failures publish nothing.
- */
-export const importRuntimeTraceSourceIntoProject = async (source, directory, context, options = {}) => {
+export async function importRuntimeTraceSourceIntoProject(source, directory, context, options = {}) {
     options.signal?.throwIfAborted();
     const store = openAnalysisProjectStore(directory);
+    let stage;
     try {
         if (store.researchInputsIdentity() !== options.research?.hash) {
             throw new Error("Refresh the selected Git research index before importing evidence.");
@@ -42,7 +35,9 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         if (options.storagePolicy) {
             store.transaction(() => store.setStoragePolicy(options.storagePolicy));
         }
-        const beforeStorage = store.storageSnapshot();
+        // Global deduplication/accounting sweeps are diagnostics, not import validation. Native
+        // workflows need the exact committed per-source counts and can avoid two full-history scans.
+        const beforeStorage = options.storageStatistics === false ? undefined : store.storageSnapshot();
         let retainedReport;
         const manifest = store.transaction(() => store.manifest(), false);
         const expected = analysisProjectRevision(manifest);
@@ -57,11 +52,32 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         let addedRuntime = 0;
         let publication;
         let validate;
-        options.onStage?.("Indexing trace facts in SQLite…");
+        if (options.validatedIndex && !options.recoverPartial) {
+            // This cache format binds both parser semantics and the full indexing context. A project
+            // revision is deliberately excluded: a stale publication must reuse its validated source.
+            const key = createHash("sha256")
+                .update(canonicalJson({
+                version: 1,
+                identity: options.validatedIndex.identity,
+                metadata: source.metadata,
+                context,
+            }))
+                .digest("hex");
+            stage = new SqliteTraceStage(path.join(options.validatedIndex.directory, `${key}.sqlite`));
+            if (stage.checkpoint) {
+                await options.validatedIndex.verify();
+                await source.verifyRetained?.();
+                options.onStage?.("Reusing validated trace index; archive decoding and indexing skipped.");
+            }
+        }
+        if (!stage?.checkpoint) {
+            options.onStage?.("Decoding, validating and indexing trace facts in SQLite…");
+        }
         options.signal?.throwIfAborted();
         const importer = await store.indexTrace(async (index) => {
             const traceImporter = createRuntimeInstructionTraceImporter(source.metadata, context, {
                 index,
+                checkpoint: stage?.checkpoint,
                 onMergeProgress: options.onMergeProgress,
                 onSource: (sha256, profile) => {
                     const receipt = store.captureReceipt(sha256);
@@ -101,12 +117,22 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                     }
                 },
             });
-            await source.read((chunk) => {
-                options.signal?.throwIfAborted();
-                traceImporter.push(chunk);
-            });
+            if (!stage?.checkpoint) {
+                await source.read((chunk) => {
+                    options.signal?.throwIfAborted();
+                    traceImporter.push(chunk);
+                });
+                if (stage && options.validatedIndex && !source.recovery) {
+                    await options.validatedIndex.verify();
+                    options.signal?.throwIfAborted();
+                    stage.seal(traceImporter.checkpoint(source.recovery));
+                }
+            }
             return traceImporter;
-        });
+        }, undefined, stage);
+        if (stage && !source.recovery) {
+            options.onStage?.("Validated trace index saved; retries can reuse it until publication succeeds.");
+        }
         options.onStage?.("Validating destination revision before publication…");
         options.signal?.throwIfAborted();
         const result = store.transaction(() => {
@@ -116,7 +142,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
             options.signal?.throwIfAborted();
             let imported;
             try {
-                imported = importer.finish();
+                imported = importer.finish(source.recovery);
                 // Provisional records can still be buffered when finish returns. Flush them before
                 // provenance/revision publication so a SQL failure rolls back the entire source.
                 publication?.finish();
@@ -174,6 +200,16 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         }
         let checkpointBusy = false;
         const maintenanceWarnings = [];
+        if (stage) {
+            const completedStage = stage;
+            stage = undefined;
+            try {
+                completedStage.close(true);
+            }
+            catch (error) {
+                maintenanceWarnings.push(`Trace import committed. Validated index cleanup deferred: ${String(error)}`);
+            }
+        }
         // These actions follow COMMIT. A reader lock, disk error or cancellation callback must not
         // report a failed import after its durable counts and provenance have already been published.
         try {
@@ -184,19 +220,11 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         catch (error) {
             maintenanceWarnings.push(`Trace import committed. Storage maintenance deferred: ${String(error)}`);
         }
-        const afterStorage = store.storageSnapshot();
-        const newFacts = afterStorage.facts - beforeStorage.facts;
-        return {
+        const compact = {
             ...result,
-            storage: {
-                before: beforeStorage,
-                after: afterStorage,
-                newFacts,
-                reusedFacts: Math.max(0, afterStorage.observations - beforeStorage.observations - newFacts),
-                checkpointBusy,
-            },
             warnings: [
                 ...maintenanceWarnings,
+                ...(source.recovery ? result.report.warnings : []),
                 ...(retainedReport
                     ? [
                         "This capture has historical reduced-index facts. Its existing facts and counts were preserved; reimport did not restore omitted registers.",
@@ -204,11 +232,31 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                     : []),
             ],
         };
+        if (!beforeStorage) {
+            return compact;
+        }
+        const afterStorage = store.storageSnapshot();
+        const newFacts = afterStorage.facts - beforeStorage.facts;
+        return {
+            ...compact,
+            storage: {
+                before: beforeStorage,
+                after: afterStorage,
+                newFacts,
+                reusedFacts: Math.max(0, afterStorage.observations - beforeStorage.observations - newFacts),
+                checkpointBusy,
+            },
+        };
     }
     finally {
-        store.close();
+        try {
+            stage?.close();
+        }
+        finally {
+            store.close();
+        }
     }
-};
+}
 /** Publish a combined offline batch without expanding the destination runtime history.
  * @param {string} directory Existing SQL project root.
  * @param {AnalysisProjectRevision} expected Revision used to verify the import ROM/mapper.

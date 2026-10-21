@@ -1,4 +1,4 @@
-import type { AnalysisRecord, RuntimeEvidenceRecord } from "../model/project-types.js";
+import type { AnalysisRecord, RuntimeEvidenceRecord, RuntimeInstructionRecord } from "../model/project-types.js";
 /**
  * Stable ordering for explicit runtime arrays, independent of insertion order in the working store.
  * @param {RuntimeEvidenceRecord} left First semantic record.
@@ -30,6 +30,10 @@ export declare const runtimeColumns: (record: RuntimeEvidenceRecord) => {
     coverage: string | null;
     payload: string | null;
 };
+/** Validate all captured registers before selecting decoder fields, including otherwise unused ones.
+ * Bytes are detached; the validated state belongs to the caller's decoded payload.
+ */
+export declare const runtimeInstructionFields: (value: Record<string, unknown> | undefined) => Pick<RuntimeInstructionRecord, "bytes" | "state">;
 /**
  * Reconstruct a semantic fact without inventing absent optional fields. Stable-ID comparisons
  * depend on preserving the same payload across inserts and subsequent reads.

@@ -41,7 +41,6 @@ test("navigation projects a bounded window with exact architecture, saved bytes 
         { id: "ram", name: "RAM", kind: "memory", addressBits: 16 },
         { id: "rom.file", name: "ROM", kind: "file", addressBits: 24 },
       ],
-      shards: [],
     },
     shards: {
       analysis: [

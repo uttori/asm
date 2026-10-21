@@ -420,4 +420,4 @@ export class DebugSidecarServer {
     return write;
   }
 }
-import { validateCaptureRequest } from "./capture-v2.js";
+import { validateCaptureRequest } from "@uttori/asm-capture";

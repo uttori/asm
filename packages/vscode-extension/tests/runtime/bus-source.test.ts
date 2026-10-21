@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { createRuntimeBusCaptureSource } from "@uttori/asm-disassembler";
+import { sourceGit } from "@uttori/asm-disassembler/source-project";
 import { build } from "esbuild";
 
 import { test } from "../../../../tests/ava-helper.js";
@@ -26,7 +27,6 @@ import {
   loadAnalysisProject,
   openAnalysisProjectStore,
   publishAnalysisProject,
-  sourceGit,
   type RuntimeBusProjectImportResult,
   type AnalysisProject,
 } from "../../../disassembler/src/index.js";
@@ -140,9 +140,9 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   await sourceGit(root, ["commit", "-m", "Seed bus source fixture"]);
   const client = new SourceProcessClient(processFile);
   const importCapture = (capture: string) =>
-    client.run<RuntimeBusProjectImportResult>(
+    client.run(
       { action: "import", directory: root, capture },
-      { maxMemoryMiB: 256 },
+      { maxMemoryMiB: 256, readResult: readBusResult },
     );
   t.teardown(() => client.dispose());
   const result = await importCapture(file);
@@ -281,3 +281,29 @@ test("bus source rejects torn tails, replacement, wrong scope, byte budgets and 
     message: /requires a lossless.*bus capture/,
   });
 });
+
+/** This fixture exercises all bounded summary branches after checking the response envelope. */
+function isResult(item: unknown): item is RuntimeBusProjectImportResult {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    "summary" in item &&
+    typeof item.summary === "object" &&
+    item.summary !== null &&
+    "observedEvents" in item &&
+    typeof item.observedEvents === "number" &&
+    "sourceSha256" in item &&
+    typeof item.sourceSha256 === "string" &&
+    "added" in item &&
+    typeof item.added === "object" &&
+    item.added !== null &&
+    "runtime" in item.added &&
+    typeof item.added.runtime === "number"
+  );
+}
+function readBusResult(value: unknown): RuntimeBusProjectImportResult {
+  if (!isResult(value)) {
+    throw new Error("Invalid fixture bus response.");
+  }
+  return value;
+}

@@ -604,7 +604,7 @@ export class DebugAdapterSession {
               !capabilities.disassemble ? "disassembly" : undefined,
             ].filter((entry): entry is string => Boolean(entry))
           : ["all inspection"];
-        const supportedSteps = capabilities?.stepKinds ?? ["instruction", "over", "in", "out"];
+        const supportedSteps = capabilities?.stepKinds ?? [];
         if (capabilities?.step && !supportedSteps.includes("over")) {
           unavailable.push("step over");
         }
@@ -642,7 +642,7 @@ export class DebugAdapterSession {
     await this.#assertThreadCapability(threadId, "step");
     const thread = this.#threads.get(threadId)!;
     const capabilities = this.#architectureCapabilities(thread.architecture)!;
-    const supported = capabilities.stepKinds ?? ["instruction", "over", "in", "out"];
+    const supported = capabilities.stepKinds;
     if (!supported.includes(kind)) {
       throw new Error(`${processorLabel(thread.architecture)} does not support step ${kind}.`);
     }
@@ -661,9 +661,7 @@ export class DebugAdapterSession {
           addressSpace,
           maxBufferedEvents: trace.maxBufferedEvents,
           maxBatchEvents: trace.maxBatchEvents,
-          ...(trace.instructionDetails === undefined
-            ? {}
-            : { instructionDetails: trace.instructionDetails }),
+          instructionDetails: trace.instructionDetails,
         });
       }
     }
@@ -1556,4 +1554,4 @@ export class DapMessageParser {
     return messages;
   }
 }
-import { validateCaptureRequest } from "./capture-v2.js";
+import { validateCaptureRequest } from "@uttori/asm-capture";

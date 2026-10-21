@@ -1,0 +1,355 @@
+{
+  "version": 1,
+  "output": "packages/vscode-extension/out/live-bus-analysis-process.cjs",
+  "source": "packages/vscode-extension/src/runtime/live-bus-analysis-process.ts",
+  "target": "node24",
+  "notices": "packages/vscode-extension/out/live-bus-analysis-process.cjs.licenses.txt",
+  "sha256": "a2bb0621585236be380ccc1656d2f6eef22a65b510783d2bb88e42f2a229de12",
+  "noticesSha256": "1acbcf4aef8332a02d171faa7e11453f231988c5aa2fcd2ef5df177c8c8a3851",
+  "inputs": [
+    {
+      "file": "node_modules/@uttori/data-tools/dist/data-hash-crc32.js",
+      "sha256": "70a73128250150eeb27166a9697c9c23ccc212c2fba5dfad71a6638e6a9de1a8"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
+    },
+    {
+      "file": "packages/capture/src/capture-compression.ts",
+      "sha256": "774dfb1bb7d0b191e272b915da52996d5f0ea8e7e61f322c1bf70991a228d21e"
+    },
+    {
+      "file": "packages/capture/src/capture-context.ts",
+      "sha256": "655acdeb2f90eed72f3e0098ba68b4d662fe42ee9204fd554c18fb5cf2b9ffa1"
+    },
+    {
+      "file": "packages/capture/src/capture-file-reader.ts",
+      "sha256": "769393ad0cf23f56079982b5e25943599fcdcfea86940dc5b822f21bc0f760db"
+    },
+    {
+      "file": "packages/capture/src/capture-file.ts",
+      "sha256": "f44dd5b3f3cebba9fff34ee5ef85b5b99e8a751b30f404fc3bfc5a11bb920f68"
+    },
+    {
+      "file": "packages/capture/src/capture-nes-mapper.ts",
+      "sha256": "6e882617f8905c1190dac9d1fab65261e0a8deee784f3629c415525de0785bd9"
+    },
+    {
+      "file": "packages/capture/src/capture-nes-ppu.ts",
+      "sha256": "936de276e944e1fc11747740d8492a03e6660c9a69356428382b74d602a3214e"
+    },
+    {
+      "file": "packages/capture/src/capture-nes-timeline.ts",
+      "sha256": "e471b6fe14e33ce153c0053c3928ca7c6be3d974c19560ccf3741daa8394f8eb"
+    },
+    {
+      "file": "packages/capture/src/capture-v2.ts",
+      "sha256": "5a6e6daa7f9158de07221b24fa2bc64fe191488cf505311f1d0a3e7e3ee76722"
+    },
+    {
+      "file": "packages/capture/src/index.ts",
+      "sha256": "640fc3bb58f49e414ff74125cbfd52119a73d6c9971c740928b1ae906d7b93af"
+    },
+    {
+      "file": "packages/capture/src/instruction-detail.ts",
+      "sha256": "4dd2392de3e3d296453899618bdc2b3ead028689f22bf965a3e8952f0a8f507f"
+    },
+    {
+      "file": "packages/capture/src/target-payload.ts",
+      "sha256": "bf276336098b2e19b9699e88d338cda9b3822571070e27078a4653066787d0c8"
+    },
+    {
+      "file": "packages/core/src/canonical-json.ts",
+      "sha256": "5f18a6e6e37a7b2735307d6268e1a5b3056641ab67b692a183b5b248e717f684"
+    },
+    {
+      "file": "packages/disassembler/src/analysis/analysis-graph.ts",
+      "sha256": "09ede8f85f87e9950815ef3529b2074145ac289ac90eeb9a048cfb0fb7844236"
+    },
+    {
+      "file": "packages/disassembler/src/analysis/analysis-sources.ts",
+      "sha256": "dd565ca49ed534a34f7cf1e159c0d49e73991f1d5a9690ce06a01c953ce82af5"
+    },
+    {
+      "file": "packages/disassembler/src/analysis/coverage-map.ts",
+      "sha256": "adb7f9bbc1c4b359e1074d8bc036fbe9b2195f200d225322d62859b726f036ed"
+    },
+    {
+      "file": "packages/disassembler/src/analysis/instruction-annotations.ts",
+      "sha256": "3e6b221916b509f8489ddc3dfee13dc3aee9231e1e7752110600ab4521e09b58"
+    },
+    {
+      "file": "packages/disassembler/src/analysis/project-evidence.ts",
+      "sha256": "f235fbcb1760a6f15e422e07c0923611f8fa4060f61b1df2d5e921b821de87c3"
+    },
+    {
+      "file": "packages/disassembler/src/analysis/static-analysis.ts",
+      "sha256": "ea03d07005cffaf48cfde70c1433de06708c21f288f4eaf633cd31e7eb263a81"
+    },
+    {
+      "file": "packages/disassembler/src/index.ts",
+      "sha256": "c85b3024fc8f25d6d571e7f22b5febc24e630cd19d5c9ac45aed7cdc35812c35"
+    },
+    {
+      "file": "packages/disassembler/src/internal/capture-limits.ts",
+      "sha256": "698b84da66646c94f657e982f4931f1ab67efe0c2dda470da7340e57069d2ee1"
+    },
+    {
+      "file": "packages/disassembler/src/internal/durable-files.ts",
+      "sha256": "7bcca533f60a969f2330f20a974d978aa3bea595259b4bd55bb7a023e0d40e91"
+    },
+    {
+      "file": "packages/disassembler/src/internal/interval-index.ts",
+      "sha256": "363e4c99354bd559375ca73e8afcb1f077e9131fbf8b538835431887c4d075a5"
+    },
+    {
+      "file": "packages/disassembler/src/internal/record-id-set.ts",
+      "sha256": "3dfaa21aaafff4658c9b5ebcb1ada87838d3c3887ae764a973575a23b45b7502"
+    },
+    {
+      "file": "packages/disassembler/src/internal/source-inputs.ts",
+      "sha256": "55b393c4c0fad9f69911d9dcc9aac59d917581c3efdbc89c48195cf7099b9c20"
+    },
+    {
+      "file": "packages/disassembler/src/internal/trace-cache.ts",
+      "sha256": "1af6874c9b4bb42c2e416bc44f4218a72ab5114b1650701d2059c9277900e17a"
+    },
+    {
+      "file": "packages/disassembler/src/model/analysis-ownership.ts",
+      "sha256": "c108554886e61d0f80025494e4acb93f174c6f72cc38f87293720266f96ba0e7"
+    },
+    {
+      "file": "packages/disassembler/src/model/metadata-validation.ts",
+      "sha256": "62c8da98be98c70a49c4cd6d92872b7b4735c2496be87f523696f83a4ddc56d2"
+    },
+    {
+      "file": "packages/disassembler/src/model/project-asset-ids.ts",
+      "sha256": "382a5668f6be5c8c47503eca7dfe6dcde5fb67edab537d0a54d6d078c235a842"
+    },
+    {
+      "file": "packages/disassembler/src/model/project-labels.ts",
+      "sha256": "efe73a791ff6b1c267fd3ffda213f32dcafa27b4ac902c15325d656632b2ab81"
+    },
+    {
+      "file": "packages/disassembler/src/model/project-types.ts",
+      "sha256": "dc4cb0f31255376addd7e61fb13bde9fbf0a47e63aa76a58bf2bf949eaf15bf1"
+    },
+    {
+      "file": "packages/disassembler/src/model/project-validation.ts",
+      "sha256": "66e5e537157a56f9afaa15f767294f47bd2cd4aaf6be6744e951d7b0682f413d"
+    },
+    {
+      "file": "packages/disassembler/src/model/record-shape.ts",
+      "sha256": "576518fa1f86290786ded1c548b20eb87295739c32205102fdb7c1e382032ee3"
+    },
+    {
+      "file": "packages/disassembler/src/model/research-mapping.ts",
+      "sha256": "f23490c0a840b24a8eb519c231554515f15061a6bdeff73dea0d8c8a89530733"
+    },
+    {
+      "file": "packages/disassembler/src/model/rom-image.ts",
+      "sha256": "8d6208dc52113c366c6f2eaf8933c1f2508a39e5aa4f0d43b6fde95dd395badd"
+    },
+    {
+      "file": "packages/disassembler/src/model/runtime-bus-types.ts",
+      "sha256": "4dcaf5912b5c84a9540b83e44cc41c5bc1a339891628f922c95577ea8e9fe326"
+    },
+    {
+      "file": "packages/disassembler/src/model/runtime-graphics-fact.ts",
+      "sha256": "e3af6b23254ec1c62e770ceee8438bfa4ad4a3ca99456ad2a254b201838b1652"
+    },
+    {
+      "file": "packages/disassembler/src/model/runtime-ppu-effect.ts",
+      "sha256": "4f9bc9426c4fbc4b791ecec5dc7a0f021ab838a9d448c89a2c9893af3d13ec07"
+    },
+    {
+      "file": "packages/disassembler/src/model/target-state.ts",
+      "sha256": "0f2f159f3383458a403737a3d85d950c42165e6f559e21b3d400596c04d22a0a"
+    },
+    {
+      "file": "packages/disassembler/src/model/trace-detail.ts",
+      "sha256": "4c8770f2394e827ecce3fb5d8ff3106d6fa64187f8abdb2af948e5d5e88b198e"
+    },
+    {
+      "file": "packages/disassembler/src/project/capture-notes.ts",
+      "sha256": "fe5195469422fe90c52d6656664983f7b6d26fe0654d0fe78178b5084d20d054"
+    },
+    {
+      "file": "packages/disassembler/src/project/project-store.ts",
+      "sha256": "5a4a05c840a277983e840079556168839f580f7359907aecac2cb63b2f8e2909"
+    },
+    {
+      "file": "packages/disassembler/src/project/project-transaction.ts",
+      "sha256": "4d8a9ad88c2f00a2236fea69f28fe8f701bb689033c1599c4aafc08a940f6bcb"
+    },
+    {
+      "file": "packages/disassembler/src/project/read-session.ts",
+      "sha256": "78274b66d7ae1da1faa748f172009679fa4a351ea6f454513386312ed0d42a8c"
+    },
+    {
+      "file": "packages/disassembler/src/project/runtime-bus-project.ts",
+      "sha256": "37674827ef37d38d40c871a71e7fe79e1131c8566e6317e68b3b2e701f93c144"
+    },
+    {
+      "file": "packages/disassembler/src/project/runtime-trace-project.ts",
+      "sha256": "cc8cc3ae63c7533898a9c2c9eca859508eadfbb994280b59439fd49bf05e5ebe"
+    },
+    {
+      "file": "packages/disassembler/src/research-inputs/analysis.ts",
+      "sha256": "a6f23833d2c420b28245da4353e7354d19c09b0ad21c797a5bb1908cd86987ad"
+    },
+    {
+      "file": "packages/disassembler/src/research-inputs/inputs.ts",
+      "sha256": "216699d630f9db3c4a3227aa358a76ac18423467ff98bd22942228e8f8930a03"
+    },
+    {
+      "file": "packages/disassembler/src/research-inputs/symbols.ts",
+      "sha256": "ced8f4dc1f0002150b17f2e51534549ae6121da67a1dcc45a4038418aaae7a43"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/capture-bus-source.ts",
+      "sha256": "696b487b0c46a3c387b5dd34d477f603a6f8c5606f2707cf2bebfd22c686c9ac"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/capture-companion.ts",
+      "sha256": "2ac503604172cb265215d1f04ae399b71abdb0dccf9c40185c71955193e7926f"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/capture-instruction-source.ts",
+      "sha256": "0cfaf2728058cd2b8bad239e532e31a05a96d35383b856c6d7b31dc0fa85029d"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/capture-source.ts",
+      "sha256": "64fd198dbd836b0292ed6d0d06859d0a92bf70022a03b149b24f224cbc8a301d"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/runtime-bus-trace.ts",
+      "sha256": "ea11d6ec8a30a0de8512d05cea3b4b4e312e3bc47d1ee054675e265d4896eedf"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/runtime-evidence.ts",
+      "sha256": "88359732e3cd9b04b7e9f9cfad434eed80d1b08ed22609df91a1f2033d5423c1"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/runtime-graphics.ts",
+      "sha256": "fdf58000b088ac5c2ded7924da2a59bb0ee7742089263e579aca672c635b19d2"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/runtime-ppu.ts",
+      "sha256": "203df272004d3aaec92152e0a891ccb38a39b8ecf23845d39df83444722af4ab"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/runtime-trace-file.ts",
+      "sha256": "0616ecab2a70036122e6625c82a31920dcb06406825f6385fcf1ea02111b61ed"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/runtime-trace.ts",
+      "sha256": "47806b593562c0b3126af739ac34d0939ef4578647cf54731418c0b0703ce341"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/runtime-transfer.ts",
+      "sha256": "c6b7f7b6f014febed8d1d88d8602cb85dfc6f4aa8fca35b84c5dfb2378e057e9"
+    },
+    {
+      "file": "packages/disassembler/src/runtime/trace-chunk-formatter.ts",
+      "sha256": "3f06b8389fad00e46b03c9192c40e6868de9925e95b7e9b2a276f6d02105cc59"
+    },
+    {
+      "file": "packages/disassembler/src/source/source-export.ts",
+      "sha256": "7d9332b5074f3cf47b83f5ddacc305876ef398b7b2ad87369b85203a1611ad9b"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-annotation-query.ts",
+      "sha256": "e47eb37066a76909280b3eb2a0c11f76b9cb1eb63b0eda40c9093777f0168508"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-coverage-query.ts",
+      "sha256": "0a1c918983cb76888821199916eda0dbb0baf48f6b15d4f84e4a07bc267a4d5a"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-graph-query.ts",
+      "sha256": "013cb9250c985d02fa48c6560b8eef16583ea3f7d636d9197c21059d6e59390f"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-graphics-query.ts",
+      "sha256": "4148fd9f79cda1c7a7e0582037dbecae43a0a7456e0ecd3951a9d642274dc0ad"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-payload.ts",
+      "sha256": "92d1f6c722c6cbdc0e6c8d478c245aa03939bcc5f13f52e2436d7cb3d5a50751"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-query-cache.ts",
+      "sha256": "8bc23b3eed865539bd4c19dbc6d41e229691c4faf8a1d414021d766f6d48be91"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-records.ts",
+      "sha256": "8d4b140abbf048b3ec702c399deaac0e487063af9f53d954898030311d0470e4"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-research-inputs.ts",
+      "sha256": "3f029f14384ab85adc42f7f1835c1883344a611bc4e956917fc1d5f67155f94e"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-runtime-batch.ts",
+      "sha256": "ec26e174fc919bf9877644086fb568ab531aa28ffb1e003ae1d20381ad3d4135"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-runtime-facts.ts",
+      "sha256": "0d8195434fd21111addac98b7fb5d9d737eaa413931821b102a2794ebebd7d7f"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-runtime-history.ts",
+      "sha256": "25773d772e9adb03b90b80c7af1dad08a0ec57cfdb9fd5ed384085ae2ee5da8a"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-runtime-payload.ts",
+      "sha256": "99e43527f2b764d0763ea8cadb1f446e76e825cceeac5e0ab21478b80bedee0e"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-runtime-storage.ts",
+      "sha256": "4c454f1a05d1f9461df3fdaae0440668c2284893346ae3c379ce3e8e85c399c8"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-runtime-summary.ts",
+      "sha256": "d831ae577413f3a8789a2ad41a55aba72fa4bbfc68422932c1b0a4242c99ff80"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-source-export.ts",
+      "sha256": "5e24644ed178178fd163123a83986e08d6f3b6d032a27d78d0114a7997b894fe"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-source-query.ts",
+      "sha256": "557782e813b3179830812ed20cc22be8162d6a370663a37c23c3ec5c1444c8d7"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-storage-policy.ts",
+      "sha256": "ab9277715c2cda849b9bf2680d698194a6dff79f7e485b2e2e043c7dc62552c9"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-store.ts",
+      "sha256": "39a4d3e64ebb3c23789ed49a9f3b1083807b4f45d394b12cb8dd2c13862d704d"
+    },
+    {
+      "file": "packages/disassembler/src/storage/sqlite-trace-stage.ts",
+      "sha256": "704636b50287685be2f13dfde5a2d55d67eb1d33eedd1d61bb4814ab263b2a4c"
+    },
+    {
+      "file": "packages/vscode-extension/esbuild.mjs",
+      "sha256": "b640ee4a290b4f884ff588b67ea2b3d7d6ba205686970f97ec9dbca3b54763fe"
+    },
+    {
+      "file": "packages/vscode-extension/src/runtime/live-bus-analysis-process.ts",
+      "sha256": "6144e4a66fd8a62b95b1fbbcc29964722d17741541bcd312b782c421e6a2fb14"
+    },
+    {
+      "file": "scripts/bundle-notices.mjs",
+      "sha256": "9ca1813012e4fd363f71f6ea59679358a2df035e8147a545c1d04c7f7365b1f1"
+    },
+    {
+      "file": "scripts/runtime-bundles.mjs",
+      "sha256": "1b47a5860356045fdbed9b4a92591094f0d4e6c88e5ad9a7c0e5f1b70f703132"
+    }
+  ]
+}

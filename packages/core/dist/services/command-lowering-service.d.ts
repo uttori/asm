@@ -1,23 +1,74 @@
 import type { ArchitectureDefinition } from "../architecture-registry.js";
-import type { LoweredInstruction } from "../architecture-types.js";
-import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
+import type { DirectiveRegistry } from "../directives/registry.js";
+import type { CaptureNode, ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
+import type { CommandOperation } from "../ir/command-operation.js";
+import type { DeclarationNode } from "../ir/declaration-node.js";
 import type { NormalizedCommand } from "../ir/normalized-command.js";
+import type { ContributionSyntax } from "../ir/source-syntax.js";
+import { type LabelStatement, type AssignmentStatement, type NumericDataStatement } from "../ir/statement-node.js";
 import type { ProgramModel } from "./program-model-builder.js";
-export type LoweredDirective = {
-    kind: "directive";
-    keyword: string;
-    words: readonly string[];
-    source: NormalizedCommand["source"];
-    command?: NormalizedCommand;
-};
-export type LoweredCommand = LoweredDirective | LoweredInstruction;
-export type LoweredPassthroughCommand = {
-    kind: "command";
+/** Statement payloads are immutable across stages; execution binds the current scope and values. */
+export type LoweredStatement = {
     command: NormalizedCommand;
     source: NormalizedCommand["source"];
-    passthroughReason: PassthroughReason;
+} & ({
+    kind: "label";
+    statement: LabelStatement;
+} | {
+    kind: "assignment";
+    statement: AssignmentStatement;
+} | {
+    kind: "numericData";
+    statement: NumericDataStatement;
+});
+/** Plugin syntax carries data only; the registry reconstructs the session binding. */
+export type LoweredPluginSyntax = {
+    kind: "pluginSyntax";
+    statement: ContributionSyntax;
+    command: NormalizedCommand;
+    source: NormalizedCommand["source"];
 };
-export type PassthroughReason = "characterMapping" | "commentOrEmpty" | "dataDirective" | "defineCommand" | "functionDefinition" | "labelDefinition" | "macroDefinitionOrInvoke" | "bareMacroCandidate" | "macroPlaceholder" | "registeredPreprocessDirective" | "staticAssignment" | "structCommand" | "unknown";
+/** No expanded strings or legacy words participate in typed instruction execution. */
+export type LoweredTypedInstruction = {
+    kind: "typedInstruction";
+    architecture: string;
+    grammarVersion: string;
+    instruction: import("../ir/resolved-instruction.js").ParsedInstruction;
+    command: NormalizedCommand;
+    source: NormalizedCommand["source"];
+    resolved?: import("../ir/resolved-instruction.js").ResolvedInstruction;
+    /** Rebuilt on every lowering; never shared with the immutable syntax cache. */
+    prepared?: import("../ir/resolved-instruction.js").ResolvedInstruction;
+};
+export type LoweredCommand = LoweredPluginSyntax | LoweredTypedInstruction;
+/** Ordered declarations carry parsed payloads, never a generic dispatch request. */
+export type LoweredOperation = {
+    kind: "operation";
+    operation: CommandOperation;
+    command: NormalizedCommand;
+    source: NormalizedCommand["source"];
+};
+export type LoweredDeclaration = {
+    kind: "declaration";
+    declaration: DeclarationNode;
+    command: NormalizedCommand;
+    source: NormalizedCommand["source"];
+};
+/** Deferred macro placeholders bind generated source at their selected loop occurrence. */
+export type LoweredSourceTemplate = {
+    kind: "sourceTemplate";
+    command: NormalizedCommand;
+    source: NormalizedCommand["source"];
+};
+/** A bare call is resolved against declarations in order, before selecting an instruction. */
+export type LoweredBareInvocation = {
+    kind: "bareInvocation";
+    invocation: Extract<CommandOperation, {
+        kind: "macroCall";
+    }>;
+    command: NormalizedCommand;
+    source: NormalizedCommand["source"];
+};
 export type LoweredLoopNode = Omit<LoopNode, "type" | "header" | "commands"> & {
     kind: "loop";
     loopType: LoopNode["type"];
@@ -33,7 +84,12 @@ export type LoweredConditionalNode = Omit<ConditionalBranchNode, "type" | "heade
     header?: NormalizedCommand;
     branches: LoweredConditionalBranch[];
 };
-export type LoweredExecutableNode = LoweredCommand | LoweredPassthroughCommand | LoweredLoopNode | LoweredConditionalNode;
+/** A capture's declaration runtime owns its body; nested control nodes keep their ordered bindings. */
+export type LoweredCaptureNode = Omit<CaptureNode, "type" | "commands"> & {
+    kind: "capture";
+    commands: ExecutableNode[];
+};
+export type LoweredExecutableNode = LoweredCaptureNode | LoweredCommand | LoweredStatement | LoweredOperation | LoweredDeclaration | LoweredSourceTemplate | LoweredBareInvocation | LoweredLoopNode | LoweredConditionalNode;
 export type LoweredProgram = {
     sourceFile: string;
     startLine: number;
@@ -42,17 +98,19 @@ export type LoweredProgram = {
 export type CommandLoweringHost = {
     syntaxProfile: {
         readonly bareMacroInvocations?: boolean;
+        readonly leadingDotLabels?: boolean;
     };
     directiveRegistry: {
         has(keyword: string): boolean;
-        getPhase(keyword: string): "preprocess" | "lowered" | undefined;
+        lookup?: DirectiveRegistry["lookup"];
+        parseSyntax?(command: NormalizedCommand): ContributionSyntax | undefined;
     };
     resolveActiveArchitecture(): {
         name: string;
         definition?: ArchitectureDefinition;
     };
-    classifyOperandForActiveArchitecture(operand: string): import("../architecture-types.js").LoweredOperand;
     canonicalizeDirectiveKeyword(keyword: string): string;
+    prepareTypedInstruction?(node: LoweredTypedInstruction): void;
 };
 /**
  * Lowers stable front-end commands into directive or instruction work units used
@@ -60,7 +118,15 @@ export type CommandLoweringHost = {
  */
 export declare class CommandLoweringService {
     host: CommandLoweringHost;
+    /** Command snapshots are immutable; weak ownership releases included/reparsed programs. */
+    private readonly statements;
+    /** Pure syntax is cached by command and selected grammar, never by resolved values or processor state. */
+    private readonly instructionSyntax;
     constructor(host: CommandLoweringHost);
+    /** Select a native statement without bypassing directive ownership or macro-template syntax. */
+    lowerStatement(command: NormalizedCommand): LoweredStatement | undefined;
+    /** Parse once per command/grammar for analysis and execution; never prepare or evaluate operands here. */
+    parseInstruction(command: NormalizedCommand): import("../ir/resolved-instruction.js").ParsedInstruction | undefined;
     /**
      * Lowers a normalized command into the execution-layer representation.
      * @param {NormalizedCommand} command The normalized command node.
@@ -75,26 +141,12 @@ export declare class CommandLoweringService {
      * @param {ExecutableNode} node The node to lower.
      * @returns {LoweredExecutableNode} The lowered node.
      */
-    lowerExecutableNode(node: ExecutableNode): LoweredExecutableNode;
+    lowerExecutableNode(node: ExecutableNode, scope?: "struct"): LoweredExecutableNode;
     /**
      * Lowers a full program model into a stage-owned execution program.
      * @param {ProgramModel} program The program to lower.
      * @returns {LoweredProgram} The lowered program.
      */
     lowerProgram(program: ProgramModel): LoweredProgram;
-    /**
-     * Commands that still require legacy preprocess / control handlers must remain
-     * as command snapshots rather than direct lowered directives. Dispatch clones
-     * these snapshots before running the mutable legacy preprocessing pipeline.
-     * @param {NormalizedCommand} command The command to inspect.
-     * @returns {boolean} True when the command should stay in passthrough form.
-     */
-    shouldPreserveCommand(command: NormalizedCommand): boolean;
-    /**
-     * Names the ordered preprocessing requirement that prevents direct lowering.
-     * @param {NormalizedCommand} command The command to inspect.
-     * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
-     */
-    getPassthroughReason(command: NormalizedCommand): PassthroughReason | undefined;
 }
 //# sourceMappingURL=command-lowering-service.d.ts.map

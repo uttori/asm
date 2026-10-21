@@ -8,9 +8,9 @@ import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
   publishAnalysisProject,
-  sourceGit,
   type AnalysisProject,
 } from "@uttori/asm-disassembler";
+import { sourceGit } from "@uttori/asm-disassembler/source-project";
 
 import { test } from "../../../../tests/ava-helper.js";
 

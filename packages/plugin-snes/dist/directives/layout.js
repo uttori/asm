@@ -1,4 +1,6 @@
 import { applyMapperSelection, assertMapperAvailable } from "../asar/compatibility.js";
+import { snesSessionStateKey } from "../session-state.js";
+import { parseSnesDirective } from "./syntax-parser.js";
 /**
  * Mapper directive keywords registered on the SNES target.
  * `fullsa1rom` is Asar's name for what this assembler stores as `bigsa1rom`.
@@ -22,32 +24,11 @@ export const MAPPER_KEYWORDS = [
  * @param {readonly string[]} words Tokenized line, keyword first.
  */
 export function handleMapper(state, words) {
-    assertMapperAvailable(state.inSpcBlock);
-    const keyword = words[0].toLowerCase();
-    if (keyword !== "sa1rom") {
-        applyMapperSelection(state, keyword === "fullsa1rom" ? "bigsa1rom" : keyword);
-        return;
+    const node = parseSnesDirective("snes.directive.mapper", { words });
+    if (node.operation !== "mapper") {
+        throw new Error("Unexpected SNES directive operation.");
     }
-    if (words.length > 1) {
-        const parts = words[1].split(",");
-        if (parts.length !== 4) {
-            throw new Error("Invalid SA1ROM mapper specification. Expected 4 comma-separated values.");
-        }
-        state.sa1Banks = [];
-        // Slots 2, 3, 6, 7 stay empty (`undefined` → treated as unmapped).
-        state.sa1Banks[0] = parseInt(parts[0], 10) << 20;
-        state.sa1Banks[1] = parseInt(parts[1], 10) << 20;
-        state.sa1Banks[4] = parseInt(parts[2], 10) << 20;
-        state.sa1Banks[5] = parseInt(parts[3], 10) << 20;
-    }
-    else {
-        state.sa1Banks = [];
-        state.sa1Banks[0] = 0 << 20;
-        state.sa1Banks[1] = 1 << 20;
-        state.sa1Banks[4] = 2 << 20;
-        state.sa1Banks[5] = 3 << 20;
-    }
-    applyMapperSelection(state, "sa1rom");
+    applyMapperPayload(state, node);
 }
 /**
  * `check title` enables `readN` without a default.
@@ -57,26 +38,7 @@ export function handleMapper(state, words) {
  * @param {readonly string[]} words Tokenized line.
  */
 export function handleCheck(state, words) {
-    if (words.length >= 2 && words[1].toLowerCase() === "title") {
-        state.readFunctionsEnabled = true;
-        return;
-    }
-    if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
-        throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
-    }
-    const mode = words[2].toLowerCase();
-    if (mode === "off") {
-        state.bankCrossMode = "off";
-    }
-    else if (mode === "half") {
-        state.bankCrossMode = "half";
-    }
-    else if (mode === "full" || mode === "on") {
-        state.bankCrossMode = "full";
-    }
-    else {
-        throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
-    }
+    applyCheckPayload(state, parseCheck(words));
 }
 /**
  * `optimize dp none|ram|always`. Unknown subcommands are ignored (Asar no-op).
@@ -86,33 +48,112 @@ export function handleCheck(state, words) {
  * @param {readonly string[]} words Tokenized line.
  */
 export function handleOptimize(state, words) {
-    if (words.length < 3 || words[1].toLowerCase() !== "dp") {
-        return;
+    const node = parseSnesDirective("snes.directive.optimize", { words });
+    if (node.operation !== "optimize") {
+        throw new Error("Unexpected SNES directive operation.");
     }
-    const mode = words[2].toLowerCase();
-    if (mode === "none") {
-        state.optimizeDirectPage = false;
-    }
-    else if (mode === "ram" || mode === "always") {
-        state.optimizeDirectPage = true;
+    if (node.enabled !== undefined) {
+        state.optimizeDirectPage = node.enabled;
     }
 }
 /**
  * `startpos <addr>` records the SPC execute address used when `endspcblock`
  * has no `execute` argument. Illegal outside an open `spcblock`.
  *
- * @param {Assembler} session Host assembler (for expression eval).
+ * @param {PluginSessionCapabilities} session Host assembler (for expression eval).
  * @param {SnesSessionState} state Mutable SNES session.
  * @param {readonly string[]} words Tokenized line.
  */
 export function handleStartpos(session, state, words) {
+    const node = parseSnesDirective("snes.directive.startpos", { words });
+    if (node.operation !== "startpos") {
+        throw new Error("Unexpected SNES directive operation.");
+    }
+    applyStartposPayload(session, state, node);
+}
+/** CHECK grammar is independent of session state; errors are reported only when selected. */
+export const checkDirectiveSyntax = {
+    version: "1",
+    parse: ({ words }) => parseCheck(words),
+    validate: isCheckPayload,
+    bind({ state }) {
+        return {
+            execute(payload) {
+                if (!isCheckPayload(payload)) {
+                    throw new Error("Invalid CHECK syntax payload.");
+                }
+                const active = state.get(snesSessionStateKey);
+                applyCheckPayload(active, payload);
+            },
+        };
+    },
+};
+/** Validate the exact portable schema again after a worker/cache round trip. */
+function isCheckPayload(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        return false;
+    }
+    if (!("operation" in payload)) {
+        return false;
+    }
+    if (payload.operation === "title") {
+        return Object.keys(payload).length === 1;
+    }
+    return (payload.operation === "bankcross" &&
+        "mode" in payload &&
+        typeof payload.mode === "string" &&
+        ["off", "half", "full"].includes(payload.mode) &&
+        Object.keys(payload).length === 2);
+}
+/** Apply mapped bank slots after checking that mapper changes are legal in this stage. */
+export function applyMapperPayload(state, node) {
+    assertMapperAvailable(state.inSpcBlock);
+    if (node.error) {
+        throw new Error(node.error);
+    }
+    if (node.banks) {
+        state.sa1Banks = [];
+        // SA-1 mapper slots 2, 3, 6 and 7 remain unmapped.
+        for (const [index, slot] of [0, 1, 4, 5].entries()) {
+            state.sa1Banks[slot] = node.banks[index];
+        }
+    }
+    applyMapperSelection(state, node.mapper);
+}
+/** State errors precede operand errors, matching SPC block validation during source execution. */
+export function applyStartposPayload(session, state, node) {
     if (!state.inSpcBlock || !state.spcBlock) {
         throw new Error("startpos used without an active spcblock.");
     }
-    if (words.length !== 2) {
-        throw new Error("startpos requires exactly one parameter.");
+    if (node.error) {
+        throw new Error(node.error);
     }
-    state.spcBlock.executeAddress =
-        session.operandResolver.getnum(session.resolvedefines(words[1])) & 0xffff;
+    if (!node.expression) {
+        throw new Error("Missing startpos expression.");
+    }
+    state.spcBlock.executeAddress = session.operandResolver.getnum(node.expression) & 0xffff;
+}
+/** CHECK shares one grammar across direct callers, source parsing and detached worker payloads. */
+function parseCheck(words) {
+    if (words.length >= 2 && words[1].toLowerCase() === "title") {
+        return { operation: "title" };
+    }
+    if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
+        throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
+    }
+    const mode = words[2].toLowerCase();
+    if (mode !== "off" && mode !== "half" && mode !== "full" && mode !== "on") {
+        throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+    }
+    return { operation: "bankcross", mode: mode === "on" ? "full" : mode };
+}
+/** Apply the already validated title or bank-cross policy. */
+function applyCheckPayload(state, payload) {
+    if (payload.operation === "title") {
+        state.readFunctionsEnabled = true;
+    }
+    else {
+        state.bankCrossMode = payload.mode;
+    }
 }
 //# sourceMappingURL=layout.js.map

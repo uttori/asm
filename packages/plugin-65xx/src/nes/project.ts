@@ -12,10 +12,10 @@ import {
   type AnalysisRecord,
   type IntervalAnnotation,
   type ResearchSnapshot,
-  lostCodeRanges,
   type StaticAnalysisSeed,
   type AnalysisControlFlowNodeRecord,
 } from "@uttori/asm-disassembler";
+import { lostCodeRanges } from "@uttori/asm-disassembler/source-project";
 
 import { analyzeNes, decodeNesInstruction, type NesAnalysisState } from "./analysis.js";
 import { NesCartridge } from "./cartridge.js";

@@ -40,6 +40,45 @@ const node = (id: string, address: number, fileOffset: number): AnalysisControlF
   evidencePath: [],
   evidence: [],
 });
+
+test("known-code ranges preserve aliases and refresh sizes without rebuilding current export data", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-code-ranges-"));
+  const input = project();
+  publishAnalysisProject(directory, {
+    ...input,
+    shards: {
+      ...input.shards,
+      analysis: [
+        node("short", 0x100, 0),
+        { ...node("wide", 0x200, 0), size: 3 },
+        node("other", 0x300, 900),
+      ],
+    },
+  });
+  const store = openAnalysisProjectStore(directory);
+  const db = new DatabaseSync(store.file);
+  t.teardown(() => {
+    db.close();
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  store.prepareAnnotationQueries();
+  t.deepEqual(store.codeRanges(), [
+    { start: 0, end: 3 },
+    { start: 900, end: 901 },
+  ]);
+  // An older warm database needs only the additive covering index, not another payload decode.
+  db.exec(
+    "DROP INDEX query_instruction_ranges; CREATE TRIGGER preserve_projection BEFORE UPDATE ON analysis BEGIN SELECT RAISE(ABORT,'unexpected projection rebuild'); END",
+  );
+  t.notThrows(() => store.prepareAnnotationQueries());
+  db.exec("DROP TRIGGER preserve_projection");
+  store.transaction(() =>
+    store.replaceTables({ analysis: [{ ...node("wide", 0x200, 8), size: 2 }] }),
+  );
+  store.prepareAnnotationQueries();
+  t.deepEqual(store.codeRanges(), [{ start: 8, end: 10 }]);
+});
 const project = (): AnalysisProject => ({
   manifest: {
     format: "uttori-asm-analysis",
@@ -756,5 +795,126 @@ test("compact execution summaries do not read detail payloads and preserve mirro
     readInstructionExecutionSummary(sql, input.manifest, [
       { addressSpace: "cpu", start: 2, end: 1 },
     ]),
+  );
+});
+
+test("lossless export cache survives unrelated edits and invalidates on SQL writes and rollback", (t) => {
+  const { store } = fixture(t);
+  store.prepareAnnotationQueries();
+  const read = () => store.transaction(() => [...store.instructionExportGroups()], false);
+  const expected = read();
+  const revision = store.revision();
+  store.prepareSourceExport();
+  t.deepEqual(read(), expected);
+  t.is(store.revision(), revision);
+  const sql = new DatabaseSync(store.file);
+  t.teardown(() => sql.close());
+  const ready = () =>
+    Boolean(sql.prepare("SELECT 1 FROM query_cache WHERE name='source_export'").get());
+  t.true(ready());
+  sql.prepare("UPDATE comments SET payload=payload").run();
+  t.true(ready(), "comments are read freshly outside the instruction cache");
+  sql.exec("BEGIN; UPDATE analysis SET payload=payload WHERE id='node'; ROLLBACK");
+  t.true(ready());
+  t.deepEqual(read(), expected);
+  sql
+    .prepare("UPDATE analysis SET payload=? WHERE id='node'")
+    .run(JSON.stringify(node("node", 0x100, 12)));
+  t.false(ready());
+  t.throws(read, { message: /fresh query snapshot/ });
+  store.prepareSourceExport();
+  t.true(read().some((group) => group[0].fileOffset === 12));
+  sql.prepare("DELETE FROM analysis WHERE id='node'").run();
+  t.false(ready());
+  store.prepareSourceExport();
+  t.false(
+    read()
+      .flat()
+      .some((entry) => entry.id === "node"),
+  );
+  sql.exec("UPDATE evidence SET payload=payload");
+  // The fixture has no evidence rows; an actual insert must still invalidate the cache.
+  sql
+    .prepare("INSERT INTO evidence(id,payload) VALUES(?,?)")
+    .run(
+      "extra",
+      JSON.stringify({ id: "extra", source: "runtime", sourceId: "test", confidence: "certain" }),
+    );
+  t.false(ready());
+});
+
+test("export cache publication loses to a concurrent dependency edit and cleans its temporary rows", (t) => {
+  const { store } = fixture(t);
+  const writer = new DatabaseSync(store.file);
+  t.teardown(() => writer.close());
+  const original = store.instructionExportGroups.bind(store);
+  store.instructionExportGroups = function* () {
+    let changed = false;
+    for (const group of original()) {
+      if (!changed) {
+        writer.prepare("UPDATE analysis SET payload=payload WHERE id='node'").run();
+        changed = true;
+      }
+      yield group;
+    }
+  };
+  store.prepareSourceExport();
+  t.falsy(writer.prepare("SELECT 1 FROM query_cache WHERE name='source_export'").get());
+  store.instructionExportGroups = original;
+  store.prepareSourceExport();
+  t.truthy(writer.prepare("SELECT 1 FROM query_cache WHERE name='source_export'").get());
+  const groups = store.transaction(() => [...store.instructionExportGroups()], false);
+  // Returned records never share an evidence array, even when their dictionary entry is shared.
+  t.not(groups[0][0].evidence, groups[0][1].evidence);
+});
+
+test("cached export rows still reject malformed projections and unrecognized provenance", (t) => {
+  const { store } = fixture(t);
+  store.prepareSourceExport();
+  const sql = new DatabaseSync(store.file);
+  t.teardown(() => sql.close());
+  const read = () => store.transaction(() => [...store.instructionExportGroups()], false);
+  sql.exec("UPDATE query_source_export_rows SET payload='null'");
+  t.throws(read, { message: /Invalid cached export instruction/ });
+  sql.exec("DELETE FROM query_cache WHERE name='source_export'");
+  store.prepareSourceExport();
+  sql
+    .prepare("UPDATE query_source_export_evidence SET payload=?")
+    .run(JSON.stringify(["missing-evidence"]));
+  t.throws(read, { message: /missing provenance/ });
+});
+
+test("cold export renders and stages one cursor pass and never publishes an incomplete stream", (t) => {
+  const { store } = fixture(t);
+  const original = store.instructionExportGroups.bind(store);
+  let passes = 0;
+  store.instructionExportGroups = function* () {
+    passes++;
+    yield* original();
+  };
+  const rendered = store.sourceExportSnapshot((groups) => {
+    t.is(passes, 0, "cold rendering has no up-front instruction scan");
+    return [...groups];
+  });
+  t.is(passes, 1);
+  passes = 0;
+  t.deepEqual(
+    store.sourceExportSnapshot((groups) => [...groups]),
+    rendered,
+  );
+  t.is(passes, 1);
+  const sql = new DatabaseSync(store.file);
+  t.teardown(() => sql.close());
+  sql.exec("DELETE FROM query_cache WHERE name='source_export'");
+  t.throws(() => store.sourceExportSnapshot((groups) => groups[Symbol.iterator]().next()), {
+    message: /complete instruction cursor/,
+  });
+  t.not(
+    sql.prepare("SELECT signature FROM query_cache WHERE name='source_export'").get()?.signature,
+    "1",
+  );
+  t.deepEqual(
+    store.sourceExportSnapshot((groups) => [...groups]),
+    rendered,
   );
 });

@@ -4,14 +4,16 @@ import os from "node:os";
 import path from "node:path";
 
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import {
+  ANALYSIS_PROJECT_SQLITE_FILE,
+  SqliteAnalysisStore,
+} from "@uttori/asm-disassembler/storage";
 
 import { test } from "../../../../tests/ava-helper.js";
 import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
-  ANALYSIS_PROJECT_SQLITE_FILE,
   RomImage,
-  SqliteAnalysisStore,
   loadAnalysisProject,
   loadAnalysisProjectView,
   publishAnalysisProject,
@@ -424,6 +426,13 @@ test("metadata replacement preserves identical and reordered records without inv
       text: "Long comment. ".repeat(100),
       evidence: ["manual-1"],
     },
+    {
+      id: "large-text",
+      addressSpace: "rom.file",
+      address: 2,
+      text: "Large metadata. ".repeat(10_000),
+      evidence: ["manual-1"],
+    },
   ];
   publishAnalysisProject(directory, { ...project, shards: { ...project.shards, comments } });
   const store = openAnalysisProjectStore(directory);
@@ -433,6 +442,11 @@ test("metadata replacement preserves identical and reordered records without inv
     store.close();
     fs.rmSync(directory, { recursive: true, force: true });
   });
+  // Legacy uncompressed metadata must retain the same exact comparison behavior as small TEXT
+  // and compressed BLOBs while the replacement cursor streams mixed payload sizes.
+  database
+    .prepare("UPDATE comments SET payload=? WHERE id='large-text'")
+    .run(JSON.stringify(comments[2]));
   const before = database.prepare("SELECT id,payload FROM comments ORDER BY id").all();
   t.is(typeof before.find((row) => row.id === "short")!.payload, "string");
   t.true(before.find((row) => row.id === "compressed")!.payload instanceof Uint8Array);
@@ -453,6 +467,31 @@ test("metadata replacement preserves identical and reordered records without inv
   database.exec("DROP TRIGGER protect_unchanged");
   store.transaction(() => store.replaceTables({ comments: [{ ...comments[0], text: "Changed" }] }));
   t.deepEqual(store.loadTable("comments"), [{ ...comments[0], text: "Changed" }]);
+});
+
+test("metadata replacement rolls back duplicate IDs across bounded batches", (t) => {
+  const directory = temporary();
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  const store = openAnalysisProjectStore(directory);
+  t.teardown(() => {
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const comments = Array.from({ length: 257 }, (_, index) => ({
+    id: `note:${index}`,
+    addressSpace: "rom.file",
+    address: index,
+    text: `Note ${index}`,
+    evidence: ["manual-1"],
+  }));
+  store.transaction(() => store.replaceTables({ comments }));
+  const before = store.loadTable("comments");
+  t.throws(() =>
+    store.transaction(() => store.replaceTables({ comments: [...comments, comments[0]] })),
+  );
+  t.deepEqual(store.loadTable("comments"), before);
+  store.transaction(() => store.replaceTables({ comments: comments.slice(0, 129) }));
+  t.is(store.loadTable("comments").length, 129);
 });
 
 test("sqlite preserves the original failure when SQLite already rolled back the transaction", (t) => {

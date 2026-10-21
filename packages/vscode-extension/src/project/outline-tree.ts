@@ -1,4 +1,4 @@
-import type { ProjectOutlineKind, ProjectOutlineNode } from "@uttori/asm-core";
+import type { ProjectOutlineKind, ProjectOutlineNode } from "@uttori/asm-core/tooling";
 /**
  * Native TreeView of the workspace include graph and per-file outline.
  * @see https://code.visualstudio.com/api/extension-guides/tree-view

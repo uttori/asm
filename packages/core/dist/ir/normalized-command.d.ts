@@ -1,11 +1,23 @@
 import { type SourceSpan } from "../source-location.js";
+import type { SourceOrigin } from "../source-provenance.js";
 import { type ParsedAssetCall } from "./asset-call.js";
+import { type CommandOperation } from "./command-operation.js";
+import { type DeclarationNode } from "./declaration-node.js";
 import { type ExpressionNode, type RangeExpressionNode } from "./expression-node.js";
+import type { SourceSyntax } from "./source-syntax.js";
 export type CommandKind = "unknown" | "directive" | "opcodeCandidate" | "functionDefinition" | "labelDefinition" | "staticAssignment" | "characterMapping" | "macroDefinitionOrInvoke" | "defineCommand" | "structCommand" | "commentOrEmpty";
 export type CommandProvenance = {
+    /** Generated token runs and all physical contributors; borrowed immutable by execution clones. */
+    readonly fragment?: import("./source-fragment.js").SourceFragment;
+    /** Invocation/include ownership attached to an execution occurrence, never a cached program. */
+    readonly origin?: SourceOrigin;
     readonly file: string;
     readonly line: number;
     readonly raw: string;
+    /** Exact physical source extent before profile rewriting, comments, or continuations. */
+    readonly physical?: {
+        readonly text: string;
+    };
     readonly normalized: string;
     readonly span: SourceSpan;
     readonly normalizedSpan: SourceSpan;
@@ -20,6 +32,8 @@ export type NormalizedCommand = {
     labelName?: string;
     assignmentTarget?: string;
     parsed: CommandSemantics;
+    /** Pure source AST; semantic rewrites invalidate it and re-enter the parser boundary. */
+    syntax?: SourceSyntax;
 };
 /**
  * Creates immutable provenance metadata for a normalized command.
@@ -76,6 +90,11 @@ export type ParsedOpcodeOperands = {
     operands: string[];
 };
 export type CommandSemantics = {
+    operation?: CommandOperation;
+    bareInvocation?: Extract<CommandOperation, {
+        kind: "macroCall";
+    }>;
+    declaration?: DeclarationNode;
     includeAsset?: ParsedAssetCall;
     condition?: ParsedCondition;
     assignment?: ParsedAssignment;
@@ -121,4 +140,11 @@ export declare function setCommandWords(command: NormalizedCommand, words: reado
  * @returns {NormalizedCommand} The same command node for chaining.
  */
 export declare function setCommandKind(command: NormalizedCommand, kind: CommandKind): NormalizedCommand;
+/**
+ * Applies lightweight heuristics to classify a normalized command.
+ * @param {string} command The normalized command text.
+ * @param {string[]} words The tokenized command words.
+ * @returns {CommandKind} The inferred command kind.
+ */
+export declare function classifyCommand(command: string, words: readonly string[]): CommandKind;
 //# sourceMappingURL=normalized-command.d.ts.map

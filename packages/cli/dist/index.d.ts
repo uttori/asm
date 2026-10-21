@@ -1,6 +1,5 @@
-import { type AnalysisStoragePolicy } from "@uttori/asm-disassembler";
-import { type SnesMapper } from "@uttori/asm-plugin-snes";
-export { executeSourceOperation, type SourceAction, type SourceOperation } from "./source.js";
+import { type AnalysisStoragePolicy } from "@uttori/asm-disassembler/storage";
+import { type SnesMapper } from "@uttori/asm-plugin-snes/disassembler";
 /** Explicit subcommands. An invocation without one defaults to assemble. */
 export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "project-compact" | "project-storage" | "project-validate";
 /** Parsed values only: no filesystem access, configuration loading, or path resolution has occurred. */

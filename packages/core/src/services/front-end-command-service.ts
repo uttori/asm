@@ -1,16 +1,9 @@
-import { renderExpressionNode } from "../ir/expression-node.js";
-import {
-  setCommandKind,
-  setCommandWords,
-  type NormalizedCommand,
-} from "../ir/normalized-command.js";
+import { type LabelStatement, type AssignmentStatement } from "../ir/statement-node.js";
 import type { MathCore } from "../mathcore.js";
 import type { SourceSpan } from "../source-location.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
 
 export type FrontEndCommandHost = {
-  inFunctionDefinition: boolean;
-  functionDefinitionLines: string[];
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   currentGlobalParentLabel: string;
@@ -32,213 +25,66 @@ export type FrontEndCommandHost = {
 export class FrontEndCommandService {
   constructor(readonly host: FrontEndCommandHost) {}
 
-  /**
-   * Continues a function definition.
-   * @param {string} command The command to continue.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
-   */
-  continueFunctionDefinition(command: string): boolean {
-    if (!this.host.inFunctionDefinition) {
-      return false;
+  /** Apply declarations directly; callers execute the following typed statement afterward. */
+  executeLabelStatement(statement: LabelStatement): void {
+    if (statement.form === "relative") {
+      if (statement.name === ":") {
+        this.host.symbolScope.handleUnnamedLabel();
+      } else {
+        this.host.symbolScope.declareRelativeLabel({
+          direction: statement.direction,
+          depth: statement.depth,
+          macroLocal: false,
+          spelling: statement.name,
+        });
+      }
+      this.host.recordCurrentAddress();
+      this.host.recordSymbolDefinition("label", statement.name, { span: statement.span });
+      return;
     }
-
-    if (command.trimEnd().endsWith("\\")) {
-      this.host.functionDefinitionLines.push(command.trimEnd().slice(0, -1));
-    } else {
-      this.host.functionDefinitionLines.push(command.trim());
-      const fullDefinition = this.host.functionDefinitionLines.join(" ");
-      this.host.functionDefinitionLines = [];
-      this.host.inFunctionDefinition = false;
-      this.host.parseFunctionDefinition(fullDefinition);
+    if (statement.form === "global") {
+      if (statement.missingName) {
+        throw new Error("global requires a label name");
+      }
+      this.host.symbolScope.setLabel(
+        statement.name,
+        undefined,
+        false,
+        false,
+        true,
+        !statement.preserveHierarchy,
+      );
+      if (!statement.preserveHierarchy) {
+        this.host.currentParentLabel = statement.name;
+        this.host.currentParentIsGlobal = true;
+        this.host.currentGlobalParentLabel = statement.name;
+      }
+      this.host.recordSymbolDefinition("label", statement.name, { span: statement.span });
+      return;
     }
-
-    return true;
-  }
-
-  /**
-   * Starts a function definition.
-   * @param {NormalizedCommand} command The command to start.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
-   */
-  startFunctionDefinition(command: NormalizedCommand): boolean {
-    const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
-    if (!functionSource || !functionSource.toLowerCase().startsWith("function")) {
-      return false;
-    }
-
-    if (functionSource.trimEnd().endsWith("\\")) {
-      this.host.inFunctionDefinition = true;
-      this.host.functionDefinitionLines.push(functionSource.trimEnd().slice(0, -1));
-    } else {
-      this.host.parseFunctionDefinition(functionSource.trim());
-    }
-
-    setCommandKind(command, "directive");
-    return true;
-  }
-
-  /**
-   * Handles a relative label definition.
-   * @param {NormalizedCommand} command The command to handle.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
-   */
-  handleRelativeLabelDefinition(command: NormalizedCommand): boolean {
-    const { keyword } = command;
-    const isUnnamedLabelDefinition = keyword === ":";
-    const isRelativeLabelDefinition =
-      isUnnamedLabelDefinition || /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
-    if (!isRelativeLabelDefinition) {
-      return false;
-    }
-
-    let relativeLabel = keyword;
-    if (isUnnamedLabelDefinition) {
-      relativeLabel = ":";
-    } else if (keyword.endsWith(":")) {
-      relativeLabel = keyword.slice(0, -1);
-    }
-    if (isUnnamedLabelDefinition) {
-      this.host.symbolScope.handleUnnamedLabel();
-    } else {
-      this.host.symbolScope.handleRelativeLabel(relativeLabel);
-    }
-    this.host.recordCurrentAddress();
-    this.host.recordSymbolDefinition("label", relativeLabel, {
-      span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
-    });
-    command.labelName = relativeLabel;
-    setCommandKind(command, "labelDefinition");
-    if (isUnnamedLabelDefinition && command.words.length > 1) {
-      this.host.processCommand(command.words.slice(1).join(" "));
-    }
-    return true;
-  }
-
-  /**
-   * Handles a global label definition.
-   * @param {NormalizedCommand} command The command to handle.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
-   */
-  handleGlobalLabel(command: NormalizedCommand): boolean {
-    const { words } = command;
-    const directiveArgs = command.parsed.directiveArgs;
-    const leadingWord = words.length > 0 ? words[0] : undefined;
-    if ((directiveArgs?.name ?? leadingWord ?? "").toLowerCase() !== "global") {
-      return false;
-    }
-
-    const payload = directiveArgs?.args.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
-    if (payload.length < 1) {
-      throw new Error("global requires a label name");
-    }
-
-    const labelDecl = payload[0];
-    const modifiesHierarchy = labelDecl.startsWith("#");
-    const labelName = modifiesHierarchy ? labelDecl.substring(1) : labelDecl;
-    const hasColon = labelName.endsWith(":");
-    const cleanName = hasColon ? labelName.slice(0, -1) : labelName;
-
-    this.host.symbolScope.setLabel(cleanName, undefined, false, false, true, !modifiesHierarchy);
-
-    if (!modifiesHierarchy) {
-      this.host.currentParentLabel = cleanName;
-      this.host.currentParentIsGlobal = true;
-      this.host.currentGlobalParentLabel = cleanName;
-    }
-
-    if (payload.length > 1) {
-      this.host.processCommand(payload.slice(1).join(" "));
-    }
-
-    this.host.recordSymbolDefinition("label", cleanName, {
-      span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
-    });
-    command.labelName = cleanName;
-    setCommandKind(command, "labelDefinition");
-    return true;
-  }
-
-  /**
-   * Consumes named label definitions.
-   * @param {NormalizedCommand} command The command to consume.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
-   */
-  consumeNamedLabelDefinitions(command: NormalizedCommand): boolean {
-    const remainingWords = [...command.words];
-    let keyword = remainingWords[0] ?? command.keyword;
-    let consumed = false;
-    let consumedCount = 0;
-
-    // Preserve current behavior exactly: once the first token qualifies as a label,
-    // keep consuming tokens until the command is exhausted.
-    while (remainingWords.length > 0 && this.host.isNamedLabelToken(keyword)) {
-      const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-      const namespace = this.host.currentNamespace;
-      // For dot labels, compute the correct scoped parent BEFORE handleLabelDefinition
-      // updates currentParentLabel. Without this, each successive sibling dot label
-      // captures the previous sibling's compound name as its container (e.g. .B51A gets
-      // containerName "bars_create_B512" instead of "bars_create"), causing cascading
-      // nesting in the document outline.
-      const dotCount = labelName.startsWith(".") ? (labelName.match(/^\.*/)?.[0]?.length ?? 1) : 0;
+    for (const { name, span } of statement.labels) {
+      // Compute a dot label's container before declaring it: declaration changes the active parent.
+      const dotCount = name.match(/^\.+/)?.[0].length ?? 0;
       const containerName =
         dotCount > 0
           ? this.host.symbolScope.getScopedParentLabel(dotCount) || undefined
-          : namespace || undefined;
-      this.host.symbolScope.handleLabelDefinition(labelName);
-      const consumedSpan =
-        consumedCount >= 0 && consumedCount < command.source.tokenSpans.length
-          ? command.source.tokenSpans[consumedCount]
-          : undefined;
-      const firstSpan =
-        command.source.tokenSpans.length > 0 ? command.source.tokenSpans[0] : undefined;
-      this.host.recordSymbolDefinition("label", labelName, {
-        span: consumedSpan ?? firstSpan ?? command.source.normalizedSpan,
-        containerName,
-      });
-      remainingWords.shift();
-      consumedCount++;
-      keyword = remainingWords[0] ?? "";
-      consumed = true;
+          : this.host.currentNamespace || undefined;
+      this.host.symbolScope.handleLabelDefinition(name);
+      this.host.recordSymbolDefinition("label", name, { span, containerName });
     }
-
-    setCommandWords(command, remainingWords);
-    if (consumed && remainingWords.length === 0) {
-      setCommandKind(command, "labelDefinition");
-    }
-    return remainingWords.length === 0;
   }
 
-  /**
-   * Handles a static label assignment.
-   * @param {NormalizedCommand} command The command to handle.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
-   */
-  handleStaticLabelAssignment(command: NormalizedCommand): boolean {
-    const { words, keyword } = command;
-    if (words.length !== 3 || (words[1] !== "=" && words[1] !== ":=")) {
-      return false;
-    }
-
-    const assignment = command.parsed.assignment;
-    const labelName = assignment?.target ?? keyword;
-    const expr = assignment ? renderExpressionNode(assignment.expression) : words[2];
-    const resolvedExpr = this.host.resolvedefines(expr);
-    let value = this.host.mathCore.math(assignment?.expression ?? resolvedExpr);
-
-    if (Number.isNaN(value)) {
-      value = this.host.symbolScope.getLabelValue(resolvedExpr, true);
-    }
-
-    const assignedName = this.host.symbolScope.qualifySymbolName(labelName);
+  /** Resolve each assignment in the current scope; the parsed expression never stores its value. */
+  executeAssignmentStatement(statement: AssignmentStatement): string {
+    const value = this.host.mathCore.math(statement.expression);
+    const assignedName = this.host.symbolScope.qualifySymbolName(statement.target);
     this.host.symbolScope.setLabel(assignedName, value, true);
     this.host.recordCurrentAddress();
     this.host.recordSymbolDefinition("label", assignedName, {
-      span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+      span: statement.span,
       value,
       containerName: this.host.currentNamespace || undefined,
     });
-    command.assignmentTarget = assignedName;
-    setCommandKind(command, "staticAssignment");
-    return true;
+    return assignedName;
   }
 }

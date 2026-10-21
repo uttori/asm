@@ -1,9 +1,12 @@
-import { executeAssetOperation, type AssetOperation } from "@uttori/asm-cli/asset-interchange";
+import { executeSourceOperation } from "@uttori/asm-game-secret-of-mana/source-host";
 import {
+  executeAssetOperation,
   executeAssetSourceOperation,
-  type AssetSourceOperation,
-} from "@uttori/asm-cli/asset-source";
-import { executeSourceOperation, type SourceOperation } from "@uttori/asm-cli/source";
+} from "@uttori/asm-game-secret-of-mana/workflows";
+import { type AssetOperation } from "@uttori/asm-workflows/asset-interchange";
+import { type AssetSourceOperation } from "@uttori/asm-workflows/asset-source";
+import { SourceOperationError } from "@uttori/asm-workflows/source";
+import { type SourceOperation } from "@uttori/asm-workflows/source";
 
 const cancellation = new AbortController();
 let started = false;
@@ -82,6 +85,7 @@ process.on(
       message.operation.action === "asset-conversion-finish" ||
       message.operation.action === "asset-source-target"
     ) {
+      process.send?.({ type: "progress", message: "Resolving saved asset source." });
       operation = executeAssetSourceOperation(message.operation, {
         signal: cancellation.signal,
         beforePublish,
@@ -100,8 +104,17 @@ process.on(
     }
     void operation.then(
       (value) => finish({ type: "result", value }),
-      (error) =>
-        finish({ type: "error", message: error instanceof Error ? error.message : String(error) }),
+      (error) => {
+        let code = cancellation.signal.aborted ? "cancelled" : "failed";
+        if (error instanceof SourceOperationError) {
+          code = error.code;
+        }
+        finish({
+          type: "error",
+          code,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      },
     );
   },
 );

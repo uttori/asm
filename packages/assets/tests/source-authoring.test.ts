@@ -5,6 +5,7 @@ import snesPlugin from "@uttori/asm-plugin-snes";
 
 import { test } from "../../../tests/ava-helper.js";
 import { spriteFixture } from "../../../tests/fixtures/sprite-source.js";
+import { createSomAssetPlugin } from "../../game-secret-of-mana/src/assembly.js";
 import { rasterZlib, rasterZlibSync } from "../src/aseprite-binary.js";
 import {
   decodeAsepriteDocument,
@@ -14,7 +15,6 @@ import {
 import type { IndexedDocument } from "../src/indexed-document.js";
 import { extendIndexedPngPalette } from "../src/png-edit.js";
 import type { AssetInput } from "../src/registry.js";
-import { createSomAssetPlugin } from "../src/secret-of-mana/som-asset-plugin.js";
 import { encodeFrameAtlas } from "../src/secret-of-mana/som-frame-atlas.js";
 import {
   effectiveSomSourcePalette,

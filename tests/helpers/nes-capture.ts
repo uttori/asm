@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { captureCrc32c, type CaptureFileHeader } from "@uttori/asm-debug-adapter";
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { captureCrc32c, type CaptureFileHeader } from "@uttori/asm-capture";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
 import { captureFixtureHeader } from "./capture-archive.js";
 

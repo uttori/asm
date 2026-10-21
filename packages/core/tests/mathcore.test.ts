@@ -1,9 +1,23 @@
 import { test } from "../../../tests/ava-helper.js";
 import type { ExpressionHost } from "../src/architecture-types.js";
 import { runWithInternalInstrumentation } from "../src/internal-instrumentation.js";
+import { parseExpressionNode, renderReferenceExpressionNode } from "../src/ir/expression-node.js";
 import { MathCore } from "../src/mathcore.js";
+import { B11MathOracle } from "./fixtures/b11-math-oracle.js";
 
 const createExpressionHost = (overrides: Partial<ExpressionHost> = {}): ExpressionHost => ({
+  resolveReference: (node) => {
+    const value = (overrides.resolveLabel ?? (() => 0))(renderReferenceExpressionNode(node));
+    if (typeof value !== "number") {
+      return {
+        kind: "error",
+        error: new Error(
+          `Reference '${renderReferenceExpressionNode(node)}' did not resolve to a numeric value.`,
+        ),
+      };
+    }
+    return { kind: "resolved", value };
+  },
   resolveLabel: () => 0,
   convertLogicalToOutputOffset: (address) => address,
   convertOutputOffsetToLogical: (offset) => offset,
@@ -18,6 +32,95 @@ const createExpressionHost = (overrides: Partial<ExpressionHost> = {}): Expressi
   canReadBaseImage: () => 0,
   readBaseImage: () => 0,
   ...overrides,
+});
+
+test("native parsed and string expressions preserve legacy precedence, grouping and rounding", (t) => {
+  const corpus = [
+    "2 ** 3 ** 2",
+    "2 ** (3 ** 2)",
+    "10 / 3 + 2.7",
+    "2.7 * 3",
+    "(2.7) * 3",
+    "5 / 2 * 3",
+    "5 / (2 * 3)",
+    "-5 / 2",
+    "~$0F & $FF",
+    "!$0F & $FF",
+    "%1010 + %0011",
+    "12 % 5",
+    "<$123456 + >$123456",
+    "^$123456",
+    "<:$123456",
+    "3 << 1 + 2",
+    "7 & 3 == 3",
+    "0 || 1 && 2",
+    "max(2, 3) + min(5, 4)",
+    "sqrt(81) + cos(0)",
+    "Label + 3",
+    "Object.field[2] + 1",
+    "defined(name)",
+    ...[
+      "+",
+      "-",
+      "*",
+      "/",
+      "%",
+      "**",
+      "<<",
+      ">>",
+      "&",
+      "|",
+      "^",
+      "<",
+      ">",
+      "==",
+      "!=",
+      "&&",
+      "||",
+    ].flatMap((operator) => [`7 ${operator} 3`, `7 ${operator} 3 + 2`, `(7 ${operator} 3) + 2`]),
+  ];
+  for (const round of [false, true]) {
+    for (const expression of corpus) {
+      const legacy = new B11MathOracle();
+      const current = new MathCore();
+      legacy.host = current.host = createExpressionHost({
+        resolveLabel: () => 17,
+        isDefined: () => 1,
+      });
+      legacy.math_round = current.math_round = round;
+      const expected = legacy.evaluateStringExpression(expression);
+      const parsed = parseExpressionNode(expression);
+      t.not(parsed.type, "raw", expression);
+      t.is(current.math(expression), expected, `${expression}, rounded=${round}`);
+      t.is(current.math(parsed), expected, `IR ${expression}, rounded=${round}`);
+    }
+  }
+  const math = new MathCore();
+  t.is(math.math(parseExpressionNode("2 ** 3 ** 2")), 64);
+  t.is(math.math(parseExpressionNode("2 ** (3 ** 2)")), 512);
+  math.math_round = true;
+  t.is(math.math("2.7 * 3"), 8);
+  t.is(math.math("(2.7) * 3"), 6);
+  t.is(math.math("10 / 3 + 2.7"), 5);
+});
+
+test("parsed expression errors retain numeric diagnostic identity and reference spans", (t) => {
+  for (const expression of ["5 / 0", "5 % 0", "(-1) ** 0.5", "2 +", "(2 + 3"]) {
+    const legacy = t.throws(() => new B11MathOracle().evaluateStringExpression(expression));
+    const current = t.throws(() => new MathCore().math(expression));
+    t.is(current.message, legacy.message, expression);
+  }
+  const node = parseExpressionNode("  Label + 3", {
+    text: " ".repeat(100) + "  Label + 3",
+    offset: 100,
+    line: 4,
+  });
+  if (node.type !== "binary") {
+    t.fail("Expected parsed binary expression");
+    return;
+  }
+  t.is(node.left.span?.start, 102);
+  t.is(node.right.span?.start, 110);
 });
 
 test("reset - resets math core state", (t) => {
@@ -90,29 +193,22 @@ test("math - basic arithmetic", (t) => {
 
 test("math - caches only pure string expressions within an assembly snapshot", (t) => {
   const mathCore = new MathCore();
-  let evaluations = 0;
-  const evaluateStringExpression = mathCore.evaluateStringExpression.bind(mathCore);
-  mathCore.evaluateStringExpression = (expression: string): number => {
-    evaluations++;
-    return evaluateStringExpression(expression);
-  };
-
-  t.is(mathCore.math("5 + 3"), 8);
-  t.is(mathCore.math("5 + 3"), 8);
-  t.is(evaluations, 1);
-
-  mathCore.host = createExpressionHost({ resolveLabel: () => 5 });
-  t.is(mathCore.math("DynamicLabel"), 5);
-  t.is(mathCore.math("DynamicLabel"), 5);
-  t.is(evaluations, 3);
-
-  mathCore.beginAssemblySnapshot();
-  t.is(mathCore.math("5 + 3"), 8);
-  t.is(evaluations, 4);
-
-  mathCore.endAssemblySnapshot();
-  t.is(mathCore.math("5 + 3"), 8);
-  t.is(evaluations, 5);
+  let label = 5;
+  mathCore.host = createExpressionHost({ resolveLabel: () => label });
+  const { metrics } = runWithInternalInstrumentation(() => {
+    t.is(mathCore.math("5 + 3"), 8);
+    t.is(mathCore.math("5 + 3"), 8);
+    t.is(mathCore.math("DynamicLabel"), 5);
+    label = 9;
+    t.is(mathCore.math("DynamicLabel"), 9, "syntax reuse must not cache state-dependent values");
+    mathCore.beginAssemblySnapshot();
+    t.is(mathCore.math("5 + 3"), 8);
+    mathCore.endAssemblySnapshot();
+    t.is(mathCore.math("5 + 3"), 8);
+  });
+  t.is(metrics.counters.pureStringExpressionCacheHits, 1);
+  t.is(metrics.counters.pureStringExpressionCacheMisses, 3);
+  t.is(metrics.counters.expressionRawFallbackEvaluations, 0);
 });
 
 test("math - records instrumentation when a run is active", (t) => {
@@ -446,894 +542,6 @@ test("math - error handling", (t) => {
     },
     { message: /Division by zero|Invalid number/ },
   );
-});
-
-test("evalMath - function parsing", (t) => {
-  const mathCore = new MathCore();
-
-  // Test inline function definition and usage
-  mathCore.str = "function double(x) = x * 2 10";
-  t.is(mathCore.evalMath(), undefined);
-  t.is(mathCore.str, "");
-});
-
-test("evalMath - NaN handling", (t) => {
-  const mathCore = new MathCore();
-
-  // Test NaN detection
-  t.throws(
-    () => {
-      mathCore.str = "0 / 0";
-      mathCore.evalMath();
-    },
-    { message: /Division by zero/ },
-  );
-
-  // Test NaN in complex expressions
-  t.throws(
-    () => {
-      mathCore.str = "5 + (0 / 0)";
-      mathCore.evalMath();
-    },
-    { message: /Division by zero/ },
-  );
-
-  // Test NaN with function calls
-  t.throws(
-    () => {
-      mathCore.str = "function badMath(x) = x / 0";
-      mathCore.evalMath();
-      mathCore.str = "badMath(10)";
-      mathCore.evalMath();
-    },
-    { message: /Division by zero/ },
-  );
-
-  // Test NaN with built-in functions
-  t.throws(
-    () => {
-      mathCore.str = "sqrt(-1)";
-      mathCore.evalMath();
-    },
-    { message: "sqrt returned NaN for argument -1" },
-  );
-
-  // Force getnum() to return NaN so evalMath() hits its explicit NaN guard.
-  t.throws(
-    () => {
-      mathCore.str = "$";
-      mathCore.evalMath();
-    },
-    { message: "Invalid number: NaN" },
-  );
-
-  // Operator results can be NaN even when both operands parsed (Math.pow of a negative root).
-  t.throws(
-    () => {
-      mathCore.math("(-1) ** 0.5");
-    },
-    { message: "Invalid number: NaN" },
-  );
-});
-
-test("evalMath - depth and operator precedence", (t) => {
-  const mathCore = new MathCore();
-
-  // Test basic operator precedence
-  mathCore.str = "2 + 3 * 4";
-  t.is(mathCore.evalMath(), 14);
-  t.is(mathCore.str, "");
-
-  // Test with parentheses changing precedence
-  mathCore.str = "(2 + 3) * 4";
-  t.is(mathCore.evalMath(), 20);
-  t.is(mathCore.str, "");
-
-  // Test with nested parentheses
-  mathCore.str = "2 * (3 + (4 - 1))";
-  t.is(mathCore.evalMath(), 12);
-  t.is(mathCore.str, "");
-
-  // Test with multiple operators of same precedence
-  mathCore.str = "10 - 5 - 2";
-  t.is(mathCore.evalMath(), 3);
-  t.is(mathCore.str, "");
-
-  // Test with stopChar parameter
-  mathCore.str = "5 + 10)";
-  t.is(mathCore.evalMath(0, ")"), 15);
-  t.is(mathCore.str, ")");
-});
-
-test("evalMath - math_round behavior", (t) => {
-  const mathCore = new MathCore();
-
-  // Test without math_round
-  mathCore.math_round = false;
-  mathCore.str = "5 / 2";
-  t.is(mathCore.evalMath(), 2.5);
-  t.is(mathCore.str, "");
-
-  // Test with math_round
-  mathCore.math_round = true;
-  mathCore.str = "5 / 2";
-  t.is(mathCore.evalMath(), 2);
-  t.is(mathCore.str, "");
-
-  // Test with negative numbers
-  mathCore.math_round = true;
-  mathCore.str = "-5 / 2";
-  t.is(mathCore.evalMath(), -2);
-  t.is(mathCore.str, "");
-
-  // Test with complex expression
-  mathCore.math_round = true;
-  mathCore.str = "10 / 3 + 2.7";
-  t.is(mathCore.evalMath(), 5);
-  t.is(mathCore.str, "");
-});
-
-test("peekNextOperator - returns null for empty string", (t) => {
-  const mathCore = new MathCore();
-  mathCore.str = "";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), null);
-});
-
-test("peekNextOperator - matches two-character operators", (t) => {
-  const mathCore = new MathCore();
-
-  // Test two-character operators
-  mathCore.str = "** 5";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "**");
-
-  mathCore.str = "<< 8";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "<<");
-
-  mathCore.str = ">> 2";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), ">>");
-
-  mathCore.str = "<= 10";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "<=");
-
-  mathCore.str = ">= 20";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), ">=");
-
-  mathCore.str = "== 30";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "==");
-
-  mathCore.str = "= 30";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "=");
-
-  mathCore.str = "!= 40";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "!=");
-
-  mathCore.str = "&& true";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "&&");
-
-  mathCore.str = "|| false";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "||");
-});
-
-test("peekNextOperator - matches single-character operators", (t) => {
-  const mathCore = new MathCore();
-
-  // Test single-character operators
-  mathCore.str = "+ 5";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "+");
-
-  mathCore.str = "- 10";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "-");
-
-  mathCore.str = "* 15";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "*");
-
-  mathCore.str = "/ 20";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "/");
-
-  mathCore.str = "% 25";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "%");
-
-  mathCore.str = "< 30";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "<");
-
-  mathCore.str = "> 35";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), ">");
-
-  mathCore.str = "& 40";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "&");
-
-  mathCore.str = "| 45";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "|");
-
-  mathCore.str = "^ 50";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "^");
-
-  mathCore.str = "= 30";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "=");
-});
-
-test("peekNextOperator - respects depth parameter", (t) => {
-  const mathCore = new MathCore();
-
-  // Test depth parameter
-  // + has priority 4, so it should match when depth <= 2
-  mathCore.str = "+ 5";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "+");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 1), "+");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 2), "+");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 4), "+");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 5), null);
-
-  // * has priority 5, so it should match when depth <= 5
-  mathCore.str = "* 10";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "*");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 5), "*");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 6), null);
-
-  // ** has priority 6, so it should match when depth <= 6
-  mathCore.str = "** 15";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "**");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 4), "**");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 6), "**");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 7), null);
-
-  // Two-character operators must not fall through to a one-character prefix.
-  mathCore.str = "&& 1";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "&&");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 1), "&&");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 2), null);
-
-  mathCore.str = "== 1";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 2), "==");
-  t.is(mathCore.peekNextOperator(mathCore.operators, 3), null);
-});
-
-test("peekNextOperator - handles whitespace correctly", (t) => {
-  const mathCore = new MathCore();
-
-  // Test with whitespace
-  mathCore.str = "  +  5";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "+");
-
-  mathCore.str = "\t*\n10";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "*");
-});
-
-test("peekNextOperator - returns null for non-operators", (t) => {
-  const mathCore = new MathCore();
-
-  // Test with non-operators
-  mathCore.str = "abc";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), null);
-
-  mathCore.str = "123";
-  t.is(mathCore.peekNextOperator(mathCore.operators, 0), null);
-});
-
-test("consumeWhile - consumes digits", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.str = "123abc";
-  t.is(mathCore.consumeWhile(/\d/), "123");
-  t.is(mathCore.str, "abc");
-
-  mathCore.str = "456";
-  t.is(mathCore.consumeWhile(/\d/), "456");
-  t.is(mathCore.str, "");
-
-  mathCore.str = "abc123";
-  t.is(mathCore.consumeWhile(/\d/), "");
-  t.is(mathCore.str, "abc123");
-});
-
-test("consumeWhile - consumes alphanumeric characters", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.str = "abc123!@#";
-  t.is(mathCore.consumeWhile(/[\dA-Za-z]/), "abc123");
-  t.is(mathCore.str, "!@#");
-
-  mathCore.str = "XYZ_123";
-  t.is(mathCore.consumeWhile(/[\dA-Za-z]/), "XYZ");
-  t.is(mathCore.str, "_123");
-});
-
-test("consumeWhile - consumes hexadecimal digits", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.str = "1A2B3C!";
-  t.is(mathCore.consumeWhile(/[\dA-Fa-f]/), "1A2B3C");
-  t.is(mathCore.str, "!");
-
-  mathCore.str = "DEADBEEF";
-  t.is(mathCore.consumeWhile(/[\dA-Fa-f]/), "DEADBEEF");
-  t.is(mathCore.str, "");
-
-  mathCore.str = "DEADZORK";
-  t.is(mathCore.consumeWhile(/[\dA-Fa-f]/), "DEAD");
-  t.is(mathCore.str, "ZORK");
-});
-
-test("consumeWhile - handles empty strings", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.str = "";
-  t.is(mathCore.consumeWhile(/\d/), "");
-  t.is(mathCore.str, "");
-});
-
-test("consumeWhile - handles whitespace", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.str = "  \t\n123";
-  t.is(mathCore.consumeWhile(/\s/), "  \t\n");
-  t.is(mathCore.str, "123");
-});
-
-test("consumeWhile - handles special characters", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.str = "!@#$%^abc";
-  t.is(mathCore.consumeWhile(/[!#$%&()*@^]/), "!@#$%^");
-  t.is(mathCore.str, "abc");
-});
-
-test("consumeWhile - handles mixed patterns", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.str = "a1b2c3!@#";
-  t.is(mathCore.consumeWhile(/[\da-z]/), "a1b2c3");
-  t.is(mathCore.str, "!@#");
-
-  mathCore.str = "123ABC_xyz";
-  t.is(mathCore.consumeWhile(/[\dA-Za-z]/), "123ABC");
-  t.is(mathCore.str, "_xyz");
-});
-
-test("consumeWhile - handles complex regex patterns", (t) => {
-  const mathCore = new MathCore();
-
-  // Test with a more complex regex that might be used in parsing
-  mathCore.str = "var_123 = 456";
-  t.is(mathCore.consumeWhile(/[A-Z_a-z]\w*/), "var_");
-  t.is(mathCore.str, "123 = 456");
-});
-
-test("getnum - basic numeric parsing", (t) => {
-  const mathCore = new MathCore();
-
-  // Test decimal numbers
-  mathCore.str = "123";
-  t.is(mathCore.getnum(), 123);
-  t.is(mathCore.str, "");
-
-  mathCore.str = "";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: /Invalid number|Unknown identifier/ },
-  );
-
-  // Test decimal with decimal point
-  mathCore.str = "123.45";
-  t.is(mathCore.getnum(), 123.45);
-  t.is(mathCore.str, "");
-
-  // Test hexadecimal with $ prefix
-  mathCore.str = "$ABCD";
-  t.is(mathCore.getnum(), 0xabcd);
-  t.is(mathCore.str, "");
-
-  // Test hexadecimal with 0x prefix
-  mathCore.str = "0xDEAD";
-  t.is(mathCore.getnum(), 0xdead);
-  t.is(mathCore.str, "");
-
-  // Test binary with % prefix
-  mathCore.str = "%1010";
-  t.is(mathCore.getnum(), 10);
-  t.is(mathCore.str, "");
-});
-
-test("getnum - sign operators", (t) => {
-  const mathCore = new MathCore();
-
-  // Test negative numbers
-  mathCore.str = "-123";
-  t.is(mathCore.getnum(), -123);
-  t.is(mathCore.str, "");
-
-  // Test positive sign
-  mathCore.str = "+456";
-  t.is(mathCore.getnum(), 456);
-  t.is(mathCore.str, "");
-});
-
-test("getnum - bitshift operator", (t) => {
-  const mathCore = new MathCore();
-
-  // Test bitshift operator <:
-  mathCore.str = "<:$ABCD";
-  t.is(mathCore.getnum(), 0xabcd >>> 16);
-  t.is(mathCore.str, "");
-
-  // Test bitshift with decimal
-  mathCore.str = "<:65535";
-  t.is(mathCore.getnum(), 65535 >>> 16);
-  t.is(mathCore.str, "");
-
-  // Test bitshift with negative number
-  mathCore.str = "<:-65535";
-  t.is(mathCore.getnum(), -65535 >>> 16);
-  t.is(mathCore.str, "");
-
-  // Test bitshift with parentheses
-  mathCore.str = "<:(65535 + 1)";
-  t.is(mathCore.getnum(), 65536 >>> 16);
-  t.is(mathCore.str, "");
-
-  // Test bitshift with hex 0x prefix
-  mathCore.str = "<:0xFFFF";
-  t.is(mathCore.getnum(), 0xffff >>> 16);
-  t.is(mathCore.str, "");
-
-  // Test bitshift with binary
-  mathCore.str = "<:%1111111111111111";
-  t.is(mathCore.getnum(), 0xffff >>> 16);
-  t.is(mathCore.str, "");
-});
-
-test("getnum - bitwise NOT operator", (t) => {
-  const mathCore = new MathCore();
-
-  // Test bitwise NOT operator ~
-  mathCore.str = "~0";
-  t.is(mathCore.getnum(), -1);
-  t.is(mathCore.str, "");
-
-  // Test bitwise NOT with decimal
-  mathCore.str = "~10";
-  t.is(mathCore.getnum(), ~10);
-  t.is(mathCore.str, "");
-
-  // Test bitwise NOT with hex
-  mathCore.str = "~$FF";
-  t.is(mathCore.getnum(), ~0xff);
-  t.is(mathCore.str, "");
-
-  // Test bitwise NOT with parentheses
-  mathCore.str = "~(10 + 5)";
-  t.is(mathCore.getnum(), ~15);
-  t.is(mathCore.str, "");
-
-  mathCore.str = "!$00";
-  t.is(mathCore.getnum(), ~0);
-  t.is(mathCore.str, "");
-
-  mathCore.str = "!10";
-  t.is(mathCore.getnum(), ~10);
-  t.is(mathCore.str, "");
-
-  mathCore.str = "!(10 + 5)";
-  t.is(mathCore.getnum(), ~15);
-  t.is(mathCore.str, "");
-});
-
-test("getnum - parentheses", (t) => {
-  const mathCore = new MathCore();
-
-  // Test simple parentheses
-  mathCore.str = "(123)";
-  t.is(mathCore.getnum(), 123);
-  t.is(mathCore.str, "");
-
-  // Test nested parentheses
-  mathCore.str = "((456))";
-  t.is(mathCore.getnum(), 456);
-  t.is(mathCore.str, "");
-
-  // Test parentheses with operators
-  mathCore.str = "-(10+5)";
-  t.is(mathCore.getnum(), -15);
-  t.is(mathCore.str, "");
-
-  // Test mismatched parentheses
-  mathCore.str = "(123";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: "Mismatched parentheses." },
-  );
-});
-
-test("getnum - struct functions with bitwise operators", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.host = createExpressionHost({
-    getExpressionObjectSize: (value, baseOnly = false) => {
-      if (baseOnly && value === "MyStruct") {
-        return 24;
-      }
-      if (!baseOnly && value === "MyObject") {
-        return 48;
-      }
-      return 0;
-    },
-  });
-
-  // Test sizeof with identifier
-  t.is(mathCore.math("sizeof(MyStruct)"), 24);
-  t.is(mathCore.str, "");
-
-  // Test sizeof with quoted string
-  t.is(mathCore.math('sizeof("MyStruct")'), 24);
-  t.is(mathCore.str, "");
-
-  // Test objectsize
-  t.is(mathCore.math("objectsize(MyObject)"), 48);
-  t.is(mathCore.str, "");
-
-  // Test sizeof with bitwise operations
-  t.is(mathCore.math("sizeof(MyStruct) & 15"), 8); // 24 & 15 = 8
-  t.is(mathCore.str, "");
-
-  // Test objectsize with bitwise operations
-  t.is(mathCore.math("objectsize(MyObject) | 3"), 51); // 48 | 3 = 51
-  t.is(mathCore.str, "");
-
-  // Test bitwise XOR with struct functions
-  t.is(mathCore.math("sizeof(MyStruct) ^ objectsize(MyObject)"), 24 ^ 48);
-  t.is(mathCore.str, "");
-
-  // Test bitwise shifts with struct functions
-  t.is(mathCore.math("sizeof(MyStruct) << 1"), 48); // 24 << 1 = 48
-  t.is(mathCore.str, "");
-
-  t.is(mathCore.math("objectsize(MyObject) >> 2"), 12); // 48 >> 2 = 12
-  t.is(mathCore.str, "");
-
-  // Test <: prefix operator with sizeof
-  t.is(mathCore.math("<:sizeof(MyStruct)"), 24 >>> 16);
-  t.is(mathCore.str, "");
-
-  // Test <: prefix operator with objectsize
-  t.is(mathCore.math("<:objectsize(MyObject)"), 48 >>> 16);
-  t.is(mathCore.str, "");
-
-  // Test error cases
-  t.throws(
-    () => {
-      mathCore.math("sizeof(MyStruct");
-    },
-    { message: "Expected ',' or ')' in function call arguments: " },
-  );
-
-  t.throws(
-    () => {
-      mathCore.math('sizeof("MyStruct');
-    },
-    { message: "Unterminated string literal in function call." },
-  );
-});
-
-test("getnum - function calls", (t) => {
-  const mathCore = new MathCore();
-
-  // Test built-in math functions
-  mathCore.str = "sqrt(16)";
-  t.is(mathCore.getnum(), 4);
-  t.is(mathCore.str, "");
-
-  // Test built-in math functions
-  mathCore.str = "<:max(16, 160000)";
-  t.is(mathCore.getnum(), 2);
-  t.is(mathCore.str, "");
-
-  // Test function with multiple arguments
-  mathCore.str = "min(10, 5, 20)";
-  t.is(mathCore.getnum(), 5);
-  t.is(mathCore.str, "");
-
-  // Test function with string argument
-  mathCore.str = 'stringsequal("hello", "hello")';
-  t.is(mathCore.getnum(), 1);
-  t.is(mathCore.str, "");
-
-  mathCore.host = createExpressionHost({
-    isDefined: (name) => (name === "some_symbol" ? 1 : 0),
-    getFileSize: (filename) => (filename === "data/64kb.bin" ? 65536 : 0),
-  });
-
-  // Unquoted identifiers and paths stay strings instead of going through getnum
-  t.is(mathCore.math("defined(some_symbol)"), 1);
-  t.is(mathCore.math("stringsequal(hello, hello)"), 1);
-  t.is(mathCore.math("stringsequal(hello, world)"), 0);
-  t.is(mathCore.math("filesize(data/64kb.bin)"), 65536);
-
-  mathCore.host = createExpressionHost({
-    getExpressionObjectSize: (value) => {
-      if (value === "Foo[1]") {
-        return 8;
-      }
-      if (value === "Bar(2)") {
-        return 16;
-      }
-      return 0;
-    },
-    isDefined: () => 0,
-  });
-
-  // Nested [] / () stay inside one unquoted string argument
-  t.is(mathCore.math("sizeof(Foo[1])"), 8);
-  t.is(mathCore.math("objectsize(Bar(2))"), 16);
-
-  // A leading extra comma leaves parseUnquotedStringArgument with an empty token
-  t.throws(
-    () => {
-      mathCore.math("defined(,,)");
-    },
-    { message: "Missing function argument for 'defined'." },
-  );
-
-  // Inline function definitions consume a call argument / parenthesized expr
-  t.throws(
-    () => {
-      mathCore.math("sqrt(function foo() = 1)");
-    },
-    { message: "Missing function argument for 'sqrt'." },
-  );
-
-  t.throws(
-    () => {
-      mathCore.math("(function foo() = 1)");
-    },
-    { message: "Empty parenthesized expression." },
-  );
-
-  // Test function with expression arguments
-  mathCore.str = "max(5+5, 8*2)";
-  t.is(mathCore.getnum(), 16);
-  t.is(mathCore.str, "");
-
-  // Test function with trailing content
-  mathCore.str = "sqrt(25) + 10";
-  t.is(mathCore.getnum(), 5);
-  t.is(mathCore.str, "+ 10");
-
-  // Test error cases
-  mathCore.str = "sqrt(25";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: "Expected ',' or ')' in function call arguments: " },
-  );
-
-  mathCore.str = "sqrt(,)";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: "sqrt expects exactly 1 numeric argument." },
-  );
-});
-
-test("getnum - identifier resolution", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.host = createExpressionHost({
-    resolveLabel: (value) => {
-      if (value === "LABEL1") {
-        return 100;
-      }
-      return 0;
-    },
-  });
-
-  // Test label resolution
-  mathCore.str = "LABEL1";
-  t.is(mathCore.getnum(), 100);
-  t.is(mathCore.str, "");
-
-  mathCore.host = createExpressionHost({
-    resolveLabel: (value) => {
-      if (value === "STRUCT_NAME") {
-        return "MyStruct";
-      }
-      return 0;
-    },
-  });
-
-  mathCore.str = "STRUCT_NAME";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: "Reference 'STRUCT_NAME' did not resolve to a numeric value." },
-  );
-
-  mathCore.host = createExpressionHost({
-    resolveLabel: (value) => {
-      if (value === ".local") {
-        return "not-numeric";
-      }
-      return 0;
-    },
-  });
-  mathCore.str = ".local";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: "Reference '.local' did not resolve to a numeric value." },
-  );
-
-  mathCore.str = "@cheap";
-  t.is(mathCore.getnum(), 0);
-
-  mathCore.host = createExpressionHost({
-    resolveLabel: (value) => (value === "@cheap" ? 9 : 0),
-  });
-  mathCore.str = "@cheap";
-  t.is(mathCore.getnum(), 9);
-
-  mathCore.str = "??invalid";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: "Invalid number: ??invalid" },
-  );
-});
-
-test("getnum - compound identifier resolution", (t) => {
-  const mathCore = new MathCore();
-
-  mathCore.host = createExpressionHost({
-    resolveLabel: (value) => {
-      if (value === "MyStruct.Child") {
-        return 321;
-      }
-      if (value === "MyStruct[2].field") {
-        return 654;
-      }
-      if (value === "Config.Section") {
-        return "ConfigSection";
-      }
-      if (value === "TrailingDot") {
-        return 777;
-      }
-      return 0;
-    },
-  });
-
-  // Dot-member parsing
-  mathCore.str = "MyStruct.Child";
-  t.is(mathCore.getnum(), 321);
-  t.is(mathCore.str, "");
-
-  // Index + member parsing (evalMath for index and bracket handling)
-  mathCore.str = "MyStruct[1+1].field + 5";
-  t.is(mathCore.getnum(), 654);
-  t.is(mathCore.str, "+ 5");
-
-  // Non-numeric compound identifiers are rejected in numeric position
-  mathCore.str = "Config.Section";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: "Reference 'Config.Section' did not resolve to a numeric value." },
-  );
-
-  // Gracefully handles trailing "." (member regex miss => break loop)
-  mathCore.str = "TrailingDot.";
-  t.is(mathCore.getnum(), 777);
-  t.is(mathCore.str, "");
-
-  // Mismatched bracket error path
-  mathCore.str = "MyStruct[2.field";
-  t.throws(
-    () => {
-      mathCore.getnum();
-    },
-    { message: "Mismatched brackets in struct index" },
-  );
-});
-
-test("getnum - user-defined functions", (t) => {
-  const mathCore = new MathCore();
-
-  // Define a user function
-  mathCore.userFunctions.set("double", { args: ["x"], content: "x * 2" });
-  mathCore.userFunctions.set("add", { args: ["a", "b"], content: "a + b" });
-
-  // Test user function call
-  mathCore.str = "double(5)";
-  t.is(mathCore.getnum(), 10);
-  t.is(mathCore.str, "");
-
-  // Test user function with multiple args
-  mathCore.str = "add(10, 20)";
-  t.is(mathCore.getnum(), 30);
-  t.is(mathCore.str, "");
-
-  // Test user function with expressions
-  mathCore.str = "double(3+2)";
-  t.is(mathCore.getnum(), 10);
-  t.is(mathCore.str, "");
-
-  // Test nested function calls
-  mathCore.str = "double(add(3, 7))";
-  t.is(mathCore.getnum(), 20);
-  t.is(mathCore.str, "");
-});
-
-test("parseStringLiteral - basic functionality", (t) => {
-  const mathCore = new MathCore();
-
-  // Test basic string parsing
-  mathCore.str = '"hello world"';
-  t.is(mathCore.parseStringLiteral(), "hello world");
-  t.is(mathCore.str, "");
-
-  // Test with trailing content
-  mathCore.str = '"test string" + other content';
-  t.is(mathCore.parseStringLiteral(), "test string");
-  t.is(mathCore.str, "+ other content");
-
-  // Test with empty string
-  mathCore.str = '""';
-  t.is(mathCore.parseStringLiteral(), "");
-  t.is(mathCore.str, "");
-
-  // Test with whitespace
-  mathCore.str = '"  spaced  "  ';
-  t.is(mathCore.parseStringLiteral(), "  spaced  ");
-  t.is(mathCore.str, "");
-});
-
-test("parseStringLiteral - error handling", (t) => {
-  const mathCore = new MathCore();
-
-  // Test with unterminated string
-  mathCore.str = '"unterminated string';
-  t.throws(
-    () => {
-      mathCore.parseStringLiteral();
-    },
-    { message: "Unterminated string literal in function call." },
-  );
-
-  // Test with empty input
-  mathCore.str = "";
-  t.throws(
-    () => {
-      mathCore.parseStringLiteral();
-    },
-    { message: /unterminated string literal|cannot read property/i },
-  );
-});
-
-test("parseStringLiteral - special characters", (t) => {
-  const mathCore = new MathCore();
-
-  // Test with special characters
-  mathCore.str = '"!@#$%^&*()_+"';
-  t.is(mathCore.parseStringLiteral(), "!@#$%^&*()_+");
-  t.is(mathCore.str, "");
-
-  // Test with numbers
-  mathCore.str = '"12345"';
-  t.is(mathCore.parseStringLiteral(), "12345");
-  t.is(mathCore.str, "");
-
-  // Test with mixed content
-  mathCore.str = '"abc123!@#"';
-  t.is(mathCore.parseStringLiteral(), "abc123!@#");
-  t.is(mathCore.str, "");
 });
 
 test("callFunction - dispatches to user functions", (t) => {
@@ -2476,89 +1684,6 @@ test("numArg", (t) => {
   );
 });
 
-test("strArg", (t) => {
-  const mathCore = new MathCore();
-
-  // Test with string argument
-  t.is(mathCore.strArg("testFunc", "hello"), "hello");
-  t.is(mathCore.strArg("testFunc", ""), "");
-  t.is(mathCore.strArg("testFunc", "123"), "123");
-
-  // Test with numeric argument (should throw error)
-  t.throws(
-    () => {
-      mathCore.strArg("testFunc", 42);
-    },
-    { message: "Function 'testFunc' expected a string argument but got a number: 42" },
-  );
-
-  t.throws(
-    () => {
-      mathCore.strArg("anotherFunc", 0);
-    },
-    { message: "Function 'anotherFunc' expected a string argument but got a number: 0" },
-  );
-
-  // Test with different function names
-  t.throws(
-    () => {
-      mathCore.strArg("sizeof", 123);
-    },
-    { message: "Function 'sizeof' expected a string argument but got a number: 123" },
-  );
-});
-
-test("parseFunctionDefinition", (t) => {
-  const mathCore = new MathCore();
-
-  // Test valid function definition with no parameters
-  mathCore.str = "function noParams() = 42";
-  mathCore.parseFunctionDefinition();
-  t.true(mathCore.userFunctions.has("noParams"));
-  t.deepEqual(mathCore.userFunctions.get("noParams"), { args: [], content: "42" });
-
-  // Test valid function definition with parameters
-  mathCore.str = "function add(a, b) = a + b";
-  mathCore.parseFunctionDefinition();
-  t.true(mathCore.userFunctions.has("add"));
-  t.deepEqual(mathCore.userFunctions.get("add"), { args: ["a", "b"], content: "a + b" });
-
-  // Test function with whitespace
-  mathCore.str = "function   multiply(x,   y)  =  x * y";
-  mathCore.parseFunctionDefinition();
-  t.true(mathCore.userFunctions.has("multiply"));
-  t.deepEqual(mathCore.userFunctions.get("multiply"), { args: ["x", "y"], content: "x * y" });
-
-  // Test function with line continuation
-  mathCore.str = "function complex(a, b) = a + \\\nb * 2";
-  mathCore.parseFunctionDefinition();
-  t.true(mathCore.userFunctions.has("complex"));
-  t.deepEqual(mathCore.userFunctions.get("complex"), { args: ["a", "b"], content: "a + b * 2" });
-
-  // Test function overwriting existing function
-  mathCore.str = "function add(x) = x + 10";
-  mathCore.parseFunctionDefinition();
-  t.true(mathCore.userFunctions.has("add"));
-  t.deepEqual(mathCore.userFunctions.get("add"), { args: ["x"], content: "x + 10" });
-
-  // Test invalid function definition syntax
-  mathCore.str = "function = 42";
-  t.throws(
-    () => {
-      mathCore.parseFunctionDefinition();
-    },
-    { message: "Invalid function definition syntax." },
-  );
-
-  mathCore.str = "function badSyntax() 42";
-  t.throws(
-    () => {
-      mathCore.parseFunctionDefinition();
-    },
-    { message: "Invalid function definition syntax." },
-  );
-});
-
 test("host requirement & labelResolver", (t) => {
   const mathCore = new MathCore();
 
@@ -2590,79 +1715,6 @@ test("host requirement & labelResolver", (t) => {
 
   t.is(mathCore.callBuiltInFunction("sizeof", ["myStruct"]), 42);
   t.is(mathCore.callBuiltInFunction("objectsize", ["myObject"]), 24);
-});
-
-test("user-defined function with bitshifting", (t) => {
-  const mathCore = new MathCore();
-
-  // Define a function that uses bitshifting
-  mathCore.str = "function highByte(value) = <:value";
-  mathCore.parseFunctionDefinition();
-  t.true(mathCore.userFunctions.has("highByte"));
-  t.deepEqual(mathCore.userFunctions.get("highByte"), { args: ["value"], content: "<:value" });
-
-  // Define a more complex function that combines bitshifting with other operations
-  mathCore.str = "function makeAddress(bank, offset) = (bank << 16) | offset";
-  mathCore.parseFunctionDefinition();
-  t.true(mathCore.userFunctions.has("makeAddress"));
-  t.deepEqual(mathCore.userFunctions.get("makeAddress"), {
-    args: ["bank", "offset"],
-    content: "(bank << 16) | offset",
-  });
-
-  // Test calling the highByte function with different values
-  mathCore.str = "highByte(0x123456)";
-  t.is(mathCore.evalMath(0), 0x12);
-
-  mathCore.str = "highByte(65535)";
-  t.is(mathCore.evalMath(0), 0);
-
-  mathCore.str = "highByte(256)";
-  t.is(mathCore.evalMath(0), 0);
-
-  mathCore.str = "highByte(0)";
-  t.is(mathCore.evalMath(0), 0x00);
-
-  // Test calling the makeAddress function
-  mathCore.str = "makeAddress(0x7E, 0x1234)";
-  t.is(mathCore.evalMath(0), 0x7e1234);
-
-  mathCore.str = "makeAddress(0, 0xFFFF)";
-  t.is(mathCore.evalMath(0), 0xffff);
-
-  // Test nested function calls
-  mathCore.str = "highByte(makeAddress(0x7E, 0x1234))";
-  t.is(mathCore.evalMath(0), 0x7e);
-
-  // Test with expressions as arguments
-  mathCore.str = "highByte(0x1000 + 0x234)";
-  t.is(mathCore.evalMath(0), 0);
-
-  mathCore.str = "makeAddress(1 + 2, 0x1000 + 0x234)";
-  t.is(mathCore.evalMath(0), 0x031234);
-
-  // Test with complex expressions
-  mathCore.str = "makeAddress(highByte(0xABCDEF) & 0x7F, 0x1234 | 0x8000)";
-  t.is(mathCore.evalMath(0), 0x2b9234);
-});
-
-test("evalMath - missing right operand", (t) => {
-  const mathCore = new MathCore();
-
-  t.throws(
-    () => {
-      mathCore.str = "5 +";
-      mathCore.evalMath();
-    },
-    { message: "Missing right operand for operator '+'." },
-  );
-
-  t.throws(
-    () => {
-      mathCore.math("5 + function foo() = 1");
-    },
-    { message: "Missing right operand for operator '+'." },
-  );
 });
 
 test("math - typed expression nodes", (t) => {
@@ -2762,7 +1814,7 @@ test("math - typed expression nodes", (t) => {
     () => {
       mathCore.math({ type: "defineReference", braced: true, content: "x" });
     },
-    { message: "Unresolved define reference: !{x}" },
+    { message: "Unknown label: !{x}" },
   );
   t.throws(
     () => {
@@ -2799,7 +1851,7 @@ test("math - typed expression nodes", (t) => {
     mathCore.math({
       type: "call",
       callee: { type: "identifier", name: "defined" },
-      arguments: [{ type: "raw", value: '"FLAG"' }],
+      arguments: [{ type: "sourceText", value: "FLAG" }],
     }),
     1,
   );
@@ -2822,7 +1874,7 @@ test("math - typed expression nodes", (t) => {
     mathCore.math({
       type: "call",
       callee: { type: "identifier", name: "sqrt" },
-      arguments: [{ type: "raw", value: "16" }],
+      arguments: [parseExpressionNode("16")],
     }),
     4,
   );
@@ -2887,8 +1939,43 @@ test("math - typed expression nodes", (t) => {
     },
     { message: /Range expression is not directly numeric/ },
   );
-  t.is(mathCore.math({ type: "raw", value: "1+2" }), 3);
+  t.throws(() => mathCore.math({ type: "raw", value: "1+2" }), {
+    message: /Raw expression nodes are not executable/,
+  });
 
   t.is(mathCore.resolveNumericIdentifierArgument("MISSING"), "MISSING");
   t.is(mathCore.resolveNumericIdentifierArgument("STRUCT"), "STRUCT");
+});
+
+test("parsed defines and references preserve deferred host resolution across stages", (t) => {
+  let value = 0;
+  const host = createExpressionHost({ resolveLabel: () => value });
+  const expressions = ["!Count + 3", "!{Count} * 2", "Items[1].field + !Offset", ".local + 1"];
+  const parsed = new MathCore();
+  parsed.host = host;
+  for (const stageValue of [0, 5, 23]) {
+    value = stageValue;
+    for (const expression of expressions) {
+      const legacy = new B11MathOracle();
+      legacy.host = host;
+      t.is(
+        parsed.math(expression),
+        legacy.evaluateStringExpression(expression),
+        `${expression}: ${stageValue}`,
+      );
+    }
+  }
+});
+
+// Definitions use the production parser; the frozen evaluator is only a differential oracle.
+test("public function definitions share typed source grammar and preserve bit operations", (t) => {
+  const mathCore = new MathCore();
+  mathCore.parseFunctionDefinition("function highByte(value) = <:value");
+  mathCore.parseFunctionDefinition("function makeAddress(bank, offset) = (bank << 16) | offset");
+  t.is(mathCore.math("highByte($123456)"), 0x12);
+  t.is(mathCore.math("makeAddress($7E, $1234)"), 0x7e1234);
+  t.is(mathCore.math("highByte($FFFF)"), 0);
+  t.is(mathCore.math("highByte(makeAddress($7E, $1234))"), 0x7e);
+  t.is(mathCore.math("makeAddress(0, $FFFF)"), 0xffff);
+  t.throws(() => mathCore.parseFunctionDefinition("function broken( = 1"));
 });

@@ -1,7 +1,4 @@
-import {
-  captureCrc32c,
-  type CapturePositionV2,
-} from "../../packages/debug-adapter/src/capture-v2.js";
+import { captureCrc32c, type CapturePositionV2 } from "@uttori/asm-capture";
 
 /** Synthetic bus stream identity and native negotiation contract, shared by archive/RSP tests. */
 export const busSession = "0123456789abcdef0123456789abcdef";

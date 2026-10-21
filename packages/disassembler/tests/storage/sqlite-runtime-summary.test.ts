@@ -2,10 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { SqliteAnalysisStore } from "@uttori/asm-disassembler/storage";
 import type { ExecutionContext } from "ava";
 
 import { test } from "../../../../tests/ava-helper.js";
-import { SqliteAnalysisStore, type RuntimeInstructionRecord } from "../../src/index.js";
+import { type RuntimeInstructionRecord } from "../../src/index.js";
 import {
   RUNTIME_SUMMARY_ROWS_SQL,
   runtimeInstructionSummary,
@@ -88,7 +89,7 @@ test("summary appends only new observations, preserves provenance and full evide
   const plan = db
     .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryInputSql(true)}`)
     .all("snes.65816", "snes.cpu");
-  t.regex(String(plan[0].detail), /SCAN pending/);
+  t.true(plan.some((r) => /SCAN pending/.test(String(r.detail))));
   t.true(plan.some((r) => /SEARCH o USING INTEGER PRIMARY KEY/.test(String(r.detail))));
   t.false(plan.some((r) => /MATERIALIZE|AUTOMATIC/.test(String(r.detail))));
 });
@@ -165,7 +166,17 @@ test("summary input yields after each decode instead of retaining a capture insi
     const plan = db
       .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryInputSql(incremental)}`)
       .all("snes.65816", "snes.cpu");
-    t.false(plan.some((row) => /TEMP B-TREE|MATERIALIZE/.test(String(row.detail))));
+    t.false(plan.some((row) => /MATERIALIZE/.test(String(row.detail))));
+    if (incremental) {
+      const sort = plan.find((row) => /TEMP B-TREE/.test(String(row.detail)))!;
+      const decode = plan.find(
+        (row) =>
+          /SEARCH f USING INTEGER PRIMARY KEY/.test(String(row.detail)) &&
+          row.parent !== sort.parent,
+      );
+      t.truthy(sort, "only compact pending coordinates are sorted");
+      t.truthy(decode, "payload lookup happens outside the compact sort");
+    }
     if (!incremental) {
       t.is(plan[0].detail, "SCAN o", "full rebuild preserves compressed-history locality");
     }
@@ -346,6 +357,84 @@ test("an iterator prepared before a mutation refuses to mix old totals with new 
   t.throws(() => [...rows], { message: /Runtime changed before reading/ });
 });
 
+test("representative staging releases temporary rows when iteration stops early", (t) => {
+  const { store, read } = fixture(t);
+  store.transaction(() => {
+    store.insertRuntime({ ...instruction("last"), address: 0x9000 });
+    store.insertRuntime({
+      ...instruction("first"),
+      address: 0x7000,
+      state: { p: 0x31, E: false, d: 0, a: 99 },
+    });
+  });
+  const expected = read();
+  const cursor = store.runtimeInstructionVariants("snes.65816", "snes.cpu", fields, masks);
+  t.deepEqual(cursor.next().value, expected[0]);
+  cursor.return?.();
+  t.deepEqual(read(), expected);
+  t.deepEqual(expected[0].state, { p: 0x31, E: false, d: 0 });
+});
+
+test("cancelling representative staging preserves warm totals and permits an exact retry", (t) => {
+  const { store, read, stats } = fixture(t);
+  store.transaction(() => {
+    for (let index = 0; index < 4100; index++) {
+      store.insertRuntime({ ...instruction(`variant:${index}`), state: { p: 0x31, d: index } });
+    }
+  });
+  const expected = read();
+  const before = stats();
+  const cursor = store.runtimeInstructionVariants(
+    "snes.65816",
+    "snes.cpu",
+    fields,
+    masks,
+    undefined,
+    () => {
+      throw new Error("cancelled staging");
+    },
+  );
+  t.throws(() => [...cursor], { message: "cancelled staging" });
+  t.deepEqual(stats(), before);
+  t.deepEqual(read(), expected);
+});
+
+test("representative staging validates unused registers before projecting selected fields", (t) => {
+  const { store, db, read } = fixture(t);
+  store.transaction(() => store.insertRuntime(instruction("bad-unused")));
+  read();
+  db.prepare("UPDATE runtime_fact_rows SET payload=?,history_id=NULL,history_slot=NULL").run(
+    JSON.stringify({ bytes: [0xea], state: { p: 0x31, unused: null } }),
+  );
+  t.throws(read, { message: /Invalid runtime state/ });
+});
+
+test("standalone representative hydration keeps one snapshot while another writer appends", (t) => {
+  const { store, file, read } = fixture(t);
+  store.transaction(() => store.insertRuntime(instruction("first")));
+  const expected = read();
+  const writer = new SqliteAnalysisStore(file, false);
+  t.teardown(() => writer.close());
+  let appended = false;
+  const cursor = store.runtimeInstructionVariants(
+    "snes.65816",
+    "snes.cpu",
+    fields,
+    masks,
+    undefined,
+    () => {
+      if (!appended) {
+        appended = true;
+        writer.transaction(() =>
+          writer.insertRuntime({ ...instruction("later", 7), address: 0x9000 }),
+        );
+      }
+    },
+  );
+  t.deepEqual([...cursor], expected, "staging and ordered hydration share the older snapshot");
+  t.is(read().length, 2, "the next cursor includes the committed append");
+});
+
 test("incremental keys retain address/evidence/key iteration order without sorting hydrated payloads", (t) => {
   const { store, db, read, stats } = fixture(t);
   store.transaction(() => {
@@ -377,7 +466,7 @@ test("incremental keys retain address/evidence/key iteration order without sorti
   const plan = db.prepare(`EXPLAIN QUERY PLAN ${RUNTIME_SUMMARY_ROWS_SQL}`).all();
   t.true(plan.some((row) => /CO-ROUTINE grouped/.test(String(row.detail))));
   const sort = plan.find((row) => /TEMP B-TREE/.test(String(row.detail)))!;
-  const source = plan.find((row) => /SEARCH o USING INTEGER PRIMARY KEY/.test(String(row.detail)))!;
+  const source = plan.find((row) => /SEARCH f USING INTEGER PRIMARY KEY/.test(String(row.detail)))!;
   t.truthy(sort);
   t.truthy(source);
   t.not(

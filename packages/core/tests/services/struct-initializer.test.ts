@@ -1,4 +1,6 @@
 import { test } from "../../../../tests/ava-helper.js";
+import { parseExpressionAtSite } from "../../src/ir/expression-node.js";
+import { preprocessBlockCommands } from "../../src/services/command-text-service.js";
 import {
   splitInitializerList,
   parseStructInitializer,
@@ -27,15 +29,42 @@ test("initializer lists preserve nested expressions, quoted commas, and one trai
   }
 });
 
+test("continued records and assets retain physical lines, quote state and split-call buffers", (t) => {
+  for (const source of [
+    'dataStruct R, {\n  text = "{quoted}", ; comment\n\n  bytes = [1,\n    2],\n}\ndb 7',
+    'includeAsset(\n "path;with)quotes.png",\n ; comment\n { format: "native" }\n)\ndb 7',
+    'includeAsset(\\\n "path.png",\\\n { format: "native" }\\\n)\ndb 7',
+  ]) {
+    const parsed = preprocessBlockCommands(source);
+    t.is(parsed.commandBuffer, "");
+    t.is(parsed.sourcedCommands.length, 2);
+    t.is(parsed.sourcedCommands[0].line, 0);
+    t.is(parsed.sourcedCommands[1].line, source.split("\n").length - 1);
+    const split = source.indexOf("\n");
+    const first = preprocessBlockCommands(source.slice(0, split));
+    const second = preprocessBlockCommands(source.slice(split + 1), first.commandBuffer);
+    t.deepEqual(second.commands, parsed.commands);
+  }
+});
+
 test("named initializers distinguish scalar expressions and arrays without evaluating them", (t) => {
   t.deepEqual(
     parseStructInitializer(' { name = "a,b", point.x = fn(1, 2), values = [3, 4,], empty = [] } '),
-    new Map<string, string | string[]>([
-      ["name", '"a,b"'],
-      ["point.x", "fn(1, 2)"],
-      ["values", ["3", "4"]],
-      ["empty", []],
-    ]),
+    new Map(
+      (
+        [
+          ["name", '"a,b"'],
+          ["point.x", "fn(1, 2)"],
+          ["values", ["3", "4"]],
+          ["empty", []],
+        ] as [string, string | string[]][]
+      ).map(([name, value]) => [
+        name,
+        Array.isArray(value)
+          ? value.map((text) => ({ text, expression: parseExpressionAtSite(text, "statement") }))
+          : { text: value, expression: parseExpressionAtSite(value, "statement") },
+      ]),
+    ),
   );
   t.deepEqual(parseStructInitializer("{}"), new Map());
   t.throws(() => parseStructInitializer("x = 1"), { message: /named initializer/ });

@@ -1,6 +1,7 @@
 import { validateSourceLabelName } from "./project-labels.js";
 import type { MetadataShard } from "./project-types.js";
 import { isResearchMapping } from "./research-mapping.js";
+import { readAnalysisTargetState } from "./target-state.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -158,6 +159,7 @@ export const validateEditableMetadataRecord = (shard: MetadataShard, record: unk
         }
       }
     }
+    readAnalysisTargetState(architecture, record.state);
     const points = record.points;
     if (
       Array.isArray(points) &&

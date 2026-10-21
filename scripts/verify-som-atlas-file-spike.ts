@@ -6,14 +6,10 @@ import { asepriteAtlasCodec } from "@uttori/asm-assets/aseprite";
 import { createIndexedPng } from "@uttori/asm-assets/image";
 import type { SpritePaletteCatalog } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
 import type { FrameLayout } from "@uttori/asm-assets/secret-of-mana/som-types";
-import {
-  AssetInterchangeService,
-  asepriteRasterCodec,
-  somSpriteSourceAdapter,
-  type SomSpriteSelection,
-} from "@uttori/asm-cli/asset-interchange";
-import { executeSourceOperation, inspectSourceProject } from "@uttori/asm-cli/source";
-import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler";
+import { somSpriteSourceAdapter, type SomSpriteSelection } from "@uttori/asm-game-secret-of-mana/workflows";
+import { AssetInterchangeService, asepriteRasterCodec } from "@uttori/asm-workflows/asset-interchange";
+import { executeSourceOperation, inspectSourceProject } from "@uttori/asm-workflows/source";
+import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler/source-project";
 
 const originalSha256 = "4c15013131351e694e05f22e38bb1b3e4031dedac77ec75abecebe8520d82d5f";
 

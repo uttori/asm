@@ -24,10 +24,14 @@ import {
   inspectSpriteEditorResult,
   type SpriteEditorBundle,
 } from "@uttori/asm-assets/sprite-editing";
-import { inspectSourceProject, type SourceProjectInspection } from "@uttori/asm-cli/source";
 import { planTypedSourceEdits, type TypedSourcePatch } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { openSourceProject, sourceGit, assertSourcePath } from "@uttori/asm-disassembler";
+import {
+  openSourceProject,
+  sourceGit,
+  assertSourcePath,
+} from "@uttori/asm-disassembler/source-project";
+import { inspectSourceProject, type SourceProjectInspection } from "@uttori/asm-workflows/source";
 
 /** Source-validation fixture inputs; atlas identity is the catalogue user identity, never a basename guess. */
 export interface RoundtripSelection {

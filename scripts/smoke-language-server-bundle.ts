@@ -10,6 +10,7 @@ type LspEnvelope = {
   result?: unknown;
   error?: { message?: string };
   method?: string;
+  params?: unknown;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -138,11 +139,15 @@ function readWorkspaceStatus(value: unknown): {
 
 class LspClient {
   readonly child;
+  configurationRequests = 0;
   #buffer = Buffer.alloc(0);
   #nextId = 1;
   readonly #pending = new Map<number, (response: LspEnvelope) => void>();
 
-  constructor(server: string) {
+  constructor(
+    server: string,
+    readonly configuration?: { scopeUri: string; settings: Record<string, unknown> },
+  ) {
     this.child = spawn(process.execPath, [server, "--stdio"], {
       stdio: ["pipe", "pipe", "inherit"],
     });
@@ -208,7 +213,19 @@ class LspClient {
       const message = parsed;
       this.#buffer = this.#buffer.subarray(bodyStart + length);
       if (message.method && message.id !== undefined) {
-        this.#send({ jsonrpc: "2.0", id: message.id, result: null });
+        let result: unknown = null;
+        if (message.method === "workspace/configuration" && this.configuration) {
+          assert.deepEqual(
+            message.params,
+            {
+              items: [{ section: "asm", scopeUri: this.configuration.scopeUri }],
+            },
+            "Configuration pulls must retain the owning root",
+          );
+          this.configurationRequests++;
+          result = [this.configuration.settings];
+        }
+        this.#send({ jsonrpc: "2.0", id: message.id, result });
       } else if (message.id !== undefined) {
         this.#pending.get(message.id)?.(message);
         this.#pending.delete(message.id);
@@ -227,7 +244,7 @@ const initialize = async (
     processId: process.pid,
     rootUri: workspaceUri,
     workspaceFolders: [{ uri: workspaceUri, name: path.basename(workspace) }],
-    capabilities: { workspace: { configuration: false } },
+    capabilities: { workspace: { configuration: client.configuration !== undefined } },
     initializationOptions,
   });
   client.notify("initialized", {});
@@ -256,9 +273,45 @@ try {
   const snesDirectory = path.join(directory, "snes");
   fs.mkdirSync(snesDirectory);
   const snesSource = path.join(snesDirectory, "main.asm");
-  fs.writeFileSync(snesSource, "org $008000\nLDA #$01\n");
-  const snesClient = new LspClient(server);
+  fs.writeFileSync(snesSource, "org $008000\nStart:\nLDA #$01\n");
+  const snesUri = pathToFileURL(snesSource).href;
+  const snesClient = new LspClient(server, {
+    scopeUri: pathToFileURL(snesDirectory).href,
+    settings: { target: "snes.sfc" },
+  });
   await initialize(snesClient, snesDirectory, { workspaceTrusted: true });
+  snesClient.notify("textDocument/didOpen", {
+    textDocument: {
+      uri: snesUri,
+      languageId: "uttori-snes",
+      version: 1,
+      text: fs.readFileSync(snesSource, "utf8"),
+    },
+  });
+  // Editors cache outlines by document version: the first answer must include the opened buffer.
+  // Concurrent readers also exercise sharing the fresh pass without cancelling each other's worker.
+  for (const symbols of await Promise.all(
+    [1, 2].map(() =>
+      snesClient.request("textDocument/documentSymbol", { textDocument: { uri: snesUri } }),
+    ),
+  )) {
+    assert.ok(
+      Array.isArray(symbols) &&
+        symbols.some((symbol: unknown) => isRecord(symbol) && symbol.name === "Start"),
+    );
+  }
+  assert.ok(snesClient.configurationRequests > 0);
+  snesClient.notify("textDocument/didChange", {
+    textDocument: { uri: snesUri, version: 2 },
+    contentChanges: [{ text: "org $008000\nChanged:\nLDA #$01\n" }],
+  });
+  const changedSymbols = await snesClient.request("textDocument/documentSymbol", {
+    textDocument: { uri: snesUri },
+  });
+  assert.ok(
+    Array.isArray(changedSymbols) &&
+      changedSymbols.some((symbol: unknown) => isRecord(symbol) && symbol.name === "Changed"),
+  );
   const snesOutput = await build(snesClient, snesSource);
   assert.equal(path.extname(snesOutput), ".sfc");
   assert.ok(fs.statSync(snesOutput).size > 0);

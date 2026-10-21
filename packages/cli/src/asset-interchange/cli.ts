@@ -1,8 +1,9 @@
 import {
   executeAssetSourceOperation,
-  type AssetSourceOperation,
-} from "../asset-source/operations.js";
-import { executeAssetOperation, type AssetOperation } from "./operations.js";
+  executeAssetOperation,
+} from "@uttori/asm-game-secret-of-mana/workflows";
+import { type AssetOperation } from "@uttori/asm-workflows/asset-interchange";
+import { type AssetSourceOperation } from "@uttori/asm-workflows/asset-source";
 
 /** Saved-document commands are distinct from source capture import; apply requires the exact reviewed plan ID. */
 export const assetUsage = `Usage:

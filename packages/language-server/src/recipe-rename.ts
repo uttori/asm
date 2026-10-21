@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { AssemblySymbolDefinition } from "@uttori/asm-core";
-import { validateSnesRamMap, validateSnesStructMap } from "@uttori/asm-plugin-snes";
+import { validateSnesRamMap, validateSnesStructMap } from "@uttori/asm-plugin-snes/disassembler";
 
 import { pathToUri } from "./providers.js";
 import type { RenameBuffer } from "./research-rename.js";

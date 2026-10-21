@@ -27,7 +27,8 @@ also extends the repository configuration. Replace it when copying the example o
 
 Validate plugin options before activation, keep mutable state per assembly session, and release
 host resources through plugin disposal. A decoder-only architecture can support analysis, but an
-assembler target also requires an encoder.
+assembler target also requires a typed encoder. The example uses plugin API v2: pure operand
+grammars, typed instruction frames, and directive parse/validate/bind payloads.
 
 ## Documentation and support
 

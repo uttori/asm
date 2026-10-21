@@ -1,5 +1,6 @@
-import type { Assembler } from "@uttori/asm-core";
-import type { SnesSessionState } from "../session-state.js";
+import type { DirectiveSyntaxContribution, PluginSessionCapabilities } from "@uttori/asm-core/plugin";
+import { type SnesSessionState } from "../session-state.js";
+import { parseSnesDirective } from "./syntax-parser.js";
 /**
  * Mapper directive keywords registered on the SNES target.
  * `fullsa1rom` is Asar's name for what this assembler stores as `bigsa1rom`.
@@ -34,9 +35,19 @@ export declare function handleOptimize(state: SnesSessionState, words: readonly 
  * `startpos <addr>` records the SPC execute address used when `endspcblock`
  * has no `execute` argument. Illegal outside an open `spcblock`.
  *
- * @param {Assembler} session Host assembler (for expression eval).
+ * @param {PluginSessionCapabilities} session Host assembler (for expression eval).
  * @param {SnesSessionState} state Mutable SNES session.
  * @param {readonly string[]} words Tokenized line.
  */
-export declare function handleStartpos(session: Assembler, state: SnesSessionState, words: readonly string[]): void;
+export declare function handleStartpos(session: PluginSessionCapabilities, state: SnesSessionState, words: readonly string[]): void;
+/** CHECK grammar is independent of session state; errors are reported only when selected. */
+export declare const checkDirectiveSyntax: DirectiveSyntaxContribution;
+/** Apply mapped bank slots after checking that mapper changes are legal in this stage. */
+export declare function applyMapperPayload(state: SnesSessionState, node: Extract<ReturnType<typeof parseSnesDirective>, {
+    operation: "mapper";
+}>): void;
+/** State errors precede operand errors, matching SPC block validation during source execution. */
+export declare function applyStartposPayload(session: PluginSessionCapabilities, state: SnesSessionState, node: Extract<ReturnType<typeof parseSnesDirective>, {
+    operation: "startpos";
+}>): void;
 //# sourceMappingURL=layout.d.ts.map

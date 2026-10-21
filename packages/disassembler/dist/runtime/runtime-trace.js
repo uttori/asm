@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { TraceCache } from "../internal/trace-cache.js";
 import { validateRuntimeInstructionDetails, } from "../model/trace-detail.js";
+import { TraceChunkFormatter } from "./trace-chunk-formatter.js";
 /** Native, emulator-neutral on-disk identity for an explicitly recorded instruction trace. */
 export const RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
 /** Supported trace-artifact schema. Readers reject other revisions. */
@@ -86,18 +88,20 @@ export const createRuntimeTraceChunkValidator = () => {
             throw new Error(`Instruction trace chunk ${index} active must be boolean.`);
         }
         const chunk = {
-            sequenceStart: integer(input.sequenceStart, `Instruction trace chunk ${index} sequenceStart`, 1),
+            // The validator owns this tree and emits canonical property order. The import hash can
+            // stringify it directly without recursively sorting and copying every register again.
+            active: input.active,
             addresses: input.addresses.map((address, addressIndex) => integer(address, `Instruction trace chunk ${index} address ${addressIndex}`)),
             ...(input.details === undefined
                 ? {}
                 : { details: validateRuntimeInstructionDetails(input.details, input.addresses.length) }),
+            droppedEvents: integer(input.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
+            sequenceStart: integer(input.sequenceStart, `Instruction trace chunk ${index} sequenceStart`, 1),
             ...(input.unattributedMemoryAccesses === undefined
                 ? {}
                 : {
                     unattributedMemoryAccesses: integer(input.unattributedMemoryAccesses, "Unattributed trace memory accesses"),
                 }),
-            droppedEvents: integer(input.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
-            active: input.active,
         };
         if ((chunk.unattributedMemoryAccesses ?? previousUnattributed) < previousUnattributed) {
             throw new Error("Unattributed trace memory count decreased.");
@@ -224,9 +228,15 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
     const suffix = envelope.slice(split + 2);
     const validateChunk = createRuntimeTraceChunkValidator();
     const index = storage?.index ?? createMemoryFactIndex();
-    let executionRecords = 0;
-    let memoryRecords = 0;
-    let indexRecords = 0;
+    const instructionIdentities = new TraceCache();
+    const chunkFormatter = new TraceChunkFormatter();
+    let sealed = storage?.checkpoint;
+    let executionRecords = sealed?.executionRecords ?? 0;
+    let memoryRecords = sealed?.memoryRecords ?? 0;
+    let indexRecords = sealed?.indexRecords ?? 0;
+    if (indexRecords > maxIndexRecords) {
+        throw new Error(`Trace index exceeds ${maxIndexRecords} records.`);
+    }
     const reserve = (count) => {
         // Budget the eventual output as each new key is discovered, including paired code/state records.
         // Subtract first so a pair cannot overflow the safe integer ceiling before comparison.
@@ -236,25 +246,25 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         }
         indexRecords += count;
     };
-    let observedEvents = 0;
-    let droppedEvents = 0;
-    let complete = false;
+    let observedEvents = sealed?.observedEvents ?? 0;
+    let droppedEvents = sealed?.droppedEvents ?? 0;
+    let complete = sealed?.complete ?? false;
     let chunks = 0;
-    let unattributed = 0;
+    let unattributed = sealed?.unattributed ?? 0;
     let finished = false;
     let failure;
-    let detailedEvents = 0;
-    let memoryLoss = 0;
+    let detailedEvents = sealed?.detailedEvents ?? 0;
+    let memoryLoss = sealed?.memoryLoss ?? 0;
     const pushChunk = (input) => {
-        if (finished) {
+        if (finished || sealed) {
             throw new Error("Instruction trace import already finished.");
         }
         const chunk = validateChunk(input);
         // Hash every original chunk so identity covers all supplied bytes, registers and counts.
         hash.update(chunks++ === 0 ? "[\n" : ",\n");
-        // canonicalJson always has one trailing newline. Indent its text directly instead of
-        // allocating one array entry and callback result for every line in a rich trace chunk.
-        hash.update(`    ${canonicalJson(chunk).slice(0, -1).replaceAll("\n", "\n    ")}`);
+        // Preserve historical envelope indentation while reusing validated snapshot text. The
+        // formatter avoids another recursive normalization of every captured register object.
+        hash.update(chunkFormatter.format(chunk));
         droppedEvents = chunk.droppedEvents;
         complete = !chunk.active;
         unattributed = chunk.unattributedMemoryAccesses ?? unattributed;
@@ -263,8 +273,9 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             const physical = detail?.state.prg0;
             let mapping;
             if (artifact.architecture === "65xx.2a03") {
-                if (!detail || typeof physical !== "number")
+                if (!detail || typeof physical !== "number") {
                     throw new Error("NES execution evidence requires captured bytes and physical mapper identity.");
+                }
                 // The fetch coordinate is authoritative; unknown/RAM code has no ROM offset.
                 mapping = sha256(canonicalJson({
                     physical,
@@ -294,10 +305,19 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             // Keep bytes and decoding state together: independent sets could pair self-modified code
             // with register values that were never observed when those bytes executed.
             const state = detail.state;
-            const content = canonicalJson({ address, bytes: detail.bytes, state });
+            const content = JSON.stringify({ address, bytes: detail.bytes, state });
             // Full snapshots may contain large or mostly unique register objects. Fixed-size keys
             // bound per-variant key allocations without dropping any captured register fields.
-            const key = sha256(content);
+            // Arbitrary JSON register strings can be large. Cache only short identities, keeping the
+            // 4,096-entry working set below eight MiB of UTF-16 key text even for hostile input shapes.
+            const cacheable = content.length <= 1024;
+            let key = cacheable ? instructionIdentities.get(content) : undefined;
+            if (key === undefined) {
+                key = sha256(`${JSON.stringify({ address, bytes: detail.bytes, state }, undefined, 2)}\n`);
+                if (cacheable) {
+                    instructionIdentities.insert(content, key);
+                }
+            }
             if (index.add(`code:${key}`, () => ({
                 kind: "instruction",
                 identity: key,
@@ -351,7 +371,37 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             throw failure;
         }
     };
-    const finish = () => {
+    const checkpoint = (recovery) => {
+        if (failure) {
+            throw failure;
+        }
+        if (!sealed) {
+            // Copy before digesting so sealing is independent of publication. A failed database merge
+            // can reuse this exact identity and the committed counters without decoding the archive again.
+            const finalHash = hash
+                .copy()
+                .update(chunks ? "\n  ]" : "[]")
+                .update(suffix);
+            if (recovery) {
+                finalHash.update(canonicalJson({ recoveredCapturePrefix: recovery }));
+            }
+            sealed = {
+                sourceSha256: finalHash.digest("hex"),
+                executionRecords,
+                memoryRecords,
+                indexRecords,
+                observedEvents,
+                droppedEvents,
+                complete,
+                unattributed,
+                detailedEvents,
+                memoryLoss,
+                ...(recovery ? { recovery } : {}),
+            };
+        }
+        return sealed;
+    };
+    const finish = (recovery) => {
         if (failure) {
             throw failure;
         }
@@ -359,10 +409,9 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             throw new Error("Instruction trace import already finished.");
         }
         finished = true;
-        const sourceSha256 = hash
-            .update(chunks ? "\n  ]" : "[]")
-            .update(suffix)
-            .digest("hex");
+        const prepared = checkpoint(recovery);
+        recovery = prepared.recovery;
+        const sourceSha256 = prepared.sourceSha256;
         storage?.onSource?.(sourceSha256, "full");
         const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
         const evidenceIds = [evidenceId];
@@ -471,6 +520,12 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
                 executionEvents: observedEvents,
                 detailedEvents,
                 memoryRecords,
+                ...(recovery
+                    ? {
+                        recoveredChunks: Number(recovery.chunkThrough),
+                        recoveredEvents: Number(recovery.eventThrough),
+                    }
+                    : {}),
             },
             unsupported: droppedEvents === 0
                 ? []
@@ -482,6 +537,11 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
                     },
                 ],
             warnings: [
+                ...(recovery
+                    ? [
+                        `Recovered incomplete ACT2 prefix through checkpoint ${recovery.chunkThrough}, instruction ${recovery.eventThrough}: ${recovery.reason} The unrecorded tail and final companion boundary are unknown.`,
+                    ]
+                    : []),
                 ...(!complete ? ["Trace artifact ended while capture was still active."] : []),
                 ...(detailedEvents < observedEvents
                     ? [
@@ -506,6 +566,6 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             droppedEvents,
         };
     };
-    return { push, finish };
+    return { push, checkpoint, finish };
 };
 //# sourceMappingURL=runtime-trace.js.map

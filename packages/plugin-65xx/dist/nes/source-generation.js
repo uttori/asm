@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { lostCodeRanges, openAnalysisProjectStore, validateProjectRom, assertSourcePath, sourceGit, retainSourceGeneration, sourceContentHash, verifySourceGeneration, createSourceInputSnapshot, createSourceScratch, } from "@uttori/asm-disassembler";
+import { openAnalysisProjectStore, validateProjectRom } from "@uttori/asm-disassembler";
+import { lostCodeRanges, assertSourcePath, sourceGit, retainSourceGeneration, sourceContentHash, verifySourceGeneration, createSourceInputSnapshot, createSourceScratch, } from "@uttori/asm-disassembler/source-project";
 import { loadNesRom } from "./project.js";
 import { buildNesSource } from "./source-build.js";
 import { exportNesSource } from "./source-export.js";

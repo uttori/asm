@@ -81,6 +81,14 @@ this indicates a pending worker, while record counts show measurable progress. O
 completion, failure, archive hashes and import totals. Failure or cancellation stops the queue and
 preserves completed imports; retrying the queue is safe.
 
+Instruction imports decode, validate and index each new archive once. A completed index survives
+an interrupted database merge in `.uttori-local/validated-traces` and is removed after successful
+publication. Retries match archive, companion manifest, ROM and importer identities before reuse;
+present companion artifacts still receive integrity checks. A matching Git catalog entry and native
+import receipt skip an already completed full instruction import. Partial recovery always rereads
+the archive. The worker's 30-minute timeout measures inactivity, so a progressing queue can finish
+even when its total duration exceeds 30 minutes.
+
 The default import budget is 32 GiB per archive. Git source imports apply
 `limits.captureBytes` in `.uttori/project.json` to both the primary recording and each graphics
 companion; other trace imports use `asm.trace.maxImportSizeMiB` (default 32768). Streaming reads

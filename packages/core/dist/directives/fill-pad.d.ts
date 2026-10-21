@@ -13,7 +13,7 @@ export declare const handleFillPattern: (ctx: FillPadDirectiveContext, words: re
  * @param {string[]} words `fill` plus the byte count.
  * @throws {Error} If exactly one parameter is not supplied.
  */
-export declare const handleFill: ({ session, operandResolver }: FillPadDirectiveContext, words: readonly string[]) => void;
+export declare const handleFill: (ctx: FillPadDirectiveContext, words: readonly string[]) => void;
 /**
  * Sets the pad unit and little-endian pad bytes used by later `pad` directives.
  * @param {FillPadDirectiveContext} ctx The directive context.
@@ -30,7 +30,7 @@ export declare const handlePadPattern: (ctx: FillPadDirectiveContext, words: rea
  * @param {string[]} words `pad` and an optional logical address.
  * @throws {Error} If more than one parameter is supplied, or the target does not map to output.
  */
-export declare const handlePad: ({ session, operandResolver }: FillPadDirectiveContext, words: readonly string[]) => void;
+export declare const handlePad: (ctx: FillPadDirectiveContext, words: readonly string[]) => void;
 /**
  * Registers fill/pad pattern and emit directives.
  * @param {DirectiveRegistry} registry The directive registry.

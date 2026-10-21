@@ -1,4 +1,4 @@
-import { assetPath } from "@uttori/asm-cli/asset-interchange/paths";
+import { assetPath } from "@uttori/asm-workflows/asset-interchange/paths";
 
 /** Editor state only: opaque tabs expose dirty state, while native text/binary documents expose monotonic versions. */
 export interface AssetEditorVersion {

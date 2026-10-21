@@ -1,5 +1,6 @@
 /** Lightweight asset-call parsing for editor requests; conversion belongs to explicit previews/builds. */
-import { parseAssetCall, preprocessBlockCommands, type ParsedAssetCall } from "@uttori/asm-core";
+import { parseAssetCall, type ParsedAssetCall } from "@uttori/asm-core";
+import { preprocessBlockCommands } from "@uttori/asm-core/frontend";
 
 /** Strip an assembly comment without cutting semicolons inside quoted paths.
  * @param {string} line Source line.

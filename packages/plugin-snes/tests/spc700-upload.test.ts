@@ -1,14 +1,7 @@
 import { RomImage } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
-import {
-  analyzeSpc700Aram,
-  materializeSpc700UploadBlock,
-  parseSpc700UploadStream,
-  SPC700_ARAM_ADDRESS_SPACE,
-  SNES_FILE_ADDRESS_SPACE,
-  spc700UploadProjectRecords,
-} from "../src/index.js";
+import { analyzeSpc700Aram, materializeSpc700UploadBlock, parseSpc700UploadStream, SPC700_ARAM_ADDRESS_SPACE, SNES_FILE_ADDRESS_SPACE, spc700UploadProjectRecords } from "@uttori/asm-plugin-snes/disassembler";
 
 const romFor = (bytes: readonly number[]): RomImage =>
   new RomImage(Uint8Array.from(bytes), { headerSize: 0 });

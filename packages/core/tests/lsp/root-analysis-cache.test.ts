@@ -138,6 +138,7 @@ test("root analysis rejects incompatible, corrupt, and tampered cache entries", 
   }
   for (const changes of [
     { version: 999 },
+    { version: 5 },
     { root: "wrong" },
     { fingerprint: "tampered" },
     { identity: null },

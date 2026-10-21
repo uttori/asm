@@ -7,6 +7,8 @@ import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
+  analysisProjectRevision,
+  loadAnalysisProject,
   publishAnalysisProject,
   type AnalysisProject,
 } from "@uttori/asm-disassembler";
@@ -281,10 +283,12 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       ),
     );
     t.deepEqual(await client.request(projectDirectory, "annotations"), []);
-    publishAnalysisProject(projectDirectory, {
-      ...project,
-      shards: { ...project.shards, annotations: [] },
-    });
+    const current = loadAnalysisProject(projectDirectory);
+    publishAnalysisProject(
+      projectDirectory,
+      { ...current, shards: { ...current.shards, annotations: [] } },
+      analysisProjectRevision(current.manifest),
+    );
     client.invalidate();
     const revisedCoverage = await client.request(projectDirectory, "coverage");
     if (!isCoverage(revisedCoverage)) {
@@ -292,11 +296,7 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     }
     t.is(revisedCoverage.summary.classifiedBytes, 0);
     client.dispose();
-    const restarted = await client.request(projectDirectory, "coverage");
-    if (!isCoverage(restarted)) {
-      throw new Error("expected restarted coverage");
-    }
-    t.is(restarted.summary.totalBytes, 1024, "worker can restart after termination");
+    await t.throwsAsync(client.request(projectDirectory, "coverage"), { message: /disposed/ });
   } finally {
     client.dispose();
     fs.rmSync(directory, { recursive: true, force: true });
@@ -318,6 +318,69 @@ const fakeProcess = (directory: string): string => {
   );
   return file;
 };
+
+test("distinct read admission is bounded, duplicate requests share capacity, and invalidation settles old work", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-worker-bound-"));
+  const logs: { level: string; message: string }[] = [];
+  const client = new AnalysisWorkerClient(fakeProcess(directory), {
+    maxPending: 2,
+    log: (level, message) => logs.push({ level, message }),
+  });
+  t.teardown(() => {
+    client.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const active = client.request("busy", "coverage");
+  t.is(client.request("busy", "coverage"), active);
+  const queued = client.request("busy", "coverageConflicts", { offset: 200 });
+  const results = Promise.allSettled([active, queued]);
+  await t.throwsAsync(client.request("busy", "coverageConflicts", { offset: 400 }), {
+    message: /capacity/,
+  });
+  client.invalidate();
+  t.true((await results).every((result) => result.status === "rejected"));
+  const invalidations = logs.filter((entry) =>
+    entry.message.includes("Analysis project invalidated."),
+  );
+  t.is(invalidations.length, 2);
+  t.true(invalidations.every((entry) => entry.level === "debug"));
+  t.truthy(await client.request("ready", "coverage"), "new generation starts after invalidation");
+  client.dispose();
+  await t.throwsAsync(client.request("ready", "manifest"), { message: /disposed/ });
+});
+
+test("new viewport reads replace queued stale ranges without replacing the active result", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-worker-view-"));
+  const client = new AnalysisWorkerClient(fakeProcess(directory), { maxPending: 2 });
+  t.teardown(() => {
+    client.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const active = client.request("busy", "annotations", { offset: 0 });
+  const stale = t.throwsAsync(client.request("busy", "annotations", { offset: 1 }), {
+    message: /superseded/,
+  });
+  const latest = client.request("busy", "annotations", { offset: 2 });
+  await stale;
+  t.truthy(await active);
+  t.truthy(await latest);
+});
+
+test("malformed worker envelopes fail and settle the whole lane", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-worker-wire-"));
+  const file = path.join(directory, "bad.cjs");
+  fs.writeFileSync(file, "process.on('message', () => process.send(null));");
+  const client = new AnalysisWorkerClient(file);
+  t.teardown(() => {
+    client.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const results = await Promise.allSettled([
+    client.request("ready", "manifest"),
+    client.request("ready", "coverage"),
+  ]);
+  t.true(results.every((result) => result.status === "rejected"));
+});
 
 test("interactive annotations bypass bulk work and retain their process when a bulk view fails", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-projection-isolation-"));

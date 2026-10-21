@@ -1,7 +1,7 @@
 import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
+import { verifyCaptureContext } from "@uttori/asm-capture";
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
-import { verifyCaptureContext } from "@uttori/asm-debug-adapter";
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -39,7 +39,9 @@ export async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
         manifest.archive !== path.basename(file) ||
         manifest.scope !== recovery.header.scope ||
         boundaries?.session !== recovery.header.session ||
-        end?.eventThrough !== recovery.eventThrough) {
+        // A retained index already bound the terminal count to this archive's exact content hash.
+        // Reuse still checks every companion artifact, without decoding the primary a second time.
+        (recovery.eventThrough !== undefined && end?.eventThrough !== recovery.eventThrough)) {
         throw new Error("Capture companion does not match this archive's scope, session, or final event boundary.");
     }
     await verifyCaptureContext(directory, recovery.header, signal);

@@ -30,7 +30,7 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "browser": "./src/browser.ts",
+      "browser": "./dist/browser.js",
       "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
@@ -49,6 +49,16 @@
       "uttori-source": "./src/plugin/index.ts",
       "types": "./dist/plugin/index.d.ts",
       "import": "./dist/plugin/index.js"
+    },
+    "./frontend": {
+      "uttori-source": "./src/frontend.ts",
+      "types": "./dist/frontend.d.ts",
+      "import": "./dist/frontend.js"
+    },
+    "./tooling": {
+      "uttori-source": "./src/tooling.ts",
+      "types": "./dist/tooling.d.ts",
+      "import": "./dist/tooling.js"
     }
   },
   "publishConfig": {

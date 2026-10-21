@@ -15,7 +15,7 @@ export interface SourceProjectConfiguration {
     readonly captures: string;
     /** Shared resource policy. Capture/analysis values use target defaults; research ceilings are opt-in. */
     readonly limits?: ResearchInputLimits & {
-        /** Per input archive, including each graphics companion; defaults to 32 GiB and does not allocate that much memory. */
+        /** Optional byte ceiling per archive, including each graphics companion; omitted limits allow streamed inputs of any safely counted size. */
         readonly captureBytes?: number;
         readonly analysisWorkItems?: number;
         readonly analysisCallDepth?: number;

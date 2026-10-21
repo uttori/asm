@@ -1,36 +1,31 @@
+/** Supported assembly and embedding entry point; specialized host contracts have explicit subpaths. */
 /**
  * Host assembly/tooling entry point. Plugin author contracts live at ./plugin. ./debug-map
  * also has a dedicated entry point. Exported front-end, lowering, and IR services are advanced
  * embedding APIs and retain their session/stage invariants.
  */
 export { Assembler } from "./assembler.js";
-export { getStructMetadata } from "./services/struct-metadata.js";
-export * from "./architecture-types.js";
-export * from "./decoder-types.js";
-export * from "./architecture-registry.js";
-export * from "./address-width.js";
-export * from "./crc32.js";
-export * from "./addressToLine.js";
-export * from "./debug-map.js";
-export * from "./canonical-json.js";
-export * from "./operand-syntax.js";
-export * from "./syntax-profile.js";
-export * from "./diagnostics.js";
-export * from "./directive-groups.js";
-export * from "./source-location.js";
-export * from "./source-field-edits.js";
-export * from "./file-provider.js";
-export * from "./ir/assembly-tree.js";
-export * from "./ir/expression-node.js";
-export * from "./ir/normalized-command.js";
-export * from "./ir/asset-call.js";
-export * from "./services/assembly-front-end-service.js";
-export * from "./services/asset-resource-snapshot.js";
-export { isOpenStructInitializer } from "./services/struct-initializer.js";
-export { removeInlineComment, preprocessBlockCommands } from "./services/command-text-service.js";
-export * from "./services/command-lowering-service.js";
-export { ProgramModelBuilder } from "./services/program-model-builder.js";
-export * from "./lsp/index.js";
+export { Uint8ArrayDecoderSource, } from "./decoder-types.js";
+export { ArchitectureRegistry } from "./architecture-registry.js";
+export { maximumAddressForWidth, normalizeAddressForWidth, formatAddressForWidth, } from "./address-width.js";
+export { CRC32 } from "./crc32.js";
+export { AddressToLineMapping, } from "./addressToLine.js";
+export { DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource, } from "./debug-map.js";
+export { canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson, } from "./canonical-json.js";
+export { ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE, } from "./syntax-profile.js";
+export { AssemblyError, createAssemblySourceLocation, diagnosticFromError, } from "./diagnostics.js";
+export { CORE_DIRECTIVE_GROUPS } from "./directive-groups.js";
+export { createSourceSpan, createLineSpan, createTextSpan, sourceLineStarts, shiftSourceSpan, deriveTokenSpans, sourceSpanToRange, } from "./source-location.js";
+export { planTypedSourceEdits, } from "./source-field-edits.js";
+export { NodeAssemblyFileProvider, NodeAssemblySnapshotProvider, MemoryAssemblyFileProvider, stripWrappingQuotes, } from "./file-provider.js";
+export { parseExpressionNode, renderExpressionNode, isReferenceExpressionNode, renderReferenceExpressionNode, parseLeadingReferenceExpression, } from "./ir/expression-node.js";
+export { createCommandProvenance, createNormalizedCommand, cloneNormalizedCommand, setCommandWords, setCommandKind, } from "./ir/normalized-command.js";
+export { parseAssetCall } from "./ir/asset-call.js";
+export { assetSourceMediaType, resolveAssetResourceSnapshot, } from "./services/asset-resource-snapshot.js";
 export * as pluginApi from "./plugin/index.js";
 export { AssemblerEnvironment, definePlugin, PluginError, PluginManager, PLUGIN_API_VERSION, } from "./plugin/index.js";
+export { sourceOriginLocations, sourceOccurrenceRange, } from "./source-provenance.js";
+export * from "./ir/resolved-instruction.js";
+export { runTypedEncoderEntry } from "./typed-encoder-entry.js";
+export { parseInstructionOperands, bindInstructionOperands } from "./ir/parsed-operand.js";
 //# sourceMappingURL=index.js.map

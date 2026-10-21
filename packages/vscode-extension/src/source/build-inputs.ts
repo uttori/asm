@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { sourceContentHash, parseSourceProject } from "@uttori/asm-disassembler";
+import { sourceContentHash, parseSourceProject } from "@uttori/asm-disassembler/source-project";
 
 /** Saved byte identity; consumed assembly dependencies come from the worker's build receipt. */
 export interface SavedBuildInput {

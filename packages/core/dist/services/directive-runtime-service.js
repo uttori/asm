@@ -1,5 +1,8 @@
 import { normalizeAddressForWidth } from "../address-width.js";
-import { splitRespectingFunctions } from "./command-text-service.js";
+import { bindDataOperand, parseDataList } from "../ir/data-node.js";
+import { parseDeclarationNode } from "../ir/declaration-node.js";
+import { parseDirectiveExpression } from "../ir/directive-arguments.js";
+import { literalDataOperands } from "../ir/statement-node.js";
 export class DirectiveRuntimeService {
     host;
     constructor(host) {
@@ -11,17 +14,19 @@ export class DirectiveRuntimeService {
      * @throws {Error} If the format is incorrect.
      */
     handleCharacterMapping(words) {
+        // This public token entry preserves its arity diagnostic before invoking the shared grammar.
         if (words.length !== 3) {
             throw new Error("Character mapping requires format: 'char' = value");
         }
-        const token = words[0];
-        const quoted = /^'([\S\s])'$/.exec(token) ?? /^"([\S\s])"$/.exec(token);
-        const char = quoted ? quoted[1] : token.replace(/["']/g, "");
-        if (char.length !== 1) {
+        const declaration = parseDeclarationNode(words.join(" "), words);
+        if (declaration?.kind === "invalid") {
+            throw new Error(declaration.message);
+        }
+        if (declaration?.kind !== "character") {
             throw new Error("Character mapping requires format: 'char' = value");
         }
-        const value = this.host.operandResolver.getnum(words[2]);
-        this.host.characterMappings.set(char, value);
+        const value = this.host.operandResolver.getnum(declaration.expression);
+        this.host.characterMappings.set(declaration.character, value);
     }
     /**
      * Processes a string and maps characters to their corresponding values in `characterMappings`.
@@ -40,37 +45,28 @@ export class DirectiveRuntimeService {
         if (params.length !== 1) {
             throw new Error("ORG requires a single address parameter.");
         }
-        const addressStr = params[0].trim();
-        let addr;
-        if (/^\$[\da-f]+$/i.test(addressStr)) {
-            addr = parseInt(addressStr.substring(1), 16);
+        this.executeOrg(parseDirectiveExpression(params[0], false), params[0]);
+    }
+    /** ORG uses mathematical evaluation, including grouped fractions, before checking the target range. */
+    executeOrg(expression, spelling) {
+        let address;
+        try {
+            address = this.host.operandResolver.deps.evaluateMath(expression);
         }
-        else if (/^-?\d+$/.test(addressStr)) {
-            addr = parseInt(addressStr, 10);
+        catch {
+            throw new Error(`Invalid ORG address: ${spelling}`);
         }
-        else {
-            try {
-                // Asar accepts `org !Size-$01` and bitwise header-location math.
-                // Evaluate through math so leftover junk still errors instead of
-                // silently becoming 0 during definition collection.
-                addr = this.host.operandResolver.deps.evaluateMath(this.host.resolvedefines(addressStr));
-            }
-            catch {
-                throw new Error(`Invalid ORG address: ${params[0]}`);
-            }
+        if (Number.isNaN(address) || address < 0 || address > 2 ** this.host.addressWidth - 1) {
+            throw new Error(`Invalid ORG address: ${spelling}`);
         }
-        const maxAddress = 2 ** this.host.addressWidth - 1;
-        if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
-            throw new Error(`Invalid ORG address: ${params[0]}`);
-        }
-        this.host.setWritePosition(addr);
+        this.host.setWritePosition(address);
     }
     /**
      * Handles data directives.
      * @param {string} type The data directive keyword.
      * @param {string[]} params The directive parameters.
      */
-    handleDataDirective(type, params) {
+    handleDataDirective(type, params, numeric) {
         if (!Array.isArray(params) || params.length === 0) {
             throw new Error(`${type.toUpperCase()} directive requires at least one parameter.`);
         }
@@ -94,67 +90,86 @@ export class DirectiveRuntimeService {
         if (!len) {
             throw new Error(`Invalid data directive: ${type}`);
         }
-        if (this.host.isDefinitionCollectionStage) {
-            this.estimateDataDirectiveSize(len, params);
-            return;
-        }
-        // Reverse storage keeps source order when popping and avoids shifting a large data list.
-        // Expanded defines are pushed in reverse too, so they finish before the following operand.
-        const pendingValues = splitRespectingFunctions(params.join(" ")).toReversed();
-        while (pendingValues.length > 0) {
-            let value = (pendingValues.pop() ?? "").trim();
-            if (value.startsWith('"') || value.startsWith("'")) {
-                // String literals go through define expansion first, then through the
-                // active character mapping table one character at a time.
-                const unquoted = value.slice(1, -1);
-                const expandedString = this.host.defineEngine.resolveDefinesInStringLiteral(unquoted);
-                const mappedChars = this.processStringWithMapping(expandedString);
-                for (const charValue of mappedChars) {
-                    this.writeDataByLength(len, charValue);
-                }
-                continue;
+        const statement = numeric ?? {
+            width: len,
+            operands: parseDataList(params.join(" ")),
+        };
+        this.executeDataStatement(statement);
+    }
+    /** Resolve each element at its write cursor; sizing binds lists but never evaluates numeric values. */
+    executeDataStatement(statement, estimateOnly = this.host.isDefinitionCollectionStage) {
+        if (statement.literalData) {
+            if (statement.literalData.length === 0 || statement.literalData.length % 6 !== 0) {
+                throw new Error("Invalid literal data syntax.");
             }
-            if (value.startsWith("#")) {
-                value = value.substring(1);
-            }
-            // Recursively resolve defines until the token stops changing. This
-            // preserves existing behavior for define chains used inside data lists.
-            let resolved = value;
-            let previousResolved = "";
-            while (resolved !== previousResolved) {
-                previousResolved = resolved;
-                resolved = this.host.resolvedefines(resolved);
-            }
-            const expandedValues = splitRespectingFunctions(resolved);
-            if (expandedValues.length > 1) {
-                // A define can expand beyond V8's argument limit. Never spread its tokens into a call.
-                for (let index = expandedValues.length - 1; index >= 0; index--) {
-                    pendingValues.push(expandedValues[index]);
-                }
-                continue;
-            }
-            let num;
-            // Struct member references look like labels but need struct-specific
-            // indexing and extension rules before falling back to numeric parsing.
-            if (this.host.structEngine.hasStructReference(resolved)) {
-                const structValue = this.host.structEngine.resolveStructLabel(resolved);
-                if (typeof structValue === "number" && !Number.isNaN(structValue)) {
-                    this.writeDataByLength(len, structValue);
-                    continue;
-                }
-                num = structValue;
+            if (estimateOnly) {
+                this.host.step((statement.literalData.length / 6) * statement.width);
             }
             else {
-                num = this.host.operandResolver.getnum(resolved);
+                // These nodes are parsed literal occurrences: no define/list binding or speculative reads
+                // remain. Numeric observation still runs at each original write cursor through getnum.
+                for (const operand of literalDataOperands(statement.literalData)) {
+                    this.writeDataByLength(statement.width, this.host.operandResolver.getnum(operand.expression));
+                }
             }
-            if (Number.isNaN(num)) {
-                // As a final fallback, treat the value as a static label reference.
-                num = this.host.symbolScope.getLabelValue(resolved, true);
+            if (this.host.collectSourceMetadata) {
+                this.host.addAddressToLine(normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth));
             }
-            if (Number.isNaN(num)) {
-                throw new Error("Unable to determine value:");
+            return;
+        }
+        if (!statement.operands.length) {
+            throw new Error(`${(statement.emptyDirective ?? ["", "db", "dw", "dl", "dd"][statement.width]).toUpperCase()} directive requires at least one parameter.`);
+        }
+        let estimatedItems = 0;
+        const pending = [...statement.operands].toReversed();
+        while (pending.length) {
+            const original = pending.pop();
+            let entries;
+            try {
+                entries = bindDataOperand(original, (fragment) => this.host.defineEngine.resolveFragment(fragment));
             }
-            this.writeDataByLength(len, num);
+            catch (cause) {
+                if (!estimateOnly) {
+                    throw cause;
+                }
+                estimatedItems++;
+                continue;
+            }
+            if (entries.length !== 1) {
+                for (let index = entries.length - 1; index >= 0; index--) {
+                    pending.push(entries[index]);
+                }
+                continue;
+            }
+            const entry = entries[0];
+            if (entry.expression.type === "string") {
+                let value = entry.expression.value;
+                try {
+                    value = this.host.defineEngine.resolveDefinesInStringLiteral(value);
+                }
+                catch (cause) {
+                    if (!estimateOnly) {
+                        throw cause;
+                    }
+                }
+                if (estimateOnly) {
+                    estimatedItems += value.length;
+                }
+                else {
+                    for (const character of this.processStringWithMapping(value)) {
+                        this.writeDataByLength(statement.width, character);
+                    }
+                }
+            }
+            else if (estimateOnly) {
+                estimatedItems++;
+            }
+            else {
+                this.writeDataByLength(statement.width, this.host.operandResolver.getnum(entry.expression));
+            }
+        }
+        if (estimateOnly) {
+            this.host.step(estimatedItems * statement.width);
         }
         if (this.host.collectSourceMetadata) {
             this.host.addAddressToLine(normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth));
@@ -195,55 +210,10 @@ export class DirectiveRuntimeService {
      * @param {string[]} params Source operands, including defines that may expand to data lists.
      */
     estimateDataDirectiveSize(len, params) {
-        // Match emission's reverse stack: expanded lists retain source order with constant-time pops.
-        const pendingValues = splitRespectingFunctions(params.join(" ")).toReversed();
-        let estimatedItems = 0;
-        while (pendingValues.length > 0) {
-            let value = (pendingValues.pop() ?? "").trim();
-            if (!value) {
-                continue;
-            }
-            if (value.startsWith('"') || value.startsWith("'")) {
-                const unquoted = value.slice(1, -1);
-                try {
-                    // Pass 0 needs byte counts, not final values. If defines in a string
-                    // are known, use the expanded length. Otherwise fall back to literal
-                    // length so layout can keep moving.
-                    estimatedItems += this.host.defineEngine.resolveDefinesInStringLiteral(unquoted).length;
-                }
-                catch {
-                    estimatedItems += unquoted.length;
-                }
-                continue;
-            }
-            if (value.startsWith("#")) {
-                value = value.substring(1);
-            }
-            let resolved = value;
-            let previousResolved = "";
-            try {
-                while (resolved !== previousResolved) {
-                    previousResolved = resolved;
-                    resolved = this.host.resolvedefines(resolved);
-                }
-            }
-            catch {
-                // Pass 0 only needs byte counts, so unresolved symbols still consume one item.
-            }
-            const expandedValues = splitRespectingFunctions(resolved);
-            if (expandedValues.length > 1) {
-                // Count every expanded value without passing an input-sized list as call arguments.
-                for (let index = expandedValues.length - 1; index >= 0; index--) {
-                    pendingValues.push(expandedValues[index]);
-                }
-                continue;
-            }
-            estimatedItems += 1;
+        if (len !== 1 && len !== 2 && len !== 3 && len !== 4) {
+            throw new Error(`Unsupported data length ${len}`);
         }
-        this.host.step(estimatedItems * len);
-        if (this.host.collectSourceMetadata) {
-            this.host.addAddressToLine(normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth));
-        }
+        this.executeDataStatement({ width: len, operands: parseDataList(params.join(" ")) }, true);
     }
     /**
      * Pushes the current PC state.

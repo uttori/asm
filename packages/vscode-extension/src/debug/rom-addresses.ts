@@ -6,7 +6,7 @@ import {
   createSnesAddressContext,
   detectSnesRom,
   identifySnesCpuAddress,
-} from "@uttori/asm-plugin-snes";
+} from "@uttori/asm-plugin-snes/disassembler";
 
 /** Mapper-dependent hooks kept outside the emulator-neutral DAP package. */
 type AddressResolvers = Pick<
@@ -30,14 +30,19 @@ export const createSnesDebugAddressResolvers = (
     const cartridge = new NesCartridge(output);
     return {
       sourceBreakpointAddresses: (address) => {
-        if (address.outputOffset === undefined)
+        if (address.outputOffset === undefined) {
           return [{ ...address, architecture: "65xx.2a03", addressSpace: "nes.cpu" }];
+        }
         const offset = address.outputOffset - cartridge.prg.offset;
-        if (offset < 0 || offset >= cartridge.prg.size) return [];
+        if (offset < 0 || offset >= cartridge.prg.size) {
+          return [];
+        }
         let windows = [0x8000, 0xa000, 0xc000, 0xe000].map((base) => base + (offset & 8191));
         if (cartridge.mapper === 0) {
           windows = [0x8000 + offset];
-          if (cartridge.prg.size === 16384) windows.push(0xc000 + offset);
+          if (cartridge.prg.size === 16384) {
+            windows.push(0xc000 + offset);
+          }
         }
         // A source bank can execute in several windows; native stops still require the exact physical byte.
         return windows.map((pc) => ({

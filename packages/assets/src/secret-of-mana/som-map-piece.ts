@@ -69,7 +69,10 @@ interface DecodedMapPiece {
  * @param {Uint8Array} bytes Pointer-bounded map piece.
  * @returns {object} Compact row-major tile IDs and the consumed extent.
  */
-export function decodeMapPiece(bytes: Uint8Array, { history, origin = 0 }: MapHistory = {}): DecodedMapPiece {
+export function decodeMapPiece(
+  bytes: Uint8Array,
+  { history, origin = 0 }: MapHistory = {},
+): DecodedMapPiece {
   assert(bytes.length >= 3, "Missing map header/data.");
   assert(Number.isInteger(origin) && origin >= 0 && origin <= 65535, "Invalid map origin.");
   const width = (bytes[0] >>> 1) + 1;
@@ -253,7 +256,9 @@ function decodeMapStream(
     );
     motifInstances.push(decoded);
     // Keep first-insertion compatibility while retaining each contextual variant separately.
-    if (!motif.tiles) Object.assign(motif, decoded);
+    if (!motif.tiles) {
+      Object.assign(motif, decoded);
+    }
     for (let dy = 0; dy < motif.height; dy++) {
       for (let dx = 0; dx < motif.width; dx++) {
         tiles[(y + dy) * width + x + dx] = decoded.tiles[dy * motif.width + dx];

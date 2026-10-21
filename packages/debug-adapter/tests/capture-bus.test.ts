@@ -14,21 +14,15 @@ import {
   busScope,
   busSession,
 } from "../../../tests/helpers/capture-bus.js";
-import {
-  LosslessCaptureFileRecorder,
-  recoverCaptureFile,
-  readCaptureFileHeader,
-  exportCaptureJson,
-} from "../src/capture-file.js";
-import {
+import { recoverCaptureFile, readCaptureFileHeader, exportCaptureJson,
   captureCrc32c,
   decodeCaptureChunk,
   validateCaptureCapabilities,
   validateCapturePosition,
   validateCaptureRequest,
   type CaptureTransportV2,
-  type CaptureBusAccessV2,
-} from "../src/capture-v2.js";
+  type CaptureBusAccessV2 } from "@uttori/asm-capture";
+import { LosslessCaptureFileRecorder } from "../src/capture-file.js";
 
 test("bus decoding retains every actor/phase, exact counters, unowned contexts and raster timing", (t) => {
   const exact = 9007199254740993n;

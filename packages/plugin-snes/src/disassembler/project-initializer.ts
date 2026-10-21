@@ -589,28 +589,50 @@ export const analyzeSnesProject = (
     "analyze",
     `Phase 4/6: exploring static control flow from ${count(configured.size)} entry points.`,
   );
-  const result = analyzeSnes65816(rom, mapper, {
-    onProgress: ({ processedWorkItems, queuedWorkItems, instructions }) => {
-      throwIfCancelled(options.signal);
-      progress(
-        "analyze",
-        `Phase 4/6: ${count(processedWorkItems)} work items processed, ${count(queuedWorkItems)} queued, ${count(instructions)} instructions decoded.`,
-      );
-    },
-    annotations: loaded.view.annotations,
-    labels: loaded.view.labels,
-    evidence: loaded.view.evidence,
-    entryPoints: [...configured.values()],
-    targetOverrides,
-    targetSets,
-    ...(options.maxWorkItems === undefined ? {} : { maxWorkItems: options.maxWorkItems }),
-    ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
-  });
-  throwIfCancelled(options.signal);
-  progress(
-    "analyze",
-    `Static pass ${result.status}: ${count(result.processedWorkItems)} work items, ${count(result.nodes.length)} instructions, ${count(result.conflicts.length)} conflicts. Phase 5/6: decoding captured instruction variants.`,
-  );
+  // Retain the publication records, not the worklist CFG and its decoded abstract-state graph.
+  // The latter is much larger and has no consumers during captured decoding or SQLite publication.
+  const result = (() => {
+    const analysis = analyzeSnes65816(rom, mapper, {
+      onProgress: ({ processedWorkItems, queuedWorkItems, instructions }) => {
+        throwIfCancelled(options.signal);
+        progress(
+          "analyze",
+          `Phase 4/6: ${count(processedWorkItems)} work items processed, ${count(queuedWorkItems)} queued, ${count(instructions)} instructions decoded.`,
+        );
+      },
+      annotations: loaded.view.annotations,
+      labels: loaded.view.labels,
+      evidence: loaded.view.evidence,
+      entryPoints: [...configured.values()],
+      targetOverrides,
+      targetSets,
+      ...(options.maxWorkItems === undefined ? {} : { maxWorkItems: options.maxWorkItems }),
+      ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
+    });
+    throwIfCancelled(options.signal);
+    progress(
+      "analyze",
+      `Static pass ${analysis.status}: ${count(analysis.processedWorkItems)} work items, ${count(analysis.nodes.length)} instructions, ${count(analysis.conflicts.length)} conflicts. Phase 5/6: decoding captured instruction variants.`,
+    );
+    const romBytes = rom.bytes();
+    // recordsFor creates detached publication records owned by this analysis. Attach bytes to those
+    // records directly so the static CFG can be collected without another copy of every code node.
+    for (const record of analysis.records) {
+      if (record.kind === "cfg-node" && record.fileOffset !== undefined) {
+        Object.assign(record, {
+          bytes: Array.from(romBytes.subarray(record.fileOffset, record.fileOffset + record.size)),
+        });
+      }
+    }
+    return {
+      status: analysis.status,
+      processedWorkItems: analysis.processedWorkItems,
+      incompleteReasons: analysis.incompleteReasons,
+      annotations: analysis.annotations,
+      evidenceRecords: analysis.evidenceRecords,
+      records: analysis.records,
+    };
+  })();
   const capturedStore = openAnalysisProjectStore(projectDirectory);
   const capturedRecords = (() => {
     try {
@@ -619,6 +641,14 @@ export const analyzeSnesProject = (
         SNES_CPU_ADDRESS_SPACE,
         ["p", "P", "e", "E", "db", "DB", "d", "D"],
         { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } },
+        undefined,
+        (representatives) => {
+          throwIfCancelled(options.signal);
+          progress(
+            "analyze",
+            `Phase 5/6: staged ${count(representatives)} instruction representatives in storage order.`,
+          );
+        },
       );
       return capturedStore.transaction(() => {
         assertAnalysisProjectRevision(capturedStore, loaded.revision);
@@ -631,21 +661,7 @@ export const analyzeSnesProject = (
       capturedStore.close();
     }
   })();
-  const romBytes = rom.bytes();
-  const analysisRecords = [
-    ...editableRecords,
-    ...result.records.map((record) =>
-      record.kind === "cfg-node" && record.fileOffset !== undefined
-        ? {
-            ...record,
-            bytes: Array.from(
-              romBytes.subarray(record.fileOffset, record.fileOffset + record.size),
-            ),
-          }
-        : record,
-    ),
-    ...capturedRecords,
-  ];
+  const analysisRecords = [...editableRecords, ...result.records, ...capturedRecords];
   if (result.status === "incomplete") {
     const lost = lostCodeRanges(previousCode, codeRanges(analysisRecords));
     if (lost.length > 0) {
@@ -737,7 +753,7 @@ export const analyzeSnesProject = (
         options.assertResearchCurrent?.();
         throwIfCancelled(options.signal);
         assertAnalysisProjectRevision(publication, loaded.revision);
-        const projected = publication.replaceResearchAnalysis(
+        publication.replaceResearchAnalysis(
           options.research!,
           updates,
           (collection) =>
@@ -745,15 +761,10 @@ export const analyzeSnesProject = (
               "commit",
               `Phase 6/6: prepared ${collection}; validating the atomic analysis publication.`,
             ),
+          loaded.view,
         );
-        // Validate the complete derived graph against the final projected metadata. Runtime facts
-        // stay in SQLite; only their provenance links need validation if evidence was retired.
-        publication.validateView({
-          ...loaded.view,
-          ...updates,
-          ...projected,
-          runtime: [],
-        });
+        // Research publication validates the complete projected graph using this revision-pinned
+        // view. Retained runtime provenance is checked in SQLite in the same writer transaction.
         progress("commit", "Phase 6/6: validated selected research and complete derived graph.");
         return publication.manifest();
       });

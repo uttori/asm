@@ -3,7 +3,7 @@ const plugin = {
     id: "loader.fixture-plugin",
     name: "Loader fixture plugin",
     version: "1.0.0",
-    apiVersion: 1,
+    apiVersion: 2,
   },
   validateOptions(configured) {
     const byte = configured?.byte ?? 0x42;
@@ -18,11 +18,14 @@ const plugin = {
       aliases: ["loader-cpu"],
       displayName: "Loader fixture architecture",
       unknownInstructionBehavior: "throw",
-      splitOperands: (text) => (text ? [text] : []),
-      classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
-      createEncoder: ({ emission }) => ({
-        estimateSize: () => 1,
-        encode: () => {
+      operandGrammar: { version: "1", parse: () => ({ operands: [] }) },
+      createTypedEncoder: () => ({
+        estimate: (frame) => {
+          frame.choose("fixture", 1);
+          return 1;
+        },
+        encode: (frame, { emission }) => {
+          frame.choose("fixture", 1);
           emission.writeByte(context.options.byte);
           return true;
         },

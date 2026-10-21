@@ -10,16 +10,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { bindFrameAtlasPalette } from "@uttori/asm-assets/secret-of-mana/som-frame-atlas";
-import { executeSourceOperation } from "@uttori/asm-cli/source";
+import { renameResearchSymbol, writeResearchDocument } from "@uttori/asm-disassembler";
 import {
   openSourceProject,
   sourceGit,
   sourceContentHash,
   sourceStatus,
-  renameResearchSymbol,
-  writeResearchDocument,
   acceptedSourceGeneration,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 
 const application = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const root = path.join(application, "experiments/secret-of-mana-git-workflow-full");

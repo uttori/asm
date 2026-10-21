@@ -10,7 +10,7 @@ import {
   AssetRecordStore,
   assetHash,
   readAssetStagingId,
-} from "../src/asset-interchange/record-store.js";
+} from "../../workflows/src/asset-interchange/record-store.js";
 
 const isObject = (input: unknown): input is Record<string, unknown> =>
   !!input && typeof input === "object" && !Array.isArray(input);

@@ -10,14 +10,14 @@ import {
   applySourceGeneration,
   finishSourceGeneration,
   sourceGit,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
+import { somSourceConversionAdapter } from "@uttori/asm-game-secret-of-mana/source-adapter";
 
 import { test } from "../../../tests/ava-helper.js";
 import { spriteSourceFixture, buildSpriteSource } from "../../../tests/fixtures/sprite-source.js";
-import { AssetSourceConversionService } from "../src/asset-source-conversion.js";
-import { editAssetCall, locateAssetCall } from "../src/asset-source-edits.js";
-import { somSourceConversionAdapter } from "../src/asset-source/som-adapter.js";
-import { inspectSourceProject } from "../src/source.js";
+import { AssetSourceConversionService } from "../../workflows/src/asset-source-conversion.js";
+import { editAssetCall, locateAssetCall } from "../../workflows/src/asset-source-edits.js";
+import { inspectSourceProject } from "../../workflows/src/source.js";
 
 const service = () => new AssetSourceConversionService([somSourceConversionAdapter]);
 

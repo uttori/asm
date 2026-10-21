@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { isOpenStructInitializer, removeInlineComment } from "@uttori/asm-core";
-import { assertSourcePath, sourceContentHash } from "@uttori/asm-disassembler";
+import { isOpenStructInitializer, removeInlineComment } from "@uttori/asm-core/frontend";
+import { assertSourcePath, sourceContentHash } from "@uttori/asm-disassembler/source-project";
 import { inspectSnesSource, } from "../source-build.js";
 import { expandedPristineRom, expansionHeaderOffset } from "./expansion.js";
 import { planSnesRelocation, } from "./relocate.js";

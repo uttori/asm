@@ -1,4 +1,4 @@
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 /** Encodings `planSnesRelocation` accepts. Any other string is rejected at planning time. */
 const RELOCATION_ENCODINGS = [
     "long24",

@@ -7,7 +7,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
 import { GdbRspClient } from "../../../debug-sidecar-ares/src/gdb-rsp-client.ts";
 import { NodeTcpGdbRspTransport } from "../../../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts";

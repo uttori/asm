@@ -1,6 +1,6 @@
 import { open, mkdir, writeFile, readFile, mkdtemp, link, rm } from "node:fs/promises";
 import path from "node:path";
-import { readCaptureFileHeader } from "@uttori/asm-debug-adapter";
+import { readCaptureFileHeader } from "@uttori/asm-capture";
 import { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "@uttori/asm-disassembler";
 import { createNesGraphicsProjection, publishNesGraphicsEvidence } from "./ppu-evidence.js";
 import { summarizeNesPPUCapture } from "./ppu.js";

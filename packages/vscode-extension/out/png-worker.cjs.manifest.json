@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "output": "packages/vscode-extension/out/png-worker.cjs",
+  "source": "packages/vscode-extension/src/assets/png-worker.ts",
+  "target": "node24",
+  "notices": "packages/vscode-extension/out/png-worker.cjs.licenses.txt",
+  "sha256": "b4e54b3b575868a2be3020541d0dcb017841bd207f1cc41a8e168dd2cb38e571",
+  "noticesSha256": "7b8f30493d45e9bb5f5d79f49dbb463feb84785a0d6a1187045a44f821f7ee54",
+  "inputs": [
+    {
+      "file": "node_modules/@uttori/data-tools/dist/data-buffer.js",
+      "sha256": "bdc11d436ba8da5deb5e6d9dd25611238fa0e876555d2ebf5b80e9e420c0b9f1"
+    },
+    {
+      "file": "node_modules/@uttori/data-tools/dist/data-hash-crc32.js",
+      "sha256": "70a73128250150eeb27166a9697c9c23ccc212c2fba5dfad71a6638e6a9de1a8"
+    },
+    {
+      "file": "node_modules/@uttori/data-tools/dist/data-helpers.js",
+      "sha256": "84ce08c50f35e675a0f24227c0fed20205821d7cd7229f569a8d20598f425f16"
+    },
+    {
+      "file": "node_modules/@uttori/data-tools/dist/image/bitmap-text.js",
+      "sha256": "bdcbe00e9939e5e593cb3c9bd263ebf2ab9232377158c3265ebecda2b8a0e959"
+    },
+    {
+      "file": "node_modules/@uttori/data-tools/dist/image/data-image-png.js",
+      "sha256": "05be2d4c6f9c41991a981bfe7827eb919f446f5d648e3c04d4b6cb3bab86f363"
+    },
+    {
+      "file": "node_modules/@uttori/data-tools/dist/image/rgba-surface.js",
+      "sha256": "021c4707ef7526fb4b3f1f0227d519f25fcd432c42be4093a7a2177b2cedfd8d"
+    },
+    {
+      "file": "node_modules/@uttori/data-tools/dist/underflow-error.js",
+      "sha256": "2182593c50e8822d5dbfa3a78fe68fde05106cddd7c46f9e9010a5b411904a9a"
+    },
+    {
+      "file": "node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs",
+      "sha256": "1e22e9ce4302e5376e507e82425d5385c0d7d7e00485cc9c2e1870782ea4033b"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
+    },
+    {
+      "file": "packages/assets/src/image-conversion.ts",
+      "sha256": "4a6477415ef6115509458cb7d83c9660b0284bd68eef937fcf9f36b7dd53524a"
+    },
+    {
+      "file": "packages/assets/src/image.ts",
+      "sha256": "0487b77557b375e02554eb9a3fcba1373202a99efc74431314d14f14d9f69994"
+    },
+    {
+      "file": "packages/assets/src/indexed-edit.ts",
+      "sha256": "be2abac30bcb5af27b31ca7dcb8dbe2571dc1763bf8d332dfb369598bd4da7c7"
+    },
+    {
+      "file": "packages/assets/src/indexed-values.ts",
+      "sha256": "031ef3b374e2082f270ba52018695ed13d4bfa6f70b54df7deb67b4feda48fbe"
+    },
+    {
+      "file": "packages/assets/src/limits.ts",
+      "sha256": "1fb4a976bd051acbe8124e6e15ada007c503b2962b39ef6888a362f3fd0ec0dd"
+    },
+    {
+      "file": "packages/assets/src/png-edit.ts",
+      "sha256": "b7f297118c8ab569ff678bb8aa8f560eb19b924b297b5d5e0076af9564a25fb6"
+    },
+    {
+      "file": "packages/assets/src/png.ts",
+      "sha256": "9a367fc0b0299e3eaa01f9826ab6707a0b2d7cebab50c9bb56b0a46f5b54a619"
+    },
+    {
+      "file": "packages/assets/src/snes.ts",
+      "sha256": "e6fbe29b1702cd42b36737dd084f213ff4c665cd2aa12ccfb1062614bcb20f3b"
+    },
+    {
+      "file": "packages/assets/src/validation.ts",
+      "sha256": "1784b5b075e1706ea64342ef519af01e19f69ef9dbf9887e1d8a13314ddd9327"
+    },
+    {
+      "file": "packages/vscode-extension/esbuild.mjs",
+      "sha256": "b640ee4a290b4f884ff588b67ea2b3d7d6ba205686970f97ec9dbca3b54763fe"
+    },
+    {
+      "file": "packages/vscode-extension/src/assets/png-worker.ts",
+      "sha256": "0d136422bc59bb94d67b0f1f692c13bb8ff0ee2a5adef3de6f21a75930e5cb08"
+    },
+    {
+      "file": "scripts/bundle-notices.mjs",
+      "sha256": "9ca1813012e4fd363f71f6ea59679358a2df035e8147a545c1d04c7f7365b1f1"
+    },
+    {
+      "file": "scripts/runtime-bundles.mjs",
+      "sha256": "1b47a5860356045fdbed9b4a92591094f0d4e6c88e5ad9a7c0e5f1b70f703132"
+    }
+  ]
+}

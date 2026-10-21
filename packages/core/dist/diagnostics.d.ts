@@ -1,7 +1,10 @@
 import { type SourceRange, type SourceSpan } from "./source-location.js";
+import type { SourceOrigin } from "./source-provenance.js";
 export type AssemblyDiagnosticSeverity = "error" | "warning" | "info";
 export type AssemblySymbolKind = "label" | "define" | "macro" | "struct" | "structMember" | "function" | "namespace";
 export type AssemblySourceLocation = {
+    /** Shared expansion provenance, available without re-parsing source in tooling. */
+    origin?: SourceOrigin;
     file: string;
     line: number;
     span?: SourceSpan;
@@ -79,7 +82,9 @@ export declare class AssemblyError extends Error {
  * @param {SourceSpan} [span] Optional precise source span.
  * @returns {AssemblySourceLocation} The normalized source location.
  */
-export declare function createAssemblySourceLocation(file: string, line: number, span?: SourceSpan): AssemblySourceLocation;
+export declare function createAssemblySourceLocation(file: string, line: number, span?: SourceSpan, origin?: SourceOrigin): AssemblySourceLocation;
+/** Retain the innermost source while allowing the original exception and cause chain to propagate. */
+export declare function rememberErrorSource(error: unknown, location: AssemblySourceLocation): void;
 /**
  * Converts an unknown error into a structured diagnostic.
  * @param {unknown} error The error to normalize.

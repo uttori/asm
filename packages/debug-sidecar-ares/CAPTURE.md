@@ -205,5 +205,5 @@ passive storage reads. NES context uses physical 2 KiB RAM images, a synchronize
 state plus a capture-only supplement, controller polling samples, screenshots and
 a canonical CPU/APU/PPU/mapper/controller endpoint. Instruction captures include a
 full-window graphics companion. Replay requires full iNES and payload hashes plus
-the exact runtime and machine profile. SNES context and serial-input schemas are unchanged. See [NES PPU evidence](../../docs/nes-ppu-evidence.md)
+the exact runtime and machine profile. SNES context and serial-input schemas are unchanged. See [NES PPU evidence](./NES.md)
 for the wire layout, supported boards, reader APIs and limits.

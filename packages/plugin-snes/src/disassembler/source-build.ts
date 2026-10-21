@@ -1,23 +1,21 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import {
   Assembler,
-  NodeAssemblyFileProvider,
+  parseExpressionNode,
+  isReferenceExpressionNode,
+  NodeAssemblySnapshotProvider,
   createDebugMap,
   type AssemblerEnvironment,
   type AddressToLineMapping,
-  type AssemblyFileResolutionOptions,
-  type AssemblyFileStat,
 } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
-  durableReplace,
-  acquireFileLease,
+  publishSourceBuild,
   assertSourcePath,
   sourceContentHash,
   type SourceBuildVerification,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
 
 import {
   checkSnesSourceLayout,
@@ -30,7 +28,6 @@ import {
 import { checkSnesCodeFlow } from "./rom-layout/code-flow.js";
 import { checkSnesRomExpansion, type SnesRomExpansionPolicy } from "./rom-layout/expansion.js";
 import { checkRawBlockConsumption, type RawBlockInput } from "./rom-layout/raw-consumption.js";
-import { pruneSnesSourceBuilds } from "./source-build-cache.js";
 
 /** Build normal editable source. Original-ROM equality is requested only for pure generations. */
 export interface BuildSnesSourceOptions {
@@ -98,94 +95,17 @@ export interface SnesSourceInspection {
   readonly diagnostics: readonly SnesLayoutDiagnostic[];
 }
 
-/** Reuse the first bytes read across assembler passes; record the bytes consumed, not later disk contents. */
-class SourceBuildFiles extends NodeAssemblyFileProvider {
-  readonly snapshots = new Map<string, Uint8Array>();
-  #bytes = 0;
-
-  constructor(readonly overlays: ReadonlyMap<string, Uint8Array | null> = new Map()) {
-    super();
-  }
-
-  /** Candidate creations/removals participate in the same search order as saved source files. */
-  override resolvePath(
-    filename: string,
-    options: AssemblyFileResolutionOptions = {},
-  ): string | undefined {
-    const normalized = filename.replace(/^["']|["']$/g, "");
-    let candidates: string[];
-    if (path.isAbsolute(normalized)) {
-      candidates = [normalized];
-    } else {
-      candidates = [
-        options.macroSourceFile ? path.dirname(options.macroSourceFile) : undefined,
-        options.currentFile ? path.dirname(options.currentFile) : undefined,
-        ...(options.includePaths ?? []),
-        process.cwd(),
-      ]
-        .filter((item): item is string => item !== undefined)
-        .map((directory) => path.resolve(directory, normalized));
-    }
-    for (const candidate of candidates) {
-      if (this.overlays.has(candidate)) {
-        if (this.overlays.get(candidate) !== null) {
-          return candidate;
-        }
-      } else if (fs.existsSync(candidate)) {
-        return candidate;
-      }
-    }
-    return undefined;
-  }
-
-  override stat(file: string): AssemblyFileStat {
-    const name = path.resolve(file);
-    if (this.overlays.has(name)) {
-      const bytes = this.overlays.get(name);
-      return { exists: bytes !== null, readable: bytes !== null, size: bytes?.length };
-    }
-    return super.stat(file);
-  }
-
-  override readFile(file: string): Uint8Array {
-    const name = path.resolve(file);
-    let bytes = this.snapshots.get(name);
-    if (!bytes) {
-      const overlay = this.overlays.get(name);
-      if (overlay === null) {
-        throw new Error(`Candidate source removed '${name}'.`);
-      }
-      bytes = overlay ?? super.readFile(name);
-      this.#bytes += bytes.length;
-      if (this.#bytes > 256 * 1024 * 1024) {
-        throw new Error("Source build input snapshot exceeds 256 MiB.");
-      }
-      this.snapshots.set(name, bytes);
-    }
-    return bytes;
-  }
-
-  override readTextFile(file: string, encoding: BufferEncoding = "utf8"): string {
-    return Buffer.from(this.readFile(file)).toString(encoding);
-  }
-}
-
 /** Assemble one immutable input snapshot; return diagnostics for placement previews without publishing output. */
 export function inspectSnesSource(options: InspectSnesSourceOptions): SnesSourceInspection {
   options.signal?.throwIfAborted();
   const root = path.resolve(options.root);
   const entrySource = path.resolve(root, options.entrySource);
   const overlays = new Map<string, Uint8Array | null>();
-  let overlayBytes = 0;
   for (const [name, bytes] of options.overlays ?? []) {
     assertSourcePath(name);
-    overlayBytes += bytes?.length ?? 0;
-    if (overlayBytes > 256 * 1024 * 1024) {
-      throw new Error("Source overlays exceed 256 MiB.");
-    }
-    overlays.set(path.resolve(root, name), bytes === null ? null : Uint8Array.from(bytes));
+    overlays.set(path.resolve(root, name), bytes);
   }
-  const files = new SourceBuildFiles(overlays);
+  const files = new NodeAssemblySnapshotProvider({ overlays });
   const assembler = new Assembler({
     environment: options.environment,
     target: "snes.sfc",
@@ -214,7 +134,7 @@ export function inspectSnesSource(options: InspectSnesSourceOptions): SnesSource
       }
       for (let start = 0; start < original.length; start += blockSize) {
         const file = path.resolve(root, directory, `${start.toString(16).padStart(6, "0")}.bin`);
-        if (fs.existsSync(file)) {
+        if (files.stat(file).exists) {
           rawBlocks.push({
             file,
             original: original.subarray(start, start + blockSize),
@@ -243,7 +163,10 @@ export function inspectSnesSource(options: InspectSnesSourceOptions): SnesSource
         // dataStructs bases and members use the assembler's structured-reference resolver;
         // they need not be ordinary labels. Missing names remain source-linked extent failures.
         try {
-          symbols.set(name, assembler.resolveNormalizedReferenceLabelValue(name));
+          const reference = parseExpressionNode(name);
+          if (isReferenceExpressionNode(reference)) {
+            symbols.set(name, assembler.evaluateReferenceExpressionNode(reference));
+          }
         } catch {
           /* Report below. */
         }
@@ -299,12 +222,7 @@ export function inspectSnesSource(options: InspectSnesSourceOptions): SnesSource
         throw new Error(`Source preview overlay is not consumed by this assembly: ${file}`);
       }
     }
-    for (const [file, bytes] of files.snapshots) {
-      const current = overlays.get(file) ?? fs.readFileSync(file);
-      if (sourceContentHash(current) !== sourceContentHash(bytes)) {
-        throw new Error(`Source dependency changed during assembly: ${file}`);
-      }
-    }
+    files.assertUnchanged();
     if (
       options.originalContent &&
       sourceContentHash(options.originalContent) !== sourceContentHash(output)
@@ -417,24 +335,11 @@ export function buildSnesSource(options: BuildSnesSourceOptions): SnesSourceBuil
       fixedExtents: options.extents?.length ?? 0,
     },
   };
-  const lease = acquireFileLease(path.join(options.outputDirectory, "publication.lock"));
-  try {
-    if (fs.existsSync(directory) && !fs.lstatSync(directory).isDirectory()) {
-      throw new Error("Build cache destination is not an owned directory.");
-    }
-    // The pending receipt identifies interrupted outputs. Pruning runs under this same lease,
-    // so it cannot remove files another process is still publishing.
-    durableReplace(path.join(directory, "pending.json"), canonicalJson(result));
-    durableReplace(outputFile, output);
-    durableReplace(debugMapFile, debugMap);
-    durableReplace(path.join(directory, "build.json"), canonicalJson(result));
-    fs.rmSync(path.join(directory, "pending.json"));
-    // A single lightweight pointer selects the last successful pair. Editors never scan historical
-    // debug maps, and a failed build leaves this pointer at the prior validated generation.
-    durableReplace(path.join(options.outputDirectory, "current.json"), canonicalJson(result));
-    const cacheWarnings = pruneSnesSourceBuilds(options.outputDirectory, inputSha256);
-    return cacheWarnings.length ? { ...result, cacheWarnings } : result;
-  } finally {
-    lease.release();
-  }
+  return publishSourceBuild({
+    directory: options.outputDirectory,
+    receipt: result,
+    output,
+    debugMap: debugMap,
+    signal: options.signal,
+  });
 }

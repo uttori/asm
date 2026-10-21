@@ -8,8 +8,10 @@ import type { StructEngine } from "../services/struct-engine.js";
 import type { SymbolScopeService } from "../services/symbol-scope-service.js";
 /** Methods directive handlers actually call on the runtime service. */
 export interface DirectiveRuntime {
+    executeDataStatement(statement: import("../ir/statement-node.js").NumericDataStatement): void;
     handleDataDirective(type: string, params: string[]): void;
     handleOrg(params: string[]): void;
+    executeOrg(address: ExpressionNode, spelling: string): void;
     handlePullPC(): void;
     handlePushPC(): void;
 }

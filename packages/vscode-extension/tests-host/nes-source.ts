@@ -2,12 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import {
-  NativeCaptureFileRecorder,
-  recoverCaptureFile,
-  validateCaptureResult,
-} from "@uttori/asm-debug-adapter";
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { recoverCaptureFile, validateCaptureResult } from "@uttori/asm-capture";
+import { NativeCaptureFileRecorder } from "@uttori/asm-debug-adapter";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 import type { NesSourceBuild } from "@uttori/asm-plugin-65xx/disassembler";
 import * as vscode from "vscode";
 

@@ -1,8 +1,4 @@
-import {
-  RomImage,
-  type AnalysisProjectShards,
-  type RuntimeInstructionRecord,
-} from "@uttori/asm-disassembler";
+import { RomImage, type AnalysisProjectShards, type RuntimeInstructionRecord } from "@uttori/asm-disassembler";
 
 import { analyzeSnesRuntimeCode } from "../../src/disassembler/runtime-code.js";
 

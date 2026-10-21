@@ -4,11 +4,8 @@
  */
 import * as path from "node:path";
 
-import {
-  ANALYSIS_PROJECT_MANIFEST,
-  readSourceProjectLocalInputs,
-  type RomCoverageSegment,
-} from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_MANIFEST, type RomCoverageSegment } from "@uttori/asm-disassembler";
+import { readSourceProjectLocalInputs } from "@uttori/asm-disassembler/source-project";
 import {
   EventEmitter,
   ThemeIcon,

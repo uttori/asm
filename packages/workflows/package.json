@@ -1,0 +1,99 @@
+{
+  "name": "@uttori/asm-workflows",
+  "version": "1.0.0",
+  "description": "Shared source project and asset workflows for terminal, editor and embedded hosts.",
+  "keywords": [
+    "assembler",
+    "cli",
+    "disassembler",
+    "snes"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/workflows#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
+  "license": "MIT",
+  "author": "Matthew Callis <matthew.callis@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/workflows"
+  },
+  "files": [
+    "dist",
+    "src",
+    "*.md"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/source.js",
+  "module": "./dist/source.js",
+  "types": "dist/source.d.ts",
+  "exports": {
+    ".": {
+      "uttori-source": "./src/source.ts",
+      "types": "./dist/source.d.ts",
+      "import": "./dist/source.js"
+    },
+    "./source": {
+      "uttori-source": "./src/source.ts",
+      "types": "./dist/source.d.ts",
+      "import": "./dist/source.js"
+    },
+    "./asset-source": {
+      "uttori-source": "./src/asset-source/operations.ts",
+      "types": "./dist/asset-source/operations.d.ts",
+      "import": "./dist/asset-source/operations.js"
+    },
+    "./asset-interchange": {
+      "uttori-source": "./src/asset-interchange/index.ts",
+      "types": "./dist/asset-interchange/index.d.ts",
+      "import": "./dist/asset-interchange/index.js"
+    },
+    "./asset-interchange/public-records": {
+      "uttori-source": "./src/asset-interchange/public-records.ts",
+      "types": "./dist/asset-interchange/public-records.d.ts",
+      "import": "./dist/asset-interchange/public-records.js"
+    },
+    "./asset-interchange/paths": {
+      "uttori-source": "./src/asset-interchange/paths.ts",
+      "types": "./dist/asset-interchange/paths.d.ts",
+      "import": "./dist/asset-interchange/paths.js"
+    },
+    "./asset-interchange/operation-records": {
+      "uttori-source": "./src/asset-interchange/operation-records.ts",
+      "types": "./dist/asset-interchange/operation-records.d.ts",
+      "import": "./dist/asset-interchange/operation-records.js"
+    },
+    "./asset-source-edits": {
+      "uttori-source": "./src/asset-source-edits.ts",
+      "types": "./dist/asset-source-edits.d.ts",
+      "import": "./dist/asset-source-edits.js"
+    },
+    "./source-requests": {
+      "uttori-source": "./src/source-requests.ts",
+      "types": "./dist/source-requests.d.ts",
+      "import": "./dist/source-requests.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "make-types": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "pack:check": "npm pack --dry-run",
+    "prepack": "node ../../scripts/clean-workspace-build.ts --workspace workflows && npm run make-types"
+  },
+  "dependencies": {
+    "@uttori/asm-assets": "1.0.0",
+    "@uttori/asm-core": "1.0.0",
+    "@uttori/asm-disassembler": "1.0.0",
+    "@uttori/asm-plugin-65xx": "1.0.0",
+    "@uttori/asm-plugin-loader-node": "1.0.0",
+    "@uttori/asm-plugin-snes": "1.0.0"
+  },
+  "engines": {
+    "node": ">=26"
+  }
+}

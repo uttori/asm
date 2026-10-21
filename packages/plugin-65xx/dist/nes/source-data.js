@@ -32,12 +32,9 @@ export function nesSourceDataRanges(rom, annotations) {
 export function nesSourceHex(value, digits = 4) {
     return "$" + value.toString(16).toUpperCase().padStart(digits, "0");
 }
-/** Put long behavior contracts above the equate while short descriptions remain useful inline hovers. */
+/** Keep each contract above its equate and separate declarations for readable shared includes. */
 export function nesSourceDefinition(name, address, description) {
     const lines = description.split(/\r?\n/);
-    if (lines.length === 1 && lines[0].length <= 100) {
-        return [`${name} = ${nesSourceHex(address)} ; ${lines[0]}`];
-    }
-    return [...lines.map((line) => `; ${line}`), `${name} = ${nesSourceHex(address)}`];
+    return [...lines.map((line) => `; ${line}`), `${name} = ${nesSourceHex(address)}`, ""];
 }
 //# sourceMappingURL=source-data.js.map

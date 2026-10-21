@@ -1,4 +1,4 @@
-import { type NesPPUState, type CaptureFileHeader, type CaptureNesBusAccessV2 } from "@uttori/asm-debug-adapter";
+import { type NesPPUState, type CaptureFileHeader, type CaptureNesBusAccessV2 } from "@uttori/asm-capture";
 /** NPP1 is a halted graphics view, not a save state or a rendered frame. */
 export declare const NES_PPU_SNAPSHOT_BYTES = 13056;
 export interface NesPPUSnapshot {

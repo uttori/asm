@@ -1,6 +1,6 @@
 # Secret of Mana asset plugin
 
-[`som-asset-plugin.ts`](../../src/secret-of-mana/som-asset-plugin.ts) is a complete game plugin for the SNES
+[`som-asset-plugin.ts`](../../../game-secret-of-mana/src/assembly.ts) is a complete game plugin for the SNES
 assembler target. It registers `som.tile.actor3bpp`, an indexed PNG conversion built on
 `@uttori/asm-assets/image` and `/snes`, `som.sprite.frames` for framed 4bpp sprites,
 `som.boss.graphics` for the mask-expanded boss sheets, playable WAVE formats `som.brr.pcm` and
@@ -16,6 +16,23 @@ The decoder rejects truncated streams, row overruns and trailing bytes. Encoding
 escapes high tile IDs and splits runs at 64. All 512 USA-ROM rows reproduce their
 original encoding exactly; callers should still retain native streams for other
 ROM revisions whose token choices may differ.
+
+`som.boss.tilemap` handles the bank-C1 streams referenced by background-backed boss
+poses. Its required `size` is the exact even expanded byte count (2–65534), normally
+`width * height * 2`. A zero storage tag is raw data; every nonzero tag selects the
+MSB-first mask grammar that copies the byte two outputs earlier for clear bits.
+Both history bytes start at zero. Unlike boss tile graphics, tilemaps stop within
+the last mask group without rounding their output to eight bytes. Encoding defaults
+to tag 1; set `tag: 0` for raw storage or preserve the original nonzero tag explicitly.
+The decoder rejects trailing bytes and enforces the caller's output limit. Preserve
+original streams when equivalent authored data could have a different encoding.
+
+The shared `som-boss-background.ts` codec also reads and writes FF pose prefixes:
+count/FF, two signed little-endian pixel origins, then `count` six-byte rectangles
+containing cell X/Y, cell width/height and a bank-C1 near pointer. The native builder
+places each rectangle in the `$7FBC00` tilemap buffer with a 64-byte row stride.
+The prefix extent excludes collision records and makes no claim about final PPU
+scrolling or palette selection. These records are distinct from ordinary OAM parts.
 
 The separate 64-byte bitmap at `$C67FC0` selects each row's starting bank, low bit
 first (`$C6 | bit`). The 512 little-endian pointers start at `$C68000`; pointer
@@ -238,10 +255,9 @@ resolves frame tile offsets to source segments and writes the PNG/sidecar pair.
 It requires Python 3 and Pillow. A new boss
 graphics mode belongs in this plugin, beside its bounded decoder, encoder and tests.
 
-For a complete saved-file Aseprite example, use the
-[Spikey Tiger demo](../../../../secret-of-mana/demos/aseprite-spikey-tiger/README.md).
-It starts at the existing `bank-01b.asm` include and provides VS Code and CLI guides,
-complete selection declarations, and optional measured intro playback.
+For saved-file Aseprite export, preview and apply workflows, use the
+[asset interchange guide](../../../cli/ASSET_INTERCHANGE.md).
+It documents explicit selections, native-byte validation and review before publication.
 
 To edit an existing sprite directly, open the `*-frames.png` indexed image in a pixel editor.
 Draw in the authoritative frame occurrence or source-only bottom tile indicated by

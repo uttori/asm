@@ -46,6 +46,19 @@ The raw `origin` maps to output offset zero. Use `65xx.nes` for iNES output or `
 for ca65-style directives. This is a direct binary assembler. Ca65 object files and general ld65
 linking are unsupported. The manual lists exact CPU and syntax limits.
 
+## Typed instruction pipeline
+
+All registered 65xx variants use parsed operand trees for form selection, sizing and encoding.
+Lexical widths, explicit width overrides, indirect/indexed structure and compound operands remain
+separate from stage-local values. Branches resolve typed relative references; vendor forms share
+the same table-driven writer. Classification preserves the established order of effectful calls
+and deferred errors. Generated numbers are never reparsed as hexadecimal source.
+
+`Arch65xx` accepts word arrays at a public source-entry boundary, parses the registered grammar
+and delegates to the typed encoder. The old `LoweredInstruction` adapters and operand classifier
+have been removed. The strict regression corpus covers all
+2,401 pinned opcode vectors plus frozen before/after cases for effects, errors and source metadata.
+
 ## Documentation and support
 
 [65xx manual](https://github.com/uttori/asm/blob/master/packages/plugin-65xx/MANUAL.md) ·
@@ -81,12 +94,12 @@ The maintained ares fork supports `nes.2a03.instructions` ACT2 capture with mapp
 and physical-fetch provenance, plus the separate `nes.cpu-bus-ppu` scope for
 CPU/OAM/DMC accesses, actual graphics writes, render fetches and MMC3 IRQ timing. The Node API also
 reads passive PPU snapshots, renders mapped patterns/nametables/OAM tiles and
-imports bounded graphics reports. See [NES PPU evidence](../../docs/nes-ppu-evidence.md)
+imports bounded graphics reports. See [NES PPU evidence](../debug-sidecar-ares/NES.md)
 for the editor workflow and schemas. The maintained runtime also records full
 machine context, controller inputs and screenshots, and verifies deterministic
 replay against CPU/APU/PPU/mapper/controller state.
-See [the implementation plan](../../docs/nes-disassembly-plan-2026-10-06.md) for
-verified gates, conservative analysis boundaries and remaining work.
+Instruction analysis requires verified opcode bytes and physical mapping; graphics evidence
+never seeds code discovery. Unsupported mappings remain raw data.
 
 ### Bank-qualified research and hardware names
 

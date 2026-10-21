@@ -7,7 +7,7 @@ import { decodeAsepriteDocument, encodeAsepriteDocument } from "@uttori/asm-asse
 import {
   readAssetExportManifest,
   readAssetImportReview,
-} from "@uttori/asm-cli/asset-interchange/public-records";
+} from "@uttori/asm-workflows/asset-interchange/public-records";
 import * as vscode from "vscode";
 
 /** Exact fixture bytes supply the oracle independently of the worker's normal source conversion. */

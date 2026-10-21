@@ -39,9 +39,9 @@ test("browser bundle assembles saved Aseprite and portable bindings without Node
       resolveDir: process.cwd(),
       sourcefile: "browser-asset-source.ts",
       contents: `
-      import {Assembler, MemoryAssemblyFileProvider, PluginManager} from "@uttori/asm-core";
+      import { Assembler, MemoryAssemblyFileProvider, PluginManager } from "@uttori/asm-core";
       import snes from "@uttori/asm-plugin-snes";
-      import som from "@uttori/asm-assets/secret-of-mana/som-asset-plugin";
+      import som from "@uttori/asm-game-secret-of-mana";
       globalThis.assetSourceResult = (async () => {
         const manager = new PluginManager();
         await manager.activatePlugins([{plugin:snes},{plugin:som}]);

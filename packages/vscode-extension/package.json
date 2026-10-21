@@ -40,19 +40,21 @@
   },
   "dependencies": {
     "@uttori/asm-assets": "1.0.0",
-    "@uttori/asm-cli": "1.0.0",
+    "@uttori/asm-capture": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-debug-adapter": "1.0.0",
     "@uttori/asm-debug-sidecar-ares": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
     "@uttori/asm-plugin-65xx": "1.0.0",
     "@uttori/asm-plugin-snes": "1.0.0",
+    "@uttori/asm-workflows": "1.0.0",
     "jsonc-parser": "^3.3.1",
     "vscode-languageclient": "^10.1.2",
     "vscode-languageserver-types": "^3.18.4"
   },
   "devDependencies": {
     "@types/vscode": "1.140.0",
+    "@uttori/asm-game-secret-of-mana": "1.0.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2"
   },
@@ -857,11 +859,13 @@
       "title": "Uttori Assembly",
       "properties": {
         "asm.configFile": {
+          "scope": "resource",
           "type": "string",
           "default": "",
           "description": "Path to uttori-asm.config.json relative to the workspace root. When empty, uttori-asm.config.json is discovered automatically."
         },
         "asm.plugins": {
+          "scope": "resource",
           "type": "array",
           "items": {
             "oneOf": [
@@ -889,11 +893,13 @@
           "description": "Plugin module specifiers appended to plugins from uttori-asm.config.json. Workspace Trust is required."
         },
         "asm.target": {
+          "scope": "resource",
           "type": "string",
           "default": "",
           "description": "Target contribution ID or alias. The language server validates it against active plugin metadata."
         },
         "asm.entryPoints": {
+          "scope": "resource",
           "type": "array",
           "items": {
             "type": "string"
@@ -902,6 +908,7 @@
           "description": "Project entry-point files (relative to the workspace root) analysed as include roots. When empty, each open file is treated as its own root."
         },
         "asm.includePaths": {
+          "scope": "resource",
           "type": "array",
           "items": {
             "type": "string"
@@ -910,16 +917,19 @@
           "description": "Additional include search paths handed to the assembler. When empty, project configuration or target defaults apply."
         },
         "asm.architecture": {
+          "scope": "resource",
           "type": "string",
           "default": "",
           "description": "Architecture contribution ID or alias. The language server validates it against the selected target."
         },
         "asm.buildOutput": {
+          "scope": "resource",
           "type": "string",
           "default": "",
           "description": "Output path for the assembled binary. When empty, the selected target's default extension is used."
         },
         "asm.baseImage": {
+          "scope": "resource",
           "type": "string",
           "default": "",
           "description": "Optional base image file to patch when building."

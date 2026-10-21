@@ -23,7 +23,10 @@ export function referenceExpressions65816(operand: string, depth = 0): string[] 
   if (!text || depth > 32 || /^[asxy]$/i.test(text)) {
     return [];
   }
-  if (parseExpressionNode(text).type !== "raw") {
+  const expression = parseExpressionNode(text);
+  // Addressing wrappers are not expression grammar. Portable diagnostics and unbound
+  // fragments still require the architecture's delimiter extraction for tooling.
+  if (expression.type !== "raw" && expression.type !== "error" && expression.type !== "template") {
     return [text];
   }
   const parts: string[] = [];

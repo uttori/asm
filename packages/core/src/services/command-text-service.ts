@@ -2,6 +2,8 @@ import { isOpenStructInitializer } from "./struct-initializer.js";
 
 /** A preprocessed command tagged with its original 0-based source line. */
 export type SourcedCommand = {
+  /** Physical extent is attached by the program boundary after normalization. */
+  physical?: string;
   /** Normalized command text. */
   text: string;
   /** Zero-based line number in the source block. */
@@ -56,6 +58,55 @@ export function isOpenStructuredCommand(text: string): boolean {
   return depth > 0;
 }
 
+/** One buffered statement owns delimiter/quote state; offsets remain in the untouched source buffer. */
+class StructuredContinuation {
+  readonly kind: "asset" | "record" | undefined;
+  /** Signed delimiter balance; malformed input is left for the normal parser's diagnostics. */
+  depth = 0;
+  quote = "";
+  private previous = "";
+  private slashes = 0;
+
+  constructor(prefix: string) {
+    if (/^includeasset\s*\(/i.test(prefix.trimStart())) {
+      this.kind = "asset";
+    } else if (/^(?:datastruct\b|\[)/i.test(prefix.trimStart())) {
+      this.kind = "record";
+    }
+  }
+
+  /** Scan only appended physical text, retaining the existing record and asset escape rules. */
+  append(text: string): void {
+    for (const char of text) {
+      if (this.kind === "asset") {
+        if ((char === '"' || char === "'") && this.slashes % 2 === 0) {
+          if (this.quote === char) {
+            this.quote = "";
+          } else if (!this.quote) {
+            this.quote = char;
+          }
+        } else if (!this.quote && char === "(") {
+          this.depth++;
+        } else if (!this.quote && char === ")") {
+          this.depth--;
+        }
+      } else if (this.quote) {
+        if (char === this.quote && this.previous !== "\\") {
+          this.quote = "";
+        }
+      } else if (char === '"' || char === "'") {
+        this.quote = char;
+      } else if (char === "{") {
+        this.depth++;
+      } else if (char === "}") {
+        this.depth--;
+      }
+      this.previous = char;
+      this.slashes = char === "\\" ? this.slashes + 1 : 0;
+    }
+  }
+}
+
 /**
  * Removes inline comments from a command line while preserving semicolons
  * inside double-quoted text.
@@ -101,14 +152,17 @@ export const preprocessBlockCommands = (
   const sourcedCommands: SourcedCommand[] = [];
   let nextCommandBuffer = commandBuffer;
   let bufferStartLine: number | undefined;
+  let continuation = new StructuredContinuation(commandBuffer);
+  continuation.append(commandBuffer);
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     let line = lines[lineIndex];
-    const structuredContinuation = isStructuredCommandStart(nextCommandBuffer);
+    const structuredContinuation = nextCommandBuffer !== "" && continuation.kind !== undefined;
     line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
     if (!line.trim()) {
       if (structuredContinuation) {
         nextCommandBuffer += "\n";
+        continuation.append("\n");
       }
       continue;
     }
@@ -124,6 +178,7 @@ export const preprocessBlockCommands = (
     if (!line.trim()) {
       if (structuredContinuation) {
         nextCommandBuffer += "\n";
+        continuation.append("\n");
       }
       continue;
     }
@@ -138,20 +193,43 @@ export const preprocessBlockCommands = (
       });
     }
 
+    if (nextCommandBuffer === "") {
+      continuation = new StructuredContinuation(line);
+    }
+
     // Explicit backslash continuation predates structured calls; consume its marker before testing the buffered grammar.
     if (line.endsWith("\\")) {
       if (nextCommandBuffer === "") {
         bufferStartLine = lineIndex;
       }
       nextCommandBuffer += line.slice(0, -1);
+      continuation.append(line.slice(0, -1));
       if (structured) {
         nextCommandBuffer += "\n";
+        continuation.append("\n");
       }
-    } else if (isOpenStructuredCommand(nextCommandBuffer + line)) {
+      continue;
+    }
+    let open: boolean;
+    if (continuation.kind) {
+      continuation.append(line);
+      open = continuation.depth > 0;
+    } else {
+      // Legacy explicit continuations can form a structured keyword across lines.
+      // Only that uncommon transition needs to inspect the accumulated prefix once.
+      const combined = nextCommandBuffer + line;
+      open = isOpenStructuredCommand(combined);
+      if (open) {
+        continuation = new StructuredContinuation(combined);
+        continuation.append(combined);
+      }
+    }
+    if (open) {
       if (nextCommandBuffer === "") {
         bufferStartLine = lineIndex;
       }
       nextCommandBuffer += `${line}\n`;
+      continuation.append("\n");
     } else if (line.endsWith(",")) {
       if (nextCommandBuffer === "") {
         bufferStartLine = lineIndex;

@@ -1,5 +1,5 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { analyzeStaticControlFlow, } from "@uttori/asm-disassembler";
+import { readAnalysisTargetState, analyzeStaticControlFlow, } from "@uttori/asm-disassembler";
 import { Spc700Decoder } from "../architectures/spc700-decoder.js";
 import { coverageRecord, effectiveAddressRecords, incompleteReasonRecords, spc700StateRecord, } from "./analysis-record-values.js";
 import { SPC700_ARAM_ADDRESS_SPACE } from "./spc700-address-space.js";
@@ -30,7 +30,8 @@ const intervalContains = (annotation, address) => annotation.addressSpace === SP
     annotation.start <= address &&
     address < annotation.end;
 const stateOverrideFor = (annotation) => {
-    const directPage = annotation.state?.directPage;
+    const payload = readAnalysisTargetState(annotation.architecture, annotation.state);
+    const directPage = payload?.codec === "snes.spc700" ? payload.state.directPage : undefined;
     return directPage === 0 || directPage === 0x100 ? { directPage } : undefined;
 };
 const readWord = (image, address) => {

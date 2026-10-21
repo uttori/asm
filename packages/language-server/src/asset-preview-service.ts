@@ -5,11 +5,12 @@ import {
   assetSourceMediaType,
   resolveAssetResourceSnapshot,
   type AssetValueNode,
-  type WorkspaceIndex,
 } from "@uttori/asm-core";
+import { type WorkspaceIndex } from "@uttori/asm-core/tooling";
 
 import { assetCallContainingLine } from "./asset-language.js";
 import type { AssetPreviewInput, AssetPreviewResult } from "./asset-preview-conversion.js";
+import { supportsGameAssetPreview } from "./asset-preview-host.js";
 import { OverlayFileProvider } from "./core.js";
 import { uriToPath } from "./providers.js";
 
@@ -27,12 +28,7 @@ export function supportsPortableAssetPreview(id: string): boolean {
     id.startsWith("snes.") ||
     id === "nes.chr.2bpp" ||
     id === "uttori.data.raw" ||
-    id === "som.sprite.frames" ||
-    id === "som.boss.graphics" ||
-    id === "som.palette.bgr555" ||
-    id === "som.room" ||
-    id === "som.brr.pcm" ||
-    id === "som.brr.segment"
+    supportsGameAssetPreview(id)
   );
 }
 

@@ -15,8 +15,7 @@ import { relative } from "node:path";
 import { performance } from "node:perf_hooks";
 import * as zlib from "node:zlib";
 
-import { readCaptureFileHeader } from "../../packages/debug-adapter/dist/capture-file.js";
-import { captureCrc32c, decodeCaptureChunk } from "../../packages/debug-adapter/dist/capture-v2.js";
+import { readCaptureFileHeader, captureCrc32c, decodeCaptureChunk } from "@uttori/asm-capture";
 
 /** @type {{chunks: number, repeats: number, output: string | undefined}} */
 const options = { chunks: 128, repeats: 3, output: undefined };
@@ -34,8 +33,14 @@ for (const argument of process.argv.slice(2)) {
     files.push(argument);
   }
 }
-for (const key of ["chunks", "repeats"]) {
-  assert(Number.isSafeInteger(options[key]) && options[key] > 0, `${key} must be positive`);
+for (const [key, value] of [
+  ["chunks", options.chunks],
+  ["repeats", options.repeats],
+]) {
+  assert(
+    typeof value === "number" && Number.isSafeInteger(value) && value > 0,
+    `${key} must be positive`,
+  );
 }
 assert(files.length > 0, "Provide at least one existing ACT2 archive.");
 assert.equal(typeof zlib.zstdCompressSync, "function", "Node Zstandard support is required.");
@@ -63,7 +68,7 @@ function readAt(fd, length, offset) {
  * CRC and semantic record validation are performed separately for selected chunks only.
  * @param {number} fd Caller-owned descriptor.
  * @param {number} size Initial archive size in bytes.
- * @param {import('../../packages/debug-adapter/dist/capture-file.js').CaptureFileHeader} header Validated session identity.
+ * @param {import('@uttori/asm-capture').CaptureFileHeader} header Validated session identity.
  * @returns {{chunks: {offset: number, length: number, count: number}[], payloadBytes: number, events: string}} Positions and declared totals of checkpointed chunks.
  */
 function indexArchive(fd, size, header) {
@@ -207,6 +212,8 @@ function describeChunks(chunks) {
       last = cycle;
       offset += length;
     }
+    // The validated ACT2 envelope promises at least one record; an empty payload cannot supply a rate.
+    assert(first !== undefined && last !== undefined, "Chunk has no observer clock span");
     cycleSpan += last - first;
   }
   return { counts, bytesByKind, zeroBytes, cycleSpan: String(cycleSpan), nesBus, relevantNesBus };

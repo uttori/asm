@@ -43,6 +43,29 @@ export declare class NodeAssemblyFileProvider implements AssemblyFileProvider {
     readFile(filePath: string): Uint8Array;
     readTextFile(filePath: string, encoding?: BufferEncoding): string;
 }
+/** Bounds owned overlay bytes and consumed snapshots independently; defaults to 256 MiB each. */
+export interface NodeAssemblySnapshotOptions {
+    /** Absolute file identities. Null hides a saved file; supplied maps and bytes are copied. */
+    readonly overlays?: ReadonlyMap<string, Uint8Array | null>;
+    /** Positive safe-integer byte limit, including binary includes. */
+    readonly maxBytes?: number;
+}
+/**
+ * One Node build's owned input view. All passes see the first bytes read, including after disk
+ * changes; call assertUnchanged before accepting the result. Create a new provider for each build.
+ * Node path/filesystem policy stays here; assemblers consume the portable AssemblyFileProvider contract.
+ */
+export declare class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
+    #private;
+    /** Exact consumed bytes keyed by absolute path. Entries and buffers are borrowed read-only. */
+    readonly snapshots: ReadonlyMap<string, Uint8Array>;
+    constructor(options?: NodeAssemblySnapshotOptions);
+    stat(file: string): AssemblyFileStat;
+    readFile(file: string): Uint8Array;
+    readTextFile(file: string, encoding?: BufferEncoding): string;
+    /** Reject changed or removed saved inputs; copied overlays remain independent of the host disk. */
+    assertUnchanged(): void;
+}
 /** Virtual lookup base. No host cwd fallback or filesystem access is used. */
 export type MemoryAssemblyFileProviderOptions = {
     workingDirectory?: string;

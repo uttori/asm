@@ -1,5 +1,5 @@
 import { type AssemblerEnvironment, type AddressToLineMapping } from "@uttori/asm-core";
-import { type SourceBuildVerification } from "@uttori/asm-disassembler";
+import { type SourceBuildVerification } from "@uttori/asm-disassembler/source-project";
 import { type SnesPlacementContract, type SnesFixedExtent, type SnesInstructionStateContract, type SnesLayoutDiagnostic } from "./rom-layout/check.js";
 import { type SnesRomExpansionPolicy } from "./rom-layout/expansion.js";
 /** Build normal editable source. Original-ROM equality is requested only for pure generations. */

@@ -45,6 +45,7 @@ export const ARES_RSP_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
         addressSpaces: Object.freeze([ARES_65816_ADDRESS_SPACE]),
         maxBufferedEvents: ARES_TRACE_BUFFER_EVENTS,
         maxBatchEvents: ARES_TRACE_BATCH_EVENTS,
+        instructionDetails: false,
       }),
       pause: true,
       step: true,

@@ -1,6 +1,6 @@
 import { setImmediate as yieldToMessages, setTimeout as delay } from "node:timers/promises";
 
-import { NativeCaptureFileCursor, type NativeCaptureFilePosition } from "@uttori/asm-debug-adapter";
+import { NativeCaptureFileCursor, type NativeCaptureFilePosition } from "@uttori/asm-capture";
 import {
   importRuntimeBusTraceSourceIntoProject,
   validateRuntimeBusTraceMetadata,

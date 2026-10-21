@@ -74,6 +74,14 @@ export type RuntimeInstructionTraceMetadata = Omit<RuntimeInstructionTraceArtifa
 export interface RuntimeTraceSource {
     readonly metadata: RuntimeInstructionTraceMetadata;
     readonly read: (accept: (chunk: unknown) => void) => Promise<void>;
+    /** Recheck external companions when a content-matched, previously validated index replaces read(). */
+    readonly verifyRetained?: () => Promise<void>;
+    /** Available after a successful opt-in prefix read; absent for terminally verified captures. */
+    readonly recovery?: {
+        readonly chunkThrough: string;
+        readonly eventThrough: string;
+        readonly reason: string;
+    };
 }
 /**
  * Validate the small trace envelope independently of its event stream.
@@ -132,6 +140,8 @@ export interface RuntimeTraceFactIndex {
 /** Optional external storage and record sink. Sink output is provisional until finish returns. */
 export interface RuntimeTraceImporterStorage {
     readonly index: RuntimeTraceFactIndex;
+    /** Complete parser summary paired atomically with this index; never resume a partial parse. */
+    readonly checkpoint?: RuntimeTraceCheckpoint;
     /** Called after complete source validation, before emitting any provisional records. */
     readonly onSource?: (sha256: string, profile: string) => void;
     /**
@@ -155,8 +165,24 @@ export declare const runtimeTraceIndexRecordLimit: (mode: string, requested: num
 export interface RuntimeInstructionTraceImporter {
     /** Accept the next ordered chunk. Invalid data or an exceeded record budget prevents finalization. */
     push(this: void, value: unknown): void;
-    /** Consume the importer once, only after the caller has validated the entire file and its tail. */
-    finish(): RuntimeInstructionTraceImportResult;
+    /** Seal the validated stream for retry, retaining counters on disk until publication succeeds. */
+    checkpoint(recovery?: RuntimeTraceSource["recovery"]): RuntimeTraceCheckpoint;
+    /** Consume once after verifying a complete capture or an explicitly allowed checkpointed prefix. */
+    finish(recovery?: RuntimeTraceSource["recovery"]): RuntimeInstructionTraceImportResult;
+}
+/** Small sealed parser state. The owning cache binds it to archive, ROM, importer and index identities. */
+export interface RuntimeTraceCheckpoint {
+    readonly sourceSha256: string;
+    readonly executionRecords: number;
+    readonly memoryRecords: number;
+    readonly indexRecords: number;
+    readonly observedEvents: number;
+    readonly droppedEvents: number;
+    readonly complete: boolean;
+    readonly unattributed: number;
+    readonly detailedEvents: number;
+    readonly memoryLoss: number;
+    readonly recovery?: RuntimeTraceSource["recovery"];
 }
 /**
  * Aggregate a trace one validated chunk at a time, preserving canonical import identities.

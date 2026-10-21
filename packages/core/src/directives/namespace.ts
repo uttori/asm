@@ -1,3 +1,5 @@
+import type { SyntaxParseInput } from "../ir/source-syntax.js";
+import { syntaxLiteral, syntaxRecord, syntaxString, syntaxUnion } from "../ir/syntax-codec.js";
 import type { DirectiveRegistry } from "./registry.js";
 import type { NamespaceDirectiveContext } from "./types.js";
 
@@ -42,60 +44,8 @@ export const handlePullNamespace = ({ session }: NamespaceDirectiveContext): voi
  * @param {NamespaceDirectiveContext} ctx The directive context.
  * @param {string[]} words The words of the namespace command.
  */
-export const handleNamespace = (
-  { session }: NamespaceDirectiveContext,
-  words: readonly string[],
-): void => {
-  const params = words.slice(1);
-
-  // Handle namespace nesting directive
-  if (params.length >= 2 && params[0].toLowerCase() === "nested") {
-    const action = params[1].toLowerCase();
-    if (action === "on") {
-      session.namespaceNestingEnabled = true;
-      return;
-    } else if (action === "off") {
-      session.namespaceNestingEnabled = false;
-      session.namespaceNestingPath = [];
-      session.currentNamespace = "";
-      return;
-    }
-  }
-
-  if (params.length === 0) {
-    if (session.namespaceNestingEnabled) {
-      session.namespaceNestingPath = [];
-    }
-    session.currentNamespace = "";
-    return;
-  }
-
-  if (params.length === 1 && params[0].toLowerCase() === "off") {
-    if (session.namespaceNestingEnabled) {
-      // Pop the last namespace from the path
-      session.namespaceNestingPath.pop();
-      // Reconstruct the current namespace from the remaining path
-      session.currentNamespace = session.namespaceNestingPath.join("_");
-    } else {
-      session.currentNamespace = "";
-    }
-    return;
-  } else if (params.length === 1) {
-    enterNamespace(session, params[0]);
-    return;
-  }
-
-  const action = params[1].toLowerCase();
-  if (action === "off") {
-    if (session.namespaceNestingEnabled) {
-      session.namespaceNestingPath.pop();
-      session.currentNamespace = session.namespaceNestingPath.join("_");
-    } else {
-      session.currentNamespace = "";
-    }
-  } else {
-    enterNamespace(session, params[0]);
-  }
+export const handleNamespace = (ctx: NamespaceDirectiveContext, words: readonly string[]): void => {
+  executeNamespace(ctx, parseNamespace({ words }));
 };
 
 /**
@@ -124,9 +74,88 @@ export const registerNamespaceDirectives = (
   registry: DirectiveRegistry,
   context: NamespaceDirectiveContext,
 ): void => {
-  registry.registerLowered("namespace", context, handleNamespace);
+  registry.registerImmutableTyped(
+    "namespace",
+    parseNamespace,
+    syntaxUnion(
+      syntaxRecord({
+        operation: syntaxUnion(
+          syntaxLiteral("nest"),
+          syntaxLiteral("unnest"),
+          syntaxLiteral("clear"),
+          syntaxLiteral("leave"),
+        ),
+      }),
+      syntaxRecord({ operation: syntaxLiteral("enter"), name: syntaxString }),
+    ),
+    (payload) => executeNamespace(context, payload),
+  );
+  registry.registerImmutableTyped(
+    "pushns",
+    () => ({}),
+    syntaxRecord({}),
+    () => handlePushNamespace(context),
+  );
+  registry.registerImmutableTyped(
+    "pullns",
+    () => ({}),
+    syntaxRecord({}),
+    () => handlePullNamespace(context),
+  );
+};
 
-  registry.registerLowered("pushns", context, handlePushNamespace);
+/** Shared source/public-entry grammar for `namespace`. */
+const parseNamespace = ({ words }: Pick<SyntaxParseInput, "words">) => {
+  const params = words.slice(1);
+  if (params.length >= 2 && params[0].toLowerCase() === "nested") {
+    const action = params[1].toLowerCase();
+    if (action === "on" || action === "off") {
+      return { operation: action === "on" ? ("nest" as const) : ("unnest" as const) };
+    }
+  }
+  if (params.length === 0) {
+    return { operation: "clear" as const };
+  }
+  if (
+    (params.length === 1 && params[0].toLowerCase() === "off") ||
+    params[1]?.toLowerCase() === "off"
+  ) {
+    return { operation: "leave" as const };
+  }
+  return { operation: "enter" as const, name: params[0] };
+};
 
-  registry.registerLowered("pullns", context, handlePullNamespace);
+/** Applies a parsed `namespace` operation to the current stage. */
+const executeNamespace = (
+  context: NamespaceDirectiveContext,
+  node: ReturnType<typeof parseNamespace>,
+): void => {
+  const { session } = context;
+  switch (node.operation) {
+    case "nest":
+      session.namespaceNestingEnabled = true;
+      break;
+    case "unnest":
+      session.namespaceNestingEnabled = false;
+      session.namespaceNestingPath = [];
+      session.currentNamespace = "";
+      break;
+    case "clear":
+      if (session.namespaceNestingEnabled) {
+        session.namespaceNestingPath = [];
+      }
+      session.currentNamespace = "";
+      break;
+    case "leave":
+      if (session.namespaceNestingEnabled) {
+        session.namespaceNestingPath.pop();
+        session.currentNamespace = session.namespaceNestingPath.join("_");
+      } else {
+        session.currentNamespace = "";
+      }
+      break;
+    case "enter":
+      enterNamespace(session, node.name);
+      break;
+  }
 };

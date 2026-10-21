@@ -38,6 +38,8 @@ export declare function reconcileSourceCaptureCatalog(catalog: SourceCaptureCata
 }): SourceCaptureCatalog;
 /** Save only against the read snapshot; evidence imports and Git-file writes are separate durable operations. */
 export declare function writeSourceCaptureCatalog(root: string, name: string, catalog: SourceCaptureCatalog, expectedSha256?: string): void;
-/** Stream archive identity with cancellation and the shared 32 GiB default. Companion artifacts are separately verified by the importer. */
+/** Streamed source archives have no default policy ceiling beyond exact JavaScript byte accounting. */
+export declare const DEFAULT_SOURCE_CAPTURE_MAX_BYTES: number;
+/** Stream archive identity with cancellation and an optional per-archive ceiling. Companion artifacts are separately verified by the importer. */
 export declare function fingerprintSourceCapture(file: string, signal?: AbortSignal, maxBytes?: number): Promise<SourceCaptureArchive>;
 //# sourceMappingURL=captures.d.ts.map

@@ -3,8 +3,8 @@ import plugin65xx, { RAW_65XX_TARGET_ID } from "@uttori/asm-plugin-65xx";
 import snesPlugin, {
   createSnesAssemblerEnvironment,
   SNES_TARGET_ID,
-  snesSessionStateKey,
 } from "@uttori/asm-plugin-snes";
+import { snesSessionStateKey } from "@uttori/asm-plugin-snes/target";
 
 import { test } from "../ava-helper.js";
 import { createFixturePlugin } from "../plugin/fixture-plugin.js";

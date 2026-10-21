@@ -1,7 +1,8 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { DEBUG_BACKEND_PROTOCOL_VERSION, validateCaptureRequest, verifyCaptureContext, validateCapturePosition, validateCaptureCapabilities, } from "@uttori/asm-debug-adapter";
+import { validateCaptureRequest, verifyCaptureContext, validateCapturePosition, validateCaptureCapabilities } from "@uttori/asm-capture";
+import { DEBUG_BACKEND_PROTOCOL_VERSION } from "@uttori/asm-debug-adapter";
 import { Cpu6502Decoder, formatCpu6502Instruction, ricoh2a03Cpu } from "@uttori/asm-plugin-65xx";
-import { Cpu65816Decoder, formatCpu65816Instruction, } from "@uttori/asm-plugin-snes";
+import { Cpu65816Decoder, formatCpu65816Instruction } from "@uttori/asm-plugin-snes";
 import { ARES_65816_ADDRESS_SPACE, ARES_65816_ARCHITECTURE, ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE, ARES_65816_FRAME_ID, ARES_65816_THREAD_ID, ARES_65816_WRAM_ADDRESS_SPACE, ARES_RSP_CAPABILITIES, ARES_NES_CAPABILITIES, ARES_TRACE_BATCH_EVENTS, } from "./profile.js";
 import { parseAresTraceDetails } from "./trace-details.js";
 export * from "./profile.js";
@@ -810,7 +811,7 @@ export class AresRspDebugBackend {
         if (request.operation === "start") {
             this.#captureNative = false;
             this.#captureSession = position.session;
-            this.#captureScope = position.scope ?? "snes.65816.instructions";
+            this.#captureScope = position.scope;
             try {
                 validateCapturePosition(position, undefined, requestedScope);
             }

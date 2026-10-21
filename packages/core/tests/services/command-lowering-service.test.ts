@@ -22,17 +22,14 @@ test("command lowering preserves loop structure and typed children", (t) => {
     t.is(forLoop.variable, "i");
     t.truthy(forLoop.rangeNode);
     t.is(forLoop.header?.source.file, "loops.asm");
-    t.is(forLoop.commands[0]?.kind, "directive");
+    t.is(forLoop.commands[0]?.kind, "pluginSyntax");
   }
 
   t.is(whileLoop?.kind, "loop");
   if (whileLoop?.kind === "loop") {
     t.is(whileLoop.loopType, "while");
     t.truthy(whileLoop.conditionNode);
-    t.is(whileLoop.commands[0]?.kind, "command");
-    if (whileLoop.commands[0]?.kind === "command") {
-      t.is(whileLoop.commands[0].passthroughReason, "dataDirective");
-    }
+    t.is(whileLoop.commands[0]?.kind, "numericData");
   }
 });
 
@@ -60,7 +57,7 @@ test("command lowering preserves if elseif and else branches", (t) => {
   t.truthy(conditional.branches[1]?.conditionNode);
   t.falsy(conditional.branches[2]?.conditionNode);
   for (const branch of conditional.branches) {
-    t.is(branch.commands[0]?.kind, "directive");
+    t.is(branch.commands[0]?.kind, "pluginSyntax");
   }
 });
 
@@ -75,50 +72,43 @@ test("include and incbin metadata survives the direct lowering boundary", (t) =>
   const include = elementAt(lowered.nodes, 0);
   const incbin = elementAt(lowered.nodes, 1);
 
-  t.is(include?.kind, "directive");
-  if (include?.kind === "directive") {
-    t.is(include.keyword, "include");
-    t.deepEqual(include.words, ["include", '"shared file.asm"']);
+  t.is(include?.kind, "pluginSyntax");
+  if (include?.kind === "pluginSyntax") {
+    t.is(include.command.keyword, "include");
+    t.deepEqual(include.command.words, ["include", '"shared file.asm"']);
     t.is(include.command?.parsed.includeTarget?.target, '"shared file.asm"');
   }
 
-  t.is(incbin?.kind, "directive");
-  if (incbin?.kind === "directive") {
-    t.is(incbin.keyword, "incbin");
+  t.is(incbin?.kind, "pluginSyntax");
+  if (incbin?.kind === "pluginSyntax") {
+    t.is(incbin.command.keyword, "incbin");
     t.truthy(incbin.command?.parsed.incbinRange);
     t.deepEqual(incbin.command?.parsed.directiveArgs?.args, ['"data.bin":(1 * 2)..(4 * 2)']);
   }
 });
 
-test("lowered passthrough nodes name their preprocessing requirement", (t) => {
+test("lowering distinguishes define operations from deferred source templates", (t) => {
   const assembler = new Assembler();
   const cases = [
-    { source: "!value = 1", reason: "defineCommand" },
-    { source: "Label:", reason: "labelDefinition" },
-    { source: "function add(a, b) = a + b", reason: "functionDefinition" },
-    { source: "db $01", reason: "dataDirective" },
-    { source: "db <value>", reason: "macroPlaceholder" },
-    { source: "FillByte = $EE", reason: "staticAssignment" },
+    { source: "!value = 1", reason: "operation" },
+    { source: "db <value>", reason: "sourceTemplate" },
   ] as const;
 
   for (const { source, reason } of cases) {
     const program = assembler.buildProgramModel(source, `${reason}.asm`);
     const lowered = elementAt(assembler.commandLoweringService.lowerProgram(program).nodes, 0);
-    t.is(lowered?.kind, "command", source);
-    if (lowered?.kind === "command") {
-      t.is(lowered.passthroughReason, reason, source);
-    }
+    t.is(lowered?.kind, reason, source);
   }
 });
 
-test("lowered passthrough shares immutable input and dispatch mutates only its execution copy", (t) => {
+test("lowered labels share immutable input across execution", (t) => {
   const assembler = new Assembler();
   const program = assembler.buildProgramModel("Entry:", "immutable.asm");
   const sourceCommand = elementAt(program.nodes, 0);
   const lowered = elementAt(assembler.commandLoweringService.lowerProgram(program).nodes, 0);
 
-  t.is(lowered?.kind, "command");
-  if (lowered?.kind !== "command" || !sourceCommand || !("source" in sourceCommand)) {
+  t.is(lowered?.kind, "label");
+  if (lowered?.kind !== "label" || !sourceCommand || !("source" in sourceCommand)) {
     return;
   }
 
@@ -136,13 +126,13 @@ test("Asar @-prefixed directives map to the unprefixed handlers", (t) => {
   const program = assembler.buildProgramModel("@asar 1.71\n@includeonce\ndb $01", "pragma.asm");
   const lowered = assembler.commandLoweringService.lowerProgram(program);
 
-  t.is(lowered.nodes[0]?.kind, "directive");
-  if (lowered.nodes[0]?.kind === "directive") {
-    t.is(lowered.nodes[0].keyword, "asar");
+  t.is(lowered.nodes[0]?.kind, "pluginSyntax");
+  if (lowered.nodes[0]?.kind === "pluginSyntax") {
+    t.is(lowered.nodes[0].statement.contributionId, "snes.directive.asar-noops");
   }
-  t.is(lowered.nodes[1]?.kind, "directive");
-  if (lowered.nodes[1]?.kind === "directive") {
-    t.is(lowered.nodes[1].keyword, "includeonce");
+  t.is(lowered.nodes[1]?.kind, "pluginSyntax");
+  if (lowered.nodes[1]?.kind === "pluginSyntax") {
+    t.is(lowered.nodes[1].statement.contributionId, "core.directive.includeonce");
   }
 
   for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
@@ -161,19 +151,24 @@ test("Asar @-prefixed directives map to the unprefixed handlers", (t) => {
 test("registered lowered dot directives take precedence over sublabel syntax", (t) => {
   const assembler = new Assembler();
   const calls: string[] = [];
-  assembler.directiveRegistry.registerLowered(".width", undefined, (_context, words) => {
-    calls.push(words.join(" "));
-  });
+  assembler.directiveRegistry.registerTyped(
+    ".width",
+    ({ text }) => text,
+    (value): value is string => typeof value === "string",
+    (text) => {
+      calls.push(text);
+    },
+  );
   const program = assembler.buildProgramModel(".width 16", "dot-directive.asm");
   const lowered = elementAt(assembler.commandLoweringService.lowerProgram(program).nodes, 0);
-  t.is(lowered?.kind, "directive");
-  if (lowered?.kind === "directive") {
+  t.is(lowered?.kind, "pluginSyntax");
+  if (lowered?.kind === "pluginSyntax") {
     assembler.dispatchLoweredNode(lowered);
   }
   t.deepEqual(calls, [".width 16"]);
 });
 
-test("instruction-looking macro body lines remain preprocessing passthrough", (t) => {
+test("macro bodies remain immutable source templates until invocation", (t) => {
   const assembler = new Assembler();
   const program = assembler.buildProgramModel(
     ["macro emit()", "lda #$01", "endmacro"].join("\n"),
@@ -183,11 +178,15 @@ test("instruction-looking macro body lines remain preprocessing passthrough", (t
 
   t.deepEqual(
     lowered.nodes.map((node) => node.kind),
-    ["command", "command", "command"],
+    ["capture"],
   );
-  for (const node of lowered.nodes) {
-    if (node.kind === "command") {
-      t.is(node.passthroughReason, "macroDefinitionOrInvoke");
-    }
+  const capture = lowered.nodes[0];
+  if (capture.kind !== "capture") {
+    t.fail("Expected macro capture");
+    return;
   }
+  t.is(capture.captureKind, "macro");
+  t.is(capture.header.keyword, "macro");
+  t.is(capture.footer?.keyword, "endmacro");
+  t.like(capture.commands[0], { kind: "macroDefinitionOrInvoke", command: "lda #$01" });
 });

@@ -175,3 +175,51 @@ test("streaming full index validates the original rich capture before returning 
     { name: "AbortError" },
   );
 });
+
+test("validated trace trees stringify to historical canonical bytes across register layouts", (t) => {
+  const details = [
+    {
+      bytes: [0xea],
+      state: { z: 1, A: 'quoted " 🎮', "2": 2, "10": true, a: 3 },
+      droppedMemoryAccesses: 0,
+      memoryAccesses: [
+        {
+          value: 7,
+          width: 1,
+          address: 0x1234,
+          access: "write" as const,
+          addressSpace: "cpu",
+          producerExtension: { z: 2, a: [1, { B: 3, a: 4 }] },
+        },
+      ],
+    },
+    { bytes: [0xea], state: { z: 2, A: "changed", "2": 3, "10": false, a: 4 } },
+    { bytes: [0xea], state: { db: 0x7e, p: 0x30, e: 1, a: 0 } },
+  ];
+  const input = {
+    ...artifact,
+    chunks: [
+      {
+        active: false,
+        sequenceStart: 1,
+        droppedEvents: 0,
+        addresses: [1, 1, 2],
+        details,
+        unattributedMemoryAccesses: 0,
+      },
+    ],
+  };
+  const normalized = validateRuntimeInstructionTrace(input);
+  for (const chunk of normalized.chunks) {
+    t.is(JSON.stringify(chunk, undefined, 2) + "\n", canonicalJson(chunk));
+    for (const detail of chunk.details ?? []) {
+      t.is(
+        JSON.stringify({ address: 1, bytes: detail.bytes, state: detail.state }, undefined, 2) +
+          "\n",
+        canonicalJson({ address: 1, bytes: detail.bytes, state: detail.state }),
+      );
+    }
+  }
+  const imported = importRuntimeInstructionTrace(input, context);
+  t.is(imported.sourceSha256, createHash("sha256").update(canonicalJson(normalized)).digest("hex"));
+});

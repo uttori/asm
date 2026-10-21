@@ -1,6 +1,6 @@
-export * from "./data-scalar.js";
-export * from "./data-structured.js";
-export * from "./data-text.js";
+export { decodeScalarArray, encodeScalarArray } from "./data-scalar.js";
+export { decodeStructRecords, encodeStructRecords, decodePointerTable, encodePointerTable, decodeIndexTable, encodeIndexTable, } from "./data-structured.js";
+export { decodeSingleByteText, encodeSingleByteText, } from "./data-text.js";
 /** Raw byte importer copies input so the result is independent of host buffers. */
 export const rawImporter = Object.freeze({
     id: "uttori.import.raw",

@@ -43,9 +43,17 @@ const architecture = (
   id,
   displayName: id,
   unknownInstructionBehavior: "throw",
-  splitOperands: () => [],
-  classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
-  createEncoder: () => ({ estimateSize: () => 0, encode: () => true }),
+  operandGrammar: { version: "1", parse: () => ({ operands: [] }) },
+  createTypedEncoder: () => ({
+    estimate: (frame) => {
+      frame.choose("fixture", 0);
+      return 0;
+    },
+    encode: (frame) => {
+      frame.choose("fixture", 0);
+      return true;
+    },
+  }),
   instructions: [
     {
       mnemonic: "NOP",
@@ -81,7 +89,12 @@ const directiveSet: DirectiveSetContribution = {
       id: "dir.emit",
       keywords: ["emitx"],
       phase: "lowered",
-      createHandler: () => () => undefined,
+      syntax: {
+        version: "1",
+        parse: () => null,
+        validate: (payload) => payload === null,
+        bind: () => ({ execute: () => undefined }),
+      },
       tooling: [
         { keyword: "emitx", summary: "Emit a fixture byte.", syntax: "emitx", group: "data" },
       ],
@@ -167,7 +180,12 @@ test("AssemblerEnvironment resolves contributions, owners, summaries, and toolin
               id: "dir.bare.emit",
               keywords: ["barex"],
               phase: "lowered",
-              createHandler: () => () => undefined,
+              syntax: {
+                version: "1",
+                parse: () => null,
+                validate: (payload) => payload === null,
+                bind: () => ({ execute: () => undefined }),
+              },
               tooling: [
                 { keyword: "barex", summary: "Bare emit.", syntax: "barex", group: "data" },
               ],
@@ -260,18 +278,17 @@ test("AssemblerEnvironment resolves contributions, owners, summaries, and toolin
   );
 });
 
-test("ArchitectureContribution remains encoder-compatible and accepts decoder-only analysis", (t) => {
-  t.is(PLUGIN_API_VERSION, 1);
+test("ArchitectureContribution requires typed encoding and accepts decoder-only analysis", (t) => {
+  t.is(PLUGIN_API_VERSION, 2);
   const encoderOnly = architecture("cpu.encoder");
-  t.truthy(encoderOnly.createEncoder);
+  t.truthy(encoderOnly.createTypedEncoder);
   t.is(encoderOnly.createDecoder, undefined);
 
   const decoderOnly: ArchitectureContribution = {
     id: "cpu.decode",
     displayName: "Decoder only",
     unknownInstructionBehavior: "throw",
-    splitOperands: () => [],
-    classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
+    operandGrammar: { version: "1", parse: () => ({ operands: [] }) },
     createDecoder: () => ({
       decode: ({ offset }) => ({
         kind: "error",
@@ -306,7 +323,7 @@ test("ArchitectureContribution remains encoder-compatible and accepts decoder-on
   t.like(decoded, { kind: "error", code: "invalidOpcode" });
   const error = t.throws(() => new Assembler({ environment, target: "tgt.main" }));
   t.is(errorCode(error), "PLUGIN_TARGET_INVALID");
-  t.true(error.message.includes("does not provide an encoder"));
+  t.true(error.message.includes("does not provide a typed encoder"));
 });
 
 test("AssemblerEnvironment rejects incomplete or colliding target graphs", (t) => {
@@ -403,7 +420,12 @@ test("AssemblerEnvironment rejects duplicate target aliases, directive keywords,
         id: "dir.collision",
         keywords: ["emitx"],
         phase: "lowered",
-        createHandler: () => () => undefined,
+        syntax: {
+          version: "1",
+          parse: () => null,
+          validate: (payload) => payload === null,
+          bind: () => ({ execute: () => undefined }),
+        },
         tooling: [],
       },
     ],

@@ -1,5 +1,4 @@
-import { executeAssetSourceOperation, } from "../asset-source/operations.js";
-import { executeAssetOperation } from "./operations.js";
+import { executeAssetSourceOperation, executeAssetOperation, } from "@uttori/asm-game-secret-of-mana/workflows";
 /** Saved-document commands are distinct from source capture import; apply requires the exact reviewed plan ID. */
 export const assetUsage = `Usage:
   uttori-asm asset convert <project> --file <assembly.asm> --line <one-based-line> --to aseprite|indexed-png [--destination <relative-path>]

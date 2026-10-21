@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { acquireFileLease, sourceContentHash } from "@uttori/asm-disassembler";
+import { acquireFileLease, sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
 import { test } from "../../../tests/ava-helper.js";
 import { createSnesAssemblerEnvironment } from "../src/assembler.js";
@@ -73,7 +73,7 @@ for (const boundary of [
     const directories = fs
       .readdirSync(path.join(root, "build"))
       .filter((name) => /^[\da-f]{64}$/.test(name));
-    t.true(directories.length <= 3);
+    t.is(directories.length, 1);
     for (const directory of directories) {
       t.true(fs.existsSync(path.join(root, "build", directory, "build.json")));
     }
@@ -101,7 +101,7 @@ test("successful source builds bound owned cache history without deleting unknow
   }
   const generations = () =>
     fs.readdirSync(options.outputDirectory).filter((file) => /^[\da-f]{64}$/.test(file));
-  t.is(generations().length, 3);
+  t.is(generations().length, 1);
   t.true(generations().includes(latest!.inputSha256));
   const unknown = path.join(options.outputDirectory, "f".repeat(64));
   fs.mkdirSync(unknown);
@@ -132,7 +132,7 @@ test("successful source builds bound owned cache history without deleting unknow
   t.is(result.cacheWarnings?.length, 1);
   t.false(fs.existsSync(abandoned));
   t.is(fs.readFileSync(path.join(unknown, "notes.txt"), "utf8"), "Keep this authored file");
-  t.is(generations().length, 4);
+  t.is(generations().length, 2);
 });
 
 test("placement inspection measures prospective emission without publishing or altering saved source", async (t) => {

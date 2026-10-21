@@ -35,7 +35,8 @@ export function createSourceSpan(start: number, end: number, line?: number): Sou
   return {
     start,
     end,
-    line,
+    // Operand-local spans omit physical lines so cached syntax remains plain JSON data.
+    ...(line === undefined ? {} : { line }),
     columnStart: start,
     columnEnd: end,
   };

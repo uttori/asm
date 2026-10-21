@@ -5,14 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import {
-  RomImage,
-  publishAnalysisProject,
-  openAnalysisProjectStore,
-  type AnalysisProjectShards,
-  type RuntimeEvidenceRecord,
-  type RuntimeStateValue,
-} from "@uttori/asm-disassembler";
+import { RomImage, publishAnalysisProject, openAnalysisProjectStore, type AnalysisProjectShards, type RuntimeEvidenceRecord, type RuntimeStateValue } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import { analyzeSnesRuntimeCode } from "../src/disassembler/runtime-code.js";

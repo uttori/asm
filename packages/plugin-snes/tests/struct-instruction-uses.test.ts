@@ -3,11 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import {
-  loadAnalysisProjectSnapshot,
-  openAnalysisProjectStore,
-  RomImage,
-} from "@uttori/asm-disassembler";
+import { loadAnalysisProjectSnapshot, openAnalysisProjectStore, RomImage } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -270,7 +266,7 @@ test("struct instruction diagnostics retain the input file, original index, CPU 
   t.true(error!.message.includes(filename));
   t.regex(
     error!.message,
-    /instructionUses\[0\] at CPU \$808006:.*Set operand, memoryOperand, stackOperand/,
+    /instructionUses\[0] at CPU \$808006:.*Set operand, memoryOperand, stackOperand/,
   );
   t.regex(error!.message, /Correct this input before regenerating/);
   const invalid = {
@@ -279,7 +275,7 @@ test("struct instruction diagnostics retain the input file, original index, CPU 
   };
   invalid.instructionUses[1].observations![0].width = 3;
   t.throws(() => validateSnesStructMap(invalid), {
-    message: /instructionUses\[1\] at CPU \$808008: observations\[0\]:.*integer/,
+    message: /instructionUses\[1] at CPU \$808008: observations\[0]:.*integer/,
   });
 });
 
@@ -956,7 +952,9 @@ test("exports expressions and full spans through SQL and snapshot paths with ide
   const displayInput = {
     ...input,
     instructionUses: input.instructionUses.map((use, index) => {
-      if (index === 1) return { ...use, comment: explanation };
+      if (index === 1) {
+        return { ...use, comment: explanation };
+      }
       return use;
     }),
   };

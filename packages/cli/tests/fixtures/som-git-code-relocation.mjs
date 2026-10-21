@@ -5,8 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { executeSourceOperation } from "@uttori/asm-cli/source";
-import { openAnalysisProjectStore, sourceContentHash, sourceGit } from "@uttori/asm-disassembler";
+import { openAnalysisProjectStore } from "@uttori/asm-disassembler";
+import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler/source-project";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 
 const application = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const clone = path.join(application, "experiments/secret-of-mana-git-workflow-full");

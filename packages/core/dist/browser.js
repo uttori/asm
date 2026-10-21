@@ -6,9 +6,10 @@ export { Assembler } from "./assembler.js";
 export { MemoryAssemblyFileProvider, } from "./file-provider.js";
 export { definePlugin, PluginManager, PluginError, PLUGIN_API_VERSION } from "./plugin/index.js";
 export { NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE, ASAR_SYNTAX_PROFILE, } from "./syntax-profile.js";
-export { parseOperandSyntax } from "./operand-syntax.js";
-// Target encoders parse operand expressions at runtime, including in browser bundles.
-export { parseExpressionNode } from "./ir/expression-node.js";
-export * from "./services/asset-resource-snapshot.js";
-export { createEncoderRuntime } from "./architecture-types.js";
+// Target grammars and stage frames use the same portable exports in browser bundles.
+export { parseExpressionNode, isReferenceExpressionNode } from "./ir/expression-node.js";
+export { assetSourceMediaType, resolveAssetResourceSnapshot, } from "./services/asset-resource-snapshot.js";
+export { InstructionResolutionFrame } from "./ir/resolved-instruction.js";
+export { runTypedEncoderEntry } from "./typed-encoder-entry.js";
+export { parseInstructionOperands, bindInstructionOperands } from "./ir/parsed-operand.js";
 //# sourceMappingURL=browser.js.map

@@ -1,47 +1,20 @@
-import fs from "node:fs";
 import path from "node:path";
-import { Assembler, NodeAssemblyFileProvider, createDebugMap, } from "@uttori/asm-core";
+import { Assembler, NodeAssemblySnapshotProvider, createDebugMap, } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { checkRawBlockConsumption, acquireFileLease, durableReplace, sourceContentHash, } from "@uttori/asm-disassembler";
+import { checkRawBlockConsumption, publishSourceBuild, assertSourcePath, sourceContentHash, } from "@uttori/asm-disassembler/source-project";
 import { NesCartridge } from "./cartridge.js";
 import { validateNesMapper } from "./mapper.js";
-/** Each pass sees the same bytes. Overlays are inspection-only and never enter a published build. */
-class NesBuildFiles extends NodeAssemblyFileProvider {
-    overlays;
-    snapshots = new Map();
-    constructor(overlays) {
-        super();
-        this.overlays = overlays;
-    }
-    stat(file) {
-        if (this.overlays.has(file)) {
-            const bytes = this.overlays.get(file);
-            return { exists: bytes != null, readable: bytes != null, size: bytes?.length };
-        }
-        return super.stat(file);
-    }
-    readFile(file) {
-        let bytes = this.snapshots.get(file);
-        if (!bytes) {
-            const overlay = this.overlays.get(file);
-            if (overlay === null)
-                throw new Error(`Removed source is still consumed: ${file}`);
-            bytes = Uint8Array.from(overlay ?? super.readFile(file));
-            this.snapshots.set(file, bytes);
-        }
-        return bytes.slice();
-    }
-    readTextFile(file) {
-        return Buffer.from(this.readFile(file)).toString("utf8");
-    }
-}
 /** Assemble a complete iNES image without publication; stale dependencies invalidate the result. */
 export function inspectNesSource(options) {
     options.signal?.throwIfAborted();
     const root = path.resolve(options.root);
     const entry = path.resolve(root, options.entrySource);
-    const overlays = new Map([...(options.overlays ?? [])].map(([file, bytes]) => [path.resolve(root, file), bytes]));
-    const files = new NesBuildFiles(overlays);
+    const overlays = new Map();
+    for (const [file, bytes] of options.overlays ?? []) {
+        assertSourcePath(file);
+        overlays.set(path.resolve(root, file), bytes);
+    }
+    const files = new NodeAssemblySnapshotProvider({ overlays });
     const assembler = new Assembler({
         environment: options.environment,
         target: "65xx.nes",
@@ -60,35 +33,39 @@ export function inspectNesSource(options) {
         if (options.expectedHeader && !Buffer.from(cartridge.header()).equals(options.expectedHeader)) {
             throw new Error("NES fixed-layout builds must preserve the original iNES header.");
         }
-        if (output.length !== options.expectedSize)
+        if (output.length !== options.expectedSize) {
             throw new Error(`NES layout expected ${options.expectedSize} bytes; received ${output.length}.`);
+        }
         const mapping = assembler.addressToLineMapping;
         if (options.rawBlocks) {
             const { directory, original, blockSize } = options.rawBlocks;
-            if (!Number.isSafeInteger(blockSize) || blockSize < 1 || blockSize > 65536)
+            if (!Number.isSafeInteger(blockSize) || blockSize < 1 || blockSize > 65536) {
                 throw new Error("Invalid raw block size.");
+            }
             const blocks = [];
             for (let start = 0; start < original.length; start += blockSize) {
                 const file = path.resolve(root, directory, `${start.toString(16).padStart(6, "0")}.bin`);
-                if (files.stat(file).exists)
+                if (files.stat(file).exists) {
                     blocks.push({
                         file,
                         original: original.subarray(start, start + blockSize),
                         current: files.readFile(file),
                     });
+                }
             }
             const issues = checkRawBlockConsumption(mapping, blocks);
-            if (issues.length)
+            if (issues.length) {
                 throw new Error(issues.join("\n"));
+            }
         }
         for (const [file, bytes] of files.snapshots) {
             mapping.registerDependencySnapshot(file, bytes);
-            if (sourceContentHash(overlays.get(file) ?? fs.readFileSync(file)) !== sourceContentHash(bytes))
-                throw new Error(`Source changed during NES assembly: ${file}`);
         }
+        files.assertUnchanged();
         if (options.originalContent &&
-            sourceContentHash(output) !== sourceContentHash(options.originalContent))
+            sourceContentHash(output) !== sourceContentHash(options.originalContent)) {
             throw new Error("Pure NES generation does not reproduce the complete original cartridge.");
+        }
         options.signal?.throwIfAborted();
         return {
             output,
@@ -104,9 +81,11 @@ export function inspectNesSource(options) {
 }
 /** Publish immutable matching artifacts, then advance the current-build pointer under one lease. */
 export function buildNesSource(options) {
-    for (const hash of [options.toolchainSha256, options.configurationSha256])
-        if (!/^[\da-f]{64}$/.test(hash))
+    for (const hash of [options.toolchainSha256, options.configurationSha256]) {
+        if (!/^[\da-f]{64}$/.test(hash)) {
             throw new Error("NES build requires exact configuration and toolchain hashes.");
+        }
+    }
     const { output, mapping, snapshots } = inspectNesSource({ ...options, overlays: undefined });
     const inputs = [...snapshots]
         .map(([file, bytes]) => ({
@@ -150,16 +129,12 @@ export function buildNesSource(options) {
             ],
         },
     };
-    const lease = acquireFileLease(path.join(options.outputDirectory, "publication.lock"));
-    try {
-        durableReplace(outputFile, output);
-        durableReplace(debugMapFile, mapBytes);
-        durableReplace(path.join(directory, "build.json"), canonicalJson(result));
-        durableReplace(path.join(options.outputDirectory, "current.json"), canonicalJson(result));
-        return result;
-    }
-    finally {
-        lease.release();
-    }
+    return publishSourceBuild({
+        directory: options.outputDirectory,
+        receipt: result,
+        output,
+        debugMap: mapBytes,
+        signal: options.signal,
+    });
 }
 //# sourceMappingURL=source-build.js.map

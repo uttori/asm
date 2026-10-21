@@ -19,7 +19,7 @@ test("SNES freespace directives own allocation and fill policy", (t) => {
   t.is(state.activeFreespaceStartOffset, 0x90000);
   t.is(state.activeFreespaceContentStartOffset, 0x90008);
   t.deepEqual(
-    assembler.outputBytes.slice(0x90000, 0x90008),
+    Array.from(assembler.outputBytes.slice(0x90000, 0x90008)),
     [0x53, 0x54, 0x41, 0x52, 0x00, 0x00, 0xff, 0xff],
   );
 });

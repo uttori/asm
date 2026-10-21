@@ -2,16 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import {
-  RomImage,
-  openAnalysisProjectStore,
-  publishAnalysisProject,
-  sourceExportSha256,
-  type AnalysisProject,
-  type AnalysisFunctionRecord,
-  type IntervalAnnotation,
-  type RuntimeInstructionRecord,
-} from "@uttori/asm-disassembler";
+import { RomImage, openAnalysisProjectStore, publishAnalysisProject, sourceExportSha256, type AnalysisProject, type AnalysisFunctionRecord, type IntervalAnnotation, type RuntimeInstructionRecord } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import {

@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, writeFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { formatDebugAddress, type CaptureFileMetadata } from "@uttori/asm-debug-adapter";
+import { type CaptureFileMetadata } from "@uttori/asm-capture";
+import { formatDebugAddress } from "@uttori/asm-debug-adapter";
 import {
   decodeNesPPUSnapshot,
   nesPPUHtml,
@@ -18,9 +19,10 @@ export async function saveNesPPUSnapshot(
   metadata: CaptureFileMetadata,
   root: string,
 ) {
-  if (metadata.architecture !== "65xx.2a03" || !metadata.romFileSha256)
+  if (metadata.architecture !== "65xx.2a03" || !metadata.romFileSha256) {
     throw new Error("NES PPU snapshot requires a complete cartridge identity.");
-  const response = await session.customRequest("readMemory", {
+  }
+  const response: unknown = await session.customRequest("readMemory", {
     memoryReference: formatDebugAddress({
       architecture: "65xx.2a03",
       addressSpace: "nes.ppu-snapshot",
@@ -28,8 +30,19 @@ export async function saveNesPPUSnapshot(
     }),
     count: NES_PPU_SNAPSHOT_BYTES,
   });
-  if (typeof response.data !== "string" || response.unreadableBytes)
+  // Custom DAP responses have no static schema. Reject incomplete reads before decoding or saving evidence.
+  if (
+    typeof response !== "object" ||
+    response === null ||
+    Array.isArray(response) ||
+    !("data" in response) ||
+    typeof response.data !== "string" ||
+    ("unreadableBytes" in response &&
+      response.unreadableBytes !== undefined &&
+      response.unreadableBytes !== 0)
+  ) {
     throw new Error("Incomplete NES PPU snapshot.");
+  }
   const bytes = Buffer.from(response.data, "base64");
   const snapshot = decodeNesPPUSnapshot(bytes);
   const identity = {

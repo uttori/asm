@@ -40,7 +40,15 @@ const host = {
   output: [] as { channel: string; level: string; message: string }[],
   shownOutput: [] as string[],
   stopped: 0,
-  clients: [] as { start: () => Promise<void>; stop: () => Promise<void> }[],
+  failNextStart: false,
+  foldersChanged: undefined as (() => void) | undefined,
+  clients: [] as {
+    start: () => Promise<void>;
+    stop: () => Promise<void>;
+    stops: number;
+    server: Record<"run" | "debug", { options: { env: NodeJS.ProcessEnv } }>;
+    options: { initializationOptions: { owningRoot?: string } };
+  }[],
 };
 
 Object.assign(globalThis, { __uttoriExtensionTest: host });
@@ -166,6 +174,7 @@ registerHooks({
             registerFileSystemProvider: () => disposable(),
             findFiles: async () => [],
             onDidChangeConfiguration: () => disposable(),
+            onDidChangeWorkspaceFolders: (callback) => {host.foldersChanged=callback;return {dispose(){host.foldersChanged=undefined;}};},
             onDidChangeTextDocument: () => disposable(),
             onDidSaveTextDocument: () => disposable(),
             onDidCloseTextDocument: () => disposable(),
@@ -259,12 +268,12 @@ registerHooks({
         source: `
           const host = globalThis.__uttoriExtensionTest;
           export class LanguageClient {
-            constructor() {
-              host.clients.push(this);
+            constructor(id,name,server,options) {
+              this.options=options;this.server=server;this.stops=0;host.clients.push(this);
             }
-            start() { return Promise.resolve(); }
+            start() { if(host.failNextStart){host.failNextStart=false;return Promise.reject(new Error("Fixture startup failure"));} return Promise.resolve(); }
             stop() {
-              host.stopped += 1;
+              host.stopped += 1;this.stops++;
               return Promise.resolve();
             }
             onNotification() { return { dispose() {} }; }
@@ -304,6 +313,69 @@ const uri = (file: string) => ({
   scheme: "file",
   fsPath: file,
   toString: () => `file://${file}`,
+});
+
+test.serial("startup discovery cannot replace an explicit project selection", async (t) => {
+  const { SourceController } = await import("../src/source/controller.js");
+  const { window } = await import("vscode");
+  const { spriteSourceFixture } = await import("../../../tests/fixtures/sprite-source.js");
+  const startup = await spriteSourceFixture(t.teardown);
+  const explicit = await spriteSourceFixture(t.teardown);
+  const extensionPath = path.resolve("packages/vscode-extension");
+  const context = {
+    subscriptions: [] as { dispose(): void }[],
+    extensionPath,
+    extensionUri: uri(extensionPath),
+    extensionMode: 1,
+    asAbsolutePath: (value: string) => path.join(extensionPath, value),
+    workspaceState: { get: (_key: string, fallback?: unknown) => fallback, update: async () => {} },
+    globalState: { get: (_key: string, fallback?: unknown) => fallback, update: async () => {} },
+  };
+  if (!isExtensionContext(context)) {
+    throw new Error("extension context stub");
+  }
+  const selections: (string | undefined)[] = [];
+  class ObservedController extends SourceController {
+    override async select(root?: string): Promise<void> {
+      selections.push(root);
+      await super.select(root);
+    }
+  }
+  const discovery = Promise.withResolvers<void>();
+  const discoveryStarted = Promise.withResolvers<void>();
+  const originalAccess = fs.promises.access;
+  // Pause only automatic discovery; the explicit request must finish first without relying on timing.
+  fs.promises.access = new Proxy(originalAccess, {
+    async apply(target, thisArg, args: Parameters<typeof originalAccess>) {
+      const result = await Reflect.apply(target, thisArg, args);
+      if (args[0] === path.join(startup.directory, ".uttori/project.json")) {
+        discoveryStarted.resolve();
+        await discovery.promise;
+      }
+      return result;
+    },
+  });
+  host.folders = [{ uri: uri(startup.directory) }];
+  const controller = new ObservedController(
+    context,
+    window.createOutputChannel("Startup test", { log: true }),
+  );
+  t.teardown(() => {
+    discovery.resolve();
+    fs.promises.access = originalAccess;
+    controller.dispose();
+    host.folders = undefined;
+    for (const subscription of context.subscriptions) {
+      subscription.dispose();
+    }
+  });
+  await discoveryStarted.promise;
+  await controller.select(explicit.directory);
+  discovery.resolve();
+  // Drain the completed filesystem probe and restore continuation before inspecting selection ownership.
+  await new Promise((resolve) => setImmediate(resolve));
+  t.deepEqual(selections, [explicit.directory]);
+  t.is(controller.root, explicit.directory);
 });
 
 test.serial(
@@ -369,5 +441,82 @@ test.serial(
     await deactivate();
     t.is(host.stopped, 1);
     t.true(host.clients.length >= 1);
+  },
+);
+
+test.serial(
+  "workspace clients own independent roots and retry failed startup after removal/reopen",
+  async (t) => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-extension-roots-"));
+    const first = { uri: uri(path.join(directory, "snes")) },
+      second = { uri: uri(path.join(directory, "nes")) };
+    host.folders = [first, second];
+    host.trusted = true;
+    host.clients = [];
+    host.stopped = 0;
+    host.config = {};
+    const context = {
+      subscriptions: [] as { dispose(): void }[],
+      extensionPath: directory,
+      extensionUri: uri(directory),
+      extensionMode: 1,
+      asAbsolutePath: (value: string) => path.join(directory, value),
+      workspaceState: {
+        get: (_key: string, fallback?: unknown) => fallback,
+        update: async () => {},
+      },
+      globalState: { get: (_key: string, fallback?: unknown) => fallback, update: async () => {} },
+    };
+    if (!isExtensionContext(context)) {
+      throw new Error("extension context stub");
+    }
+    t.teardown(async () => {
+      await deactivate();
+      for (const item of context.subscriptions) {
+        item.dispose();
+      }
+      host.folders = undefined;
+      fs.rmSync(directory, { recursive: true, force: true });
+    });
+    activate(context);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    t.deepEqual(
+      host.clients.map((client) => client.options.initializationOptions.owningRoot),
+      [first.uri.toString(), second.uri.toString()],
+    );
+    const [firstClient, secondClient] = host.clients;
+    for (const client of [firstClient, secondClient]) {
+      t.is(client.server.run.options.env.ELECTRON_RUN_AS_NODE, "1");
+      t.is(client.server.debug.options.env.ELECTRON_RUN_AS_NODE, "1");
+    }
+    const manifest: {
+      contributes: { configuration: { properties: Record<string, { scope?: string }> } };
+    } = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+    for (const setting of [
+      "configFile",
+      "plugins",
+      "target",
+      "entryPoints",
+      "includePaths",
+      "architecture",
+      "buildOutput",
+      "baseImage",
+    ]) {
+      t.is(manifest.contributes.configuration.properties[`asm.${setting}`].scope, "resource");
+    }
+    host.folders = [second];
+    host.foldersChanged?.();
+    t.is(firstClient.stops, 1);
+    t.is(secondClient.stops, 0);
+    host.failNextStart = true;
+    host.folders = [first, second];
+    host.foldersChanged?.();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    t.is(host.clients[2].stops, 1);
+    t.is(secondClient.stops, 0);
+    host.foldersChanged?.();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    t.is(host.clients.length, 4);
+    t.is(host.clients[3].options.initializationOptions.owningRoot, first.uri.toString());
   },
 );

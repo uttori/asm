@@ -1,5 +1,6 @@
 import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
 import {
+  readAnalysisTargetState,
   analyzeStaticControlFlow,
   type AnalysisRecord,
   type AnalysisTargetOverrideRecord,
@@ -90,7 +91,8 @@ const intervalContains = (annotation: IntervalAnnotation, address: number): bool
   address < annotation.end;
 
 const stateOverrideFor = (annotation: IntervalAnnotation): Spc700StateOverride | undefined => {
-  const directPage = annotation.state?.directPage;
+  const payload = readAnalysisTargetState(annotation.architecture, annotation.state);
+  const directPage = payload?.codec === "snes.spc700" ? payload.state.directPage : undefined;
   return directPage === 0 || directPage === 0x100 ? { directPage } : undefined;
 };
 

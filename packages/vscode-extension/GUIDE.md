@@ -286,7 +286,7 @@ private graphics report; use `lossless-instructions` for code discovery.
 **Assembly: Inspect NES PPU Snapshot** requires a paused session and opens mapped
 pattern, nametable and sprite-tile views. It saves the binary snapshot, identities
 and standalone HTML under `.uttori-local/graphics/snapshots/`. The panels inspect
-storage, not a composited frame. See [the NES PPU contract](../../docs/nes-ppu-evidence.md).
+storage, not a composited frame. See [the NES PPU contract](../debug-sidecar-ares/NES.md).
 
 Famicom context capture also supports **Add Capture Milestone**, **Replay Capture
 Inputs** and **Restore Capture Pre-action State**. It retains CPU/APU/PPU/mapper
@@ -294,7 +294,7 @@ state, controller polling inputs and screenshots; replay validates the complete
 machine endpoint. Instruction recordings automatically include a separate PPU
 fetch/A12/IRQ timeline, which source import validates and saves as a graphics
 report. Use a matching context-capable runtime and Gamepad configuration. The
-[full NES contract](../../docs/nes-ppu-evidence.md) documents clock domains and
+[full NES contract](../debug-sidecar-ares/NES.md) documents clock domains and
 unsupported expansion devices.
 
 NES research uses explicit mapper selectors for banked CPU addresses. **Edit

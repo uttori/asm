@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { RomImage, openAnalysisProjectStore, validateProjectRom, assertSourcePath, sourceGit, retainSourceGeneration, sourceContentHash, verifySourceGeneration, createSourceInputSnapshot, createSourceScratch, } from "@uttori/asm-disassembler";
+import { RomImage, openAnalysisProjectStore, validateProjectRom } from "@uttori/asm-disassembler";
+import { assertSourcePath, sourceGit, retainSourceGeneration, sourceContentHash, verifySourceGeneration, createSourceInputSnapshot, createSourceScratch, } from "@uttori/asm-disassembler/source-project";
 import { lostCodeRanges } from "./code-preservation.js";
 import { buildSnesSource } from "./source-build.js";
 import { exportSnes65816Source } from "./source-export.js";
+import { readGenerationBlobs } from "./source-generation-blobs.js";
 import { validateSnesStructMap } from "./struct-map.js";
 /** Exact render options include recipe contents and the pristine-asset selection, not host paths. */
 export function snesGenerationOptionsHash(options) {
@@ -70,6 +72,7 @@ export async function prepareSnesGeneration(options) {
             throw new Error(`Invalid SNES struct map ${file}: ${detail} Correct this input before regenerating.`, { cause: error });
         }
     }
+    options.onProgress?.("Verifying the accepted generation's immutable payload.");
     const prior = await verifySourceGeneration(options.repository, options.parent);
     if (prior.descriptor.inputs.project !== options.inputs.project ||
         prior.descriptor.inputs.romSha256 !== options.inputs.romSha256) {
@@ -114,8 +117,8 @@ export async function prepareSnesGeneration(options) {
         }
         // SQL keeps the complete runtime history out of JS. The iterator is consumed while this
         // snapshot is open so another evidence import cannot mix instruction variants into the render.
-        store.prepareAnnotationQueries();
-        const { manifest, rom } = store.transaction(() => {
+        options.onProgress?.("Preparing indexed evidence and exporting source.");
+        const { manifest, rom } = store.sourceExportSnapshot((instructionGroups) => {
             const project = store.sourceExportView();
             if (sourceContentHash(canonicalJson(project.manifest)) !== options.inputs.evidenceSha256 ||
                 store.researchInputsIdentity() !== options.inputs.researchSha256) {
@@ -130,7 +133,7 @@ export async function prepareSnesGeneration(options) {
             }
             const exportedManifest = exportSnes65816Source(project, loadedRom, source, {
                 sourceProjectSha256: sourceContentHash(canonicalJson(project.manifest)),
-                instructionGroups: store.instructionExportGroups(),
+                instructionGroups,
                 emitFile: (file) => {
                     options.signal?.throwIfAborted();
                     // Reports are disposable diagnostics, not editable source or merge inputs.
@@ -141,7 +144,7 @@ export async function prepareSnesGeneration(options) {
                 },
             });
             return { manifest: exportedManifest, rom: loadedRom };
-        }, false);
+        }, options.signal);
         const priorFiles = new Map(prior.files.map((file) => [file.path, file]));
         const priorCode = priorFiles.get(`${options.sourceRoot}/source-code.json`);
         if (!priorCode) {
@@ -171,22 +174,20 @@ export async function prepareSnesGeneration(options) {
                 throw new Error(`Generation withdraws previously emitted code at $${unresolved[0].start.toString(16)}. Resolve the evidence or record reviewed intervals and reasons in codeWithdrawals.`);
             }
         }
-        for (const asset of options.pristineAssets) {
+        options.onProgress?.("Reading and checking pristine assets from immutable Git blobs.");
+        const assets = options.pristineAssets.map((asset) => {
             const name = asset.path;
             assertSourcePath(name);
             if (!name.startsWith(`${options.sourceRoot}/assets/`)) {
                 throw new Error(`Pristine asset is outside this source projection: ${name}`);
             }
-            let bytes;
             if (asset.originalBlob !== undefined) {
                 if (asset.romRange || !/^(?:[\da-f]{40}|[\da-f]{64})$/.test(asset.originalBlob)) {
                     throw new Error(`Invalid original asset blob declaration for ${name}.`);
                 }
                 // Admission pins reviewed bytes, not a path that an editor can mutate during preparation.
                 // The full original-ROM build below must succeed before any candidate is retained.
-                bytes = (await sourceGit(options.repository.root, ["cat-file", "blob", asset.originalBlob], {
-                    signal: options.signal,
-                })).stdout;
+                return { asset, blob: asset.originalBlob };
             }
             else if (asset.romRange) {
                 const { start, end } = asset.romRange;
@@ -197,28 +198,32 @@ export async function prepareSnesGeneration(options) {
                     end > rom.length) {
                     throw new Error(`Invalid original ROM extraction for ${name}.`);
                 }
-                bytes = rom.read(start, end - start);
+                return { asset, bytes: rom.read(start, end - start) };
             }
             else {
                 const priorFile = priorFiles.get(name);
                 if (!priorFile || priorFile.sha256 !== asset.sha256) {
                     throw new Error(`Asset needs original-ROM extraction and verification before adoption: ${name}`);
                 }
-                bytes = (await sourceGit(options.repository.root, ["cat-file", "blob", priorFile.blob], {
-                    signal: options.signal,
-                })).stdout;
+                return { asset, blob: priorFile.blob };
             }
+        });
+        const blobs = await readGenerationBlobs(options.repository, assets.flatMap((entry) => (entry.blob ? [entry.blob] : [])), options.signal);
+        for (const entry of assets) {
+            const { asset } = entry;
+            const bytes = entry.bytes ?? blobs.get(entry.blob);
             // Every admission route verifies immutable inputs. Working source edits are
             // merged separately; no mutable PNG, stream or resource path is reread here.
             if (sourceContentHash(bytes) !== asset.sha256) {
-                throw new Error(`Pristine asset content does not match its declared identity: ${name}`);
+                throw new Error(`Pristine asset content does not match its declared identity: ${asset.path}`);
             }
-            write({ path: name, bytes });
+            write({ path: asset.path, bytes });
         }
         // Configuration is a build input on both histories. Research maps remain owned by the source
         // branch and are retained there through the explicit checkpoint required before applying.
         const configuration = options.recipes.find((file) => file.path === "uttori-asm.config.json");
         write({ path: `${options.sourceRoot}/${configuration.path}`, bytes: configuration.bytes });
+        options.onProgress?.("Assembling generated source and verifying original-ROM equality.");
         const loaded = await options.loadEnvironment(path.join(source, configuration.path));
         let build;
         try {
@@ -244,6 +249,7 @@ export async function prepareSnesGeneration(options) {
         finally {
             await loaded.dispose();
         }
+        options.onProgress?.("Retaining the verified immutable generation in Git.");
         const generation = await retainSourceGeneration(options.repository, {
             files: [...generated.values(), createSourceInputSnapshot(options.inputFiles)],
             inputs: options.inputs,

@@ -1,3 +1,11 @@
+import { parseDirectiveExpression } from "../ir/directive-arguments.js";
+import {
+  syntaxBoolean,
+  syntaxExpression,
+  syntaxOptional,
+  syntaxRecord,
+  syntaxString,
+} from "../ir/syntax-codec.js";
 import type { DirectiveRegistry, DirectiveRegistryContexts } from "./registry.js";
 import type { AddressStackDirectiveContext, ArchitectureDirectiveContext } from "./types.js";
 
@@ -37,10 +45,11 @@ export const handleArch = (
   { session }: ArchitectureDirectiveContext,
   words: readonly string[],
 ): void => {
-  if (!words[1]) {
-    throw new Error("ARCH command requires an architecture parameter.");
-  }
-  const archParam = words[1].toLowerCase();
+  selectArchitecture({ session }, parseArchitectureName(words).name);
+};
+
+/** Apply a parsed CPU name without retaining parser tokens in the runtime contract. */
+function selectArchitecture({ session }: ArchitectureDirectiveContext, archParam: string): void {
   const canonical = session.architectureRegistry.getCanonicalName(archParam);
   if (!canonical) {
     if (session.selectArchitecture) {
@@ -63,7 +72,7 @@ export const handleArch = (
   } else {
     session.arch = canonical;
   }
-};
+}
 
 /**
  * Registers `base`, `org`, `pushbase`/`pullbase`, `pushpc`/`pullpc`, and `arch`.
@@ -71,52 +80,78 @@ export const handleArch = (
  * @param {DirectiveRegistryContexts["layout"]} context Layout-capable sessions and runtime.
  * @returns {void}
  */
+const empty = () => ({});
+
 export const registerGenericLayoutDirectives = (
   registry: DirectiveRegistry,
   context: DirectiveRegistryContexts["layout"],
 ): void => {
-  registry.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
-    if (words.length !== 2) {
-      throw new Error("BASE directive requires exactly one parameter.");
-    }
-
-    const param = words[1].trim();
-    if (param.toLowerCase() === "off") {
-      const baseAddress = session.currentTargetBaseAddress;
-      const baseStartAddress = session.currentTargetBaseStartAddress;
-      session.currentTargetAddress = baseAddress;
-      session.currentTargetStartAddress = baseStartAddress;
-      return;
-    }
-
-    const value = operandResolver.getnum(param);
-    const addressWidth = session.addressWidth;
-    const maxAddress = 2 ** addressWidth - 1;
-    if (value < 0 || value > maxAddress) {
-      throw new Error(`Invalid base address: ${param}. Must be within ${addressWidth} bits.`);
-    }
-
-    session.currentTargetAddress = value;
-    session.currentTargetStartAddress = value;
-  });
-
-  registry.registerLowered("org", context.org, ({ runtime }, words) => {
-    runtime.handleOrg(words.slice(1));
-  });
-
-  registry.registerLowered("pushbase", context.addressStack, handlePushBase);
-
-  registry.registerLowered("pullbase", context.addressStack, handlePullBase);
-
-  registry.registerLowered("pushpc", context.runtime, ({ runtime }) => {
-    runtime.handlePushPC();
-  });
-
-  registry.registerLowered("pullpc", context.runtime, ({ runtime }) => {
-    runtime.handlePullPC();
-  });
-
-  registry.registerLowered("arch", context.architecture, handleArch);
+  registry.registerImmutableTyped(
+    "base",
+    ({ words }) => {
+      if (words.length !== 2) {
+        throw new Error("BASE directive requires exactly one parameter.");
+      }
+      const text = words[1].trim();
+      const off = text.toLowerCase() === "off";
+      return { off, text, address: off ? undefined : parseDirectiveExpression(text) };
+    },
+    syntaxRecord({
+      off: syntaxBoolean,
+      text: syntaxString,
+      address: syntaxOptional(syntaxExpression),
+    }),
+    ({ off, text, address }) => {
+      const { session, operandResolver } = context.base;
+      if (off) {
+        session.currentTargetAddress = session.currentTargetBaseAddress;
+        session.currentTargetStartAddress = session.currentTargetBaseStartAddress;
+        return;
+      }
+      if (!address) {
+        throw new Error("Missing BASE expression.");
+      }
+      const value = operandResolver.getnum(address);
+      const addressWidth = session.addressWidth;
+      if (value < 0 || value > 2 ** addressWidth - 1) {
+        throw new Error(`Invalid base address: ${text}. Must be within ${addressWidth} bits.`);
+      }
+      session.currentTargetAddress = value;
+      session.currentTargetStartAddress = value;
+    },
+  );
+  registry.registerImmutableTyped(
+    "org",
+    ({ words }) => {
+      if (words.length !== 2) {
+        throw new Error("ORG requires a single address parameter.");
+      }
+      return { address: parseDirectiveExpression(words[1].trim(), false), text: words[1] };
+    },
+    syntaxRecord({ address: syntaxExpression, text: syntaxString }),
+    ({ address, text }) => {
+      context.org.runtime.executeOrg(address, text);
+    },
+  );
+  const emptySyntax = syntaxRecord({});
+  registry.registerImmutableTyped("pushbase", empty, emptySyntax, () =>
+    handlePushBase(context.addressStack),
+  );
+  registry.registerImmutableTyped("pullbase", empty, emptySyntax, () =>
+    handlePullBase(context.addressStack),
+  );
+  registry.registerImmutableTyped("pushpc", empty, emptySyntax, () =>
+    context.runtime.runtime.handlePushPC(),
+  );
+  registry.registerImmutableTyped("pullpc", empty, emptySyntax, () =>
+    context.runtime.runtime.handlePullPC(),
+  );
+  registry.registerImmutableTyped(
+    "arch",
+    ({ words }) => parseArchitectureName(words),
+    syntaxRecord({ name: syntaxString }),
+    ({ name }) => selectArchitecture(context.architecture, name),
+  );
 };
 
 /**
@@ -130,4 +165,12 @@ export const registerLayoutDirectives = (
   context: DirectiveRegistryContexts["layout"],
 ): void => {
   registerGenericLayoutDirectives(registry, context);
+};
+
+/** Public calls and source directives share CPU-name validation. */
+const parseArchitectureName = (words: readonly string[]) => {
+  if (!words[1]) {
+    throw new Error("ARCH command requires an architecture parameter.");
+  }
+  return { name: words[1].toLowerCase() };
 };

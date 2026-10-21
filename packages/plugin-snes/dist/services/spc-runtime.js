@@ -1,4 +1,36 @@
+import { parseDirectiveExpression } from "@uttori/asm-core/plugin";
 import { shouldAutoCloseSpcblock } from "../asar/compatibility.js";
+export function parseSpcBlock(words) {
+    if (words.length < 2) {
+        throw new Error("spcblock requires at least a destination address.");
+    }
+    if (words.length > 4) {
+        throw new Error("spcblock has too many arguments.");
+    }
+    let modeError;
+    if (words.length === 3 && words[2].toLowerCase() !== "nspc") {
+        modeError =
+            words[2].toLowerCase() === "custom"
+                ? "Custom spcblock mode requires a macro and is not implemented."
+                : `Unknown spcblock type: ${words[2]}`;
+    }
+    else if (words.length === 4) {
+        modeError =
+            words[2].toLowerCase() === "custom"
+                ? "Custom spcblock mode is not implemented."
+                : `Unexpected spcblock argument for type: ${words[2]}`;
+    }
+    return { destination: parseDirectiveExpression(words[1]), destinationText: words[1], modeError };
+}
+export function parseEndSpcBlock(words) {
+    if (words.length === 3) {
+        if (words[1].toLowerCase() !== "execute") {
+            return { error: `Invalid endspcblock argument: ${words[1]}` };
+        }
+        return { execute: parseDirectiveExpression(words[2]) };
+    }
+    return words.length === 1 ? {} : { error: "Unknown endspcblock format." };
+}
 /**
  * Session-bound runtime for SPC block directives and stage cleanup.
  *
@@ -22,7 +54,7 @@ export class SnesSpcRuntimeService {
      */
     finishPass() {
         if (shouldAutoCloseSpcblock(this.state.spcInlineCompatibility, this.state.inSpcBlock)) {
-            this.handleEndSpcblock(["endspcblock", "execute", "0"]);
+            this.executeEndSpcblock({ execute: { type: "literal", value: "0", numericValue: 0 } });
         }
         if (this.state.inSpcBlock) {
             throw new Error("Missing endspcblock before end of pass.");
@@ -37,37 +69,19 @@ export class SnesSpcRuntimeService {
      * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
      */
     handleSpcblock(words) {
-        if (words.length < 2) {
-            throw new Error("spcblock requires at least a destination address.");
-        }
-        if (words.length > 4) {
-            throw new Error("spcblock has too many arguments.");
-        }
+        this.executeSpcblock(parseSpcBlock(words));
+    }
+    /** Bind destination before reporting mode errors, then commit the NSPC header and switch CPU. */
+    executeSpcblock(node) {
         if (this.state.inSpcBlock) {
             throw new Error("Nested spcblock directives are not supported.");
         }
-        const destination = this.session.operandResolver.getnum(this.session.resolvedefines(words[1]));
+        const destination = this.session.operandResolver.getnum(node.destination);
         if ((destination & ~0xffff) !== 0) {
-            throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
+            throw new Error(`spcblock destination must be 16-bit, got: ${node.destinationText}`);
         }
-        let type = "nspc";
-        if (words.length === 3) {
-            const kind = words[2].toLowerCase();
-            if (kind === "nspc") {
-                type = "nspc";
-            }
-            else if (kind === "custom") {
-                throw new Error("Custom spcblock mode requires a macro and is not implemented.");
-            }
-            else {
-                throw new Error(`Unknown spcblock type: ${words[2]}`);
-            }
-        }
-        else if (words.length === 4) {
-            if (words[2].toLowerCase() !== "custom") {
-                throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
-            }
-            throw new Error("Custom spcblock mode is not implemented.");
+        if (node.modeError) {
+            throw new Error(node.modeError);
         }
         const sizeAddress = this.session.currentTargetBaseAddress;
         this.session.write2(0);
@@ -76,7 +90,7 @@ export class SnesSpcRuntimeService {
         this.session.currentTargetStartAddress = destination;
         this.state.spcBlock = {
             destination,
-            type,
+            type: "nspc",
             sizeAddress,
             executeAddress: null,
             namespaceBackup: this.session.currentNamespace,
@@ -99,6 +113,10 @@ export class SnesSpcRuntimeService {
      * @param {readonly string[]} words Tokenized line.
      */
     handleEndSpcblock(words) {
+        this.executeEndSpcblock(parseEndSpcBlock(words));
+    }
+    /** Size patching precedes trailer validation; an execute expression runs after its zero word. */
+    executeEndSpcblock(node) {
         const block = this.state.spcBlock;
         if (!this.state.inSpcBlock || !block) {
             throw new Error("endspcblock used without an active spcblock.");
@@ -115,15 +133,12 @@ export class SnesSpcRuntimeService {
             this.session.writeOutputBytes(sizeOffset, blockSize & 0xff, 1);
             this.session.writeOutputBytes(sizeOffset + 1, (blockSize >> 8) & 0xff, 1);
         }
-        if (words.length === 3) {
-            if (words[1].toLowerCase() !== "execute") {
-                throw new Error(`Invalid endspcblock argument: ${words[1]}`);
-            }
-            this.session.write2(0);
-            this.session.write2(this.session.operandResolver.getnum(this.session.resolvedefines(words[2])) & 0xffff);
+        if (node.error) {
+            throw new Error(node.error);
         }
-        else if (words.length !== 1) {
-            throw new Error("Unknown endspcblock format.");
+        if (node.execute) {
+            this.session.write2(0);
+            this.session.write2(this.session.operandResolver.getnum(node.execute) & 0xffff);
         }
         else if (block.executeAddress !== null) {
             this.session.write2(0);

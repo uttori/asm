@@ -5,6 +5,7 @@ import { Assembler } from "@uttori/asm-core";
 import { test } from "../../../tests/ava-helper.js";
 import { PluginManager } from "../../core/src/plugin/manager.js";
 import plugin65xx, { create65xxAssemblerEnvironment, RAW_65XX_TARGET_ID } from "../src/index.js";
+import { assertTyped65xx } from "./helpers/typed-execution.js";
 
 const environment = await create65xxAssemblerEnvironment();
 
@@ -162,7 +163,7 @@ function assemble(
     targetOptions: { origin },
   });
   try {
-    assembler.assembleSource(source, "fixture.asm");
+    assertTyped65xx(assembler, () => assembler.assembleSource(source, "fixture.asm"));
     return assembler.getBinaryOutput();
   } finally {
     assembler.dispose();
@@ -260,8 +261,9 @@ test("NMOS encoding-equivalent chip names resolve as architecture aliases", (t) 
   for (const alias of ["6502", "6510", "8502", "6507"]) {
     t.is(environment.resolveArchitectureId(RAW_65XX_TARGET_ID, alias), "65xx.6502", alias);
   }
-  for (const alias of ["2A03", "2A07"])
+  for (const alias of ["2A03", "2A07"]) {
     t.is(environment.resolveArchitectureId(RAW_65XX_TARGET_ID, alias), "65xx.2a03");
+  }
   const catalog = environment.getToolingCatalog(RAW_65XX_TARGET_ID).getInstructions("6502x");
   t.true(catalog.some((instruction) => instruction.mnemonic === "SLO"));
   t.true(catalog.some((instruction) => instruction.mnemonic === "LDA"));

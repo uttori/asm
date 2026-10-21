@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 
-import { WorkspaceIndex } from "@uttori/asm-core";
+import { WorkspaceIndex } from "@uttori/asm-core/tooling";
 import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 
 import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
@@ -111,6 +111,7 @@ function runIndexingPass(index: WorkspaceIndex): IndexingSample {
     peakHeapUsedBytes: instrumented.metrics.peakHeapUsedBytes || memory.heapUsed,
     phasesMs: instrumented.metrics.phasesMs,
     counters: instrumented.metrics.counters,
+    expressionBoundaries: instrumented.metrics.expressionBoundaries,
     cachedRoots: index.lastReindexCachedRoots,
     analyzedRoots: index.lastReindexAnalyzedRoots,
     fileCount: status.fileCount,

@@ -1,3 +1,4 @@
+import type { RelativeReferenceExpressionNode } from "../ir/expression-node.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
 import type { StructDefinition } from "./struct-engine.js";
 export type LabelEntry = {
@@ -93,6 +94,13 @@ export declare class SymbolScopeService {
      * @returns {number} The address of the label.
      */
     handleRelativeLabel(label: string): number;
+    /** Declare a parsed relative-label stream; spelling is retained only for diagnostics. */
+    declareRelativeLabel({ direction, depth, macroLocal: isMacroLocal, spelling: label, }: {
+        direction: 1 | -1;
+        depth: number;
+        macroLocal: boolean;
+        spelling: string;
+    }): number;
     /**
      * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
      * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
@@ -106,6 +114,8 @@ export declare class SymbolScopeService {
      * @returns {number} The target address.
      */
     findUnnamedLabel(label: string, currentAddressOverride?: number): number;
+    /** Resolve a typed relative stream without recognizing its spelling again. */
+    resolveRelativeReference(reference: RelativeReferenceExpressionNode, address?: number): number;
     /**
      * Finds the next label.
      * @param {string} label The label to find.

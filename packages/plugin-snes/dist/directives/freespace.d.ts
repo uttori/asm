@@ -1,4 +1,4 @@
-import type { Assembler } from "@uttori/asm-core";
+import type { PluginSessionCapabilities } from "@uttori/asm-core/plugin";
 import type { SnesSessionState } from "../session-state.js";
 /**
  * Allocates an Asar-style freespace block (`freecode` / `freespace` / `freedata`).
@@ -13,20 +13,22 @@ import type { SnesSessionState } from "../session-state.js";
  *
  * `norom` has no cartridge map, so allocation is refused.
  *
- * @param {Assembler} session Host assembler.
+ * @param {PluginSessionCapabilities} session Host assembler.
  * @param {SnesSessionState} state Mutable SNES session.
  * @param {readonly string[]} words Tokenized line (keyword used only in the SPC-block error).
  */
-export declare function handleFreespace(session: Assembler, state: SnesSessionState, words: readonly string[]): void;
+export declare function handleFreespace(session: PluginSessionCapabilities, state: SnesSessionState, words: readonly string[]): void;
+/** Allocate after validating the current mapper/block state; the keyword is diagnostic attribution. */
+export declare function allocateFreespace(session: PluginSessionCapabilities, state: SnesSessionState, keyword: string): void;
 /**
  * Sets the fill byte used when expanding output (`freespacebyte <value>`).
  * Mirrored onto the session so later `expandOutput` calls match Asar.
  *
- * @param {Assembler} session Host assembler.
+ * @param {PluginSessionCapabilities} session Host assembler.
  * @param {SnesSessionState} state Mutable SNES session.
  * @param {readonly string[]} words Tokenized line.
  */
-export declare function handleFreespaceByte(session: Assembler, state: SnesSessionState, words: readonly string[]): void;
+export declare function handleFreespaceByte(session: PluginSessionCapabilities, state: SnesSessionState, words: readonly string[]): void;
 /**
  * Emits an Asar `PROT` record: `PROT` + payload-length byte + 24-bit SNES
  * addresses for each label + `STOP\0`.
@@ -35,8 +37,10 @@ export declare function handleFreespaceByte(session: Assembler, state: SnesSessi
  * The length byte is `labelCount * 3` truncated to 8 bits - Asar's format has
  * no 16-bit count, so >85 labels wrap.
  *
- * @param {Assembler} session Host assembler.
+ * @param {PluginSessionCapabilities} session Host assembler.
  * @param {readonly string[]} words Tokenized line. Labels after the keyword, comma-separated.
  */
-export declare function handleProt(session: Assembler, words: readonly string[]): void;
+export declare function handleProt(session: PluginSessionCapabilities, words: readonly string[]): void;
+/** Emit the parsed label sequence in source order; unresolved labels retain the provisional zero value. */
+export declare function emitProtectionRecord(session: PluginSessionCapabilities, labels: readonly string[]): void;
 //# sourceMappingURL=freespace.d.ts.map

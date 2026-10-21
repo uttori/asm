@@ -4,14 +4,6 @@ import path from "node:path";
 import { asepriteAtlasCodec } from "@uttori/asm-assets/aseprite";
 import { indexedPngAtlasCodec } from "@uttori/asm-assets/atlas-png";
 import {
-  AssetInterchangeService,
-  asepriteRasterCodec,
-  indexedPngStructureCodec,
-  somSpriteSourceAdapter,
-  assetHash,
-} from "@uttori/asm-cli/asset-interchange";
-import { inspectSourceProject } from "@uttori/asm-cli/source";
-import {
   acceptedSourceGeneration,
   sourceGit,
   retainSourceGeneration,
@@ -19,7 +11,15 @@ import {
   previewSourceGeneration,
   applySourceGeneration,
   finishSourceGeneration,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
+import { somSpriteSourceAdapter } from "@uttori/asm-game-secret-of-mana/workflows";
+import {
+  AssetInterchangeService,
+  asepriteRasterCodec,
+  indexedPngStructureCodec,
+  assetHash,
+} from "@uttori/asm-workflows/asset-interchange";
+import { inspectSourceProject } from "@uttori/asm-workflows/source";
 
 import { test } from "./ava-helper.js";
 import { spriteSourceFixture, buildSpriteSource } from "./fixtures/sprite-source.js";

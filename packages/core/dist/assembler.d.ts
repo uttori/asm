@@ -1,7 +1,7 @@
 import { AddressToLineMapping } from "./addressToLine.js";
 import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
-import type { ExpressionHost, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
-import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
+import type { ExpressionHost } from "./architecture-types.js";
+import type { AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import { type AssemblyAnalysisResult, type AssemblyDiagnostic, type AssemblyIncludeEdge, type AssemblySourceLocation, type AssemblySymbolDefinition, type AssemblySymbolKind, type AssemblySymbolReference, type AssemblySymbolReferenceKind } from "./diagnostics.js";
 import { type CoreDirectiveGroup } from "./directive-groups.js";
 import { DirectiveRegistry } from "./directives/registry.js";
@@ -9,10 +9,12 @@ import { type AssemblyFileProvider } from "./file-provider.js";
 import type { ConditionalBranchNode, ExecutableNode, LoopNode } from "./ir/assembly-tree.js";
 import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expression-node.js";
 import { type NormalizedCommand } from "./ir/normalized-command.js";
+import { type ReferenceResolution } from "./ir/reference-path.js";
+import { type SourceFragment } from "./ir/source-fragment.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import type { AssemblyStageName } from "./plugin/contracts.js";
-import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
+import { type AssemblerEnvironment, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
 import { AssetAssemblyService } from "./services/asset-assembly-service.js";
 import { CommandLoweringService, type LoweredCommand, type LoweredExecutableNode, type LoweredLoopNode, type LoweredProgram } from "./services/command-lowering-service.js";
@@ -26,6 +28,7 @@ import { ProgramModelBuilder, type IncrementalProgramParseState, type ProgramMod
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
 import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
 import { type SourceSpan } from "./source-location.js";
+import type { SourceOrigin } from "./source-provenance.js";
 import { type SyntaxProfile } from "./syntax-profile.js";
 type RuntimeConditionalNode = ConditionalBranchNode;
 type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
@@ -80,21 +83,8 @@ type StageExecutionState = {
     symbols: StageSymbolState;
     control: StageControlState;
     pluginState: PluginStateSnapshot;
+    /** Reclaimable execution cache. Full builds discard completed plans; direct runStage results retain them. */
     loweredProgram: LoweredProgram | null;
-};
-type CommandPreprocessResult = "continue" | "handled";
-type AssemblerServiceBag = {
-    defineEngine: DefineEngine;
-    directiveRuntime: DirectiveRuntimeService;
-    fileProvider?: AssemblyFileProvider;
-    frontEnd?: AssemblyFrontEndService;
-    frontEndCommandService: FrontEndCommandService;
-    includeSource: IncludeSourceService;
-    lowering?: CommandLoweringService;
-    macroEngine: MacroEngine;
-    outputWriter: OutputWriterService;
-    structEngine: StructEngine;
-    symbolScope: SymbolScopeService;
 };
 type CursorAddressFacade = {
     recordCurrentAddress(): void;
@@ -102,7 +92,6 @@ type CursorAddressFacade = {
     syncWriteStarts(): void;
     incrementBytesWritten(num: number): void;
 };
-type TraceCommandContext = Pick<AssemblerTraceCommandEvent, "file" | "line" | "raw" | "normalized">;
 type WhileTracker = {
     iswhile: boolean;
     startline: number;
@@ -141,10 +130,6 @@ export type ProgramAnalysisOptions = {
     /** Resolve asset paths without converting bytes; state-dependent assertions after assets wait for a build. */
     deferAssetConversion?: boolean;
 };
-type ActiveLifecycle = {
-    record: OwnedContribution<LifecycleContribution>;
-    instance: SessionLifecycle;
-};
 /**
  * Mutable, synchronous build session. Share its frozen environment with other sessions, not its state.
  * Use assembleSource/assembleProgram for builds and analyzeSource for recovering diagnostics.
@@ -163,8 +148,13 @@ export declare class Assembler {
     currentTargetBaseStartAddress: number;
     bytes: number;
     pushBaseStack: number[];
-    /** Mutable bytes produced by this assembly session. */
-    outputBytes: number[] | Uint8Array;
+    private readonly outputBuffer;
+    /**
+     * Mutable output; large contiguous session-owned images may use typed views. Reacquire a view after
+     * growing writes; assigned arrays retain their growth behavior and assigned typed arrays stay fixed.
+     */
+    get outputBytes(): number[] | Uint8Array;
+    set outputBytes(value: number[] | Uint8Array);
     /** Byte used when expanding a sparse output range. */
     outputFillByte: number;
     whileStatus: WhileTracker[];
@@ -172,10 +162,7 @@ export declare class Assembler {
     currentNamespace: string;
     namespaceNestingEnabled: boolean;
     namespaceNestingPath: string[];
-    inMacroDefinition: boolean;
     currentMacroName: string;
-    currentMacroParams: string[];
-    currentMacroBody: NormalizedCommand[];
     currentVariadicCount: number | undefined;
     currentVariadicArgs: string[];
     macros: Map<string, MacroDefinition>;
@@ -184,18 +171,18 @@ export declare class Assembler {
     addressToLineMapping: AddressToLineMapping;
     currentFile: string;
     currentLine: number;
+    /** Invocation-local provenance. Buffered nodes snapshot it before this scope ends. */
+    private currentSourceOrigin?;
     /** Optional sink for structured tracing used by tests and ad-hoc debug scripts. */
-    traceListener: AssemblerTraceListener | null;
+    private traceListener;
     /** Active command contexts so nested byte writes inherit the right source line. */
-    traceCommandStack: TraceCommandContext[];
+    private readonly traceCommandStack;
     defines: Map<string, string>;
     /** Bare numeric values exposed only while executing typed `for` loops. */
     private readonly activeLoopVariables;
     characterMappings: Map<string, number>;
     currentTable: string | null;
     tableStack: Map<string, number>[];
-    inFunctionDefinition: boolean;
-    functionDefinitionLines: string[];
     arch: string;
     pushpcStack: PushPcStackEntry[];
     pushpcnum: number;
@@ -237,6 +224,7 @@ export declare class Assembler {
     currentGlobalParentLabel: string;
     labelParents: Map<string, string | null>;
     requireStaticLabelLookup: boolean;
+    /** Session syntax values indexed by opaque builder identities, with source keys owned by the builder. */
     readonly passProgramCache: Map<string, RuntimeNode[]>;
     directiveRegistry: DirectiveRegistry;
     architectureRegistry: ArchitectureRegistry;
@@ -248,7 +236,7 @@ export declare class Assembler {
     readonly pluginState: PluginSessionStateStore;
     readonly pluginAddressSpace: PluginTargetAddressSpace;
     readonly pluginOutputFormat: PluginTargetOutputFormat;
-    readonly activeLifecycles: readonly ActiveLifecycle[];
+    private readonly activeLifecycles;
     readonly cursorAddress: CursorAddressFacade;
     readonly fileProvider: AssemblyFileProvider;
     /** Binary/resource dependencies and converted bytes owned by the active build. */
@@ -259,19 +247,25 @@ export declare class Assembler {
     readonly programModelBuilder: ProgramModelBuilder;
     readonly commandLoweringService: CommandLoweringService;
     readonly incrementalProgramParseState: IncrementalProgramParseState;
-    readonly services: AssemblerServiceBag;
+    private readonly services;
     readonly stageExecutionStates: Map<AssemblyStageName, StageExecutionState>;
     readonly diagnostics: AssemblyDiagnostic[];
     readonly symbolDefinitions: AssemblySymbolDefinition[];
     readonly symbolReferences: AssemblySymbolReference[];
+    /** Pure occurrence plans replay against the current scope instead of caching resolved references. */
+    private readonly referencePlanner;
+    /** Static records need replay only when the same deduplication fields or analysis epoch change. */
+    private readonly stableReferences;
+    private referenceEpoch;
     readonly includeEdges: AssemblyIncludeEdge[];
     readonly collectSourceMetadata: boolean;
     /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
     followIncludes: boolean;
-    activeStageExecutionState: StageExecutionState | null;
-    analysisErrorRecoveryEnabled: boolean;
-    runtimePassthroughRewriteEnabled: boolean;
-    sessionDisposed: boolean;
+    private activeStageExecutionState;
+    private analysisErrorRecoveryEnabled;
+    private sessionDisposed;
+    /** Nesting permits target hooks triggered synchronously by another plugin capability. */
+    private borrowPluginCapabilities;
     get defineEngine(): DefineEngine;
     get directiveRuntime(): DirectiveRuntimeService;
     get addressWidth(): number;
@@ -393,6 +387,11 @@ export declare class Assembler {
         containerName?: string;
     }): void;
     /**
+     * Avoid rebuilding an already-recorded static occurrence. These fields match reference deduplication;
+     * hierarchy and struct-container selection stay outside this shortcut because they can change later.
+     */
+    private recordStableSymbolReference;
+    /**
      * Collects expression references.
      * @param {ExpressionNode | undefined} expression The expression.
      * @param {SourceSpan} [fallbackSpan] The fallback span.
@@ -441,6 +440,8 @@ export declare class Assembler {
      * @param {NormalizedCommand} command The command.
      */
     collectCommandReferences(command: NormalizedCommand): void;
+    /** Walk portable directive payloads, collecting expression nodes without interpreting enum/path strings. */
+    private collectSyntaxReferences;
     /**
      * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
      * @param {ProgramModel} program The program model to analyze.
@@ -498,7 +499,47 @@ export declare class Assembler {
         environment?: AssemblerOptions["environment"];
     });
     runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void;
-    runBeforeDirective(keyword: string, words: readonly string[], raw: string): "continue" | "handled";
+    runBeforeDirective(keyword: string, command: NormalizedCommand, syntax?: import("./ir/source-syntax.ts").DeclarationSyntax | {
+        readonly kind: "label";
+        readonly statement: import("./ir/statement-node.js").LabelStatement;
+    } | {
+        readonly kind: "sequence";
+        readonly declaration: import("./ir/statement-node.js").LabelStatement;
+        readonly following: NormalizedCommand | import("./ir/source-syntax.ts").NumericDataFragment;
+    } | {
+        readonly kind: "numericData";
+        readonly statement: import("./ir/statement-node.js").NumericDataStatement;
+    } | {
+        readonly kind: "data";
+        readonly width: 1 | 2 | 3 | 4;
+        readonly items: readonly import("./ir/source-syntax.ts").DataItemSyntax[];
+    } | {
+        readonly kind: "resource";
+        readonly operation: "include" | "binary" | "asset";
+        readonly path: import("./ir/source-syntax.ts").SyntaxToken;
+        readonly arguments: readonly import("./ir/source-syntax.ts").DataItemSyntax[];
+    } | {
+        readonly kind: "template";
+        readonly segments: readonly import("./ir/source-syntax.ts").TemplateSegmentSyntax[];
+    } | {
+        readonly kind: "invocation";
+        readonly name: import("./ir/source-syntax.ts").SyntaxToken;
+        readonly arguments: readonly import("./ir/source-syntax.ts").SyntaxToken[];
+    } | ({
+        readonly kind: "plugin";
+        readonly contributionId: string;
+        readonly grammarVersion: string;
+    } & {
+        readonly payload: import("./ir/source-syntax.ts").SyntaxValue;
+        readonly error?: never;
+    }) | ({
+        readonly kind: "plugin";
+        readonly contributionId: string;
+        readonly grammarVersion: string;
+    } & {
+        readonly error: string;
+        readonly payload?: never;
+    }) | undefined): "continue" | "handled";
     /**
      * Resolves ambiguous `endif` handling through active dialect lifecycles.
      * @param {"for" | "while"} [loopType] The innermost loop type.
@@ -574,6 +615,8 @@ export declare class Assembler {
      * @param {number} length The length of the section to fill.
      */
     fillOutputBytes(start: number, value: number, length: number): void;
+    /** Store one already-validated emitted byte, preserving sparse gap fill and public fill overrides. */
+    writeOutputByte(offset: number, value: number): void;
     createEphemeralStageExecutionState(stage: AssemblyStageName): StageExecutionState;
     /**
      * Synchronizes active stage execution state.
@@ -582,29 +625,12 @@ export declare class Assembler {
     syncActiveStageExecutionState(stage: AssemblyStageName): void;
     getActiveStageCapabilities(): StageExecutionCapabilities;
     get traceStage(): AssemblyStageName;
-    layoutInstruction(input: string[] | LoweredInstruction): boolean;
-    /**
-     * Encode through the active architecture, observing numeric operands only during final emission.
-     * @param {string[] | LoweredInstruction} input Instruction in the current source/expansion context.
-     * @returns {boolean} Whether the architecture handled it; unsupported mnemonics follow its policy.
-     */
-    emitInstruction(input: string[] | LoweredInstruction): boolean;
-    /**
-     * Picks the appropriate instruction handler based on architecture.
-     * @param {string[] | LoweredInstruction} input The instruction to pick.
-     * @returns {boolean} True if the instruction was handled, false otherwise.
-     */
-    asblock_pick(input: string[] | LoweredInstruction): boolean;
+    /** Public word entry; all source forms use the shared parser and typed execution contracts. */
+    asblock_pick(words: string[]): boolean;
     resolveActiveArchitecture(): {
         name: string;
         definition?: ArchitectureDefinition;
     };
-    /**
-     * Classifies operand for active architecture.
-     * @param {string} operand The operand.
-     * @returns {LoweredOperand} The classified operand.
-     */
-    classifyOperandForActiveArchitecture(operand: string): LoweredOperand;
     /**
      * Resolves target-specific directive prefixes without teaching the registry a dialect.
      * @param {string} keyword Source directive keyword.
@@ -645,7 +671,6 @@ export declare class Assembler {
     read1(logicalPosition: number): number;
     read2(logicalPosition: number): number;
     read3(logicalPosition: number): number;
-    rewriteRawCommand(command: string): string;
     createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty?: boolean): NormalizedCommand | null;
     /**
      * Applies a `!name =` assignment without routing it through the incremental if-tree.
@@ -659,26 +684,40 @@ export declare class Assembler {
      * @returns {boolean} `true` when the line was a character mapping.
      */
     tryHandleCharacterMapping(command: string): boolean;
-    preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult;
-    prepareNormalizedCommandForDispatch(state: NormalizedCommand): boolean;
+    /** Scope expansion metadata and restore caller positions even when nested expansion fails. */
+    withSourceOrigin(origin: SourceOrigin, execute: () => void): void;
+    /** Include origins are execution-local; the same cached file can be reached from many callers. */
+    withIncludeSource(file: string, execute: () => void, fromFile?: string): void;
     /**
      * Processes a command from an internal re-entrant source.
      * @param {string} command - The command to process.
      * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
      */
-    processCommand(command: string, preprocessed?: boolean): void;
-    /**
-     * Processes normalized command.
-     * @param {NormalizedCommand} state The state.
-     * @param {boolean} [rewriteRaw] The rewrite raw.
-     */
-    processNormalizedCommand(state: NormalizedCommand, rewriteRaw?: boolean): void;
+    processCommand(command: string, preprocessed?: boolean, template?: NormalizedCommand): void;
+    /** Physical fragments retained only while the frontend buffers one multiline statement. */
+    private pendingGeneratedFragment?;
+    /** Execute an attributed generated fragment through the shared incremental frontend. */
+    processSourceFragment(fragment: SourceFragment, preprocessed?: boolean, template?: NormalizedCommand): void;
+    /** Public normalized-source entry: the shared parser owns streaming captures and control flow. */
+    processNormalizedCommand(command: NormalizedCommand, rewriteRaw?: boolean): void;
+    /** Execute typed syntax with current scope and the same source ownership as directive dispatch. */
+    private executeStatement;
+    /** Keep nested write attribution and trace event ordering identical for typed and legacy data. */
+    private executeAttributedCommand;
     getOrCreateLoweredProgram(stageState: StageExecutionState, program: ProgramModel): LoweredProgram;
     /**
      * Dispatches lowered node.
      * @param {LoweredCommand} lowered The lowered.
      */
     dispatchLoweredNode(lowered: LoweredCommand): void;
+    /** Classification retains its stage-entry ordering; no prepared values enter the syntax cache. */
+    prepareTypedInstruction(node: import("./services/command-lowering-service.js").LoweredTypedInstruction): void;
+    /** Preserve binding diagnostics as data without retaining exception/session objects in a receipt. */
+    private operandBindingFailure;
+    /** Every borrowed evaluation capability expires with its instruction's stage frame. */
+    private createInstructionFrame;
+    /** Bind templates at the source boundary, then lend a fresh frame for exactly one stage invocation. */
+    private executeTypedInstruction;
     /**
      * Parses a function definition of the form:
      *   function name(param1, param2...) = expression
@@ -751,32 +790,12 @@ export declare class Assembler {
      */
     resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic?: boolean): number | string;
     /**
-     * Resolves an already-normalized reference string as either a struct member/base
-     * or a plain label lookup.
-     * @param {string} normalizedReference The normalized reference text.
-     * @param {boolean} [requireStatic] Whether labels must be static.
-     * @returns {number} The resolved numeric address/value.
+     * Resolve structured references with explicit stage deferral. `relativeAddress` selects
+     * relative labels at that logical byte address; omission uses the current instruction cursor.
      */
-    resolveNormalizedReferenceLabelValue(normalizedReference: string, requireStatic?: boolean): number;
-    /**
-     * Renders an index expression for a normalized reference string.
-     * @param {ExpressionNode} indexExpression The index expression to render.
-     * @returns {string} The rendered numeric or source-like index text.
-     */
-    resolveReferenceIndexText(indexExpression: ExpressionNode): string;
-    /**
-     * Renders a reference expression after resolving any nested index expressions.
-     * @param {ReferenceExpressionNode} expression The reference expression to render.
-     * @returns {string} The normalized reference text.
-     */
-    renderResolvedReferenceExpression(expression: ReferenceExpressionNode): string;
-    /**
-     * Re-runs `resolvedefines()` across a rendered reference expression and reparses
-     * it only when define expansion materially changes the text.
-     * @param {ReferenceExpressionNode} expression The reference expression to expand.
-     * @returns {ExpressionNode | undefined} The reparsed expression, if expansion changed it.
-     */
-    tryResolveExpandedReferenceExpression(expression: ReferenceExpressionNode): ExpressionNode | undefined;
+    resolveStructuredReference(expression: ReferenceExpressionNode, requireStatic?: boolean, relativeAddress?: number): ReferenceResolution;
+    /** A textual define suffix binds to its final operand; it does not introduce an implicit group. */
+    private bindReferenceSuffix;
     /**
      * Resolves standalone relative-label tokens used in define contexts.
      * @param {string} input The token to resolve.
@@ -808,6 +827,8 @@ export declare class Assembler {
      * @returns {string} The string with defines resolved.
      */
     resolvedefines(input: string): string;
+    /** Bind source-valued defines without converting symbol references into numeric source text. */
+    resolveDefineFragment(fragment: SourceFragment): SourceFragment;
     /**
      * Handles activate stage.
      * @param {AssemblyStageName} stage The stage.

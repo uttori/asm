@@ -1,25 +1,44 @@
+import {
+  checkedDeclaration,
+  parseDeclarationNode,
+  structDeclarationGuard,
+} from "../ir/declaration-node.js";
 import type { DirectiveRegistry } from "./registry.js";
 import type { StructDirectiveContext } from "./types.js";
 
+/** Records and layouts use the same checked transport path as target directive overrides. */
 export const registerStructBinaryDirectives = (
   registry: DirectiveRegistry,
-  context: StructDirectiveContext,
+  { session }: StructDirectiveContext,
 ): void => {
-  registry.register("struct", context, ({ session }, words) => {
-    session.structEngine.handleStruct(words);
-  });
-
-  registry.register("endstruct", context, ({ session }, words) => {
-    session.structEngine.handleEndStruct(words);
-  });
-
-  registry.register("datastruct", context, ({ session }, words) => {
-    session.structEngine.data.emit(words);
-  });
-  registry.register("datastructs", context, ({ session }, words) => {
-    session.structEngine.data.begin(words);
-  });
-  registry.register("enddatastructs", context, ({ session }, words) => {
-    session.structEngine.data.end(words);
-  });
+  registry.registerImmutableTyped(
+    ["struct", "endstruct", "datastruct", "datastructs", "enddatastructs"],
+    ({ text, words, declaration }) => {
+      const node = checkedDeclaration(declaration ?? parseDeclarationNode(text, words));
+      if (!structDeclarationGuard(node)) {
+        throw new Error("Expected a struct declaration or record initializer.");
+      }
+      return node;
+    },
+    structDeclarationGuard,
+    (node) => {
+      switch (node.kind) {
+        case "struct":
+          session.structEngine.executeStruct(node);
+          break;
+        case "endStruct":
+          session.structEngine.executeEndStruct(node);
+          break;
+        case "dataStruct":
+          session.structEngine.data.executeRecord(node);
+          break;
+        case "dataStructs":
+          session.structEngine.data.executeBegin(node);
+          break;
+        case "endDataStructs":
+          session.structEngine.data.executeEnd(node.argumentCount);
+          break;
+      }
+    },
+  );
 };

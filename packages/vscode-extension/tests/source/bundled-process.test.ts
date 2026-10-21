@@ -3,11 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { sourceGit, type SourceMergePreview } from "@uttori/asm-disassembler";
-import type { PreparedSnesGeneration } from "@uttori/asm-plugin-snes";
+import { sourceGit } from "@uttori/asm-disassembler/source-project";
 
 import { test } from "../../../../tests/ava-helper.js";
 import { SourceProcessClient } from "../../src/source/process-client.js";
+import { readGenerationCommit, readMergePreview } from "../../src/source/result-readers.js";
 
 test.serial(
   "bundled regeneration preserves complete explicit comments and omits research reasons",
@@ -101,13 +101,13 @@ test.serial(
     await sourceGit(directory, ["add", "--all"]);
     await sourceGit(directory, ["commit", "-m", "Document command operand contracts"]);
 
-    const prepared = await client.run<PreparedSnesGeneration>(
+    const prepared = await client.run(
       { action: "prepare", directory },
-      controls,
+      { ...controls, readResult: readGenerationCommit },
     );
-    const preview = await client.run<SourceMergePreview>(
+    const preview = await client.run(
       { action: "preview", directory, candidate: prepared.generation.commit },
-      controls,
+      { ...controls, readResult: readMergePreview },
     );
     t.deepEqual(preview.conflicts, []);
     const bank = (

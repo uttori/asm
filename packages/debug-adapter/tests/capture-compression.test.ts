@@ -16,9 +16,8 @@ import {
   busSession,
 } from "../../../tests/helpers/capture-bus.js";
 import { writeNesCaptureFixture } from "../../../tests/helpers/nes-capture.js";
-import { compressCaptureChunk, decodeCaptureChunkBytes } from "../src/capture-compression.js";
-import { NativeCaptureFileCursor, recoverCaptureFile } from "../src/capture-file.js";
-import { captureCrc32c, decodeCaptureChunk, type CaptureChunkV2 } from "../src/capture-v2.js";
+import { compressCaptureChunk, decodeCaptureChunkBytes,NativeCaptureFileCursor,recoverCaptureFile,captureCrc32c,decodeCaptureChunk,type CaptureChunkV2 } from "@uttori/asm-capture";
+
 
 /** Recalculate the physical checksum to isolate framing errors from corruption errors. */
 function checksum(bytes: Buffer): Buffer {

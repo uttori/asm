@@ -1,1 +1,1 @@
-{"version":3,"file":"raw-consumption.d.ts","sourceRoot":"","sources":["../../../src/disassembler/rom-layout/raw-consumption.ts"],"names":[],"mappings":"AAAA,oFAAoF;AACpF,OAAO,EAAE,wBAAwB,EAAE,KAAK,aAAa,EAAE,MAAM,0BAA0B,CAAC"}
+{"version":3,"file":"raw-consumption.d.ts","sourceRoot":"","sources":["../../../src/disassembler/rom-layout/raw-consumption.ts"],"names":[],"mappings":"AAAA,oFAAoF;AACpF,OAAO,EACL,wBAAwB,EACxB,KAAK,aAAa,GACnB,MAAM,yCAAyC,CAAC"}

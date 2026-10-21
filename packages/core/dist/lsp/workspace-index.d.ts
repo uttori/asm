@@ -41,6 +41,21 @@ export type WorkspaceIndexOptions = {
 };
 export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environment" | "target">;
 export type RootAnalysis = CachedRootAnalysis;
+/** Shared by worker producers, transport validation and snapshot hydration. */
+export declare const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION: 3;
+/** Structured-clone payload from an isolated analyzer. It contains no plugin instances or file handles. */
+export interface WorkspaceAnalysisSnapshot {
+    /** Revision 2 carries typed operand occurrences; revision 1 ranges cannot be reused for rename. */
+    readonly version: typeof WORKSPACE_ANALYSIS_SNAPSHOT_VERSION;
+    readonly target: string;
+    readonly architecture: string;
+    readonly roots: readonly (readonly [string, RootAnalysis])[];
+    readonly files: readonly (readonly [string, FileAnalysis])[];
+    readonly includeEdges: readonly AssemblyIncludeEdge[];
+    readonly symbols: readonly AssemblySymbolDefinition[];
+    readonly references: readonly AssemblySymbolReference[];
+    readonly status: WorkspaceIndexStatus;
+}
 /**
  * Snapshot of workspace analysis used by the project panel and status bar.
  */
@@ -111,6 +126,14 @@ export declare class WorkspaceIndex {
      * @param {WorkspaceIndexOptions} [options] Initial index configuration.
      */
     constructor(options: WorkspaceIndexOptions);
+    /** Capture an owned complete generation; later producer edits cannot mutate a published snapshot. */
+    snapshot(): WorkspaceAnalysisSnapshot;
+    /**
+     * Hydrate a new, unpublished index with a worker-owned snapshot. Hosts swap the resulting index
+     * as one unit, keeping readers on the previous coherent generation while analysis is running.
+     * The environment stays local and must match the worker's target and architecture.
+     */
+    static fromSnapshot(options: WorkspaceIndexOptions, snapshot: WorkspaceAnalysisSnapshot, overlays: ReadonlyMap<string, string>): WorkspaceIndex;
     /**
      * Updates index configuration and re-analyses the workspace.
      * @param {WorkspaceIndexOptions} options The configuration to apply.

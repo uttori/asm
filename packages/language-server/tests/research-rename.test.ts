@@ -3,12 +3,10 @@ import os from "node:os";
 import path from "node:path";
 
 import { Assembler, MemoryAssemblyFileProvider } from "@uttori/asm-core";
-import { sourceGit, writeResearchDocument } from "@uttori/asm-disassembler";
-import {
-  createSnesAssemblerEnvironment,
-  validateSnesStructMap,
-  validateSnesRamMap,
-} from "@uttori/asm-plugin-snes";
+import { writeResearchDocument } from "@uttori/asm-disassembler";
+import { sourceGit } from "@uttori/asm-disassembler/source-project";
+import { createSnesAssemblerEnvironment } from "@uttori/asm-plugin-snes";
+import { validateSnesStructMap, validateSnesRamMap } from "@uttori/asm-plugin-snes/disassembler";
 import { TextDocumentEdit, type WorkspaceEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 

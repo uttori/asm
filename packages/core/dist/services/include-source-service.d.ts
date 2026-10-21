@@ -17,6 +17,8 @@ export interface IncludeSourceHost {
     readonly programModelBuilder: ProgramModelBuilder;
     lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
     recordIncludeEdge(fromFile: string, toFile: string): void;
+    /** Scope include ownership without attaching caller state to cached file syntax. */
+    withIncludeSource?(file: string, execute: () => void, fromFile: string): void;
     /** Final-pass hosts record which raw input bytes reach output for orphaned-edit validation. */
     recordBinarySlice?(file: string, start: number, end: number, bytes: Uint8Array): void;
     /** When false, include directives record an edge without parsing the target. */

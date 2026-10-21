@@ -29,6 +29,7 @@
     "vscode-languageserver-textdocument": "^1.0.15"
   },
   "devDependencies": {
+    "@uttori/asm-game-secret-of-mana": "1.0.0",
     "esbuild": "^0.28.2"
   },
   "engines": {

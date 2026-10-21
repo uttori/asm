@@ -24,6 +24,7 @@ import { runtimeIdentityKey } from "./sqlite-runtime-facts.js";
 import { collectRuntimeHistory, packRuntimeHistory, registerRuntimeHistory, } from "./sqlite-runtime-history.js";
 import { RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter, } from "./sqlite-runtime-storage.js";
 import { runtimeInstructionSummary } from "./sqlite-runtime-summary.js";
+import { SOURCE_EXPORT_CACHE, clearSourceExportStage, publishSourceExportCache, sourceExportCacheReady, sourceExportCacheRecords, stageSourceExportGroups, uncachedSourceExportRecords, } from "./sqlite-source-export.js";
 import { prepareSourceQueries, sourceQueriesReady, readSourceSummary, readSourcePage, } from "./sqlite-source-query.js";
 import { CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, maintainStorageCaches, optionalCacheBytes, } from "./sqlite-storage-policy.js";
 /** On-disk sqlite filename stored in `analysis.json` `db`. */
@@ -219,6 +220,9 @@ function isIndexedExportInstruction(value, spaces, knownEvidence) {
     const evidenceList = value.evidence;
     return (typeof value.id === "string" &&
         value.id !== "" &&
+        value.kind === "cfg-node" &&
+        isSafeInteger(value.fileOffset) &&
+        value.fileOffset >= 0 &&
         typeof addressSpace === "string" &&
         isSafeInteger(address) &&
         address >= 0 &&
@@ -299,7 +303,10 @@ export class SqliteAnalysisStore {
             if (version !== ANALYSIS_SQLITE_STORAGE_VERSION) {
                 throw new Error(`Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Only the current storage format is supported.`);
             }
-            this.#database.exec("PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE; PRAGMA journal_size_limit=67108864;");
+            // TEMP has a separate pager: its 2 MiB default churns on compact ID/projection trees even
+            // when main's pages are hot. A 64 MiB target keeps those lookups useful without retaining the
+            // full graph in memory; TEMP contents remain file-backed and grow independently on disk.
+            this.#database.exec("PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE; PRAGMA temp.cache_size=-65536; PRAGMA journal_size_limit=67108864;");
             this.#insertEvidence = this.#database.prepare("INSERT INTO evidence (id, payload) VALUES (?, ?)");
             this.#insertLabel = this.#database.prepare("INSERT INTO labels (id, address_space, address, name, payload) VALUES (?, ?, ?, ?, ?)");
             this.#insertComment = this.#database.prepare("INSERT INTO comments (id, address_space, address, payload) VALUES (?, ?, ?, ?)");
@@ -460,26 +467,35 @@ export class SqliteAnalysisStore {
         }
     }
     /**
-     * Index trace chunks in a connection-local disk table. This transaction never reads or writes
-     * main, allowing other project writers to proceed during asynchronous capture parsing.
-     * @param {Function} action Async parser using only the supplied temporary counter index.
+     * Index trace chunks in temporary or privately staged disk counters. This transaction never
+     * reads or writes the destination project, allowing other writers during asynchronous parsing.
+     * @param {Function} action Async parser using only the supplied counter index.
      * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-     * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
+     * @param {SqliteTraceStage} stage Optional private counters retained across publication failures.
+     * @returns {Promise} Parser result after counters commit. Staged counters survive connection close.
      */
-    async indexTrace(action, metrics) {
+    async indexTrace(action, metrics, stage) {
         // Keep payloads out of the key B-tree: large full-register traces otherwise scatter
         // each lookup/insert across payload pages. Rowid storage appends those payloads and
         // leaves a smaller ID index. NOT NULL retains WITHOUT ROWID's key constraint.
         // The temp pager has its own cache; main.cache_size does not cover it. Use a 64 MiB
         // page-cache target to reduce churn while keeping the complete fact set backed by disk.
-        this.#database.exec(`PRAGMA temp.cache_size=-65536;
-      CREATE TEMP TABLE trace_facts (
-      id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, count INTEGER NOT NULL
-    ); BEGIN;`);
-        const increment = this.#database.prepare("UPDATE temp.trace_facts SET count=count+1 WHERE id=?");
-        const insert = this.#database.prepare("INSERT INTO temp.trace_facts VALUES (?, ?, 1)");
-        const values = this.#database.prepare("SELECT payload, count FROM temp.trace_facts");
-        const incrementMany = this.#database.prepare("UPDATE temp.trace_facts SET count=count+? WHERE id=?");
+        const database = stage?.database ?? this.#database;
+        const table = stage ? "main.trace_facts" : "temp.trace_facts";
+        const reused = stage?.checkpoint !== undefined;
+        if (!stage) {
+            database.exec(`PRAGMA temp.cache_size=-65536;
+        CREATE TEMP TABLE trace_facts (
+        id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, count INTEGER NOT NULL
+      )`);
+        }
+        if (!reused) {
+            database.exec("BEGIN");
+        }
+        const increment = database.prepare(`UPDATE ${table} SET count=count+1 WHERE id=?`);
+        const insert = database.prepare(`INSERT INTO ${table} VALUES (?, ?, 1)`);
+        const values = database.prepare(`SELECT payload, count FROM ${table}`);
+        const incrementMany = database.prepare(`UPDATE ${table} SET count=count+? WHERE id=?`);
         // Hot traces revisit a small working set millions of times. Keep at most
         // 4096 counter deltas. Payloads and the full distinct index remain on disk.
         const pending = new TraceCache(metrics);
@@ -548,18 +564,32 @@ export class SqliteAnalysisStore {
             },
             clear: () => {
                 pending.clear();
-                this.#database.exec("DELETE FROM temp.trace_facts");
+                // Sealed counters remain immutable until destination publication succeeds.
+                if (!stage?.checkpoint) {
+                    database.exec(`DELETE FROM ${table}`);
+                }
             },
         };
         try {
             const result = await action(index);
-            flush();
-            this.#database.exec("COMMIT");
+            if (!reused) {
+                flush();
+                database.exec("COMMIT");
+            }
             this.#clearDictionaryCache();
             return result;
         }
         catch (error) {
-            this.rollback();
+            this.#clearDictionaryCache();
+            try {
+                if (database.isTransaction) {
+                    database.exec("ROLLBACK");
+                }
+            }
+            catch {
+                // A full or damaged disk can abort SQLite itself. Preserve the parser's original error;
+                // closing the owned connection remains the final rollback fallback for either database.
+            }
             throw error;
         }
     }
@@ -628,6 +658,10 @@ export class SqliteAnalysisStore {
      * Research files remain authoritative if the process exits before this cache is refreshed.
      */
     synchronizeResearchInputs(snapshot) {
+        return this.#synchronizeResearchInputs(snapshot);
+    }
+    /** A revision-pinned analyzer view can validate publication without decoding metadata twice. */
+    #synchronizeResearchInputs(snapshot, view) {
         this.#requireTransaction();
         const manifest = this.manifest();
         if (snapshot.romSha256 !== manifest.rom.contentSha256) {
@@ -642,7 +676,7 @@ export class SqliteAnalysisStore {
             return false;
         }
         projectResearchInputs(this.#database, snapshot, (kind, record) => this.#insertRecord(kind, record));
-        this.validateView({
+        this.validateView(view ?? {
             labels: this.loadTable("labels"),
             comments: this.loadTable("comments"),
             regions: this.loadTable("regions"),
@@ -698,8 +732,10 @@ export class SqliteAnalysisStore {
      * imported facts. Overridden IDs retain their observation shadows; removing a decision on a
      * later branch therefore restores the original record. Return the exact projected replacements
      * for validation without reparsing a million-row graph into a second set of JS objects.
+     * An optional base view must belong to the revision checked under this writer lock. Its unchanged
+     * collections combine with the projected replacements for the same complete publication validation.
      */
-    replaceResearchAnalysis(snapshot, updates, onProgress) {
+    replaceResearchAnalysis(snapshot, updates, onProgress, baseView) {
         this.#requireTransaction();
         if (this.researchInputsIdentity() !== snapshot.hash) {
             throw new Error("Analysis publication requires the selected Git research snapshot.");
@@ -748,7 +784,11 @@ export class SqliteAnalysisStore {
             onProgress?.(collection);
         }
         this.publishManifest(this.manifest());
-        this.synchronizeResearchInputs(snapshot);
+        let view;
+        if (baseView !== undefined) {
+            view = { ...baseView, ...projected, runtime: [] };
+        }
+        this.#synchronizeResearchInputs(snapshot, view);
         // Publication used this exact selected snapshot. Reapplying its projection is not a new edit.
         this.#database.exec("DELETE FROM meta WHERE k='analysis-dirty'");
         return projected;
@@ -761,20 +801,11 @@ export class SqliteAnalysisStore {
      */
     replaceTables(shards) {
         this.#requireTransaction();
-        this.#database.exec("CREATE TEMP TABLE IF NOT EXISTS replacement_ids (id TEXT PRIMARY KEY) WITHOUT ROWID");
-        const remember = this.#database.prepare("INSERT INTO temp.replacement_ids VALUES (?)");
-        const tables = new Set([
-            "analysis",
-            "annotations",
-            "labels",
-            "comments",
-            "regions",
-            "runtime",
-            "evidence",
-            "imports",
-        ]);
+        this.#database.exec(`CREATE TEMP TABLE IF NOT EXISTS replacement_ids
+      (id TEXT PRIMARY KEY,ordinal INTEGER NOT NULL) WITHOUT ROWID;
+      CREATE TEMP TABLE IF NOT EXISTS replacement_deletes(id TEXT PRIMARY KEY) WITHOUT ROWID`);
         for (const key of Object.keys(shards)) {
-            if (!isShardKind(key) || !tables.has(key)) {
+            if (!isShardKind(key)) {
                 throw new Error(`Unknown analysis table '${key}'.`);
             }
             const kind = key;
@@ -782,39 +813,87 @@ export class SqliteAnalysisStore {
                 this.#replaceRuntime(shards.runtime ?? []);
                 continue;
             }
-            // A new or emptied table has nothing to compare or delete. Its primary key still rejects
-            // duplicate IDs, and the owning writer transaction rolls back a failed initial insertion.
+            const records = shards[kind] ?? [];
             if (!this.#database.prepare(`SELECT 1 FROM ${kind} LIMIT 1`).get()) {
-                for (const record of shards[kind] ?? []) {
+                // Initial insertion has nothing to compare. The owning table rejects duplicate IDs.
+                for (const record of records) {
                     this.#insertRecord(kind, record);
                 }
                 continue;
             }
-            this.#database.exec("DELETE FROM temp.replacement_ids");
-            // Derived export columns can be large. Comparison needs only the authoritative payload.
-            const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
-            const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
-            for (const record of shards[kind] ?? []) {
-                remember.run(record.id);
-                const prior = find.get(record.id);
-                if (prior) {
-                    // Reanalysis usually reproduces the same serialized record. Compare its decoded JSON
-                    // before parsing/sorting both objects. Retain canonical comparison for reordered keys.
-                    const json = decodeSqlitePayload(prior.payload);
-                    if (json === JSON.stringify(record)) {
-                        continue;
-                    }
-                    const before = JSON.parse(json);
-                    // Comparison is internal. Compact canonical JSON keeps key order and undefined
-                    // omission without the pretty identity text used for stored payloads.
-                    if (canonicalEquals(before, record)) {
-                        continue;
-                    }
-                    remove.run(record.id);
-                }
-                this.#insertRecord(kind, record);
+            if (records.length === 0) {
+                this.#database.exec(`DELETE FROM ${kind}`);
+                continue;
             }
-            this.#database.exec(`DELETE FROM ${kind} WHERE id NOT IN (SELECT id FROM temp.replacement_ids)`);
+            this.#database.exec("DELETE FROM temp.replacement_ids; DELETE FROM temp.replacement_deletes");
+            const remember = new Map();
+            for (let offset = 0; offset < records.length; offset += 128) {
+                const batch = records.slice(offset, offset + 128);
+                let insert = remember.get(batch.length);
+                if (!insert) {
+                    insert = this.#database.prepare(`INSERT INTO temp.replacement_ids VALUES ${batch.map(() => "(?,?)").join(",")}`);
+                    remember.set(batch.length, insert);
+                }
+                insert.run(...batch.flatMap((record, index) => [record.id, offset + index]));
+            }
+            const unchanged = [];
+            const deleted = [];
+            const statements = new Map();
+            /** Keep temporary journal writes bounded without retaining old payloads or a whole-graph Map. */
+            const flush = (ids, remove) => {
+                if (ids.length === 0) {
+                    return;
+                }
+                const signature = `${remove}:${ids.length}`;
+                let statement = statements.get(signature);
+                if (!statement) {
+                    let sql = `INSERT INTO temp.replacement_deletes VALUES ${ids.map(() => "(?)").join(",")}`;
+                    if (remove) {
+                        sql = `DELETE FROM temp.replacement_ids WHERE id IN (${ids.map(() => "?").join(",")})`;
+                    }
+                    statement = this.#database.prepare(sql);
+                    statements.set(signature, statement);
+                }
+                statement.run(...ids);
+                ids.length = 0;
+            };
+            // Scan wide stored rows once in physical order. A scalar lookup touches only the compact
+            // TEMP ID tree; per-record ID probes or IN-list reads churn the main pager on large graphs.
+            const rows = this.#database.prepare(`SELECT stored.id,stored.payload,
+        (SELECT ordinal FROM temp.replacement_ids WHERE id=stored.id) AS ordinal
+        FROM ${kind} stored NOT INDEXED`);
+            for (const row of rows.iterate()) {
+                const id = String(row.id);
+                if (row.ordinal === null) {
+                    deleted.push(id);
+                }
+                else {
+                    const record = records[Number(row.ordinal)];
+                    const json = decodeSqlitePayload(row.payload);
+                    if (json === JSON.stringify(record) || canonicalEquals(JSON.parse(json), record)) {
+                        unchanged.push(id);
+                    }
+                    else {
+                        deleted.push(id);
+                    }
+                }
+                // Only completed unique IDs leave the lookup tree. The main scan is never mutated while
+                // its cursor is active; unchanged rows retain both physical payloads and dependent caches.
+                if (unchanged.length === 128) {
+                    flush(unchanged, true);
+                }
+                if (deleted.length === 128) {
+                    flush(deleted, false);
+                }
+            }
+            flush(unchanged, true);
+            flush(deleted, false);
+            this.#database.exec(`DELETE FROM ${kind} WHERE id IN (SELECT id FROM temp.replacement_deletes)`);
+            for (const row of this.#database
+                .prepare("SELECT ordinal FROM temp.replacement_ids ORDER BY ordinal")
+                .iterate()) {
+                this.#insertRecord(kind, records[Number(row.ordinal)]);
+            }
         }
     }
     /**
@@ -980,7 +1059,6 @@ export class SqliteAnalysisStore {
             ...manifest,
             db: ANALYSIS_PROJECT_SQLITE_FILE,
             revision,
-            shards: [],
         };
         const insert = this.#database.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)");
         insert.run("revision", String(revision));
@@ -1061,6 +1139,27 @@ export class SqliteAnalysisStore {
             records.push(requireMetadataRecord(kind, parseRecord(row.payload)));
         }
         return records;
+    }
+    /** Read at most 200 metadata records by stable ID. The cursor belongs to the caller's read snapshot. */
+    metadataPage(kind, after, limit = 200) {
+        if (!["labels", "comments", "regions", "annotations", "analysis", "evidence", "imports"].includes(kind)) {
+            throw new Error("Unknown metadata collection.");
+        }
+        if (!Number.isSafeInteger(limit) ||
+            limit < 1 ||
+            limit > 200 ||
+            (after !== undefined && typeof after !== "string")) {
+            throw new Error("Metadata pages require a string cursor and a limit from 1 to 200.");
+        }
+        // Fetch one sentinel row so the caller need not issue an empty final page. Identifiers are
+        // unique within each validated collection and avoid OFFSET rescans of preceding payloads.
+        const rows = this.#database
+            .prepare(`SELECT id,payload FROM ${kind} WHERE id > ? ORDER BY id LIMIT ?`)
+            .all(after ?? "", limit + 1);
+        const records = rows
+            .slice(0, limit)
+            .map((row) => requireMetadataRecord(kind, parseRecord(row.payload)));
+        return { records, ...(rows.length > limit ? { next: String(rows[limit - 1].id) } : {}) };
     }
     /** Validate a query view against this read snapshot, including every included provenance reference.
      * @param {AnalysisProjectShards} shards Selected records, with unused collections empty.
@@ -1411,7 +1510,7 @@ export class SqliteAnalysisStore {
      */
     codeRanges() {
         return this.#database
-            .prepare("SELECT file_offset AS start,MAX(file_offset+size) AS end FROM query_instruction_nodes WHERE file_offset IS NOT NULL GROUP BY file_offset")
+            .prepare("SELECT query_file_offset AS start,MAX(query_file_offset+query_size) AS end FROM analysis INDEXED BY query_instruction_ranges WHERE kind='cfg-node' AND query_file_offset IS NOT NULL GROUP BY query_file_offset")
             .all()
             .map((row) => ({ start: Number(row.start), end: Number(row.end) }));
     }
@@ -1444,11 +1543,13 @@ export class SqliteAnalysisStore {
      * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
      * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
      * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
+     * @param {Function} [onReadProgress] Representatives staged in storage order; throwing aborts the cursor.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
-     * Prepare before starting the consuming read transaction.
+     * Preparation precedes the consuming read transaction. Standalone iteration owns a snapshot;
+     * close a partially consumed cursor to release it.
      */
-    runtimeInstructionVariants(architecture, space, stateFields, masks = {}, onProgress) {
-        return runtimeInstructionSummary(this.#database, (action, write) => this.transaction(action, write), architecture, space, stateFields, masks, onProgress);
+    runtimeInstructionVariants(architecture, space, stateFields, masks = {}, onProgress, onReadProgress) {
+        return runtimeInstructionSummary(this.#database, (action, write) => this.transaction(action, write), architecture, space, stateFields, masks, onProgress, onReadProgress, () => this.#clearDictionaryCache());
     }
     /** Exact execution seed totals grouped by PC, without decoding execution payloads.
      * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
@@ -1586,27 +1687,114 @@ export class SqliteAnalysisStore {
         return { manifest, shards };
     }
     /**
+     * Prepare an optional, lossless export projection before opening the rendering read transaction.
+     * Dependency triggers reject publication after intervening analysis/provenance edits. Cache misses
+     * still use the authoritative ordered cursor; no manifest revision or Git files are changed.
+     */
+    prepareSourceExport(signal) {
+        this.prepareAnnotationQueries();
+        signal?.throwIfAborted();
+        if (sourceExportCacheReady(this.#database)) {
+            return;
+        }
+        this.sourceExportSnapshot((groups) => {
+            for (const group of groups) {
+                void group;
+            }
+        }, signal);
+    }
+    /**
+     * Render inside one read snapshot, staging a lossless projection during the first cursor pass.
+     * The callback must synchronously consume all groups. Only a surviving dependency token can
+     * publish the staged cache after rendering releases its read lock; concurrent edits win.
+     */
+    sourceExportSnapshot(render, signal) {
+        this.prepareAnnotationQueries();
+        signal?.throwIfAborted();
+        if (sourceExportCacheReady(this.#database)) {
+            const completion = { complete: false };
+            const result = this.transaction(() => {
+                const records = this.instructionExportGroups();
+                const groups = (function* () {
+                    yield* records;
+                    completion.complete = true;
+                })();
+                try {
+                    return render(groups);
+                }
+                finally {
+                    // Even a failed/partial consumer cannot keep a SQLite cursor alive after its snapshot.
+                    groups.return();
+                }
+            }, false);
+            if (!completion.complete) {
+                throw new Error("Source export did not consume the complete instruction cursor.");
+            }
+            return result;
+        }
+        const pending = `pending:${randomUUID()}`;
+        this.transaction(() => {
+            installQueryCache(this.#database, SOURCE_EXPORT_CACHE.key, ["analysis", "evidence"]);
+            writeQueryCache(this.#database, SOURCE_EXPORT_CACHE.key, pending, null);
+        });
+        const completion = { complete: false };
+        try {
+            const result = this.transaction(() => {
+                const groups = stageSourceExportGroups(this.#database, this.instructionExportGroups(), () => {
+                    completion.complete = true;
+                }, signal);
+                try {
+                    return render(groups);
+                }
+                finally {
+                    groups.return();
+                }
+            }, false);
+            if (!completion.complete) {
+                throw new Error("Source export did not consume the complete instruction cursor.");
+            }
+            this.transaction(() => {
+                signal?.throwIfAborted();
+                // As with cachedProjection, a concurrent dependency write or a newer reader's token
+                // prevents publication. Rendering still belongs to its original consistent snapshot.
+                if (this.#database
+                    .prepare("SELECT signature FROM query_cache WHERE name=?")
+                    .get(SOURCE_EXPORT_CACHE.key)?.signature === pending) {
+                    publishSourceExportCache(this.#database);
+                    writeQueryCache(this.#database, SOURCE_EXPORT_CACHE.key, SOURCE_EXPORT_CACHE.signature, true);
+                }
+            });
+            return result;
+        }
+        finally {
+            clearSourceExportStage(this.#database);
+        }
+    }
+    /**
      * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
      * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
      * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
      * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
      */
     *instructionExportGroups() {
+        if (!annotationQueryIndexesReady(this.#database)) {
+            throw new Error("Instruction inputs changed before export. Prepare a fresh query snapshot.");
+        }
         const spaces = new Map(this.manifest().addressSpaces.map((space) => [space.id, 2 ** space.addressBits]));
         const evidence = new Set(this.loadTable("evidence").map(({ id }) => id));
         let previous;
         let group = [];
-        for (const row of this.#database
-            .prepare("SELECT file_offset,data FROM query_instruction_nodes WHERE file_offset IS NOT NULL ORDER BY file_offset")
-            .iterate()) {
-            const offset = Number(row.file_offset);
+        const records = sourceExportCacheReady(this.#database)
+            ? sourceExportCacheRecords(this.#database)
+            : uncachedSourceExportRecords(this.#database);
+        for (const record of records) {
+            if (!isIndexedExportInstruction(record, spaces, evidence)) {
+                throw new Error("Invalid indexed export instruction or missing provenance.");
+            }
+            const offset = record.fileOffset;
             if (previous !== undefined && previous !== offset) {
                 yield group;
                 group = [];
-            }
-            const record = parseSqlitePayload(row.data);
-            if (!isIndexedExportInstruction(record, spaces, evidence)) {
-                throw new Error("Invalid indexed export instruction or missing provenance.");
             }
             group.push(record);
             previous = offset;

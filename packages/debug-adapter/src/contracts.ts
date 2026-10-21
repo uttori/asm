@@ -1,7 +1,7 @@
+import type { CaptureInstructionDetail,CaptureRequestV2,CaptureResultV2 } from "@uttori/asm-capture";
 /** Current emulator-neutral debugger backend protocol. */
 export const DEBUG_BACKEND_PROTOCOL_VERSION = 1 as const;
 
-import type { CaptureRequestV2, CaptureResultV2 } from "./capture-v2.js";
 
 /** Architecture-qualified address that cannot be confused with another processor's address. */
 export interface DebugAddress {
@@ -17,8 +17,8 @@ export interface DebugAddress {
 export interface DebugExecutionCapabilities {
   readonly pause: boolean;
   readonly step: boolean;
-  /** Exact step semantics. Omitted by protocol-v1 peers means all legacy kinds. */
-  readonly stepKinds?: readonly DebugStepKind[];
+  /** Exact supported step semantics; empty when stepping is unavailable. */
+  readonly stepKinds: readonly DebugStepKind[];
   readonly registers: boolean;
   readonly memory: boolean;
   readonly stackFrames: boolean;
@@ -40,8 +40,8 @@ export interface DebugTraceCapabilities {
   readonly maxBufferedEvents: number;
   /** Maximum instruction addresses returned by one pull. */
   readonly maxBatchEvents: number;
-  /** Optional execution-time bytes/state and bus accesses. Absent means PC-only. */
-  readonly instructionDetails?: boolean;
+  /** Whether execution-time bytes/state and bus accesses are available; false means PC-only. */
+  readonly instructionDetails: boolean;
 }
 
 /** Explicit operations and address spaces available for one emulated processor architecture. */
@@ -115,21 +115,8 @@ export interface DebugTraceStartOptions {
   readonly addressSpace: string;
 }
 
-/** Bytes and state captured at execution time for the address at the same batch index. */
-export interface DebugTraceInstructionDetail {
-  readonly bytes: readonly number[];
-  readonly state: Readonly<Record<string, string | number | boolean>>;
-  readonly droppedMemoryAccesses?: number;
-  readonly memoryAccesses?: readonly {
-    readonly addressSpace: string;
-    readonly address: number;
-    readonly access: "read" | "write" | "fetch";
-    readonly width: number;
-    readonly value?: number;
-    readonly actor?: "cpu" | "dma" | "hdma";
-    readonly channel?: number;
-  }[];
-}
+/** Execution-time instruction evidence shared with offline capture consumers. */
+export type DebugTraceInstructionDetail = CaptureInstructionDetail;
 
 /** Destructive producer pull. Sequence gaps and cumulative loss remain visible to the recorder. */
 export interface DebugTraceBatch {

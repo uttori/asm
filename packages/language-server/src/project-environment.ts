@@ -1,8 +1,13 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { Assembler, WorkspaceIndex, type AssemblerOptions } from "@uttori/asm-core";
+import { Assembler, type AssemblerOptions } from "@uttori/asm-core";
 import type { AssemblerPlugin, PluginLogger } from "@uttori/asm-core/plugin";
+import {
+  WorkspaceIndex,
+  type WorkspaceAnalysisSnapshot,
+  type WorkspaceIndexOptions,
+} from "@uttori/asm-core/tooling";
 import {
   NodePluginLoader,
   discoverProjectConfigurationPath,
@@ -56,6 +61,11 @@ export interface ProjectEnvironmentState {
 
 /** Host-owned plugin catalog and defaults retained across environment replacements. */
 export interface ProjectEnvironmentControllerOptions {
+  /** Executable hosts isolate CPU-heavy indexing; library tests may retain synchronous construction. */
+  readonly indexer?: (
+    settings: ProjectEnvironmentSettings,
+    overlays: ReadonlyMap<string, string>,
+  ) => Promise<WorkspaceAnalysisSnapshot>;
   /** Pre-imported plugins keyed by module specifier, available without external module loading. */
   readonly bundledPlugins: ReadonlyMap<string, AssemblerPlugin>;
   /** Fallback configuration for untrusted workspaces or projects with no config/plugin requests. */
@@ -162,7 +172,7 @@ export class ProjectEnvironmentController {
         },
         logger: this.options.logger,
       });
-      const index = new WorkspaceIndex({
+      const indexOptions: WorkspaceIndexOptions = {
         environment: loaded.environment,
         target: loaded.target,
         architecture: loaded.architecture,
@@ -171,13 +181,19 @@ export class ProjectEnvironmentController {
         includePaths: [...loaded.includePaths],
         logger: this.options.logger,
         cacheDir: path.join(cwd, ".uttori-asm", "cache"),
-      });
+      };
+      let index = new WorkspaceIndex(indexOptions);
       // Seed unsaved buffers before analysis so the replacement reflects the editor snapshot.
       for (const [file, content] of overlays) {
         index.updateDocument(file, content);
       }
       if (overlays.size > 0 || (settings.entryPoints?.length ?? 0) > 0) {
-        index.reindex();
+        if (this.options.indexer) {
+          const snapshot = await this.options.indexer(settings, overlays);
+          index = WorkspaceIndex.fromSnapshot(indexOptions, snapshot, overlays);
+        } else {
+          index.reindex();
+        }
       }
 
       next = Object.freeze({
@@ -206,6 +222,28 @@ export class ProjectEnvironmentController {
       });
     }
     return next;
+  }
+
+  /** Publish one completed analysis generation while retaining ownership of the active environment. */
+  publishAnalysis(
+    snapshot: WorkspaceAnalysisSnapshot,
+    overlays: ReadonlyMap<string, string>,
+  ): WorkspaceIndex {
+    const { loaded, index: previous } = this.current;
+    const index = WorkspaceIndex.fromSnapshot(
+      {
+        environment: loaded.environment,
+        target: loaded.target,
+        architecture: loaded.architecture,
+        targetOptions: loaded.targetOptions,
+        entryPoints: previous.entryPoints,
+        includePaths: [...loaded.includePaths],
+      },
+      snapshot,
+      overlays,
+    );
+    this.#state = Object.freeze({ ...this.current, index });
+    return index;
   }
 
   /**

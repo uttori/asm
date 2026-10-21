@@ -463,24 +463,17 @@ function assembleSource(input: {
     collectSourceMetadata: false,
   });
   const hits: EmitHit[] = [];
-  const originalEmit = assembler.emitInstruction.bind(assembler);
+  const originalEmit = assembler.executeLoweredNode.bind(assembler);
 
   if (input.sourceMap) {
-    assembler.emitInstruction = function emitMapped(instruction) {
-      if (!assembler.enforceResolvedLabels) {
+    assembler.executeLoweredNode = function emitMapped(instruction) {
+      if (!assembler.enforceResolvedLabels || instruction.kind !== "typedInstruction") {
         return originalEmit(instruction);
       }
       const start = assembler.currentTargetAddress;
-      let words: readonly string[];
-      let commandIndex = assembler.currentLine;
-      let file = assembler.currentFile;
-      if (Array.isArray(instruction)) {
-        words = instruction;
-      } else {
-        words = instruction.words;
-        commandIndex = instruction.sourceLine;
-        file = instruction.sourceFile || file;
-      }
+      const words = instruction.command.words;
+      const commandIndex = instruction.source.line;
+      const file = instruction.source.file || assembler.currentFile;
       const result = originalEmit(instruction);
       hits.push({
         pc: start,
@@ -502,7 +495,7 @@ function assembleSource(input: {
     assembler.assembleProgram(assembler.buildProgramModel(source, input.sourcePath, 0));
     return { bytes: Buffer.from(assembler.getBinaryOutput()), hits };
   } finally {
-    assembler.emitInstruction = originalEmit;
+    assembler.executeLoweredNode = originalEmit;
     assembler.dispose();
   }
 }

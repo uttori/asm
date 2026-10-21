@@ -20,6 +20,8 @@ export interface OutputWriterHost {
   pluginOutputFormat: TargetOutputFormat;
   pluginState: Parameters<TargetOutputFormat["finalize"]>[0]["state"];
   fillOutputBytes(start: number, value: number, length: number): void;
+  /** Optional owned-storage path; validation, ownership and trace hooks have already run. */
+  writeOutputByte?(offset: number, value: number): void;
   setWritePosition(address: number): void;
   syncWriteStarts(): void;
   incrementBytesWritten(num: number): void;
@@ -105,18 +107,19 @@ export class OutputWriterService {
     }
 
     if (this.host.canEmitBytes) {
-      if (
-        outputOffset >= this.host.outputBytes.length &&
-        outputOffset - this.host.outputBytes.length > 0
-      ) {
-        this.host.fillOutputBytes(
-          this.host.outputBytes.length,
-          this.host.outputFillByte,
-          outputOffset - this.host.outputBytes.length,
-        );
+      if (this.host.writeOutputByte) {
+        this.host.writeOutputByte(outputOffset, num);
+      } else {
+        // Structural hosts may still supply their own plain/fixed output container.
+        if (outputOffset > this.host.outputBytes.length) {
+          this.host.fillOutputBytes(
+            this.host.outputBytes.length,
+            this.host.outputFillByte,
+            outputOffset - this.host.outputBytes.length,
+          );
+        }
+        this.host.outputBytes[outputOffset] = num & 0xff;
       }
-
-      this.host.outputBytes[outputOffset] = num & 0xff;
     }
 
     this.step(1);
@@ -156,14 +159,22 @@ export class OutputWriterService {
   }
 
   /**
-   * Writes an arbitrary-width value for architecture extensions.
-   * @param {number} num Value to write.
-   * @param {number} width Width in bytes.
-   * @param {"little" | "big"} endianness Byte order.
+   * Writes the low 1–4 bytes of a safe integer, using two's complement for negatives.
+   * Invalid arguments throw before lifecycle hooks, output, or the cursor change.
+   * @param {number} num Safe integer; high bits outside the selected width are discarded.
+   * @param {number} width Integral byte width from 1 through 4; use writeBytes for wider values.
+   * @param {"little" | "big"} endianness Byte order, defaulting to little-endian.
    */
   writeValue(num: number, width: number, endianness: "little" | "big" = "little"): void {
-    if (!Number.isInteger(width) || width < 1) {
+    // JavaScript shifts wrap at 32 bits, so accepting a wider number would repeat low bytes.
+    if (!Number.isInteger(width) || width < 1 || width > 4) {
       throw new Error(`Invalid write width: ${width}`);
+    }
+    if (!Number.isSafeInteger(num)) {
+      throw new Error(`Write value must be a safe integer: ${num}`);
+    }
+    if (!["little", "big"].includes(endianness)) {
+      throw new Error(`Invalid write endianness: ${endianness}`);
     }
     this.validateWrite(width);
     for (let index = 0; index < width; index++) {

@@ -50,6 +50,7 @@ const replayArchitectureCapabilities = (script) => {
                     addressSpaces: [...addressSpaces].toSorted(),
                     maxBufferedEvents: REPLAY_TRACE_BUFFER_EVENTS,
                     maxBatchEvents: REPLAY_TRACE_BATCH_EVENTS,
+                    instructionDetails: false,
                 },
             pause: true,
             step: true,
@@ -94,29 +95,26 @@ export class ReplayDebugBackend {
             throw new Error("Replay script requires at least one snapshot.");
         }
         this.#script = script;
-        const architectures = script.architectures
-            ? script.architectures.map((capability) => ({
-                ...capability,
-                ...(capability.stepKinds ? { stepKinds: [...capability.stepKinds] } : {}),
-                addressSpaces: [...capability.addressSpaces].toSorted(),
-                memorySpaces: [...capability.memorySpaces]
-                    .toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace))
-                    .map((memorySpace) => Object.freeze({ ...memorySpace })),
-                trace: capability.trace
-                    ? {
-                        ...capability.trace,
-                        addressSpaces: [...capability.trace.addressSpaces].toSorted(),
-                    }
-                    : null,
-            }))
-            : replayArchitectureCapabilities(script);
+        const suppliedArchitectures = script.architectures?.map((capability) => ({
+            ...capability,
+            stepKinds: [...capability.stepKinds],
+            addressSpaces: [...capability.addressSpaces].toSorted(),
+            memorySpaces: [...capability.memorySpaces]
+                .toSorted((left, right) => left.addressSpace.localeCompare(right.addressSpace))
+                .map((memorySpace) => Object.freeze({ ...memorySpace })),
+            trace: capability.trace
+                ? {
+                    ...capability.trace,
+                    addressSpaces: [...capability.trace.addressSpaces].toSorted(),
+                }
+                : null,
+        }));
+        const architectures = suppliedArchitectures ?? replayArchitectureCapabilities(script);
         const supports = (key) => architectures.some((capability) => capability[key]);
         this.capabilities = Object.freeze({
             pause: supports("pause"),
             step: supports("step"),
-            stepKinds: [
-                ...new Set(architectures.flatMap((capability) => capability.stepKinds ?? REPLAY_STEP_KINDS)),
-            ],
+            stepKinds: [...new Set(architectures.flatMap((capability) => capability.stepKinds))],
             registers: supports("registers"),
             memory: supports("memory"),
             stackFrames: supports("stackFrames"),

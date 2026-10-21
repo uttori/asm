@@ -4,6 +4,8 @@ import { measureInternalPhase } from "../internal-instrumentation.js";
 import { ASAR_SYNTAX_PROFILE } from "../syntax-profile.js";
 import { OverlayFileProvider } from "./overlay-file-provider.js";
 import { hashBytes, RootAnalysisCache } from "./root-analysis-cache.js";
+/** Shared by worker producers, transport validation and snapshot hydration. */
+export const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION = 3;
 /**
  * Indexes one or more assembly projects for editor tooling.
  *
@@ -106,6 +108,55 @@ export class WorkspaceIndex {
                 ?.directivePrefixes ?? ASAR_SYNTAX_PROFILE.directivePrefixes;
         this.logger = options.logger;
         this.cache = options.cacheDir ? new RootAnalysisCache(options.cacheDir) : undefined;
+    }
+    /** Capture an owned complete generation; later producer edits cannot mutate a published snapshot. */
+    snapshot() {
+        return structuredClone({
+            version: WORKSPACE_ANALYSIS_SNAPSHOT_VERSION,
+            target: this.target,
+            architecture: this.architecture,
+            roots: [...this.rootAnalyses],
+            files: [...this.fileAnalysis],
+            includeEdges: this.includeEdges,
+            symbols: this.allSymbols,
+            references: this.allReferences,
+            status: this.getStatus(),
+        });
+    }
+    /**
+     * Hydrate a new, unpublished index with a worker-owned snapshot. Hosts swap the resulting index
+     * as one unit, keeping readers on the previous coherent generation while analysis is running.
+     * The environment stays local and must match the worker's target and architecture.
+     */
+    static fromSnapshot(options, snapshot, overlays) {
+        const index = new WorkspaceIndex(options);
+        if (snapshot.version !== WORKSPACE_ANALYSIS_SNAPSHOT_VERSION ||
+            snapshot.target !== index.target ||
+            snapshot.architecture !== index.architecture) {
+            throw new Error("Analysis snapshot belongs to a different environment.");
+        }
+        // A library caller may retain the input; publication never borrows its mutable arrays or records.
+        snapshot = structuredClone(snapshot);
+        for (const [file, text] of overlays) {
+            index.overlay.set(file, text);
+        }
+        for (const [file, analysis] of snapshot.files) {
+            index.fileAnalysis.set(file, analysis);
+        }
+        for (const [root, analysis] of snapshot.roots) {
+            index.rootAnalyses.set(root, analysis);
+            index.#rootFileSets.set(root, new Set([root, ...analysis.includeEdges.flatMap((edge) => [edge.fromFile, edge.toFile])]));
+        }
+        index.includeEdges = [...snapshot.includeEdges];
+        index.allSymbols = [...snapshot.symbols];
+        index.allReferences = [...snapshot.references];
+        index.lastReindexDurationMs = snapshot.status.lastReindexDurationMs;
+        index.lastReindexRootCount = snapshot.status.lastReindexRootCount;
+        index.lastReindexCachedRoots = snapshot.status.lastReindexCachedRoots;
+        index.lastReindexAnalyzedRoots = snapshot.status.lastReindexAnalyzedRoots;
+        index.fullReindexRequired = false;
+        index.#rebuildCoverageIndex();
+        return index;
     }
     /**
      * Updates index configuration and re-analyses the workspace.
@@ -429,7 +480,7 @@ export class WorkspaceIndex {
         this.lastRootServedFromCache = false;
         this.logger?.info(`Analyzing ${path.basename(root)} (followIncludes=${followIncludes}, ${content.length} chars)...`);
         if (followIncludes && this.cache) {
-            const cached = this.cache.read(root, this.cacheIdentity(), (file) => this.hashFile(file));
+            const cached = this.cache.read(root, this.cacheIdentity(), (file) => this.hashFile(file), (file) => !this.overlay.has(file));
             if (cached) {
                 this.lastRootServedFromCache = true;
                 this.logger?.info(`Using cached analysis for ${path.basename(root)} ` +

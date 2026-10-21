@@ -1,57 +1,5 @@
-import type { AssemblerEnvironment } from "@uttori/asm-core";
-import { type SourceRepository, type SourceGeneration, type SourceGenerationFile, type SourceGenerationInputs } from "@uttori/asm-disassembler";
-import { type SnesSourceBuild } from "./source-build.js";
-/** Original assets come from immutable Git objects or original ROM bytes, never live working files. */
-export interface PrepareSnesGenerationOptions {
-    readonly repository: SourceRepository;
-    readonly parent: string;
-    readonly evidenceDirectory: string;
-    readonly romFile: string;
-    /** Exact source projection prefix in this project repository, such as disassembly. */
-    readonly sourceRoot: string;
-    readonly inputs: SourceGenerationInputs;
-    /** Explicit authoring maps/configuration, already captured by the caller. Paths are source-root relative. */
-    readonly recipes: readonly SourceGenerationFile[];
-    /** Exact research/configuration/catalog and evidence-manifest bytes retained in generation history. */
-    readonly inputFiles: readonly SourceGenerationFile[];
-    /** Repository-relative pristine inputs; the complete generation must still rebuild the original ROM. */
-    readonly pristineAssets: readonly {
-        readonly path: string;
-        readonly sha256: string;
-        /** Half-open, headerless original-ROM file offsets. This admits new binary inputs without trusting edited working files. */
-        readonly romRange?: {
-            readonly start: number;
-            readonly end: number;
-        };
-        /** Explicit immutable blob for a newly decoded/reviewed original asset; SHA-256 guards its bytes. */
-        readonly originalBlob?: string;
-    }[];
-    /** Git-reviewed exceptions for withdrawing previously emitted code; reasons remain in the input receipt. */
-    readonly codeWithdrawals?: readonly {
-        readonly start: number;
-        readonly end: number;
-        readonly reason: string;
-    }[];
-    readonly signal?: AbortSignal;
-    /** Host owns trusted plugin loading and disposal, keeping Node module loading out of the target layer. */
-    readonly loadEnvironment: (configuration: string) => Promise<{
-        readonly environment: AssemblerEnvironment;
-        readonly includePaths: readonly string[];
-        readonly targetOptions: Readonly<Record<string, unknown>>;
-        dispose(): Promise<void>;
-    }>;
-}
-/** Candidate and exact build proof; temporary source and build folders are reclaimed before returning. */
-export interface PreparedSnesGeneration {
-    readonly generation: SourceGeneration;
-    readonly verification: SnesSourceBuild["verification"];
-    readonly codeBytes: number;
-    readonly files: number;
-    readonly withdrawnCode: readonly {
-        readonly start: number;
-        readonly end: number;
-    }[];
-}
+import { type SourceGenerationOptions as PrepareSnesGenerationOptions, type PreparedSourceGeneration as PreparedSnesGeneration } from "@uttori/asm-disassembler/source-project";
+export type { SourceGenerationOptions as PrepareSnesGenerationOptions, PreparedSourceGeneration as PreparedSnesGeneration, } from "@uttori/asm-disassembler/source-project";
 /** Exact render options include recipe contents and the pristine-asset selection, not host paths. */
 export declare function snesGenerationOptionsHash(options: Pick<PrepareSnesGenerationOptions, "sourceRoot" | "recipes" | "pristineAssets" | "codeWithdrawals">): string;
 /**

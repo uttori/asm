@@ -2,6 +2,7 @@ import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { exportCaptureJson, captureCrc32c } from "@uttori/asm-capture";
 import { createRuntimeCaptureSource } from "@uttori/asm-disassembler";
 import test from "ava";
 
@@ -16,8 +17,6 @@ import {
   busScope,
   busSession,
 } from "../../../../tests/helpers/capture-bus.js";
-import { exportCaptureJson } from "../../../debug-adapter/src/capture-file.js";
-import { captureCrc32c } from "../../../debug-adapter/src/capture-v2.js";
 import {
   createRuntimeInstructionTraceImporter,
   importRuntimeInstructionTraceFile,

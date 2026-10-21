@@ -1,22 +1,17 @@
-import type {
-  ArchitectureEncoder,
-  ArchitectureEncoderContext,
-  InstructionDescriptor,
-  LoweredOperand,
-  MathValue,
-  OperandResolutionContext,
-} from "../architecture-types.js";
-import type { Assembler } from "../assembler.js";
+import type { InstructionDescriptor, MathValue } from "../architecture-types.js";
 import type {
   ArchitectureDecoder,
   ArchitectureInstructionSpecification,
 } from "../decoder-types.js";
 import type { CoreDirectiveGroup } from "../directive-groups.js";
+import type { NormalizedCommand } from "../ir/normalized-command.js";
+import type { SyntaxGrammar, SyntaxValue } from "../ir/source-syntax.js";
 import type { DirectiveDescriptor } from "../lsp/directive-catalog.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
+import type { PluginSessionCapabilities } from "./session-capabilities.js";
 
 /** Contract revision required by PluginManager. Independent of npm package versions. */
-export const PLUGIN_API_VERSION = 1 as const;
+export const PLUGIN_API_VERSION = 2 as const;
 
 /** Ordered build passes: collect symbols, determine addresses, then emit final bytes. */
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
@@ -120,23 +115,18 @@ export interface SessionStateStore {
   get<T>(slot: SessionStateKey<T>): T;
 }
 
-/** Session expression and symbol resolution available while classifying an operand. */
-export interface OperandClassificationContext {
-  readonly operands: OperandResolutionContext;
-}
-
 /** Processor syntax and factories. IDs are namespaced. Aliases resolve within each target. */
 export interface ArchitectureContribution {
+  /** Pure processor-owned grammar shared by execution and tooling, including analysis-only targets. */
+  operandGrammar: import("../ir/resolved-instruction.js").ArchitectureOperandGrammar;
   id: string;
   aliases?: readonly string[];
   displayName: string;
   unknownInstructionBehavior: "throw" | "returnFalse";
-  splitOperands(text: string): string[];
-  /** Unresolved expression fragments used by navigation/rename; omit addressing punctuation and registers without evaluating symbols. */
-  referenceExpressions?(operandText: string): readonly string[];
-  classifyOperand(context: OperandClassificationContext, operand: string): LoweredOperand;
-  /** Per-session encoder. May be omitted for analysis. Assembler requires encoders for every target architecture. */
-  createEncoder?(context: ArchitectureFactoryContext): ArchitectureEncoder;
+  /** Receives only state/options; evaluation and writes are borrowed per instruction. Omit only for decoder-only use, which cannot create assembly sessions. */
+  createTypedEncoder?(
+    context: ArchitectureFactoryContext,
+  ): import("../ir/resolved-instruction.js").TypedArchitectureEncoder;
   /** Optional architecture-owned decoder. Formatting remains a separate concern. */
   createDecoder?(context: ArchitectureDecoderFactoryContext): ArchitectureDecoder;
   /** Machine-readable forms used by decoders, editor tooling, and conformance tests. */
@@ -144,19 +134,15 @@ export interface ArchitectureContribution {
   instructions: readonly InstructionDescriptor[];
 }
 
-/** Encoder capabilities bound to one assembler session. Do not retain beyond that session. */
-export interface ArchitectureFactoryContext extends ArchitectureEncoderContext {
+/** Factory metadata and state. Evaluation and emission are borrowed only during typed instruction dispatch. */
+export interface ArchitectureFactoryContext {
   readonly targetId: string;
   readonly options: Readonly<Record<string, unknown>>;
   readonly state: SessionStateStore;
 }
 
-/** Decoder inputs owned by the host. Options and state follow the selected target's contract. */
-export interface ArchitectureDecoderFactoryContext {
-  readonly targetId: string;
-  readonly options: Readonly<Record<string, unknown>>;
-  readonly state: SessionStateStore;
-}
+/** Decoder factories share the same session metadata and state contract. */
+export type ArchitectureDecoderFactoryContext = ArchitectureFactoryContext;
 
 /** Per-session target services use normalized target options and shared session state. */
 export interface TargetFactoryContext {
@@ -215,30 +201,25 @@ export interface TargetOutputFormat {
 /** The same live state store supplied to the directive factory. */
 export interface DirectiveExecutionContext {
   readonly state: SessionStateStore;
+  /** Detached occurrence metadata for diagnostics. Semantic input is the validated payload. */
+  readonly command: Pick<NormalizedCommand, "keyword" | "source">;
 }
-
-/** Synchronous directive execution. Words include the keyword, and raw retains the command text. */
-export type DirectiveHandler = (
-  context: DirectiveExecutionContext,
-  words: readonly string[],
-  raw: string,
-) => void;
 
 /** Creates a handler bound to one session. The session remains owned and disposed by its host. */
 export interface DirectiveFactoryContext {
   readonly targetId: string;
   readonly state: SessionStateStore;
-  readonly session: Assembler;
+  readonly session: PluginSessionCapabilities;
 }
 
 /** Runtime syntax and editor descriptions. Keywords must not collide within a target. */
 export interface DirectiveContribution {
   id: string;
   keywords: readonly string[];
-  /** Preprocess handles source before lowering. Lowered handles executable commands in each stage. */
-  phase: "preprocess" | "lowered";
-  /** Returning undefined preserves the core directive when this session's grammar does not need an override. */
-  createHandler(context: DirectiveFactoryContext): DirectiveHandler | undefined;
+  /** Typed directives execute after ordered source expansion, once per active assembly stage. */
+  phase: "lowered";
+  /** Required pure grammar and session binding; undefined binding preserves existing keyword ownership. */
+  syntax: DirectiveSyntaxContribution;
   tooling: readonly DirectiveDescriptor[];
 }
 
@@ -385,7 +366,7 @@ export interface ExpressionSetContribution {
 /** Borrowed session and live state. Hooks must not dispose or recursively assemble the session. */
 export interface SessionLifecycleContext {
   readonly state: SessionStateStore;
-  readonly session: Assembler;
+  readonly session: PluginSessionCapabilities;
 }
 
 /** The stage entering or leaving execution. Analysis may run only a subset of stages. */
@@ -396,8 +377,10 @@ export interface StageLifecycleContext extends SessionLifecycleContext {
 /** Directive command before its registered handler executes. */
 export interface DirectiveMiddlewareContext extends SessionLifecycleContext {
   readonly keyword: string;
-  readonly words: readonly string[];
-  readonly raw: string;
+  /** Prepared statement or contribution payload; never a word-array execution alternative. */
+  readonly syntax?: import("../ir/source-syntax.js").SourceSyntax;
+  /** Detached occurrence metadata, including provenance, for diagnostics and attribution. */
+  readonly source: NormalizedCommand["source"];
 }
 
 /** Architecture IDs are canonical. SourceAlias retains the spelling used for selection. */
@@ -422,7 +405,7 @@ export interface WriteValidationContext extends SessionLifecycleContext {
 
 /** Output and session immediately before the output-format finalizer. */
 export interface LifecycleOutputFinalizationContext extends OutputFinalizationContext {
-  readonly session: Assembler;
+  readonly session: PluginSessionCapabilities;
 }
 
 /**
@@ -448,6 +431,11 @@ export interface SessionLifecycle {
 /** Creates hooks for one session. Included only when referenced by the selected target. */
 export interface LifecycleContribution {
   id: string;
+  /**
+   * Canonical lowercase keywords observed by beforeDirective. Omitted means all; an empty
+   * list disables directive middleware only. Filtering precedes capability borrowing and snapshots.
+   */
+  beforeDirectiveKeywords?: readonly string[];
   create(context: TargetFactoryContext): SessionLifecycle;
 }
 
@@ -532,4 +520,13 @@ export interface ToolingCatalog {
   getArchitectures(): readonly ArchitectureSummary[];
   /** Lists every target in the environment, not just this catalog's target. */
   getTargets(): readonly TargetSummary[];
+}
+
+/** Bound execution owns effects; the host borrows capabilities only during factory/execute calls. */
+export interface BoundDirectiveSyntax {
+  execute(payload: SyntaxValue, context: DirectiveExecutionContext): void;
+}
+/** Undefined binding leaves the previous core/target registration active for this session. */
+export interface DirectiveSyntaxContribution extends SyntaxGrammar {
+  bind(context: DirectiveFactoryContext): BoundDirectiveSyntax | undefined;
 }

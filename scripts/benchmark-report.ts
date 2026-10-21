@@ -6,6 +6,8 @@ export type BenchmarkSample = {
   peakHeapUsedBytes: number;
   phasesMs: Record<string, number>;
   counters: InternalInstrumentationSnapshot["counters"];
+  /** Optional so historical benchmark receipts remain readable. */
+  expressionBoundaries?: InternalInstrumentationSnapshot["expressionBoundaries"];
 };
 
 export type BenchmarkStatistics = {
@@ -51,6 +53,10 @@ export type BenchmarkAggregate = {
   peakHeapUsedBytes: number;
   phasesMs: Record<string, BenchmarkStatistics>;
   counters: Record<keyof BenchmarkSample["counters"], BenchmarkStatistics>;
+  expressionBoundaries?: Record<
+    keyof InternalInstrumentationSnapshot["expressionBoundaries"],
+    Record<string, BenchmarkStatistics>
+  >;
 };
 
 const COUNTER_NAMES: readonly (keyof BenchmarkSample["counters"])[] = [
@@ -63,8 +69,17 @@ const COUNTER_NAMES: readonly (keyof BenchmarkSample["counters"])[] = [
   "includeBytesRead",
   "includeTextCacheHits",
   "includeResolutionCacheHits",
+  "expressionParses",
+  "operandLexicalParses",
+  "operandSyntaxCacheHits",
+  "operandSyntaxCacheMisses",
+  "expressionParserCalls",
+  "expressionInstrumentationParses",
+  "expressionLegacyEvaluations",
+  "expressionParseCacheHits",
   "expressionEvaluations",
   "expressionStringEvaluations",
+  "expressionRawFallbackEvaluations",
   "expressionUniqueStringEvaluations",
   "expressionNodeEvaluations",
   "expressionUniqueNodeEvaluations",
@@ -80,6 +95,8 @@ const COUNTER_NAMES: readonly (keyof BenchmarkSample["counters"])[] = [
   "loweredProgramBuilds",
   "runtimeNodesLowered",
   "referenceCollections",
+  "referencePlanBuilds",
+  "instructionReferencePlanBuilds",
   "addressMappings",
   "assemblerConstructions",
   "sessionConstructions",
@@ -123,6 +140,22 @@ export function isBenchmarkSample(value: unknown): value is BenchmarkSample {
     !isRecord(value.counters)
   ) {
     return false;
+  }
+  if (value.expressionBoundaries !== undefined) {
+    if (!isRecord(value.expressionBoundaries)) {
+      return false;
+    }
+    const categories = ["parses", "fallbacks", "passthrough"];
+    // Earlier receipts predate operand routing metrics and remain valid evidence.
+    if (value.expressionBoundaries.operandFallbacks !== undefined) {
+      categories.push("operandFallbacks");
+    }
+    for (const category of categories) {
+      const bucket = value.expressionBoundaries[category];
+      if (!isRecord(bucket) || !Object.values(bucket).every((count) => typeof count === "number")) {
+        return false;
+      }
+    }
   }
   if (!Object.values(value.phasesMs).every((entry) => typeof entry === "number")) {
     return false;
@@ -229,5 +262,31 @@ export function aggregateSamples(samples: BenchmarkSample[]): BenchmarkAggregate
       ]),
     ),
     counters,
+    ...(samples.some((sample) => sample.expressionBoundaries) && {
+      expressionBoundaries: aggregateExpressionBoundaries(samples),
+    }),
+  };
+}
+
+/** Missing buckets are zero within a measured run; older receipts can omit the entire section. */
+function aggregateExpressionBoundaries(
+  samples: BenchmarkSample[],
+): NonNullable<BenchmarkAggregate["expressionBoundaries"]> {
+  const aggregate = (
+    category: keyof InternalInstrumentationSnapshot["expressionBoundaries"],
+  ): Record<string, BenchmarkStatistics> => {
+    const buckets: Record<string, number>[] = samples.map(
+      (sample) => sample.expressionBoundaries?.[category] ?? {},
+    );
+    const keys = [...new Set(buckets.flatMap((bucket) => Object.keys(bucket)))].toSorted();
+    return Object.fromEntries(
+      keys.map((key) => [key, benchmarkStatistics(buckets.map((bucket) => bucket[key] ?? 0))]),
+    );
+  };
+  return {
+    parses: aggregate("parses"),
+    fallbacks: aggregate("fallbacks"),
+    passthrough: aggregate("passthrough"),
+    operandFallbacks: aggregate("operandFallbacks"),
   };
 }

@@ -1,0 +1,1 @@
+{"version":3,"file":"source-builtins.js","sourceRoot":"","sources":["../src/source-builtins.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,eAAe,EAAE,MAAM,sCAAsC,CAAC;AACvE,OAAO,EAAE,gBAAgB,EAAE,MAAM,sCAAsC,CAAC;AACxE,oFAAoF;AACpF,MAAM,CAAC,MAAM,oBAAoB,GAAsC;IACrE,gBAAgB;IAChB,eAAe;CAChB,CAAC"}

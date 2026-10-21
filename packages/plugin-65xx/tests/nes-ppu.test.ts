@@ -2,22 +2,21 @@ import { readFile, mkdtemp, rm, writeFile, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import {
-  LosslessCaptureFileRecorder,
-  type CaptureTransportV2,
-  type CapturePositionV2,
-} from "@uttori/asm-debug-adapter";
+import { type CaptureTransportV2, type CapturePositionV2 } from "@uttori/asm-capture";
+import { decodeNesBusRecords } from "@uttori/asm-capture";
+import { LosslessCaptureFileRecorder } from "@uttori/asm-debug-adapter";
 import {
   RomImage,
   publishAnalysisProject,
   openAnalysisProjectStore,
-  reconcileSourceCaptureCatalog,
-  fingerprintSourceCapture,
   readResearchInputs,
 } from "@uttori/asm-disassembler";
+import {
+  reconcileSourceCaptureCatalog,
+  fingerprintSourceCapture,
+} from "@uttori/asm-disassembler/source-project";
 import test from "ava";
 
-import { decodeNesBusRecords } from "../../debug-adapter/src/capture-nes-ppu.js";
 import { createNesGraphicsProjection } from "../src/nes/ppu-evidence.js";
 import { importNesPPUCapture } from "../src/nes/ppu-project.js";
 import {

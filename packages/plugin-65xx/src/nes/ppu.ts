@@ -9,7 +9,7 @@ import {
   type NesPPUState,
   type CaptureFileHeader,
   type CaptureNesBusAccessV2,
-} from "@uttori/asm-debug-adapter";
+} from "@uttori/asm-capture";
 import {
   DEFAULT_RUNTIME_TRACE_MAX_BYTES,
   verifyRuntimeCaptureCompanion,

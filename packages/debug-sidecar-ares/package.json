@@ -64,10 +64,11 @@
     "prepack": "node ../../scripts/clean-workspace-build.ts --workspace debug-sidecar-ares && npm run make-types && npm run build"
   },
   "dependencies": {
+    "@uttori/asm-capture": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-debug-adapter": "1.0.0",
-    "@uttori/asm-plugin-snes": "1.0.0",
-    "@uttori/asm-plugin-65xx": "1.0.0"
+    "@uttori/asm-plugin-65xx": "1.0.0",
+    "@uttori/asm-plugin-snes": "1.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { openAnalysisProjectStore, sourceContentHash, } from "@uttori/asm-disassembler";
+import { openAnalysisProjectStore, } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 /** Aggregate verified PPU port accesses without timing/register snapshots multiplying every fact.
  * Full ordered events, including fetch/A12/IRQ timelines, remain in the hashed ACT2 archive.
  */

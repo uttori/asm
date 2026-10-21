@@ -3,9 +3,9 @@ import os from "node:os";
 import path from "node:path";
 
 import { decompressSomLz } from "@uttori/asm-assets/secret-of-mana/lz";
-import somAssetPlugin from "@uttori/asm-assets/secret-of-mana/som-asset-plugin";
+import somAssetPlugin from "@uttori/asm-game-secret-of-mana";
 import { PluginManager } from "@uttori/asm-core";
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
 import { test } from "../../../tests/ava-helper.js";
 import snesPlugin, { createSnesAssemblerEnvironment } from "../src/assembler.js";

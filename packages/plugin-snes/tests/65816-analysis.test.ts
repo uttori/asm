@@ -1,13 +1,6 @@
 import { test } from "../../../tests/ava-helper.js";
 import { RomImage, type StaticInstruction } from "../../disassembler/src/index.js";
-import {
-  analyzeSnes65816,
-  applyCpu65816StateOverride,
-  joinCpu65816States,
-  resetCpu65816State,
-  transferCpu65816State,
-  unknownCpu65816State,
-} from "../src/index.js";
+import { analyzeSnes65816, applyCpu65816StateOverride, joinCpu65816States, resetCpu65816State, transferCpu65816State, unknownCpu65816State } from "@uttori/asm-plugin-snes/disassembler";
 
 const loRom = (program: readonly number[], reset = 0x8000): RomImage => {
   const bytes = new Uint8Array(0x10000);

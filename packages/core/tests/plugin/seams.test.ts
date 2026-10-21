@@ -1,73 +1,62 @@
 import { test } from "../../../../tests/ava-helper.js";
 import { Assembler } from "../../../../tests/test-assembler.js";
-import type { LoweredOperand } from "../../src/architecture-types.js";
-import { createNormalizedCommand } from "../../src/ir/normalized-command.js";
 
-const commandNode = (command: string) =>
-  createNormalizedCommand(command, command, command.trim().split(/\s+/), "plugin-seam.asm", 1);
-
-test("disposable architecture registration participates in lowering and dispatch", (t) => {
+test("registered architecture grammar and typed execution share the source occurrence", (t) => {
   const assembler = new Assembler();
-  const classified: string[] = [];
-  const encoded: string[][] = [];
-
+  t.teardown(() => assembler.dispose());
+  const parsed: string[] = [],
+    encoded: string[] = [];
   assembler.architectureRegistry.register(
     {
       name: "contract-test",
-      classifyOperand: (_resolver, operand): LoweredOperand => {
-        classified.push(operand);
-        return {
-          raw: operand,
-          expanded: operand,
-          length: 1,
-          immediate: false,
-          indirect: false,
-        };
+      operandGrammar: {
+        version: "1",
+        parse: (_mnemonic, text) => {
+          parsed.push(text);
+          return { operands: [] };
+        },
       },
-      splitOperands: (operandText) => operandText.split(",").map((operand) => operand.trim()),
       unknownInstructionBehavior: "throw",
       encoder: {
-        estimateSize: () => 1,
-        encode: (words) => {
-          encoded.push(words);
-          return true;
+        typed: {
+          estimate: (frame) => {
+            frame.choose("test", 1);
+            return 1;
+          },
+          encode: (frame) => {
+            frame.choose("test", 1);
+            encoded.push(frame.instruction.mnemonic);
+            return true;
+          },
         },
       },
     },
     ["contract-alias"],
   );
   assembler.arch = "contract-alias";
-
-  const lowered = assembler.commandLoweringService.lowerCommand(commandNode("emit left,right"));
-  t.is(lowered.kind, "instruction");
-  if (lowered.kind !== "instruction") {
-    return;
-  }
-  t.deepEqual(lowered.operands, ["left", "right"]);
-  t.deepEqual(classified, ["left", "right", "left,right"]);
-
+  const lowered = assembler.commandLoweringService.lowerCommand(
+    assembler.createNormalizedCommandFromRaw("emit left,right")!,
+  );
+  t.is(lowered.kind, "typedInstruction");
   assembler.activateStage("emitProgram");
   assembler.dispatchLoweredNode(lowered);
-  t.deepEqual(encoded, [["emit", "left,right"]]);
+  t.deepEqual(parsed, ["left,right"]);
+  t.deepEqual(encoded, ["emit"]);
 });
 
-test("disposable directive registration remains preprocessing passthrough", (t) => {
+test("registered directives execute their parsed payload with source ownership", (t) => {
   const assembler = new Assembler();
-  const calls: Array<{ value: string; raw: string }> = [];
-  const context = { prefix: "seen:" };
-  assembler.directiveRegistry.register("contract-directive", context, (ctx, words, raw) => {
-    calls.push({ value: `${ctx.prefix}${words[1]}`, raw });
-  });
-
-  const lowered = assembler.commandLoweringService.lowerExecutableNode(
-    commandNode("contract-directive value"),
+  t.teardown(() => assembler.dispose());
+  const calls: string[] = [];
+  assembler.directiveRegistry.registerTyped(
+    "contract-directive",
+    ({ words }) => words[1],
+    (value): value is string => typeof value === "string",
+    (value, command) => calls.push(`seen:${value}:${command.source.raw}`),
   );
-  t.is(lowered.kind, "command");
-  if (lowered.kind !== "command") {
-    return;
-  }
-  t.is(lowered.passthroughReason, "registeredPreprocessDirective");
-
+  const program = assembler.buildProgramModel("contract-directive value", "plugin-seam.asm");
+  const lowered = assembler.commandLoweringService.lowerProgram(program).nodes[0];
+  t.is(lowered.kind, "pluginSyntax");
   assembler.executeLoweredNode(lowered);
-  t.deepEqual(calls, [{ value: "seen:value", raw: "contract-directive value" }]);
+  t.deepEqual(calls, ["seen:value:contract-directive value"]);
 });

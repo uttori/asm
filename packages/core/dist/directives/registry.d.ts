@@ -1,8 +1,9 @@
 import { type CoreDirectiveGroup } from "../directive-groups.js";
-import type { NormalizedCommand } from "../ir/normalized-command.js";
-import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, NarrowDirectiveHandler, NamespaceDirectiveContext, OrgDirectiveContext, RuntimeDirectiveContext, StructDirectiveContext, TableDirectiveContext, DiagnosticDirectiveContext } from "./types.js";
+import { type NormalizedCommand } from "../ir/normalized-command.js";
+import { type ContributionSyntax, type SyntaxGrammar, type SyntaxValue, type SyntaxParseInput } from "../ir/source-syntax.js";
+import { type SyntaxGuard } from "../ir/syntax-codec.js";
+import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, NamespaceDirectiveContext, OrgDirectiveContext, RuntimeDirectiveContext, StructDirectiveContext, TableDirectiveContext, DiagnosticDirectiveContext } from "./types.js";
 type BoundDirectiveHandler = (words: readonly string[], raw: string, command?: NormalizedCommand) => void;
-export type DirectiveExecutionPhase = "preprocess" | "lowered";
 export interface DirectiveRegistryContexts {
     data: DataDirectiveContext;
     fillPad: FillPadDirectiveContext;
@@ -23,23 +24,22 @@ export interface DirectiveRegistryContexts {
 export declare class DirectiveRegistry {
     readonly directivePrefixes: readonly string[];
     readonly handlers: Map<string, BoundDirectiveHandler>;
-    readonly phases: Map<string, DirectiveExecutionPhase>;
+    /** Grammar versions are immutable; registration is the only ownership transition. */
+    private cachedGrammarIdentity?;
+    private readonly syntaxHandlers;
+    /** Ordered keyword ownership is part of every program-cache identity. */
+    get grammarIdentity(): string;
+    /** Last registration owns both parsing and execution; absent bindings install nothing. */
+    registerSyntax(keywords: readonly string[], id: string, grammar: SyntaxGrammar, execute: (payload: SyntaxValue, command: NormalizedCommand) => void): void;
+    /** Core and target handlers share a versioned parser and checked, serializable execution payload. */
+    registerTyped<T>(keywords: string | readonly string[], parse: (input: SyntaxParseInput) => T, validate: SyntaxGuard<T>, execute: (payload: T, command: NormalizedCommand) => void): void;
+    private syntaxKeyword;
+    private syntaxHandler;
+    /** Pure parsing catches diagnostics for deferred reporting, including inactive branches. */
+    parseSyntax(command: NormalizedCommand): ContributionSyntax | undefined;
+    /** Reject stale worker/cache payloads; never reparse or silently select a different grammar. */
+    executeSyntax(syntax: ContributionSyntax, command: NormalizedCommand): void;
     constructor(directivePrefixes?: readonly string[]);
-    /**
-     * Registers the value.
-     * @param {string | string[]} keyword The keyword.
-     * @param {Context} context The context.
-     * @param {NarrowDirectiveHandler<Context>} handler The handler.
-     * @param {DirectiveExecutionPhase} [phase] The directive execution phase.
-     */
-    register<Context>(keyword: string | string[], context: Context, handler: NarrowDirectiveHandler<Context>, phase?: DirectiveExecutionPhase): void;
-    /**
-     * Registers a directive that can execute from durable lowered command data.
-     * @param {string | string[]} keyword The directive keyword or aliases.
-     * @param {Context} context The handler context.
-     * @param {NarrowDirectiveHandler<Context>} handler The handler.
-     */
-    registerLowered<Context>(keyword: string | string[], context: Context, handler: NarrowDirectiveHandler<Context>): void;
     has(keyword: string): boolean;
     dispatch(keyword: string, words: readonly string[], raw: string, command?: NormalizedCommand): boolean;
     /**
@@ -48,12 +48,6 @@ export declare class DirectiveRegistry {
      * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
      */
     lookup(keyword: string): BoundDirectiveHandler | undefined;
-    /**
-     * Resolves the execution phase declared alongside a directive handler.
-     * @param {string} keyword The directive keyword.
-     * @returns {DirectiveExecutionPhase | undefined} The active directive phase.
-     */
-    getPhase(keyword: string): DirectiveExecutionPhase | undefined;
 }
 export declare const createDirectiveRegistry: (contexts: DirectiveRegistryContexts, enabledGroups?: readonly CoreDirectiveGroup[], directivePrefixes?: readonly string[]) => DirectiveRegistry;
 export {};

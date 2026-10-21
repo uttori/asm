@@ -1,12 +1,4 @@
-import {
-  ReplayDebugBackend,
-  type DebugAddress,
-  type DebugBackendEvent,
-  type DebugBreakpoint,
-  type DebugStepKind,
-  type DebugStopReason,
-  type DebugSubscription,
-} from "../../src/index.js";
+import { ReplayDebugBackend, type DebugAddress, type DebugBackendEvent, type DebugBreakpoint, type DebugStepKind, type DebugStopReason, type DebugSubscription } from "../../src/index.js";
 import { debugConformanceScript } from "./debug-conformance-fixture.js";
 
 /**

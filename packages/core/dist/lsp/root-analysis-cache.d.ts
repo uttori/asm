@@ -46,9 +46,10 @@ export declare class RootAnalysisCache {
      * @param {string} root Absolute root source path.
      * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
      * @param {(file: string) => string | undefined} hashFile Content hasher.
+     * @param {(file: string) => boolean} allowMtime False for live overlays whose disk timestamp cannot establish freshness.
      * @returns {CachedRootAnalysis | undefined} The cached artifacts, or undefined on miss.
      */
-    read(root: string, identity: RootAnalysisCacheIdentity, hashFile: (file: string) => string | undefined): CachedRootAnalysis | undefined;
+    read(root: string, identity: RootAnalysisCacheIdentity, hashFile: (file: string) => string | undefined, allowMtime?: (file: string) => boolean): CachedRootAnalysis | undefined;
     /**
      * Persists a full-pass analysis. Failures are ignored so a cache write can
      * never block or break the language server.

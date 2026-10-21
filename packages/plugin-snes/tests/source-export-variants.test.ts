@@ -2,14 +2,7 @@ import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import {
-  RomImage,
-  publishAnalysisProject,
-  openAnalysisProjectStore,
-  type AnalysisProject,
-  type AnalysisControlFlowNodeRecord,
-  type RuntimeInstructionRecord,
-} from "@uttori/asm-disassembler";
+import { RomImage, publishAnalysisProject, openAnalysisProjectStore, type AnalysisProject, type AnalysisControlFlowNodeRecord, type RuntimeInstructionRecord } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -96,7 +89,7 @@ test("immutable rendering reads recipes without publishing ownership or touching
   const project = projectFor(rom, [capture("observed", [0xea], {})]);
   const rendered = new Map<string, Uint8Array>();
   renderSourceFixture(
-    { manifest: { ...project.manifest, shards: [] }, shards: project.shards },
+    { manifest: { ...project.manifest, }, shards: project.shards },
     rom,
     directory,
     {
@@ -130,7 +123,7 @@ test("newly observed calls use the persistent preferred name at the original sym
   const rendered = new Map<string, Uint8Array>();
   renderSourceFixture(
     {
-      manifest: { ...project.manifest, shards: [] },
+      manifest: { ...project.manifest, },
       shards: {
         ...project.shards,
         labels: [

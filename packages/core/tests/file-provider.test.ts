@@ -8,6 +8,7 @@ import { test } from "../../../tests/ava-helper.js";
 import {
   MemoryAssemblyFileProvider,
   NodeAssemblyFileProvider,
+  NodeAssemblySnapshotProvider,
   stripWrappingQuotes,
 } from "../src/file-provider.js";
 
@@ -32,6 +33,99 @@ test("MemoryAssemblyFileProvider resolves quoted, relative, and absolute keys", 
   t.is(provider.resolvePath("shared.asm", { includePaths: ["/inc"] }), "/inc/shared.asm");
   t.is(provider.resolvePath("cwd.asm"), "/work/cwd.asm");
   t.is(provider.resolvePath("nowhere.asm", { currentFile: "/proj/main.asm" }), undefined);
+});
+
+test("snapshot resolution uses macro, source, include and cwd order for saved and overlay files", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "asm-snapshot-resolution-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const macro = path.join(root, "macros/shared.asm");
+  const source = path.join(root, "source/shared.asm");
+  const include = path.join(root, "includes/shared.asm");
+  fs.mkdirSync(path.dirname(include), { recursive: true });
+  fs.writeFileSync(include, "disk");
+  const cwd = path.resolve(`snapshot-${path.basename(root)}.asm`);
+  const options = {
+    macroSourceFile: path.join(root, "macros/definition.asm"),
+    currentFile: path.join(root, "source/main.asm"),
+    includePaths: [path.dirname(include)],
+  };
+  const overlays = new Map<string, Uint8Array | null>([
+    [macro, Buffer.from("macro")],
+    [source, Buffer.from("source")],
+    [cwd, Buffer.from("cwd")],
+  ]);
+  let files = new NodeAssemblySnapshotProvider({ overlays });
+  t.is(files.resolvePath("shared.asm", options), macro);
+  t.is(files.resolvePath(`\`${macro}\``), macro);
+  t.is(files.resolvePath(path.basename(cwd)), cwd);
+  t.is(files.resolvePath(""), undefined);
+  overlays.set(macro, null);
+  files = new NodeAssemblySnapshotProvider({ overlays });
+  t.is(files.resolvePath('"shared.asm"', options), source);
+  t.is(files.resolvePath(macro), undefined);
+  overlays.set(source, null);
+  files = new NodeAssemblySnapshotProvider({ overlays });
+  t.is(files.resolvePath("shared.asm", options), include);
+  overlays.set(include, null);
+  files = new NodeAssemblySnapshotProvider({ overlays });
+  t.is(files.resolvePath("shared.asm", options), undefined);
+  t.false(files.stat(include).exists);
+  t.throws(() => files.readFile(include), { message: /Candidate source removed/ });
+});
+
+test("snapshots own overlay bytes and retain first reads until saved-input freshness validation", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "asm-snapshot-ownership-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const saved = path.join(root, "saved.bin");
+  const created = path.join(root, "created.bin");
+  fs.writeFileSync(saved, Buffer.from([1, 2]));
+  const input = Uint8Array.of(3, 4);
+  const overlays = new Map<string, Uint8Array | null>([[created, input]]);
+  const files = new NodeAssemblySnapshotProvider({ overlays });
+  input.fill(99);
+  overlays.set(created, null);
+  files.readFile(created).fill(88);
+  t.deepEqual([...files.readFile(created)], [3, 4]);
+  t.deepEqual([...files.readFile(saved)], [1, 2]);
+  files.assertUnchanged();
+  fs.writeFileSync(saved, Buffer.from([2, 1]));
+  t.deepEqual([...files.readFile(saved)], [1, 2]);
+  t.throws(() => files.assertUnchanged(), { message: /Source dependency changed/ });
+  fs.unlinkSync(saved);
+  t.is(files.resolvePath(saved), saved);
+  t.is(files.stat(saved).size, 2);
+  t.throws(() => files.assertUnchanged(), { message: /Source dependency changed/ });
+  t.deepEqual([...files.snapshots.get(created)!], [3, 4]);
+  t.true(files.readFiles.has(created));
+});
+
+test("snapshot byte limits cover overlays and aggregate consumed inputs without recounting passes", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "asm-snapshot-limits-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const first = path.join(root, "first.bin");
+  const second = path.join(root, "second.bin");
+  fs.writeFileSync(first, Uint8Array.of(1, 2));
+  fs.writeFileSync(second, Uint8Array.of(3, 4));
+  const files = new NodeAssemblySnapshotProvider({ maxBytes: 3 });
+  files.readFile(first);
+  files.readFile(first);
+  t.throws(() => files.readFile(second), { message: /snapshot exceeds 3 bytes/ });
+  t.is(files.snapshots.size, 1);
+  t.throws(() => new NodeAssemblySnapshotProvider({ maxBytes: 0 }), {
+    message: /positive safe integer/,
+  });
+  t.throws(
+    () =>
+      new NodeAssemblySnapshotProvider({
+        maxBytes: 3,
+        overlays: new Map([[first, new Uint8Array(4)]]),
+      }),
+    { message: /overlays exceed 3 bytes/ },
+  );
+  t.throws(
+    () => new NodeAssemblySnapshotProvider({ overlays: new Map([["relative.asm", null]]) }),
+    { message: /absolute path/ },
+  );
 });
 
 test("MemoryAssemblyFileProvider stats and reads string and binary files", (t) => {

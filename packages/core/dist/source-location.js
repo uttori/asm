@@ -9,7 +9,8 @@ export function createSourceSpan(start, end, line) {
     return {
         start,
         end,
-        line,
+        // Operand-local spans omit physical lines so cached syntax remains plain JSON data.
+        ...(line === undefined ? {} : { line }),
         columnStart: start,
         columnEnd: end,
     };

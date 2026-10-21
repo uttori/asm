@@ -1,4 +1,13 @@
 import type { CoreDirectiveGroup } from "../directive-groups.js";
+import { parseDirectiveExpression } from "../ir/directive-arguments.js";
+import type { SyntaxParseInput } from "../ir/source-syntax.js";
+import {
+  syntaxBoolean,
+  syntaxExpression,
+  syntaxOptional,
+  syntaxRecord,
+  syntaxString,
+} from "../ir/syntax-codec.js";
 import { splitRespectingFunctions } from "../services/command-text-service.js";
 import type { DirectiveRegistry } from "./registry.js";
 import type { DiagnosticDirectiveContext, TableDirectiveContext } from "./types.js";
@@ -94,24 +103,11 @@ const formatPrintArgs = (parts: readonly string[]): string => {
  * @throws {Error} If the condition is missing or evaluates to zero.
  */
 export const handleAssert = (
-  { session }: DiagnosticDirectiveContext,
+  ctx: DiagnosticDirectiveContext,
   _words: readonly string[],
   raw: string,
 ): void => {
-  const payload = stripLeadingKeyword(raw, "assert");
-  const parts = splitRespectingFunctions(payload);
-  const condition = parts[0] ?? "";
-  if (condition === "") {
-    throw new Error("Broken conditional: assert");
-  }
-  if (session.evaluateAssertion(condition) !== false) {
-    return;
-  }
-  const messageParts = parts.slice(1);
-  if (messageParts.length === 0) {
-    throw new Error("Assertion failed.");
-  }
-  throw new Error(`Assertion failed: ${formatPrintArgs(messageParts)}`);
+  executeAssert({ diagnostic: ctx }, parseAssert({ text: raw }));
 };
 
 /**
@@ -122,15 +118,11 @@ export const handleAssert = (
  * @throws {Error} Always. Message matches asar's `Eerror_command`.
  */
 export const handleError = (
-  _ctx: DiagnosticDirectiveContext,
+  ctx: DiagnosticDirectiveContext,
   _words: readonly string[],
   raw: string,
 ): void => {
-  const payload = stripLeadingKeyword(raw, "error");
-  if (payload === "") {
-    throw new Error("error command.");
-  }
-  throw new Error(`error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`);
+  executeError({ diagnostic: ctx }, parseError({ text: raw }));
 };
 
 /**
@@ -219,19 +211,14 @@ export const handleTable = (
   _words: readonly string[],
   raw: string,
 ): void => {
-  let payload = stripLeadingKeyword(raw, "table");
-  let rtl = false;
-  if (/,\s*rtl\s*$/i.test(payload)) {
-    rtl = true;
-    payload = payload.replace(/,\s*rtl\s*$/i, "").trim();
-  } else if (/,\s*ltr\s*$/i.test(payload)) {
-    payload = payload.replace(/,\s*ltr\s*$/i, "").trim();
-  }
-  const filename = unwrapQuoted(payload);
-  if (filename === "") {
-    throw new Error("table requires a filename");
-  }
+  executeTable({ session }, parseTable({ text: raw }));
+};
 
+/** File contents are table data; only the assembly path/direction grammar is parsed ahead of execution. */
+function executeTable(
+  { session }: TableDirectiveContext,
+  { filename, rtl }: { filename: string; rtl: boolean },
+): void {
   const contents = session.includeSource.readFile(filename, "utf8");
   if (typeof contents !== "string") {
     throw new Error(`Error reading file: ${filename}`);
@@ -253,7 +240,7 @@ export const handleTable = (
     }
     session.characterMappings.set(parsed.char, parsed.value);
   }
-};
+}
 
 /**
  * Deprecated asar `warnpc addr`, equivalent to `assert pc() <= addr`.
@@ -264,20 +251,11 @@ export const handleTable = (
  * @throws {Error} If the address is missing or `pc > addr`.
  */
 export const handleWarnpc = (
-  { session }: DiagnosticDirectiveContext,
+  ctx: DiagnosticDirectiveContext,
   _words: readonly string[],
   raw: string,
 ): void => {
-  const payload = stripLeadingKeyword(raw, "warnpc");
-  if (payload === "") {
-    throw new Error("warnpc requires an address");
-  }
-  const maxpos = session.operandResolver.getnum(session.resolvedefines(payload));
-  if (session.currentTargetAddress > maxpos) {
-    throw new Error(
-      `warnpc failed: Current pc = $${hex6(session.currentTargetAddress)}, wanted <= $${hex6(maxpos)}`,
-    );
-  }
+  executeWarnpc({ diagnostic: ctx }, parseWarnpc({ text: raw }));
 };
 
 /**
@@ -287,26 +265,125 @@ export const handleWarnpc = (
  * @param {ReadonlySet<CoreDirectiveGroup>} [enabledGroups] Groups to register. Defaults to both.
  * @returns {void}
  */
+const empty = () => ({});
+
 export const registerMiscDirectives = (
   registry: DirectiveRegistry,
   context: MiscDirectiveContexts,
   enabledGroups: ReadonlySet<CoreDirectiveGroup> = new Set(["table", "diagnostic"]),
 ): void => {
+  const emptySyntax = syntaxRecord({});
   if (enabledGroups.has("table")) {
-    registry.registerLowered("pulltable", context.table, handlePullTable);
-
-    registry.registerLowered("pushtable", context.table, handlePushTable);
-
-    registry.registerLowered("cleartable", context.table, handleClearTable);
-
-    registry.registerLowered("table", context.table, handleTable);
+    registry.registerImmutableTyped("pulltable", empty, emptySyntax, () =>
+      handlePullTable(context.table),
+    );
+    registry.registerImmutableTyped("pushtable", empty, emptySyntax, () =>
+      handlePushTable(context.table),
+    );
+    registry.registerImmutableTyped("cleartable", empty, emptySyntax, () =>
+      handleClearTable(context.table),
+    );
+    registry.registerImmutableTyped(
+      "table",
+      parseTable,
+      syntaxRecord({ filename: syntaxString, rtl: syntaxBoolean }),
+      (payload) => executeTable(context.table, payload),
+    );
   }
-
   if (enabledGroups.has("diagnostic")) {
-    registry.registerLowered("assert", context.diagnostic, handleAssert);
-
-    registry.registerLowered("error", context.diagnostic, handleError);
-
-    registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+    registry.registerImmutableTyped(
+      "assert",
+      parseAssert,
+      syntaxRecord({ condition: syntaxExpression, message: syntaxOptional(syntaxString) }),
+      (payload) => executeAssert(context, payload),
+    );
+    registry.registerImmutableTyped(
+      "error",
+      parseError,
+      syntaxRecord({ message: syntaxString }),
+      (payload) => executeError(context, payload),
+    );
+    registry.registerImmutableTyped(
+      "warnpc",
+      parseWarnpc,
+      syntaxRecord({ address: syntaxExpression }),
+      (payload) => executeWarnpc(context, payload),
+    );
   }
+};
+
+/** Shared source/public-entry grammar for `assert`. */
+const parseAssert = ({ text }: Pick<SyntaxParseInput, "text">) => {
+  const parts = splitRespectingFunctions(stripLeadingKeyword(text, "assert"));
+  if (!parts[0]) {
+    throw new Error("Broken conditional: assert");
+  }
+  return {
+    condition: parseDirectiveExpression(parts[0], false),
+    message: parts.length > 1 ? formatPrintArgs(parts.slice(1)) : undefined,
+  };
+};
+
+/** Applies a parsed `assert` operation to the current stage. */
+const executeAssert = (
+  context: Pick<MiscDirectiveContexts, "diagnostic">,
+  { condition, message }: ReturnType<typeof parseAssert>,
+): void => {
+  if (context.diagnostic.session.evaluateAssertion(condition) !== false) {
+    return;
+  }
+  throw new Error(message === undefined ? "Assertion failed." : `Assertion failed: ${message}`);
+};
+
+/** Shared source/public-entry grammar for `error`. */
+const parseError = ({ text }: Pick<SyntaxParseInput, "text">) => {
+  const payload = stripLeadingKeyword(text, "error");
+  return {
+    message: payload
+      ? `error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`
+      : "error command.",
+  };
+};
+
+/** Applies a parsed `error` operation to the current stage. */
+const executeError = (
+  _context: Pick<MiscDirectiveContexts, "diagnostic">,
+  { message }: ReturnType<typeof parseError>,
+): void => {
+  throw new Error(message);
+};
+
+/** Shared source/public-entry grammar for `warnpc`. */
+const parseWarnpc = ({ text }: Pick<SyntaxParseInput, "text">) => {
+  const payload = stripLeadingKeyword(text, "warnpc");
+  if (!payload) {
+    throw new Error("warnpc requires an address");
+  }
+  return { address: parseDirectiveExpression(payload) };
+};
+
+/** Applies a parsed `warnpc` operation to the current stage. */
+const executeWarnpc = (
+  context: Pick<MiscDirectiveContexts, "diagnostic">,
+  { address }: ReturnType<typeof parseWarnpc>,
+): void => {
+  const { session } = context.diagnostic;
+  const maxpos = session.operandResolver.getnum(address);
+  if (session.currentTargetAddress > maxpos) {
+    throw new Error(
+      `warnpc failed: Current pc = $${hex6(session.currentTargetAddress)}, wanted <= $${hex6(maxpos)}`,
+    );
+  }
+};
+
+/** Shared assembly path and direction grammar; file contents remain table data. */
+const parseTable = ({ text }: Pick<SyntaxParseInput, "text">) => {
+  let payload = stripLeadingKeyword(text, "table");
+  const rtl = /,\s*rtl\s*$/i.test(payload);
+  payload = payload.replace(/,\s*(?:rtl|ltr)\s*$/i, "").trim();
+  const filename = unwrapQuoted(payload);
+  if (!filename) {
+    throw new Error("table requires a filename");
+  }
+  return { filename, rtl };
 };

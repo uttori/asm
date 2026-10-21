@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import type { AssetSourceConversionPlan } from "@uttori/asm-cli/asset-source";
+import type { AssetSourceConversionPlan } from "@uttori/asm-workflows/asset-source";
 import * as vscode from "vscode";
 
 /** Exercise shipped commands and VS Code's native resource/text undo without the interchange wizard. */

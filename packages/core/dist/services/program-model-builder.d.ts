@@ -1,10 +1,13 @@
-import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
+import type { CaptureNode, ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
 import type { SourcedCommand } from "./command-text-service.js";
 export type ProgramModel = {
     sourceFile: string;
     startLine: number;
     nodes: ExecutableNode[];
+    /** Original input, including comments/continuations; syntax never stores bound values. */
+    sourceText?: string;
+    grammarIdentity?: string;
 };
 export type IncludeProgramNode = {
     type: "include";
@@ -16,19 +19,25 @@ export type IncrementalProgramParseState = {
     loopStack: LoopNode[];
     ifStack: ConditionalBranchNode[];
     branchStack: ConditionalBranch[];
-    inMacroDefinition: boolean;
-    inFunctionDefinition: boolean;
-    inDataStructs?: boolean;
+    /** Capture frames own parser routing; values and execution bindings remain outside the AST. */
+    captures: {
+        node: CaptureNode;
+        loopDepth: number;
+        branchDepth: number;
+    }[];
 };
 export type ProgramModelBuilderHost = {
     currentFile: string;
     currentLine: number;
     passProgramCache: Map<string, ExecutableNode[]>;
+    grammarIdentity?(): string;
+    /** Raw-source hits may skip preprocessing only when no incremental statement is buffered. */
+    sourceBufferEmpty?(): boolean;
     preprocessBlockCommands(source: string): string[];
     splitInlineCommands(commands: string[]): string[];
     preprocessSourcedBlockCommands(source: string): SourcedCommand[];
     splitSourcedInlineCommands(commands: SourcedCommand[]): SourcedCommand[];
-    createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
+    createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number, physical?: string): NormalizedCommand;
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
 };
 /**
@@ -36,6 +45,10 @@ export type ProgramModelBuilderHost = {
  */
 export declare class ProgramModelBuilder {
     readonly host: ProgramModelBuilderHost;
+    private readonly identities;
+    private nextProgramId;
+    /** Release the lookup index together with the public program values at snapshot end/disposal. */
+    clearCache(): void;
     constructor(host: ProgramModelBuilderHost);
     /**
      * Creates an incremental parser state for line-by-line assembly.
@@ -54,7 +67,7 @@ export declare class ProgramModelBuilder {
      * @param {number} [startLine] Optional starting line number.
      * @returns {ProgramModel} The parsed program model.
      */
-    buildProgramModel(source: string, sourceFile?: string, startLine?: number): ProgramModel;
+    buildProgramModel(source: string, sourceFile?: string, startLine?: number, sourceKind?: "physical" | "generated"): ProgramModel;
     /**
      * Creates a typed include node from a source file body.
      * @param {string} file The include file name.
@@ -69,7 +82,9 @@ export declare class ProgramModelBuilder {
      * @param {number} [startLine] Optional starting line number.
      * @returns {ExecutableNode[]} The cached or parsed nodes.
      */
-    getOrBuildPassProgram(commands: Array<string | SourcedCommand>, sourceFile?: string, startLine?: number): ExecutableNode[];
+    getOrBuildPassProgram(commands: Array<string | SourcedCommand>, sourceFile?: string, startLine?: number, sourceKind?: "physical" | "generated"): ExecutableNode[];
+    /** Index text separately from short public cache identities; never retain a second joined source copy. */
+    private getOrBuildCachedProgram;
     /**
      * Consumes one raw command into an incremental parse state and returns newly
      * completed top-level executable nodes.
@@ -79,7 +94,7 @@ export declare class ProgramModelBuilder {
      * @param {number} [sourceLine] Optional source line override.
      * @returns {ExecutableNode[]} Newly completed top-level nodes.
      */
-    consumeIncrementalCommand(state: IncrementalProgramParseState, rawCommand: string, sourceFile?: string, sourceLine?: number): ExecutableNode[];
+    consumeIncrementalCommand(state: IncrementalProgramParseState, rawCommand: string, sourceFile?: string, sourceLine?: number, normalized?: NormalizedCommand): ExecutableNode[];
     /**
      * Parses a flat command stream into nested executable nodes.
      * @param {Array<string | SourcedCommand>} commands The command stream.
@@ -87,7 +102,7 @@ export declare class ProgramModelBuilder {
      * @param {number} [startLine] Optional starting line number.
      * @returns {ExecutableNode[]} The executable nodes.
      */
-    parseCommandStreamToNodes(commands: Array<string | SourcedCommand>, sourceFile?: string, startLine?: number): ExecutableNode[];
+    parseCommandStreamToNodes(commands: Array<string | SourcedCommand>, sourceFile?: string, startLine?: number, sourceKind?: "physical" | "generated"): ExecutableNode[];
     /**
      * Pushes to current.
      * @param {IncrementalProgramParseState} state The state.
@@ -101,7 +116,7 @@ export declare class ProgramModelBuilder {
      * @param {string} sourceFile The source file.
      * @param {number} sourceLine The source line.
      */
-    consumeCommandIntoState(state: IncrementalProgramParseState, rawCommand: string, sourceFile: string, sourceLine: number): void;
+    consumeCommandIntoState(state: IncrementalProgramParseState, rawCommand: string, sourceFile: string, sourceLine: number, normalized?: NormalizedCommand): void;
     isNodeComplete(node: ExecutableNode): boolean;
     drainCompletedRoots(state: IncrementalProgramParseState): ExecutableNode[];
 }

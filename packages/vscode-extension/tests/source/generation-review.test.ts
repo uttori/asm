@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { sourceGit, type SourceMergePreview } from "@uttori/asm-disassembler";
+import { sourceGit, type SourceMergePreview } from "@uttori/asm-disassembler/source-project";
 
 import { test } from "../../../../tests/ava-helper.js";
 import { readSourceGenerationReview } from "../../src/source/generation-review.js";

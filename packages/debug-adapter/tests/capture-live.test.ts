@@ -11,12 +11,8 @@ import {
   busScope,
   busSession,
 } from "../../../tests/helpers/capture-bus.js";
-import {
-  NativeCaptureFileCursor,
-  recoverCaptureFile,
-  type NativeCaptureFilePosition,
-} from "../src/capture-file.js";
-import { captureCrc32c } from "../src/capture-v2.js";
+import { NativeCaptureFileCursor, recoverCaptureFile, type NativeCaptureFilePosition,captureCrc32c } from "@uttori/asm-capture";
+
 
 const header = busJsonFrame("ACS2", { ...captureFixtureHeader, scope: busScope });
 const pair = (n: number) =>

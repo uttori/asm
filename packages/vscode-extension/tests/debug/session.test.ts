@@ -3,8 +3,9 @@ import { registerHooks } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
+import { type CaptureFileSummary } from "@uttori/asm-capture";
 import { AddressToLineMapping, createDebugMap } from "@uttori/asm-core";
-import { LosslessCaptureFileRecorder, type CaptureFileSummary } from "@uttori/asm-debug-adapter";
+import { LosslessCaptureFileRecorder } from "@uttori/asm-debug-adapter";
 import sinon from "sinon";
 import type {
   DebugAdapterDescriptorFactory,
@@ -130,6 +131,7 @@ const host = {
   commandResult: undefined as unknown,
   terminate: undefined as ((session: DebugSession) => void) | undefined,
   warningResult: undefined as Promise<unknown> | undefined,
+  panels: [] as { webview: { html: string } }[],
 };
 
 Object.assign(globalThis, { __uttoriDebugTest: host });
@@ -184,6 +186,11 @@ registerHooks({
             }),
           };
           export const window = {
+            createWebviewPanel: () => {
+              const panel = { webview: { html: "" } };
+              host.panels.push(panel);
+              return panel;
+            },
             showSaveDialog: async () => host.destination,
             withProgress: async (options, action) => {
               host.progress.push(options);
@@ -244,6 +251,7 @@ const {
 } = await import("../../src/debug/session.js");
 const { runtimeCapturePhase, onDidChangeRuntimeCapture } =
   await import("../../src/runtime/capture-state.js");
+const { saveNesPPUSnapshot } = await import("../../src/debug/nes-ppu.js");
 
 const reset = (): void => {
   host.trusted = true;
@@ -264,7 +272,66 @@ const reset = (): void => {
   host.commandResult = undefined;
   host.terminate = undefined;
   host.warningResult = undefined;
+  host.panels = [];
 };
+
+test.serial(
+  "NES PPU snapshots validate DAP responses before writing or opening a view",
+  async (t) => {
+    reset();
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-ppu-response-"));
+    t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const native = fs.readFileSync(
+      new URL("../../../debug-adapter/tests/fixtures/nes-ppu/ppu-snapshot.bin", import.meta.url),
+    );
+    const data = native.toString("base64");
+    const metadata = {
+      architecture: "65xx.2a03",
+      addressSpace: "nes.cpu",
+      romContentSha256: "1".repeat(64),
+      romFileSha256: "2".repeat(64),
+      producer: { id: "test", revision: "fixture" },
+    };
+    let response: unknown;
+    const session = { id: "ppu", configuration: {}, customRequest: async () => response };
+    if (!isDebugSession(session)) {
+      throw new Error("debug session stub");
+    }
+    for (response of [
+      undefined,
+      null,
+      [],
+      {},
+      { data: 0 },
+      { data, unreadableBytes: 1 },
+      { data, unreadableBytes: "0" },
+      { data, unreadableBytes: false },
+    ]) {
+      await t.throwsAsync(saveNesPPUSnapshot(session, metadata, directory), {
+        message: /Incomplete NES PPU snapshot/,
+      });
+    }
+    t.deepEqual(fs.readdirSync(directory), []);
+    t.is(host.panels.length, 0);
+    // DAP permits omission or zero for a complete read; both must save identical native evidence.
+    for (response of [{ data }, { data, unreadableBytes: 0 }]) {
+      const saved = await saveNesPPUSnapshot(session, metadata, directory);
+      t.deepEqual(fs.readFileSync(path.join(saved.directory, "ppu.bin")), native);
+      t.regex(
+        fs.readFileSync(path.join(saved.directory, "identity.json"), "utf8"),
+        /snapshotSha256/,
+      );
+      t.true(fs.existsSync(path.join(saved.directory, "index.html")));
+    }
+    t.is(host.panels.length, 2);
+    t.true(host.panels.every((panel) => panel.webview.html.includes("Nametables")));
+    t.false(
+      fs
+        .readdirSync(path.join(directory, ".uttori-local/graphics/snapshots"))
+        .some((name) => name.startsWith(".pending-")),
+    );
+  },
+);
 
 const workspaceFolder = (file: string): WorkspaceFolder => {
   const value = { uri: uri(file), name: "workspace", index: 0 };

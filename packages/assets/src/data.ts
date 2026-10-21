@@ -1,7 +1,24 @@
 import type { AssetDocument, AssetEncoder, AssetImporter } from "./registry.js";
-export * from "./data-scalar.js";
-export * from "./data-structured.js";
-export * from "./data-text.js";
+export { type ScalarArrayOptions, decodeScalarArray, encodeScalarArray } from "./data-scalar.js";
+export {
+  type StructField,
+  type StructLayout,
+  type StructRecords,
+  decodeStructRecords,
+  encodeStructRecords,
+  type PointerTableOptions,
+  decodePointerTable,
+  encodePointerTable,
+  type IndexTableOptions,
+  decodeIndexTable,
+  encodeIndexTable,
+} from "./data-structured.js";
+export {
+  type SingleByteTextOptions,
+  type SingleByteText,
+  decodeSingleByteText,
+  encodeSingleByteText,
+} from "./data-text.js";
 
 /** Raw byte importer copies input so the result is independent of host buffers. */
 export const rawImporter: AssetImporter = Object.freeze({

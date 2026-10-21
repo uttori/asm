@@ -3,6 +3,16 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { runInNewContext } from "node:vm";
+
+import { buildSync } from "esbuild";
+
+import {
+  declaredArchiveClosure,
+  writePackageExportProbe,
+  type PackageArchiveNode,
+  type PackageConsumerExports,
+} from "./package-consumers.js";
 
 /** npm's inventory of an actual archive, after its prepack lifecycle completes. */
 interface PackedArchive {
@@ -352,15 +362,36 @@ try {
   const names = new Set(workspaces.map(({ manifest }) => manifest.name));
   const archives: string[] = [];
   const externalDependencies: Array<{ dependency: string; from: string }> = [];
+  const packageArchives = new Map<string, PackageArchiveNode>();
+  const packageExports = new Map<string, PackageConsumerExports>();
+  /** Resolve external versions from the declaring package, not from the repository root. */
+  const dependencyIdentity = (dependency: string, from: string): string => {
+    if (names.has(dependency)) {
+      return dependency;
+    }
+    const value: unknown = JSON.parse(
+      fs.readFileSync(dependencyManifest(dependency, from), "utf8"),
+    );
+    const manifest = readPackageIdentity(value);
+    return `${manifest.name}@${manifest.version}`;
+  };
   const imports: string[] = [];
   const commonJsImports: string[] = [];
   for (const { directory, manifest } of workspaces) {
     const archive = pack(directory, true);
+    const ownImports: string[] = [];
+    const ownCommonJsImports: string[] = [];
+    const jsonImports: string[] = [];
     const files = new Set(archive.files.map((file) => file.path));
     for (const [subpath, target] of Object.entries(manifest.exports)) {
       const specifier = manifest.name + subpath.slice(1);
       if (typeof target === "string") {
         assert.ok(files.has(target.replace(/^\.\//, "")), `${specifier}: missing ${target}`);
+        if (target.endsWith(".json")) {
+          jsonImports.push(specifier);
+        } else if (target.endsWith(".js") || target.endsWith(".mjs")) {
+          ownImports.push(specifier);
+        }
         continue;
       }
       // The maintainer-only source condition is opt-in. Normal runtime and type conditions must
@@ -370,8 +401,23 @@ try {
         if (condition === "require" && !destination) {
           continue;
         }
-        assertDistExport(destination, `${specifier}: invalid ${condition} export`);
-        const extension = condition === "types" ? ".d.ts" : ".js";
+        // The CLI's public runtime is self-contained so private game composition never becomes a public dependency.
+        const bundledCli =
+          manifest.name === "@uttori/asm-cli" &&
+          specifier === manifest.name &&
+          condition === "import";
+        if (bundledCli) {
+          assert.equal(destination, "./out/cli.mjs");
+        } else {
+          assertDistExport(destination, `${specifier}: invalid ${condition} export`);
+        }
+        assert.ok(destination);
+        let extension = ".js";
+        if (condition === "types") {
+          extension = ".d.ts";
+        } else if (bundledCli) {
+          extension = ".mjs";
+        }
         assert.ok(
           destination.endsWith(extension),
           `${specifier}: ${condition} is not ${extension}`,
@@ -379,8 +425,10 @@ try {
         assert.ok(files.has(destination.slice(2)), `${specifier}: missing ${destination}`);
       }
       imports.push(specifier);
+      ownImports.push(specifier);
       if (target.require) {
         commonJsImports.push(specifier);
+        ownCommonJsImports.push(specifier);
       }
     }
     for (const binary of Object.values(manifest.bin ?? {})) {
@@ -423,7 +471,19 @@ try {
         externalDependencies.push({ dependency, from: directory });
       }
     }
-    archives.push(path.join(scratch, archive.filename));
+    const archivePath = path.join(scratch, archive.filename);
+    archives.push(archivePath);
+    packageArchives.set(manifest.name, {
+      archive: archivePath,
+      dependencies: Object.keys(manifest.dependencies ?? {}).map((name) =>
+        dependencyIdentity(name, directory),
+      ),
+    });
+    packageExports.set(manifest.name, {
+      imports: ownImports,
+      commonJsImports: ownCommonJsImports,
+      jsonImports,
+    });
     console.log(`${manifest.name}: ${files.size} files, compiled exports and executables present`);
   }
 
@@ -440,7 +500,14 @@ try {
     }
     stagedDependencies.add(identity);
     const archive = pack(path.dirname(manifestPath), false);
-    archives.push(path.join(scratch, archive.filename));
+    const archivePath = path.join(scratch, archive.filename);
+    archives.push(archivePath);
+    packageArchives.set(identity, {
+      archive: archivePath,
+      dependencies: Object.keys(manifest.dependencies ?? {}).map((name) =>
+        dependencyIdentity(name, path.dirname(manifestPath)),
+      ),
+    });
     for (const transitive of Object.keys(manifest.dependencies ?? {})) {
       if (!names.has(transitive)) {
         externalDependencies.push({ dependency: transitive, from: path.dirname(manifestPath) });
@@ -448,6 +515,115 @@ try {
     }
   }
 
+  for (const { manifest } of workspaces) {
+    const consumer = path.join(scratch, "isolated", manifest.name);
+    fs.mkdirSync(consumer, { recursive: true });
+    fs.writeFileSync(path.join(consumer, "package.json"), '{"private":true,"type":"module"}\n');
+    npm(
+      [
+        "install",
+        "--offline",
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund",
+        "--package-lock=false",
+        ...declaredArchiveClosure([manifest.name], packageArchives),
+      ],
+      consumer,
+    );
+    const exports = packageExports.get(manifest.name);
+    assert.ok(exports);
+    run(process.execPath, [writePackageExportProbe(consumer, exports)], consumer);
+    // TypeScript itself and Node ambient types are test tools, never package-resolution fallbacks.
+    fs.writeFileSync(
+      path.join(consumer, "public-api.mts"),
+      exports.imports
+        .map(
+          (name, index) =>
+            `import * as api${index} from ${JSON.stringify(name)};\nvoid api${index};`,
+        )
+        .join("\n"),
+    );
+    fs.writeFileSync(
+      path.join(consumer, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          target: "ES2024",
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          strict: true,
+          noEmit: true,
+          types: ["node"],
+          typeRoots: [path.join(root, "node_modules", "@types")],
+        },
+        files: ["public-api.mts"],
+      }),
+    );
+    run(
+      process.execPath,
+      [path.join(root, "node_modules/typescript/bin/tsc"), "-p", "tsconfig.json"],
+      consumer,
+    );
+    console.log(
+      `${manifest.name}: isolated declared dependencies, runtime exports and types passed`,
+    );
+  }
+
+  // Compile the guide's exact source in a consumer containing only its declared dependency closure.
+  // Test tooling uses absolute paths; TypeScript package resolution cannot fall back to this repository.
+  const example = path.join(scratch, "plugin-author");
+  fs.mkdirSync(example);
+  const exampleRoot = path.join(root, "packages/plugin-author");
+  for (const file of ["package.json", "main.asm", "uttori-asm.config.json", "src"]) {
+    fs.cpSync(path.join(exampleRoot, file), path.join(example, file), { recursive: true });
+  }
+  const exampleManifest: unknown = JSON.parse(
+    fs.readFileSync(path.join(example, "package.json"), "utf8"),
+  );
+  assert.ok(isRecord(exampleManifest));
+  const exampleDependencies = readStringMap(exampleManifest.dependencies, "example dependencies");
+  npm(
+    [
+      "install",
+      "--offline",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+      "--package-lock=false",
+      ...declaredArchiveClosure(Object.keys(exampleDependencies ?? {}), packageArchives),
+    ],
+    example,
+  );
+  fs.copyFileSync(
+    path.join(root, "tests/package-consumer/plugin-author.mts"),
+    path.join(example, "plugin-author.mts"),
+  );
+  fs.writeFileSync(
+    path.join(example, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        target: "ES2024",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        strict: true,
+        rootDir: ".",
+        outDir: "compiled",
+        types: ["node"],
+        typeRoots: [path.join(root, "node_modules/@types")],
+      },
+      include: ["src/index.ts", "plugin-author.mts"],
+    }),
+  );
+  run(
+    process.execPath,
+    [path.join(root, "node_modules/typescript/bin/tsc"), "-p", "tsconfig.json"],
+    example,
+  );
+  console.log(run(process.execPath, ["compiled/plugin-author.mjs"], example).trim());
+
+  // Private game integration is supplied only to the aggregate project fixture. Isolated public consumers
+  // above must continue to succeed with their declared public dependency closures alone.
+  const gameArchive = pack(path.join(root, "packages/game-secret-of-mana"), true);
   const consumer = path.join(scratch, "consumer");
   fs.mkdirSync(consumer);
   fs.writeFileSync(path.join(consumer, "package.json"), '{"private":true,"type":"module"}\n');
@@ -460,6 +636,7 @@ try {
       "--no-fund",
       "--package-lock=false",
       ...archives,
+      path.join(scratch, gameArchive.filename),
     ],
     consumer,
   );
@@ -547,6 +724,79 @@ try {
     [path.join(root, "node_modules/typescript/bin/tsc"), "-p", "tsconfig.json"],
     consumer,
   );
+  // Compile from installed archives with browser conditions, then execute without Node globals.
+  fs.writeFileSync(
+    path.join(consumer, "portable-types.mts"),
+    `
+import type { ArchitectureEncoder, ArchitectureEncoderContext, ParsedInstructionOperands,
+  ParsedOperand, InstructionResolutionFrame, OperandResolutionContext, ArchitectureDecodeContext,
+  ArchitectureDecodeResult, ArchitectureDecoder, ArchitectureInstructionSpecification,
+  DecodedInstruction, DecodedOperand, DecodedReference, InstructionFlow } from "@uttori/asm-core";
+import snes from "@uttori/asm-plugin-snes";
+void snes;
+`,
+  );
+  fs.writeFileSync(
+    path.join(consumer, "tsconfig.browser.json"),
+    JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "Bundler",
+        customConditions: ["browser"],
+        strict: true,
+        noEmit: true,
+        skipLibCheck: false,
+        types: ["node"],
+        typeRoots: [path.join(root, "node_modules/@types")],
+      },
+      files: ["portable-types.mts"],
+    }),
+  );
+  run(
+    process.execPath,
+    [path.join(root, "node_modules/typescript/bin/tsc"), "-p", "tsconfig.browser.json"],
+    consumer,
+  );
+  const portable = buildSync({
+    stdin: {
+      resolveDir: consumer,
+      sourcefile: "portable-consumer.js",
+      contents: `
+    import {Assembler,MemoryAssemblyFileProvider,PluginManager} from "@uttori/asm-core";
+    import snes from "@uttori/asm-plugin-snes";
+    globalThis.portableResult=(async()=>{
+      const manager=new PluginManager();await manager.activatePlugins([{plugin:snes}]);
+      const assembler=new Assembler({environment:manager.freeze(),target:"snes.sfc",fileProvider:new MemoryAssemblyFileProvider({})});
+      try {const program=assembler.buildProgramModel("lorom\\norg $808000\\nMain: db 2 * (3 + 4)\\ncheck bankcross off\\ndb (5+1)\\nfunction twice(x) = x*2\\nmacro Emit(x)\\ndb twice(<x>)\\nendmacro\\n%Emit(4)","main.asm");assembler.assembleProgram(JSON.parse(JSON.stringify(program)));return JSON.stringify([...assembler.getBinaryOutput()]);}
+      finally {assembler.dispose();await manager.dispose();}
+    })();
+  `,
+    },
+    platform: "browser",
+    conditions: ["browser"],
+    bundle: true,
+    write: false,
+    format: "esm",
+    logLevel: "silent",
+  });
+  const context = {
+    portableResult: undefined as Promise<string> | undefined,
+    TextEncoder,
+    TextDecoder,
+    structuredClone,
+    Uint8Array,
+    Uint16Array,
+    Uint32Array,
+    Int8Array,
+    Int16Array,
+    Int32Array,
+    ArrayBuffer,
+    DataView,
+  };
+  await runInNewContext(`(async () => { ${portable.outputFiles[0].text} })()`, context);
+  assert.equal(await context.portableResult, "[14,6,8]");
+  console.log("Installed portable browser conditions assemble without Node globals.");
   console.log(run(process.execPath, ["compiled/contracts.mjs"], consumer).trim());
   console.log(run(process.execPath, ["compiled/storage.mjs"], consumer).trim());
   console.log(run(process.execPath, ["compiled/cli.mjs"], consumer).trim());

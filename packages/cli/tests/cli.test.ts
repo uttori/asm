@@ -534,7 +534,7 @@ test("E2E: CLI plugin adds a lossless asset transform to the standard SNES targe
   await fs.writeFile(
     plugin,
     `export default {
-  manifest: { id: "example.cli-transform", name: "CLI transform", version: "1.0.0", apiVersion: 1 },
+  manifest: { id: "example.cli-transform", name: "CLI transform", version: "1.0.0", apiVersion: 2 },
   activate(context) {
     context.registerAssetTransform({
       id: "example.xor", version: "1.0.0", targets: ["snes.sfc"],
@@ -686,17 +686,17 @@ test.serial(
     await fs.writeFile(
       plugin,
       `const plugin = {
-  manifest: { id: "cli.dispose-plugin", name: "CLI dispose plugin", version: "1.0.0", apiVersion: 1 },
+  manifest: { id: "cli.dispose-plugin", name: "CLI dispose plugin", version: "1.0.0", apiVersion: 2 },
   activate(context) {
     context.registerArchitecture({
       id: "cli.dispose-architecture",
       displayName: "CLI dispose architecture",
       unknownInstructionBehavior: "throw",
-      splitOperands: (text) => (text ? [text] : []),
-      classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
-      createEncoder: ({ emission }) => ({
-        estimateSize: () => 1,
-        encode: () => {
+      operandGrammar: { version: "1", parse: () => ({ operands: [] }) },
+      createTypedEncoder: () => ({
+        estimate: (frame) => { frame.choose("fixture", 1); return 1; },
+        encode: (frame, { emission }) => {
+          frame.choose("fixture", 1);
           emission.writeByte(1);
           return true;
         },

@@ -3,8 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { sourceGit, sourceContentHash } from "@uttori/asm-disassembler";
-import type { SnesSourceBuild } from "@uttori/asm-plugin-snes";
+import { sourceGit, sourceContentHash } from "@uttori/asm-disassembler/source-project";
+import type { SnesSourceBuild } from "@uttori/asm-plugin-snes/disassembler";
 import * as vscode from "vscode";
 
 /** Minimal stable built-in Git extension API used only by the native acceptance fixture. */

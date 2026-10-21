@@ -10,6 +10,8 @@ import {
   ConfigurationTarget,
   ExtensionMode,
   Hover,
+  RelativePattern,
+  type WorkspaceFolder,
   StatusBarAlignment,
   Uri,
   debug as vscodeDebug,
@@ -113,7 +115,14 @@ const ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"] as const;
  * Language client connected to the bundled server process.
  * @see https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#language-client
  */
-let client: LanguageClient | undefined;
+const languageClients = new Map<string, LanguageClient>();
+/** Select by document ownership; background requests must never inherit another root's active target. */
+function languageClientFor(
+  uri = window.activeTextEditor?.document.uri,
+): LanguageClient | undefined {
+  const folder = uri ? workspace.getWorkspaceFolder(uri) : workspace.workspaceFolders?.[0];
+  return languageClients.get(folder?.uri.toString() ?? "");
+}
 /** Build completion publishes artifacts to the same information controller used by editor hovers. */
 let editorInformationController: AnalysisAnnotationController | undefined;
 /**
@@ -173,8 +182,8 @@ let statusItem: StatusBarItem;
  * Returns the JSON-safe project settings sent across the LSP boundary.
  * @returns {Record<string, unknown>} The complete language-server initialization settings.
  */
-function serverInitializationOptions(): Record<string, unknown> {
-  const config = workspace.getConfiguration("asm");
+function serverInitializationOptions(resource?: Uri): Record<string, unknown> {
+  const config = workspace.getConfiguration("asm", resource ?? null);
   return {
     configFile: config.get<string>("configFile", ""),
     plugins: config.get<unknown[]>("plugins", []),
@@ -233,23 +242,27 @@ export function activate(context: ExtensionContext): void {
   });
   context.subscriptions.push(worker);
   const serverModule = context.asAbsolutePath(path.join("server", "server.mjs"));
-  const assetPreviewController = new AssetPreviewController(() => client);
+  const assetPreviewController = new AssetPreviewController(languageClientFor);
   context.subscriptions.push(assetPreviewController);
 
   /**
    * Spawn Node on the ESM server bundle. The `module` ServerOptions form uses `cp.fork()`,
    * which cannot load an ESM graph with top-level await.
+   * Executable transports do not set Electron's Node mode for us; explicitly select it so the
+   * Extension Host executable runs the server instead of starting another editor process.
    */
   const serverOptions: ServerOptions = {
     run: {
       command: process.execPath,
       args: [serverModule],
       transport: TransportKind.stdio,
+      options: { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" } },
     },
     debug: {
       command: process.execPath,
-      args: ["--nolazy", "--inspect=6009", serverModule],
+      args: ["--nolazy", "--inspect=0", serverModule],
       transport: TransportKind.stdio,
+      options: { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" } },
     },
   };
 
@@ -266,13 +279,6 @@ export function activate(context: ExtensionContext): void {
       scheme: "file" as const,
       language,
     })),
-    synchronize: {
-      fileEvents: [
-        workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
-        workspace.createFileSystemWatcher("**/*.{png,wav,wave,json,bin,pal,palette}"),
-        workspace.createFileSystemWatcher("**/uttori-asm.config.json"),
-      ],
-    },
     middleware: {
       provideHover: async (document, position, token, next) => {
         const instruction = await next(document, position, token);
@@ -305,13 +311,6 @@ export function activate(context: ExtensionContext): void {
     traceOutputChannel: outputChannel,
   };
 
-  client = new LanguageClient(
-    "uttoriAsmLanguageServer",
-    "Uttori Assembly Language Server",
-    serverOptions,
-    clientOptions,
-  );
-
   statusItem = window.createStatusBarItem(StatusBarAlignment.Left, 0);
   statusItem.command = "asm.toggleWatch";
   updateStatusItem();
@@ -319,7 +318,7 @@ export function activate(context: ExtensionContext): void {
 
   const panelProvider = new ProjectPanelProvider(
     context.extensionUri,
-    () => client,
+    () => languageClientFor(),
     () => initConfig(),
   );
   const indexProvider = new IndexDetailsProvider(() => panelProvider.snapshot());
@@ -327,7 +326,7 @@ export function activate(context: ExtensionContext): void {
     void panelProvider.refresh();
     indexProvider.refresh();
   };
-  const outlineProvider = new ProjectOutlineProvider(() => client);
+  const outlineProvider = new ProjectOutlineProvider(() => languageClientFor());
   const coverageProvider = new AnalysisCoverageProvider();
   const sourcesProvider = new AnalysisSourcesProvider();
   const analysisAnnotationController = new AnalysisAnnotationController(
@@ -473,13 +472,21 @@ export function activate(context: ExtensionContext): void {
     ),
     workspace.onDidGrantWorkspaceTrust(() => {
       refreshProjectViews();
-      void client?.sendNotification("workspace/didChangeConfiguration", {
-        settings: {
-          asm: serverInitializationOptions(),
-        },
-      });
+      for (const [key, languageClient] of languageClients) {
+        void languageClient.sendNotification("workspace/didChangeConfiguration", {
+          settings: { asm: serverInitializationOptions(key ? Uri.parse(key) : undefined) },
+        });
+      }
     }),
     workspace.onDidChangeConfiguration((event) => {
+      for (const [key, languageClient] of languageClients) {
+        const resource = key ? Uri.parse(key) : undefined;
+        if (event.affectsConfiguration("asm", resource)) {
+          void languageClient.sendNotification("workspace/didChangeConfiguration", {
+            settings: { asm: serverInitializationOptions(resource) },
+          });
+        }
+      }
       if (
         event.affectsConfiguration("asm.editorInfo") ||
         event.affectsConfiguration("asm.analysis.showAnnotations") ||
@@ -507,55 +514,206 @@ export function activate(context: ExtensionContext): void {
 
   analysisAnnotationController.refresh();
 
-  void client.start().then(() => {
-    if (!client) {
+  const clientResources = new Map<string, Disposable[]>();
+  const startClient = (folder?: WorkspaceFolder): void => {
+    const key = folder?.uri.toString() ?? "";
+    if (languageClients.has(key)) {
       return;
     }
-    if (
-      context.extensionMode === ExtensionMode.Development ||
-      process.env.UTTORI_ASM_LSP_TRACE === "verbose"
-    ) {
-      void client.setTrace(Trace.Verbose);
-    }
-    refreshProjectViews();
-    context.subscriptions.push(
-      client.onRequest("asm/researchBuffers", ({ root }: { root: string }) => {
-        // Include unsaved/new JSON documents in the same F2 transaction while leaving their language
-        // features with the JSON extension. The server filters these against the project's research roots.
-        const buffers = workspace.textDocuments
-          .filter((document) => {
-            const relative = path.relative(root, document.uri.fsPath);
-            return (
-              document.uri.scheme === "file" &&
-              document.uri.fsPath.endsWith(".json") &&
-              relative !== ".." &&
-              !relative.startsWith(`..${path.sep}`) &&
-              !path.isAbsolute(relative)
-            );
-          })
-          .map((document) => ({
-            uri: document.uri.toString(),
-            version: document.version,
-            text: document.getText(),
-          }));
-        if (
-          buffers.length > 512 ||
-          buffers.reduce((total, buffer) => total + Buffer.byteLength(buffer.text), 0) >
-            32 * 1024 * 1024
-        ) {
-          throw new Error(
-            "Open research buffers exceed the rename budget. Save or close unrelated JSON documents.",
-          );
-        }
-        return buffers;
-      }),
-      client.onNotification("asm/indexUpdated", () => {
-        refreshProjectViews();
-        outlineProvider.refresh();
-      }),
+    const owned: Disposable[] = [];
+    const owns = (uri: Uri): boolean =>
+      (workspace.getWorkspaceFolder(uri)?.uri.toString() ?? "") === key;
+    const watch = (pattern: string) => {
+      const watcher = workspace.createFileSystemWatcher(
+        folder ? new RelativePattern(folder, pattern) : pattern,
+      );
+      owned.push(watcher);
+      return watcher;
+    };
+    const client = new LanguageClient(
+      "uttoriAsmLanguageServer" + key,
+      "Uttori Assembly Language Server",
+      serverOptions,
+      {
+        ...clientOptions,
+        // Nested folders can match a parent's selector. The deepest workspace owner alone receives
+        // synchronization and answers requests, so identical names never cross project environments.
+        middleware: {
+          ...clientOptions.middleware,
+          didOpen: async (document, next) => {
+            if (owns(document.uri)) {
+              return next(document);
+            }
+          },
+          didChange: async (event, next) => {
+            if (owns(event.document.uri)) {
+              return next(event);
+            }
+          },
+          didClose: async (document, next) => {
+            if (owns(document.uri)) {
+              return next(document);
+            }
+          },
+          didSave: async (document, next) => {
+            if (owns(document.uri)) {
+              return next(document);
+            }
+          },
+          provideHover: (document, position, token, next) =>
+            owns(document.uri)
+              ? clientOptions.middleware!.provideHover!(document, position, token, next)
+              : undefined,
+          provideCompletionItem: (document, position, providerContext, token, next) =>
+            owns(document.uri) ? next(document, position, providerContext, token) : undefined,
+          provideDefinition: (document, position, token, next) =>
+            owns(document.uri) ? next(document, position, token) : undefined,
+          provideReferences: (document, position, providerContext, token, next) =>
+            owns(document.uri) ? next(document, position, providerContext, token) : undefined,
+          provideDocumentSymbols: (document, token, next) =>
+            owns(document.uri) ? next(document, token) : undefined,
+          provideRenameEdits: (document, position, name, token, next) =>
+            owns(document.uri) ? next(document, position, name, token) : undefined,
+          prepareRename: (document, position, token, next) =>
+            owns(document.uri) ? next(document, position, token) : undefined,
+          provideSignatureHelp: (document, position, providerContext, token, next) =>
+            owns(document.uri) ? next(document, position, providerContext, token) : undefined,
+          provideDocumentSemanticTokens: (document, token, next) =>
+            owns(document.uri) ? next(document, token) : undefined,
+          provideDocumentSemanticTokensEdits: (document, previous, token, next) =>
+            owns(document.uri) ? next(document, previous, token) : undefined,
+        },
+        workspaceFolder: folder,
+        documentSelector: ASSEMBLY_LANGUAGE_IDS.map((language) => ({
+          scheme: "file",
+          language,
+          ...(folder ? { pattern: { baseUri: folder.uri.toString(), pattern: "**/*" } } : {}),
+        })),
+        synchronize: {
+          fileEvents: [
+            watch("**/*.{asm,src,SRC,s,inc}"),
+            watch("**/*.{png,wav,wave,json,bin,pal,palette}"),
+            watch("**/uttori-asm.config.json"),
+          ],
+        },
+        initializationOptions: {
+          ...serverInitializationOptions(folder?.uri),
+          ...(folder ? { owningRoot: folder.uri.toString() } : {}),
+        },
+      },
     );
-    return;
-  });
+    languageClients.set(key, client);
+    clientResources.set(key, owned);
+    outputChannel?.info(`Starting language server for ${key || "standalone files"}.`);
+    void client
+      .start()
+      .then(() => {
+        if (languageClients.get(key) !== client) {
+          return;
+        }
+        outputChannel?.info(`Language server ready for ${key || "standalone files"}.`);
+        if (
+          context.extensionMode === ExtensionMode.Development ||
+          process.env.UTTORI_ASM_LSP_TRACE === "verbose"
+        ) {
+          void client.setTrace(Trace.Verbose);
+        }
+        refreshProjectViews();
+        owned.push(
+          client.onRequest("asm/researchBuffers", ({ root }: { root: string }) => {
+            // Include unsaved/new JSON documents in the same F2 transaction while leaving their language
+            // features with the JSON extension. The server filters these against the project's research roots.
+            const buffers = workspace.textDocuments
+              .filter((document) => {
+                const relative = path.relative(root, document.uri.fsPath);
+                return (
+                  document.uri.scheme === "file" &&
+                  document.uri.fsPath.endsWith(".json") &&
+                  relative !== ".." &&
+                  !relative.startsWith(`..${path.sep}`) &&
+                  !path.isAbsolute(relative)
+                );
+              })
+              .map((document) => ({
+                uri: document.uri.toString(),
+                version: document.version,
+                text: document.getText(),
+              }));
+            if (
+              buffers.length > 512 ||
+              buffers.reduce((total, buffer) => total + Buffer.byteLength(buffer.text), 0) >
+                32 * 1024 * 1024
+            ) {
+              throw new Error(
+                "Open research buffers exceed the rename budget. Save or close unrelated JSON documents.",
+              );
+            }
+            return buffers;
+          }),
+          client.onNotification("asm/indexUpdated", () => {
+            if (client !== languageClientFor()) {
+              return;
+            }
+            refreshProjectViews();
+            outlineProvider.refresh();
+          }),
+        );
+        return;
+      })
+      .catch((error: unknown) => {
+        // Failed startup must release this root so a later folder/configuration event can retry it.
+        if (languageClients.get(key) === client) {
+          languageClients.delete(key);
+          clientResources.delete(key);
+          for (const resource of owned) {
+            resource.dispose();
+          }
+        }
+        void client.stop().catch((stopError: unknown) => outputChannel?.error(String(stopError)));
+        outputChannel?.error(`Language server ${folder?.name ?? "files"}: ${String(error)}`);
+      });
+  };
+  const reconcileClients = (): void => {
+    const folders: readonly (WorkspaceFolder | undefined)[] = workspace.workspaceFolders?.length
+      ? workspace.workspaceFolders
+      : [undefined];
+    const retained = new Set(folders.map((folder) => folder?.uri.toString() ?? ""));
+    for (const [key, languageClient] of languageClients) {
+      if (retained.has(key)) {
+        continue;
+      }
+      languageClients.delete(key);
+      for (const resource of clientResources.get(key) ?? []) {
+        resource.dispose();
+      }
+      clientResources.delete(key);
+      void languageClient.stop().catch((error: unknown) => outputChannel?.error(String(error)));
+    }
+    for (const folder of folders) {
+      startClient(folder);
+    }
+  };
+  context.subscriptions.push(
+    workspace.onDidChangeWorkspaceFolders(reconcileClients),
+    window.onDidChangeActiveTextEditor(() => {
+      // Opening a document can make a newly added root visible before its folder notification.
+      // Reconcile idempotently before routing view requests, including retries after startup failure.
+      reconcileClients();
+      refreshProjectViews();
+      outlineProvider.refresh();
+    }),
+    {
+      dispose: () => {
+        for (const resources of clientResources.values()) {
+          for (const resource of resources) {
+            resource.dispose();
+          }
+        }
+        clientResources.clear();
+      },
+    },
+  );
+  reconcileClients();
 }
 
 /**
@@ -564,13 +722,15 @@ export function activate(context: ExtensionContext): void {
  * @see https://code.visualstudio.com/api/get-started/extension-anatomy#extension-entry-file
  * @see https://code.visualstudio.com/api/references/vscode-api#Disposable.dispose
  */
-export function deactivate(): Thenable<void> | undefined {
+export async function deactivate(): Promise<void> {
   saveListener?.dispose();
   if (watchTimer) {
     clearTimeout(watchTimer);
   }
   extensionContext = undefined;
-  return client?.stop();
+  const clients = [...languageClients.values()];
+  languageClients.clear();
+  await Promise.all(clients.map((languageClient) => languageClient.stop()));
 }
 
 /**
@@ -892,6 +1052,7 @@ async function initConfig(): Promise<void> {
   };
   let metadata: ProjectMetadata = {};
   try {
+    const client = languageClientFor(folder.uri);
     if (client) {
       metadata = await client.sendRequest<ProjectMetadata>("asm/projectMetadata");
     }
@@ -985,6 +1146,7 @@ async function runBuild(
       return { ok: false, message };
     }
   }
+  const client = languageClientFor(documentUri ? Uri.parse(documentUri) : undefined);
   if (!client) {
     const message = "Language server is not running.";
     outputChannel?.error(message);

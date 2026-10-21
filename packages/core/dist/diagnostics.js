@@ -32,13 +32,34 @@ export class AssemblyError extends Error {
  * @param {SourceSpan} [span] Optional precise source span.
  * @returns {AssemblySourceLocation} The normalized source location.
  */
-export function createAssemblySourceLocation(file, line, span) {
+export function createAssemblySourceLocation(file, line, span, origin) {
     return {
+        ...(origin ? { origin } : {}),
         file,
         line,
         span,
         range: span ? sourceSpanToRange(span, line) : undefined,
     };
+}
+/** Error identity/messages are preserved while the deepest expansion occurrence survives unwinding. */
+const errorSources = new WeakMap();
+/** Retain the innermost source while allowing the original exception and cause chain to propagate. */
+export function rememberErrorSource(error, location) {
+    if (error instanceof Error && !errorSource(error)) {
+        errorSources.set(error, location);
+    }
+}
+function errorSource(error) {
+    const visited = new Set();
+    while (error instanceof Error && !visited.has(error)) {
+        visited.add(error);
+        const location = errorSources.get(error);
+        if (location) {
+            return location;
+        }
+        error = error.cause;
+    }
+    return undefined;
 }
 /**
  * Converts an unknown error into a structured diagnostic.
@@ -48,6 +69,7 @@ export function createAssemblySourceLocation(file, line, span) {
  * @returns {AssemblyDiagnostic} The normalized diagnostic.
  */
 export function diagnosticFromError(error, fallbackLocation, stage) {
+    fallbackLocation = errorSource(error) ?? fallbackLocation;
     if (error instanceof AssemblyError) {
         return {
             code: error.code,

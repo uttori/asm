@@ -12,9 +12,15 @@ import type {
   DiagnosticDirectiveContext,
   TableDirectiveContext,
 } from "../../src/directives/types.js";
+import { renderExpressionNode } from "../../src/ir/expression-node.js";
 import type { ExpressionNode } from "../../src/ir/expression-node.js";
 
-const parseStubNumber = (input: string): number => {
+const parseStubNumber = (
+  input: string | import("../../src/ir/expression-node.js").ExpressionNode,
+): number => {
+  if (typeof input !== "string") {
+    input = renderExpressionNode(input);
+  }
   const text = input.trim();
   if (/^\$[\da-f]+$/i.test(text)) {
     return Number.parseInt(text.slice(1), 16);
@@ -37,11 +43,8 @@ const createDiagnosticContext = (
 test("assert passes a nonzero condition and ignores the message", (t) => {
   const seen: string[] = [];
   const ctx = createDiagnosticContext((expression) => {
-    if (typeof expression !== "string") {
-      t.fail();
-      return false;
-    }
-    seen.push(expression);
+    t.not(typeof expression, "string");
+    seen.push(typeof expression === "string" ? expression : renderExpressionNode(expression));
     return true;
   });
 
@@ -53,11 +56,8 @@ test("assert passes a nonzero condition and ignores the message", (t) => {
 test("assert splits the message at the first top-level comma", (t) => {
   const seen: string[] = [];
   const ctx = createDiagnosticContext((expression) => {
-    if (typeof expression !== "string") {
-      t.fail();
-      return false;
-    }
-    seen.push(expression);
+    t.not(typeof expression, "string");
+    seen.push(typeof expression === "string" ? expression : renderExpressionNode(expression));
     return true;
   });
 
@@ -326,11 +326,11 @@ test("misc registry dispatches assert, error, warn, and warnpc", (t) => {
     diagnostic: {
       session: {
         evaluateAssertion: (expression) => {
-          if (typeof expression !== "string") {
+          if (typeof expression === "string") {
             t.fail();
             return false;
           }
-          evaluated = expression;
+          evaluated = renderExpressionNode(expression);
           return true;
         },
         resolvedefines: (input) => input,

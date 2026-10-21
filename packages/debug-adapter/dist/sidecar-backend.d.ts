@@ -53,5 +53,5 @@ export declare class SidecarDebugBackend implements DebugBackend {
     /** @inheritdoc */
     onEvent(listener: (event: DebugBackendEvent) => void): DebugSubscription;
 }
-import { type CaptureRequestV2, type CaptureResultV2 } from "./capture-v2.js";
+import { type CaptureRequestV2, type CaptureResultV2 } from "@uttori/asm-capture";
 //# sourceMappingURL=sidecar-backend.d.ts.map

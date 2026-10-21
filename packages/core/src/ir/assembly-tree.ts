@@ -33,4 +33,15 @@ export type ConditionalBranchNode = {
   endLine?: number;
 };
 
-export type ExecutableNode = NormalizedCommand | LoopNode | ConditionalBranchNode;
+/** Captured syntax is selected as a unit; parsing its body never activates declaration effects. */
+export type CaptureNode = {
+  type: "capture";
+  captureKind: "macro" | "function" | "struct" | "dataStructs";
+  header: NormalizedCommand;
+  commands: ExecutableNode[];
+  footer?: NormalizedCommand;
+  startLine: number;
+  endLine?: number;
+};
+
+export type ExecutableNode = NormalizedCommand | LoopNode | ConditionalBranchNode | CaptureNode;

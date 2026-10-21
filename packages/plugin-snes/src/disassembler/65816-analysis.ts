@@ -1,5 +1,6 @@
 import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
 import {
+  readAnalysisTargetState,
   analyzeStaticControlFlow,
   HalfOpenIntervalIndex,
   type AnalysisRecord,
@@ -145,25 +146,8 @@ const readVector = (rom: RomImage, mapper: SnesMapper, pointer: number): number 
 };
 
 const stateOverrideFor = (annotation: IntervalAnnotation): Cpu65816StateOverride | undefined => {
-  if (!annotation.state) {
-    return undefined;
-  }
-  return {
-    ...(annotation.state.e === undefined ? {} : { e: annotation.state.e }),
-    ...(annotation.state.m === undefined ? {} : { m: annotation.state.m }),
-    ...(annotation.state.x === undefined ? {} : { x: annotation.state.x }),
-    ...(annotation.state.carry === undefined ? {} : { carry: annotation.state.carry }),
-    ...(annotation.state.programBank === undefined
-      ? {}
-      : { programBank: annotation.state.programBank }),
-    ...(annotation.state.dataBank === undefined ? {} : { dataBank: annotation.state.dataBank }),
-    ...(annotation.state.directPage === undefined
-      ? {}
-      : { directPage: annotation.state.directPage }),
-    ...(annotation.state.stackPointer === undefined
-      ? {}
-      : { stackPointer: annotation.state.stackPointer }),
-  };
+  const payload = readAnalysisTargetState(annotation.architecture, annotation.state);
+  return payload?.codec === "snes.65816" ? payload.state : undefined;
 };
 
 const controlTargetKind = (

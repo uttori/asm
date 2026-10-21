@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { runtimeBundleFor, writeRuntimeBundleReceipt } from "./runtime-bundles.mjs";
+export { pruneRuntimeOutputs } from "./runtime-bundles.mjs";
+
 /**
  * Wrap esbuild so each shipped bundle carries the license text of its bundled npm dependencies.
  * Missing license files fail the build instead of silently producing an incomplete archive.
@@ -8,6 +11,7 @@ import path from "node:path";
  * @returns {(options: import("esbuild").BuildOptions & { outfile: string }) => Promise<import("esbuild").BuildResult>} Builder that also writes OUTFILE.licenses.txt.
  */
 export const withBundleNotices = (build) => async (options) => {
+  const bundle = runtimeBundleFor(options);
   const result = await build({ ...options, metafile: true });
   const base = options.absWorkingDir ?? process.cwd();
   /** @type {Map<string, string>} License text grouped by package and installed version. */
@@ -90,5 +94,6 @@ export const withBundleNotices = (build) => async (options) => {
   const header =
     "Bundled npm dependency notices. License text is reproduced with normalized line endings.\n";
   fs.writeFileSync(`${options.outfile}.licenses.txt`, header + "\n" + sections.join("\n\n"));
+  writeRuntimeBundleReceipt(bundle, result.metafile, base);
   return result;
 };

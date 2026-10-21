@@ -8,22 +8,14 @@ import { createRuntimeBusCaptureSource } from "@uttori/asm-disassembler";
 import { test } from "../../../tests/ava-helper.js";
 import { captureFixtureHeader } from "../../../tests/helpers/capture-archive.js";
 import { busJsonFrame } from "../../../tests/helpers/capture-bus.js";
-import {
-  ANALYSIS_PROJECT_SCHEMA_VERSION,
-  RomImage,
-  publishAnalysisProject,
-  loadAnalysisProject,
-  importRuntimeBusTraceSourceIntoProject,
-  createRuntimeBusTraceImporter,
-} from "../../disassembler/src/index.js";
+import { ANALYSIS_PROJECT_SCHEMA_VERSION, RomImage, publishAnalysisProject, loadAnalysisProject, importRuntimeBusTraceSourceIntoProject, createRuntimeBusTraceImporter } from "../../disassembler/src/index.js";
 import { renderBusTraceReport } from "../../vscode-extension/src/runtime/bus-trace-report.js";
-import { recoverCaptureFile } from "../src/capture-file.js";
-import {
+import { recoverCaptureFile,
   captureCrc32c,
   decodeCaptureChunk,
   validateCaptureCapabilities,
-  validateCapturePosition,
-} from "../src/capture-v2.js";
+  validateCapturePosition } from "@uttori/asm-capture";
+
 
 test("native PPU effects survive framing, SQL import, duplicate import", async (t) => {
   const lines = execFileSync(

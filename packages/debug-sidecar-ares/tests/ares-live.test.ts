@@ -714,6 +714,7 @@ liveTest("built ares sidecar sustains ordered bounded 65816 trace pulls", async 
     )?.trace;
     t.deepEqual(traceCapabilities, {
       addressSpaces: ["snes.cpu"],
+      instructionDetails: true,
       maxBufferedEvents: 65_536,
       maxBatchEvents: 240,
     });

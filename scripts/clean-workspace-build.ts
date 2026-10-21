@@ -3,6 +3,9 @@ import * as path from "node:path";
 
 /** Explicit generated JavaScript/declaration directories removed before a workspace build. */
 const GENERATED_PACKAGE_DIRECTORIES = [
+  "packages/game-secret-of-mana/dist",
+  "packages/capture/dist",
+  "packages/workflows/dist",
   "packages/cli/dist",
   "packages/core/dist",
   "packages/debug-adapter/dist",

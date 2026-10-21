@@ -2,7 +2,19 @@
 import assert from "node:assert/strict";
 
 import { RomImage, type InstructionAnalysisAnnotation } from "@uttori/asm-disassembler";
+import {
+  analyzeSnes65816,
+  analyzeSpc700Aram,
+  Spc700AramImage,
+  SPC700_ARAM_ADDRESS_SPACE,
+} from "@uttori/asm-plugin-snes/disassembler";
 
+import type { ExpressionNode } from "../../packages/core/src/ir/expression-node.js";
+import {
+  fragmentText,
+  sourceFragment,
+  type SourceFragment,
+} from "../../packages/core/src/ir/source-fragment.js";
 import { MathCore } from "../../packages/core/src/mathcore.js";
 import {
   definePlugin,
@@ -24,12 +36,6 @@ import {
   renderSnesStructDefines,
   validateSnesStructMap,
 } from "../../packages/plugin-snes/src/disassembler/struct-map.js";
-import {
-  analyzeSnes65816,
-  analyzeSpc700Aram,
-  Spc700AramImage,
-  SPC700_ARAM_ADDRESS_SPACE,
-} from "../../packages/plugin-snes/src/index.js";
 import { formatInstructionAnnotationDetails } from "../../packages/vscode-extension/src/editor-info/format.js";
 import { benchmarkStatistics } from "../../scripts/benchmark-report.js";
 
@@ -114,17 +120,28 @@ const scenarios: Record<string, () => void | Promise<void>> = {
       isDefinitionCollectionStage: true,
       collectSourceMetadata: false,
       characterMappings: new Map([["A", 42]]),
-      defineEngine: { resolveDefinesInStringLiteral: (value: string) => value },
+      defineEngine: {
+        resolveDefinesInStringLiteral: (value: string) => value,
+        resolveFragment: (fragment: SourceFragment) => {
+          const value = fragmentText(fragment);
+          if (value === "!NEST") {
+            return sourceFragment('7,!LIST,"AZ",8', []);
+          }
+          if (value === "!LIST") {
+            return sourceFragment(list, []);
+          }
+          return fragment;
+        },
+      },
       structEngine: { hasStructReference: () => false },
-      operandResolver: { getnum: Number },
-      resolvedefines: (value: string) => {
-        if (value === "NEST") {
-          return '7,LIST,"AZ",8';
-        }
-        if (value === "LIST") {
-          return list;
-        }
-        return value;
+      operandResolver: {
+        getnum: (expression: ExpressionNode) => {
+          assert(expression.type === "literal" && expression.numericValue !== undefined);
+          return expression.numericValue;
+        },
+      },
+      resolvedefines: () => {
+        throw new Error("Typed data must expand fragments instead of using the text adapter.");
       },
       step: (bytes: number) => {
         estimatedBytes += bytes;
@@ -137,9 +154,9 @@ const scenarios: Record<string, () => void | Promise<void>> = {
       throw new Error("Directive runtime fixture is missing the fields this expansion uses.");
     }
     const service = new DirectiveRuntimeService(host);
-    service.handleDataDirective("dw", ["9,NEST,10"]);
+    service.handleDataDirective("dw", ["9,!NEST,10"]);
     host.isDefinitionCollectionStage = false;
-    service.handleDataDirective("dw", ["9,NEST,10"]);
+    service.handleDataDirective("dw", ["9,!NEST,10"]);
     assert.equal(estimatedBytes, (count + 6) * 2);
     assert.equal(emitted.length, count + 6);
     assert.deepEqual(emitted.slice(0, 2), [9, 7]);

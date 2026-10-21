@@ -1,4 +1,4 @@
-import { open } from "node:fs/promises";
+import { open, lstat } from "node:fs/promises";
 
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 
@@ -42,9 +42,12 @@ export const createRuntimeCaptureSource = async (
     await handle.close();
   }
   if (magic.toString("ascii") !== "ACS2") {
+    if (options.recoverPartial) {
+      throw new Error("Partial recovery requires an ACT2 instruction archive.");
+    }
     return createRuntimeTraceFileSource(file, options);
   }
-  const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-debug-adapter");
+  const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-capture");
   const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
   const header = await readCaptureFileHeader(file, limits);
   if (header.scope !== "snes.65816.instructions" && header.scope !== "nes.2a03.instructions") {
@@ -57,9 +60,21 @@ export const createRuntimeCaptureSource = async (
     format: "uttori-asm-instruction-trace",
     schemaVersion: 1,
   });
+  let recovery: RuntimeTraceSource["recovery"];
   return {
     metadata,
+    verifyRetained: async () => {
+      await verifyRuntimeCaptureCompanion(file, { header, complete: true }, options.signal);
+    },
+    get recovery() {
+      return recovery;
+    },
     read: async (accept) => {
+      recovery = undefined;
+      const before = await lstat(file, { bigint: true });
+      if (!before.isFile() || before.isSymbolicLink()) {
+        throw new Error("Capture must be a regular file.");
+      }
       const result = await recoverCaptureFile(
         file,
         (chunk) => {
@@ -80,20 +95,45 @@ export const createRuntimeCaptureSource = async (
             addresses: chunk.instructions.map((instruction) => instruction.address),
             details: chunk.instructions.map((instruction) => instruction.detail),
             droppedEvents: 0,
-            // This is the same normalization as legacy JSON export. Nothing is published until
-            // the terminal frame confirms the entire capture completed without loss.
+            // Match legacy JSON normalization. Publication still requires a validated terminal
+            // or, with explicit recovery, a validated checkpointed prefix.
             active: false,
           });
         },
         limits,
       );
-      if (!result.complete) {
+      const after = await lstat(file, { bigint: true });
+      if (
+        before.dev !== after.dev ||
+        before.ino !== after.ino ||
+        before.size !== after.size ||
+        before.mtimeNs !== after.mtimeNs ||
+        before.ctimeNs !== after.ctimeNs
+      ) {
+        throw new Error("Capture archive changed while importing.");
+      }
+      if (
+        !result.complete &&
+        (!options.recoverPartial ||
+          result.reasonCode !== "truncated" ||
+          result.eventThrough === "0")
+      ) {
         throw new Error(`Capture archive is incomplete: ${result.reason}`);
       }
       if (!canonicalEquals(result.header, header)) {
         throw new Error("Capture archive identity changed while importing.");
       }
-      await verifyRuntimeCaptureCompanion(file, result, options.signal);
+      if (result.complete) {
+        await verifyRuntimeCaptureCompanion(file, result, options.signal);
+      } else {
+        // Recovery accepts only ACK-backed chunks from an unchanged file. An unfinished companion
+        // has no verified end boundary and must never be presented as complete scene context.
+        recovery = {
+          chunkThrough: result.chunkThrough,
+          eventThrough: result.eventThrough,
+          reason: result.reason!,
+        };
+      }
     },
   };
 };

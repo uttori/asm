@@ -14,6 +14,8 @@ export interface OutputWriterHost {
     pluginOutputFormat: TargetOutputFormat;
     pluginState: Parameters<TargetOutputFormat["finalize"]>[0]["state"];
     fillOutputBytes(start: number, value: number, length: number): void;
+    /** Optional owned-storage path; validation, ownership and trace hooks have already run. */
+    writeOutputByte?(offset: number, value: number): void;
     setWritePosition(address: number): void;
     syncWriteStarts(): void;
     incrementBytesWritten(num: number): void;
@@ -54,10 +56,11 @@ export declare class OutputWriterService {
      */
     write4(num: number): void;
     /**
-     * Writes an arbitrary-width value for architecture extensions.
-     * @param {number} num Value to write.
-     * @param {number} width Width in bytes.
-     * @param {"little" | "big"} endianness Byte order.
+     * Writes the low 1–4 bytes of a safe integer, using two's complement for negatives.
+     * Invalid arguments throw before lifecycle hooks, output, or the cursor change.
+     * @param {number} num Safe integer; high bits outside the selected width are discarded.
+     * @param {number} width Integral byte width from 1 through 4; use writeBytes for wider values.
+     * @param {"little" | "big"} endianness Byte order, defaulting to little-endian.
      */
     writeValue(num: number, width: number, endianness?: "little" | "big"): void;
     /**

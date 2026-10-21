@@ -153,6 +153,7 @@ export const enforceDatabaseBudget = (db: DatabaseSync): void => {
 
 /** Disposable projections, ordered by eviction preference. Core editor/export indexes stay available. */
 const CACHES = [
+  { key: "source_export", tables: ["query_source_export_rows", "query_source_export_evidence"] },
   { key: "coverage", tables: ["query_coverage_segments", "query_coverage_details"] },
   { key: "graph", tables: ["query_graph_nodes", "query_graph_edges"] },
   {

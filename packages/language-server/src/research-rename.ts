@@ -1,15 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { WorkspaceIndex } from "@uttori/asm-core";
+import type { WorkspaceIndex } from "@uttori/asm-core/tooling";
 import {
-  openSourceProject,
   parseResearchDocument,
   readResearchInputs,
   renameResearchSymbol,
   validateSourceLabelName,
   type ProjectLabel,
 } from "@uttori/asm-disassembler";
+import { openSourceProject } from "@uttori/asm-disassembler/source-project";
 import {
   CreateFile,
   Range,

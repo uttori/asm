@@ -221,8 +221,17 @@ function emptyMetrics(): InternalInstrumentationSnapshot {
       includeBytesRead: 0,
       includeTextCacheHits: 0,
       includeResolutionCacheHits: 0,
+      expressionParses: 0,
+      operandLexicalParses: 0,
+      operandSyntaxCacheHits: 0,
+      operandSyntaxCacheMisses: 0,
+      expressionParserCalls: 0,
+      expressionInstrumentationParses: 0,
+      expressionLegacyEvaluations: 0,
+      expressionParseCacheHits: 0,
       expressionEvaluations: 0,
       expressionStringEvaluations: 0,
+      expressionRawFallbackEvaluations: 0,
       expressionUniqueStringEvaluations: 0,
       expressionNodeEvaluations: 0,
       expressionUniqueNodeEvaluations: 0,
@@ -238,11 +247,15 @@ function emptyMetrics(): InternalInstrumentationSnapshot {
       loweredProgramBuilds: 0,
       runtimeNodesLowered: 0,
       referenceCollections: 0,
+      referencePlanBuilds: 0,
+      instructionReferencePlanBuilds: 0,
       addressMappings: 0,
       assemblerConstructions: 0,
       sessionConstructions: 0,
       cacheWriteBytes: 0,
     },
+    syntaxBoundaries: {},
+    expressionBoundaries: { parses: {}, fallbacks: {}, passthrough: {}, operandFallbacks: {} },
     phasesMs: {},
     peakRssBytes: 0,
     peakHeapUsedBytes: 0,
@@ -293,10 +306,11 @@ function runFixture(fixture: Fixture, instrumentation: boolean): FixtureRun {
     },
     sample: {
       wallMs: elapsed,
-      peakRssBytes: instrumented.metrics.peakRssBytes,
+      peakRssBytes: process.resourceUsage().maxRSS * 1024,
       peakHeapUsedBytes: instrumented.metrics.peakHeapUsedBytes,
       phasesMs: instrumented.metrics.phasesMs,
       counters: instrumented.metrics.counters,
+      expressionBoundaries: instrumented.metrics.expressionBoundaries,
     },
   };
 }
@@ -306,6 +320,7 @@ function runFixtureIsolated(fixture: Fixture, instrumentation: boolean): Fixture
   const child = spawnSync(
     process.execPath,
     [
+      "--conditions=uttori-source",
       "--import",
       "tsx",
       scriptPath,
@@ -355,16 +370,16 @@ function main(): void {
   let validationFailed = false;
 
   for (const fixture of selectedFixtures) {
+    let cold: FixtureRun | undefined;
     for (let warmup = 0; warmup < options.warmups; warmup++) {
       console.error(
         `[${fixture.id}] warmup ${warmup + 1}/${options.warmups} (${options.isolate ? "isolated" : "in-process"})...`,
       );
       const started = performance.now();
-      if (options.isolate) {
-        runFixtureIsolated(fixture, options.instrumentation);
-      } else {
-        runFixture(fixture, options.instrumentation);
-      }
+      const warmupRun = options.isolate
+        ? runFixtureIsolated(fixture, options.instrumentation)
+        : runFixture(fixture, options.instrumentation);
+      cold ??= warmupRun;
       console.error(
         `[${fixture.id}] warmup completed in ${formatMilliseconds(performance.now() - started)}.`,
       );
@@ -409,6 +424,8 @@ function main(): void {
       id: fixture.id,
       category: fixture.category,
       source: fixture.source,
+      sourceSha256: sha256(fs.readFileSync(path.join(root, fixture.source))),
+      cold,
       validation: { valid, expected: expected ?? null, actual },
       performance: {
         valid: performanceValid,
@@ -436,7 +453,7 @@ function main(): void {
       warmups: options.warmups,
       repetitions: options.repetitions,
       instrumentation: options.instrumentation,
-      memorySampling: options.instrumentation ? "phase-boundary" : "end-of-run",
+      memorySampling: "process RSS high-water; heap at phase/end boundaries",
       processMode: options.isolate ? "isolated" : "in-process",
       fixtureIds: selectedFixtures.map((fixture) => fixture.id),
       maxMedianMs: options.maxMedianMs ?? null,
@@ -451,6 +468,8 @@ function main(): void {
       cpuModel: os.cpus()[0]?.model ?? "unknown",
       logicalCpuCount: os.cpus().length,
       totalMemoryBytes: os.totalmem(),
+      harnessSha256: sha256(fs.readFileSync(fileURLToPath(import.meta.url))),
+      cliBundleSha256: sha256(fs.readFileSync(path.join(root, "packages/cli/out/cli.mjs"))),
     },
     benchmarks: benchmarkResults,
   };

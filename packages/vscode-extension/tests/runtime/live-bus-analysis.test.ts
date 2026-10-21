@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import type { NativeCaptureFilePosition } from "@uttori/asm-capture";
 import { createRuntimeBusCaptureSource } from "@uttori/asm-disassembler";
 import { build } from "esbuild";
 
@@ -15,10 +16,10 @@ import {
   busScope,
   busSession,
 } from "../../../../tests/helpers/capture-bus.js";
-import type { NativeCaptureFilePosition } from "../../../debug-adapter/src/capture-file.js";
 import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
+  analysisProjectRevision,
   publishAnalysisProject,
   loadAnalysisProject,
   openAnalysisProjectStore,
@@ -179,10 +180,11 @@ test("live worker cancellation, lag exhaustion and corrupt completion never publ
     }
     if (failure === "stale") {
       const changed = loadAnalysisProject(directory);
-      publishAnalysisProject(directory, {
-        ...changed,
-        manifest: { ...changed.manifest, target: "edited" },
-      });
+      publishAnalysisProject(
+        directory,
+        { ...changed, manifest: { ...changed.manifest, target: "edited" } },
+        analysisProjectRevision(changed.manifest),
+      );
     }
     if (failure === "corrupt" || failure === "stale") {
       const terminal = busJsonFrame("END2", busPosition("1", "1", "complete"));
@@ -200,4 +202,66 @@ test("live worker cancellation, lag exhaustion and corrupt completion never publ
     t.is(after.shards.imports.length, 0);
     t.true(fs.existsSync(file) || fs.existsSync(file + ".partial"));
   }
+});
+
+test("terminal results survive preview acknowledgments after the worker disconnects", async (t) => {
+  const fixture = path.join(root, "terminal-race.cjs");
+  const disconnected = path.join(root, "terminal-race.closed");
+  fs.writeFileSync(
+    fixture,
+    `const fs = require('node:fs');
+process.once('message', () => {
+  process.send({ type: 'progress', progress: { provisional: true } }, () => {
+    process.send({ type: 'result', value: { observedEvents: 7 } }, () => process.disconnect());
+  });
+});
+process.once('disconnect', () => fs.writeFileSync(${JSON.stringify(disconnected)}, 'closed'));
+`,
+  );
+  const client = new LiveBusAnalysis(
+    fixture,
+    {
+      file: "unused",
+      projectDirectory: root,
+      position: position(0, 0),
+      maxLagBytes: 1048576,
+      maxBytes: 1048576,
+      maxIndexRecords: 100,
+    },
+    () => {
+      // Hold delivery of the terminal message until IPC has closed, reproducing a busy editor.
+      const deadline = Date.now() + 5000;
+      const wait = new Int32Array(new SharedArrayBuffer(4));
+      while (!fs.existsSync(disconnected) && Date.now() < deadline) {
+        Atomics.wait(wait, 0, 0, 10);
+      }
+      t.true(fs.existsSync(disconnected));
+    },
+    128,
+  );
+  t.teardown(() => client.cancel());
+  t.is((await client.completion).observedEvents, 7);
+});
+
+test("worker exit without a terminal result still rejects completion", async (t) => {
+  const fixture = path.join(root, "premature-exit.cjs");
+  fs.writeFileSync(
+    fixture,
+    "process.once('message', () => process.send({ type: 'progress', progress: { provisional: true } }, () => process.exit(1)));",
+  );
+  const client = new LiveBusAnalysis(
+    fixture,
+    {
+      file: "unused",
+      projectDirectory: root,
+      position: position(0, 0),
+      maxLagBytes: 1048576,
+      maxBytes: 1048576,
+      maxIndexRecords: 100,
+    },
+    () => undefined,
+    128,
+  );
+  t.teardown(() => client.cancel());
+  await t.throwsAsync(client.completion, { message: /process exited \(1\)/ });
 });

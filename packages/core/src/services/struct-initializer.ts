@@ -1,3 +1,6 @@
+import { parseDirectiveExpression } from "../ir/directive-arguments.js";
+import { type ExpressionNode } from "../ir/expression-node.js";
+
 /**
  * Small, deliberately separate grammar for named records. Expressions remain
  * assembler expressions. This parser only recognizes their outer delimiters.
@@ -78,16 +81,24 @@ export function structInitializerStart(text: string): number {
 /**
  * Parse field names and scalar/array shapes without evaluating assembler expressions.
  * @param {string} text One brace-delimited record literal.
- * @returns {Map<string, string | string[]>} Unique names and unevaluated values.
+ * @returns {Map<string, StructInitializerValue | StructInitializerValue[]>} Unique names and unevaluated values.
  */
-export function parseStructInitializer(text: string): Map<string, string | string[]> {
+export function parseStructInitializer(
+  text: string,
+): Map<string, StructInitializerValue | StructInitializerValue[]> {
   return new Map(parseStructInitializerEntries(text).map((field) => [field.name, field.value]));
 }
+
+/** One scalar expression; spelling is retained only for diagnostics and field attribution. */
+export type StructInitializerValue = {
+  text: string;
+  expression: ExpressionNode;
+};
 
 /** An unevaluated field with UTF-16 offsets into the original brace-delimited literal. */
 export type StructInitializerEntry = {
   name: string;
-  value: string | string[];
+  value: StructInitializerValue | StructInitializerValue[];
   /** Start of the field identifier, including dotted field paths. */
   start: number;
   /** Scalar/array element offsets, in the same order as their expressions. */
@@ -127,12 +138,24 @@ export function parseStructInitializerEntries(text: string): StructInitializerEn
         elementCursor = expressionStart + expression.length;
         return { text: expression, start: expressionStart };
       });
-      fields.push({ name, value: values, start, expressions });
+      fields.push({ name, value: values.map(parseInitializerValue), start, expressions });
     } else {
-      fields.push({ name, value, start, expressions: [{ text: value, start: valueStart }] });
+      fields.push({
+        name,
+        value: parseInitializerValue(value),
+        start,
+        expressions: [{ text: value, start: valueStart }],
+      });
     }
   }
   return fields;
+}
+
+/** Initializer values use numeric operand semantics; record delimiters have already been removed. */
+function parseInitializerValue(text: string): StructInitializerValue {
+  // A define may supply commas or quoting inside a call. Bind that source fragment before
+  // evaluating the resulting expression, just as numeric directive operands do.
+  return { text, expression: parseDirectiveExpression(text) };
 }
 
 /**

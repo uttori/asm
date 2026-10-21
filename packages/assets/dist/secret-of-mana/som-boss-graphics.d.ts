@@ -11,9 +11,20 @@ export declare function expandBossGraphics(source: Uint8Array, size: number): {
     data: Uint8Array<ArrayBuffer>;
     consumed: number;
 };
+/**
+ * Expand exactly `size` bytes of the shared two-byte-history mask grammar. Background
+ * tilemaps stop inside the final mask group, whereas the graphics uploader rounds to eight.
+ * The returned extent excludes unused bits and speculative native prefetches.
+ */
+export declare function expandBossMask(source: Uint8Array, size: number): {
+    data: Uint8Array<ArrayBuffer>;
+    consumed: number;
+};
 /** Encode each byte as a literal unless the game's two-byte history can reproduce it.
- * @param {Uint8Array} data Expanded bytes, a positive multiple of eight.
+ * @param {Uint8Array} data Expanded bytes, a positive multiple of eight up to 65536 bytes.
  * @returns {Uint8Array} Mask stream that expands back to `data`.
  */
 export declare function encodeBossGraphics(data: Uint8Array): Uint8Array<ArrayBuffer>;
+/** Encode an exact byte count, leaving unused low bits of the final mask clear. */
+export declare function encodeBossMask(data: Uint8Array): Uint8Array<ArrayBuffer>;
 //# sourceMappingURL=som-boss-graphics.d.ts.map

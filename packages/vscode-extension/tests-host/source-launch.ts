@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { pngImporter, type IndexedImage } from "@uttori/asm-assets/image";
-import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler";
+import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler/source-project";
 import * as vscode from "vscode";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

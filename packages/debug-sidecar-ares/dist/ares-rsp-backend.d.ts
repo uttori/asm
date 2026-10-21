@@ -1,4 +1,5 @@
-import { type DebugAddress, type DebugBackend, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread, type DebugTraceBatch, type DebugTraceStartOptions, type CaptureRequestV2, type CaptureResultV2 } from "@uttori/asm-debug-adapter";
+import { type CaptureRequestV2, type CaptureResultV2 } from "@uttori/asm-capture";
+import { type DebugAddress, type DebugBackend, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread, type DebugTraceBatch, type DebugTraceStartOptions } from "@uttori/asm-debug-adapter";
 import type { GdbRspClient, GdbRspStop } from "./gdb-rsp-client.js";
 import { ARES_RSP_CAPABILITIES } from "./profile.js";
 export * from "./profile.js";

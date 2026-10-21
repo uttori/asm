@@ -16,9 +16,12 @@ function makeWorkspace(): string {
 }
 
 test("language server bundling rejects undefined imports and preserves the previous bundle", (t) => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-bundle-build-"));
-  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-bundle-build-"));
+  const directory = path.join(root, "packages/language-server");
+  fs.mkdirSync(directory, { recursive: true });
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(path.join(directory, "src"));
+  fs.writeFileSync(path.join(directory, "src/index-worker.ts"), "export {};\n");
   fs.mkdirSync(path.join(directory, "out"));
   fs.mkdirSync(path.join(directory, "node_modules"));
   fs.symlinkSync(
@@ -27,17 +30,13 @@ test("language server bundling rejects undefined imports and preserves the previ
     "junction",
   );
   const buildScript = path.join(directory, "esbuild.mjs");
-  // The fixture has a flat directory layout. Copy the real shared notice builder beside it.
-  fs.writeFileSync(
-    buildScript,
-    fs
-      .readFileSync(path.resolve("packages/language-server/esbuild.mjs"), "utf8")
-      .replace("../../scripts/bundle-notices.mjs", "./bundle-notices.mjs"),
-  );
-  fs.copyFileSync(
-    path.resolve("scripts/bundle-notices.mjs"),
-    path.join(directory, "bundle-notices.mjs"),
-  );
+  // Preserve production-relative paths so the real inventory and transitive receipt writer execute.
+  fs.copyFileSync(path.resolve("packages/language-server/esbuild.mjs"), buildScript);
+  fs.mkdirSync(path.join(root, "scripts"));
+  fs.writeFileSync(path.join(root, "package-lock.json"), "{}\n");
+  for (const file of ["bundle-notices.mjs", "runtime-bundles.mjs"]) {
+    fs.copyFileSync(path.resolve("scripts", file), path.join(root, "scripts", file));
+  }
   fs.writeFileSync(
     path.join(directory, "src/server.ts"),
     'import { defaultLd65ConfigText } from "./linker-config.js";\nconsole.log(defaultLd65ConfigText());\n',
@@ -50,6 +49,8 @@ test("language server bundling rejects undefined imports and preserves the previ
   const output = path.join(directory, "out/server.mjs");
   const previous = "// Previous working server bundle.\n";
   fs.writeFileSync(output, previous);
+  const retired = path.join(directory, "out/retired-worker.mjs");
+  fs.writeFileSync(retired, "retired");
 
   const failed = spawnSync(process.execPath, [buildScript], {
     encoding: "utf8",
@@ -59,6 +60,7 @@ test("language server bundling rejects undefined imports and preserves the previ
   t.is(failed.status, 1);
   t.true(failed.stderr.includes("import-is-undefined"));
   t.is(fs.readFileSync(output, "utf8"), previous);
+  t.true(fs.existsSync(retired), "Failed builds leave the previous output set intact");
 
   fs.writeFileSync(linker, 'export const defaultLd65ConfigText = () => "valid linker config";\n');
   const rebuilt = spawnSync(process.execPath, [buildScript], {
@@ -66,6 +68,7 @@ test("language server bundling rejects undefined imports and preserves the previ
     timeout: 10_000,
   });
   t.is(rebuilt.status, 0, rebuilt.stderr);
+  t.false(fs.existsSync(retired), "Successful builds remove retired executables");
   const run = spawnSync(process.execPath, [output], { encoding: "utf8", timeout: 10_000 });
   t.is(run.status, 0, run.stderr);
   t.is(run.stdout.trim(), "valid linker config");

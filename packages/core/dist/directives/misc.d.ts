@@ -29,7 +29,7 @@ export declare const handlePushTable: ({ session }: TableDirectiveContext) => vo
  * @param {string} raw Full command text.
  * @throws {Error} If the condition is missing or evaluates to zero.
  */
-export declare const handleAssert: ({ session }: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
+export declare const handleAssert: (ctx: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
 /**
  * Asar `error [print-args...]`. Always fails the assemble.
  * @param {DiagnosticDirectiveContext} _ctx Unused session.
@@ -37,7 +37,7 @@ export declare const handleAssert: ({ session }: DiagnosticDirectiveContext, _wo
  * @param {string} raw Full command text.
  * @throws {Error} Always. Message matches asar's `Eerror_command`.
  */
-export declare const handleError: (_ctx: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
+export declare const handleError: (ctx: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
 /**
  * Asar `cleartable`. Restores identity mapping (each code point encodes as itself).
  * An empty Map plus `processStringWithMapping`'s charCode fallback matches that.
@@ -63,13 +63,6 @@ export declare const handleTable: ({ session }: TableDirectiveContext, _words: r
  * @param {string} raw Full command text.
  * @throws {Error} If the address is missing or `pc > addr`.
  */
-export declare const handleWarnpc: ({ session }: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
-/**
- * Registers table and diagnostic directives when those core groups are enabled.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {MiscDirectiveContexts} context Table and diagnostic sessions.
- * @param {ReadonlySet<CoreDirectiveGroup>} [enabledGroups] Groups to register. Defaults to both.
- * @returns {void}
- */
+export declare const handleWarnpc: (ctx: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
 export declare const registerMiscDirectives: (registry: DirectiveRegistry, context: MiscDirectiveContexts, enabledGroups?: ReadonlySet<CoreDirectiveGroup>) => void;
 //# sourceMappingURL=misc.d.ts.map

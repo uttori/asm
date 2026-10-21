@@ -5,13 +5,12 @@ import path from "node:path";
 import test from "ava";
 
 import { verifyRuntimeCaptureCompanion } from "../../disassembler/src/runtime/capture-companion.js";
-import { verifyCaptureContext } from "../src/capture-context.js";
-import { LosslessCaptureFileRecorder, recoverCaptureFile } from "../src/capture-file.js";
-import {
+import { verifyCaptureContext,recoverCaptureFile,
   validateCaptureRequest,
   type CaptureTransportV2,
-  type CapturePositionV2,
-} from "../src/capture-v2.js";
+  type CapturePositionV2 } from "@uttori/asm-capture";
+
+import { LosslessCaptureFileRecorder } from "../src/capture-file.js";
 
 const metadata = {
   architecture: "snes.65816",
@@ -22,6 +21,7 @@ const metadata = {
 const session = "1".repeat(32);
 const position = (state: CapturePositionV2["state"]): CapturePositionV2 => ({
   session,
+  scope: "snes.65816.instructions",
   state,
   producedThrough: "0",
   deliveredThrough: "0",

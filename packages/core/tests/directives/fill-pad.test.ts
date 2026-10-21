@@ -1,4 +1,5 @@
 import { test } from "../../../../tests/ava-helper.js";
+import { Assembler } from "../../../../tests/test-assembler.js";
 import {
   handleFill,
   handleFillPattern,
@@ -89,20 +90,15 @@ test("fill of zero bytes is a no-op", (t) => {
 });
 
 test("fill pattern and fill resolve defines before evaluating", (t) => {
-  const { ctx, written } = createContext({
-    resolvedefines: (input) => {
-      if (input === "!pat") {
-        return "$AABB";
-      }
-      if (input === "!count") {
-        return "3";
-      }
-      return input;
-    },
-  });
-  handleFillPattern(ctx, ["fillword", "!pat"]);
-  handleFill(ctx, ["fill", "!count"]);
-  t.deepEqual(written, [0xbb, 0xaa, 0xbb]);
+  const assembler = new Assembler();
+  t.teardown(() => assembler.dispose());
+  assembler.assembleProgram(
+    assembler.buildProgramModel(
+      "lorom\norg $808000\n!pat = $AABB\n!count = 3\nfillword !pat\nfill !count",
+      "defines.asm",
+    ),
+  );
+  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0xbb, 0xaa, 0xbb]);
 });
 
 test("fill pattern rejects unknown keywords and wrong arity", (t) => {
@@ -217,12 +213,15 @@ test("pad without an address writes a full bank from a bank-aligned address", (t
 });
 
 test("pad resolves defines on the target address", (t) => {
-  const { ctx, written } = createContext({
-    resolvedefines: (input) => (input === "!end" ? "$808002" : input),
-  });
-  handlePadPattern(ctx, ["padbyte", "$11"]);
-  handlePad(ctx, ["pad", "!end"]);
-  t.deepEqual(written, [0x11, 0x11]);
+  const assembler = new Assembler();
+  t.teardown(() => assembler.dispose());
+  assembler.assembleProgram(
+    assembler.buildProgramModel(
+      "lorom\norg $808000\n!end = $808002\npadbyte $11\npad !end",
+      "defines.asm",
+    ),
+  );
+  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0x11, 0x11]);
 });
 
 test("pad pattern rejects unknown keywords and wrong arity", (t) => {

@@ -1,4 +1,5 @@
 import { sourceSpanToRange, type SourceRange, type SourceSpan } from "./source-location.js";
+import type { SourceOrigin } from "./source-provenance.js";
 
 export type AssemblyDiagnosticSeverity = "error" | "warning" | "info";
 
@@ -12,6 +13,8 @@ export type AssemblySymbolKind =
   | "namespace";
 
 export type AssemblySourceLocation = {
+  /** Shared expansion provenance, available without re-parsing source in tooling. */
+  origin?: SourceOrigin;
   file: string;
   line: number;
   span?: SourceSpan;
@@ -120,13 +123,37 @@ export function createAssemblySourceLocation(
   file: string,
   line: number,
   span?: SourceSpan,
+  origin?: SourceOrigin,
 ): AssemblySourceLocation {
   return {
+    ...(origin ? { origin } : {}),
     file,
     line,
     span,
     range: span ? sourceSpanToRange(span, line) : undefined,
   };
+}
+
+/** Error identity/messages are preserved while the deepest expansion occurrence survives unwinding. */
+const errorSources = new WeakMap<object, AssemblySourceLocation>();
+/** Retain the innermost source while allowing the original exception and cause chain to propagate. */
+export function rememberErrorSource(error: unknown, location: AssemblySourceLocation): void {
+  if (error instanceof Error && !errorSource(error)) {
+    errorSources.set(error, location);
+  }
+}
+
+function errorSource(error: unknown): AssemblySourceLocation | undefined {
+  const visited = new Set<unknown>();
+  while (error instanceof Error && !visited.has(error)) {
+    visited.add(error);
+    const location = errorSources.get(error);
+    if (location) {
+      return location;
+    }
+    error = error.cause;
+  }
+  return undefined;
 }
 
 /**
@@ -141,6 +168,7 @@ export function diagnosticFromError(
   fallbackLocation: AssemblySourceLocation,
   stage?: string,
 ): AssemblyDiagnostic {
+  fallbackLocation = errorSource(error) ?? fallbackLocation;
   if (error instanceof AssemblyError) {
     return {
       code: error.code,

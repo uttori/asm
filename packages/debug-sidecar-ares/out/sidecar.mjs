@@ -11,14 +11,6 @@ var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x + '" is not supported');
 });
-var __esm = (fn, res, err2) => function __init() {
-  if (err2) throw err2[0];
-  try {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  } catch (e) {
-    throw err2 = [e], e;
-  }
-};
 var __commonJS = (cb, mod) => function __require2() {
   try {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -43,1150 +35,6 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// packages/debug-adapter/src/contracts.ts
-var DEBUG_BACKEND_PROTOCOL_VERSION;
-var init_contracts = __esm({
-  "packages/debug-adapter/src/contracts.ts"() {
-    "use strict";
-    DEBUG_BACKEND_PROTOCOL_VERSION = 1;
-  }
-});
-
-// packages/debug-adapter/src/conformance.ts
-var DEBUG_BACKEND_CONFORMANCE_SCENARIOS;
-var init_conformance = __esm({
-  "packages/debug-adapter/src/conformance.ts"() {
-    "use strict";
-    DEBUG_BACKEND_CONFORMANCE_SCENARIOS = Object.freeze([
-      "protocol-and-capabilities",
-      "connect-and-inspect",
-      "exact-instruction-step",
-      "continue-to-breakpoint",
-      "reconnect-without-reset",
-      "request-bounds"
-    ]);
-  }
-});
-
-// packages/debug-adapter/src/debug-expression.ts
-var MAX_MAGNITUDE, binaryPrecedence;
-var init_debug_expression = __esm({
-  "packages/debug-adapter/src/debug-expression.ts"() {
-    "use strict";
-    MAX_MAGNITUDE = (1n << 256n) - 1n;
-    binaryPrecedence = Object.freeze({
-      "||": 0,
-      "&&": 1,
-      "=": 2,
-      "==": 2,
-      "!=": 2,
-      "<": 2,
-      ">": 2,
-      "<=": 2,
-      ">=": 2,
-      "<<": 3,
-      ">>": 3,
-      "&": 3,
-      "|": 3,
-      "^": 3,
-      "+": 4,
-      "-": 4,
-      "*": 5,
-      "/": 5,
-      "%": 5,
-      "**": 6
-    });
-  }
-});
-
-// packages/core/src/canonical-json.ts
-var init_canonical_json = __esm({
-  "packages/core/src/canonical-json.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/debug-map.ts
-var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
-    "use strict";
-  }
-});
-
-// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
-var CRC32_POLYNOMIAL, CRC32C_POLYNOMIAL, reflectedTable, sliceTable, CRC32_TABLE, CRC32C_TABLE, crc32Slices, crc32cSlices, i0, i1, i2, i3, i4, i5, i6, i7, c0, c1, c2, c3, c4, c5, c6, c7, computeBytes;
-var init_data_hash_crc32 = __esm({
-  "node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
-    CRC32_POLYNOMIAL = 3988292384;
-    CRC32C_POLYNOMIAL = 2197175160;
-    reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
-      let crc = index;
-      for (let bit = 0; bit < 8; bit++) {
-        crc = crc & 1 ? polynomial ^ crc >>> 1 : crc >>> 1;
-      }
-      return crc >>> 0;
-    });
-    sliceTable = (table) => {
-      const slices = [Uint32Array.from(table)];
-      for (let width = 1; width < 8; width++) {
-        const previous = slices[width - 1];
-        slices.push(Uint32Array.from(previous, (crc) => crc >>> 8 ^ table[crc & 255]));
-      }
-      return [slices[0], slices[1], slices[2], slices[3], slices[4], slices[5], slices[6], slices[7]];
-    };
-    CRC32_TABLE = /* @__PURE__ */ reflectedTable(CRC32_POLYNOMIAL);
-    CRC32C_TABLE = /* @__PURE__ */ reflectedTable(CRC32C_POLYNOMIAL);
-    crc32Slices = /* @__PURE__ */ sliceTable(CRC32_TABLE);
-    crc32cSlices = /* @__PURE__ */ sliceTable(CRC32C_TABLE);
-    [i0, i1, i2, i3, i4, i5, i6, i7] = crc32Slices;
-    [c0, c1, c2, c3, c4, c5, c6, c7] = crc32cSlices;
-    computeBytes = (bytes) => {
-      let crc = -1;
-      let index = 0;
-      const length = bytes.length;
-      const blockEnd = length - 7;
-      for (; index < blockEnd; index += 8) {
-        const mixed = crc ^ (bytes[index] | bytes[index + 1] << 8 | bytes[index + 2] << 16 | bytes[index + 3] << 24);
-        crc = i7[mixed & 255] ^ i6[mixed >>> 8 & 255] ^ i5[mixed >>> 16 & 255] ^ i4[mixed >>> 24] ^ i3[bytes[index + 4]] ^ i2[bytes[index + 5]] ^ i1[bytes[index + 6]] ^ i0[bytes[index + 7]];
-      }
-      for (; index < length; index++) {
-        crc = crc >>> 8 ^ i0[(crc ^ bytes[index]) & 255];
-      }
-      return ~crc >>> 0;
-    };
-  }
-});
-
-// packages/debug-adapter/src/capture-nes-ppu.ts
-var init_capture_nes_ppu = __esm({
-  "packages/debug-adapter/src/capture-nes-ppu.ts"() {
-    "use strict";
-  }
-});
-
-// packages/debug-adapter/src/capture-v2.ts
-function isFieldRecord(value) {
-  return typeof value === "object" && value !== null;
-}
-function validateCaptureRequest(value) {
-  if (!isFieldRecord(value)) {
-    throw new Error("Invalid capture request.");
-  }
-  if (value.operation === "context") {
-    let fields2 = ["operation", "action"];
-    const action = value.action;
-    if (action === "prepare" || action === "replay" || action === "restore") {
-      fields2.push("directory", "romContentSha256", "romFileSha256", "producer");
-      validateCaptureRequest({
-        operation: "file-start",
-        file: value.directory,
-        romFileSha256: value.romFileSha256,
-        romContentSha256: value.romContentSha256,
-        producer: value.producer,
-        bufferBytes: 8388608
-      });
-    } else if (action === "start" || action === "stop" || action === "mark") {
-      fields2.push("session");
-      captureSession(value.session);
-      if (action === "mark") {
-        fields2.push("label");
-        if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
-          throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
-        }
-      }
-    } else if (action !== "abort" && action !== "status") {
-      throw new Error("Unsupported capture context action.");
-    }
-    if (Object.keys(value).some((key) => !fields2.includes(key))) {
-      throw new Error("Unsupported capture context field.");
-    }
-    return;
-  }
-  if (value.operation === "file-capabilities") {
-    if (Object.keys(value).some((key) => !["operation", "scope"].includes(key))) {
-      throw new Error("Unsupported native file capability field.");
-    }
-    if (value.scope !== void 0) {
-      captureScope(value.scope);
-    }
-    return;
-  }
-  if (value.operation === "file-start") {
-    if (Object.keys(value).some(
-      (key) => ![
-        "operation",
-        "scope",
-        "bufferBytes",
-        "file",
-        "romContentSha256",
-        "romFileSha256",
-        "producer",
-        "measureStages"
-      ].includes(key)
-    )) {
-      throw new Error("Unsupported native file start field.");
-    }
-    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
-      throw new Error("Native file profiling must be boolean.");
-    }
-    validateCaptureRequest({
-      operation: "start",
-      bufferBytes: value.bufferBytes,
-      scope: value.scope
-    });
-    const producer = value.producer;
-    if (!bounded(value.file, 4096) || typeof value.file !== "string" || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || typeof value.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romContentSha256) || value.romFileSha256 !== void 0 && (typeof value.romFileSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romFileSha256)) || !isFieldRecord(producer) || !bounded(producer.id, 256) || !bounded(producer.revision, 1024) || Object.keys(producer).some((key) => !["id", "revision"].includes(key))) {
-      throw new Error(
-        "Native file capture requires an absolute bounded path and exact ROM/producer identity."
-      );
-    }
-    return;
-  }
-  let fields = ["operation", "session"];
-  if (value.operation === "capabilities") {
-    fields = ["operation", "scope"];
-  }
-  if (value.operation === "start") {
-    fields = ["operation", "bufferBytes", "scope"];
-  }
-  if (value.operation === "read") {
-    fields = ["operation", "session", "chunk"];
-  }
-  if (value.operation === "ack") {
-    fields = ["operation", "session", "chunk", "event"];
-  }
-  if (Object.keys(value).some((key) => !fields.includes(key))) {
-    throw new Error(
-      "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
-    );
-  }
-  if (value.operation === "capabilities" || value.operation === "start") {
-    if (value.scope !== void 0) {
-      captureScope(value.scope);
-    }
-  }
-  if (value.operation === "capabilities") {
-    return;
-  }
-  if (value.operation === "start") {
-    const bufferBytes = value.bufferBytes;
-    if (typeof bufferBytes !== "number" || !Number.isSafeInteger(bufferBytes) || bufferBytes < 4718656 || bufferBytes > 64 * 1024 * 1024) {
-      throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
-    }
-    return;
-  }
-  captureSession(value.session);
-  if (value.operation === "status" || value.operation === "stop" || value.operation === "abort" || value.operation === "release" || value.operation === "file-status" || value.operation === "file-stop" || value.operation === "file-abort" || value.operation === "file-release") {
-    return;
-  }
-  if (value.operation === "read" || value.operation === "ack") {
-    if (!captureU64(value.chunk)) {
-      throw new Error("Capture chunk sequence starts at one.");
-    }
-    if (value.operation === "ack" && !captureU64(value.event)) {
-      throw new Error("Capture event sequence starts at one.");
-    }
-    return;
-  }
-  throw new Error("Unsupported capture operation.");
-}
-function assertCapturePosition(value, session, scope) {
-  if (!isFieldRecord(value)) {
-    throw new Error("Invalid capture position.");
-  }
-  captureSession(value.session);
-  if (session !== void 0 && value.session !== session) {
-    throw new Error("Capture session changed.");
-  }
-  if (value.scope !== void 0) {
-    captureScope(value.scope);
-  }
-  const positionScope = value.scope === void 0 ? "snes.65816.instructions" : value.scope;
-  if (scope !== void 0 && positionScope !== captureScope(scope)) {
-    throw new Error("Capture scope changed or was not confirmed by the producer.");
-  }
-  const state = value.state;
-  if (state !== "armed" && state !== "recording" && state !== "throttled" && state !== "stopping" && state !== "draining" && state !== "complete" && state !== "incomplete") {
-    throw new Error("Invalid capture state.");
-  }
-  const bounds = [
-    value.releasedThrough,
-    value.durableThrough,
-    value.acceptedThrough,
-    value.deliveredThrough,
-    value.producedThrough
-  ].map(captureU64);
-  if (bounds.some((bound, index) => index > 0 && bound < bounds[index - 1])) {
-    throw new Error("Capture ownership boundaries are inconsistent.");
-  }
-  if (captureU64(value.chunkThrough) > captureU64(value.producedChunks)) {
-    throw new Error("Capture chunk boundary is inconsistent.");
-  }
-  captureU64(value.throttleCount);
-  if (!captureU64(value.clockNumerator) || !captureU64(value.clockDenominator)) {
-    throw new Error("Invalid capture clock domain.");
-  }
-  if (value.droppedInScope !== "0" || typeof value.error !== "string" || value.error.length > 256) {
-    throw new Error("Capture integrity failed.");
-  }
-  const bufferedBytes = value.bufferedBytes;
-  const allocatedBytes = value.allocatedBytes;
-  if (typeof bufferedBytes !== "number" || typeof allocatedBytes !== "number" || !Number.isSafeInteger(bufferedBytes) || !Number.isSafeInteger(allocatedBytes) || bufferedBytes < 0 || allocatedBytes < 0 || bufferedBytes > 64 * 1024 * 1024 || allocatedBytes > 64 * 1024 * 1024 || bufferedBytes > allocatedBytes) {
-    throw new Error("Capture allocation exceeds its bounds.");
-  }
-  if (state === "complete" && (value.error || bufferedBytes || new Set(bounds.map(String)).size !== 1 || value.chunkThrough !== value.producedChunks)) {
-    throw new Error("Capture terminal totals do not reconcile.");
-  }
-}
-var maxU64, captureScope, captureU64, captureSession, bounded, validateCaptureCapabilities, validateCapturePosition;
-var init_capture_v2 = __esm({
-  "packages/debug-adapter/src/capture-v2.ts"() {
-    "use strict";
-    maxU64 = (1n << 64n) - 1n;
-    captureScope = (value) => {
-      if (value !== "nes.cpu-bus-ppu" && value !== "nes.2a03.instructions" && value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
-        throw new Error("Unsupported capture scope.");
-      }
-      return value;
-    };
-    captureU64 = (value) => {
-      if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64) {
-        throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
-      }
-      return BigInt(value);
-    };
-    captureSession = (value) => {
-      if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value)) {
-        throw new Error("Invalid capture session identity.");
-      }
-      return value;
-    };
-    bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
-    validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
-      captureScope(scope);
-      let reserve = scope === "nes.2a03.instructions" ? 91 : 71;
-      if (scope === "nes.cpu-bus-ppu") {
-        reserve = 128;
-      }
-      if (scope === "snes.cpu-bus") {
-        reserve = 64;
-      }
-      if (scope === "snes.cpu-bus-transfers") {
-        reserve = 80;
-      }
-      if (scope === "snes.cpu-bus-ppu") {
-        reserve = 88;
-      }
-      const expected = {
-        version: 2,
-        scope,
-        mode: "lossless",
-        ownership: "durable-prefix",
-        maxChunkBytes: 262144,
-        requiredReserveBytes: reserve,
-        overheadBytes: 4194304,
-        resumeSession: false
-      };
-      if (!isFieldRecord(value) || Object.entries(expected).some(([key, item]) => value[key] !== item)) {
-        throw new Error("Unsupported capture scope, reserve, or ownership contract.");
-      }
-      if (value.nativeFile === true) {
-        return { ...expected, nativeFile: true };
-      }
-      return expected;
-    };
-    validateCapturePosition = (value, session, scope) => {
-      assertCapturePosition(value, session, scope);
-      return value;
-    };
-  }
-});
-
-// packages/debug-adapter/src/dap.ts
-var init_dap = __esm({
-  "packages/debug-adapter/src/dap.ts"() {
-    "use strict";
-  }
-});
-
-// packages/debug-adapter/src/mock-script.ts
-var init_mock_script = __esm({
-  "packages/debug-adapter/src/mock-script.ts"() {
-    "use strict";
-  }
-});
-
-// packages/debug-adapter/src/sidecar-protocol.ts
-function assertDebugSidecarSessionToken(value) {
-  if (typeof value !== "string" || !sessionPattern.test(value)) {
-    throw new Error("Sidecar session token must be 32-128 base64url characters.");
-  }
-}
-function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-  if (!isRecord(value)) {
-    throw new Error("Sidecar message must be an object.");
-  }
-  if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
-    throw new Error(`Unsupported sidecar protocol '${String(value.protocol)}'.`);
-  }
-  if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION) {
-    throw new Error(`Unsupported sidecar protocol version '${String(value.version)}'.`);
-  }
-  assertDebugSidecarSessionToken(value.session);
-  if (!positiveInteger(value.sequence)) {
-    throw new Error("Sidecar message sequence must be a positive safe integer.");
-  }
-  if (value.type === "request") {
-    if (!listed(DEBUG_SIDECAR_COMMANDS, value.command)) {
-      throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
-    }
-    assertRequestBounds(value.command, value.arguments, limits);
-    return;
-  }
-  if (value.type === "response") {
-    if (!positiveInteger(value.requestSequence)) {
-      throw new Error("Sidecar response requestSequence must be a positive safe integer.");
-    }
-    if (typeof value.success !== "boolean") {
-      throw new Error("Sidecar response success must be boolean.");
-    }
-    if (!value.success && typeof value.error !== "string") {
-      throw new Error("Failed sidecar response must include an error string.");
-    }
-    return;
-  }
-  if (value.type === "event") {
-    if (!listed(DEBUG_SIDECAR_EVENTS, value.event)) {
-      throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
-    }
-    if (!isRecord(value.body)) {
-      throw new Error("Sidecar event body must be an object.");
-    }
-    return;
-  }
-  throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
-}
-var DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord, listed, positiveInteger, nonNegativeInteger, sessionPattern, assertRequestBounds, LIMIT_NAMES, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
-var init_sidecar_protocol = __esm({
-  "packages/debug-adapter/src/sidecar-protocol.ts"() {
-    "use strict";
-    DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
-    DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
-    DEBUG_SIDECAR_COMMANDS = Object.freeze([
-      "initialize",
-      "connect",
-      "disconnect",
-      "pause",
-      "continue",
-      "step",
-      "threads",
-      "stackFrames",
-      "registers",
-      "readMemory",
-      "setBreakpoints",
-      "disassemble",
-      "startTrace",
-      "readTrace",
-      "stopTrace",
-      "capture",
-      "ping",
-      "shutdown"
-    ]);
-    DEBUG_SIDECAR_EVENTS = Object.freeze([
-      "stopped",
-      "continued",
-      "terminated",
-      "breakpoint",
-      "output"
-    ]);
-    DEFAULT_DEBUG_SIDECAR_LIMITS = Object.freeze({
-      maxFrameBytes: 1048576,
-      maxBufferedBytes: 2097152,
-      maxMemoryReadBytes: 1048576,
-      maxDisassemblyInstructions: 4096,
-      maxBreakpoints: 4096,
-      maxTraceBatchEvents: 4096,
-      maxQueuedMessages: 1024,
-      maxQueuedBytes: 8388608
-    });
-    isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-    listed = (values, value) => typeof value === "string" && values.some((item) => item === value);
-    positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
-    nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-    sessionPattern = /^[\w-]{32,128}$/;
-    assertRequestBounds = (command, args, limits) => {
-      const record2 = args ?? {};
-      if (!isRecord(record2)) {
-        throw new Error("Sidecar request arguments must be an object.");
-      }
-      if (command === "readMemory") {
-        const count = record2.count;
-        if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes) {
-          throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
-        }
-      }
-      if (command === "disassemble") {
-        const count = record2.count;
-        if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions) {
-          throw new Error(
-            `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
-          );
-        }
-      }
-      if (command === "setBreakpoints") {
-        const breakpoints = record2.breakpoints;
-        if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
-          throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
-        }
-      }
-      if (command === "readTrace") {
-        const maxEvents = record2.maxEvents;
-        if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
-          throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
-        }
-      }
-    };
-    LIMIT_NAMES = [
-      "maxFrameBytes",
-      "maxBufferedBytes",
-      "maxMemoryReadBytes",
-      "maxDisassemblyInstructions",
-      "maxBreakpoints",
-      "maxTraceBatchEvents",
-      "maxQueuedMessages",
-      "maxQueuedBytes"
-    ];
-    validateLimits = (limits) => {
-      for (const name of LIMIT_NAMES) {
-        if (!positiveInteger(limits[name])) {
-          throw new Error(`${name} must be a positive safe integer.`);
-        }
-      }
-      if (limits.maxBufferedBytes < limits.maxFrameBytes + 4) {
-        throw new Error("maxBufferedBytes must hold at least one complete framed message.");
-      }
-    };
-    encodeDebugSidecarMessage = (message, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) => {
-      validateLimits(limits);
-      assertDebugSidecarMessage(message, limits);
-      const body = Buffer.from(JSON.stringify(message), "utf8");
-      if (body.length > limits.maxFrameBytes) {
-        throw new Error(`Sidecar frame exceeds ${limits.maxFrameBytes} bytes.`);
-      }
-      const frame = Buffer.allocUnsafe(body.length + 4);
-      frame.writeUInt32BE(body.length, 0);
-      body.copy(frame, 4);
-      return frame;
-    };
-    DebugSidecarMessageParser = class {
-      #limits;
-      #buffer = Buffer.alloc(0);
-      #lastSequence = 0;
-      /**
-       * Creates one directional stream parser.
-       * @param {DebugSidecarProtocolLimits} limits Framing and request limits.
-       */
-      constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-        validateLimits(limits);
-        this.#limits = limits;
-      }
-      /**
-       * Adds a transport chunk and returns every complete validated message in order.
-       * @param {Uint8Array} chunk Next stdio or socket bytes.
-       * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
-       */
-      push(chunk) {
-        if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
-          throw new Error(`Sidecar receive buffer exceeds ${this.#limits.maxBufferedBytes} bytes.`);
-        }
-        this.#buffer = Buffer.concat([this.#buffer, chunk]);
-        const messages = [];
-        while (this.#buffer.length >= 4) {
-          const length = this.#buffer.readUInt32BE(0);
-          if (length === 0) {
-            throw new Error("Sidecar frame body cannot be empty.");
-          }
-          if (length > this.#limits.maxFrameBytes) {
-            throw new Error(`Sidecar frame declares ${length} bytes, above the configured limit.`);
-          }
-          if (this.#buffer.length < length + 4) {
-            break;
-          }
-          const body = this.#buffer.subarray(4, length + 4);
-          this.#buffer = this.#buffer.subarray(length + 4);
-          let decoded2;
-          try {
-            decoded2 = JSON.parse(body.toString("utf8"));
-          } catch {
-            throw new Error("Sidecar frame contains invalid JSON.");
-          }
-          assertDebugSidecarMessage(decoded2, this.#limits);
-          if (decoded2.sequence <= this.#lastSequence) {
-            throw new Error(
-              `Sidecar sequence ${decoded2.sequence} is not greater than ${this.#lastSequence}.`
-            );
-          }
-          this.#lastSequence = decoded2.sequence;
-          messages.push(decoded2);
-        }
-        return messages;
-      }
-    };
-    DebugSidecarMessageQueue = class {
-      #limits;
-      #frames = [];
-      #bytes = 0;
-      /**
-       * Creates a bounded outgoing queue.
-       * @param {DebugSidecarProtocolLimits} limits Framing and queue limits.
-       */
-      constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-        validateLimits(limits);
-        this.#limits = limits;
-      }
-      /** @returns {number} Number of queued protocol messages. */
-      get length() {
-        return this.#frames.length;
-      }
-      /** @returns {number} Encoded bytes currently retained for transport backpressure. */
-      get bytes() {
-        return this.#bytes;
-      }
-      /**
-       * Encodes and appends one message, failing the connection when bounds would be exceeded.
-       * @param {DebugSidecarMessage} message Next ordered message.
-       * @returns {void}
-       */
-      enqueue(message) {
-        const frame = encodeDebugSidecarMessage(message, this.#limits);
-        if (this.#frames.length >= this.#limits.maxQueuedMessages || this.#bytes + frame.length > this.#limits.maxQueuedBytes) {
-          throw new Error("Sidecar outgoing queue exceeded its backpressure limit.");
-        }
-        this.#frames.push(frame);
-        this.#bytes += frame.length;
-      }
-      /**
-       * Removes the oldest encoded frame.
-       * @returns {Uint8Array | undefined} Oldest frame or undefined when empty.
-       */
-      dequeue() {
-        const frame = this.#frames.shift();
-        if (frame) {
-          this.#bytes -= frame.length;
-        }
-        return frame;
-      }
-    };
-  }
-});
-
-// packages/debug-adapter/src/node-stdio-transport.ts
-var DEBUG_SIDECAR_SESSION_ENV;
-var init_node_stdio_transport = __esm({
-  "packages/debug-adapter/src/node-stdio-transport.ts"() {
-    "use strict";
-    DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
-  }
-});
-
-// packages/debug-adapter/src/trace-buffer.ts
-var init_trace_buffer = __esm({
-  "packages/debug-adapter/src/trace-buffer.ts"() {
-    "use strict";
-  }
-});
-
-// packages/debug-adapter/src/replay-backend.ts
-var init_replay_backend = __esm({
-  "packages/debug-adapter/src/replay-backend.ts"() {
-    "use strict";
-  }
-});
-
-// packages/debug-adapter/src/sidecar-backend.ts
-var init_sidecar_backend = __esm({
-  "packages/debug-adapter/src/sidecar-backend.ts"() {
-    "use strict";
-  }
-});
-
-// packages/debug-adapter/src/sidecar-client.ts
-var init_sidecar_client = __esm({
-  "packages/debug-adapter/src/sidecar-client.ts"() {
-    "use strict";
-  }
-});
-
-// packages/debug-adapter/src/sidecar-server.ts
-function assertShutdownCommand(command) {
-  if (command !== "shutdown") {
-    throw new Error(`Unsupported command '${command}'.`);
-  }
-}
-var isStepKind, isRecord2, record, integer, positiveInteger2, string, optionalPositiveInteger, boolean, address, addresses, asError, DebugSidecarServer;
-var init_sidecar_server = __esm({
-  "packages/debug-adapter/src/sidecar-server.ts"() {
-    "use strict";
-    init_contracts();
-    init_sidecar_protocol();
-    init_capture_v2();
-    isStepKind = (value) => value === "instruction" || value === "over" || value === "in" || value === "out";
-    isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-    record = (value, context) => {
-      if (!isRecord2(value)) {
-        throw new Error(`${context} must be an object.`);
-      }
-      return value;
-    };
-    integer = (value, context, minimum = 0) => {
-      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
-        throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
-      }
-      return value;
-    };
-    positiveInteger2 = (value, context) => integer(value, context, 1);
-    string = (value, context) => {
-      if (typeof value !== "string" || value.length === 0) {
-        throw new Error(`${context} must be a non-empty string.`);
-      }
-      return value;
-    };
-    optionalPositiveInteger = (value, context) => value === void 0 ? void 0 : positiveInteger2(value, context);
-    boolean = (value, context, defaultValue) => {
-      if (value === void 0) {
-        return defaultValue;
-      }
-      if (typeof value !== "boolean") {
-        throw new Error(`${context} must be boolean.`);
-      }
-      return value;
-    };
-    address = (value, context) => {
-      const candidate = record(value, context);
-      if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0) {
-        throw new Error(`${context}.architecture must be a non-empty string.`);
-      }
-      if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0) {
-        throw new Error(`${context}.addressSpace must be a non-empty string.`);
-      }
-      const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer(candidate.outputOffset, `${context}.outputOffset`);
-      return {
-        architecture: candidate.architecture,
-        addressSpace: candidate.addressSpace,
-        address: integer(candidate.address, `${context}.address`),
-        ...outputOffset === void 0 ? {} : { outputOffset }
-      };
-    };
-    addresses = (value, context) => {
-      if (!Array.isArray(value)) {
-        throw new Error(`${context} must be an array.`);
-      }
-      return value.map((entry, index) => address(entry, `${context}[${index}]`));
-    };
-    asError = (error) => error instanceof Error ? error : new Error(String(error));
-    DebugSidecarServer = class {
-      #backendName;
-      #implementation;
-      #session;
-      #write;
-      #closeTransport;
-      #parser;
-      #outgoing;
-      #eventSubscription;
-      #serverSequence = 1;
-      #capturedEvents;
-      #receiveTail = Promise.resolve();
-      #writeTail = Promise.resolve();
-      #closed = false;
-      /**
-       * Creates a server around an emulator-neutral backend implementation.
-       * @param {DebugSidecarServerOptions} options Identity, backend, transport, and safety bounds.
-       */
-      constructor(options) {
-        if (typeof options.backend !== "string" || options.backend.length === 0) {
-          throw new Error("Sidecar backend name must be a non-empty string.");
-        }
-        assertDebugSidecarSessionToken(options.session);
-        this.#backendName = options.backend;
-        this.#implementation = options.implementation;
-        this.#session = options.session;
-        this.#write = options.write;
-        this.#closeTransport = options.close ?? (() => Promise.resolve());
-        const limits = options.limits ?? DEFAULT_DEBUG_SIDECAR_LIMITS;
-        this.#parser = new DebugSidecarMessageParser(limits);
-        this.#outgoing = new DebugSidecarMessageQueue(limits);
-        this.#eventSubscription = this.#implementation.onEvent((event) => this.#backendEvent(event));
-      }
-      /** @returns {boolean} Whether the server has permanently closed. */
-      get closed() {
-        return this.#closed;
-      }
-      /**
-       * Accepts the next transport chunk. Calls are serialized even when the stream producer overlaps them.
-       * @param {Uint8Array} data Framed protocol bytes from the client.
-       * @returns {Promise<void>} Completion after every request in this chunk has been dispatched.
-       */
-      receive(data) {
-        if (this.#closed) {
-          return Promise.reject(new Error("Sidecar server is closed."));
-        }
-        const receive = this.#receiveTail.then(() => this.#receive(data));
-        this.#receiveTail = receive.catch(() => void 0);
-        return receive.catch(async (error) => {
-          await this.close(asError(error));
-          throw error;
-        });
-      }
-      /**
-       * Flushes queued output and closes the server transport exactly once.
-       * @param {Error} error Optional terminal protocol or transport failure.
-       * @returns {Promise<void>} Completion of transport cleanup.
-       */
-      async close(error) {
-        if (this.#closed) {
-          return;
-        }
-        this.#closed = true;
-        this.#eventSubscription.dispose();
-        await this.#writeTail.catch(() => void 0);
-        await this.#closeTransport(error);
-      }
-      async #receive(data) {
-        for (const message of this.#parser.push(data)) {
-          if (message.session !== this.#session) {
-            throw new Error("Sidecar request session does not match this connection.");
-          }
-          if (message.type !== "request") {
-            throw new Error("Sidecar client sent a non-request message on a server-only channel.");
-          }
-          await this.#handle(message);
-        }
-      }
-      async #handle(request) {
-        const events = [];
-        this.#capturedEvents = events;
-        let result;
-        let failure;
-        try {
-          result = await this.#dispatch(request);
-        } catch (error) {
-          failure = asError(error);
-        } finally {
-          this.#capturedEvents = void 0;
-        }
-        await this.#send(
-          this.#envelope({
-            type: "response",
-            requestSequence: request.sequence,
-            success: failure === void 0,
-            ...failure ? { error: failure.message } : { result }
-          })
-        );
-        for (const event of events) {
-          await this.#send(this.#eventEnvelope(event));
-        }
-        if (request.command === "shutdown" && !failure) {
-          await this.close();
-        }
-      }
-      async #dispatch(request) {
-        const args = record(request.arguments ?? {}, "Sidecar request arguments");
-        if (request.command === "initialize") {
-          if (args.backend !== this.#backendName) {
-            throw new Error("Unexpected backend identity.");
-          }
-          if (args.backendProtocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
-            throw new Error("Unsupported backend protocol version.");
-          }
-          return {
-            backend: this.#backendName,
-            backendProtocolVersion: DEBUG_BACKEND_PROTOCOL_VERSION,
-            capabilities: this.#implementation.capabilities
-          };
-        }
-        if (request.command === "connect") {
-          await this.#implementation.connect({
-            reset: boolean(args.reset, "Connect reset", true)
-          });
-          return { capabilities: this.#implementation.capabilities };
-        }
-        if (request.command === "disconnect") {
-          await this.#implementation.disconnect({
-            terminate: boolean(args.terminate, "Disconnect terminate", true)
-          });
-          return {};
-        }
-        if (request.command === "pause") {
-          await this.#implementation.pause(optionalPositiveInteger(args.threadId, "Pause threadId"));
-          return {};
-        }
-        if (request.command === "continue") {
-          await this.#implementation.continue(
-            optionalPositiveInteger(args.threadId, "Continue threadId")
-          );
-          return {};
-        }
-        if (request.command === "step") {
-          const kind = args.kind;
-          if (typeof kind !== "string" || !isStepKind(kind)) {
-            throw new Error(`Unsupported step kind '${String(kind)}'.`);
-          }
-          await this.#implementation.step(positiveInteger2(args.threadId, "Step threadId"), kind);
-          return {};
-        }
-        if (request.command === "threads") {
-          return this.#implementation.threads();
-        }
-        if (request.command === "stackFrames") {
-          return this.#implementation.stackFrames(
-            positiveInteger2(args.threadId, "Stack frames threadId")
-          );
-        }
-        if (request.command === "registers") {
-          return this.#implementation.registers(positiveInteger2(args.frameId, "Registers frameId"));
-        }
-        if (request.command === "readMemory") {
-          const memory = await this.#implementation.readMemory(
-            address(args.address, "Memory address"),
-            integer(args.count, "Memory count")
-          );
-          return {
-            address: memory.address,
-            data: Buffer.from(memory.bytes).toString("base64"),
-            unreadableBytes: memory.unreadableBytes
-          };
-        }
-        if (request.command === "setBreakpoints") {
-          return this.#implementation.setBreakpoints(
-            addresses(args.breakpoints, "Breakpoint addresses")
-          );
-        }
-        if (request.command === "disassemble") {
-          return this.#implementation.disassemble(
-            address(args.address, "Disassembly address"),
-            integer(args.count, "Disassembly count")
-          );
-        }
-        if (request.command === "capture") {
-          const capture = args;
-          validateCaptureRequest(capture);
-          if (!this.#implementation.capture) {
-            throw new Error("This backend does not support capture v2.");
-          }
-          return this.#implementation.capture(capture);
-        }
-        if (request.command === "startTrace") {
-          if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full") {
-            throw new Error("Trace detail must be pc or full.");
-          }
-          await this.#implementation.startTrace({
-            architecture: string(args.architecture, "Trace architecture"),
-            addressSpace: string(args.addressSpace, "Trace address space"),
-            ...args.detail === void 0 ? {} : { detail: args.detail }
-          });
-          return {};
-        }
-        if (request.command === "readTrace") {
-          return this.#implementation.readTrace(positiveInteger2(args.maxEvents, "Trace batch size"));
-        }
-        if (request.command === "stopTrace") {
-          await this.#implementation.stopTrace();
-          return {};
-        }
-        if (request.command === "ping") {
-          return { pong: true };
-        }
-        assertShutdownCommand(request.command);
-        return {};
-      }
-      #backendEvent(event) {
-        if (this.#closed) {
-          return;
-        }
-        if (this.#capturedEvents) {
-          this.#capturedEvents.push(event);
-          return;
-        }
-        void this.#send(this.#eventEnvelope(event)).catch(
-          (error) => this.close(asError(error))
-        );
-      }
-      #eventEnvelope(event) {
-        if (event.type === "stopped") {
-          return this.#envelope({
-            type: "event",
-            event: "stopped",
-            body: { reason: event.reason, threadId: event.threadId }
-          });
-        }
-        if (event.type === "continued") {
-          return this.#envelope({
-            type: "event",
-            event: "continued",
-            body: { threadId: event.threadId, allThreads: event.allThreads }
-          });
-        }
-        if (event.type === "terminated") {
-          return this.#envelope({
-            type: "event",
-            event: "terminated",
-            body: { restart: event.restart }
-          });
-        }
-        if (event.type === "breakpoint") {
-          return this.#envelope({
-            type: "event",
-            event: "breakpoint",
-            body: { breakpoint: event.breakpoint }
-          });
-        }
-        return this.#envelope({
-          type: "event",
-          event: "output",
-          body: { category: event.category, text: event.text }
-        });
-      }
-      #envelope(message) {
-        if (!Number.isSafeInteger(this.#serverSequence) || this.#serverSequence <= 0) {
-          throw new Error("Sidecar server sequence exhausted.");
-        }
-        return {
-          protocol: DEBUG_SIDECAR_PROTOCOL,
-          version: DEBUG_SIDECAR_PROTOCOL_VERSION,
-          session: this.#session,
-          sequence: this.#serverSequence++,
-          ...message
-        };
-      }
-      #send(message) {
-        if (this.#closed) {
-          return Promise.reject(new Error("Sidecar server is closed."));
-        }
-        this.#outgoing.enqueue(message);
-        const write2 = this.#writeTail.then(async () => {
-          let frame = this.#outgoing.dequeue();
-          while (frame) {
-            await this.#write(frame);
-            frame = this.#outgoing.dequeue();
-          }
-          return;
-        });
-        this.#writeTail = write2.catch(() => void 0);
-        return write2;
-      }
-    };
-  }
-});
-
-// packages/debug-adapter/src/capture-context.ts
-import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { lstat, open, readdir, readFile, link, unlink } from "node:fs/promises";
-import path from "node:path";
-var isRecord3, digestFile, verifyCaptureContext;
-var init_capture_context = __esm({
-  "packages/debug-adapter/src/capture-context.ts"() {
-    "use strict";
-    isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-    digestFile = async (file, signal) => {
-      const hash = createHash("sha256");
-      for await (const bytes of createReadStream(file, { signal })) {
-        if (!Buffer.isBuffer(bytes)) {
-          throw new Error(`Expected binary capture context data in ${path.basename(file)}.`);
-        }
-        hash.update(bytes);
-      }
-      return hash.digest("hex");
-    };
-    verifyCaptureContext = async (directory, identity, signal) => {
-      signal?.throwIfAborted();
-      const metadataFile = path.join(directory, "manifest.json");
-      const metadataStat = await lstat(metadataFile);
-      if (!metadataStat.isFile() || metadataStat.isSymbolicLink() || metadataStat.size > 1048576) {
-        throw new Error("Invalid capture context manifest.");
-      }
-      const manifest = JSON.parse(await readFile(metadataFile, "utf8"));
-      if (!isRecord3(manifest)) {
-        throw new Error("Invalid capture context manifest.");
-      }
-      const producer = isRecord3(manifest.producer) ? manifest.producer : void 0;
-      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity.romContentSha256 || !isRecord3(producer) || producer.id !== identity.producer.id || producer.revision !== identity.producer.revision || !isRecord3(manifest.files)) {
-        throw new Error("Capture context requires the matching ROM and emulator build.");
-      }
-      const nes = manifest.architecture === "65xx.2a03";
-      if (nes && (!identity.romFileSha256 || identity.romFileSha256 !== manifest.romFileSha256 || manifest.addressSpace !== "nes.cpu") || !nes && identity.romFileSha256 !== void 0) {
-        throw new Error("Capture context requires the matching full iNES image.");
-      }
-      const files = manifest.files;
-      if (nes && manifest.scope !== "nes.2a03.instructions" && manifest.scope !== "nes.cpu-bus-ppu") {
-        throw new Error("Invalid NES capture context scope.");
-      }
-      if (nes && manifest.scope === "nes.2a03.instructions" && !files["graphics.act2"]) {
-        throw new Error("NES instruction context is missing its graphics companion.");
-      }
-      for (const name of [
-        "start.bst",
-        ...nes ? ["ram-start.bin", "ram-end.bin", "start-extra.bin", "end-state.bin"] : ["wram-start.bin", "wram-end.bin"],
-        "inputs.bin",
-        "identity.txt",
-        "machine.json",
-        "start-clock.txt",
-        "end-clock.txt",
-        "boundaries.json"
-      ]) {
-        if (!files[name]) {
-          throw new Error(`Capture context is missing ${name}.`);
-        }
-      }
-      for (const [name, artifact] of Object.entries(files)) {
-        signal?.throwIfAborted();
-        if (!/^(?:identity\.txt|machine\.json|start-extra\.bin|end-state\.bin|ram-(?:start|end)\.bin|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
-          name
-        ) || !isRecord3(artifact) || typeof artifact.bytes !== "number" || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || typeof artifact.sha256 !== "string" || !/^[\da-f]{64}$/.test(artifact.sha256)) {
-          throw new Error("Invalid capture context artifact descriptor.");
-        }
-        const file = path.join(directory, name), stat2 = await lstat(file);
-        if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && (nes || stat2.size !== 131072) || name.startsWith("ram-") && (!nes || stat2.size !== 2048) || name === "start-extra.bin" && (!nes || stat2.size !== 38) || name === "end-state.bin" && (!nes || stat2.size < 2048 || stat2.size > 32 * 1048576) || name === "inputs.bin" && stat2.size % 18) {
-          throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
-        }
-        if (await digestFile(file, signal) !== artifact.sha256) {
-          throw new Error(`Capture context checksum mismatch: ${name}.`);
-        }
-      }
-    };
-  }
-});
-
-// packages/debug-adapter/src/capture-file.ts
-var init_capture_file = __esm({
-  "packages/debug-adapter/src/capture-file.ts"() {
-    "use strict";
-  }
-});
-
-// packages/debug-adapter/src/index.ts
-var init_src = __esm({
-  "packages/debug-adapter/src/index.ts"() {
-    "use strict";
-    init_conformance();
-    init_contracts();
-    init_debug_expression();
-    init_dap();
-    init_mock_script();
-    init_node_stdio_transport();
-    init_replay_backend();
-    init_sidecar_backend();
-    init_sidecar_client();
-    init_sidecar_protocol();
-    init_sidecar_server();
-    init_trace_buffer();
-    init_capture_v2();
-    init_capture_file();
-    init_capture_context();
-    init_capture_nes_ppu();
-  }
-});
-
 // node_modules/ms/index.js
 var require_ms = __commonJS({
   "node_modules/ms/index.js"(exports, module) {
@@ -1200,7 +48,7 @@ var require_ms = __commonJS({
       options = options || {};
       var type = typeof val;
       if (type === "string" && val.length > 0) {
-        return parse(val);
+        return parse2(val);
       } else if (type === "number" && isFinite(val)) {
         return options.long ? fmtLong(val) : fmtShort(val);
       }
@@ -1208,7 +56,7 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse(str) {
+    function parse2(str) {
       str = String(str);
       if (str.length > 100) {
         return;
@@ -1951,13 +799,968 @@ var require_src = __commonJS({
 });
 
 // packages/debug-sidecar-ares/src/sidecar.ts
-init_src();
 import { createHash as createHash3 } from "node:crypto";
 import { readFile as readFile2 } from "node:fs/promises";
 import path3 from "node:path";
 
+// packages/debug-adapter/src/contracts.ts
+var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
+
+// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+var CRC32_POLYNOMIAL = 3988292384;
+var CRC32C_POLYNOMIAL = 2197175160;
+var reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
+  let crc = index;
+  for (let bit = 0; bit < 8; bit++) {
+    crc = crc & 1 ? polynomial ^ crc >>> 1 : crc >>> 1;
+  }
+  return crc >>> 0;
+});
+var sliceTable = (table) => {
+  const slices = [Uint32Array.from(table)];
+  for (let width = 1; width < 8; width++) {
+    const previous = slices[width - 1];
+    slices.push(Uint32Array.from(previous, (crc) => crc >>> 8 ^ table[crc & 255]));
+  }
+  return [slices[0], slices[1], slices[2], slices[3], slices[4], slices[5], slices[6], slices[7]];
+};
+var CRC32_TABLE = /* @__PURE__ */ reflectedTable(CRC32_POLYNOMIAL);
+var CRC32C_TABLE = /* @__PURE__ */ reflectedTable(CRC32C_POLYNOMIAL);
+var crc32Slices = /* @__PURE__ */ sliceTable(CRC32_TABLE);
+var crc32cSlices = /* @__PURE__ */ sliceTable(CRC32C_TABLE);
+var [i0, i1, i2, i3, i4, i5, i6, i7] = crc32Slices;
+var [c0, c1, c2, c3, c4, c5, c6, c7] = crc32cSlices;
+var computeBytes = (bytes) => {
+  let crc = -1;
+  let index = 0;
+  const length = bytes.length;
+  const blockEnd = length - 7;
+  for (; index < blockEnd; index += 8) {
+    const mixed = crc ^ (bytes[index] | bytes[index + 1] << 8 | bytes[index + 2] << 16 | bytes[index + 3] << 24);
+    crc = i7[mixed & 255] ^ i6[mixed >>> 8 & 255] ^ i5[mixed >>> 16 & 255] ^ i4[mixed >>> 24] ^ i3[bytes[index + 4]] ^ i2[bytes[index + 5]] ^ i1[bytes[index + 6]] ^ i0[bytes[index + 7]];
+  }
+  for (; index < length; index++) {
+    crc = crc >>> 8 ^ i0[(crc ^ bytes[index]) & 255];
+  }
+  return ~crc >>> 0;
+};
+
+// packages/capture/src/capture-v2.ts
+var maxU64 = (1n << 64n) - 1n;
+var captureScope = (value) => {
+  if (value !== "nes.cpu-bus-ppu" && value !== "nes.2a03.instructions" && value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
+    throw new Error("Unsupported capture scope.");
+  }
+  return value;
+};
+var captureU64 = (value) => {
+  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64) {
+    throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
+  }
+  return BigInt(value);
+};
+var captureSession = (value) => {
+  if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value)) {
+    throw new Error("Invalid capture session identity.");
+  }
+  return value;
+};
+function isFieldRecord(value) {
+  return typeof value === "object" && value !== null;
+}
+var bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
+function validateCaptureRequest(value) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Invalid capture request.");
+  }
+  if (value.operation === "context") {
+    let fields2 = ["operation", "action"];
+    const action = value.action;
+    if (action === "prepare" || action === "replay" || action === "restore") {
+      fields2.push("directory", "romContentSha256", "romFileSha256", "producer");
+      validateCaptureRequest({
+        operation: "file-start",
+        file: value.directory,
+        romFileSha256: value.romFileSha256,
+        romContentSha256: value.romContentSha256,
+        producer: value.producer,
+        bufferBytes: 8388608
+      });
+    } else if (action === "start" || action === "stop" || action === "mark") {
+      fields2.push("session");
+      captureSession(value.session);
+      if (action === "mark") {
+        fields2.push("label");
+        if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
+          throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
+        }
+      }
+    } else if (action !== "abort" && action !== "status") {
+      throw new Error("Unsupported capture context action.");
+    }
+    if (Object.keys(value).some((key) => !fields2.includes(key))) {
+      throw new Error("Unsupported capture context field.");
+    }
+    return;
+  }
+  if (value.operation === "file-capabilities") {
+    if (Object.keys(value).some((key) => !["operation", "scope"].includes(key))) {
+      throw new Error("Unsupported native file capability field.");
+    }
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+    return;
+  }
+  if (value.operation === "file-start") {
+    if (Object.keys(value).some(
+      (key) => ![
+        "operation",
+        "scope",
+        "bufferBytes",
+        "file",
+        "romContentSha256",
+        "romFileSha256",
+        "producer",
+        "measureStages"
+      ].includes(key)
+    )) {
+      throw new Error("Unsupported native file start field.");
+    }
+    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
+      throw new Error("Native file profiling must be boolean.");
+    }
+    validateCaptureRequest({
+      operation: "start",
+      bufferBytes: value.bufferBytes,
+      scope: value.scope
+    });
+    const producer = value.producer;
+    if (!bounded(value.file, 4096) || typeof value.file !== "string" || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || typeof value.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romContentSha256) || value.romFileSha256 !== void 0 && (typeof value.romFileSha256 !== "string" || !/^[\da-f]{64}$/.test(value.romFileSha256)) || !isFieldRecord(producer) || !bounded(producer.id, 256) || !bounded(producer.revision, 1024) || Object.keys(producer).some((key) => !["id", "revision"].includes(key))) {
+      throw new Error(
+        "Native file capture requires an absolute bounded path and exact ROM/producer identity."
+      );
+    }
+    return;
+  }
+  let fields = ["operation", "session"];
+  if (value.operation === "capabilities") {
+    fields = ["operation", "scope"];
+  }
+  if (value.operation === "start") {
+    fields = ["operation", "bufferBytes", "scope"];
+  }
+  if (value.operation === "read") {
+    fields = ["operation", "session", "chunk"];
+  }
+  if (value.operation === "ack") {
+    fields = ["operation", "session", "chunk", "event"];
+  }
+  if (Object.keys(value).some((key) => !fields.includes(key))) {
+    throw new Error(
+      "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
+    );
+  }
+  if (value.operation === "capabilities" || value.operation === "start") {
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+  }
+  if (value.operation === "capabilities") {
+    return;
+  }
+  if (value.operation === "start") {
+    const bufferBytes = value.bufferBytes;
+    if (typeof bufferBytes !== "number" || !Number.isSafeInteger(bufferBytes) || bufferBytes < 4718656 || bufferBytes > 64 * 1024 * 1024) {
+      throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
+    }
+    return;
+  }
+  captureSession(value.session);
+  if (value.operation === "status" || value.operation === "stop" || value.operation === "abort" || value.operation === "release" || value.operation === "file-status" || value.operation === "file-stop" || value.operation === "file-abort" || value.operation === "file-release") {
+    return;
+  }
+  if (value.operation === "read" || value.operation === "ack") {
+    if (!captureU64(value.chunk)) {
+      throw new Error("Capture chunk sequence starts at one.");
+    }
+    if (value.operation === "ack" && !captureU64(value.event)) {
+      throw new Error("Capture event sequence starts at one.");
+    }
+    return;
+  }
+  throw new Error("Unsupported capture operation.");
+}
+var validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
+  captureScope(scope);
+  let reserve = scope === "nes.2a03.instructions" ? 91 : 71;
+  if (scope === "nes.cpu-bus-ppu") {
+    reserve = 128;
+  }
+  if (scope === "snes.cpu-bus") {
+    reserve = 64;
+  }
+  if (scope === "snes.cpu-bus-transfers") {
+    reserve = 80;
+  }
+  if (scope === "snes.cpu-bus-ppu") {
+    reserve = 88;
+  }
+  const expected = {
+    version: 2,
+    scope,
+    mode: "lossless",
+    ownership: "durable-prefix",
+    maxChunkBytes: 262144,
+    requiredReserveBytes: reserve,
+    overheadBytes: 4194304,
+    resumeSession: false
+  };
+  if (!isFieldRecord(value) || Object.entries(expected).some(([key, item]) => value[key] !== item)) {
+    throw new Error("Unsupported capture scope, reserve, or ownership contract.");
+  }
+  if (value.nativeFile === true) {
+    return { ...expected, nativeFile: true };
+  }
+  return expected;
+};
+function assertCapturePosition(value, session, scope) {
+  if (!isFieldRecord(value)) {
+    throw new Error("Invalid capture position.");
+  }
+  captureSession(value.session);
+  if (session !== void 0 && value.session !== session) {
+    throw new Error("Capture session changed.");
+  }
+  const positionScope = captureScope(value.scope);
+  if (scope !== void 0 && positionScope !== captureScope(scope)) {
+    throw new Error("Capture scope changed or was not confirmed by the producer.");
+  }
+  const state = value.state;
+  if (state !== "armed" && state !== "recording" && state !== "throttled" && state !== "stopping" && state !== "draining" && state !== "complete" && state !== "incomplete") {
+    throw new Error("Invalid capture state.");
+  }
+  const bounds = [
+    value.releasedThrough,
+    value.durableThrough,
+    value.acceptedThrough,
+    value.deliveredThrough,
+    value.producedThrough
+  ].map(captureU64);
+  if (bounds.some((bound, index) => index > 0 && bound < bounds[index - 1])) {
+    throw new Error("Capture ownership boundaries are inconsistent.");
+  }
+  if (captureU64(value.chunkThrough) > captureU64(value.producedChunks)) {
+    throw new Error("Capture chunk boundary is inconsistent.");
+  }
+  captureU64(value.throttleCount);
+  if (!captureU64(value.clockNumerator) || !captureU64(value.clockDenominator)) {
+    throw new Error("Invalid capture clock domain.");
+  }
+  if (value.droppedInScope !== "0" || typeof value.error !== "string" || value.error.length > 256) {
+    throw new Error("Capture integrity failed.");
+  }
+  const bufferedBytes = value.bufferedBytes;
+  const allocatedBytes = value.allocatedBytes;
+  if (typeof bufferedBytes !== "number" || typeof allocatedBytes !== "number" || !Number.isSafeInteger(bufferedBytes) || !Number.isSafeInteger(allocatedBytes) || bufferedBytes < 0 || allocatedBytes < 0 || bufferedBytes > 64 * 1024 * 1024 || allocatedBytes > 64 * 1024 * 1024 || bufferedBytes > allocatedBytes) {
+    throw new Error("Capture allocation exceeds its bounds.");
+  }
+  if (state === "complete" && (value.error || bufferedBytes || new Set(bounds.map(String)).size !== 1 || value.chunkThrough !== value.producedChunks)) {
+    throw new Error("Capture terminal totals do not reconcile.");
+  }
+}
+var validateCapturePosition = (value, session, scope) => {
+  assertCapturePosition(value, session, scope);
+  return value;
+};
+
+// packages/capture/src/capture-context.ts
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { lstat, readFile } from "node:fs/promises";
+import path from "node:path";
+var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var digestFile = async (file, signal) => {
+  const hash = createHash("sha256");
+  for await (const bytes of createReadStream(file, { signal })) {
+    if (!Buffer.isBuffer(bytes)) {
+      throw new Error(`Expected binary capture context data in ${path.basename(file)}.`);
+    }
+    hash.update(bytes);
+  }
+  return hash.digest("hex");
+};
+var verifyCaptureContext = async (directory, identity, signal) => {
+  signal?.throwIfAborted();
+  const metadataFile = path.join(directory, "manifest.json");
+  const metadataStat = await lstat(metadataFile);
+  if (!metadataStat.isFile() || metadataStat.isSymbolicLink() || metadataStat.size > 1048576) {
+    throw new Error("Invalid capture context manifest.");
+  }
+  const manifest = JSON.parse(await readFile(metadataFile, "utf8"));
+  if (!isRecord(manifest)) {
+    throw new Error("Invalid capture context manifest.");
+  }
+  const producer = isRecord(manifest.producer) ? manifest.producer : void 0;
+  if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity.romContentSha256 || !isRecord(producer) || producer.id !== identity.producer.id || producer.revision !== identity.producer.revision || !isRecord(manifest.files)) {
+    throw new Error("Capture context requires the matching ROM and emulator build.");
+  }
+  const nes = manifest.architecture === "65xx.2a03";
+  if (nes && (!identity.romFileSha256 || identity.romFileSha256 !== manifest.romFileSha256 || manifest.addressSpace !== "nes.cpu") || !nes && identity.romFileSha256 !== void 0) {
+    throw new Error("Capture context requires the matching full iNES image.");
+  }
+  const files = manifest.files;
+  if (nes && manifest.scope !== "nes.2a03.instructions" && manifest.scope !== "nes.cpu-bus-ppu") {
+    throw new Error("Invalid NES capture context scope.");
+  }
+  if (nes && manifest.scope === "nes.2a03.instructions" && !files["graphics.act2"]) {
+    throw new Error("NES instruction context is missing its graphics companion.");
+  }
+  for (const name of [
+    "start.bst",
+    ...nes ? ["ram-start.bin", "ram-end.bin", "start-extra.bin", "end-state.bin"] : ["wram-start.bin", "wram-end.bin"],
+    "inputs.bin",
+    "identity.txt",
+    "machine.json",
+    "start-clock.txt",
+    "end-clock.txt",
+    "boundaries.json"
+  ]) {
+    if (!files[name]) {
+      throw new Error(`Capture context is missing ${name}.`);
+    }
+  }
+  for (const [name, artifact] of Object.entries(files)) {
+    signal?.throwIfAborted();
+    if (!/^(?:identity\.txt|machine\.json|start-extra\.bin|end-state\.bin|ram-(?:start|end)\.bin|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
+      name
+    ) || !isRecord(artifact) || typeof artifact.bytes !== "number" || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || typeof artifact.sha256 !== "string" || !/^[\da-f]{64}$/.test(artifact.sha256)) {
+      throw new Error("Invalid capture context artifact descriptor.");
+    }
+    const file = path.join(directory, name), stat2 = await lstat(file);
+    if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && (nes || stat2.size !== 131072) || name.startsWith("ram-") && (!nes || stat2.size !== 2048) || name === "start-extra.bin" && (!nes || stat2.size !== 38) || name === "end-state.bin" && (!nes || stat2.size < 2048 || stat2.size > 32 * 1048576) || name === "inputs.bin" && stat2.size % 18) {
+      throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
+    }
+    if (await digestFile(file, signal) !== artifact.sha256) {
+      throw new Error(`Capture context checksum mismatch: ${name}.`);
+    }
+  }
+};
+
+// packages/debug-adapter/src/sidecar-protocol.ts
+var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
+var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
+var DEBUG_SIDECAR_COMMANDS = Object.freeze([
+  "initialize",
+  "connect",
+  "disconnect",
+  "pause",
+  "continue",
+  "step",
+  "threads",
+  "stackFrames",
+  "registers",
+  "readMemory",
+  "setBreakpoints",
+  "disassemble",
+  "startTrace",
+  "readTrace",
+  "stopTrace",
+  "capture",
+  "ping",
+  "shutdown"
+]);
+var DEBUG_SIDECAR_EVENTS = Object.freeze([
+  "stopped",
+  "continued",
+  "terminated",
+  "breakpoint",
+  "output"
+]);
+var DEFAULT_DEBUG_SIDECAR_LIMITS = Object.freeze({
+  maxFrameBytes: 1048576,
+  maxBufferedBytes: 2097152,
+  maxMemoryReadBytes: 1048576,
+  maxDisassemblyInstructions: 4096,
+  maxBreakpoints: 4096,
+  maxTraceBatchEvents: 4096,
+  maxQueuedMessages: 1024,
+  maxQueuedBytes: 8388608
+});
+var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var listed = (values, value) => typeof value === "string" && values.some((item) => item === value);
+var positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+var nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+var sessionPattern = /^[\w-]{32,128}$/;
+function assertDebugSidecarSessionToken(value) {
+  if (typeof value !== "string" || !sessionPattern.test(value)) {
+    throw new Error("Sidecar session token must be 32-128 base64url characters.");
+  }
+}
+var assertRequestBounds = (command, args, limits) => {
+  const record2 = args ?? {};
+  if (!isRecord2(record2)) {
+    throw new Error("Sidecar request arguments must be an object.");
+  }
+  if (command === "readMemory") {
+    const count = record2.count;
+    if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes) {
+      throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
+    }
+  }
+  if (command === "disassemble") {
+    const count = record2.count;
+    if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions) {
+      throw new Error(
+        `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
+      );
+    }
+  }
+  if (command === "setBreakpoints") {
+    const breakpoints = record2.breakpoints;
+    if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
+      throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
+    }
+  }
+  if (command === "readTrace") {
+    const maxEvents = record2.maxEvents;
+    if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
+      throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
+    }
+  }
+};
+function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
+  if (!isRecord2(value)) {
+    throw new Error("Sidecar message must be an object.");
+  }
+  if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
+    throw new Error(`Unsupported sidecar protocol '${String(value.protocol)}'.`);
+  }
+  if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION) {
+    throw new Error(`Unsupported sidecar protocol version '${String(value.version)}'.`);
+  }
+  assertDebugSidecarSessionToken(value.session);
+  if (!positiveInteger(value.sequence)) {
+    throw new Error("Sidecar message sequence must be a positive safe integer.");
+  }
+  if (value.type === "request") {
+    if (!listed(DEBUG_SIDECAR_COMMANDS, value.command)) {
+      throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
+    }
+    assertRequestBounds(value.command, value.arguments, limits);
+    return;
+  }
+  if (value.type === "response") {
+    if (!positiveInteger(value.requestSequence)) {
+      throw new Error("Sidecar response requestSequence must be a positive safe integer.");
+    }
+    if (typeof value.success !== "boolean") {
+      throw new Error("Sidecar response success must be boolean.");
+    }
+    if (!value.success && typeof value.error !== "string") {
+      throw new Error("Failed sidecar response must include an error string.");
+    }
+    return;
+  }
+  if (value.type === "event") {
+    if (!listed(DEBUG_SIDECAR_EVENTS, value.event)) {
+      throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
+    }
+    if (!isRecord2(value.body)) {
+      throw new Error("Sidecar event body must be an object.");
+    }
+    return;
+  }
+  throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
+}
+var LIMIT_NAMES = [
+  "maxFrameBytes",
+  "maxBufferedBytes",
+  "maxMemoryReadBytes",
+  "maxDisassemblyInstructions",
+  "maxBreakpoints",
+  "maxTraceBatchEvents",
+  "maxQueuedMessages",
+  "maxQueuedBytes"
+];
+var validateLimits = (limits) => {
+  for (const name of LIMIT_NAMES) {
+    if (!positiveInteger(limits[name])) {
+      throw new Error(`${name} must be a positive safe integer.`);
+    }
+  }
+  if (limits.maxBufferedBytes < limits.maxFrameBytes + 4) {
+    throw new Error("maxBufferedBytes must hold at least one complete framed message.");
+  }
+};
+var encodeDebugSidecarMessage = (message, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) => {
+  validateLimits(limits);
+  assertDebugSidecarMessage(message, limits);
+  const body = Buffer.from(JSON.stringify(message), "utf8");
+  if (body.length > limits.maxFrameBytes) {
+    throw new Error(`Sidecar frame exceeds ${limits.maxFrameBytes} bytes.`);
+  }
+  const frame = Buffer.allocUnsafe(body.length + 4);
+  frame.writeUInt32BE(body.length, 0);
+  body.copy(frame, 4);
+  return frame;
+};
+var DebugSidecarMessageParser = class {
+  #limits;
+  #buffer = Buffer.alloc(0);
+  #lastSequence = 0;
+  /**
+   * Creates one directional stream parser.
+   * @param {DebugSidecarProtocolLimits} limits Framing and request limits.
+   */
+  constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
+    validateLimits(limits);
+    this.#limits = limits;
+  }
+  /**
+   * Adds a transport chunk and returns every complete validated message in order.
+   * @param {Uint8Array} chunk Next stdio or socket bytes.
+   * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
+   */
+  push(chunk) {
+    if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
+      throw new Error(`Sidecar receive buffer exceeds ${this.#limits.maxBufferedBytes} bytes.`);
+    }
+    this.#buffer = Buffer.concat([this.#buffer, chunk]);
+    const messages = [];
+    while (this.#buffer.length >= 4) {
+      const length = this.#buffer.readUInt32BE(0);
+      if (length === 0) {
+        throw new Error("Sidecar frame body cannot be empty.");
+      }
+      if (length > this.#limits.maxFrameBytes) {
+        throw new Error(`Sidecar frame declares ${length} bytes, above the configured limit.`);
+      }
+      if (this.#buffer.length < length + 4) {
+        break;
+      }
+      const body = this.#buffer.subarray(4, length + 4);
+      this.#buffer = this.#buffer.subarray(length + 4);
+      let decoded2;
+      try {
+        decoded2 = JSON.parse(body.toString("utf8"));
+      } catch {
+        throw new Error("Sidecar frame contains invalid JSON.");
+      }
+      assertDebugSidecarMessage(decoded2, this.#limits);
+      if (decoded2.sequence <= this.#lastSequence) {
+        throw new Error(
+          `Sidecar sequence ${decoded2.sequence} is not greater than ${this.#lastSequence}.`
+        );
+      }
+      this.#lastSequence = decoded2.sequence;
+      messages.push(decoded2);
+    }
+    return messages;
+  }
+};
+var DebugSidecarMessageQueue = class {
+  #limits;
+  #frames = [];
+  #bytes = 0;
+  /**
+   * Creates a bounded outgoing queue.
+   * @param {DebugSidecarProtocolLimits} limits Framing and queue limits.
+   */
+  constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
+    validateLimits(limits);
+    this.#limits = limits;
+  }
+  /** @returns {number} Number of queued protocol messages. */
+  get length() {
+    return this.#frames.length;
+  }
+  /** @returns {number} Encoded bytes currently retained for transport backpressure. */
+  get bytes() {
+    return this.#bytes;
+  }
+  /**
+   * Encodes and appends one message, failing the connection when bounds would be exceeded.
+   * @param {DebugSidecarMessage} message Next ordered message.
+   * @returns {void}
+   */
+  enqueue(message) {
+    const frame = encodeDebugSidecarMessage(message, this.#limits);
+    if (this.#frames.length >= this.#limits.maxQueuedMessages || this.#bytes + frame.length > this.#limits.maxQueuedBytes) {
+      throw new Error("Sidecar outgoing queue exceeded its backpressure limit.");
+    }
+    this.#frames.push(frame);
+    this.#bytes += frame.length;
+  }
+  /**
+   * Removes the oldest encoded frame.
+   * @returns {Uint8Array | undefined} Oldest frame or undefined when empty.
+   */
+  dequeue() {
+    const frame = this.#frames.shift();
+    if (frame) {
+      this.#bytes -= frame.length;
+    }
+    return frame;
+  }
+};
+
+// packages/debug-adapter/src/node-stdio-transport.ts
+var DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
+
+// packages/debug-adapter/src/sidecar-server.ts
+var isStepKind = (value) => value === "instruction" || value === "over" || value === "in" || value === "out";
+var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var record = (value, context) => {
+  if (!isRecord3(value)) {
+    throw new Error(`${context} must be an object.`);
+  }
+  return value;
+};
+var integer = (value, context, minimum = 0) => {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
+    throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+  }
+  return value;
+};
+var positiveInteger2 = (value, context) => integer(value, context, 1);
+var string = (value, context) => {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${context} must be a non-empty string.`);
+  }
+  return value;
+};
+var optionalPositiveInteger = (value, context) => value === void 0 ? void 0 : positiveInteger2(value, context);
+var boolean = (value, context, defaultValue) => {
+  if (value === void 0) {
+    return defaultValue;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`${context} must be boolean.`);
+  }
+  return value;
+};
+var address = (value, context) => {
+  const candidate = record(value, context);
+  if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0) {
+    throw new Error(`${context}.architecture must be a non-empty string.`);
+  }
+  if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0) {
+    throw new Error(`${context}.addressSpace must be a non-empty string.`);
+  }
+  const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer(candidate.outputOffset, `${context}.outputOffset`);
+  return {
+    architecture: candidate.architecture,
+    addressSpace: candidate.addressSpace,
+    address: integer(candidate.address, `${context}.address`),
+    ...outputOffset === void 0 ? {} : { outputOffset }
+  };
+};
+var addresses = (value, context) => {
+  if (!Array.isArray(value)) {
+    throw new Error(`${context} must be an array.`);
+  }
+  return value.map((entry, index) => address(entry, `${context}[${index}]`));
+};
+function assertShutdownCommand(command) {
+  if (command !== "shutdown") {
+    throw new Error(`Unsupported command '${command}'.`);
+  }
+}
+var asError = (error) => error instanceof Error ? error : new Error(String(error));
+var DebugSidecarServer = class {
+  #backendName;
+  #implementation;
+  #session;
+  #write;
+  #closeTransport;
+  #parser;
+  #outgoing;
+  #eventSubscription;
+  #serverSequence = 1;
+  #capturedEvents;
+  #receiveTail = Promise.resolve();
+  #writeTail = Promise.resolve();
+  #closed = false;
+  /**
+   * Creates a server around an emulator-neutral backend implementation.
+   * @param {DebugSidecarServerOptions} options Identity, backend, transport, and safety bounds.
+   */
+  constructor(options) {
+    if (typeof options.backend !== "string" || options.backend.length === 0) {
+      throw new Error("Sidecar backend name must be a non-empty string.");
+    }
+    assertDebugSidecarSessionToken(options.session);
+    this.#backendName = options.backend;
+    this.#implementation = options.implementation;
+    this.#session = options.session;
+    this.#write = options.write;
+    this.#closeTransport = options.close ?? (() => Promise.resolve());
+    const limits = options.limits ?? DEFAULT_DEBUG_SIDECAR_LIMITS;
+    this.#parser = new DebugSidecarMessageParser(limits);
+    this.#outgoing = new DebugSidecarMessageQueue(limits);
+    this.#eventSubscription = this.#implementation.onEvent((event) => this.#backendEvent(event));
+  }
+  /** @returns {boolean} Whether the server has permanently closed. */
+  get closed() {
+    return this.#closed;
+  }
+  /**
+   * Accepts the next transport chunk. Calls are serialized even when the stream producer overlaps them.
+   * @param {Uint8Array} data Framed protocol bytes from the client.
+   * @returns {Promise<void>} Completion after every request in this chunk has been dispatched.
+   */
+  receive(data) {
+    if (this.#closed) {
+      return Promise.reject(new Error("Sidecar server is closed."));
+    }
+    const receive = this.#receiveTail.then(() => this.#receive(data));
+    this.#receiveTail = receive.catch(() => void 0);
+    return receive.catch(async (error) => {
+      await this.close(asError(error));
+      throw error;
+    });
+  }
+  /**
+   * Flushes queued output and closes the server transport exactly once.
+   * @param {Error} error Optional terminal protocol or transport failure.
+   * @returns {Promise<void>} Completion of transport cleanup.
+   */
+  async close(error) {
+    if (this.#closed) {
+      return;
+    }
+    this.#closed = true;
+    this.#eventSubscription.dispose();
+    await this.#writeTail.catch(() => void 0);
+    await this.#closeTransport(error);
+  }
+  async #receive(data) {
+    for (const message of this.#parser.push(data)) {
+      if (message.session !== this.#session) {
+        throw new Error("Sidecar request session does not match this connection.");
+      }
+      if (message.type !== "request") {
+        throw new Error("Sidecar client sent a non-request message on a server-only channel.");
+      }
+      await this.#handle(message);
+    }
+  }
+  async #handle(request) {
+    const events = [];
+    this.#capturedEvents = events;
+    let result;
+    let failure;
+    try {
+      result = await this.#dispatch(request);
+    } catch (error) {
+      failure = asError(error);
+    } finally {
+      this.#capturedEvents = void 0;
+    }
+    await this.#send(
+      this.#envelope({
+        type: "response",
+        requestSequence: request.sequence,
+        success: failure === void 0,
+        ...failure ? { error: failure.message } : { result }
+      })
+    );
+    for (const event of events) {
+      await this.#send(this.#eventEnvelope(event));
+    }
+    if (request.command === "shutdown" && !failure) {
+      await this.close();
+    }
+  }
+  async #dispatch(request) {
+    const args = record(request.arguments ?? {}, "Sidecar request arguments");
+    if (request.command === "initialize") {
+      if (args.backend !== this.#backendName) {
+        throw new Error("Unexpected backend identity.");
+      }
+      if (args.backendProtocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
+        throw new Error("Unsupported backend protocol version.");
+      }
+      return {
+        backend: this.#backendName,
+        backendProtocolVersion: DEBUG_BACKEND_PROTOCOL_VERSION,
+        capabilities: this.#implementation.capabilities
+      };
+    }
+    if (request.command === "connect") {
+      await this.#implementation.connect({
+        reset: boolean(args.reset, "Connect reset", true)
+      });
+      return { capabilities: this.#implementation.capabilities };
+    }
+    if (request.command === "disconnect") {
+      await this.#implementation.disconnect({
+        terminate: boolean(args.terminate, "Disconnect terminate", true)
+      });
+      return {};
+    }
+    if (request.command === "pause") {
+      await this.#implementation.pause(optionalPositiveInteger(args.threadId, "Pause threadId"));
+      return {};
+    }
+    if (request.command === "continue") {
+      await this.#implementation.continue(
+        optionalPositiveInteger(args.threadId, "Continue threadId")
+      );
+      return {};
+    }
+    if (request.command === "step") {
+      const kind = args.kind;
+      if (typeof kind !== "string" || !isStepKind(kind)) {
+        throw new Error(`Unsupported step kind '${String(kind)}'.`);
+      }
+      await this.#implementation.step(positiveInteger2(args.threadId, "Step threadId"), kind);
+      return {};
+    }
+    if (request.command === "threads") {
+      return this.#implementation.threads();
+    }
+    if (request.command === "stackFrames") {
+      return this.#implementation.stackFrames(
+        positiveInteger2(args.threadId, "Stack frames threadId")
+      );
+    }
+    if (request.command === "registers") {
+      return this.#implementation.registers(positiveInteger2(args.frameId, "Registers frameId"));
+    }
+    if (request.command === "readMemory") {
+      const memory = await this.#implementation.readMemory(
+        address(args.address, "Memory address"),
+        integer(args.count, "Memory count")
+      );
+      return {
+        address: memory.address,
+        data: Buffer.from(memory.bytes).toString("base64"),
+        unreadableBytes: memory.unreadableBytes
+      };
+    }
+    if (request.command === "setBreakpoints") {
+      return this.#implementation.setBreakpoints(
+        addresses(args.breakpoints, "Breakpoint addresses")
+      );
+    }
+    if (request.command === "disassemble") {
+      return this.#implementation.disassemble(
+        address(args.address, "Disassembly address"),
+        integer(args.count, "Disassembly count")
+      );
+    }
+    if (request.command === "capture") {
+      const capture = args;
+      validateCaptureRequest(capture);
+      if (!this.#implementation.capture) {
+        throw new Error("This backend does not support capture v2.");
+      }
+      return this.#implementation.capture(capture);
+    }
+    if (request.command === "startTrace") {
+      if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full") {
+        throw new Error("Trace detail must be pc or full.");
+      }
+      await this.#implementation.startTrace({
+        architecture: string(args.architecture, "Trace architecture"),
+        addressSpace: string(args.addressSpace, "Trace address space"),
+        ...args.detail === void 0 ? {} : { detail: args.detail }
+      });
+      return {};
+    }
+    if (request.command === "readTrace") {
+      return this.#implementation.readTrace(positiveInteger2(args.maxEvents, "Trace batch size"));
+    }
+    if (request.command === "stopTrace") {
+      await this.#implementation.stopTrace();
+      return {};
+    }
+    if (request.command === "ping") {
+      return { pong: true };
+    }
+    assertShutdownCommand(request.command);
+    return {};
+  }
+  #backendEvent(event) {
+    if (this.#closed) {
+      return;
+    }
+    if (this.#capturedEvents) {
+      this.#capturedEvents.push(event);
+      return;
+    }
+    void this.#send(this.#eventEnvelope(event)).catch(
+      (error) => this.close(asError(error))
+    );
+  }
+  #eventEnvelope(event) {
+    if (event.type === "stopped") {
+      return this.#envelope({
+        type: "event",
+        event: "stopped",
+        body: { reason: event.reason, threadId: event.threadId }
+      });
+    }
+    if (event.type === "continued") {
+      return this.#envelope({
+        type: "event",
+        event: "continued",
+        body: { threadId: event.threadId, allThreads: event.allThreads }
+      });
+    }
+    if (event.type === "terminated") {
+      return this.#envelope({
+        type: "event",
+        event: "terminated",
+        body: { restart: event.restart }
+      });
+    }
+    if (event.type === "breakpoint") {
+      return this.#envelope({
+        type: "event",
+        event: "breakpoint",
+        body: { breakpoint: event.breakpoint }
+      });
+    }
+    return this.#envelope({
+      type: "event",
+      event: "output",
+      body: { category: event.category, text: event.text }
+    });
+  }
+  #envelope(message) {
+    if (!Number.isSafeInteger(this.#serverSequence) || this.#serverSequence <= 0) {
+      throw new Error("Sidecar server sequence exhausted.");
+    }
+    return {
+      protocol: DEBUG_SIDECAR_PROTOCOL,
+      version: DEBUG_SIDECAR_PROTOCOL_VERSION,
+      session: this.#session,
+      sequence: this.#serverSequence++,
+      ...message
+    };
+  }
+  #send(message) {
+    if (this.#closed) {
+      return Promise.reject(new Error("Sidecar server is closed."));
+    }
+    this.#outgoing.enqueue(message);
+    const write2 = this.#writeTail.then(async () => {
+      let frame = this.#outgoing.dequeue();
+      while (frame) {
+        await this.#write(frame);
+        frame = this.#outgoing.dequeue();
+      }
+      return;
+    });
+    this.#writeTail = write2.catch(() => void 0);
+    return write2;
+  }
+};
+
 // packages/debug-sidecar-ares/src/ares-process-host.ts
-init_src();
 import { spawn } from "node:child_process";
 import { createHash as createHash2 } from "node:crypto";
 import { createReadStream as createReadStream2 } from "node:fs";
@@ -2955,14 +2758,1270 @@ var AresProcessHost = class {
     this.#output = combined.subarray(Math.max(0, combined.length - this.#maxOutputBytes));
   }
   #serializeLifecycle(action) {
-    const operation = this.#lifecycleTail.then(action);
-    this.#lifecycleTail = operation.then(
+    const operation2 = this.#lifecycleTail.then(action);
+    this.#lifecycleTail = operation2.then(
       () => void 0,
       () => void 0
     );
-    return operation;
+    return operation2;
   }
 };
+
+// packages/core/src/source-location.ts
+function createSourceSpan(start, end, line) {
+  return {
+    start,
+    end,
+    // Operand-local spans omit physical lines so cached syntax remains plain JSON data.
+    ...line === void 0 ? {} : { line },
+    columnStart: start,
+    columnEnd: end
+  };
+}
+function createTextSpan(text, start, end, line, lineStarts = sourceLineStarts(text)) {
+  let low = 0;
+  let high = lineStarts.length;
+  while (low + 1 < high) {
+    const middle = low + high >>> 1;
+    if (lineStarts[middle] <= start) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  const column = start - lineStarts[low];
+  return createSourceSpan(column, column + end - start, line + low);
+}
+function sourceLineStarts(text) {
+  const starts = [0];
+  for (let at = text.indexOf("\n"); at >= 0; at = text.indexOf("\n", at + 1)) {
+    starts.push(at + 1);
+  }
+  return starts;
+}
+
+// packages/core/src/ir/expression-parse-state.ts
+var rawOutcomes = /* @__PURE__ */ new WeakMap();
+function setRawExpressionOutcome(node, outcome2) {
+  rawOutcomes.set(node, outcome2);
+}
+function expressionOutcomeKey(outcome2) {
+  return outcome2.kind === "native" ? "native" : `${outcome2.kind}:${outcome2.reason}`;
+}
+
+// packages/core/src/internal-instrumentation.ts
+var activeInstrumentation;
+function recordExpressionParse(site, outcome2) {
+  if (syntaxOwner === "execution") {
+    recordSyntaxBoundary("execution-expression-parse");
+  }
+  const metrics = activeInstrumentation;
+  if (!metrics) {
+    return;
+  }
+  metrics.counters.expressionParserCalls++;
+  if (site === "instrumentation") {
+    metrics.counters.expressionInstrumentationParses++;
+  }
+  const key = `${site}:${expressionOutcomeKey(outcome2)}`;
+  metrics.expressionBoundaries.parses[key] = (metrics.expressionBoundaries.parses[key] ?? 0) + 1;
+}
+var migrationGuard;
+function recordSyntaxBoundary(boundary) {
+  if (migrationGuard?.forbidden.has(boundary)) {
+    migrationGuard.violations.add(boundary);
+  }
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.syntaxBoundaries[boundary] = (metrics.syntaxBoundaries[boundary] ?? 0) + 1;
+  }
+}
+var syntaxOwner = "source";
+function recordExecutionParser(kind) {
+  if (syntaxOwner === "execution") {
+    recordSyntaxBoundary(`execution-${kind}-parse`);
+  }
+}
+
+// packages/core/src/ir/source-fragment.ts
+function sourceFragment(text, origins = []) {
+  return { segments: [{ text, origins }] };
+}
+
+// packages/core/src/ir/define-template.ts
+function parseDefineTemplate(text, escapes = "basic") {
+  const parse2 = (start, end) => {
+    const parts2 = [];
+    for (let index = start; index < end; index++) {
+      const next = text.at(index + 1);
+      if (text[index] === "\\" && next !== void 0 && escapes !== "none" && (escapes === "string" || next === "\\" || next === "!")) {
+        parts2.push({ kind: "escape", start: index, end: index + 2, value: next });
+        index++;
+        continue;
+      }
+      if (text[index] !== "!") {
+        continue;
+      }
+      if (next === "{") {
+        let cursor = index + 2;
+        let depth = 1;
+        for (; cursor < end && depth > 0; cursor++) {
+          if (text[cursor] === "{") {
+            depth++;
+          } else if (text[cursor] === "}") {
+            depth--;
+          }
+        }
+        if (depth !== 0) {
+          parts2.push({ kind: "error", start: index, end });
+          break;
+        }
+        parts2.push({
+          kind: "define",
+          start: index,
+          end: cursor,
+          name: text.slice(index + 2, cursor - 1),
+          braced: true,
+          children: parse2(index + 2, cursor - 1)
+        });
+        index = cursor - 1;
+      } else if (next && /\w/.test(next)) {
+        let cursor = index + 2;
+        while (cursor < end && /\w/.test(text[cursor])) {
+          cursor++;
+        }
+        parts2.push({
+          kind: "define",
+          start: index,
+          end: cursor,
+          name: text.slice(index + 1, cursor),
+          braced: false,
+          children: []
+        });
+        index = cursor - 1;
+      }
+    }
+    return parts2;
+  };
+  return { text, parts: parse2(0, text.length) };
+}
+
+// packages/core/src/ir/expression-call-contracts.ts
+var firstSourceArgument = /* @__PURE__ */ new Set([
+  "countof",
+  "bytesof",
+  "startof",
+  "endof",
+  "defined",
+  "sizeof",
+  "objectsize",
+  "datasize",
+  "filesize",
+  "getfilestatus"
+]);
+function isSourceTextArgument(name, index) {
+  if (name === "stringsequal" || name === "stringsequalnocase") {
+    return index < 2;
+  }
+  return index === 0 && (firstSourceArgument.has(name) || /^(?:canreadfile|readfile)\d?$/.test(name));
+}
+
+// packages/core/src/ir/expression-operators.ts
+var binaryPrecedence = {
+  "||": 0,
+  "&&": 1,
+  "==": 2,
+  "=": 2,
+  "!=": 2,
+  "<": 2,
+  ">": 2,
+  "<=": 2,
+  ">=": 2,
+  "|": 3,
+  "^": 3,
+  "&": 3,
+  "<<": 3,
+  ">>": 3,
+  "+": 4,
+  "-": 4,
+  "*": 5,
+  "/": 5,
+  "%": 5,
+  "**": 6
+};
+
+// packages/core/src/ir/expression-node.ts
+function attachRootSpan(node, text, source) {
+  node.span ??= source ? createTextSpan(
+    source.text,
+    source.offset,
+    source.offset + text.length,
+    source.line,
+    source.lineStarts
+  ) : createSourceSpan(0, text.length);
+  return node;
+}
+function parseExpressionNode(input, source) {
+  return parseExpressionAtSite(input, "public", source);
+}
+function parseExpressionAtSite(input, site, source) {
+  return parseExpressionResult(input, site, source).node;
+}
+function parseExpressionResult(input, site = "public", source) {
+  const result = parseExpressionInput(input, site, source);
+  recordExpressionParse(site, result.outcome);
+  return result;
+}
+var ExpressionSyntaxError = class extends Error {
+  constructor(outcome2, diagnostic) {
+    super(outcome2.reason);
+    this.outcome = outcome2;
+    this.diagnostic = diagnostic;
+  }
+  outcome;
+  diagnostic;
+};
+function errorParseResult(text, outcome2, source, diagnostic) {
+  if (text.includes("!")) {
+    const defines = parseDefineTemplate(text);
+    if (defines.parts.some((part) => part.kind === "define") && !defines.parts.some((part) => part.kind === "error")) {
+      return {
+        node: attachRootSpan({ type: "template", form: "source", text, defines }, text, source),
+        outcome: { kind: "native" }
+      };
+    }
+  }
+  const node = attachRootSpan(
+    {
+      type: "error",
+      value: text,
+      outcome: outcome2,
+      ...diagnostic ?? { message: `Invalid number: ${text}` }
+    },
+    text,
+    source
+  );
+  setRawExpressionOutcome(node, outcome2);
+  return { node, outcome: outcome2 };
+}
+function parseLiteralValue(value) {
+  if (/^\$[\dA-Fa-f]+$/.test(value)) {
+    return Number.parseInt(value.slice(1), 16);
+  }
+  if (/^0x[\da-f]+$/i.test(value)) {
+    return Number.parseInt(value.slice(2), 16);
+  }
+  if (/^%[01]+$/.test(value)) {
+    return Number.parseInt(value.slice(1), 2);
+  }
+  if (/^-?\d+(?:\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+  throw new Error(`Unsupported literal expression: ${value}`);
+}
+function parseExpressionInput(input, site, source) {
+  const trimmed = input.trim();
+  if (source) {
+    source = { ...source, offset: source.offset + input.length - input.trimStart().length };
+  }
+  if (!trimmed) {
+    return errorParseResult(trimmed, { kind: "invalid", reason: "empty" }, source, {
+      code: "MATH_INVALID_INPUT",
+      message: "Invalid input: empty expression."
+    });
+  }
+  if (trimmed.startsWith("#") && trimmed.length > 1) {
+    return parseExpressionResult(
+      trimmed.slice(1),
+      site,
+      source && { ...source, offset: source.offset + 1 }
+    );
+  }
+  const rangeIndex = findTopLevelRange(trimmed);
+  if (rangeIndex !== -1) {
+    const start = parseExpressionResult(trimmed.slice(0, rangeIndex), site, source);
+    const end = parseExpressionResult(
+      trimmed.slice(rangeIndex + 2),
+      site,
+      source && { ...source, offset: source.offset + rangeIndex + 2 }
+    );
+    const outcome2 = start.outcome.kind === "native" ? end.outcome : start.outcome;
+    return {
+      node: attachRootSpan({ type: "range", start: start.node, end: end.node }, trimmed, source),
+      outcome: outcome2
+    };
+  }
+  try {
+    const parser = new ExpressionParser(tokenizeExpression(trimmed, source, site), trimmed);
+    const expression = parser.parseExpression();
+    if (!parser.isAtEnd()) {
+      const offset = parser.peek()?.offset ?? trimmed.length;
+      const rest = trimmed.slice(offset);
+      const diagnostic = rest.startsWith(",") ? { code: "MATH_INVALID_INPUT", message: `Invalid input: ${rest}` } : { code: "MATH_MISMATCHED_PARENTHESES", message: "Mismatched parentheses." };
+      return errorParseResult(
+        trimmed,
+        { kind: "invalid", reason: "trailing-tokens" },
+        source,
+        diagnostic
+      );
+    }
+    return { node: attachRootSpan(expression, trimmed, source), outcome: { kind: "native" } };
+  } catch (error) {
+    const failure = error instanceof ExpressionSyntaxError ? error.outcome : { kind: "unsupported", reason: "unclassified" };
+    const diagnostic = error instanceof ExpressionSyntaxError && error.diagnostic ? error.diagnostic : { message: `Invalid number: ${trimmed}` };
+    return errorParseResult(trimmed, failure, source, diagnostic);
+  }
+}
+function isReferenceExpressionNode(node) {
+  switch (node.type) {
+    case "identifier":
+    case "defineReference":
+    case "relativeReference":
+      return true;
+    case "member":
+    case "index":
+      return isReferenceExpressionNode(node.object);
+    case "binary":
+    case "call":
+    case "literal":
+    case "range":
+    case "raw":
+    case "string":
+    case "unary":
+    case "error":
+    case "sourceText":
+    case "template":
+      break;
+  }
+  return false;
+}
+function findTopLevelRange(input) {
+  let depth = 0;
+  let bracketDepth = 0;
+  let quote = "";
+  for (let i = 0; i < input.length - 1; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
+      continue;
+    }
+    if (quote) {
+      continue;
+    }
+    if (char === "(") {
+      depth++;
+      continue;
+    }
+    if (char === ")") {
+      depth--;
+      continue;
+    }
+    if (char === "[") {
+      bracketDepth++;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth--;
+      continue;
+    }
+    if (depth === 0 && bracketDepth === 0 && input.slice(i, i + 2) === "..") {
+      if (i === 0) {
+        continue;
+      }
+      return i;
+    }
+  }
+  return -1;
+}
+function skipWhitespace(input, index) {
+  let current = index;
+  while (current < input.length && /\s/.test(input[current])) {
+    current++;
+  }
+  return current;
+}
+function isUnaryOperator(value) {
+  return value === "<:" || value === "<" || value === ">" || value === "^" || value === "~" || value === "-" || value === "+";
+}
+function isQuote(value) {
+  return value === '"' || value === "'";
+}
+var binaryOperators = [
+  "**",
+  "<<",
+  ">>",
+  "<=",
+  ">=",
+  "==",
+  "=",
+  "!=",
+  "&&",
+  "||",
+  "*",
+  "/",
+  "%",
+  "+",
+  "-",
+  "&",
+  "|",
+  "^",
+  "<",
+  ">"
+];
+function tokenizeExpression(input, source, site = "public") {
+  const tokens = [];
+  let index = 0;
+  const provenance = (end) => source ? {
+    offset: index,
+    span: createTextSpan(
+      source.text,
+      source.offset + index,
+      source.offset + end,
+      source.line,
+      source.lineStarts
+    )
+  } : { offset: index };
+  const astProvenance = (end) => {
+    const { offset: _offset, ...location } = provenance(end);
+    return location;
+  };
+  while (index < input.length) {
+    const char = input[index];
+    if (/\s/.test(char)) {
+      index++;
+      continue;
+    }
+    const previousToken = tokens.at(-1);
+    const startsOperand = !previousToken || ["operator", "lparen", "lbracket", "comma"].includes(previousToken.type);
+    const relative = input.slice(index).match(/^([:?]?)(\++|-+)/);
+    if (relative && (relative[1] || startsOperand && /^(?:\s*$|\s*[&)*,/<=>\]^|])/.test(input.slice(index + relative[0].length)))) {
+      let stream = "relative";
+      if (relative[1] === ":") {
+        stream = "unnamed";
+      }
+      if (relative[1] === "?") {
+        stream = "macro";
+      }
+      const text = relative[0];
+      tokens.push({
+        type: "expression",
+        node: {
+          type: "relativeReference",
+          text,
+          stream,
+          direction: relative[2][0] === "+" ? 1 : -1,
+          count: relative[2].length,
+          ...astProvenance(index + text.length)
+        },
+        offset: index
+      });
+      index += text.length;
+      continue;
+    }
+    const placeholder = startsOperand ? input.slice(index).match(/^<(?:([A-Z_a-z]\w*)|(?:\.{3}|…)\[([^\]]+)])>/) : null;
+    if (placeholder) {
+      const text = placeholder[0];
+      const node = {
+        type: "template",
+        form: placeholder[1] ? "parameter" : "variadic",
+        text,
+        ...astProvenance(index + text.length)
+      };
+      if (placeholder[1]) {
+        node.name = placeholder[1];
+      } else {
+        node.index = parseExpressionAtSite(placeholder[2], site);
+      }
+      tokens.push({ type: "expression", node, offset: index });
+      index += text.length;
+      continue;
+    }
+    if (char === "(") {
+      tokens.push({ type: "lparen", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ")") {
+      tokens.push({ type: "rparen", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ",") {
+      tokens.push({ type: "comma", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ".") {
+      tokens.push({ type: "dot", ...provenance(index + 1) });
+      index++;
+      continue;
+    }
+    if (char === "[") {
+      tokens.push({ type: "lbracket", offset: index });
+      index++;
+      continue;
+    }
+    if (char === "]") {
+      tokens.push({ type: "rbracket", offset: index });
+      index++;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      const { value, nextIndex, quote } = readQuotedString(input, index);
+      tokens.push({ type: "string", value, quote, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    const previous = tokens.at(-1);
+    const operandExpected = !previous || previous.type === "operator" || previous.type === "lparen" || previous.type === "lbracket" || previous.type === "comma";
+    if (operandExpected && char === "%" && !/[01]/.test(input[index + 1] ?? "")) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "literal" },
+        { message: "Invalid number: NaN" }
+      );
+    }
+    if (char === "%" && operandExpected && /[01]/.test(input[index + 1] ?? "")) {
+      const literal = input.slice(index).match(/^%[01]+/)[0];
+      tokens.push({ type: "literal", value: literal, ...provenance(index + literal.length) });
+      index += literal.length;
+      continue;
+    }
+    if (char === "!" && !input.startsWith("!=", index) && !/[A-Z_a-z{]/.test(input[index + 1] ?? "")) {
+      tokens.push({ type: "operator", value: "~", offset: index });
+      index++;
+      continue;
+    }
+    if (char === "~") {
+      tokens.push({ type: "operator", value: "~", offset: index });
+      index++;
+      continue;
+    }
+    const operator = (input.startsWith("<:", index) ? "<:" : void 0) ?? binaryOperators.find((candidate) => input.startsWith(candidate, index));
+    if (operator) {
+      tokens.push({ type: "operator", value: operator, offset: index });
+      index += operator.length;
+      continue;
+    }
+    if (char === "!") {
+      const { token, nextIndex } = readDefineReference(input, index);
+      tokens.push({ ...token, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    if (char === "@" || char === "?" || /[A-Z_a-z]/.test(char) || previousToken?.type === "dot" && /\d/.test(char)) {
+      const { value, nextIndex } = readIdentifier(input, index);
+      if (nextIndex === index + 1 && (char === "?" || char === "@")) {
+        throw new ExpressionSyntaxError({ kind: "unsupported", reason: "token" });
+      }
+      const open = skipWhitespace(input, nextIndex);
+      if (input[open] === "(" && previousToken?.type !== "dot") {
+        const call = readCallSyntax(input, value, open, site, source);
+        tokens.push({
+          type: "expression",
+          node: {
+            type: "call",
+            callee: { type: "identifier", name: value, ...astProvenance(nextIndex) },
+            arguments: call.arguments,
+            ...astProvenance(call.end)
+          },
+          offset: index
+        });
+        index = call.end;
+        continue;
+      }
+      tokens.push({ type: "identifier", value, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    if (char === "$") {
+      const match = input.slice(index).match(/^\$[\dA-Fa-f]+/);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    if (char === "%") {
+      const match = input.slice(index).match(/^%[01]+/);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    if (/\d/.test(char)) {
+      if (/^0x/i.test(input.slice(index)) && !/[\dA-Fa-f]/.test(input[index + 2] ?? "")) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      const match = input.slice(index).match(/^(?:0x[\da-f]+|-?\d+(?:\.\d+)?)/i);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    throw new ExpressionSyntaxError({ kind: "unsupported", reason: "token" });
+  }
+  return tokens;
+}
+function readCallSyntax(input, name, open, site, source) {
+  const args = [];
+  let start = open + 1;
+  let depth = 0;
+  let quote = "";
+  const append = (end) => {
+    const raw = input.slice(start, end);
+    const text = raw.trim();
+    if (!text) {
+      if (start > open + 1 && isSourceTextArgument(name, args.length)) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "operand" },
+          { message: `Missing function argument for '${name}'.` }
+        );
+      }
+      return;
+    }
+    if (/^function\b/.test(text)) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "operand" },
+        { message: `Missing function argument for '${name}'.` }
+      );
+    }
+    const offset = start + raw.length - raw.trimStart().length;
+    const occurrence = source && { ...source, offset: source.offset + offset };
+    if (isSourceTextArgument(name, args.length)) {
+      let value = text;
+      if (text.startsWith('"') || text.startsWith("'")) {
+        const quoted = readQuotedString(text, 0);
+        const trailing = text.slice(quoted.nextIndex).trimStart();
+        if (trailing && /^["'A-Z_a-z]/.test(trailing)) {
+          throw new ExpressionSyntaxError(
+            { kind: "invalid", reason: "delimiter" },
+            {
+              message: `Expected ',' or ')' in function call arguments: ${input.slice(offset + quoted.nextIndex).trimStart()}`
+            }
+          );
+        }
+      }
+      if (text.startsWith('"') && text.endsWith('"') || text.startsWith("'") && text.endsWith("'")) {
+        value = text.slice(1, -1);
+      }
+      args.push(attachRootSpan({ type: "sourceText", text, value }, text, occurrence));
+    } else {
+      args.push(parseExpressionAtSite(text, site, occurrence));
+    }
+  };
+  for (let index = start; index < input.length; index++) {
+    const char = input[index];
+    if (quote) {
+      if (char === quote && input[index - 1] !== "\\") {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(" || char === "[") {
+      depth++;
+    } else if (char === "]") {
+      depth--;
+    } else if (char === ")") {
+      if (depth === 0) {
+        append(index);
+        return { arguments: args, end: index + 1 };
+      }
+      depth--;
+    } else if (char === "," && depth === 0) {
+      append(index);
+      start = index + 1;
+    }
+  }
+  let message = "Mismatched parentheses.";
+  if (depth === 0 && input.slice(start).trim()) {
+    message = "Expected ',' or ')' in function call arguments: ";
+  }
+  if (quote) {
+    message = "Unterminated string literal in function call.";
+  }
+  throw new ExpressionSyntaxError({ kind: "invalid", reason: "delimiter" }, { message });
+}
+function readQuotedString(input, start) {
+  const quote = input[start];
+  if (!isQuote(quote)) {
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "string" });
+  }
+  let value = "";
+  let index = start + 1;
+  while (index < input.length) {
+    const char = input[index];
+    if (char === quote && input[index - 1] !== "\\") {
+      return { value, nextIndex: index + 1, quote };
+    }
+    value += char;
+    index++;
+  }
+  throw new ExpressionSyntaxError({ kind: "invalid", reason: "string" });
+}
+function readIdentifier(input, start) {
+  let index = start;
+  if (input[index] === "?" && input[index + 1] === ".") {
+    index++;
+    while (input[index] === ".") {
+      index++;
+    }
+  }
+  if (input[index] === "@" || input[index] === "?") {
+    index++;
+  }
+  while (index < input.length && /\w/.test(input[index])) {
+    index++;
+  }
+  return { value: input.slice(start, index), nextIndex: index };
+}
+function readDefineReference(input, start) {
+  if (input[start + 1] === "{") {
+    let index = start + 2;
+    let braces = 1;
+    let content = "";
+    while (index < input.length) {
+      const char = input[index];
+      if (char === "{") {
+        braces++;
+      } else if (char === "}") {
+        braces--;
+        if (braces === 0) {
+          return {
+            token: { type: "defineReference", content, braced: true },
+            nextIndex: index + 1
+          };
+        }
+      }
+      content += char;
+      index++;
+    }
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "define" });
+  }
+  const { value, nextIndex } = readIdentifier(input, start + 1);
+  if (!value) {
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "define" });
+  }
+  return {
+    token: { type: "defineReference", name: value, braced: false },
+    nextIndex
+  };
+}
+var ExpressionParser = class {
+  constructor(tokens, sourceText) {
+    this.tokens = tokens;
+    this.sourceText = sourceText;
+  }
+  tokens;
+  sourceText;
+  index = 0;
+  parseExpression(minPrecedence = 0) {
+    let left = this.parsePrefix();
+    while (true) {
+      const token = this.peek();
+      if (!token || token.type !== "operator" || !isBinaryOperator(token.value)) {
+        break;
+      }
+      const precedence = binaryPrecedence[token.value];
+      if (precedence < minPrecedence) {
+        break;
+      }
+      this.consume();
+      const nextMinPrecedence = precedence + 1;
+      const next = this.peek();
+      if (this.isAtEnd() || next?.type === "identifier" && next.value === "function") {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "operand" },
+          { message: `Missing right operand for operator '${token.value}'.` }
+        );
+      }
+      const right = this.parseExpression(nextMinPrecedence);
+      left = {
+        type: "binary",
+        operator: token.value,
+        left,
+        right
+      };
+    }
+    return left;
+  }
+  isAtEnd() {
+    return this.index >= this.tokens.length;
+  }
+  parsePrefix() {
+    const token = this.peek();
+    if (!token) {
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" });
+    }
+    if (token.type === "operator" && isUnaryOperator(token.value)) {
+      this.consume();
+      return {
+        type: "unary",
+        operator: token.value,
+        argument: this.parsePrefix()
+      };
+    }
+    return this.parsePostfix(this.parsePrimary());
+  }
+  parsePrimary() {
+    if (this.peek()?.type === "dot") {
+      const firstSpan = this.peek()?.span;
+      let name = "";
+      while (this.match({ type: "dot" })) {
+        name += ".";
+      }
+      const token2 = this.consume();
+      if (token2?.type === "identifier") {
+        return {
+          type: "identifier",
+          name: name + token2.value,
+          ...firstSpan && {
+            span: createSourceSpan(firstSpan.start, token2.span.end, firstSpan.line)
+          }
+        };
+      }
+      if (token2?.type === "literal" && /^\d+$/.test(token2.value)) {
+        return {
+          type: "identifier",
+          name: name + token2.value,
+          ...firstSpan && {
+            span: createSourceSpan(firstSpan.start, token2.span.end, firstSpan.line)
+          }
+        };
+      }
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "member" });
+    }
+    const token = this.consume();
+    if (!token) {
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" });
+    }
+    switch (token.type) {
+      case "expression":
+        return token.node;
+      case "literal": {
+        const numericValue = parseLiteralValue(token.value);
+        return {
+          type: "literal",
+          value: token.value,
+          ...Number.isFinite(numericValue) && { numericValue },
+          ...token.span && { span: token.span }
+        };
+      }
+      case "string":
+        return {
+          type: "string",
+          value: token.value,
+          quote: token.quote,
+          ...token.span && { span: token.span }
+        };
+      case "defineReference":
+        return token.braced ? {
+          type: "defineReference",
+          content: token.content,
+          braced: true,
+          ...token.span && { span: token.span }
+        } : {
+          type: "defineReference",
+          name: token.name,
+          braced: false,
+          ...token.span && { span: token.span }
+        };
+      case "identifier":
+        return { type: "identifier", name: token.value, ...token.span && { span: token.span } };
+      case "lparen": {
+        const next = this.peek();
+        if (next?.type === "identifier" && next.value === "function") {
+          throw new ExpressionSyntaxError(
+            { kind: "invalid", reason: "operand" },
+            { message: "Empty parenthesized expression." }
+          );
+        }
+        const expression = this.parseExpression();
+        this.expect("rparen");
+        return { ...expression, parenthesized: true };
+      }
+      case "comma":
+      case "dot":
+      case "lbracket":
+      case "operator":
+      case "rbracket":
+      case "rparen":
+        break;
+    }
+    throw new ExpressionSyntaxError(
+      { kind: "invalid", reason: "operand" },
+      { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` }
+    );
+  }
+  parsePostfix(expression) {
+    let current = expression;
+    while (true) {
+      if (this.match({ type: "lparen" })) {
+        if (current.type !== "identifier") {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        current = {
+          type: "call",
+          callee: current,
+          arguments: this.parseCallArguments()
+        };
+        continue;
+      }
+      if (this.match({ type: "dot" })) {
+        if (!isReferenceExpressionNode(current)) {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        const property = this.consume();
+        if (!property || property.type !== "identifier") {
+          throw new ExpressionSyntaxError({ kind: "invalid", reason: "member" });
+        }
+        current = {
+          type: "member",
+          object: current,
+          property: {
+            type: "identifier",
+            name: property.value,
+            ...property.span && { span: property.span }
+          }
+        };
+        continue;
+      }
+      if (this.match({ type: "lbracket" })) {
+        if (!isReferenceExpressionNode(current)) {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        const indexExpression = this.parseExpression();
+        this.expect("rbracket");
+        current = {
+          type: "index",
+          object: current,
+          index: indexExpression
+        };
+        continue;
+      }
+      return current;
+    }
+  }
+  parseCallArguments() {
+    const args = [];
+    if (this.match({ type: "rparen" })) {
+      return args;
+    }
+    do {
+      args.push(this.parseExpression());
+    } while (this.match({ type: "comma" }));
+    this.expect("rparen");
+    return args;
+  }
+  /**
+   * Expects a value.
+   * @param {Token["type"]} type The type.
+   */
+  expect(type) {
+    const token = this.consume();
+    if (!token || token.type !== type) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "delimiter" },
+        {
+          message: type === "rbracket" ? "Mismatched brackets in struct index" : "Mismatched parentheses."
+        }
+      );
+    }
+  }
+  match(expected) {
+    const token = this.peek();
+    if (token && token.type === expected.type) {
+      this.index++;
+      return true;
+    }
+    return false;
+  }
+  consume() {
+    const token = this.tokens[this.index];
+    this.index++;
+    return token;
+  }
+  peek() {
+    return this.tokens[this.index];
+  }
+};
+function isBinaryOperator(value) {
+  return value in binaryPrecedence;
+}
+
+// packages/core/src/ir/directive-arguments.ts
+function parseDirectiveExpression(text, numeric = true, source) {
+  recordExecutionParser("directive");
+  if (/![\w{]/.test(text)) {
+    return { type: "template", form: "source", text };
+  }
+  const node = parseExpressionAtSite(text, "statement", source);
+  return numeric ? dataResolutionExpression(text, node) : node;
+}
+function unquoteDirectiveText(text) {
+  const quote = text[0];
+  if ((quote === '"' || quote === "'") && text.endsWith(quote) && text.length > 1) {
+    return text.slice(1, -1);
+  }
+  return text;
+}
+function dataResolutionExpression(text, node) {
+  if (node.parenthesized && (node.type === "member" || node.type === "index" || node.type === "literal" && node.value.includes("."))) {
+    return { type: "identifier", name: text, ...node.span ? { span: node.span } : {} };
+  }
+  return node;
+}
+
+// packages/core/src/ir/source-syntax.ts
+function copySyntaxValue(value) {
+  return copySyntaxTree(value, false);
+}
+function copySyntaxTree(value, immutable) {
+  const ancestors = /* @__PURE__ */ new Set();
+  let nodes = 0;
+  const copy = (entry, depth) => {
+    if (++nodes > 1e6) {
+      throw new Error("Plugin syntax payload exceeds structural limits (1,000,000 values).");
+    }
+    if (depth > 128) {
+      throw new Error("Plugin syntax payload exceeds structural limits (128 nesting levels).");
+    }
+    if (entry === null || typeof entry === "string" || typeof entry === "boolean") {
+      return entry;
+    }
+    if (typeof entry === "number" && Number.isFinite(entry)) {
+      return entry;
+    }
+    if (typeof entry !== "object") {
+      throw new Error("Plugin syntax payload must be plain JSON data.");
+    }
+    if (ancestors.has(entry)) {
+      throw new Error("Plugin syntax payload must be acyclic.");
+    }
+    const prototype = Object.getPrototypeOf(entry);
+    if (!Array.isArray(entry) && prototype !== Object.prototype && prototype !== null) {
+      throw new Error("Plugin syntax payload must have a plain prototype.");
+    }
+    if (Object.getOwnPropertySymbols(entry).length) {
+      throw new Error("Plugin syntax payload cannot contain symbol properties.");
+    }
+    ancestors.add(entry);
+    try {
+      const keys = Object.getOwnPropertyNames(entry);
+      if (Array.isArray(entry)) {
+        const result2 = [];
+        for (let index = 0; index < entry.length; index++) {
+          const descriptor2 = Object.getOwnPropertyDescriptor(entry, index);
+          if (!descriptor2) {
+            throw new Error("Plugin syntax arrays must be dense.");
+          }
+          if (!("value" in descriptor2)) {
+            throw new Error("Plugin syntax payload cannot contain accessors.");
+          }
+          result2.push(copy(descriptor2.value, depth + 1));
+        }
+        if (keys.length !== entry.length + 1) {
+          throw new Error("Plugin syntax arrays cannot have custom properties.");
+        }
+        return immutable ? Object.freeze(result2) : result2;
+      }
+      const result = {};
+      for (const key of keys) {
+        const descriptor2 = Object.getOwnPropertyDescriptor(entry, key);
+        if (!descriptor2 || !("value" in descriptor2)) {
+          throw new Error("Plugin syntax payload cannot contain accessors.");
+        }
+        const copied = copy(descriptor2.value, depth + 1);
+        if (Object.hasOwn(Object.prototype, key)) {
+          Object.defineProperty(result, key, {
+            value: copied,
+            enumerable: true,
+            writable: true,
+            configurable: true
+          });
+        } else {
+          result[key] = copied;
+        }
+      }
+      return immutable ? Object.freeze(result) : result;
+    } finally {
+      ancestors.delete(entry);
+    }
+  };
+  return copy(value, 0);
+}
+
+// packages/core/src/ir/syntax-codec.ts
+var syntaxString = (value) => typeof value === "string";
+var syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
+var syntaxBoolean = (value) => typeof value === "boolean";
+function syntaxLiteral(literal) {
+  return (value) => value === literal;
+}
+function syntaxArray(guard) {
+  return (value) => Array.isArray(value) && value.every(guard);
+}
+function syntaxOptional(guard) {
+  return (value) => value === void 0 || guard(value);
+}
+function syntaxObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function syntaxRecord(shape) {
+  return (value) => {
+    if (!syntaxObject(value)) {
+      return false;
+    }
+    const fields = value;
+    return Object.keys(fields).every((key) => Object.hasOwn(shape, key)) && Object.entries(shape).every(([key, guard]) => guard(fields[key]));
+  };
+}
+function syntaxUnion(...guards) {
+  return (value) => guards.some((guard) => guard(value));
+}
+var syntaxSpan = syntaxRecord({
+  start: syntaxNumber,
+  end: syntaxNumber,
+  line: syntaxOptional(syntaxNumber),
+  columnStart: syntaxOptional(syntaxNumber),
+  columnEnd: syntaxOptional(syntaxNumber)
+});
+var identifier = (value) => syntaxExpression(value) && value.type === "identifier";
+var reference = (value) => syntaxExpression(value) && ["identifier", "defineReference", "relativeReference", "member", "index"].includes(value.type);
+var outcome = syntaxUnion(
+  syntaxRecord({ kind: syntaxLiteral("native") }),
+  syntaxRecord({
+    kind: syntaxLiteral("compatibility"),
+    reason: syntaxUnion(
+      syntaxLiteral("relative-label"),
+      syntaxLiteral("macro-argument"),
+      syntaxLiteral("variadic-template")
+    )
+  }),
+  syntaxRecord({
+    kind: syntaxLiteral("invalid"),
+    reason: syntaxUnion(
+      ...[
+        "empty",
+        "literal",
+        "string",
+        "define",
+        "operand",
+        "delimiter",
+        "member",
+        "trailing-tokens"
+      ].map(syntaxLiteral)
+    )
+  }),
+  syntaxRecord({
+    kind: syntaxLiteral("unsupported"),
+    reason: syntaxUnion(
+      syntaxLiteral("token"),
+      syntaxLiteral("postfix"),
+      syntaxLiteral("unclassified")
+    )
+  })
+);
+var syntaxExpression = (value) => {
+  if (!syntaxObject(value)) {
+    return false;
+  }
+  const node = value;
+  if (node.span !== void 0 && !syntaxSpan(node.span)) {
+    return false;
+  }
+  if (node.parenthesized !== void 0 && !syntaxBoolean(node.parenthesized)) {
+    return false;
+  }
+  switch (node.type) {
+    case "literal":
+      return syntaxString(node.value) && (node.numericValue === void 0 || syntaxNumber(node.numericValue));
+    case "identifier":
+      return syntaxString(node.name);
+    case "string":
+      return syntaxString(node.value) && (node.quote === '"' || node.quote === "'");
+    case "sourceText":
+      return syntaxString(node.text) && syntaxString(node.value);
+    case "defineReference":
+      return syntaxBoolean(node.braced) && (syntaxString(node.name) || syntaxString(node.content));
+    case "relativeReference":
+      return (node.direction === 1 || node.direction === -1) && syntaxNumber(node.count) && ["relative", "unnamed", "macro"].includes(String(node.stream));
+    case "member":
+      return reference(node.object) && identifier(node.property);
+    case "index":
+      return reference(node.object) && syntaxExpression(node.index);
+    case "call":
+      return identifier(node.callee) && syntaxArray(syntaxExpression)(node.arguments);
+    case "unary":
+      return ["<:", "<", ">", "^", "~", "-", "+"].includes(String(node.operator)) && syntaxExpression(node.argument);
+    case "binary":
+      return [
+        "**",
+        "*",
+        "/",
+        "%",
+        "+",
+        "-",
+        "<<",
+        ">>",
+        "&",
+        "|",
+        "^",
+        "<",
+        ">",
+        "<=",
+        ">=",
+        "==",
+        "=",
+        "!=",
+        "&&",
+        "||"
+      ].includes(String(node.operator)) && syntaxExpression(node.left) && syntaxExpression(node.right);
+    case "range":
+      return syntaxExpression(node.start) && syntaxExpression(node.end);
+    case "template":
+      return ["parameter", "variadic", "source"].includes(String(node.form)) && syntaxString(node.text) && (node.index === void 0 || syntaxExpression(node.index));
+    case "error":
+      return syntaxString(node.value) && syntaxString(node.message) && outcome(node.outcome);
+    default:
+      return false;
+  }
+};
+function syntaxCodec(version, parse2, guard) {
+  return {
+    version,
+    parse(input) {
+      return copySyntaxValue(JSON.parse(JSON.stringify(parse2(input))));
+    },
+    validate: guard,
+    read(payload) {
+      if (!guard(payload)) {
+        throw new Error("Invalid typed directive payload.");
+      }
+      return payload;
+    }
+  };
+}
 
 // packages/core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE = Object.freeze({
@@ -2996,8 +4055,313 @@ var CA65_SYNTAX_PROFILE = Object.freeze({
   fileLocalSymbols: true
 });
 
+// packages/core/src/services/command-text-service.ts
+var splitRespectingFunctions = (input) => {
+  const result = [];
+  let current = "";
+  let parenDepth = 0;
+  let inQuotes = false;
+  let quoteChar = "";
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (char === quoteChar) {
+        inQuotes = false;
+      }
+    }
+    if (!inQuotes) {
+      if (char === "(") {
+        parenDepth++;
+      } else if (char === ")") {
+        parenDepth--;
+      } else if (char === "," && parenDepth === 0) {
+        result.push(current.trim());
+        current = "";
+        continue;
+      }
+    }
+    current += char;
+  }
+  if (current) {
+    result.push(current.trim());
+  }
+  return result;
+};
+
+// packages/core/src/ir/data-node.ts
+function parseDataOperand(text) {
+  let value = text.trim();
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    return { text, expression: { type: "string", quote, value: value.slice(1, -1) } };
+  }
+  if (value.startsWith("#")) {
+    value = value.slice(1);
+  }
+  if (/![\w{]/.test(value)) {
+    return { text, expression: { type: "template", form: "source", text: value } };
+  }
+  return {
+    text,
+    expression: dataResolutionExpression(value, parseExpressionAtSite(value, "statement"))
+  };
+}
+function parseDataList(text) {
+  return splitRespectingFunctions(text).map(parseDataOperand);
+}
+
+// packages/core/src/ir/parsed-operand.ts
+function parseInstructionOperands(mnemonic, text, grammar2) {
+  const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
+  let width;
+  if (suffix === "b") {
+    width = 1;
+  } else if (suffix === "w") {
+    width = 2;
+  } else if (suffix === "l") {
+    width = 3;
+  }
+  const mnemonicBit = grammar2.bitSelectors ? /^(?:bbs|bbc|set1|clr1)([0-7])$/i.exec(mnemonic)?.[1] : void 0;
+  const result = {
+    operands: []
+  };
+  if (width) {
+    result.width = width;
+  }
+  if (mnemonicBit !== void 0) {
+    result.mnemonicBit = Number(mnemonicBit);
+  }
+  if (!text.trim()) {
+    return result;
+  }
+  if (grammar2.templates !== false && /![\w{]|<[^>]+>|\\[A-Z_a-z]/.test(text)) {
+    result.operands.push({
+      kind: "template",
+      fragment: sourceFragment(text, []),
+      structure: parseInstructionOperands(mnemonic, text, { ...grammar2, templates: false }),
+      span: { start: 0, end: text.length }
+    });
+    return result;
+  }
+  try {
+    const parts2 = operandParts(text, ",");
+    for (let index = 0; index < parts2.length; index++) {
+      let part = parts2[index];
+      const next = parts2[index + 1];
+      if (grammar2.commaIndex && next && grammar2.indexRegisters.includes(next.text.toLowerCase())) {
+        part = { text: text.slice(part.start, next.end), start: part.start, end: next.end };
+        index++;
+      }
+      result.operands.push(parseOperand(part.text, part.start, grammar2));
+    }
+  } catch (cause) {
+    result.operands = [
+      {
+        kind: "invalid",
+        message: cause instanceof Error ? cause.message : String(cause),
+        span: { start: 0, end: text.length }
+      }
+    ];
+  }
+  return result;
+}
+function operandParts(text, separator) {
+  const parts2 = [];
+  const stack = [];
+  let quote = "";
+  let start = 0;
+  const append = (end) => {
+    const raw = text.slice(start, end);
+    const value = raw.trim();
+    const offset = start + raw.length - raw.trimStart().length;
+    parts2.push({ text: value, start: offset, end: offset + value.length });
+  };
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if (quote) {
+      if (char === "\\") {
+        index++;
+      } else if (char === quote) {
+        quote = "";
+      }
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if ("([{".includes(char)) {
+      stack.push(char);
+    } else if (")]}".includes(char)) {
+      const opening = { ")": "(", "]": "[", "}": "{" }[char];
+      if (stack.pop() !== opening) {
+        throw new Error("Mismatched operand delimiters.");
+      }
+    } else if (char === separator && stack.length === 0) {
+      append(index);
+      start = index + 1;
+    }
+  }
+  if (quote || stack.length) {
+    throw new Error("Unclosed operand delimiter.");
+  }
+  append(text.length);
+  return parts2;
+}
+function scalar(text, start, force) {
+  const expression = parseDirectiveExpression(text, true, { text, offset: 0, line: 0 });
+  let spelling = "expression";
+  let literalBytes;
+  const hex3 = /^\$([\da-f]+)$/i.exec(text);
+  const binary = /^%([01]+)$/.exec(text);
+  if (hex3) {
+    spelling = "hex";
+    literalBytes = Math.max(1, Math.ceil(hex3[1].length / 2));
+  } else if (binary) {
+    spelling = "binary";
+    literalBytes = Math.max(1, Math.ceil(binary[1].length / 8));
+  } else if (/^-?\d+(?:\.\d+)?$/.test(text)) {
+    spelling = "decimal";
+  } else if (isReferenceExpressionNode(expression)) {
+    spelling = "symbol";
+  }
+  return {
+    expression,
+    ...expression.type === "template" ? {
+      referenceExpression: parseExpressionAtSite(text, "statement", {
+        text,
+        offset: 0,
+        line: 0
+      })
+    } : {},
+    width: {
+      spelling,
+      grouped: expression.parenthesized === true,
+      ...force ? { forcedBytes: force } : {},
+      ...literalBytes ? { literalBytes } : {}
+    },
+    span: { start, end: start + text.length }
+  };
+}
+function parseOperand(text, start, grammar2) {
+  const span = { start, end: start + text.length };
+  if (!text) {
+    return { kind: "invalid", message: "Missing operand.", span };
+  }
+  const name = text.toLowerCase();
+  if (grammar2.registers.includes(name)) {
+    return { kind: "register", name, span };
+  }
+  if (text.startsWith("#")) {
+    const value = text.slice(1).trim();
+    return { kind: "immediate", value: scalar(value, start + text.indexOf(value, 1)), span };
+  }
+  let body = text;
+  let offset = start;
+  let force;
+  const prefix = grammar2.ca65Widths ? /^([afz]):\s*/i.exec(body) : void 0;
+  if (prefix) {
+    const code = prefix[1].toLowerCase();
+    if (code === "z") {
+      force = 1;
+    } else if (code === "a") {
+      force = 2;
+    } else {
+      force = 3;
+    }
+    body = body.slice(prefix[0].length);
+    offset += prefix[0].length;
+  }
+  let inverted = false;
+  if (grammar2.bitSelectors && body.startsWith("/")) {
+    inverted = true;
+    body = body.slice(1);
+    offset++;
+  }
+  let index;
+  const outside = grammar2.commaIndex ? operandParts(body, ",") : operandParts(body, "+");
+  if ((grammar2.commaIndex || grammar2.plusIndex) && outside.length > 1) {
+    const last = outside.at(-1);
+    if (grammar2.indexRegisters.includes(last.text.toLowerCase())) {
+      index = {
+        register: last.text.toLowerCase(),
+        position: "outside",
+        separator: grammar2.commaIndex ? "," : "+"
+      };
+      body = body.slice(0, last.start - 1).replace(/[+,]\s*$/, "").trimEnd();
+    }
+  }
+  let postIncrement = false;
+  if (grammar2.plusIndex && /\)\s*\+$/.test(body)) {
+    postIncrement = true;
+    body = body.slice(0, body.lastIndexOf("+")).trimEnd();
+  }
+  let delimiter = "none";
+  if (body.startsWith("(") && body.endsWith(")") || body.startsWith("[") && body.endsWith("]")) {
+    const inner = body.slice(1, -1);
+    try {
+      operandParts(inner, ",");
+      delimiter = body[0] === "(" ? "parentheses" : "brackets";
+      const trimmed = inner.trim();
+      offset += 1 + inner.length - inner.trimStart().length;
+      body = trimmed;
+    } catch {
+    }
+  }
+  if (delimiter !== "none" && grammar2.plusIndex && body.endsWith("+")) {
+    const candidate = body.slice(0, -1).trimEnd();
+    if (grammar2.registers.includes(candidate.toLowerCase())) {
+      postIncrement = true;
+      body = candidate;
+    }
+  }
+  if (delimiter !== "none") {
+    const inside = operandParts(body, grammar2.commaIndex ? "," : "+");
+    if (inside.length === 2 && grammar2.indexRegisters.includes(inside[1].text.toLowerCase())) {
+      if (index) {
+        const address3 = scalar(inside[0].text, offset + inside[0].start, force);
+        return {
+          kind: "memory",
+          address: address3,
+          delimiter,
+          index,
+          innerIndex: inside[1].text.toLowerCase(),
+          span
+        };
+      }
+      index = {
+        register: inside[1].text.toLowerCase(),
+        position: "inside",
+        separator: grammar2.commaIndex ? "," : "+"
+      };
+      body = inside[0].text;
+      offset += inside[0].start;
+    }
+  }
+  let bit;
+  const bitMatch = grammar2.bitSelectors ? /\.([0-7])$/.exec(body) : void 0;
+  if (bitMatch) {
+    bit = { selector: scalar(bitMatch[1], offset + body.length - 1), inverted };
+    body = body.slice(0, bitMatch.index).trimEnd();
+  }
+  const register = body.toLowerCase();
+  const address2 = delimiter !== "none" && grammar2.registers.includes(register) ? {
+    kind: "register",
+    name: register,
+    span: { start: offset, end: offset + body.length }
+  } : scalar(body, offset, force);
+  return {
+    kind: "memory",
+    address: address2,
+    delimiter,
+    span,
+    ...index ? { index } : {},
+    ...postIncrement ? { postIncrement } : {},
+    ...bit ? { bit } : {}
+  };
+}
+
 // packages/core/src/plugin/contracts.ts
-var PLUGIN_API_VERSION = 1;
+var PLUGIN_API_VERSION = 2;
 function definePlugin(plugin2) {
   return plugin2;
 }
@@ -3044,96 +4408,197 @@ var Uint8ArrayDecoderSource = class {
   }
 };
 
-// packages/core/src/index.ts
-init_debug_map();
-init_canonical_json();
-
-// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
-init_src();
-
-// packages/plugin-65xx/src/instructions/catalog.ts
-var syntax = {
-  implied: "",
-  accumulator: "A",
-  immediate: "#value",
-  zeroPage: "zp",
-  zeroPageIndexedX: "zp,x",
-  zeroPageIndexedY: "zp,y",
-  absolute: "addr",
-  absoluteIndexedX: "addr,x",
-  absoluteIndexedY: "addr,y",
-  absoluteLongIndexedX: "long,x",
-  indirect: "(addr)",
-  zeroPageIndirect: "(zp)",
-  zeroPageIndirectLong: "[zp]",
-  indexedIndirectX: "(zp,x)",
-  indirectIndexedY: "(zp),y",
-  absoluteIndexedIndirect: "(addr,x)",
-  zeroPageIndirectIndexedZ: "(zp),z",
-  stackRelative: "offset,s",
-  stackRelativeIndirectIndexedY: "(offset,s),y",
-  relative: "target",
-  relative16: "target",
-  zeroPageRelative: "zp,target",
-  accumulatorRelative: "A,target",
-  zeroPageImmediate: "zp,#value",
-  specialPage: "$FFnn",
-  blockTransfer: "source,destination,length",
-  immediateZeroPage: "#value,zp",
-  immediateZeroPageIndexedX: "#value,zp,x",
-  immediateAbsolute: "#value,addr",
-  immediateAbsoluteIndexedX: "#value,addr,x",
-  basePageIndirectIndexedZ: "[zp],z",
-  quadAccumulator: "Q"
-};
-var summaries = {
-  ADC: "Add memory to the accumulator with carry.",
-  AND: "Bitwise AND memory with the accumulator.",
-  ASL: "Shift left one bit.",
-  BCC: "Branch when carry is clear.",
-  BCS: "Branch when carry is set.",
-  BEQ: "Branch when equal (zero set).",
-  BIT: "Test accumulator bits without storing a result.",
-  BMI: "Branch when negative.",
-  BNE: "Branch when not equal (zero clear).",
-  BPL: "Branch when positive.",
-  BRK: "Trigger a software interrupt.",
-  BVC: "Branch when overflow is clear.",
-  BVS: "Branch when overflow is set.",
-  CMP: "Compare memory with the accumulator.",
-  CPX: "Compare memory with X.",
-  CPY: "Compare memory with Y.",
-  EOR: "Exclusive-OR memory with the accumulator.",
-  JMP: "Jump to an address.",
-  JSR: "Call a subroutine.",
-  LDA: "Load the accumulator.",
-  LDX: "Load X.",
-  LDY: "Load Y.",
-  NOP: "Perform no operation.",
-  ORA: "Bitwise OR memory with the accumulator.",
-  SBC: "Subtract memory and borrow from the accumulator.",
-  STA: "Store the accumulator.",
-  STX: "Store X.",
-  STY: "Store Y."
-};
-function buildInstructionCatalog(forms) {
-  const grouped = /* @__PURE__ */ new Map();
-  for (const form of forms) {
-    const entries2 = grouped.get(form.mnemonic) ?? [];
-    entries2.push(form);
-    grouped.set(form.mnemonic, entries2);
-  }
-  return [...grouped.entries()].toSorted(([left], [right]) => left.localeCompare(right)).map(([mnemonic, entries2]) => ({
-    mnemonic,
-    summary: summaries[mnemonic] ?? (entries2.some((entry) => !entry.documented) ? "Undocumented NMOS 6502 instruction." : `${mnemonic} instruction.`),
-    modes: entries2.map((form) => ({
-      mode: form.mode,
-      syntax: syntax[form.mode],
-      opcode: form.opcode,
-      size: form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0)
-    }))
-  }));
+// packages/plugin-65xx/src/ca65-profile.ts
+var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
+function isSessionStateKey(value) {
+  return value.id.length > 0;
 }
+function createSessionStateKey(id) {
+  const key = { id };
+  if (!isSessionStateKey(key)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key;
+}
+var ca65SessionStateKey = createSessionStateKey(
+  CA65_65XX_SESSION_STATE_ID
+);
+function createCa65SessionState() {
+  return {
+    defaultArchitecture: "65xx.6502",
+    currentArchitecture: "65xx.6502",
+    cpuStack: [],
+    scopeStack: [],
+    segmentStack: [],
+    currentFlatSegment: ""
+  };
+}
+function cloneCa65SessionState(state) {
+  return {
+    ...state,
+    cpuStack: [...state.cpuStack],
+    scopeStack: [...state.scopeStack],
+    segmentStack: [...state.segmentStack]
+  };
+}
+function resetCa65StageState(state) {
+  state.currentArchitecture = state.defaultArchitecture;
+  state.cpuStack = [];
+  state.scopeStack = [];
+  state.segmentStack = [];
+  state.currentFlatSegment = "";
+}
+var ca65CpuNames = Object.freeze({
+  "6502": "65xx.6502",
+  "6502x": "65xx.6502x",
+  "2a03": "65xx.2a03",
+  "2a07": "65xx.2a03",
+  "6502dtv": "65xx.6502dtv",
+  "65sc02": "65xx.65sc02",
+  "65c02": "65xx.65c02",
+  w65c02: "65xx.w65c02",
+  "65ce02": "65xx.65ce02",
+  "4510": "65xx.4510",
+  "45gs02": "65xx.45gs02",
+  huc6280: "65xx.huc6280",
+  m740: "65xx.m740"
+});
+function resolve65xxCpuName(name) {
+  return ca65CpuNames[name.trim().toLowerCase()];
+}
+var ca65CpuShorthands = Object.freeze({
+  p02: "6502",
+  p02x: "6502x",
+  pdtv: "6502dtv",
+  psc02: "65sc02",
+  pc02: "65c02",
+  pwc02: "w65c02",
+  pce02: "65ce02",
+  p4510: "4510",
+  p45gs02: "45gs02",
+  p6280: "huc6280",
+  pm740: "m740"
+});
+var cpuPredicateSymbols = Object.freeze({
+  ifp02: "__CA65_CPU_6502__",
+  ifp02x: "__CA65_CPU_6502X__",
+  ifpdtv: "__CA65_CPU_6502DTV__",
+  ifpsc02: "__CA65_CPU_65SC02__",
+  ifpc02: "__CA65_CPU_65C02__",
+  ifpwc02: "__CA65_CPU_W65C02__",
+  ifpce02: "__CA65_CPU_65CE02__",
+  ifp4510: "__CA65_CPU_4510__",
+  ifp45gs02: "__CA65_CPU_45GS02__",
+  ifp6280: "__CA65_CPU_HUC6280__",
+  ifpm740: "__CA65_CPU_M740__"
+});
+var ca65CpuPredicateByArchitecture = Object.freeze({
+  "65xx.6502": "__CA65_CPU_6502__",
+  "65xx.6502x": "__CA65_CPU_6502X__",
+  "65xx.2a03": "__CA65_CPU_6502X__",
+  "65xx.6502dtv": "__CA65_CPU_6502DTV__",
+  "65xx.65sc02": "__CA65_CPU_65SC02__",
+  "65xx.65c02": "__CA65_CPU_65C02__",
+  "65xx.w65c02": "__CA65_CPU_W65C02__",
+  "65xx.65ce02": "__CA65_CPU_65CE02__",
+  "65xx.4510": "__CA65_CPU_4510__",
+  "65xx.45gs02": "__CA65_CPU_45GS02__",
+  "65xx.huc6280": "__CA65_CPU_HUC6280__",
+  "65xx.m740": "__CA65_CPU_M740__"
+});
+function splitArguments(value) {
+  const parts2 = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(") {
+      depth++;
+    } else if (character === ")") {
+      depth--;
+    } else if (character === "," && depth === 0) {
+      parts2.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts2.push(value.slice(start).trim());
+  return parts2.filter(Boolean);
+}
+function rewriteScopedNames(value) {
+  let result = "";
+  let quote = "";
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if ((character === '"' || character === "'") && value[index - 1] !== "\\") {
+      quote = quote === character ? "" : quote || character;
+    }
+    if (!quote && character === ":" && value[index + 1] === ":") {
+      result += "_";
+      index++;
+    } else {
+      result += character;
+    }
+  }
+  return result;
+}
+function rewriteCa65Command(command, context) {
+  let rewritten = rewriteScopedNames(command);
+  rewritten = rewritten.replace(/\.(defined|lobyte|hibyte|bankbyte|loword|hiword)\s*\(/gi, "$1(");
+  rewritten = rewritten.replace(
+    /(^|[^\w@])@([0-7]+)\b/g,
+    (_match, prefix, digits) => `${prefix}${Number.parseInt(digits, 8)}`
+  );
+  rewritten = rewritten.replace(/<>/g, "!=");
+  const match = rewritten.match(/^(\s*)\.([\dA-Za-z]+)\b(.*)$/);
+  if (!match) {
+    return rewritten;
+  }
+  const [, indent, rawKeyword, rawRest] = match;
+  const keyword = rawKeyword.toLowerCase();
+  const rest = rawRest.trim();
+  const predicate = cpuPredicateSymbols[keyword];
+  if (predicate) {
+    return `${indent}if ${predicate}`;
+  }
+  if (["if", "elseif", "else", "endif"].includes(keyword)) {
+    return `${indent}${keyword}${rest ? ` ${rest}` : ""}`;
+  }
+  if (keyword === "ifdef") {
+    return `${indent}if defined(${rest})`;
+  }
+  if (keyword === "ifndef") {
+    return `${indent}if defined(${rest}) == 0`;
+  }
+  if (keyword === "macro") {
+    const header = rest.match(/^([A-Z_a-z]\w*)\s*(.*)$/);
+    if (!header) {
+      return rewritten;
+    }
+    const params = splitArguments(header[2]).join(",");
+    return `${indent}macro ${header[1]}(${params})`;
+  }
+  if (keyword === "endmacro") {
+    return `${indent}endmacro`;
+  }
+  if (keyword === "repeat") {
+    const [count = "0", variable = `__ca65_repeat_${context.sourceLine}`] = splitArguments(rest);
+    return `${indent}for ${variable} = 0..(${count})`;
+  }
+  if (keyword === "endrepeat") {
+    return `${indent}endfor`;
+  }
+  if (keyword === "undefine") {
+    return `${indent}undef ${rest}`;
+  }
+  return rewritten;
+}
+var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
+  ...CA65_SYNTAX_PROFILE,
+  id: "ca65-65xx",
+  rewriteCommand: rewriteCa65Command,
+  bareMacroInvocations: true,
+  macroParameterPrefix: "\\"
+});
 
 // packages/plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
@@ -5437,745 +6902,6 @@ function getCpuAssemblyForms(cpu) {
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 
-// packages/plugin-65xx/src/architecture.ts
-var directToAbsolute = {
-  zeroPage: "absolute",
-  zeroPageIndexedX: "absoluteIndexedX",
-  zeroPageIndexedY: "absoluteIndexedY",
-  zeroPageIndirect: "indirect",
-  indexedIndirectX: "absoluteIndexedIndirect"
-};
-var absoluteToDirect = {
-  absolute: "zeroPage",
-  absoluteIndexedX: "zeroPageIndexedX",
-  absoluteIndexedY: "zeroPageIndexedY",
-  indirect: "zeroPageIndirect",
-  absoluteIndexedIndirect: "indexedIndirectX"
-};
-var addressingModes = {
-  implied: true,
-  accumulator: true,
-  immediate: true,
-  zeroPage: true,
-  zeroPageIndexedX: true,
-  zeroPageIndexedY: true,
-  absolute: true,
-  absoluteIndexedX: true,
-  absoluteIndexedY: true,
-  absoluteLongIndexedX: true,
-  indirect: true,
-  zeroPageIndirect: true,
-  zeroPageIndirectLong: true,
-  indexedIndirectX: true,
-  indirectIndexedY: true,
-  absoluteIndexedIndirect: true,
-  zeroPageIndirectIndexedZ: true,
-  stackRelative: true,
-  stackRelativeIndirectIndexedY: true,
-  relative: true,
-  relative16: true,
-  zeroPageRelative: true,
-  accumulatorRelative: true,
-  zeroPageImmediate: true,
-  specialPage: true,
-  blockTransfer: true,
-  immediateZeroPage: true,
-  immediateZeroPageIndexedX: true,
-  immediateAbsolute: true,
-  immediateAbsoluteIndexedX: true,
-  basePageIndirectIndexedZ: true,
-  quadAccumulator: true
-};
-function isAddressingMode(value) {
-  for (const mode2 of Object.keys(addressingModes)) {
-    if (value === mode2) {
-      return true;
-    }
-  }
-  return false;
-}
-function mappedAddressingMode(table, mode2) {
-  if (mode2 === void 0 || !isAddressingMode(mode2)) {
-    return void 0;
-  }
-  return table[mode2];
-}
-var aliasToMnemonic = /* @__PURE__ */ new Map();
-for (const form of nmos6502DecodeTable) {
-  for (const alias of form.aliases ?? []) {
-    aliasToMnemonic.set(alias, form.mnemonic);
-  }
-}
-function parseMnemonic(value) {
-  const match = value.trim().toUpperCase().match(/^([A-Z][\dA-Z]{2,4})(?:\.([BW]))?$/);
-  if (!match) {
-    return { mnemonic: value.trim().toUpperCase() };
-  }
-  let forcedWidth;
-  if (match[2] === "B") {
-    forcedWidth = 1;
-  } else if (match[2] === "W") {
-    forcedWidth = 2;
-  }
-  return {
-    mnemonic: match[1],
-    forcedWidth
-  };
-}
-function modeSize(form) {
-  return form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
-}
-function splitTopLevelOperands(value) {
-  const operands = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < value.length; index++) {
-    const character = value[index];
-    if (character === "(" || character === "[") {
-      depth++;
-    } else if (character === ")" || character === "]") {
-      depth--;
-    } else if (character === "," && depth === 0) {
-      operands.push(value.slice(start, index).trim());
-      start = index + 1;
-    }
-  }
-  operands.push(value.slice(start).trim());
-  return operands.filter(Boolean);
-}
-var Arch65xx = class {
-  /**
-   * @param {ArchitectureEncoderContext} context Encoder host (operands, emission, diagnostics).
-   * @param {CpuDefinition} cpu CPU whose feature set filters {@link getCpuAssemblyForms}.
-   */
-  constructor(context, cpu) {
-    this.context = context;
-    this.cpu = cpu;
-    this.forms = getCpuAssemblyForms(cpu).filter(
-      (form) => matchesFeatures(form.availableWhen, cpu.features)
-    );
-    this.catalog = buildInstructionCatalog(this.forms);
-    const grouped = /* @__PURE__ */ new Map();
-    for (const form of this.forms) {
-      const entries2 = grouped.get(form.mnemonic) ?? [];
-      entries2.push(form);
-      grouped.set(form.mnemonic, entries2);
-    }
-    for (const [mnemonic, entries2] of grouped) {
-      this.formsByMnemonic.set(mnemonic, entries2);
-    }
-  }
-  context;
-  cpu;
-  forms;
-  catalog;
-  formsByMnemonic = /* @__PURE__ */ new Map();
-  getInstructionCatalog() {
-    return this.catalog;
-  }
-  /**
-   * Estimates size from tokenized words.
-   * @param {readonly string[]} words Mnemonic plus rest-of-line operand.
-   * @returns {number} Encoded size in bytes, or 0 if unknown.
-   */
-  estimateSize(words) {
-    if (words.length === 0) {
-      return 0;
-    }
-    const operand = words.slice(1).join(" ");
-    return this.estimateResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
-  }
-  /**
-   * Encodes tokenized words. Returns false when the mnemonic is unknown on this CPU.
-   * @param {readonly string[]} words Mnemonic plus rest-of-line operand.
-   * @returns {boolean} True if encoded.
-   */
-  encode(words) {
-    if (words.length === 0) {
-      return true;
-    }
-    const operand = words.slice(1).join(" ");
-    return this.encodeResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
-  }
-  /**
-   * Estimates the size of a resolved instruction.
-   * @param {LoweredInstruction} instruction The instruction.
-   * @returns {number} The estimated size in bytes.
-   */
-  estimateInstruction(instruction) {
-    return this.estimateResolved(instruction.mnemonic, instruction.loweredOperand);
-  }
-  /**
-   * Encodes a resolved instruction.
-   * @param {LoweredInstruction} instruction The instruction.
-   * @returns {boolean} True if encoded.
-   */
-  encodeInstruction(instruction) {
-    return this.encodeResolved(instruction.mnemonic, instruction.loweredOperand);
-  }
-  /**
-   * Estimates the size of a resolved instruction.
-   * @param {string} rawMnemonic The raw mnemonic.
-   * @param {LoweredOperand} operand The operand.
-   * @returns {number} The estimated size in bytes.
-   */
-  estimateResolved(rawMnemonic, operand) {
-    const resolved = this.resolveForm(rawMnemonic, operand);
-    return resolved ? modeSize(resolved) : 0;
-  }
-  /**
-   * Encodes a resolved instruction.
-   * @param {string} rawMnemonic The raw mnemonic.
-   * @param {LoweredOperand} operand The operand.
-   * @returns {boolean} True if encoded.
-   */
-  encodeResolved(rawMnemonic, operand) {
-    const resolved = this.resolveForm(rawMnemonic, operand);
-    if (!resolved) {
-      return false;
-    }
-    const form = resolved;
-    const relativeBaseOffset = form.relativeBaseOffset ?? modeSize(form);
-    let branchDelta = 0;
-    if (form.codec === "relative8" || form.codec === "relative16") {
-      const branchWidth = form.codec === "relative8" ? 1 : 2;
-      branchDelta = this.readBranchDelta(operand, relativeBaseOffset, branchWidth);
-    }
-    const compoundOperands = form.codec === "zero-page-relative8" || form.codec === "accumulator-relative8" || form.codec === "zero-page-immediate8" || form.codec === "three-unsigned16-le" || form.codec === "immediate-unsigned8" || form.codec === "immediate-unsigned16" ? splitTopLevelOperands(operand.expanded) : [];
-    const compoundValues = this.readCompoundValues(form, compoundOperands);
-    let operandWidth = 0;
-    if (form.codec === "unsigned8") {
-      operandWidth = 1;
-    } else if (form.codec === "unsigned16-le") {
-      operandWidth = 2;
-    } else if (form.codec === "unsigned24-le") {
-      operandWidth = 3;
-    }
-    const operandKind = operandWidth === 1 ? "operand" : "address";
-    let operandValue = 0;
-    if (operandWidth !== 0) {
-      operandValue = this.readExpressionValue(
-        operand.baseExpression ?? operand.expanded,
-        operandWidth,
-        `${form.mnemonic} ${operandKind}`,
-        operand.mode === "immediate"
-      );
-      if (form.operandConstraint === "power-of-two" && (operandValue === 0 || (operandValue & operandValue - 1) !== 0)) {
-        throw this.context.diagnostics.error(`${form.mnemonic} operand must be a power of two.`);
-      }
-    }
-    const specialPageValue = form.codec === "special-page" ? this.readExpressionValue(
-      operand.baseExpression ?? operand.expanded,
-      2,
-      `${form.mnemonic} special-page address`,
-      false
-    ) : 0;
-    if (form.codec === "special-page" && (specialPageValue & 65280) !== 65280) {
-      throw this.context.diagnostics.error(
-        `${form.mnemonic} special-page address must be in $FF00-$FFFF.`
-      );
-    }
-    this.context.emission.writeBytes(form.encoding);
-    switch (form.codec) {
-      case "none":
-        return true;
-      case "unsigned8":
-        this.context.emission.writeByte(operandValue);
-        return true;
-      case "unsigned16-le":
-        this.context.emission.writeValue(operandValue, 2, "little");
-        return true;
-      case "unsigned24-le":
-        this.context.emission.writeValue(operandValue, 3, "little");
-        return true;
-      case "relative8":
-        this.context.emission.writeByte(branchDelta & 255);
-        return true;
-      case "relative16":
-        this.context.emission.writeValue(branchDelta & 65535, 2, "little");
-        return true;
-      case "zero-page-relative8": {
-        this.context.emission.writeByte(compoundValues[0] ?? 0);
-        this.context.emission.writeByte((compoundValues[1] ?? 0) & 255);
-        return true;
-      }
-      case "accumulator-relative8":
-        this.context.emission.writeByte((compoundValues[0] ?? 0) & 255);
-        return true;
-      case "zero-page-immediate8":
-        this.context.emission.writeByte(compoundValues[0] ?? 0);
-        this.context.emission.writeByte(compoundValues[1] ?? 0);
-        return true;
-      case "special-page":
-        this.context.emission.writeByte(specialPageValue & 255);
-        return true;
-      case "three-unsigned16-le":
-        for (const value of compoundValues) {
-          this.context.emission.writeValue(value, 2, "little");
-        }
-        return true;
-      case "immediate-unsigned8":
-        this.context.emission.writeByte(compoundValues[0] ?? 0);
-        this.context.emission.writeByte(compoundValues[1] ?? 0);
-        return true;
-      case "immediate-unsigned16":
-        this.context.emission.writeByte(compoundValues[0] ?? 0);
-        this.context.emission.writeValue(compoundValues[1] ?? 0, 2, "little");
-        return true;
-    }
-    return false;
-  }
-  /**
-   * Reads compound values from operands.
-   * @param {InstructionForm} form The instruction form.
-   * @param {readonly string[]} operands The operands.
-   * @returns {readonly number[]} The compound values.
-   */
-  readCompoundValues(form, operands) {
-    const expect = (count, description) => {
-      if (operands.length !== count) {
-        throw this.context.diagnostics.error(`${form.mnemonic} expects ${description}.`);
-      }
-    };
-    switch (form.codec) {
-      case "zero-page-relative8":
-        expect(2, "a zero-page address and branch target");
-        return [
-          this.readExpressionValue(operands[0] ?? "", 1, `${form.mnemonic} address`, false),
-          this.readBranchExpression(
-            operands[1] ?? "",
-            form.relativeBaseOffset ?? modeSize(form),
-            1
-          )
-        ];
-      case "accumulator-relative8":
-        expect(2, "A and a branch target");
-        if (operands[0]?.trim().toUpperCase() !== "A") {
-          throw this.context.diagnostics.error(`${form.mnemonic} accumulator branch must use A.`);
-        }
-        return [
-          this.readBranchExpression(
-            operands[1] ?? "",
-            form.relativeBaseOffset ?? modeSize(form),
-            1
-          )
-        ];
-      case "zero-page-immediate8":
-        expect(2, "a zero-page address and immediate value");
-        if (!operands[1]?.trim().startsWith("#")) {
-          throw this.context.diagnostics.error(
-            `${form.mnemonic} second operand must be immediate.`
-          );
-        }
-        return [
-          this.readExpressionValue(operands[0] ?? "", 1, `${form.mnemonic} address`, false),
-          this.readExpressionValue(
-            operands[1]?.trim().slice(1) ?? "",
-            1,
-            `${form.mnemonic} immediate`,
-            true
-          )
-        ];
-      case "three-unsigned16-le":
-        expect(3, "source, destination, and length operands");
-        return operands.map(
-          (expression, index) => this.readExpressionValue(
-            expression,
-            2,
-            `${form.mnemonic} ${["source", "destination", "length"][index]}`,
-            false
-          )
-        );
-      case "immediate-unsigned8":
-      case "immediate-unsigned16": {
-        const indexed = form.mode.endsWith("IndexedX");
-        expect(indexed ? 3 : 2, "an immediate value and address");
-        if (!operands[0]?.trim().startsWith("#")) {
-          throw this.context.diagnostics.error(`${form.mnemonic} first operand must be immediate.`);
-        }
-        if (indexed && operands[2]?.trim().toUpperCase() !== "X") {
-          throw this.context.diagnostics.error(`${form.mnemonic} indexed test operand must use X.`);
-        }
-        return [
-          this.readExpressionValue(
-            operands[0]?.trim().slice(1) ?? "",
-            1,
-            `${form.mnemonic} immediate`,
-            true
-          ),
-          this.readExpressionValue(
-            operands[1] ?? "",
-            form.codec === "immediate-unsigned8" ? 1 : 2,
-            `${form.mnemonic} address`,
-            false
-          )
-        ];
-      }
-      case "none":
-      case "relative16":
-      case "relative8":
-      case "special-page":
-      case "unsigned16-le":
-      case "unsigned24-le":
-      case "unsigned8":
-      default:
-        return [];
-    }
-  }
-  /**
-   * Resolves a form for a mnemonic and operand.
-   * @param {string} rawMnemonic The raw mnemonic.
-   * @param {LoweredOperand} operand The operand.
-   * @returns {InstructionForm | undefined} The resolved form.
-   */
-  resolveForm(rawMnemonic, operand) {
-    const parsed = parseMnemonic(rawMnemonic);
-    let mnemonic = parsed.mnemonic;
-    let forms = this.formsByMnemonic.get(mnemonic);
-    const variantArchitectures = Object.entries(variantFormsByCpuId).filter(([, entries2]) => entries2.some((entry) => entry.mnemonic === parsed.mnemonic)).map(([cpuId]) => cpuId);
-    if (!forms) {
-      const canonical = aliasToMnemonic.get(mnemonic);
-      const aliasedForms = canonical ? this.formsByMnemonic.get(canonical) : void 0;
-      if (canonical && aliasedForms) {
-        mnemonic = canonical;
-        forms = aliasedForms;
-      }
-    }
-    const { forcedWidth } = parsed;
-    if (!forms) {
-      if (variantArchitectures.length > 0) {
-        throw this.context.diagnostics.error(
-          `Instruction '${parsed.mnemonic}' is available on ${variantArchitectures.join(", ")}, not ${this.cpu.id}.`
-        );
-      }
-      const knownOnlyOn6502x = nmos6502DecodeTable.some(
-        (form2) => form2.mnemonic === mnemonic || form2.aliases?.includes(mnemonic)
-      );
-      if (knownOnlyOn6502x) {
-        throw this.context.diagnostics.error(
-          `Instruction '${mnemonic}' or this operand form requires architecture '65xx.6502x'.`
-        );
-      }
-      return void 0;
-    }
-    const hasOperand = operand.raw.trim() !== "";
-    if (mnemonic === "BRK" && forcedWidth === 2) {
-      throw this.context.diagnostics.error("BRK accepts at most an 8-bit signature byte.");
-    }
-    let mode2 = operand.mode;
-    if (operand.raw.trim().toUpperCase() === "A") {
-      mode2 = "accumulator";
-    }
-    if (operand.raw.trim().toUpperCase() === "Q") {
-      mode2 = "quadAccumulator";
-    }
-    if (this.cpu.id === "65xx.m740" && mnemonic === "JSR" && mode2 === "absolute" && /^(?:\$ff[\da-f]{2}|0xff[\da-f]{2})$/i.test(operand.expanded.trim())) {
-      mode2 = "specialPage";
-    }
-    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) {
-      mode2 = "relative16";
-    } else if (hasOperand && forms.some((entry) => entry.mode === "relative")) {
-      mode2 = "relative";
-    }
-    if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
-      if (forms.some((entry) => entry.mode === "accumulator")) {
-        mode2 = "accumulator";
-      } else if (forms.some((entry) => entry.mode === "quadAccumulator")) {
-        mode2 = "quadAccumulator";
-      }
-    }
-    if (forcedWidth) {
-      const byteMode = mappedAddressingMode(absoluteToDirect, mode2);
-      const wordMode = mappedAddressingMode(directToAbsolute, mode2);
-      const alreadyRequestedWidth = forcedWidth === 1 && mode2 !== void 0 && mode2.startsWith("zeroPage") || forcedWidth === 2 && (mode2 === "absolute" || mode2 === "indirect" || mode2 !== void 0 && mode2.startsWith("absoluteIndexed"));
-      if (!byteMode && !wordMode && !alreadyRequestedWidth) {
-        throw this.context.diagnostics.error(
-          `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode2}.`
-        );
-      }
-      const promoted = forcedWidth === 1 ? byteMode : wordMode;
-      mode2 = promoted ?? mode2;
-    }
-    let form = forms.find((entry) => entry.mode === mode2);
-    const widened = mappedAddressingMode(directToAbsolute, mode2);
-    if (!form && widened) {
-      form = forms.find((entry) => entry.mode === widened);
-    }
-    if (!form) {
-      const accepted = forms.map((entry) => entry.mode).join(", ");
-      throw this.context.diagnostics.error(
-        `${mnemonic} does not support addressing mode '${mode2 ?? "unknown"}' on ${this.cpu.id}. Expected ${accepted}.`
-      );
-    }
-    return form;
-  }
-  /**
-   * Reads an expression value.
-   * @param {string} expression The expression.
-   * @param {1 | 2 | 3} width The width.
-   * @param {string} description The description.
-   * @param {boolean} immediate Whether the expression is immediate.
-   * @returns {number} The value.
-   */
-  readExpressionValue(expression, width, description, immediate) {
-    const value = this.context.operands.getnum(expression);
-    const minimum = width === 1 && immediate ? -128 : 0;
-    let maximum = 255;
-    if (width === 2) {
-      maximum = 65535;
-    } else if (width === 3) {
-      maximum = 16777215;
-    }
-    if (!Number.isInteger(value) || value < minimum || value > maximum) {
-      throw this.context.diagnostics.error(
-        `${description} ${value} is outside the ${width * 8}-bit range.`
-      );
-    }
-    return value & maximum;
-  }
-  /**
-   * Reads a branch delta.
-   * @param {LoweredOperand} operand The operand.
-   * @param {number} relativeBaseOffset The relative base offset.
-   * @param {1 | 2} width The width.
-   * @returns {number} The branch delta.
-   */
-  readBranchDelta(operand, relativeBaseOffset, width) {
-    return this.readBranchExpression(
-      operand.baseExpression ?? operand.expanded,
-      relativeBaseOffset,
-      width
-    );
-  }
-  /**
-   * Reads a branch expression.
-   * @param {string} expression The expression.
-   * @param {number} relativeBaseOffset The relative base offset.
-   * @param {1 | 2} width The width.
-   * @returns {number} The branch expression.
-   */
-  readBranchExpression(expression, relativeBaseOffset, width) {
-    if (!this.context.branches.enforceResolvedLabels()) {
-      return 0;
-    }
-    const reference = this.context.sizing.getCurrentAddress() + relativeBaseOffset & 65535;
-    let target;
-    if (/^\++$/.test(expression)) {
-      target = this.context.branches.findNextLabel(expression, reference);
-    } else if (/^-+$/.test(expression)) {
-      target = this.context.branches.findPreviousLabel(expression, reference);
-    } else {
-      target = this.context.operands.getnum(expression);
-    }
-    if (!Number.isInteger(target) || target < 0 || target > 65535) {
-      throw this.context.diagnostics.error(
-        `Branch target ${target} is outside the 16-bit address space.`
-      );
-    }
-    const delta = (target - reference + 32768 & 65535) - 32768;
-    const minimum = width === 1 ? -128 : -32768;
-    const maximum = width === 1 ? 127 : 32767;
-    if (delta < minimum || delta > maximum) {
-      throw this.context.diagnostics.error(
-        `Branch target $${target.toString(16).toUpperCase()} is out of range from $${reference.toString(16).toUpperCase()} (${delta}).`
-      );
-    }
-    return delta;
-  }
-};
-
-// packages/plugin-65xx/src/ca65-profile.ts
-var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
-function isSessionStateKey(value) {
-  return value.id.length > 0;
-}
-function createSessionStateKey(id) {
-  const key = { id };
-  if (!isSessionStateKey(key)) {
-    throw new Error(`Invalid session state key '${id}'.`);
-  }
-  return key;
-}
-var ca65SessionStateKey = createSessionStateKey(
-  CA65_65XX_SESSION_STATE_ID
-);
-function createCa65SessionState() {
-  return {
-    defaultArchitecture: "65xx.6502",
-    currentArchitecture: "65xx.6502",
-    cpuStack: [],
-    scopeStack: [],
-    segmentStack: [],
-    currentFlatSegment: ""
-  };
-}
-function cloneCa65SessionState(state) {
-  return {
-    ...state,
-    cpuStack: [...state.cpuStack],
-    scopeStack: [...state.scopeStack],
-    segmentStack: [...state.segmentStack]
-  };
-}
-function resetCa65StageState(state) {
-  state.currentArchitecture = state.defaultArchitecture;
-  state.cpuStack = [];
-  state.scopeStack = [];
-  state.segmentStack = [];
-  state.currentFlatSegment = "";
-}
-var ca65CpuNames = Object.freeze({
-  "6502": "65xx.6502",
-  "6502x": "65xx.6502x",
-  "2a03": "65xx.2a03",
-  "2a07": "65xx.2a03",
-  "6502dtv": "65xx.6502dtv",
-  "65sc02": "65xx.65sc02",
-  "65c02": "65xx.65c02",
-  w65c02: "65xx.w65c02",
-  "65ce02": "65xx.65ce02",
-  "4510": "65xx.4510",
-  "45gs02": "65xx.45gs02",
-  huc6280: "65xx.huc6280",
-  m740: "65xx.m740"
-});
-function resolve65xxCpuName(name) {
-  return ca65CpuNames[name.trim().toLowerCase()];
-}
-var ca65CpuShorthands = Object.freeze({
-  p02: "6502",
-  p02x: "6502x",
-  pdtv: "6502dtv",
-  psc02: "65sc02",
-  pc02: "65c02",
-  pwc02: "w65c02",
-  pce02: "65ce02",
-  p4510: "4510",
-  p45gs02: "45gs02",
-  p6280: "huc6280",
-  pm740: "m740"
-});
-var cpuPredicateSymbols = Object.freeze({
-  ifp02: "__CA65_CPU_6502__",
-  ifp02x: "__CA65_CPU_6502X__",
-  ifpdtv: "__CA65_CPU_6502DTV__",
-  ifpsc02: "__CA65_CPU_65SC02__",
-  ifpc02: "__CA65_CPU_65C02__",
-  ifpwc02: "__CA65_CPU_W65C02__",
-  ifpce02: "__CA65_CPU_65CE02__",
-  ifp4510: "__CA65_CPU_4510__",
-  ifp45gs02: "__CA65_CPU_45GS02__",
-  ifp6280: "__CA65_CPU_HUC6280__",
-  ifpm740: "__CA65_CPU_M740__"
-});
-var ca65CpuPredicateByArchitecture = Object.freeze({
-  "65xx.6502": "__CA65_CPU_6502__",
-  "65xx.6502x": "__CA65_CPU_6502X__",
-  "65xx.2a03": "__CA65_CPU_6502X__",
-  "65xx.6502dtv": "__CA65_CPU_6502DTV__",
-  "65xx.65sc02": "__CA65_CPU_65SC02__",
-  "65xx.65c02": "__CA65_CPU_65C02__",
-  "65xx.w65c02": "__CA65_CPU_W65C02__",
-  "65xx.65ce02": "__CA65_CPU_65CE02__",
-  "65xx.4510": "__CA65_CPU_4510__",
-  "65xx.45gs02": "__CA65_CPU_45GS02__",
-  "65xx.huc6280": "__CA65_CPU_HUC6280__",
-  "65xx.m740": "__CA65_CPU_M740__"
-});
-function splitArguments(value) {
-  const parts = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < value.length; index++) {
-    const character = value[index];
-    if (character === "(") {
-      depth++;
-    } else if (character === ")") {
-      depth--;
-    } else if (character === "," && depth === 0) {
-      parts.push(value.slice(start, index).trim());
-      start = index + 1;
-    }
-  }
-  parts.push(value.slice(start).trim());
-  return parts.filter(Boolean);
-}
-function rewriteScopedNames(value) {
-  let result = "";
-  let quote = "";
-  for (let index = 0; index < value.length; index++) {
-    const character = value[index];
-    if ((character === '"' || character === "'") && value[index - 1] !== "\\") {
-      quote = quote === character ? "" : quote || character;
-    }
-    if (!quote && character === ":" && value[index + 1] === ":") {
-      result += "_";
-      index++;
-    } else {
-      result += character;
-    }
-  }
-  return result;
-}
-function rewriteCa65Command(command, context) {
-  let rewritten = rewriteScopedNames(command);
-  rewritten = rewritten.replace(/\.(defined|lobyte|hibyte|bankbyte|loword|hiword)\s*\(/gi, "$1(");
-  rewritten = rewritten.replace(
-    /(^|[^\w@])@([0-7]+)\b/g,
-    (_match, prefix, digits) => `${prefix}${Number.parseInt(digits, 8)}`
-  );
-  rewritten = rewritten.replace(/<>/g, "!=");
-  const match = rewritten.match(/^(\s*)\.([\dA-Za-z]+)\b(.*)$/);
-  if (!match) {
-    return rewritten;
-  }
-  const [, indent, rawKeyword, rawRest] = match;
-  const keyword = rawKeyword.toLowerCase();
-  const rest = rawRest.trim();
-  const predicate = cpuPredicateSymbols[keyword];
-  if (predicate) {
-    return `${indent}if ${predicate}`;
-  }
-  if (["if", "elseif", "else", "endif"].includes(keyword)) {
-    return `${indent}${keyword}${rest ? ` ${rest}` : ""}`;
-  }
-  if (keyword === "ifdef") {
-    return `${indent}if defined(${rest})`;
-  }
-  if (keyword === "ifndef") {
-    return `${indent}if defined(${rest}) == 0`;
-  }
-  if (keyword === "macro") {
-    const header = rest.match(/^([A-Z_a-z]\w*)\s*(.*)$/);
-    if (!header) {
-      return rewritten;
-    }
-    const params = splitArguments(header[2]).join(",");
-    return `${indent}macro ${header[1]}(${params})`;
-  }
-  if (keyword === "endmacro") {
-    return `${indent}endmacro`;
-  }
-  if (keyword === "repeat") {
-    const [count = "0", variable = `__ca65_repeat_${context.sourceLine}`] = splitArguments(rest);
-    return `${indent}for ${variable} = 0..(${count})`;
-  }
-  if (keyword === "endrepeat") {
-    return `${indent}endfor`;
-  }
-  if (keyword === "undefine") {
-    return `${indent}undef ${rest}`;
-  }
-  return rewritten;
-}
-var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
-  ...CA65_SYNTAX_PROFILE,
-  id: "ca65-65xx",
-  rewriteCommand: rewriteCa65Command,
-  bareMacroInvocations: true,
-  macroParameterPrefix: "\\"
-});
-
 // packages/plugin-65xx/src/decoder.ts
 var hex = (value, width = 2) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var sizeOf = (form) => form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
@@ -6401,19 +7127,41 @@ function formatCpu6502Instruction(instruction, addressExpression) {
   return `${form.mnemonic}${suffix}${text ? ` ${text}` : ""}`;
 }
 
-// packages/plugin-65xx/src/directives/ca65.ts
-function unquote(token) {
-  if (token.length >= 2) {
-    const quote = token[0];
-    if ((quote === '"' || quote === "'") && token.endsWith(quote)) {
-      return token.slice(1, -1);
-    }
-  }
-  return token;
+// packages/plugin-65xx/src/session-state.ts
+var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
+function isSessionStateKey2(value) {
+  return value.id.length > 0;
 }
+function createSessionStateKey2(id) {
+  const key = { id };
+  if (!isSessionStateKey2(key)) {
+    throw new Error(`Invalid session state key '${id}'.`);
+  }
+  return key;
+}
+var nes65xxSessionStateKey = createSessionStateKey2(NES_65XX_SESSION_STATE_ID);
+function cloneNes65xxSessionState(value) {
+  return {
+    ...value,
+    header: [...value.header],
+    memoryCursors: { ...value.memoryCursors }
+  };
+}
+function resetNes65xxStageState(state) {
+  state.memoryCursors = {};
+  for (const memory of state.linker.memories.values()) {
+    state.memoryCursors[memory.name] = memory.start;
+  }
+  state.currentSegment = null;
+  state.currentLoadMemory = null;
+  state.segmentLoadStart = 0;
+  state.segmentRunStart = 0;
+}
+
+// packages/plugin-65xx/src/directives/ca65.ts
 function parameterList(words) {
   const joined = words.slice(1).join(" ");
-  const parts = [];
+  const parts2 = [];
   let current = "";
   let parenDepth = 0;
   let quote;
@@ -6438,7 +7186,7 @@ function parameterList(words) {
     if (char === "," && parenDepth === 0) {
       const trimmed2 = current.trim();
       if (trimmed2) {
-        parts.push(trimmed2);
+        parts2.push(trimmed2);
       }
       current = "";
       continue;
@@ -6447,9 +7195,9 @@ function parameterList(words) {
   }
   const trimmed = current.trim();
   if (trimmed) {
-    parts.push(trimmed);
+    parts2.push(trimmed);
   }
-  return parts;
+  return parts2;
 }
 function markGlobalSymbol(session, name) {
   if (!name) {
@@ -6518,86 +7266,6 @@ function openSegment(session, state, segment) {
   state.segmentLoadStart = loadStart;
   state.segmentRunStart = runStart;
 }
-function handleSegment(session, state, words) {
-  const name = unquote(words[1] ?? "").trim();
-  if (!name) {
-    throw new Error(".segment requires a segment name.");
-  }
-  const segment = state.linker.segments.get(name);
-  if (!segment) {
-    throw new Error(`.segment "${name}" is not defined in the linker configuration.`);
-  }
-  closeActiveSegment(session, state);
-  openSegment(session, state, segment);
-}
-function markGlobalSymbols(session, words, keyword) {
-  const names = parameterList(words).map((entry) => unquote(entry).trim()).filter(Boolean);
-  if (names.length === 0) {
-    throw new Error(`${keyword} requires at least one identifier.`);
-  }
-  for (const name of names) {
-    markGlobalSymbol(session, name);
-  }
-}
-function handleExport(session, words) {
-  markGlobalSymbols(session, words, ".export");
-}
-function handleImport(session, words) {
-  markGlobalSymbols(session, words, ".import");
-}
-function handleByte(session, words) {
-  session.directiveRuntime.handleDataDirective("db", words.slice(1));
-}
-function handleAddr(session, words) {
-  session.directiveRuntime.handleDataDirective("dw", words.slice(1));
-}
-function emitMappedBytes(session, words, write2, width) {
-  const params = parameterList(words);
-  if (params.length === 0) {
-    throw new Error(`${words[0]} requires at least one parameter.`);
-  }
-  if (session.isDefinitionCollectionStage) {
-    session.step(params.length * width);
-    return;
-  }
-  for (const param of params) {
-    write2(session.operandResolver.getnum(param));
-  }
-}
-function handleLobytes(session, words) {
-  emitMappedBytes(session, words, (value) => session.write1(value & 255), 1);
-}
-function handleHibytes(session, words) {
-  emitMappedBytes(session, words, (value) => session.write1(value >> 8 & 255), 1);
-}
-function handleDbyt(session, words) {
-  emitMappedBytes(
-    session,
-    words,
-    (value) => {
-      session.write1(value >> 8 & 255);
-      session.write1(value & 255);
-    },
-    2
-  );
-}
-function handleDword(session, words, width = 4) {
-  session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", words.slice(1));
-}
-function handleSetcpu(session, state, words) {
-  const name = unquote(words.slice(1).join(" ").trim());
-  if (!name) {
-    throw new Error(".setcpu requires a CPU name argument.");
-  }
-  const architecture = resolve65xxCpuName(name);
-  if (!architecture) {
-    throw new Error(
-      `.setcpu "${name}" is not a supported 65xx CPU. Supported names: ${Object.keys(ca65CpuNames).join(", ")}.`
-    );
-  }
-  session.selectArchitecture(architecture, name.toLowerCase());
-  state.currentArchitecture = architecture;
-}
 function handlePushcpu(session, state) {
   state.cpuStack.push(session.resolveActiveArchitecture().name);
 }
@@ -6609,108 +7277,12 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(architecture, architecture);
   state.currentArchitecture = architecture;
 }
-function handleCpuShorthand(session, state, words) {
-  const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
-  const cpu = ca65CpuShorthands[keyword];
-  if (!cpu) {
-    throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
-  }
-  handleSetcpu(session, state, ["setcpu", cpu]);
-}
-function handleRes(session, words) {
-  const params = parameterList(words);
-  if (params.length < 1 || params.length > 2) {
-    throw new Error(".res expects count and an optional fill value.");
-  }
-  const count = session.operandResolver.getnum(params[0] ?? "");
-  const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
-  if (!Number.isInteger(count) || count < 0) {
-    throw new Error(".res count must be non-negative.");
-  }
-  if (session.isDefinitionCollectionStage) {
-    session.step(count);
-    return;
-  }
-  for (let index = 0; index < count; index++) {
-    session.write1(fill & 255);
-  }
-}
-function handleAlign(session, words) {
-  const params = parameterList(words);
-  if (params.length < 1 || params.length > 2) {
-    throw new Error(".align expects a boundary and optional fill value.");
-  }
-  const boundary = session.operandResolver.getnum(params[0] ?? "");
-  const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
-  if (!Number.isInteger(boundary) || boundary <= 0) {
-    throw new Error(".align boundary must be a positive integer.");
-  }
-  const count = (boundary - session.currentTargetAddress % boundary) % boundary;
-  if (session.isDefinitionCollectionStage) {
-    session.step(count);
-    return;
-  }
-  for (let index = 0; index < count; index++) {
-    session.write1(fill & 255);
-  }
-}
-function handleCa65Incbin(session, words) {
-  const params = parameterList(words);
-  if (params.length < 1 || params.length > 3) {
-    throw new Error(".incbin expects a filename, optional offset, and optional size.");
-  }
-  const filename = unquote(params[0] ?? "");
-  const data = session.includeSource.readFile(filename);
-  if (!(data instanceof Uint8Array)) {
-    throw new Error(`Failed to read binary include: ${filename}`);
-  }
-  const offset = params[1] ? session.operandResolver.getnum(params[1]) : 0;
-  const size = params[2] ? session.operandResolver.getnum(params[2]) : data.length - offset;
-  if (!Number.isInteger(offset) || !Number.isInteger(size) || offset < 0 || size < 0 || offset + size > data.length) {
-    throw new Error(
-      `.incbin range ${offset}+${size} is outside '${filename}' (${data.length} bytes).`
-    );
-  }
-  if (session.isDefinitionCollectionStage) {
-    session.step(size);
-    return;
-  }
-  for (const byte of data.subarray(offset, offset + size)) {
-    session.write1(byte);
-  }
-}
-function handleCa65Assert(session, words) {
-  const params = parameterList(words);
-  if (params.length === 0) {
-    throw new Error(".assert requires an expression.");
-  }
-  if (session.evaluateAssertion(params[0] ?? "") !== false) {
-    return;
-  }
-  const message = params.find((part) => /^["']/.test(part));
-  throw new Error(message ? unquote(message) : ".assert expression evaluated to false.");
-}
-function handleScope(session, state, words, procedure) {
-  const name = words[1]?.trim() || `__anonymous_scope_${session.currentLine}`;
-  if (procedure) {
-    session.symbolScope.setLabel(session.symbolScope.qualifySymbolName(name));
-  }
-  state.scopeStack.push(session.currentNamespace);
-  session.currentNamespace = session.currentNamespace ? `${session.currentNamespace}_${name}` : name;
-}
 function handleEndScope(session, state) {
   const previous = state.scopeStack.pop();
   if (previous === void 0) {
     throw new Error("ca65 scope stack is empty.");
   }
   session.currentNamespace = previous;
-}
-function handleFlatSegment(state, words) {
-  const name = unquote(words[1] ?? "").trim();
-  if (!name) {
-    throw new Error(".segment requires a segment name.");
-  }
-  state.currentFlatSegment = name;
 }
 function handlePushseg(state) {
   state.segmentStack.push(state.currentFlatSegment);
@@ -6722,11 +7294,742 @@ function handlePopseg(state) {
   }
   state.currentFlatSegment = segment;
 }
-function handleUnsupportedCa65(words) {
-  const keyword = words[0] ?? "<unknown>";
-  throw new Error(
-    `.${keyword.replace(/^\./, "")} requires relocatable ca65 object/linker semantics, which the flat-image compatibility profile does not implement.`
-  );
+
+// packages/plugin-65xx/src/linker-config.ts
+var DEFAULT_LINKER_CONFIG = `MEMORY {
+    ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
+}
+SEGMENTS {
+    CODE: load = ROM, type = ro ;
+}
+`;
+function defaultLd65ConfigText() {
+  return DEFAULT_LINKER_CONFIG;
+}
+function parseLd65Config(source) {
+  const text = source.replace(/\/\*[\S\s]*?\*\//g, " ");
+  const memories = /* @__PURE__ */ new Map();
+  const segments = /* @__PURE__ */ new Map();
+  const symbols = [];
+  let fileOffset = 0;
+  for (const statement of readBlockStatements(text, "MEMORY")) {
+    const parsed = parseNamedStatement(statement);
+    const start = requireNumber(parsed.attrs, "start", parsed.name);
+    const size = requireNumber(parsed.attrs, "size", parsed.name);
+    const file = parsed.attrs.file ?? "%O";
+    const isRam = file === '""' || file === "''" || file === "";
+    const region = {
+      name: parsed.name,
+      start,
+      size,
+      fileOffset: isRam ? -1 : fileOffset,
+      fill: parseYesNo(parsed.attrs.fill) ?? false,
+      fillval: parseNumberToken(parsed.attrs.fillval ?? "0") ?? 0
+    };
+    memories.set(region.name, region);
+    if (!isRam) {
+      fileOffset += size;
+    }
+  }
+  for (const statement of readBlockStatements(text, "SEGMENTS")) {
+    const parsed = parseNamedStatement(statement);
+    const load = parsed.attrs.load;
+    if (!load) {
+      throw new Error(`ld65 segment '${parsed.name}' is missing load = MEMORY.`);
+    }
+    if (!memories.has(load)) {
+      throw new Error(`ld65 segment '${parsed.name}' loads unknown memory '${load}'.`);
+    }
+    const run = parsed.attrs.run ?? load;
+    if (!memories.has(run)) {
+      throw new Error(`ld65 segment '${parsed.name}' runs in unknown memory '${run}'.`);
+    }
+    segments.set(parsed.name, {
+      name: parsed.name,
+      load,
+      run,
+      start: parseNumberToken(parsed.attrs.start),
+      define: parseYesNo(parsed.attrs.define) ?? false,
+      type: parsed.attrs.type ?? "ro"
+    });
+  }
+  for (const statement of readBlockStatements(text, "SYMBOLS")) {
+    const parsed = parseNamedStatement(statement);
+    const valueExpr = parsed.attrs.value;
+    if (!valueExpr) {
+      throw new Error(`ld65 symbol '${parsed.name}' is missing value = EXPR.`);
+    }
+    symbols.push({ name: parsed.name, valueExpr });
+  }
+  if (memories.size === 0) {
+    throw new Error("ld65 config MEMORY block is empty.");
+  }
+  return {
+    memories,
+    segments,
+    symbols,
+    imageSize: fileOffset
+  };
+}
+function linkerDefinedSymbolNames(config) {
+  const names = [];
+  for (const segment of config.segments.values()) {
+    if (!segment.define) {
+      continue;
+    }
+    names.push(
+      `__${segment.name}_LOAD__`,
+      `__${segment.name}_RUN__`,
+      `__${segment.name}_SIZE__`,
+      `__${segment.name}_RUN_END__`
+    );
+  }
+  for (const symbol of config.symbols) {
+    names.push(symbol.name);
+  }
+  return names;
+}
+var LD65_BLOCK_BODY = {
+  MEMORY: /memory\s*{([\S\s]*?)}/i,
+  SEGMENTS: /segments\s*{([\S\s]*?)}/i,
+  SYMBOLS: /symbols\s*{([\S\s]*?)}/i
+};
+function readBlockStatements(source, block) {
+  const match = source.match(LD65_BLOCK_BODY[block]);
+  if (!match) {
+    return [];
+  }
+  return match[1].split(";").map((entry) => entry.trim()).filter(Boolean);
+}
+function parseNamedStatement(statement) {
+  const colon = statement.indexOf(":");
+  if (colon <= 0) {
+    throw new Error(`Invalid ld65 statement: ${statement}`);
+  }
+  const name = statement.slice(0, colon).trim();
+  const attrs = {};
+  for (const part of splitTopLevelCommas(statement.slice(colon + 1))) {
+    const equals = part.indexOf("=");
+    if (equals <= 0) {
+      continue;
+    }
+    const key = part.slice(0, equals).trim().toLowerCase();
+    const value = part.slice(equals + 1).trim();
+    attrs[key] = value;
+  }
+  return { name, attrs };
+}
+function splitTopLevelCommas(input) {
+  const parts2 = [];
+  let current = "";
+  let quote;
+  for (const char of input) {
+    if (quote) {
+      current += char;
+      if (char === quote) {
+        quote = void 0;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ",") {
+      const trimmed2 = current.trim();
+      if (trimmed2) {
+        parts2.push(trimmed2);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed) {
+    parts2.push(trimmed);
+  }
+  return parts2;
+}
+function parseNumberToken(token) {
+  if (token === void 0 || token === "") {
+    return void 0;
+  }
+  if (token.startsWith("$")) {
+    const value = Number.parseInt(token.slice(1), 16);
+    return Number.isFinite(value) ? value : void 0;
+  }
+  if (/^-?\d+$/.test(token)) {
+    return Number.parseInt(token, 10);
+  }
+  return void 0;
+}
+function requireNumber(attrs, key, owner) {
+  const value = parseNumberToken(attrs[key]);
+  if (value === void 0) {
+    throw new Error(`ld65 '${owner}' is missing numeric ${key}.`);
+  }
+  return value;
+}
+function parseYesNo(raw) {
+  if (raw === void 0) {
+    return void 0;
+  }
+  const normalized = raw.toLowerCase();
+  if (normalized === "yes" || normalized === "true") {
+    return true;
+  }
+  if (normalized === "no" || normalized === "false") {
+    return false;
+  }
+  return void 0;
+}
+
+// packages/plugin-65xx/src/target/nes.ts
+var NES_65XX_TARGET_ID = "65xx.nes";
+var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
+var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
+var NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
+var INES_MAGIC = [78, 69, 83, 26];
+function isRecord5(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function createNes65xxTargetOptions(configured) {
+  const value = isRecord5(configured) ? configured : {};
+  const sourceStyle = value.sourceStyle ?? "ca65";
+  if (sourceStyle !== "asar" && sourceStyle !== "ca65") {
+    throw new Error("NES sourceStyle must be 'asar' or 'ca65'.");
+  }
+  const linkerConfig = typeof value.linkerConfig === "string" && value.linkerConfig.trim() ? value.linkerConfig : defaultLd65ConfigText();
+  const linker = parseLd65Config(linkerConfig);
+  const fillByte = typeof value.fillByte === "number" && Number.isInteger(value.fillByte) ? value.fillByte & 255 : 255;
+  const header = normalizeHeader(value.header, linker.imageSize);
+  return { header, linkerConfig, fillByte, linker, sourceStyle };
+}
+function createInitialNesState(context) {
+  const options = createNes65xxTargetOptions(context.targetOptions);
+  const state = {
+    header: options.header,
+    fillByte: options.fillByte,
+    linker: options.linker,
+    memoryCursors: {},
+    currentSegment: null,
+    currentLoadMemory: null,
+    segmentLoadStart: 0,
+    segmentRunStart: 0
+  };
+  resetNes65xxStageState(state);
+  return state;
+}
+function validate(address2) {
+  if (!Number.isInteger(address2) || address2 < 0 || address2 > 65535) {
+    throw new Error(`Address $${address2.toString(16).toUpperCase()} is outside 16-bit NES space.`);
+  }
+  return address2;
+}
+function createNesAddressSpace({
+  state,
+  options
+}) {
+  if (options.sourceStyle === "asar") {
+    const nes = state.get(nes65xxSessionStateKey);
+    const physical = (address2) => {
+      if (!Number.isSafeInteger(address2) || address2 < 0 || address2 >= nes.linker.imageSize) {
+        throw new Error(
+          `NES physical write offset ${address2} is outside the fixed cartridge layout.`
+        );
+      }
+      return address2;
+    };
+    return {
+      addressWidth: 32,
+      defaultOrigin: 0,
+      normalizeForWrite: physical,
+      advance: (address2, amount) => address2 + amount,
+      toOutputOffset(address2) {
+        if (!Number.isSafeInteger(address2) || address2 < 0 || address2 > nes.linker.imageSize) {
+          return -1;
+        }
+        return nes.header.length + address2;
+      },
+      fromOutputOffset(offset) {
+        const address2 = offset - nes.header.length;
+        return address2 >= 0 && address2 < nes.linker.imageSize ? address2 : -1;
+      },
+      validateWrite: physical
+    };
+  }
+  return {
+    addressWidth: 16,
+    defaultOrigin: 0,
+    normalizeForWrite: validate,
+    advance(address2, amount) {
+      return validate(address2 + amount & 65535);
+    },
+    toOutputOffset(address2) {
+      const nes = state.get(nes65xxSessionStateKey);
+      if (!nes.currentLoadMemory) {
+        return -1;
+      }
+      const memory = nes.linker.memories.get(nes.currentLoadMemory);
+      if (!memory || memory.fileOffset < 0) {
+        return -1;
+      }
+      if (address2 < memory.start || address2 >= memory.start + memory.size) {
+        return -1;
+      }
+      return nes.header.length + memory.fileOffset + (address2 - memory.start);
+    },
+    fromOutputOffset(offset) {
+      const nes = state.get(nes65xxSessionStateKey);
+      const prgOffset = offset - nes.header.length;
+      if (prgOffset < 0) {
+        return -1;
+      }
+      for (const memory of nes.linker.memories.values()) {
+        if (memory.fileOffset < 0) {
+          continue;
+        }
+        if (prgOffset >= memory.fileOffset && prgOffset < memory.fileOffset + memory.size) {
+          return memory.start + (prgOffset - memory.fileOffset);
+        }
+      }
+      return -1;
+    },
+    validateWrite(address2) {
+      validate(address2);
+    }
+  };
+}
+function createNesOutputFormat() {
+  return {
+    finalize: () => void 0,
+    getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+  };
+}
+function createNesLifecycle({ state }) {
+  const prefill = (session) => {
+    const nes = state.get(nes65xxSessionStateKey);
+    resetNes65xxStageState(nes);
+    session.outputFillByte = nes.fillByte;
+    const total = nes.header.length + nes.linker.imageSize;
+    const image = Array.from({ length: total }, () => nes.fillByte);
+    for (let index = 0; index < nes.header.length; index++) {
+      image[index] = nes.header[index] ?? 0;
+    }
+    session.outputBytes = image;
+    session.bytes = 0;
+    for (const name of linkerDefinedSymbolNames(nes.linker)) {
+      session.globalSymbols.add(name);
+    }
+  };
+  return {
+    onSessionCreated: ({ session }) => {
+      prefill(session);
+    },
+    onStageStart: ({ session }) => {
+      prefill(session);
+    },
+    onStageEnd: ({ session }) => {
+      const nes = state.get(nes65xxSessionStateKey);
+      closeActiveSegment(session, nes);
+      applyLinkerSymbols(session, nes);
+    }
+  };
+}
+function normalizeHeader(configured, imageSize) {
+  if (configured instanceof Uint8Array || Array.isArray(configured)) {
+    const bytes = [...configured].map((value) => Number(value) & 255);
+    if (bytes.length === 0) {
+      throw new Error("65xx NES target header must not be empty.");
+    }
+    return bytes;
+  }
+  if (configured !== void 0) {
+    throw new Error("65xx NES target header must be a byte array.");
+  }
+  const prgBanks = Math.max(1, Math.ceil(imageSize / 16384));
+  const header = Array.from({ length: 16 }, () => 0);
+  header[0] = INES_MAGIC[0];
+  header[1] = INES_MAGIC[1];
+  header[2] = INES_MAGIC[2];
+  header[3] = INES_MAGIC[3];
+  header[4] = prgBanks & 255;
+  return header;
+}
+
+// packages/plugin-65xx/src/directives/ca65-syntax.ts
+var operation = (name) => syntaxLiteral(name);
+var schema = syntaxUnion(
+  syntaxRecord({ operation: operation("segment"), name: syntaxString }),
+  syntaxRecord({ operation: operation("cpu"), name: syntaxString, architecture: syntaxString }),
+  syntaxRecord({ operation: operation("symbols"), names: syntaxArray(syntaxString) }),
+  syntaxRecord({
+    operation: operation("data"),
+    width: syntaxUnion(syntaxLiteral(1), syntaxLiteral(2), syntaxLiteral(3), syntaxLiteral(4)),
+    operands: syntaxArray(syntaxRecord({ text: syntaxString, expression: syntaxExpression }))
+  }),
+  syntaxRecord({
+    operation: operation("mapped"),
+    mode: syntaxUnion(syntaxLiteral("low"), syntaxLiteral("high"), syntaxLiteral("big")),
+    values: syntaxArray(syntaxExpression)
+  }),
+  syntaxRecord({
+    operation: syntaxUnion(operation("reserve"), operation("align")),
+    count: syntaxExpression,
+    fill: syntaxOptional(syntaxExpression)
+  }),
+  syntaxRecord({
+    operation: operation("binary"),
+    filename: syntaxString,
+    offset: syntaxOptional(syntaxExpression),
+    size: syntaxOptional(syntaxExpression)
+  }),
+  syntaxRecord({
+    operation: operation("assert"),
+    condition: syntaxExpression,
+    message: syntaxString
+  }),
+  syntaxRecord({
+    operation: operation("scope"),
+    name: syntaxOptional(syntaxString),
+    procedure: syntaxBoolean
+  }),
+  syntaxRecord({
+    operation: syntaxUnion(
+      operation("pushcpu"),
+      operation("popcpu"),
+      operation("pushseg"),
+      operation("popseg"),
+      operation("endscope")
+    )
+  }),
+  syntaxRecord({ operation: operation("error"), message: syntaxString })
+);
+function parse(id, { words }) {
+  const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
+  const family = id.slice("65xx.directive.".length);
+  if (family === "pushcpu" || family === "popcpu" || family === "pushseg" || family === "popseg" || family === "endscope") {
+    return { operation: family };
+  }
+  if (family === "segment") {
+    const name = unquoteDirectiveText(words[1] ?? "").trim();
+    if (!name) {
+      throw new Error(".segment requires a segment name.");
+    }
+    return { operation: "segment", name };
+  }
+  if (family === "setcpu" || family === "cpu-shorthand") {
+    const name = family === "setcpu" ? unquoteDirectiveText(words.slice(1).join(" ").trim()) : ca65CpuShorthands[keyword];
+    if (!name) {
+      throw new Error(".setcpu requires a CPU name argument.");
+    }
+    const architecture = resolve65xxCpuName(name);
+    if (!architecture) {
+      throw new Error(
+        `.setcpu "${name}" is not a supported 65xx CPU. Supported names: ${Object.keys(ca65CpuNames).join(", ")}.`
+      );
+    }
+    return { operation: "cpu", name: name.toLowerCase(), architecture };
+  }
+  if (family === "scope") {
+    return {
+      operation: "scope",
+      name: words[1]?.trim() || void 0,
+      procedure: keyword === "proc"
+    };
+  }
+  if (family === "unsupported-object") {
+    return {
+      operation: "error",
+      message: `.${keyword} requires relocatable ca65 object/linker semantics, which the flat-image compatibility profile does not implement.`
+    };
+  }
+  if (family === "unsupported-macro") {
+    return {
+      operation: "error",
+      message: `.${keyword} is not yet supported by the ca65 macro compatibility slice.`
+    };
+  }
+  if (family === "byte" || family === "addr" || family === "dword" || family === "faraddr") {
+    const widths = { byte: 1, addr: 2, dword: 4, faraddr: 3 };
+    const width = widths[family];
+    const operands = parseDataList(words.slice(1).join(" "));
+    if (!operands.length) {
+      throw new Error(
+        `${["", "DB", "DW", "DL", "DD"][width]} directive requires at least one parameter.`
+      );
+    }
+    return { operation: "data", width, operands };
+  }
+  const params = parameterList(words);
+  if (family === "export" || family === "import") {
+    const names = params.map((value) => unquoteDirectiveText(value).trim()).filter(Boolean);
+    if (!names.length) {
+      throw new Error(`.${family} requires at least one identifier.`);
+    }
+    return { operation: "symbols", names };
+  }
+  if (family === "lobytes" || family === "hibytes" || family === "dbyt") {
+    if (!params.length) {
+      throw new Error(`${words[0]} requires at least one parameter.`);
+    }
+    let mode2 = "low";
+    if (family === "hibytes") {
+      mode2 = "high";
+    } else if (family === "dbyt") {
+      mode2 = "big";
+    }
+    return {
+      operation: "mapped",
+      mode: mode2,
+      values: params.map((value) => parseDirectiveExpression(value))
+    };
+  }
+  if (family === "res" || family === "align") {
+    if (params.length < 1 || params.length > 2) {
+      throw new Error(
+        family === "res" ? ".res expects count and an optional fill value." : ".align expects a boundary and optional fill value."
+      );
+    }
+    return {
+      operation: family === "res" ? "reserve" : "align",
+      count: parseDirectiveExpression(params[0]),
+      fill: params[1] ? parseDirectiveExpression(params[1]) : void 0
+    };
+  }
+  if (family === "incbin") {
+    if (params.length < 1 || params.length > 3) {
+      throw new Error(".incbin expects a filename, optional offset, and optional size.");
+    }
+    return {
+      operation: "binary",
+      filename: unquoteDirectiveText(params[0]),
+      offset: params[1] ? parseDirectiveExpression(params[1]) : void 0,
+      size: params[2] ? parseDirectiveExpression(params[2]) : void 0
+    };
+  }
+  if (family === "assert") {
+    if (!params.length) {
+      throw new Error(".assert requires an expression.");
+    }
+    const message = params.find((part) => /^["']/.test(part));
+    return {
+      operation: "assert",
+      condition: parseDirectiveExpression(params[0], false),
+      message: message ? unquoteDirectiveText(message) : ".assert expression evaluated to false."
+    };
+  }
+  throw new Error(`Missing typed ca65 directive grammar '${id}'.`);
+}
+function execute(node, { session, state, targetId }) {
+  const profile = state.get(ca65SessionStateKey);
+  switch (node.operation) {
+    case "error":
+      throw new Error(node.message);
+    case "pushcpu":
+      return handlePushcpu(session, profile);
+    case "popcpu":
+      return handlePopcpu(session, profile);
+    case "pushseg":
+      return handlePushseg(profile);
+    case "popseg":
+      return handlePopseg(profile);
+    case "endscope":
+      return handleEndScope(session, profile);
+    case "cpu":
+      session.selectArchitecture(node.architecture, node.name);
+      profile.currentArchitecture = node.architecture;
+      return;
+    case "segment": {
+      if (targetId !== NES_65XX_TARGET_ID) {
+        profile.currentFlatSegment = node.name;
+        return;
+      }
+      const nes = state.get(nes65xxSessionStateKey);
+      const segment = nes.linker.segments.get(node.name);
+      if (!segment) {
+        throw new Error(`.segment "${node.name}" is not defined in the linker configuration.`);
+      }
+      closeActiveSegment(session, nes);
+      openSegment(session, nes, segment);
+      return;
+    }
+    case "scope": {
+      const name = node.name ?? `__anonymous_scope_${session.currentLine}`;
+      if (node.procedure) {
+        session.symbolScope.setLabel(session.symbolScope.qualifySymbolName(name));
+      }
+      profile.scopeStack.push(session.currentNamespace);
+      session.currentNamespace = session.currentNamespace ? `${session.currentNamespace}_${name}` : name;
+      return;
+    }
+    case "symbols":
+      for (const name of node.names) {
+        markGlobalSymbol(session, name);
+      }
+      return;
+    case "data":
+      session.directiveRuntime.executeDataStatement(node);
+      return;
+    case "mapped":
+      if (session.isDefinitionCollectionStage) {
+        session.step(node.values.length * (node.mode === "big" ? 2 : 1));
+        return;
+      }
+      for (const expression of node.values) {
+        const value = session.operandResolver.getnum(expression);
+        if (node.mode !== "low") {
+          session.write1(value >> 8 & 255);
+        }
+        if (node.mode !== "high") {
+          session.write1(value & 255);
+        }
+      }
+      return;
+    case "reserve":
+    case "align": {
+      const value = session.operandResolver.getnum(node.count);
+      const fill = node.fill ? session.operandResolver.getnum(node.fill) : 0;
+      if (!Number.isInteger(value) || value < (node.operation === "align" ? 1 : 0)) {
+        throw new Error(
+          node.operation === "align" ? ".align boundary must be a positive integer." : ".res count must be non-negative."
+        );
+      }
+      const count = node.operation === "reserve" ? value : (value - session.currentTargetAddress % value) % value;
+      if (session.isDefinitionCollectionStage) {
+        session.step(count);
+        return;
+      }
+      for (let index = 0; index < count; index++) {
+        session.write1(fill & 255);
+      }
+      return;
+    }
+    case "binary": {
+      const data = session.includeSource.readFile(node.filename);
+      if (!(data instanceof Uint8Array)) {
+        throw new Error(`Failed to read binary include: ${node.filename}`);
+      }
+      const offset = node.offset ? session.operandResolver.getnum(node.offset) : 0;
+      const size = node.size ? session.operandResolver.getnum(node.size) : data.length - offset;
+      if (!Number.isInteger(offset) || !Number.isInteger(size) || offset < 0 || size < 0 || offset + size > data.length) {
+        throw new Error(
+          `.incbin range ${offset}+${size} is outside '${node.filename}' (${data.length} bytes).`
+        );
+      }
+      if (session.isDefinitionCollectionStage) {
+        session.step(size);
+        return;
+      }
+      for (const byte of data.subarray(offset, offset + size)) {
+        session.write1(byte);
+      }
+      return;
+    }
+    case "assert":
+      if (session.evaluateAssertion(node.condition) === false) {
+        throw new Error(node.message);
+      }
+      return;
+  }
+}
+function ca65DirectiveSyntax(id) {
+  const codec = syntaxCodec("1", (input) => parse(id, input), schema);
+  return {
+    ...codec,
+    bind(context) {
+      if ((id === "65xx.directive.incbin" || id === "65xx.directive.assert") && context.session.targetOptions.sourceStyle === "asar") {
+        return void 0;
+      }
+      return { execute: (payload) => execute(codec.read(payload), context) };
+    }
+  };
+}
+
+// packages/plugin-65xx/src/instructions/catalog.ts
+var syntax = {
+  implied: "",
+  accumulator: "A",
+  immediate: "#value",
+  zeroPage: "zp",
+  zeroPageIndexedX: "zp,x",
+  zeroPageIndexedY: "zp,y",
+  absolute: "addr",
+  absoluteIndexedX: "addr,x",
+  absoluteIndexedY: "addr,y",
+  absoluteLongIndexedX: "long,x",
+  indirect: "(addr)",
+  zeroPageIndirect: "(zp)",
+  zeroPageIndirectLong: "[zp]",
+  indexedIndirectX: "(zp,x)",
+  indirectIndexedY: "(zp),y",
+  absoluteIndexedIndirect: "(addr,x)",
+  zeroPageIndirectIndexedZ: "(zp),z",
+  stackRelative: "offset,s",
+  stackRelativeIndirectIndexedY: "(offset,s),y",
+  relative: "target",
+  relative16: "target",
+  zeroPageRelative: "zp,target",
+  accumulatorRelative: "A,target",
+  zeroPageImmediate: "zp,#value",
+  specialPage: "$FFnn",
+  blockTransfer: "source,destination,length",
+  immediateZeroPage: "#value,zp",
+  immediateZeroPageIndexedX: "#value,zp,x",
+  immediateAbsolute: "#value,addr",
+  immediateAbsoluteIndexedX: "#value,addr,x",
+  basePageIndirectIndexedZ: "[zp],z",
+  quadAccumulator: "Q"
+};
+var summaries = {
+  ADC: "Add memory to the accumulator with carry.",
+  AND: "Bitwise AND memory with the accumulator.",
+  ASL: "Shift left one bit.",
+  BCC: "Branch when carry is clear.",
+  BCS: "Branch when carry is set.",
+  BEQ: "Branch when equal (zero set).",
+  BIT: "Test accumulator bits without storing a result.",
+  BMI: "Branch when negative.",
+  BNE: "Branch when not equal (zero clear).",
+  BPL: "Branch when positive.",
+  BRK: "Trigger a software interrupt.",
+  BVC: "Branch when overflow is clear.",
+  BVS: "Branch when overflow is set.",
+  CMP: "Compare memory with the accumulator.",
+  CPX: "Compare memory with X.",
+  CPY: "Compare memory with Y.",
+  EOR: "Exclusive-OR memory with the accumulator.",
+  JMP: "Jump to an address.",
+  JSR: "Call a subroutine.",
+  LDA: "Load the accumulator.",
+  LDX: "Load X.",
+  LDY: "Load Y.",
+  NOP: "Perform no operation.",
+  ORA: "Bitwise OR memory with the accumulator.",
+  SBC: "Subtract memory and borrow from the accumulator.",
+  STA: "Store the accumulator.",
+  STX: "Store X.",
+  STY: "Store Y."
+};
+function buildInstructionCatalog(forms) {
+  const grouped = /* @__PURE__ */ new Map();
+  for (const form of forms) {
+    const entries2 = grouped.get(form.mnemonic) ?? [];
+    entries2.push(form);
+    grouped.set(form.mnemonic, entries2);
+  }
+  return [...grouped.entries()].toSorted(([left], [right]) => left.localeCompare(right)).map(([mnemonic, entries2]) => ({
+    mnemonic,
+    summary: summaries[mnemonic] ?? (entries2.some((entry) => !entry.documented) ? "Undocumented NMOS 6502 instruction." : `${mnemonic} instruction.`),
+    modes: entries2.map((form) => ({
+      mode: form.mode,
+      syntax: syntax[form.mode],
+      opcode: form.opcode,
+      size: form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0)
+    }))
+  }));
 }
 
 // node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
@@ -11522,9 +12825,6 @@ var DataBuffer = class _DataBuffer {
 };
 var data_buffer_default = DataBuffer;
 
-// node_modules/@uttori/data-tools/dist/image/data-image-png.js
-init_data_hash_crc32();
-
 // node_modules/@uttori/data-tools/dist/image/bitmap-text.js
 function freezeGlyphs() {
   return Object.freeze(Object.fromEntries(Object.entries({
@@ -12342,9 +13642,9 @@ function validateIndexed(image, bitDepth, maxPixels) {
     }
   }
 }
-function joinChunks(parts, maxBytes) {
+function joinChunks(parts2, maxBytes) {
   let length = 0;
-  for (const part of parts) {
+  for (const part of parts2) {
     length += part.length;
   }
   if (!Number.isSafeInteger(length) || length > maxBytes) {
@@ -12352,7 +13652,7 @@ function joinChunks(parts, maxBytes) {
   }
   const output = new Uint8Array(length);
   let offset = 0;
-  for (const part of parts) {
+  for (const part of parts2) {
     output.set(part, offset);
     offset += part.length;
   }
@@ -13543,26 +14843,26 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     if (pixelsChanged) {
       compressed = _ImagePNG._encodeIndexedData(next, original.sourceBitDepth, options, image._limits);
     }
-    const parts = [PNG_SIGNATURE];
+    const parts2 = [PNG_SIGNATURE];
     let wrotePixels = false;
     for (const chunk of image.chunks) {
       const { type } = chunk;
       if (type === "IHDR" && pixelsChanged) {
-        parts.push(makeChunk(type, makeHeader(width, height, image.bitDepth, 3)));
+        parts2.push(makeChunk(type, makeHeader(width, height, image.bitDepth, 3)));
       } else if (type === "PLTE" && paletteChanged) {
-        parts.push(...makePaletteChunks(palette));
+        parts2.push(...makePaletteChunks(palette));
       } else if (type === "tRNS" && paletteChanged) {
         continue;
       } else if (type === "IDAT" && compressed !== void 0) {
         if (!wrotePixels) {
-          parts.push(makeChunk(type, compressed));
+          parts2.push(makeChunk(type, compressed));
           wrotePixels = true;
         }
       } else if (type === "IHDR" || type === "PLTE" || type === "tRNS" || type === "IDAT" || type === "IEND" || chunk.safeToCopy || retained.has(type)) {
-        parts.push(chunk.raw);
+        parts2.push(chunk.raw);
       }
     }
-    return joinChunks(parts, image._limits.maxOutputBytes);
+    return joinChunks(parts2, image._limits.maxOutputBytes);
   }
   /**
    * Rewrite an indexed PNG using rewriteIndexed().
@@ -13921,557 +15221,871 @@ var nesAssetFormats = [
   }
 ];
 
-// packages/plugin-65xx/src/operands/classifier.ts
-function classify65xxOperand(resolver, operand) {
-  const raw = operand.trim();
-  const sizePrefix = parseCa65AddressSizePrefix(raw);
-  const { expanded, length: inferredLength } = resolver.expandOperand(sizePrefix.rest);
-  let length = inferredLength;
-  if (sizePrefix.force === 1) {
-    length = 1;
-  } else if (sizePrefix.force === 2) {
-    length = Math.max(2, inferredLength);
-  } else if (sizePrefix.force === 3) {
-    length = Math.max(3, inferredLength);
-  }
-  const normalized = expanded.trim();
-  const normalizedUpper = normalized.toUpperCase();
-  const compound = splitTopLevelOperands2(normalized);
-  let mode2 = "unknown";
-  let baseExpression = normalized;
-  let registerName;
-  if (normalized === "") {
-    mode2 = "implied";
-  } else if (normalizedUpper === "A") {
-    mode2 = "accumulator";
-    registerName = "a";
-  } else if (normalizedUpper === "Q") {
-    mode2 = "quadAccumulator";
-    registerName = "q";
-  } else if (compound.length >= 2 && compound[0]?.startsWith("#")) {
-    const indexedX = compound.length === 3 && compound[2]?.toUpperCase() === "X";
-    const address2 = compound[1] ?? "";
-    const addressLength = resolver.expandOperand(address2).length;
-    mode2 = `${addressLength <= 1 ? "immediateZeroPage" : "immediateAbsolute"}${indexedX ? "IndexedX" : ""}`;
-    baseExpression = normalized;
-  } else if (normalized.startsWith("#")) {
-    mode2 = "immediate";
-    baseExpression = normalized.slice(1).trim();
-  } else {
-    const indexedIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*x\s*\)$/i);
-    const stackRelativeIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i);
-    const indirectIndexed = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*y$/i);
-    const indirectIndexedZ = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*z$/i);
-    const indirect = normalized.match(/^\(\s*(.+?)\s*\)$/i);
-    const basePageIndirectZ = normalized.match(/^\[\s*(.+?)\s*]\s*,\s*z$/i);
-    const indirectLong = normalized.match(/^\[\s*(.+?)\s*]$/i);
-    const indexed = normalized.match(/^(.+?)\s*,\s*([sx-z])$/i);
-    const topLevelComma = findTopLevelComma(normalized);
-    if (stackRelativeIndirect) {
-      mode2 = "stackRelativeIndirectIndexedY";
-      baseExpression = stackRelativeIndirect[1].trim();
-    } else if (indexedIndirect) {
-      mode2 = resolver.expandOperand(indexedIndirect[1].trim()).length <= 1 ? "indexedIndirectX" : "absoluteIndexedIndirect";
-      baseExpression = indexedIndirect[1].trim();
-    } else if (indirectIndexed && !indirectIndexed[1].includes(",")) {
-      mode2 = "indirectIndexedY";
-      baseExpression = indirectIndexed[1].trim();
-    } else if (indirectIndexedZ && !indirectIndexedZ[1].includes(",")) {
-      mode2 = "zeroPageIndirectIndexedZ";
-      baseExpression = indirectIndexedZ[1].trim();
-    } else if (basePageIndirectZ) {
-      mode2 = "basePageIndirectIndexedZ";
-      baseExpression = basePageIndirectZ[1].trim();
-    } else if (indirectLong) {
-      mode2 = "zeroPageIndirectLong";
-      baseExpression = indirectLong[1].trim();
-    } else if (indirect) {
-      mode2 = resolver.expandOperand(indirect[1].trim()).length <= 1 ? "zeroPageIndirect" : "indirect";
-      baseExpression = indirect[1].trim();
-    } else if (indexed) {
-      const register = indexed[2].toLowerCase();
-      if (register === "s") {
-        mode2 = "stackRelative";
-      } else if (register === "z") {
-        mode2 = "unknown";
-      } else if (length > 2 && register === "x") {
-        mode2 = "absoluteLongIndexedX";
-      } else {
-        mode2 = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register.toUpperCase()}`;
-      }
-      baseExpression = indexed[1].trim();
-    } else if (topLevelComma >= 0) {
-      if (compound.length === 3) {
-        mode2 = "blockTransfer";
-      } else if (compound[0]?.toUpperCase() === "A") {
-        mode2 = "accumulatorRelative";
-      } else if (compound[1]?.startsWith("#")) {
-        mode2 = "zeroPageImmediate";
-      } else {
-        mode2 = "zeroPageRelative";
-      }
-      baseExpression = normalized;
-    } else {
-      mode2 = length <= 1 ? "zeroPage" : "absolute";
-    }
-  }
-  return {
-    // Unused
-    immediate: false,
-    // Unused
-    indirect: false,
-    mode: mode2,
-    baseExpression,
-    registerName,
-    raw,
-    expanded,
-    length,
-    // 24-bit values are not 6502-legal. Encoder can still emit long-x on 4510.
-    metadata: length > 2 ? { addressOutOfRange: true } : void 0
-  };
-}
-function splitTopLevelOperands2(value) {
-  const parts = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < value.length; index++) {
-    const character = value[index];
-    if (character === "(" || character === "[") {
-      depth++;
-    } else if (character === ")" || character === "]") {
-      depth--;
-    } else if (character === "," && depth === 0) {
-      parts.push(value.slice(start, index).trim());
-      start = index + 1;
-    }
-  }
-  parts.push(value.slice(start).trim());
-  return parts.filter(Boolean);
-}
-function findTopLevelComma(value) {
-  let depth = 0;
-  for (let index = 0; index < value.length; index++) {
-    const character = value[index];
-    if (character === "(" || character === "[") {
-      depth++;
-    } else if (character === ")" || character === "]") {
-      depth--;
-    } else if (character === "," && depth === 0) {
-      return index;
-    }
-  }
-  return -1;
-}
-function parseCa65AddressSizePrefix(operand) {
-  const match = operand.match(/^([afz]):(.*)$/i);
-  if (!match) {
-    return { rest: operand, force: void 0 };
-  }
-  const rest = match[2].trim();
-  const key = match[1].toLowerCase();
-  if (key === "z") {
-    return { rest, force: 1 };
-  }
-  if (key === "a") {
-    return { rest, force: 2 };
-  }
-  return { rest, force: 3 };
-}
-
-// packages/plugin-65xx/src/session-state.ts
-var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
-function isSessionStateKey2(value) {
-  return value.id.length > 0;
-}
-function createSessionStateKey2(id) {
-  const key = { id };
-  if (!isSessionStateKey2(key)) {
-    throw new Error(`Invalid session state key '${id}'.`);
-  }
-  return key;
-}
-var nes65xxSessionStateKey = createSessionStateKey2(NES_65XX_SESSION_STATE_ID);
-function cloneNes65xxSessionState(value) {
-  return {
-    ...value,
-    header: [...value.header],
-    memoryCursors: { ...value.memoryCursors }
-  };
-}
-function resetNes65xxStageState(state) {
-  state.memoryCursors = {};
-  for (const memory of state.linker.memories.values()) {
-    state.memoryCursors[memory.name] = memory.start;
-  }
-  state.currentSegment = null;
-  state.currentLoadMemory = null;
-  state.segmentLoadStart = 0;
-  state.segmentRunStart = 0;
-}
-
-// packages/plugin-65xx/src/linker-config.ts
-var DEFAULT_LINKER_CONFIG = `MEMORY {
-    ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
-}
-SEGMENTS {
-    CODE: load = ROM, type = ro ;
-}
-`;
-function defaultLd65ConfigText() {
-  return DEFAULT_LINKER_CONFIG;
-}
-function parseLd65Config(source) {
-  const text = source.replace(/\/\*[\S\s]*?\*\//g, " ");
-  const memories = /* @__PURE__ */ new Map();
-  const segments = /* @__PURE__ */ new Map();
-  const symbols = [];
-  let fileOffset = 0;
-  for (const statement of readBlockStatements(text, "MEMORY")) {
-    const parsed = parseNamedStatement(statement);
-    const start = requireNumber(parsed.attrs, "start", parsed.name);
-    const size = requireNumber(parsed.attrs, "size", parsed.name);
-    const file = parsed.attrs.file ?? "%O";
-    const isRam = file === '""' || file === "''" || file === "";
-    const region = {
-      name: parsed.name,
-      start,
-      size,
-      fileOffset: isRam ? -1 : fileOffset,
-      fill: parseYesNo(parsed.attrs.fill) ?? false,
-      fillval: parseNumberToken(parsed.attrs.fillval ?? "0") ?? 0
-    };
-    memories.set(region.name, region);
-    if (!isRam) {
-      fileOffset += size;
-    }
-  }
-  for (const statement of readBlockStatements(text, "SEGMENTS")) {
-    const parsed = parseNamedStatement(statement);
-    const load = parsed.attrs.load;
-    if (!load) {
-      throw new Error(`ld65 segment '${parsed.name}' is missing load = MEMORY.`);
-    }
-    if (!memories.has(load)) {
-      throw new Error(`ld65 segment '${parsed.name}' loads unknown memory '${load}'.`);
-    }
-    const run = parsed.attrs.run ?? load;
-    if (!memories.has(run)) {
-      throw new Error(`ld65 segment '${parsed.name}' runs in unknown memory '${run}'.`);
-    }
-    segments.set(parsed.name, {
-      name: parsed.name,
-      load,
-      run,
-      start: parseNumberToken(parsed.attrs.start),
-      define: parseYesNo(parsed.attrs.define) ?? false,
-      type: parsed.attrs.type ?? "ro"
-    });
-  }
-  for (const statement of readBlockStatements(text, "SYMBOLS")) {
-    const parsed = parseNamedStatement(statement);
-    const valueExpr = parsed.attrs.value;
-    if (!valueExpr) {
-      throw new Error(`ld65 symbol '${parsed.name}' is missing value = EXPR.`);
-    }
-    symbols.push({ name: parsed.name, valueExpr });
-  }
-  if (memories.size === 0) {
-    throw new Error("ld65 config MEMORY block is empty.");
-  }
-  return {
-    memories,
-    segments,
-    symbols,
-    imageSize: fileOffset
-  };
-}
-function linkerDefinedSymbolNames(config) {
-  const names = [];
-  for (const segment of config.segments.values()) {
-    if (!segment.define) {
-      continue;
-    }
-    names.push(
-      `__${segment.name}_LOAD__`,
-      `__${segment.name}_RUN__`,
-      `__${segment.name}_SIZE__`,
-      `__${segment.name}_RUN_END__`
-    );
-  }
-  for (const symbol of config.symbols) {
-    names.push(symbol.name);
-  }
-  return names;
-}
-var LD65_BLOCK_BODY = {
-  MEMORY: /memory\s*{([\S\s]*?)}/i,
-  SEGMENTS: /segments\s*{([\S\s]*?)}/i,
-  SYMBOLS: /symbols\s*{([\S\s]*?)}/i
+// packages/plugin-65xx/src/operands/syntax.ts
+var grammar = {
+  registers: ["a", "q"],
+  indexRegisters: ["x", "y", "z", "s"],
+  commaIndex: true,
+  ca65Widths: true
 };
-function readBlockStatements(source, block) {
-  const match = source.match(LD65_BLOCK_BODY[block]);
-  if (!match) {
-    return [];
-  }
-  return match[1].split(";").map((entry) => entry.trim()).filter(Boolean);
-}
-function parseNamedStatement(statement) {
-  const colon = statement.indexOf(":");
-  if (colon <= 0) {
-    throw new Error(`Invalid ld65 statement: ${statement}`);
-  }
-  const name = statement.slice(0, colon).trim();
-  const attrs = {};
-  for (const part of splitTopLevelCommas(statement.slice(colon + 1))) {
-    const equals = part.indexOf("=");
-    if (equals <= 0) {
-      continue;
+function parts(text) {
+  const result = [];
+  let depth = 0;
+  let quote = "";
+  let start = 0;
+  const append = (end) => {
+    const raw = text.slice(start, end);
+    const trimmed = raw.trim();
+    if (trimmed) {
+      result.push({ text: trimmed, start: start + raw.length - raw.trimStart().length });
     }
-    const key = part.slice(0, equals).trim().toLowerCase();
-    const value = part.slice(equals + 1).trim();
-    attrs[key] = value;
-  }
-  return { name, attrs };
-}
-function splitTopLevelCommas(input) {
-  const parts = [];
-  let current = "";
-  let quote;
-  for (const char of input) {
+  };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
     if (quote) {
-      current += char;
-      if (char === quote) {
-        quote = void 0;
+      if (ch === "\\") {
+        i++;
+      } else if (ch === quote) {
+        quote = "";
       }
-      continue;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+    } else if (ch === "(" || ch === "[") {
+      depth++;
+    } else if (ch === ")" || ch === "]") {
+      depth--;
+    } else if (ch === "," && depth === 0) {
+      append(i);
+      start = i + 1;
     }
-    if (char === '"' || char === "'") {
-      quote = char;
-      current += char;
-      continue;
-    }
-    if (char === ",") {
-      const trimmed2 = current.trim();
-      if (trimmed2) {
-        parts.push(trimmed2);
-      }
-      current = "";
-      continue;
-    }
-    current += char;
   }
-  const trimmed = current.trim();
-  if (trimmed) {
-    parts.push(trimmed);
-  }
-  return parts;
+  append(text.length);
+  return result;
 }
-function parseNumberToken(token) {
-  if (token === void 0 || token === "") {
-    return void 0;
+function containsCall(node) {
+  if (node.type === "call") {
+    return true;
   }
-  if (token.startsWith("$")) {
-    const value = Number.parseInt(token.slice(1), 16);
-    return Number.isFinite(value) ? value : void 0;
+  if (node.type === "binary") {
+    return containsCall(node.left) || containsCall(node.right);
   }
-  if (/^-?\d+$/.test(token)) {
-    return Number.parseInt(token, 10);
+  if (node.type === "unary") {
+    return containsCall(node.argument);
+  }
+  if (node.type === "index") {
+    return containsCall(node.object) || containsCall(node.index);
+  }
+  if (node.type === "member") {
+    return containsCall(node.object);
+  }
+  return false;
+}
+function scalar2(text, start, force) {
+  const expression = parseExpressionNode(text);
+  let spelling = "expression";
+  let literalBytes;
+  if (expression.type === "literal" && !expression.parenthesized) {
+    if (text.startsWith("$")) {
+      spelling = "hex";
+      literalBytes = Math.max(1, Math.ceil((text.length - 1) / 2));
+    } else if (text.startsWith("%")) {
+      spelling = "binary";
+      literalBytes = Math.max(1, Math.ceil((text.length - 1) / 8));
+    } else if (!text.startsWith("0x")) {
+      spelling = "decimal";
+    }
+  } else if (isReferenceExpressionNode(expression)) {
+    spelling = "symbol";
+  }
+  return {
+    expression,
+    span: { start, end: start + text.length },
+    width: {
+      spelling,
+      grouped: expression.parenthesized === true,
+      ...literalBytes ? { literalBytes } : {},
+      ...force ? { forcedBytes: force } : {}
+    }
+  };
+}
+function plan(input, start) {
+  let text = input.trim();
+  const prefix = /^([afz]):\s*/i.exec(text);
+  let force;
+  if (prefix) {
+    if (prefix[1].toLowerCase() === "z") {
+      force = 1;
+    } else if (prefix[1].toLowerCase() === "a") {
+      force = 2;
+    } else {
+      force = 3;
+    }
+    text = text.slice(prefix[0].length);
+    start += prefix[0].length;
+  }
+  text = text.replace(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i, "$1$2$3");
+  const immediate = text.startsWith("#");
+  const body = immediate ? text.slice(1).trim() : text;
+  const suffix = !immediate ? /^(.*),\s*([sxy])$/i.exec(body) : null;
+  const expressionText = suffix ? suffix[1].trim() : body;
+  const numeric = scalar2(expressionText, start + text.indexOf(expressionText), force);
+  const mathematicalScalar = numeric;
+  const relative = /^(?:\?[+-]|:?\++|:?-+)$/.test(text);
+  const mathematical = /^[A-Z_a-z]\w*\s*\(/.test(body) || /[&*+/^|-]|<<|>>/.test(body);
+  let probeText = body;
+  if (text.startsWith("[") && text.endsWith("]")) {
+    probeText = text.slice(1, -1).trim();
+  } else if (!immediate && text.includes(",")) {
+    probeText = text.slice(0, text.lastIndexOf(",")).trim();
+  }
+  let probe;
+  if (!/^[\d$%(]/.test(probeText) && !probeText.includes(",")) {
+    const candidate = scalar2(probeText, start + text.indexOf(probeText));
+    if (isReferenceExpressionNode(candidate.expression) && candidate.expression.type !== "relativeReference") {
+      probe = candidate;
+    }
+  }
+  let hexWidth;
+  if (body.startsWith("$")) {
+    const atom = body.slice(1).split(",")[0];
+    hexWidth = Math.max(1, Math.ceil(atom.length / 2));
+  }
+  const groupedAtom = numeric.expression.parenthesized && (isReferenceExpressionNode(numeric.expression) || numeric.expression.type === "literal" && numeric.expression.value.includes("."));
+  const native = !relative && !/^[([]/.test(text) && !/^[aq]$/i.test(text) && numeric.expression.type !== "error" && numeric.expression.type !== "range" && numeric.expression.type !== "template" && !containsCall(numeric.expression) && !groupedAtom;
+  let numericScalar = numeric;
+  if (groupedAtom && expressionText.includes(".") && !mathematical) {
+    numericScalar = { ...numeric, expression: { type: "identifier", name: expressionText } };
+  }
+  return {
+    scalar: numericScalar,
+    unbound: /![\w{]|<[^>]+>|\\[A-Z_a-z]/.test(input),
+    display: expressionText,
+    ...suffix ? { index: suffix[2].toLowerCase() } : {},
+    immediate,
+    relative,
+    directHex: body.startsWith("$"),
+    native,
+    ...force ? { force } : {},
+    ...hexWidth ? { hexWidth } : {},
+    ...probe ? { probe } : {},
+    ...mathematical && !relative ? { math: mathematicalScalar } : {}
+  };
+}
+function parse65xxOperands(mnemonic, text) {
+  const common = parseInstructionOperands(mnemonic, text, grammar);
+  const parsedMnemonic = /^([A-Z][\dA-Z]{2,4})(?:\.([BW]))?$/.exec(mnemonic.trim().toUpperCase());
+  let forcedWidth;
+  if (parsedMnemonic?.[2] === "B") {
+    forcedWidth = 1;
+  } else if (parsedMnemonic?.[2] === "W") {
+    forcedWidth = 2;
+  }
+  const whole = plan(text, 0);
+  const split = parts(text);
+  const unboundOperands = common.operands[0]?.kind === "template" ? common.operands[0].structure.operands : common.operands;
+  const first = unboundOperands.at(0);
+  let inner;
+  if (first?.kind === "memory" && !("kind" in first.address)) {
+    const span = first.address.span;
+    inner = plan(text.slice(span.start, span.end), span.start);
+  }
+  const register = text.trim().toLowerCase();
+  const originalRegister = register === "a" || register === "q" ? register : void 0;
+  const selected = operandScalar(first);
+  const scalarDisplay = whole.native || !selected ? whole.display : text.slice(selected.span.start, selected.span.end);
+  return {
+    ...common,
+    policy65xx: {
+      kind: "65xx-v1",
+      mnemonic: parsedMnemonic?.[1] ?? mnemonic.trim().toUpperCase(),
+      ...forcedWidth ? { forcedWidth } : {},
+      ...originalRegister ? { originalRegister } : {},
+      whole,
+      unboundOperands,
+      scalarDisplay,
+      parts: split.map((p) => plan(p.text, p.start)),
+      ...inner ? { inner } : {},
+      hasOperand: text.trim().length > 0,
+      hexSpecialPage: /^(?:\$ff[\da-f]{2}|0xff[\da-f]{2})$/i.test(text.trim())
+    }
+  };
+}
+function syntax65xx(syntax2) {
+  if (!has65xxPolicy(syntax2)) {
+    throw new Error("65xx encoder requires its registered operand grammar.");
+  }
+  return syntax2;
+}
+function operandScalar(operand) {
+  if (operand?.kind === "immediate") {
+    return operand.value;
+  }
+  if (operand?.kind === "memory" && !("kind" in operand.address)) {
+    return operand.address;
   }
   return void 0;
 }
-function requireNumber(attrs, key, owner) {
-  const value = parseNumberToken(attrs[key]);
-  if (value === void 0) {
-    throw new Error(`ld65 '${owner}' is missing numeric ${key}.`);
+function has65xxPolicy(syntax2) {
+  return "policy65xx" in syntax2 && typeof syntax2.policy65xx === "object" && syntax2.policy65xx !== null && "kind" in syntax2.policy65xx && syntax2.policy65xx.kind === "65xx-v1";
+}
+
+// packages/plugin-65xx/src/operands/resolution.ts
+function valueWidth(value) {
+  if (!Number.isFinite(value)) {
+    return 4;
+  }
+  let integer3 = Math.floor(Math.abs(value));
+  let digits = 1;
+  while (integer3 >= 16) {
+    integer3 = Math.floor(integer3 / 16);
+    digits++;
+  }
+  if (value < 0) {
+    digits++;
+  }
+  let fraction = Math.abs(value) % 1;
+  if (fraction) {
+    digits++;
+    for (let n = 0; fraction && n < 268; n++) {
+      fraction = fraction * 16 % 1;
+      digits++;
+    }
+  }
+  return Math.max(1, Math.ceil(digits / 2));
+}
+function expand(plan2, frame) {
+  let length = plan2.hexWidth ?? 2;
+  let value = 0;
+  let generated = false;
+  let flattened = false;
+  if (plan2.unbound && frame.bindingFailure?.reason === "other") {
+    return { length: plan2.force ?? length, value, flattened, generated };
+  }
+  if (plan2.relative) {
+    return { length: 2, value, generated, flattened };
+  }
+  if (plan2.probe && isReferenceExpressionNode(plan2.probe.expression)) {
+    const result = frame.reference(plan2.probe.expression);
+    if (result.kind === "resolved") {
+      value = result.value;
+      generated = true;
+      length = valueWidth(value);
+    }
+  }
+  if (plan2.immediate && !generated && (plan2.math || !plan2.directHex)) {
+    try {
+      value = frame.evaluate(plan2.scalar, "classification", true).value;
+      generated = true;
+      length = valueWidth(value);
+    } catch {
+    }
+  }
+  if (!generated && plan2.math) {
+    try {
+      const result = frame.evaluate(plan2.math, "classification", true, "math").value;
+      if (!Number.isNaN(result)) {
+        value = result;
+        generated = true;
+        flattened = true;
+        length = valueWidth(value);
+      }
+    } catch {
+    }
+  }
+  if (plan2.force === 1) {
+    length = 1;
+  } else if (plan2.force) {
+    length = Math.max(plan2.force, length);
+  }
+  return { length, value, generated, flattened };
+}
+function classify(syntax2, frame) {
+  const policy = syntax2.policy65xx;
+  const whole = expand(policy.whole, frame);
+  const operands = syntax2.operands;
+  const first = operands.at(0);
+  let mode2 = "unknown";
+  let length = whole.length;
+  if (!policy.hasOperand) {
+    mode2 = "implied";
+  } else if (policy.originalRegister === "a") {
+    mode2 = "accumulator";
+  } else if (policy.originalRegister === "q") {
+    mode2 = "quadAccumulator";
+  } else if (policy.whole.immediate && whole.generated) {
+    mode2 = "immediate";
+  } else if (first?.kind === "immediate" && operands.length >= 2) {
+    const address2 = expand(policy.parts[1], frame);
+    const second = operands[1];
+    const indexed = second.kind === "memory" && second.index?.register === "x";
+    mode2 = address2.length <= 1 ? "immediateZeroPage" : "immediateAbsolute";
+    if (indexed) {
+      mode2 += "IndexedX";
+    }
+  } else if (first?.kind === "immediate") {
+    mode2 = "immediate";
+  } else if (operands.length >= 2 && policy.whole.index && policy.whole.scalar.expression.type === "error") {
+    mode2 = length <= 1 ? "zeroPage" : "absolute";
+    mode2 += "Indexed" + policy.whole.index.toUpperCase();
+  } else if (first?.kind === "invalid") {
+    mode2 = length <= 1 ? "zeroPage" : "absolute";
+  } else if (operands.length >= 2) {
+    if (policy.parts.length === 3) {
+      mode2 = "blockTransfer";
+    } else if (first?.kind === "register" && first.name === "a") {
+      mode2 = "accumulatorRelative";
+    } else if (operands[1].kind === "immediate") {
+      mode2 = "zeroPageImmediate";
+    } else {
+      mode2 = "zeroPageRelative";
+    }
+  } else if (first?.kind === "memory") {
+    const index = first.index?.register;
+    const delimiter = whole.flattened ? "none" : first.delimiter;
+    if (delimiter === "parentheses" && first.innerIndex === "s" && index === "y") {
+      mode2 = "stackRelativeIndirectIndexedY";
+    } else if (delimiter === "parentheses" && first.index?.position === "inside" && index === "x") {
+      length = expand(policy.inner, frame).length;
+      mode2 = length <= 1 ? "indexedIndirectX" : "absoluteIndexedIndirect";
+    } else if (delimiter === "parentheses" && first.index?.position === "outside" && index === "y") {
+      mode2 = "indirectIndexedY";
+    } else if (delimiter === "parentheses" && first.index?.position === "outside" && index === "z") {
+      mode2 = "zeroPageIndirectIndexedZ";
+    } else if (delimiter === "brackets" && index === "z") {
+      mode2 = "basePageIndirectIndexedZ";
+    } else if (delimiter === "brackets" && !index) {
+      mode2 = "zeroPageIndirectLong";
+    } else if (delimiter === "parentheses" && !index) {
+      length = expand(policy.inner, frame).length;
+      mode2 = length <= 1 ? "zeroPageIndirect" : "indirect";
+    } else if (delimiter === "none") {
+      if (index === "s") {
+        mode2 = "stackRelative";
+      } else if (index === "z") {
+        mode2 = "unknown";
+      } else if (index === "x" && length > 2) {
+        mode2 = "absoluteLongIndexedX";
+      } else {
+        mode2 = length <= 1 ? "zeroPage" : "absolute";
+        if (index === "x" || index === "y") {
+          mode2 += "Indexed" + index.toUpperCase();
+        }
+      }
+    }
+  }
+  return {
+    mode: mode2,
+    length,
+    generated: whole.generated,
+    value: whole.value,
+    native: policy.whole.native,
+    specialPage: mode2 === "absolute" && (whole.generated && whole.value >= 65280 && whole.value <= 65535 || policy.hexSpecialPage)
+  };
+}
+function prepare65xx(syntax2, frame) {
+  if (syntax2.policy65xx.parts.length === 1) {
+    const first = classify(syntax2, frame);
+    if (first.native && !(first.generated && (first.value < 0 || !Number.isInteger(first.value)))) {
+      return first;
+    }
+  } else {
+    for (const part of syntax2.policy65xx.parts) {
+      expand(part, frame);
+    }
+  }
+  return classify(syntax2, frame);
+}
+function generatedValue(value) {
+  if (value < 0 || Number.isNaN(value)) {
+    throw new Error("Invalid number: NaN");
+  }
+  if (!Number.isFinite(value)) {
+    throw new Error("Invalid number: $" + String(value).toUpperCase());
+  }
+  if (!Number.isInteger(value)) {
+    throw new Error("Invalid number: $" + value.toString(16).toUpperCase());
   }
   return value;
 }
-function parseYesNo(raw) {
-  if (raw === void 0) {
-    return void 0;
+function selectedScalar(syntax2) {
+  if (syntax2.policy65xx.whole.native || syntax2.operands.length >= 2 && syntax2.policy65xx.whole.index && syntax2.policy65xx.whole.scalar.expression.type === "error") {
+    return syntax2.policy65xx.whole.scalar;
   }
-  const normalized = raw.toLowerCase();
-  if (normalized === "yes" || normalized === "true") {
-    return true;
+  const selected = operandScalar(syntax2.operands[0]);
+  if (selected?.expression.type === "template") {
+    return syntax2.policy65xx.inner?.scalar ?? syntax2.policy65xx.whole.scalar;
   }
-  if (normalized === "no" || normalized === "false") {
-    return false;
-  }
-  return void 0;
+  return selected ?? syntax2.policy65xx.whole.scalar;
 }
 
-// packages/plugin-65xx/src/target/nes.ts
-var NES_65XX_TARGET_ID = "65xx.nes";
-var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
-var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
-var NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
-var INES_MAGIC = [78, 69, 83, 26];
-function isRecord5(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function createNes65xxTargetOptions(configured) {
-  const value = isRecord5(configured) ? configured : {};
-  const sourceStyle = value.sourceStyle ?? "ca65";
-  if (sourceStyle !== "asar" && sourceStyle !== "ca65") {
-    throw new Error("NES sourceStyle must be 'asar' or 'ca65'.");
+// packages/plugin-65xx/src/typed-architecture.ts
+var directToAbsolute = {
+  zeroPage: "absolute",
+  zeroPageIndexedX: "absoluteIndexedX",
+  zeroPageIndexedY: "absoluteIndexedY",
+  zeroPageIndirect: "indirect",
+  indexedIndirectX: "absoluteIndexedIndirect"
+};
+var absoluteToDirect = {
+  absolute: "zeroPage",
+  absoluteIndexedX: "zeroPageIndexedX",
+  absoluteIndexedY: "zeroPageIndexedY",
+  indirect: "zeroPageIndirect",
+  absoluteIndexedIndirect: "indexedIndirectX"
+};
+var addressingModes = {
+  implied: true,
+  accumulator: true,
+  immediate: true,
+  zeroPage: true,
+  zeroPageIndexedX: true,
+  zeroPageIndexedY: true,
+  absolute: true,
+  absoluteIndexedX: true,
+  absoluteIndexedY: true,
+  absoluteLongIndexedX: true,
+  indirect: true,
+  zeroPageIndirect: true,
+  zeroPageIndirectLong: true,
+  indexedIndirectX: true,
+  indirectIndexedY: true,
+  absoluteIndexedIndirect: true,
+  zeroPageIndirectIndexedZ: true,
+  stackRelative: true,
+  stackRelativeIndirectIndexedY: true,
+  relative: true,
+  relative16: true,
+  zeroPageRelative: true,
+  accumulatorRelative: true,
+  zeroPageImmediate: true,
+  specialPage: true,
+  blockTransfer: true,
+  immediateZeroPage: true,
+  immediateZeroPageIndexedX: true,
+  immediateAbsolute: true,
+  immediateAbsoluteIndexedX: true,
+  basePageIndirectIndexedZ: true,
+  quadAccumulator: true
+};
+function isAddressingMode(value) {
+  for (const mode2 of Object.keys(addressingModes)) {
+    if (value === mode2) {
+      return true;
+    }
   }
-  const linkerConfig = typeof value.linkerConfig === "string" && value.linkerConfig.trim() ? value.linkerConfig : defaultLd65ConfigText();
-  const linker = parseLd65Config(linkerConfig);
-  const fillByte = typeof value.fillByte === "number" && Number.isInteger(value.fillByte) ? value.fillByte & 255 : 255;
-  const header = normalizeHeader(value.header, linker.imageSize);
-  return { header, linkerConfig, fillByte, linker, sourceStyle };
+  return false;
 }
-function createInitialNesState(context) {
-  const options = createNes65xxTargetOptions(context.targetOptions);
-  const state = {
-    header: options.header,
-    fillByte: options.fillByte,
-    linker: options.linker,
-    memoryCursors: {},
-    currentSegment: null,
-    currentLoadMemory: null,
-    segmentLoadStart: 0,
-    segmentRunStart: 0
-  };
-  resetNes65xxStageState(state);
-  return state;
-}
-function validate(address2) {
-  if (!Number.isInteger(address2) || address2 < 0 || address2 > 65535) {
-    throw new Error(`Address $${address2.toString(16).toUpperCase()} is outside 16-bit NES space.`);
+function mappedAddressingMode(table, mode2) {
+  if (mode2 === void 0 || !isAddressingMode(mode2)) {
+    return void 0;
   }
-  return address2;
+  return table[mode2];
 }
-function createNesAddressSpace({
-  state,
-  options
-}) {
-  if (options.sourceStyle === "asar") {
-    const nes = state.get(nes65xxSessionStateKey);
-    const physical = (address2) => {
-      if (!Number.isSafeInteger(address2) || address2 < 0 || address2 >= nes.linker.imageSize) {
-        throw new Error(
-          `NES physical write offset ${address2} is outside the fixed cartridge layout.`
+var aliasToMnemonic = /* @__PURE__ */ new Map();
+for (const form of nmos6502DecodeTable) {
+  for (const alias of form.aliases ?? []) {
+    aliasToMnemonic.set(alias, form.mnemonic);
+  }
+}
+var modeSize = (form) => form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
+var TypedArch65xx = class {
+  constructor(cpu) {
+    this.cpu = cpu;
+    this.forms = getCpuAssemblyForms(cpu).filter(
+      (form) => matchesFeatures(form.availableWhen, cpu.features)
+    );
+    this.catalog = buildInstructionCatalog(this.forms);
+    for (const form of this.forms) {
+      this.formsByMnemonic.set(form.mnemonic, [
+        ...this.formsByMnemonic.get(form.mnemonic) ?? [],
+        form
+      ]);
+    }
+  }
+  cpu;
+  deferOperandBindingErrors = true;
+  forms;
+  catalog;
+  formsByMnemonic = /* @__PURE__ */ new Map();
+  /** Failed binding retains parsed punctuation so addressing errors keep precedence over value reads. */
+  syntax(frame) {
+    const syntax2 = syntax65xx(frame.instruction.operands);
+    return frame.bindingFailure ? { ...syntax2, operands: syntax2.policy65xx.unboundOperands } : syntax2;
+  }
+  /** Record classification effects before form selection; this receipt does not yet carry a size. */
+  prepare(frame) {
+    const state = prepare65xx(this.syntax(frame), frame);
+    frame.chooseScalars(
+      state.mode,
+      0,
+      state.mode,
+      state.length,
+      state.generated,
+      state.value,
+      state.native,
+      state.specialPage
+    );
+  }
+  /** Reuse this occurrence's preparation without repeating its width probes during encoding. */
+  classification(frame) {
+    const value = frame.preparation?.state;
+    if (Array.isArray(value)) {
+      const tuple = value;
+      const [mode2, length, generated, scalar3, native, specialPage] = tuple;
+      if (value.length !== 6 || typeof mode2 !== "string" || typeof length !== "number" || typeof generated !== "boolean" || typeof scalar3 !== "number" || typeof native !== "boolean" || typeof specialPage !== "boolean") {
+        throw new Error("Invalid prepared 65xx snapshot.");
+      }
+      return { mode: mode2, length, generated, value: scalar3, native, specialPage };
+    }
+    if (value && typeof value === "object" && !Array.isArray(value) && "mode" in value && "length" in value && "generated" in value && "value" in value && "native" in value && "specialPage" in value && typeof value.mode === "string" && typeof value.length === "number" && typeof value.generated === "boolean" && typeof value.value === "number" && typeof value.native === "boolean" && typeof value.specialPage === "boolean") {
+      return {
+        mode: value.mode,
+        length: value.length,
+        generated: value.generated,
+        value: value.value,
+        native: value.native,
+        specialPage: value.specialPage
+      };
+    }
+    return prepare65xx(this.syntax(frame), frame);
+  }
+  estimate(frame) {
+    const state = this.classification(frame);
+    const form = this.resolveForm(frame, this.syntax(frame), state);
+    const size = form ? modeSize(form) : 0;
+    frame.choose(form ? form.mnemonic + ":" + form.mode : "unknown", size, {
+      cpu: this.cpu.id,
+      mode: form?.mode ?? "unknown"
+    });
+    return size;
+  }
+  resolveForm(frame, syntax2, operand) {
+    const parsed = syntax2.policy65xx;
+    let mnemonic = parsed.mnemonic;
+    let forms = this.formsByMnemonic.get(mnemonic);
+    if (!forms) {
+      const canonical = aliasToMnemonic.get(mnemonic);
+      const aliasedForms = canonical ? this.formsByMnemonic.get(canonical) : void 0;
+      if (canonical && aliasedForms) {
+        mnemonic = canonical;
+        forms = aliasedForms;
+      }
+    }
+    const { forcedWidth } = parsed;
+    if (!forms) {
+      const variantArchitectures = Object.entries(variantFormsByCpuId).filter(([, entries2]) => entries2.some((entry) => entry.mnemonic === parsed.mnemonic)).map(([cpuId]) => cpuId);
+      if (variantArchitectures.length > 0) {
+        throw frame.error(
+          `Instruction '${parsed.mnemonic}' is available on ${variantArchitectures.join(", ")}, not ${this.cpu.id}.`
         );
       }
-      return address2;
+      const knownOnlyOn6502x = nmos6502DecodeTable.some(
+        (form2) => form2.mnemonic === mnemonic || form2.aliases?.includes(mnemonic)
+      );
+      if (knownOnlyOn6502x) {
+        throw frame.error(
+          `Instruction '${mnemonic}' or this operand form requires architecture '65xx.6502x'.`
+        );
+      }
+      return void 0;
+    }
+    const hasOperand = parsed.hasOperand;
+    if (mnemonic === "BRK" && forcedWidth === 2) {
+      throw frame.error("BRK accepts at most an 8-bit signature byte.");
+    }
+    let mode2 = operand.mode;
+    if (parsed.originalRegister === "a") {
+      mode2 = "accumulator";
+    }
+    if (parsed.originalRegister === "q") {
+      mode2 = "quadAccumulator";
+    }
+    if (this.cpu.id === "65xx.m740" && mnemonic === "JSR" && mode2 === "absolute" && operand.specialPage) {
+      mode2 = "specialPage";
+    }
+    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) {
+      mode2 = "relative16";
+    } else if (hasOperand && forms.some((entry) => entry.mode === "relative")) {
+      mode2 = "relative";
+    }
+    if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
+      if (forms.some((entry) => entry.mode === "accumulator")) {
+        mode2 = "accumulator";
+      } else if (forms.some((entry) => entry.mode === "quadAccumulator")) {
+        mode2 = "quadAccumulator";
+      }
+    }
+    if (forcedWidth) {
+      const byteMode = mappedAddressingMode(absoluteToDirect, mode2);
+      const wordMode = mappedAddressingMode(directToAbsolute, mode2);
+      const alreadyRequestedWidth = forcedWidth === 1 && mode2.startsWith("zeroPage") || forcedWidth === 2 && (mode2 === "absolute" || mode2 === "indirect" || mode2.startsWith("absoluteIndexed"));
+      if (!byteMode && !wordMode && !alreadyRequestedWidth) {
+        throw frame.error(
+          `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode2}.`
+        );
+      }
+      const promoted = forcedWidth === 1 ? byteMode : wordMode;
+      mode2 = promoted ?? mode2;
+    }
+    let form = forms.find((entry) => entry.mode === mode2);
+    const widened = mappedAddressingMode(directToAbsolute, mode2);
+    if (!form && widened) {
+      form = forms.find((entry) => entry.mode === widened);
+    }
+    if (!form) {
+      const accepted = forms.map((entry) => entry.mode).join(", ");
+      throw frame.error(
+        `${mnemonic} does not support addressing mode '${mode2}' on ${this.cpu.id}. Expected ${accepted}.`
+      );
+    }
+    return form;
+  }
+  /** Validate the complete operand tuple before the first opcode/prefix write. */
+  encode(frame, context) {
+    const syntax2 = this.syntax(frame);
+    const state = this.classification(frame);
+    const form = this.resolveForm(frame, syntax2, state);
+    if (!form) {
+      return false;
+    }
+    frame.choose(form.mnemonic + ":" + form.mode, modeSize(form), {
+      cpu: this.cpu.id,
+      mode: form.mode
+    });
+    const scalar3 = selectedScalar(syntax2);
+    const generated = state.generated && (!state.native || state.value < 0 || !Number.isInteger(state.value));
+    const value = (width, description, immediate = false) => this.readValue(
+      frame,
+      scalar3,
+      width,
+      description,
+      immediate,
+      generated ? state.value : void 0,
+      state.generated ? "$" + state.value.toString(16).toUpperCase() : syntax2.policy65xx.scalarDisplay,
+      syntax2.policy65xx.whole.unbound
+    );
+    const p = syntax2.policy65xx.parts;
+    const expect = (count, description) => {
+      if (p.length !== count) {
+        throw frame.error(form.mnemonic + " expects " + description + ".");
+      }
     };
-    return {
-      addressWidth: 32,
-      defaultOrigin: 0,
-      normalizeForWrite: physical,
-      advance: (address2, amount) => address2 + amount,
-      toOutputOffset(address2) {
-        if (!Number.isSafeInteger(address2) || address2 < 0 || address2 > nes.linker.imageSize) {
-          return -1;
+    const branch = (operand, prepared, display, unbound = false) => this.readBranch(
+      frame,
+      operand,
+      form.relativeBaseOffset ?? modeSize(form),
+      form.codec === "relative16" ? 2 : 1,
+      prepared,
+      display,
+      unbound
+    );
+    const values = [];
+    switch (form.codec) {
+      case "none":
+        break;
+      case "unsigned8":
+      case "unsigned16-le":
+      case "unsigned24-le": {
+        let width = 1;
+        if (form.codec === "unsigned16-le") {
+          width = 2;
+        } else if (form.codec === "unsigned24-le") {
+          width = 3;
         }
-        return nes.header.length + address2;
-      },
-      fromOutputOffset(offset) {
-        const address2 = offset - nes.header.length;
-        return address2 >= 0 && address2 < nes.linker.imageSize ? address2 : -1;
-      },
-      validateWrite: physical
-    };
-  }
-  return {
-    addressWidth: 16,
-    defaultOrigin: 0,
-    normalizeForWrite: validate,
-    advance(address2, amount) {
-      return validate(address2 + amount & 65535);
-    },
-    toOutputOffset(address2) {
-      const nes = state.get(nes65xxSessionStateKey);
-      if (!nes.currentLoadMemory) {
-        return -1;
-      }
-      const memory = nes.linker.memories.get(nes.currentLoadMemory);
-      if (!memory || memory.fileOffset < 0) {
-        return -1;
-      }
-      if (address2 < memory.start || address2 >= memory.start + memory.size) {
-        return -1;
-      }
-      return nes.header.length + memory.fileOffset + (address2 - memory.start);
-    },
-    fromOutputOffset(offset) {
-      const nes = state.get(nes65xxSessionStateKey);
-      const prgOffset = offset - nes.header.length;
-      if (prgOffset < 0) {
-        return -1;
-      }
-      for (const memory of nes.linker.memories.values()) {
-        if (memory.fileOffset < 0) {
-          continue;
+        const v = value(
+          width,
+          form.mnemonic + (width === 1 ? " operand" : " address"),
+          state.mode === "immediate"
+        );
+        if (form.operandConstraint === "power-of-two" && (v === 0 || (v & v - 1) !== 0)) {
+          throw frame.error(form.mnemonic + " operand must be a power of two.");
         }
-        if (prgOffset >= memory.fileOffset && prgOffset < memory.fileOffset + memory.size) {
-          return memory.start + (prgOffset - memory.fileOffset);
-        }
+        values.push(v);
+        break;
       }
-      return -1;
-    },
-    validateWrite(address2) {
-      validate(address2);
+      case "relative8":
+      case "relative16":
+        values.push(
+          branch(
+            scalar3,
+            state.generated ? state.value : void 0,
+            state.generated ? "$" + state.value.toString(16).toUpperCase() : syntax2.policy65xx.scalarDisplay,
+            syntax2.policy65xx.whole.unbound
+          )
+        );
+        break;
+      case "zero-page-relative8":
+        expect(2, "a zero-page address and branch target");
+        values.push(
+          this.readValue(
+            frame,
+            p[0].scalar,
+            1,
+            form.mnemonic + " address",
+            false,
+            void 0,
+            p[0].display,
+            p[0].unbound
+          ),
+          branch(p[1].scalar, void 0, p[1].display, p[1].unbound)
+        );
+        break;
+      case "accumulator-relative8":
+        expect(2, "A and a branch target");
+        if (syntax2.operands[0]?.kind !== "register" || syntax2.operands[0].name !== "a") {
+          throw frame.error(form.mnemonic + " accumulator branch must use A.");
+        }
+        values.push(branch(p[1].scalar, void 0, p[1].display, p[1].unbound));
+        break;
+      case "zero-page-immediate8":
+        expect(2, "a zero-page address and immediate value");
+        if (!p[1].immediate) {
+          throw frame.error(form.mnemonic + " second operand must be immediate.");
+        }
+        values.push(
+          this.readValue(
+            frame,
+            p[0].scalar,
+            1,
+            form.mnemonic + " address",
+            false,
+            void 0,
+            p[0].display,
+            p[0].unbound
+          ),
+          this.readValue(
+            frame,
+            p[1].scalar,
+            1,
+            form.mnemonic + " immediate",
+            true,
+            void 0,
+            p[1].display,
+            p[1].unbound
+          )
+        );
+        break;
+      case "three-unsigned16-le":
+        expect(3, "source, destination, and length operands");
+        for (let i = 0; i < p.length; i++) {
+          values.push(
+            this.readValue(
+              frame,
+              p[i].scalar,
+              2,
+              form.mnemonic + " " + ["source", "destination", "length"][i],
+              false,
+              void 0,
+              p[i].display,
+              p[i].unbound
+            )
+          );
+        }
+        break;
+      case "immediate-unsigned8":
+      case "immediate-unsigned16": {
+        const indexed = form.mode.endsWith("IndexedX");
+        expect(indexed ? 3 : 2, "an immediate value and address");
+        if (!p[0].immediate) {
+          throw frame.error(form.mnemonic + " first operand must be immediate.");
+        }
+        values.push(
+          this.readValue(
+            frame,
+            p[0].scalar,
+            1,
+            form.mnemonic + " immediate",
+            true,
+            void 0,
+            p[0].display,
+            p[0].unbound
+          ),
+          this.readValue(
+            frame,
+            p[1].scalar,
+            form.codec === "immediate-unsigned8" ? 1 : 2,
+            form.mnemonic + " address",
+            false,
+            void 0,
+            p[1].display,
+            p[1].unbound
+          )
+        );
+        break;
+      }
+      case "special-page": {
+        const v = value(2, form.mnemonic + " special-page address");
+        if ((v & 65280) !== 65280) {
+          throw frame.error(form.mnemonic + " special-page address must be in $FF00-$FFFF.");
+        }
+        values.push(v & 255);
+        break;
+      }
     }
-  };
-}
-function createNesOutputFormat() {
-  return {
-    finalize: () => void 0,
-    getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
-  };
-}
-function createNesLifecycle({ state }) {
-  const prefill = (session) => {
-    const nes = state.get(nes65xxSessionStateKey);
-    resetNes65xxStageState(nes);
-    session.outputFillByte = nes.fillByte;
-    const total = nes.header.length + nes.linker.imageSize;
-    const image = Array.from({ length: total }, () => nes.fillByte);
-    for (let index = 0; index < nes.header.length; index++) {
-      image[index] = nes.header[index] ?? 0;
+    context.emission.writeBytes(form.encoding);
+    for (let i = 0; i < values.length; i++) {
+      const width = form.operands[i].width;
+      const mask = 2 ** (width * 8) - 1;
+      context.emission.writeValue(values[i] & mask, width, "little");
     }
-    session.outputBytes = image;
-    session.bytes = 0;
-    for (const name of linkerDefinedSymbolNames(nes.linker)) {
-      session.globalSymbols.add(name);
-    }
-  };
-  return {
-    onSessionCreated: ({ session }) => {
-      prefill(session);
-    },
-    onStageStart: ({ session }) => {
-      prefill(session);
-    },
-    onStageEnd: ({ session }) => {
-      const nes = state.get(nes65xxSessionStateKey);
-      closeActiveSegment(session, nes);
-      applyLinkerSymbols(session, nes);
-    }
-  };
-}
-function normalizeHeader(configured, imageSize) {
-  if (configured instanceof Uint8Array || Array.isArray(configured)) {
-    const bytes = [...configured].map((value) => Number(value) & 255);
-    if (bytes.length === 0) {
-      throw new Error("65xx NES target header must not be empty.");
-    }
-    return bytes;
+    return true;
   }
-  if (configured !== void 0) {
-    throw new Error("65xx NES target header must be a byte array.");
+  /** Validate before writing, retaining a classification value only when its evaluation schedule requires it. */
+  readValue(frame, scalar3, width, description, immediate = false, prepared, displayText, unbound = false) {
+    let value;
+    if (unbound && frame.bindingFailure?.reason === "other") {
+      throw new Error(frame.bindingFailure.message);
+    } else if (prepared === void 0) {
+      value = frame.evaluate(scalar3, "beforeOpcode", false, "numeric", displayText).value;
+    } else {
+      value = frame.stageName !== "emitProgram" && (!Number.isInteger(prepared) || prepared < 0) ? 0 : generatedValue(prepared);
+      frame.observe(scalar3, value, "beforeOpcode", displayText);
+    }
+    const minimum = width === 1 && immediate ? -128 : 0;
+    const maximum = 2 ** (width * 8) - 1;
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+      throw frame.error(description + " " + value + " is outside the " + width * 8 + "-bit range.");
+    }
+    return value & maximum;
   }
-  const prgBanks = Math.max(1, Math.ceil(imageSize / 16384));
-  const header = Array.from({ length: 16 }, () => 0);
-  header[0] = INES_MAGIC[0];
-  header[1] = INES_MAGIC[1];
-  header[2] = INES_MAGIC[2];
-  header[3] = INES_MAGIC[3];
-  header[4] = prgBanks & 255;
-  return header;
-}
+  /** Relative streams select against the same reference cursor used by the wrapping subtraction. */
+  readBranch(frame, scalar3, offset, width, prepared, displayText, unbound = false) {
+    if (frame.stageName !== "emitProgram") {
+      return 0;
+    }
+    const reference2 = frame.currentAddress() + offset & 65535;
+    let target;
+    if (unbound && frame.bindingFailure?.reason === "other") {
+      throw new Error(frame.bindingFailure.message);
+    } else if (prepared !== void 0) {
+      target = generatedValue(prepared);
+      frame.observe(scalar3, target, "beforeOpcode", displayText);
+    } else if (scalar3.expression.type === "relativeReference" && scalar3.expression.stream === "relative") {
+      const result = frame.reference(scalar3.expression, reference2);
+      if (result.kind === "error") {
+        throw result.error;
+      }
+      if (result.kind === "missing") {
+        throw new Error("Error: Label '" + result.name + "' not found.");
+      }
+      target = result.value;
+    } else {
+      target = frame.evaluate(scalar3, "beforeOpcode", false, "numeric", displayText).value;
+    }
+    if (!Number.isInteger(target) || target < 0 || target > 65535) {
+      throw frame.error("Branch target " + target + " is outside the 16-bit address space.");
+    }
+    const delta = (target - reference2 + 32768 & 65535) - 32768;
+    const minimum = width === 1 ? -128 : -32768;
+    const maximum = width === 1 ? 127 : 32767;
+    if (delta < minimum || delta > maximum) {
+      throw frame.error(
+        "Branch target $" + target.toString(16).toUpperCase() + " is out of range from $" + reference2.toString(16).toUpperCase() + " (" + delta + ")."
+      );
+    }
+    return delta;
+  }
+};
 
 // packages/plugin-65xx/src/index.ts
 var RAW_65XX_TARGET_ID = "65xx.raw";
@@ -14561,13 +16175,13 @@ var ca65ExpressionFunctions = [
   ["loword", "Low word of a value.", (value) => value & 65535],
   ["hiword", "High word of a value.", (value) => value >>> 16 & 65535]
 ];
-var directive = (id, keywords, handler) => {
+var directive = (id, keywords) => {
   const wanted = new Set(keywords);
   return {
     id,
     keywords,
     phase: "lowered",
-    createHandler: handler,
+    syntax: ca65DirectiveSyntax(id),
     tooling: ca65Tooling.filter((entry) => wanted.has(entry.keyword))
   };
 };
@@ -14628,13 +16242,12 @@ function register65xxContributions(context) {
     const catalog = buildInstructionCatalog(forms);
     context.registerArchitecture({
       id: cpu.id,
+      operandGrammar: { version: "2", parse: parse65xxOperands },
       aliases: cpu.aliases,
       displayName: cpu.displayName,
       unknownInstructionBehavior: "throw",
       // Same as 65816: `LDA $12,x` is one operand, not two.
-      splitOperands: (text) => text.trim() ? [text.trim()] : [],
-      classifyOperand: ({ operands }, operand) => classify65xxOperand(operands, operand),
-      createEncoder: (encoderContext) => new Arch65xx(encoderContext, cpu),
+      createTypedEncoder: () => new TypedArch65xx(cpu),
       // Vendor/CMOS tables have different semantics; expose the decoder only for NMOS/Ricoh profiles.
       createDecoder: cpu.features.has("nmos") && !cpu.features.has("dtv") ? () => new Cpu6502Decoder(cpu) : void 0,
       instructionSpecifications: cpu.features.has("nmos") && !cpu.features.has("dtv") ? cpu6502Specifications(cpu) : void 0,
@@ -14769,150 +16382,41 @@ function register65xxContributions(context) {
   context.registerDirectiveSet({
     id: CA65_65XX_DIRECTIVE_SET_ID,
     directives: [
-      directive(
-        "65xx.directive.segment",
-        ["segment"],
-        ({ targetId, session, state }) => (_ctx, words) => {
-          if (targetId === NES_65XX_TARGET_ID) {
-            handleSegment(session, state.get(nes65xxSessionStateKey), words);
-          } else {
-            handleFlatSegment(state.get(ca65SessionStateKey), words);
-          }
-        }
-      ),
-      directive(
-        "65xx.directive.setcpu",
-        ["setcpu", "cpu"],
-        ({ session, state }) => (_ctx, words) => handleSetcpu(session, state.get(ca65SessionStateKey), words)
-      ),
-      directive(
-        "65xx.directive.pushcpu",
-        ["pushcpu"],
-        ({ session, state }) => () => handlePushcpu(session, state.get(ca65SessionStateKey))
-      ),
-      directive(
-        "65xx.directive.popcpu",
-        ["popcpu"],
-        ({ session, state }) => () => handlePopcpu(session, state.get(ca65SessionStateKey))
-      ),
-      directive(
-        "65xx.directive.cpu-shorthand",
-        Object.keys(ca65CpuShorthands),
-        ({ session, state }) => (_ctx, words) => handleCpuShorthand(session, state.get(ca65SessionStateKey), words)
-      ),
-      directive(
-        "65xx.directive.export",
-        ["export"],
-        ({ session }) => (_ctx, words) => handleExport(session, words)
-      ),
-      directive(
-        "65xx.directive.import",
-        ["import"],
-        ({ session }) => (_ctx, words) => handleImport(session, words)
-      ),
-      directive(
-        "65xx.directive.byte",
-        ["byte", "byt"],
-        ({ session }) => (_ctx, words) => handleByte(session, words)
-      ),
-      directive(
-        "65xx.directive.addr",
-        ["addr", "word"],
-        ({ session }) => (_ctx, words) => handleAddr(session, words)
-      ),
-      directive(
-        "65xx.directive.lobytes",
-        ["lobytes"],
-        ({ session }) => (_ctx, words) => handleLobytes(session, words)
-      ),
-      directive(
-        "65xx.directive.hibytes",
-        ["hibytes"],
-        ({ session }) => (_ctx, words) => handleHibytes(session, words)
-      ),
-      directive(
-        "65xx.directive.dbyt",
-        ["dbyt"],
-        ({ session }) => (_ctx, words) => handleDbyt(session, words)
-      ),
-      directive(
-        "65xx.directive.dword",
-        ["dword"],
-        ({ session }) => (_ctx, words) => handleDword(session, words)
-      ),
-      directive(
-        "65xx.directive.faraddr",
-        ["faraddr"],
-        ({ session }) => (_ctx, words) => handleDword(session, words, 3)
-      ),
-      directive(
-        "65xx.directive.res",
-        ["res"],
-        ({ session }) => (_ctx, words) => handleRes(session, words)
-      ),
-      directive(
-        "65xx.directive.align",
-        ["align"],
-        ({ session }) => (_ctx, words) => handleAlign(session, words)
-      ),
-      directive("65xx.directive.incbin", ["incbin"], ({ session }) => {
-        if (session.targetOptions.sourceStyle === "asar") {
-          return void 0;
-        }
-        return (_ctx, words) => handleCa65Incbin(session, words);
-      }),
-      directive("65xx.directive.assert", ["assert"], ({ session }) => {
-        if (session.targetOptions.sourceStyle === "asar") {
-          return void 0;
-        }
-        return (_ctx, words) => handleCa65Assert(session, words);
-      }),
-      directive(
-        "65xx.directive.scope",
-        ["scope", "proc"],
-        ({ session, state }) => (_ctx, words) => handleScope(
-          session,
-          state.get(ca65SessionStateKey),
-          words,
-          (words[0] ?? "").replace(/^\./, "").toLowerCase() === "proc"
-        )
-      ),
-      directive(
-        "65xx.directive.endscope",
-        ["endscope", "endproc"],
-        ({ session, state }) => () => handleEndScope(session, state.get(ca65SessionStateKey))
-      ),
-      directive(
-        "65xx.directive.pushseg",
-        ["pushseg"],
-        ({ state }) => () => handlePushseg(state.get(ca65SessionStateKey))
-      ),
-      directive(
-        "65xx.directive.popseg",
-        ["popseg"],
-        ({ state }) => () => handlePopseg(state.get(ca65SessionStateKey))
-      ),
-      directive(
-        "65xx.directive.unsupported-object",
-        [
-          "autoimport",
-          "constructor",
-          "debuginfo",
-          "destructor",
-          "exportzp",
-          "forceimport",
-          "globalzp",
-          "importzp",
-          "interruptor",
-          "reloc"
-        ],
-        () => (_ctx, words) => handleUnsupportedCa65(words)
-      ),
-      directive("65xx.directive.unsupported-macro", ["exitmacro", "local"], () => (_ctx, words) => {
-        throw new Error(
-          `.${(words[0] ?? "").replace(/^\./, "")} is not yet supported by the ca65 macro compatibility slice.`
-        );
-      })
+      directive("65xx.directive.segment", ["segment"]),
+      directive("65xx.directive.setcpu", ["setcpu", "cpu"]),
+      directive("65xx.directive.pushcpu", ["pushcpu"]),
+      directive("65xx.directive.popcpu", ["popcpu"]),
+      directive("65xx.directive.cpu-shorthand", Object.keys(ca65CpuShorthands)),
+      directive("65xx.directive.export", ["export"]),
+      directive("65xx.directive.import", ["import"]),
+      directive("65xx.directive.byte", ["byte", "byt"]),
+      directive("65xx.directive.addr", ["addr", "word"]),
+      directive("65xx.directive.lobytes", ["lobytes"]),
+      directive("65xx.directive.hibytes", ["hibytes"]),
+      directive("65xx.directive.dbyt", ["dbyt"]),
+      directive("65xx.directive.dword", ["dword"]),
+      directive("65xx.directive.faraddr", ["faraddr"]),
+      directive("65xx.directive.res", ["res"]),
+      directive("65xx.directive.align", ["align"]),
+      directive("65xx.directive.incbin", ["incbin"]),
+      directive("65xx.directive.assert", ["assert"]),
+      directive("65xx.directive.scope", ["scope", "proc"]),
+      directive("65xx.directive.endscope", ["endscope", "endproc"]),
+      directive("65xx.directive.pushseg", ["pushseg"]),
+      directive("65xx.directive.popseg", ["popseg"]),
+      directive("65xx.directive.unsupported-object", [
+        "autoimport",
+        "constructor",
+        "debuginfo",
+        "destructor",
+        "exportzp",
+        "forceimport",
+        "globalzp",
+        "importzp",
+        "interruptor",
+        "reloc"
+      ]),
+      directive("65xx.directive.unsupported-macro", ["exitmacro", "local"])
     ],
     tooling: ca65Tooling
   });
@@ -15682,7 +17186,8 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
       trace: Object.freeze({
         addressSpaces: Object.freeze([ARES_65816_ADDRESS_SPACE]),
         maxBufferedEvents: ARES_TRACE_BUFFER_EVENTS,
-        maxBatchEvents: ARES_TRACE_BATCH_EVENTS
+        maxBatchEvents: ARES_TRACE_BATCH_EVENTS,
+        instructionDetails: false
       }),
       pause: true,
       step: true,
@@ -16564,14 +18069,14 @@ var AresRspDebugBackend = class {
     if (request.operation === "start" && bus && (ppu || transfers || !this.#busCaptureSupported)) {
       await this.capture({ operation: "capabilities", scope: requestedScope });
     }
-    let operation = request.operation;
+    let operation2 = request.operation;
     if (request.operation === "capabilities" && bus) {
-      operation = transfers ? "transfer-capabilities" : "bus-capabilities";
+      operation2 = transfers ? "transfer-capabilities" : "bus-capabilities";
     }
     if (request.operation === "capabilities" && ppu) {
-      operation = "ppu-capabilities";
+      operation2 = "ppu-capabilities";
     }
-    const fields = ["qUttoriCapture", operation];
+    const fields = ["qUttoriCapture", operation2];
     if (request.operation === "start") {
       fields.push(request.bufferBytes);
       if (ppu) {
@@ -16627,7 +18132,7 @@ var AresRspDebugBackend = class {
     if (request.operation === "start") {
       this.#captureNative = false;
       this.#captureSession = position.session;
-      this.#captureScope = position.scope ?? "snes.65816.instructions";
+      this.#captureScope = position.scope;
       try {
         validateCapturePosition(position, void 0, requestedScope);
       } catch (error) {
@@ -17036,7 +18541,7 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
   });
   let contentSha256 = manifest.romSha256;
   let nesPrgFileOffset;
-  if (/^(Famicom|NES|FC)$/i.test(options.system ?? "")) {
+  if (/^(famicom|nes|fc)$/i.test(options.system ?? "")) {
     const romBytes = await readFile2(options.rom);
     if (!romBytes.subarray(0, 4).equals(Buffer.from([78, 69, 83, 26]))) {
       throw new Error("Famicom launch requires an iNES cartridge.");

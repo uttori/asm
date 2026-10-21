@@ -2,8 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { decodeAsepriteDocument, encodeAsepriteDocument } from "@uttori/asm-assets/aseprite";
-import { AssetInterchangeService, somRoomSourceAdapter } from "@uttori/asm-cli/asset-interchange";
-import { inspectSourceProject } from "@uttori/asm-cli/source";
+import { somRoomSourceAdapter } from "@uttori/asm-game-secret-of-mana/workflows";
+import { AssetInterchangeService } from "@uttori/asm-workflows/asset-interchange";
+import { inspectSourceProject } from "@uttori/asm-workflows/source";
 
 import { test } from "./ava-helper.js";
 import { roomSourceFixture } from "./fixtures/room-source.js";

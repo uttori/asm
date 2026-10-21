@@ -12,18 +12,19 @@ import {
   spritePaletteColors,
   type SpritePaletteCatalog,
 } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
-import { AssetInterchangeService, somSpriteSourceAdapter } from "@uttori/asm-cli/asset-interchange";
-import { readAssetImportReview } from "@uttori/asm-cli/asset-interchange/public-records";
-import { inspectSourceProject, executeSourceOperation } from "@uttori/asm-cli/source";
+import { RomImage } from "@uttori/asm-disassembler";
 import {
-  RomImage,
   sourceGit,
   sourceRepository,
   retainSourceGeneration,
   adoptSourceGeneration,
   finishSourceGeneration,
   type SourceBuildVerification,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
+import { somSpriteSourceAdapter } from "@uttori/asm-game-secret-of-mana/workflows";
+import { AssetInterchangeService } from "@uttori/asm-workflows/asset-interchange";
+import { readAssetImportReview } from "@uttori/asm-workflows/asset-interchange/public-records";
+import { inspectSourceProject, executeSourceOperation } from "@uttori/asm-workflows/source";
 
 // This runs outside the repository with ordinary installed exports and the shipped executable.
 const directory = fs.mkdtempSync(path.join(process.cwd(), "installed asset source "));
@@ -143,7 +144,7 @@ try {
     includePaths: ["./"],
     plugins: [
       { module: "@uttori/asm-plugin-snes", options: { checksumEnabled: false } },
-      { module: "@uttori/asm-assets/secret-of-mana/som-asset-plugin" },
+      { module: "@uttori/asm-game-secret-of-mana" },
     ],
   });
   fs.writeFileSync(

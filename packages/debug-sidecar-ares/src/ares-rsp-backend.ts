@@ -1,34 +1,8 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import {
-  DEBUG_BACKEND_PROTOCOL_VERSION,
-  type DebugAddress,
-  type DebugBackend,
-  type DebugBackendConnectOptions,
-  type DebugBackendEvent,
-  type DebugBreakpoint,
-  type DebugInstruction,
-  type DebugMemoryRead,
-  type DebugRegister,
-  type DebugStackFrame,
-  type DebugStepKind,
-  type DebugSubscription,
-  type DebugThread,
-  type DebugTraceBatch,
-  type DebugTraceStartOptions,
-  validateCaptureRequest,
-  verifyCaptureContext,
-  validateCapturePosition,
-  validateCaptureCapabilities,
-  type CaptureRequestV2,
-  type CaptureResultV2,
-  type CaptureScopeV2,
-} from "@uttori/asm-debug-adapter";
+import { validateCaptureRequest, verifyCaptureContext, validateCapturePosition, validateCaptureCapabilities, type CaptureRequestV2, type CaptureResultV2, type CaptureScopeV2 } from "@uttori/asm-capture";
+import { DEBUG_BACKEND_PROTOCOL_VERSION, type DebugAddress, type DebugBackend, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread, type DebugTraceBatch, type DebugTraceStartOptions } from "@uttori/asm-debug-adapter";
 import { Cpu6502Decoder, formatCpu6502Instruction, ricoh2a03Cpu } from "@uttori/asm-plugin-65xx";
-import {
-  Cpu65816Decoder,
-  formatCpu65816Instruction,
-  type Cpu65816DecodeState,
-} from "@uttori/asm-plugin-snes";
+import { Cpu65816Decoder, formatCpu65816Instruction, type Cpu65816DecodeState } from "@uttori/asm-plugin-snes";
 
 import type { GdbRspClient, GdbRspStop } from "./gdb-rsp-client.js";
 import {
@@ -997,7 +971,7 @@ export class AresRspDebugBackend implements DebugBackend {
     if (request.operation === "start") {
       this.#captureNative = false;
       this.#captureSession = position.session;
-      this.#captureScope = position.scope ?? "snes.65816.instructions";
+      this.#captureScope = position.scope;
       try {
         validateCapturePosition(position, undefined, requestedScope);
       } catch (error) {

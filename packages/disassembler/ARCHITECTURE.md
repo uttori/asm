@@ -240,6 +240,12 @@ vectors. The renderer requires an output sink and never writes the user's source
 source-project services retain immutable generation commits, validate their payload and original-ROM
 equality, preview native three-way merges and require a committed checkpoint before application.
 
+Source build publication keeps only the current complete binary/debug-map pair. A small
+ownership identity is independent of the potentially large public input receipt, so large
+projects do not disable cache retirement. Unknown files and symlinks remain outside automatic
+retention. Source generation, target asset handling and research inspection share the bounded
+`readSourceBlobs` Git reader instead of separate binary framing implementations.
+
 Research inputs are Git-tracked declarations keyed by original ROM identity. SQLite restores imported
 observation shadows before applying the selected branch's research. It retains normalized capture
 facts and rebuildable projections; there is no database edit-receipt/undo engine.

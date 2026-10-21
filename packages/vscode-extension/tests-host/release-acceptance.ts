@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { sourceGit } from "@uttori/asm-disassembler";
-import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
+import { sourceGit } from "@uttori/asm-disassembler/source-project";
 import * as vscode from "vscode";
+
+import { readGenerationCommit, readBuildOutput } from "../src/source/result-readers.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -58,7 +59,7 @@ async function languageFeatures(folder: vscode.WorkspaceFolder): Promise<void> {
       "vscode.executeDocumentSymbolProvider",
       uri,
     );
-    return symbols.some((symbol) => symbol.name === "Entry");
+    return Array.isArray(symbols) && symbols.some((symbol) => symbol.name === "Entry");
   }, "assembly symbols");
   const completions = await vscode.commands.executeCommand<vscode.CompletionList>(
     "vscode.executeCompletionItemProvider",
@@ -185,7 +186,7 @@ async function sourceWorkflow(
   const source = new SourceProcessClient(
     path.join(extension.extensionPath, "out/source-process.mjs"),
   );
-  const worker = new AnalysisWorkerClient(
+  let worker = new AnalysisWorkerClient(
     path.join(extension.extensionPath, "out/analysis-worker.cjs"),
   );
   const limits = { maxMemoryMiB: 1024 };
@@ -199,17 +200,17 @@ async function sourceWorkflow(
     fs.writeFileSync(edited, content);
     await sourceGit(sourceDirectory, ["add", "source/main.asm"]);
     await sourceGit(sourceDirectory, ["commit", "-m", "Preserve release source edit"]);
-    const prepared = await source.run<PreparedSnesGeneration>(
+    const prepared = await source.run(
       { action: "prepare", directory: sourceDirectory },
-      limits,
+      { ...limits, readResult: readGenerationCommit },
     );
     const operation = { directory: sourceDirectory, candidate: prepared.generation.commit };
     await source.run({ ...operation, action: "preview" }, limits);
     await source.run({ ...operation, action: "apply" }, limits);
-    await source.run({ ...operation, action: "finish" }, limits);
-    const built = await source.run<SnesSourceBuild>(
+    await source.run({ directory: sourceDirectory, action: "finish" }, limits);
+    const built = await source.run(
       { action: "build", directory: sourceDirectory },
-      limits,
+      { ...limits, readResult: readBuildOutput },
     );
     assert.deepEqual(fs.readFileSync(built.outputFile), Buffer.from(bytes));
     assert.equal(fs.readFileSync(edited, "utf8"), content);
@@ -228,6 +229,11 @@ async function sourceWorkflow(
     const evidence = path.join(sourceDirectory, ".uttori-local/evidence");
     await worker.request(evidence, "manifest");
     worker.dispose();
+    await assert.rejects(worker.request(evidence, "manifest"), /disposed/);
+    // Closing a project ends its client lifetime; reopening creates a fresh owner for late replies.
+    worker = new AnalysisWorkerClient(
+      path.join(extension.extensionPath, "out/analysis-worker.cjs"),
+    );
     await worker.request(evidence, "manifest");
     fs.writeFileSync(
       path.join(folder.uri.fsPath, "release-reopen.json"),
@@ -305,7 +311,15 @@ export async function runReleaseAcceptance(
   await sourceWorkflow(extension, folder);
   const second = path.join(folder.uri.fsPath, "second-folder");
   fs.mkdirSync(second);
-  fs.writeFileSync(path.join(second, "second.asm"), "lorom\norg $008000\nSecondEntry:\n nop\n");
+  fs.writeFileSync(path.join(second, "second.asm"), '.segment "CODE"\nSecondEntry:\n nop\n');
+  fs.writeFileSync(
+    path.join(second, "uttori-asm.config.json"),
+    JSON.stringify({
+      target: "65xx.nes",
+      architecture: "65xx.6502",
+      entryPoints: ["second.asm"],
+    }),
+  );
   assert.equal(
     vscode.workspace.updateWorkspaceFolders(1, 0, { uri: vscode.Uri.file(second), name: "second" }),
     true,
@@ -321,7 +335,16 @@ export async function runReleaseAcceptance(
       "vscode.executeDocumentSymbolProvider",
       secondUri,
     );
-    return symbols.some((symbol) => symbol.name === "SecondEntry");
+    return (
+      Array.isArray(symbols) &&
+      symbols.some((symbol) => symbol.name === "SecondEntry") &&
+      symbols.every((symbol) => symbol.name !== "Entry")
+    );
   }, "second-folder symbols");
-  console.log("Installed extension handles documents in multiple workspace folders.");
+  await vscode.commands.executeCommand("asm.build");
+  const nes = fs.readFileSync(path.join(second, "second.nes"));
+  assert.deepEqual([...nes.subarray(0, 4)], [0x4e, 0x45, 0x53, 0x1a]);
+  console.log(
+    "Installed extension handles independent SNES/NES workspace folders and target builds.",
+  );
 }

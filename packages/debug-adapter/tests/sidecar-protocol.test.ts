@@ -1,17 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import {
-  DEBUG_SIDECAR_PROTOCOL,
-  DEBUG_SIDECAR_PROTOCOL_VERSION,
-  DEFAULT_DEBUG_SIDECAR_LIMITS,
-  DebugSidecarMessageParser,
-  DebugSidecarMessageQueue,
-  assertDebugSidecarMessage,
-  createDebugSidecarSessionToken,
-  encodeDebugSidecarMessage,
-  type DebugSidecarMessage,
-  type DebugSidecarProtocolLimits,
-  type DebugSidecarRequest,
-} from "../src/index.js";
+import { DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEFAULT_DEBUG_SIDECAR_LIMITS, DebugSidecarMessageParser, DebugSidecarMessageQueue, assertDebugSidecarMessage, createDebugSidecarSessionToken, encodeDebugSidecarMessage, type DebugSidecarMessage, type DebugSidecarProtocolLimits, type DebugSidecarRequest } from "../src/index.js";
 
 const session = "a".repeat(43);
 

@@ -1,3 +1,5 @@
+import { parseDirectiveExpression } from "../ir/directive-arguments.js";
+import { syntaxExpression, syntaxLiteral, syntaxNumber, syntaxOptional, syntaxRecord, } from "../ir/syntax-codec.js";
 /** Repeating fill pattern length. LCM of byte/word/long/dword widths. */
 const FILL_PATTERN_SIZE = 12;
 const PATTERN_WIDTH = {
@@ -41,24 +43,24 @@ const writeLittleEndianRepeats = (value, width, dest, length) => {
         dest[i] = bytes[i % width];
     }
 };
-/**
- * Resolves a fill* or pad* pattern operand.
- * @param {FillPadDirectiveContext} ctx The directive context.
- * @param {string[]} words Directive keyword and value.
- * @param {"fill" | "pad"} kind Pattern family.
- * @returns {{ width: number; value: number }} Unit width and resolved value.
- * @throws {Error} If the keyword is unknown or the arity is not exactly one operand.
- */
-const resolvePatternValue = ({ session, operandResolver }, words, kind) => {
-    const keyword = words[0];
-    const width = patternWidth(keyword, kind);
+/** Shared pattern grammar; width is measured in bytes and the value remains unresolved. */
+const parsePattern = (words, kind) => {
+    const width = patternWidth(words[0], kind);
     if (words.length !== 2) {
-        throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
+        throw new Error(`${words[0].toUpperCase()} directive requires exactly one parameter.`);
     }
-    return {
-        width,
-        value: operandResolver.getnum(session.resolvedefines(words[1])),
-    };
+    return { width, expression: parseDirectiveExpression(words[1]) };
+};
+/** Install a pattern after evaluating its value in the current assembly stage. */
+const executePattern = (context, kind, { width, expression }) => {
+    const value = context.operandResolver.getnum(expression);
+    if (kind === "fill") {
+        writeLittleEndianRepeats(value, width, context.session.fillbyte, FILL_PATTERN_SIZE);
+    }
+    else {
+        context.session.padUnit = width;
+        writeLittleEndianRepeats(value, width, context.session.padbyte, width);
+    }
 };
 /**
  * Sets the 12-byte fill pattern used by later `fill` directives.
@@ -67,8 +69,7 @@ const resolvePatternValue = ({ session, operandResolver }, words, kind) => {
  * @throws {Error} If the keyword is unknown or exactly one parameter is not supplied.
  */
 export const handleFillPattern = (ctx, words) => {
-    const { width, value } = resolvePatternValue(ctx, words, "fill");
-    writeLittleEndianRepeats(value, width, ctx.session.fillbyte, FILL_PATTERN_SIZE);
+    executePattern(ctx, "fill", parsePattern(words, "fill"));
 };
 /**
  * Emits `count` bytes of the current fill pattern.
@@ -76,14 +77,8 @@ export const handleFillPattern = (ctx, words) => {
  * @param {string[]} words `fill` plus the byte count.
  * @throws {Error} If exactly one parameter is not supplied.
  */
-export const handleFill = ({ session, operandResolver }, words) => {
-    if (words.length !== 2) {
-        throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
-    }
-    const count = operandResolver.getnum(session.resolvedefines(words[1]));
-    for (let i = 0; i < count; i++) {
-        session.write1(session.fillbyte[i % FILL_PATTERN_SIZE]);
-    }
+export const handleFill = (ctx, words) => {
+    executeFill(ctx, parseFill({ words }));
 };
 /**
  * Sets the pad unit and little-endian pad bytes used by later `pad` directives.
@@ -92,10 +87,7 @@ export const handleFill = ({ session, operandResolver }, words) => {
  * @throws {Error} If the keyword is unknown or exactly one parameter is not supplied.
  */
 export const handlePadPattern = (ctx, words) => {
-    const { session } = ctx;
-    const { width, value } = resolvePatternValue(ctx, words, "pad");
-    session.padUnit = width;
-    writeLittleEndianRepeats(value, width, session.padbyte, width);
+    executePattern(ctx, "pad", parsePattern(words, "pad"));
 };
 /**
  * Pads with the current pad pattern.
@@ -106,13 +98,53 @@ export const handlePadPattern = (ctx, words) => {
  * @param {string[]} words `pad` and an optional logical address.
  * @throws {Error} If more than one parameter is supplied, or the target does not map to output.
  */
-export const handlePad = ({ session, operandResolver }, words) => {
-    let gap;
-    if (words.length === 1) {
-        gap = 0x10000 - (session.currentTargetAddress & 0xffff);
+export const handlePad = (ctx, words) => {
+    executePad(ctx, parsePad({ words }));
+};
+/**
+ * Registers fill/pad pattern and emit directives.
+ * @param {DirectiveRegistry} registry The directive registry.
+ * @param {FillPadDirectiveContext} context The fill/pad directive context.
+ */
+export const registerFillPadDirectives = (registry, context) => {
+    const pattern = (kind, keywords) => {
+        registry.registerTyped(keywords, ({ words }) => parsePattern(words, kind), syntaxRecord({ width: syntaxNumber, expression: syntaxExpression }), (payload) => executePattern(context, kind, payload));
+    };
+    pattern("fill", ["fillbyte", "fillword", "filllong", "filldword"]);
+    pattern("pad", ["padbyte", "padword", "padlong", "paddword"]);
+    registry.registerTyped("fill", parseFill, syntaxRecord({ expression: syntaxExpression }), (payload) => executeFill(context, payload));
+    registry.registerTyped("pad", parsePad, syntaxRecord({ operation: syntaxLiteral("pad"), address: syntaxOptional(syntaxExpression) }), (payload) => executePad(context, payload));
+};
+/** Shared source/public-entry grammar for `fill`. */
+const parseFill = ({ words }) => {
+    if (words.length !== 2) {
+        throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
     }
-    else if (words.length === 2) {
-        const targetAddress = operandResolver.getnum(session.resolvedefines(words[1]));
+    return { expression: parseDirectiveExpression(words[1]) };
+};
+/** Applies a parsed `fill` operation to the current stage. */
+const executeFill = (context, { expression }) => {
+    const count = context.operandResolver.getnum(expression);
+    for (let index = 0; index < count; index++) {
+        context.session.write1(context.session.fillbyte[index % FILL_PATTERN_SIZE]);
+    }
+};
+/** Shared source/public-entry grammar for `pad`. */
+const parsePad = ({ words }) => {
+    if (words.length > 2) {
+        throw new Error("PAD directive accepts zero or one parameter.");
+    }
+    return {
+        operation: "pad",
+        address: words.length === 2 ? parseDirectiveExpression(words[1]) : undefined,
+    };
+};
+/** Applies a parsed `pad` operation to the current stage. */
+const executePad = (context, { address }) => {
+    const { session, operandResolver } = context;
+    let gap = 0x10000 - (session.currentTargetAddress & 0xffff);
+    if (address) {
+        const targetAddress = operandResolver.getnum(address);
         const targetPC = session.outputWriter.toOutputOffset(targetAddress);
         if (targetPC < 0) {
             throw new Error(`Target address ${targetAddress.toString(16)} does not map to output.`);
@@ -123,22 +155,8 @@ export const handlePad = ({ session, operandResolver }, words) => {
         }
         gap = targetPC - currentPC;
     }
-    else {
-        throw new Error("PAD directive accepts zero or one parameter.");
+    for (let index = 0; index < gap; index++) {
+        session.write1(session.padbyte[index % session.padUnit]);
     }
-    for (let i = 0; i < gap; i++) {
-        session.write1(session.padbyte[i % session.padUnit]);
-    }
-};
-/**
- * Registers fill/pad pattern and emit directives.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {FillPadDirectiveContext} context The fill/pad directive context.
- */
-export const registerFillPadDirectives = (registry, context) => {
-    registry.registerLowered(["fillbyte", "fillword", "filllong", "filldword"], context, handleFillPattern);
-    registry.registerLowered("fill", context, handleFill);
-    registry.registerLowered(["padbyte", "padword", "padlong", "paddword"], context, handlePadPattern);
-    registry.registerLowered("pad", context, handlePad);
 };
 //# sourceMappingURL=fill-pad.js.map

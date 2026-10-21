@@ -1,11 +1,9 @@
-import type { ArchitectureEncoder, InstructionDescriptor, LoweredOperand } from "./architecture-types.js";
-import type { OperandResolver } from "./operand-resolver.js";
+import type { ArchitectureEncoder, InstructionDescriptor } from "./architecture-types.js";
 export type ArchitectureDefinition = {
+    operandGrammar: import("./ir/resolved-instruction.js").ArchitectureOperandGrammar;
     name: string;
     encoder: ArchitectureEncoder;
     instructions?: readonly InstructionDescriptor[];
-    classifyOperand: (resolver: OperandResolver, operand: string) => LoweredOperand;
-    splitOperands: (operandText: string) => string[];
     /** Architecture-owned lexical extraction preserves symbolic references hidden by addressing wrappers. */
     referenceExpressions?: (operandText: string) => readonly string[];
     unknownInstructionBehavior: "throw" | "returnFalse";

@@ -3,12 +3,13 @@ import path from "node:path";
 import { Assembler, NodeAssemblyFileProvider, PluginError, createDebugMap } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { ANALYSIS_PROJECT_MANIFEST, RomImage, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_RUNTIME_TRACE_MAX_BYTES, validateProjectRom, } from "@uttori/asm-disassembler";
+import somPlugin from "@uttori/asm-game-secret-of-mana";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
-import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, } from "@uttori/asm-plugin-snes";
+import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+import { SNES_MAPPERS, analyzeSnesProject, createSnesAnalysisProject, } from "@uttori/asm-plugin-snes/disassembler";
 import { assetUsage, runAssetCli } from "./asset-interchange/cli.js";
 import { publishOutputFiles } from "./output-files.js";
 import { runSourceCli, sourceUsage } from "./source.js";
-export { executeSourceOperation } from "./source.js";
 function isCliCommand(value) {
     return Object.hasOwn(commandOptions, value);
 }
@@ -595,6 +596,7 @@ const assemble = async (parsed, cwd) => {
     };
     const useSnesHostDefault = !hasProjectConfiguration && pluginModules.length === 0;
     const bundledPlugins = new Map([
+        ["@uttori/asm-game-secret-of-mana", somPlugin],
         ["@uttori/asm-plugin-snes", snesPlugin],
     ]);
     let loaded;

@@ -85,7 +85,12 @@ const decodeHistoryBlock = (encoded: Uint8Array): HistoryBlock => {
   if (!count || count > MAX_ROWS || size < (count + 1) * 4 + count || size > MAX_BYTES) {
     throw new Error("Invalid runtime history block bounds.");
   }
-  const body = inflateSync(bytes.subarray(16), { maxOutputLength: size });
+  // The checked header gives the exact output bound. One spare byte lets zlib finish without
+  // allocating another chunk at an exact boundary; the default 16 KiB chunks also require a concat.
+  const body = inflateSync(bytes.subarray(16), {
+    maxOutputLength: size,
+    chunkSize: Math.max(64, size + 1),
+  });
   if (body.length !== size || crc32(body) !== bytes.readUInt32LE(12)) {
     throw new Error("Corrupt runtime history block.");
   }

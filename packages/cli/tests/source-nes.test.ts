@@ -2,18 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import {
-  openAnalysisProjectStore,
-  readSourceCaptureCatalog,
-  sourceGit,
-  type SourceGeneration,
-  type SourceMergePreview,
-} from "@uttori/asm-disassembler";
-import { loadNesRom, type NesSourceBuild } from "@uttori/asm-plugin-65xx/disassembler";
+import { openAnalysisProjectStore } from "@uttori/asm-disassembler";
+import { readSourceCaptureCatalog, sourceGit } from "@uttori/asm-disassembler/source-project";
+import { loadNesRom } from "@uttori/asm-plugin-65xx/disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import { writeNesCaptureFixture } from "../../../tests/helpers/nes-capture.js";
-import { executeSourceOperation } from "../src/source.js";
+import { executeSourceOperation } from "../../workflows/src/source.js";
 
 /** Mapper 0 with a trainer and trailing bytes exercises container offsets independently of private ROMs. */
 function fixture(): Buffer {
@@ -21,13 +16,23 @@ function fixture(): Buffer {
   rom.set([0x4e, 0x45, 0x53, 0x1a, 1, 1, 4]);
   rom.fill(0xaa, 16, 528);
   rom.set([0xa9, 1, 0x8d, 0, 0x20, 0x60], 528);
-  for (const vector of [0x3ffa, 0x3ffc, 0x3ffe]) {rom.writeUInt16LE(0x8000, 528 + vector);}
+  for (const vector of [0x3ffa, 0x3ffc, 0x3ffe]) {
+    rom.writeUInt16LE(0x8000, 528 + vector);
+  }
   rom.set([3, 2, 1], rom.length - 3);
   return rom;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Require the build result's output path before comparing its bytes with the cartridge fixture. */
+function sourceOutput(value: unknown): string {
+  if (!isRecord(value) || typeof value.outputFile !== "string") {
+    throw new Error("Missing rebuilt NES output.");
+  }
+  return value.outputFile;
 }
 
 test("NES companion budget failures retry without duplicating CPU evidence and survive removal of inputs", async (t) => {
@@ -147,10 +152,7 @@ test("NES companion budget failures retry without duplicating CPU evidence and s
   await executeSourceOperation({ action: "apply", directory, candidate });
   await executeSourceOperation({ action: "finish", directory });
   const build = await executeSourceOperation({ action: "build", directory });
-  if (!isRecord(build) || typeof build.outputFile !== "string") {
-    throw new Error("Missing rebuilt NES output.");
-  }
-  t.deepEqual(fs.readFileSync(build.outputFile), original);
+  t.deepEqual(fs.readFileSync(sourceOutput(build)), original);
   const bank = fs.readFileSync(path.join(directory, "source/banks/prg_00.asm"), "utf8");
   t.is((bank.match(/STA\.w PPUCTRL/g) ?? []).length, 2);
   const reopened = openAnalysisProjectStore(evidenceDirectory);
@@ -174,8 +176,8 @@ test("NES source workflow initializes beside originals, rebuilds exactly, and re
   fs.writeFileSync(path.join(directory, "notes.txt"), "Existing research\n");
   await executeSourceOperation({ action: "init", directory, rom });
   t.is((await sourceGit(directory, ["branch", "--show-current"])).stdout.toString().trim(), "main");
-  const build = (await executeSourceOperation({ action: "build", directory })) as NesSourceBuild;
-  t.deepEqual(fs.readFileSync(build.outputFile), original);
+  const build = await executeSourceOperation({ action: "build", directory });
+  t.deepEqual(fs.readFileSync(sourceOutput(build)), original);
   t.deepEqual(fs.readFileSync(rom), original);
   t.is(fs.readFileSync(path.join(directory, "notes.txt"), "utf8"), "Existing research\n");
   const bank = path.join(directory, "source/banks/prg_00.asm");
@@ -190,18 +192,26 @@ test("NES source workflow initializes beside originals, rebuilds exactly, and re
   fs.writeFileSync(bank, source.replace("LDA #$01", "LDA #$02"));
   await sourceGit(directory, ["add", "source/banks/prg_00.asm", "notes.txt"]);
   await sourceGit(directory, ["commit", "-m", "Edit NES program"]);
-  const edited = (await executeSourceOperation({ action: "build", directory })) as NesSourceBuild;
+  const edited = await executeSourceOperation({ action: "build", directory });
   const expected = Buffer.from(original);
   expected[529] = 2;
-  t.deepEqual(fs.readFileSync(edited.outputFile), expected);
-  const prepared = (await executeSourceOperation({ action: "prepare", directory })) as {
-    generation: SourceGeneration;
-  };
-  const preview = (await executeSourceOperation({
+  t.deepEqual(fs.readFileSync(sourceOutput(edited)), expected);
+  const prepared = await executeSourceOperation({ action: "prepare", directory });
+  if (
+    !isRecord(prepared) ||
+    !isRecord(prepared.generation) ||
+    typeof prepared.generation.commit !== "string"
+  ) {
+    throw new Error("Missing prepared NES generation.");
+  }
+  const preview = await executeSourceOperation({
     action: "preview",
     directory,
     candidate: prepared.generation.commit,
-  })) as SourceMergePreview;
+  });
+  if (!isRecord(preview)) {
+    throw new Error("Missing NES merge preview.");
+  }
   t.deepEqual(preview.conflicts, []);
   await executeSourceOperation({
     action: "apply",
@@ -217,8 +227,8 @@ test("NES source workflow initializes beside originals, rebuilds exactly, and re
       .trim(),
     "refs/heads/main",
   );
-  const rebuilt = (await executeSourceOperation({ action: "build", directory })) as NesSourceBuild;
-  t.deepEqual(fs.readFileSync(rebuilt.outputFile), expected);
+  const rebuilt = await executeSourceOperation({ action: "build", directory });
+  t.deepEqual(fs.readFileSync(sourceOutput(rebuilt)), expected);
   t.regex(fs.readFileSync(bank, "utf8"), /STA\.w PPUCTRL/);
   const configFile = path.join(directory, "source/uttori-asm.config.json");
   const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
@@ -229,6 +239,6 @@ test("NES source workflow initializes beside originals, rebuilds exactly, and re
   });
   await t.throwsAsync(
     executeSourceOperation({ action: "expand", directory, expansionSize: 0x10000 }),
-    { message: /fixed cartridge layout/ },
+    { message: /does not support expand/ },
   );
 });

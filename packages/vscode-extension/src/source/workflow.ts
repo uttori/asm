@@ -1,4 +1,4 @@
-import type { SourceMergeStatus } from "@uttori/asm-disassembler";
+import type { SourceMergeStatus } from "@uttori/asm-disassembler/source-project";
 
 /** Retire obsolete editor selections without hiding an active or unvalidated Git merge. */
 export function shouldClearSourceCandidate(status: {

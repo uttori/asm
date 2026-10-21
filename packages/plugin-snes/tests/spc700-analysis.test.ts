@@ -1,16 +1,7 @@
 import type { StaticInstruction } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
-import {
-  analyzeSpc700Aram,
-  applySpc700StateOverride,
-  joinSpc700States,
-  SPC700_ARAM_ADDRESS_SPACE,
-  SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR,
-  Spc700AramImage,
-  transferSpc700State,
-  unknownSpc700State,
-} from "../src/index.js";
+import { analyzeSpc700Aram, applySpc700StateOverride, joinSpc700States, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage, transferSpc700State, unknownSpc700State } from "@uttori/asm-plugin-snes/disassembler";
 
 const entryPoint = (address: number, directPage?: 0 | 0x100) => ({
   id: "main",

@@ -1,59 +1,37 @@
-/**
- * Analysis projects, ROM identity, bounded static traversal, runtime evidence, and verified
- * source publication. Target plugins own decoding/mapping; capture contracts retain their
- * explicit architecture identities.
- * @module @uttori/asm-disassembler
- */
-// Semantic contracts and record validation are shared by every operation.
-export * from "./model/project-types.js";
-export * from "./model/project-asset-ids.js";
-export * from "./model/project-labels.js";
-export * from "./model/rom-image.js";
-export * from "./model/trace-detail.js";
-export * from "./model/runtime-bus-types.js";
-// Read-only projections and proposed edits do not publish a project revision.
-export * from "./analysis/analysis-graph.js";
-export * from "./analysis/analysis-sources.js";
-export * from "./analysis/coverage-map.js";
-export * from "./analysis/instruction-annotations.js";
-export * from "./analysis/static-analysis.js";
+/** Supported assembly and embedding entry point; specialized host contracts have explicit subpaths. */
+export { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST, } from "./model/project-types.js";
+export { resolveProjectNativeAssetId } from "./model/project-asset-ids.js";
+export { validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames, } from "./model/project-labels.js";
+export { detectCopierHeaderSize, RomImage, } from "./model/rom-image.js";
+export { validateRuntimeInstructionDetails, } from "./model/trace-detail.js";
+export { validateRuntimeBusFact, } from "./model/runtime-bus-types.js";
+export { buildAnalysisSourceCatalog, } from "./analysis/analysis-sources.js";
+export { buildRomCoverageMap, } from "./analysis/coverage-map.js";
+export { buildInstructionAnalysisAnnotations, } from "./analysis/instruction-annotations.js";
+export { DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, analyzeStaticControlFlow, } from "./analysis/static-analysis.js";
 export { explainProjectEvidence, } from "./analysis/project-evidence.js";
-export * from "./runtime/runtime-evidence.js";
-export * from "./runtime/runtime-trace.js";
-export * from "./runtime/runtime-trace-file.js";
-export * from "./runtime/runtime-bus-trace.js";
-export * from "./runtime/runtime-transfer.js";
-export * from "./runtime/runtime-graphics.js";
-// The connection facade stays public; codecs and query implementation helpers stay internal.
-export * from "./storage/sqlite-store.js";
-export { registerRuntimeHistory } from "./storage/sqlite-runtime-history.js";
-export { DEFAULT_ANALYSIS_STORAGE_POLICY, } from "./storage/sqlite-storage-policy.js";
-export * from "./project/project-store.js";
-export * from "./project/project-transaction.js";
-export * from "./project/runtime-trace-project.js";
-export * from "./project/runtime-bus-project.js";
-export * from "./project/capture-notes.js";
-export * from "./source/source-export.js";
-export * from "./source-project/git.js";
-export * from "./source-project/file-transaction.js";
-export * from "./source-project/generation.js";
-export * from "./source-project/input-snapshot.js";
-export * from "./source-project/merge.js";
-export * from "./source-project/project.js";
-export * from "./source-project/captures.js";
-export * from "./source-project/scratch.js";
-export * from "./source-project/pins.js";
-export * from "./research-inputs/inputs.js";
-export * from "./research-inputs/symbols.js";
-export * from "./research-inputs/analysis.js";
-export * from "./internal/interval-index.js";
-export * from "./internal/durable-files.js";
-export * from "./runtime/capture-instruction-source.js";
-export * from "./runtime/capture-bus-source.js";
-export * from "./runtime/capture-source.js";
-export { lostCodeRanges } from "./source-project/code-preservation.js";
-export { checkRawBlockConsumption } from "./source-project/raw-consumption.js";
+export { mergeRuntimeEvidence, inspectRuntimeEvidence, } from "./runtime/runtime-evidence.js";
+export { RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, runtimeTraceIndexRecordLimit, createRuntimeInstructionTraceImporter, } from "./runtime/runtime-trace.js";
+export { DEFAULT_RUNTIME_TRACE_MAX_BYTES, readRuntimeTraceFileMetadata, readRuntimeTraceFileChunks, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile, } from "./runtime/runtime-trace-file.js";
+export { RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter, } from "./runtime/runtime-bus-trace.js";
+export { validateRuntimeTransferBoundary, createRuntimeTransferAccumulator, } from "./runtime/runtime-transfer.js";
+export { createRuntimeGraphicsAccumulator, } from "./runtime/runtime-graphics.js";
+export { parseAnalysisProjectManifest, openAnalysisProjectStore, loadAnalysisProject, loadAnalysisProjectView, validateProjectRom, validateAnalysisProject, } from "./project/project-store.js";
+export { withAnalysisReadSession } from "./project/read-session.js";
+export { ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject, } from "./project/project-transaction.js";
+export { importRuntimeTraceIntoProject, importRuntimeTraceSourceIntoProject, commitRuntimeEvidenceBatch, } from "./project/runtime-trace-project.js";
+export { importRuntimeBusTraceSourceIntoProject, } from "./project/runtime-bus-project.js";
+export { isCaptureImportNotes, readCaptureImportNotes, writeCaptureImportNotes, pendingCaptureImportNotes, completeCaptureImportNotes, } from "./project/capture-notes.js";
+export { SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, sourceExportSha256, compareByteImages, } from "./source/source-export.js";
+export { RESEARCH_COLLECTIONS, RESEARCH_INPUT_LIMIT_NAMES, validateResearchSnapshot, validateResearchDecision, parseResearchDocument, readResearchInputs, writeResearchDocument, } from "./research-inputs/inputs.js";
+export { changeResearchSymbol, renameResearchSymbol, } from "./research-inputs/symbols.js";
+export { changeResearchAnalysis, } from "./research-inputs/analysis.js";
+export { HalfOpenIntervalIndex } from "./internal/interval-index.js";
+export { createRuntimeCaptureSource } from "./runtime/capture-instruction-source.js";
+export { createRuntimeBusCaptureSource } from "./runtime/capture-bus-source.js";
+export { openRuntimeCaptureSource } from "./runtime/capture-source.js";
 export { verifyRuntimeCaptureCompanion } from "./runtime/capture-companion.js";
-export * from "./model/research-mapping.js";
-export * from "./model/runtime-graphics-fact.js";
+export { isResearchMapping, matchesResearchMapping, } from "./model/research-mapping.js";
+export { isRuntimeGraphicsFact } from "./model/runtime-graphics-fact.js";
+export { readAnalysisTargetState, } from "./model/target-state.js";
 //# sourceMappingURL=index.js.map

@@ -171,7 +171,7 @@ public:
 
   auto status() const -> std::string {
     auto q = [](uint64_t v) { return "\"" + std::to_string(v) + "\""; };
-    return "{\"session\":\"" + session + "\",\"state\":\"" + (throttled && recording ? "throttled" : state) +
+    return "{\"scope\":\"snes.65816.instructions\",\"session\":\"" + session + "\",\"state\":\"" + (throttled && recording ? "throttled" : state) +
       "\",\"producedThrough\":" + q(produced) + ",\"deliveredThrough\":" + q(delivered) +
       ",\"acceptedThrough\":" + q(accepted) + ",\"durableThrough\":" + q(accepted) +
       ",\"releasedThrough\":" + q(accepted) + ",\"chunkThrough\":" + q(acceptedChunk) +

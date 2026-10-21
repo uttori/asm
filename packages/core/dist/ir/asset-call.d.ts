@@ -1,4 +1,5 @@
 import { type SourceSpan } from "../source-location.js";
+import type { ExpressionNode } from "./expression-node.js";
 /** Typed source value; numeric leaves keep assembler expressions for later evaluation. */
 export type AssetValueNode = {
     readonly kind: "string";
@@ -10,7 +11,8 @@ export type AssetValueNode = {
     readonly span: SourceSpan;
 } | {
     readonly kind: "number";
-    readonly expression: string;
+    readonly expression: ExpressionNode;
+    readonly text: string;
     readonly span: SourceSpan;
 } | {
     readonly kind: "array";
@@ -38,4 +40,6 @@ export interface ParsedAssetCall {
  * @returns {ParsedAssetCall | undefined} Typed call with argument spans, if present.
  */
 export declare function parseAssetCall(command: string, line?: number): ParsedAssetCall | undefined;
+/** Transport validation mirrors the recursive asset grammar without interpreting string data. */
+export declare const assetCallGuard: import("./syntax-codec.js").SyntaxGuard<ParsedAssetCall>;
 //# sourceMappingURL=asset-call.d.ts.map

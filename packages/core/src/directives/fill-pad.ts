@@ -1,3 +1,12 @@
+import { parseDirectiveExpression } from "../ir/directive-arguments.js";
+import type { SyntaxParseInput } from "../ir/source-syntax.js";
+import {
+  syntaxExpression,
+  syntaxLiteral,
+  syntaxNumber,
+  syntaxOptional,
+  syntaxRecord,
+} from "../ir/syntax-codec.js";
 import type { DirectiveRegistry } from "./registry.js";
 import type { FillPadDirectiveContext } from "./types.js";
 
@@ -53,28 +62,28 @@ const writeLittleEndianRepeats = (
   }
 };
 
-/**
- * Resolves a fill* or pad* pattern operand.
- * @param {FillPadDirectiveContext} ctx The directive context.
- * @param {string[]} words Directive keyword and value.
- * @param {"fill" | "pad"} kind Pattern family.
- * @returns {{ width: number; value: number }} Unit width and resolved value.
- * @throws {Error} If the keyword is unknown or the arity is not exactly one operand.
- */
-const resolvePatternValue = (
-  { session, operandResolver }: FillPadDirectiveContext,
-  words: readonly string[],
-  kind: "fill" | "pad",
-): { width: number; value: number } => {
-  const keyword = words[0];
-  const width = patternWidth(keyword, kind);
+/** Shared pattern grammar; width is measured in bytes and the value remains unresolved. */
+const parsePattern = (words: readonly string[], kind: "fill" | "pad") => {
+  const width = patternWidth(words[0], kind);
   if (words.length !== 2) {
-    throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
+    throw new Error(`${words[0].toUpperCase()} directive requires exactly one parameter.`);
   }
-  return {
-    width,
-    value: operandResolver.getnum(session.resolvedefines(words[1])),
-  };
+  return { width, expression: parseDirectiveExpression(words[1]) };
+};
+
+/** Install a pattern after evaluating its value in the current assembly stage. */
+const executePattern = (
+  context: FillPadDirectiveContext,
+  kind: "fill" | "pad",
+  { width, expression }: ReturnType<typeof parsePattern>,
+): void => {
+  const value = context.operandResolver.getnum(expression);
+  if (kind === "fill") {
+    writeLittleEndianRepeats(value, width, context.session.fillbyte, FILL_PATTERN_SIZE);
+  } else {
+    context.session.padUnit = width;
+    writeLittleEndianRepeats(value, width, context.session.padbyte, width);
+  }
 };
 
 /**
@@ -84,8 +93,7 @@ const resolvePatternValue = (
  * @throws {Error} If the keyword is unknown or exactly one parameter is not supplied.
  */
 export const handleFillPattern = (ctx: FillPadDirectiveContext, words: readonly string[]): void => {
-  const { width, value } = resolvePatternValue(ctx, words, "fill");
-  writeLittleEndianRepeats(value, width, ctx.session.fillbyte, FILL_PATTERN_SIZE);
+  executePattern(ctx, "fill", parsePattern(words, "fill"));
 };
 
 /**
@@ -94,18 +102,8 @@ export const handleFillPattern = (ctx: FillPadDirectiveContext, words: readonly 
  * @param {string[]} words `fill` plus the byte count.
  * @throws {Error} If exactly one parameter is not supplied.
  */
-export const handleFill = (
-  { session, operandResolver }: FillPadDirectiveContext,
-  words: readonly string[],
-): void => {
-  if (words.length !== 2) {
-    throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
-  }
-
-  const count = operandResolver.getnum(session.resolvedefines(words[1]));
-  for (let i = 0; i < count; i++) {
-    session.write1(session.fillbyte[i % FILL_PATTERN_SIZE]);
-  }
+export const handleFill = (ctx: FillPadDirectiveContext, words: readonly string[]): void => {
+  executeFill(ctx, parseFill({ words }));
 };
 
 /**
@@ -115,10 +113,7 @@ export const handleFill = (
  * @throws {Error} If the keyword is unknown or exactly one parameter is not supplied.
  */
 export const handlePadPattern = (ctx: FillPadDirectiveContext, words: readonly string[]): void => {
-  const { session } = ctx;
-  const { width, value } = resolvePatternValue(ctx, words, "pad");
-  session.padUnit = width;
-  writeLittleEndianRepeats(value, width, session.padbyte, width);
+  executePattern(ctx, "pad", parsePattern(words, "pad"));
 };
 
 /**
@@ -130,33 +125,8 @@ export const handlePadPattern = (ctx: FillPadDirectiveContext, words: readonly s
  * @param {string[]} words `pad` and an optional logical address.
  * @throws {Error} If more than one parameter is supplied, or the target does not map to output.
  */
-export const handlePad = (
-  { session, operandResolver }: FillPadDirectiveContext,
-  words: readonly string[],
-): void => {
-  let gap: number;
-  if (words.length === 1) {
-    gap = 0x10000 - (session.currentTargetAddress & 0xffff);
-  } else if (words.length === 2) {
-    const targetAddress = operandResolver.getnum(session.resolvedefines(words[1]));
-    const targetPC = session.outputWriter.toOutputOffset(targetAddress);
-    if (targetPC < 0) {
-      throw new Error(`Target address ${targetAddress.toString(16)} does not map to output.`);
-    }
-
-    const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
-    if (targetPC <= currentPC) {
-      return;
-    }
-
-    gap = targetPC - currentPC;
-  } else {
-    throw new Error("PAD directive accepts zero or one parameter.");
-  }
-
-  for (let i = 0; i < gap; i++) {
-    session.write1(session.padbyte[i % session.padUnit]);
-  }
+export const handlePad = (ctx: FillPadDirectiveContext, words: readonly string[]): void => {
+  executePad(ctx, parsePad({ words }));
 };
 
 /**
@@ -168,16 +138,80 @@ export const registerFillPadDirectives = (
   registry: DirectiveRegistry,
   context: FillPadDirectiveContext,
 ): void => {
-  registry.registerLowered(
-    ["fillbyte", "fillword", "filllong", "filldword"],
-    context,
-    handleFillPattern,
+  const pattern = (kind: "fill" | "pad", keywords: readonly string[]): void => {
+    registry.registerImmutableTyped(
+      keywords,
+      ({ words }) => parsePattern(words, kind),
+      syntaxRecord({ width: syntaxNumber, expression: syntaxExpression }),
+      (payload) => executePattern(context, kind, payload),
+    );
+  };
+  pattern("fill", ["fillbyte", "fillword", "filllong", "filldword"]);
+  pattern("pad", ["padbyte", "padword", "padlong", "paddword"]);
+  registry.registerImmutableTyped(
+    "fill",
+    parseFill,
+    syntaxRecord({ expression: syntaxExpression }),
+    (payload) => executeFill(context, payload),
   );
-  registry.registerLowered("fill", context, handleFill);
-  registry.registerLowered(
-    ["padbyte", "padword", "padlong", "paddword"],
-    context,
-    handlePadPattern,
+  registry.registerImmutableTyped(
+    "pad",
+    parsePad,
+    syntaxRecord({ operation: syntaxLiteral("pad"), address: syntaxOptional(syntaxExpression) }),
+    (payload) => executePad(context, payload),
   );
-  registry.registerLowered("pad", context, handlePad);
+};
+
+/** Shared source/public-entry grammar for `fill`. */
+const parseFill = ({ words }: Pick<SyntaxParseInput, "words">) => {
+  if (words.length !== 2) {
+    throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
+  }
+  return { expression: parseDirectiveExpression(words[1]) };
+};
+
+/** Applies a parsed `fill` operation to the current stage. */
+const executeFill = (
+  context: FillPadDirectiveContext,
+  { expression }: ReturnType<typeof parseFill>,
+): void => {
+  const count = context.operandResolver.getnum(expression);
+  for (let index = 0; index < count; index++) {
+    context.session.write1(context.session.fillbyte[index % FILL_PATTERN_SIZE]);
+  }
+};
+
+/** Shared source/public-entry grammar for `pad`. */
+const parsePad = ({ words }: Pick<SyntaxParseInput, "words">) => {
+  if (words.length > 2) {
+    throw new Error("PAD directive accepts zero or one parameter.");
+  }
+  return {
+    operation: "pad" as const,
+    address: words.length === 2 ? parseDirectiveExpression(words[1]) : undefined,
+  };
+};
+
+/** Applies a parsed `pad` operation to the current stage. */
+const executePad = (
+  context: FillPadDirectiveContext,
+  { address }: ReturnType<typeof parsePad>,
+): void => {
+  const { session, operandResolver } = context;
+  let gap = 0x10000 - (session.currentTargetAddress & 0xffff);
+  if (address) {
+    const targetAddress = operandResolver.getnum(address);
+    const targetPC = session.outputWriter.toOutputOffset(targetAddress);
+    if (targetPC < 0) {
+      throw new Error(`Target address ${targetAddress.toString(16)} does not map to output.`);
+    }
+    const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
+    if (targetPC <= currentPC) {
+      return;
+    }
+    gap = targetPC - currentPC;
+  }
+  for (let index = 0; index < gap; index++) {
+    session.write1(session.padbyte[index % session.padUnit]);
+  }
 };

@@ -1,5 +1,5 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { analyzeStaticControlFlow, HalfOpenIntervalIndex, } from "@uttori/asm-disassembler";
+import { readAnalysisTargetState, analyzeStaticControlFlow, HalfOpenIntervalIndex, } from "@uttori/asm-disassembler";
 import { Cpu65816Decoder } from "../architectures/65816-decoder.js";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { applyCpu65816StateOverride, cpu65816DecodeState, cpu65816StateKey, emulationVectorCpu65816State, enterCpu65816Address, joinCpu65816States, nativeVectorCpu65816State, resetCpu65816State, transferCpu65816State, unknownCpu65816State, } from "./65816-state.js";
@@ -49,25 +49,8 @@ const readVector = (rom, mapper, pointer) => {
     return target === 0 || target === 0xffff ? undefined : target;
 };
 const stateOverrideFor = (annotation) => {
-    if (!annotation.state) {
-        return undefined;
-    }
-    return {
-        ...(annotation.state.e === undefined ? {} : { e: annotation.state.e }),
-        ...(annotation.state.m === undefined ? {} : { m: annotation.state.m }),
-        ...(annotation.state.x === undefined ? {} : { x: annotation.state.x }),
-        ...(annotation.state.carry === undefined ? {} : { carry: annotation.state.carry }),
-        ...(annotation.state.programBank === undefined
-            ? {}
-            : { programBank: annotation.state.programBank }),
-        ...(annotation.state.dataBank === undefined ? {} : { dataBank: annotation.state.dataBank }),
-        ...(annotation.state.directPage === undefined
-            ? {}
-            : { directPage: annotation.state.directPage }),
-        ...(annotation.state.stackPointer === undefined
-            ? {}
-            : { stackPointer: annotation.state.stackPointer }),
-    };
+    const payload = readAnalysisTargetState(annotation.architecture, annotation.state);
+    return payload?.codec === "snes.65816" ? payload.state : undefined;
 };
 const controlTargetKind = (kind) => {
     if (kind === "branch") {

@@ -1,5 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import { CaptureFrameReader } from "../src/capture-file-reader.js";
+import { CaptureFrameReader } from "@uttori/asm-capture";
 
 test("read-ahead handles short reads and frame boundaries without rereading or mutating owned prefixes", async (t) => {
   const source = Buffer.from(Array.from({ length: 300 }, (_, i) => i & 255));

@@ -18,6 +18,7 @@ import { runColdDebugActivationSmoke } from "./cold-debug.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
 import { runNesSourceSmoke } from "./nes-source.js";
 import { runPaletteEditorSmoke } from "./palette-editor.js";
+import { runPausedRuntimeSmoke } from "./paused-runtime.js";
 import { runPngEditorSmoke } from "./png-editor.js";
 import { runReleaseAcceptance } from "./release-acceptance.js";
 import { runSourceGitUiSmoke } from "./source-git-ui.js";
@@ -74,6 +75,16 @@ const hoverContentText = (content: string | object): string => {
   const code = Reflect.get(content, "value");
   return typeof code === "string" ? code : "";
 };
+
+/** Compare stable instruction help independently of the transient snapshot-freshness notice. */
+const instructionHelp = (contents: string[]): string[] =>
+  contents
+    .filter(
+      (text) =>
+        !text.includes("Uttori analysis") &&
+        text !== "Index updating; this result is from the previous complete snapshot.",
+    )
+    .map((text) => text.replace("\n\n_Index updating; previous complete snapshot._", ""));
 
 const requireRecord = (value: unknown, label: string): Record<string, unknown> => {
   if (!isRecord(value)) {
@@ -325,17 +336,39 @@ async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
  */
 async function waitForLanguageServer(uri: vscode.Uri): Promise<void> {
   const deadline = Date.now() + 20_000;
+  let lastResult: unknown;
   while (Date.now() < deadline) {
     const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[] | undefined>(
       "vscode.executeDocumentSymbolProvider",
       uri,
     );
+    lastResult = symbols;
     if (Array.isArray(symbols)) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error("Uttori language server did not register within 20 seconds.");
+  const document = await vscode.workspace.openTextDocument(uri);
+  const owner = vscode.workspace.getWorkspaceFolder(document.uri);
+  throw new Error(
+    `Uttori language server did not register within 20 seconds: ${JSON.stringify({
+      requested: uri.toString(),
+      document: document.uri.toString(),
+      language: document.languageId,
+      result: lastResult,
+      owner: owner?.uri.toString(),
+      selectorMatch: owner
+        ? vscode.languages.match(
+            {
+              language: document.languageId,
+              scheme: "file",
+              pattern: new vscode.RelativePattern(owner, "**/*"),
+            },
+            document,
+          )
+        : undefined,
+    })}`,
+  );
 }
 
 /**
@@ -498,6 +531,9 @@ export async function run(): Promise<void> {
   }
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
+  if (process.env.UTTORI_VSCODE_PAUSED_RUNTIME && process.env.UTTORI_VSCODE_RELEASE_PHASE === "installed") {
+    await runPausedRuntimeSmoke(folder);
+  }
   if (process.env.UTTORI_VSCODE_NES_SOURCE === "1") {
     return runNesSourceSmoke(folder);
   }
@@ -657,9 +693,7 @@ export async function run(): Promise<void> {
     );
   };
   const informationConfig = vscode.workspace.getConfiguration("asm", sourceUri);
-  const instructionBefore = (await hoverText(6)).filter(
-    (text) => !text.includes("Uttori analysis"),
-  );
+  const instructionBefore = instructionHelp(await hoverText(6));
   assert.ok(instructionBefore.some((text) => text.includes("Return from subroutine")));
   try {
     await informationConfig.update(
@@ -685,10 +719,7 @@ export async function run(): Promise<void> {
       `Authoring hover should work with inline disabled and no matching analysis project. Actual: ${JSON.stringify(ldaHover)} `,
     );
     const rtsHover = await hoverText(6);
-    assert.deepEqual(
-      rtsHover.filter((text) => !text.includes("Uttori analysis")),
-      instructionBefore,
-    );
+    assert.deepEqual(instructionHelp(rtsHover), instructionBefore);
     assert.ok(rtsHover.some((text) => text.includes("Uttori analysis")));
     assert.ok(
       rtsHover.findIndex((text) => text.includes("Return from subroutine")) <

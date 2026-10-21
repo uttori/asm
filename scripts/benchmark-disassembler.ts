@@ -36,11 +36,11 @@ import {
   type LoadedAnalysisProject,
   type RuntimeInstructionTraceArtifact,
 } from "@uttori/asm-disassembler";
+import { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import {
   SNES_CPU_ADDRESS_SPACE,
   SNES_FILE_ADDRESS_SPACE,
   SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR,
-  SNES_TARGET_ID,
   SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR,
   SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR,
   SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR,
@@ -48,15 +48,11 @@ import {
   createSnesAddressContext,
   exportSnes65816Source,
   importDizRaw,
-  snesRomAddressSpace,
-} from "@uttori/asm-plugin-snes";
+} from "@uttori/asm-plugin-snes/disassembler";
+import { snesRomAddressSpace } from "@uttori/asm-plugin-snes/target";
 
 import { SECRET_OF_MANA_ANALYSIS_FIXTURE } from "../fixtures/fixture-manifest.js";
-import {
-  aggregateOperationSamples,
-  isBenchmarkSample,
-  type OperationBenchmarkSample,
-} from "./benchmark-report.js";
+import { aggregateOperationSamples, type OperationBenchmarkSample } from "./benchmark-report.js";
 import {
   assertDisassemblerBudgetEnvironment,
   evaluateDisassemblerBenchmarkBudgets,
@@ -114,6 +110,8 @@ type WorkerResult = {
   readonly sample: OperationBenchmarkSample;
   readonly observation: OperationObservation;
   readonly gcAvailable: boolean;
+  readonly peakProcessRssBytes: number;
+  readonly romSha256: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -132,9 +130,28 @@ function isObservation(value: unknown): value is OperationObservation {
 function isWorkerResult(value: unknown): value is WorkerResult {
   return (
     isRecord(value) &&
-    isBenchmarkSample(value.sample) &&
+    isRecord(value.sample) &&
+    [
+      "wallMs",
+      "baselineRssBytes",
+      "baselineHeapUsedBytes",
+      "endRssBytes",
+      "endHeapUsedBytes",
+      "boundaryMaxRssBytes",
+      "boundaryMaxHeapUsedBytes",
+      "rssDeltaBytes",
+      "heapUsedDeltaBytes",
+    ].every(
+      (key) =>
+        typeof value.sample === "object" &&
+        value.sample !== null &&
+        key in value.sample &&
+        typeof Reflect.get(value.sample, key) === "number",
+    ) &&
     isObservation(value.observation) &&
-    typeof value.gcAvailable === "boolean"
+    typeof value.gcAvailable === "boolean" &&
+    typeof value.peakProcessRssBytes === "number" &&
+    typeof value.romSha256 === "string"
   );
 }
 
@@ -868,6 +885,27 @@ const prepareOperation = (
   }
   unexpectedBenchmarkOperation(operation);
   const manifestBytes = fs.readFileSync(path.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
+  // The renderer consumes existing source inputs; fixture setup is outside the timed emission.
+  const sourceDirectory = path.join(temporary, "source");
+  fs.mkdirSync(sourceDirectory, { recursive: true });
+  fs.writeFileSync(
+    path.join(sourceDirectory, "ram-map.json"),
+    JSON.stringify({
+      format: "uttori-asm-snes-ram-map",
+      schemaVersion: 1,
+      variables: [],
+    }),
+  );
+  fs.writeFileSync(
+    path.join(sourceDirectory, "uttori-asm.config.json"),
+    JSON.stringify({
+      plugins: [{ module: "@uttori/asm-plugin-snes", options: { checksumEnabled: false } }],
+      target: "snes.sfc",
+      architecture: "snes.65816",
+      entryPoints: ["main.asm"],
+      includePaths: ["./"],
+    }),
+  );
   return () => {
     const exported = exportSnes65816Source(loaded, rom, path.join(temporary, "source"), {
       sourceProjectSha256: sourceExportSha256(manifestBytes),
@@ -928,6 +966,8 @@ const runWorker = (fixture: Fixture, operation: OperationId): WorkerResult => {
       },
       observation: value.observation,
       gcAvailable: typeof global.gc === "function",
+      peakProcessRssBytes: process.resourceUsage().maxRSS * 1024,
+      romSha256: rom.identity.sha256,
     };
   } finally {
     value?.dispose?.();
@@ -946,7 +986,16 @@ const runWorker = (fixture: Fixture, operation: OperationId): WorkerResult => {
 const runIsolated = (fixture: Fixture, operation: OperationId): WorkerResult => {
   const child = spawnSync(
     process.execPath,
-    ["--expose-gc", "--import", "tsx", scriptPath, "--internal-worker", fixture.id, operation],
+    [
+      "--expose-gc",
+      "--conditions=uttori-source",
+      "--import",
+      "tsx",
+      scriptPath,
+      "--internal-worker",
+      fixture.id,
+      operation,
+    ],
     { cwd: root, encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
   );
   if (child.error) {
@@ -983,6 +1032,10 @@ const main = (): void => {
     cpuModel: os.cpus()[0]?.model ?? "unknown",
     logicalCpuCount: os.cpus().length,
     totalMemoryBytes: os.totalmem(),
+    harnessSha256: createHash("sha256").update(fs.readFileSync(scriptPath)).digest("hex"),
+    cliBundleSha256: createHash("sha256")
+      .update(fs.readFileSync(path.join(root, "packages/cli/out/cli.mjs")))
+      .digest("hex"),
   };
   let budgets: DisassemblerBenchmarkBudgets | undefined;
   let budgetsIdentity:
@@ -1009,13 +1062,16 @@ const main = (): void => {
   for (const fixture of selectedFixtures) {
     const operations = [];
     for (const operation of options.operationIds) {
+      let cold: WorkerResult | undefined;
       for (let warmup = 0; warmup < options.warmups; warmup++) {
         console.error(
           `[${fixture.id}/${operation}] warmup ${warmup + 1}/${options.warmups} (isolated)...`,
         );
-        runIsolated(fixture, operation);
+        const warmupResult = runIsolated(fixture, operation);
+        cold ??= warmupResult;
       }
       const samples: OperationBenchmarkSample[] = [];
+      const processPeaks: number[] = [];
       let observation: OperationObservation | undefined;
       for (let repetition = 0; repetition < options.repetitions; repetition++) {
         console.error(
@@ -1028,9 +1084,17 @@ const main = (): void => {
         }
         observation = result.observation;
         samples.push(result.sample);
+        processPeaks.push(result.peakProcessRssBytes);
       }
       const aggregate = aggregateOperationSamples(samples);
-      operations.push({ id: operation, observation, aggregate, samples });
+      operations.push({
+        id: operation,
+        observation,
+        aggregate,
+        samples,
+        cold,
+        peakProcessRssBytes: Math.max(...processPeaks),
+      });
       console.log(
         `${fixture.id.padEnd(16)} ${operation.padEnd(34)} median ${formatMilliseconds(aggregate.wallMs.median).padStart(11)}  p95 ${formatMilliseconds(aggregate.wallMs.p95).padStart(11)}  boundary RSS ${formatMebibytes(aggregate.boundaryMaxRssBytes.max).padStart(10)}  median ΔRSS ${formatMebibytes(aggregate.rssDeltaBytes.median).padStart(10)}`,
       );
@@ -1056,6 +1120,7 @@ const main = (): void => {
       repetitions: options.repetitions,
       processMode: "isolated",
       memorySampling: "operation-boundary",
+      warmState: "Fresh V8 process for each sample; warm OS filesystem cache after the first run.",
       garbageCollectionBeforeBoundary: allWorkersHadGc,
       fixtureIds: options.fixtureIds,
       operationIds: options.operationIds,

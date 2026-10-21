@@ -10,6 +10,8 @@ import {
   loadAnalysisProject,
   loadAnalysisProjectViewSnapshot,
   publishAnalysisProject,
+  withAnalysisReadSession,
+  type AnalysisReadSession,
   type AnalysisProject,
   type RuntimeEvidenceRecord,
   type ProjectLabel,
@@ -58,6 +60,48 @@ const fixture = (): AnalysisProject => ({
       },
     ],
   },
+});
+
+test("read sessions bound pages and expire cursors while preserving a concurrent writer's old snapshot", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-read-session-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const project = fixture();
+  publishAnalysisProject(directory, {
+    ...project,
+    shards: {
+      ...project.shards,
+      labels: Array.from({ length: 205 }, (_, index) => ({
+        id: `label-${String(index).padStart(3, "0")}`,
+        addressSpace: "rom.file",
+        address: index,
+        name: `Label${index}`,
+        evidence: [],
+      })),
+    },
+  });
+  const before = loadAnalysisProjectViewSnapshot(directory);
+  let escaped: AnalysisReadSession | undefined;
+  let cursor: IterableIterator<RuntimeEvidenceRecord> | undefined;
+  withAnalysisReadSession(directory, (session) => {
+    escaped = session;
+    t.false("replaceTables" in session);
+    const first = session.metadataPage("labels");
+    t.is(first.records.length, 200);
+    t.is(session.metadataPage("labels", first.next).records.length, 5);
+    t.throws(() => session.metadataPage("labels", undefined, 201), { message: /1 to 200/ });
+    cursor = session.runtimeRecords();
+    t.false(cursor.next().done);
+    commitAnalysisProjectViewUpdate(directory, before, { labels: [] });
+    t.is(session.metadataPage("labels").records.length, 200);
+    t.deepEqual(session.revision, before.revision);
+  });
+  t.throws(() => escaped!.metadataPage("labels"), { message: /closed/ });
+  t.throws(() => cursor!.next(), { message: /closed/ });
+  t.is(
+    withAnalysisReadSession(directory, (session) => session.metadataPage("labels").records.length),
+    0,
+  );
+  t.throws(() => publishAnalysisProject(directory, project), { message: /already exists/ });
 });
 
 test("explicit view replacements are persisted even when a JavaScript caller reuses an array", (t) => {

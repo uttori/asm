@@ -73,10 +73,7 @@ const string = (value: unknown, context: string): string => {
   return value;
 };
 
-const readStepKinds = (value: unknown, context: string): readonly DebugStepKind[] | undefined => {
-  if (value === undefined) {
-    return undefined;
-  }
+const readStepKinds = (value: unknown, context: string): readonly DebugStepKind[] => {
   const values = array(value, context).map((entry, index) => string(entry, `${context}[${index}]`));
   const kinds: DebugStepKind[] = [];
   for (const entry of values) {
@@ -196,14 +193,13 @@ const architectureCapabilities = (
       addressSpaces: traceAddressSpaces,
       maxBufferedEvents,
       maxBatchEvents,
-      ...(traceRecord.instructionDetails === undefined
-        ? {}
-        : {
-            instructionDetails: boolean(traceRecord.instructionDetails, "Trace instructionDetails"),
-          }),
+      instructionDetails: boolean(traceRecord.instructionDetails, "Trace instructionDetails"),
     };
   })();
   const stepKinds = readStepKinds(candidate.stepKinds, `${context}.stepKinds`);
+  if (boolean(candidate.step, `${context}.step`) !== (stepKinds.length > 0)) {
+    throw new Error(`${context}.step must agree with its explicit stepKinds.`);
+  }
   return {
     architecture: string(candidate.architecture, `${context}.architecture`),
     addressSpaces: [...addressSpaces].toSorted(),
@@ -211,7 +207,7 @@ const architectureCapabilities = (
     trace,
     pause: boolean(candidate.pause, `${context}.pause`),
     step: boolean(candidate.step, `${context}.step`),
-    ...(stepKinds === undefined ? {} : { stepKinds }),
+    stepKinds,
     registers: boolean(candidate.registers, `${context}.registers`),
     memory,
     stackFrames: boolean(candidate.stackFrames, `${context}.stackFrames`),
@@ -231,10 +227,13 @@ const backendCapabilities = (value: unknown, context: string): DebugBackendCapab
     throw new Error(`${context}.architectures must use unique architecture identifiers.`);
   }
   const stepKinds = readStepKinds(candidate.stepKinds, `${context}.stepKinds`);
+  if (boolean(candidate.step, `${context}.step`) !== (stepKinds.length > 0)) {
+    throw new Error(`${context}.step must agree with its explicit stepKinds.`);
+  }
   return Object.freeze({
     pause: boolean(candidate.pause, `${context}.pause`),
     step: boolean(candidate.step, `${context}.step`),
-    ...(stepKinds === undefined ? {} : { stepKinds: Object.freeze(stepKinds) }),
+    stepKinds: Object.freeze(stepKinds),
     registers: boolean(candidate.registers, `${context}.registers`),
     memory: boolean(candidate.memory, `${context}.memory`),
     stackFrames: boolean(candidate.stackFrames, `${context}.stackFrames`),
@@ -245,7 +244,7 @@ const backendCapabilities = (value: unknown, context: string): DebugBackendCapab
       architectures.map((entry) =>
         Object.freeze({
           ...entry,
-          ...(entry.stepKinds ? { stepKinds: Object.freeze(entry.stepKinds) } : {}),
+          stepKinds: Object.freeze(entry.stepKinds),
           addressSpaces: Object.freeze(entry.addressSpaces),
           memorySpaces: Object.freeze(
             entry.memorySpaces.map((memorySpace) => Object.freeze(memorySpace)),
@@ -792,4 +791,4 @@ import {
   validateCaptureResult,
   type CaptureRequestV2,
   type CaptureResultV2,
-} from "./capture-v2.js";
+} from "@uttori/asm-capture";

@@ -1,12 +1,13 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { projectSourceLabelNames, } from "@uttori/asm-disassembler";
+import { projectSourceLabelNames, HalfOpenIntervalIndex, } from "@uttori/asm-disassembler";
 import { Cpu6502Decoder, formatCpu6502Instruction } from "../decoder.js";
 import { ricoh2a03Cpu } from "../instructions/opcodes.js";
 import { NES_CHR_CODEC, NES_TEXT_CODEC, nesChrPng, decodeNesText, nesTextMap } from "./assets.js";
 import { NES_HARDWARE_SYMBOLS, nesHardwareOperand, nesHardwareSource } from "./hardware.js";
-import { matchesNesResearch, nesResearchMapper, nesStoredMapper } from "./research.js";
+import { nesResearchMapper, nesStoredMapper } from "./research.js";
 import { nesSourceDataRanges, nesSourceDefinition, nesSourceHex } from "./source-data.js";
+import { NesSourceIndex, nesInstructionIntervals } from "./source-index.js";
 /** Stable 8 KiB PRG/CHR ownership with separate trainer/trailer segments. Offsets include the iNES header. */
 export function nesSourceSegments(rom, _nodes = []) {
     const segments = [];
@@ -62,9 +63,17 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
     const definitions = [];
     const ramDefinitions = [];
     const dataRanges = nesSourceDataRanges(rom, research.annotations ?? []);
-    for (const record of [...(research.labels ?? []), ...(research.comments ?? [])]) {
+    const records = [...(research.labels ?? []), ...(research.comments ?? [])];
+    const index = new NesSourceIndex(rom, nodes, research.labels ?? [], records.length > 0);
+    const dataIndex = new HalfOpenIntervalIndex(dataRanges);
+    const segmentIndex = new HalfOpenIntervalIndex(segments.map((segment) => ({
+        start: segment.offset - 16,
+        end: segment.offset - 16 + segment.size,
+        segment,
+    })));
+    for (const record of records) {
         // A CPU alias can execute from several contexts; select every proven physical owner, once.
-        const matching = nodes.filter((node) => matchesNesResearch(rom, record, node.address, nesStoredMapper(node.incomingState)));
+        const matching = index.nodes(record);
         const offsets = new Set(matching.map((node) => node.fileOffset));
         if (record.addressSpace === "nes.file") {
             offsets.add(record.address);
@@ -77,7 +86,7 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
         if (name && "name" in record && !record.suppressed) {
             const owners = [...offsets].map((offset) => ({
                 offset,
-                segment: segments.find((item) => offset >= item.offset - 16 && offset < item.offset - 16 + item.size),
+                segment: segmentIndex.at(offset)[0]?.segment,
             }));
             if (owners.some((owner) => !owner.segment)) {
                 throw new Error(`Research label '${record.id}' is outside the original image.`);
@@ -172,22 +181,32 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
     for (const segment of segments) {
         const start = segment.offset - 16;
         const end = start + segment.size;
-        const available = nodes.filter((node) => node.fileOffset !== undefined &&
-            node.fileOffset >= start &&
-            node.fileOffset + node.size <= end);
-        const observed = available.filter((node) => node.id.startsWith("nes:runtime:"));
-        // Only ROM-validated capture nodes establish an observed boundary. Propagated static evidence
-        // is not proof of execution and must yield when it starts inside a captured operand.
+        const available = index.physical
+            .overlapping(start, end)
+            .filter((entry) => entry.start >= start && entry.end <= end)
+            .map((entry) => entry.node);
+        const observed = nesInstructionIntervals(available.filter((node) => node.id.startsWith("nes:runtime:")));
+        // Static propagation yields to an observed boundary, but identical execution contexts coexist.
         const candidates = available.filter((node) => node.id.startsWith("nes:runtime:") ||
-            !observed.some((other) => other.fileOffset < node.fileOffset + node.size &&
-                other.fileOffset + other.size > node.fileOffset &&
-                (other.fileOffset !== node.fileOffset || other.size !== node.size)));
+            !observed
+                .overlapping(node.fileOffset, node.fileOffset + node.size)
+                .some((other) => other.start !== node.fileOffset || other.node.size !== node.size));
+        const intervals = nesInstructionIntervals(candidates);
         const byOffset = new Map();
+        const ownersAt = new Map();
         for (const node of candidates) {
             const offset = node.fileOffset;
-            const conflicting = candidates.some((other) => other.fileOffset < offset + node.size &&
-                other.fileOffset + other.size > offset &&
-                (other.fileOffset !== offset || other.size !== node.size));
+            const owners = ownersAt.get(offset);
+            if (owners) {
+                owners.push(node);
+            }
+            else {
+                ownersAt.set(offset, [node]);
+            }
+            // Incompatible captured boundaries remain raw; preserve last-candidate selection for equal spans.
+            const conflicting = intervals
+                .overlapping(offset, offset + node.size)
+                .some((other) => other.start !== offset || other.node.size !== node.size);
             if (!conflicting) {
                 byOffset.set(offset, node);
             }
@@ -202,12 +221,26 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
         let offset = start;
         let markerIndex = 0;
         while (offset < end) {
-            for (const name of labelsAt.get(offset) ?? []) {
-                lines.push("", `${name}:`);
+            // A raw slice must not visually own the decoded instructions or data that follow it.
+            if (lines.at(-1)?.startsWith("incbin ")) {
+                lines.push("");
             }
-            // Behavior comments belong to the following label body, with the same indent as its instructions.
-            lines.push(...(notes.get(offset) ?? []).map((line) => `  ${line}`));
-            const data = dataRanges.find((range) => range.start <= offset && offset < range.end);
+            const offsetLabels = labelsAt.get(offset) ?? [];
+            const offsetNotes = notes.get(offset) ?? [];
+            for (const name of offsetLabels) {
+                if (lines.at(-1) !== "") {
+                    lines.push("");
+                }
+                // Hover documentation binds to the preceding comment block. Repeat shared notes for aliases
+                // at the same bytes so every emitted label retains its behavior contract.
+                lines.push(...offsetNotes);
+                lines.push(`${name}:`);
+            }
+            // Instruction-site notes without a label remain inside the current routine's body.
+            if (offsetLabels.length === 0) {
+                lines.push(...offsetNotes.map((line) => `  ${line}`));
+            }
+            const data = dataIndex.at(offset).at(0);
             // These native codecs do not implement recompression; ignoring it would emit a different representation.
             if (data?.annotation.asset?.compression) {
                 throw new Error(`Compressed NES source asset '${data.annotation.id}' is unsupported.`);
@@ -283,8 +316,7 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
                     }
                     let expression = nesSourceHex(value, width * 2);
                     if (data.annotation.classification === "pointer16") {
-                        const targets = (research.labels ?? []).filter((label) => !label.suppressed &&
-                            matchesNesResearch(rom, label, value, nesResearchMapper(data.annotation.mapping)));
+                        const targets = index.labels(value, nesResearchMapper(data.annotation.mapping));
                         if (targets.length === 1) {
                             expression = names.get(targets[0].id) ?? expression;
                         }
@@ -309,11 +341,11 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
                     // Immediate constants and relative displacements are not memory labels.
                     if (!operand && decoded.instruction.operands[0]?.kind === "address") {
                         const address = decoded.instruction.operands[0]?.value;
-                        const owners = candidates.filter((candidate) => candidate.fileOffset === offset);
+                        const owners = ownersAt.get(offset) ?? [];
                         const resolved = owners.map((owner) => {
-                            const labels = (research.labels ?? []).filter((label) => !label.suppressed &&
-                                address !== undefined &&
-                                matchesNesResearch(rom, label, address, nesStoredMapper(owner.incomingState)));
+                            const labels = address === undefined
+                                ? []
+                                : index.labels(address, nesStoredMapper(owner.incomingState));
                             return labels.length === 1 ? names.get(labels[0].id) : undefined;
                         });
                         // A physical instruction can run under several mappings. Name its operand only when all agree.
@@ -339,7 +371,10 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
                 next++;
             }
             // Opaque bytes stand apart from the preceding decoded label body or scoped text table.
-            lines.push("", `incbin "../assets/raw/${block.toString(16).padStart(6, "0")}.bin":${nesSourceHex(offset - block)}..${nesSourceHex(next - block)}`);
+            if (lines.at(-1) !== "") {
+                lines.push("");
+            }
+            lines.push(`incbin "../assets/raw/${block.toString(16).padStart(6, "0")}.bin":${nesSourceHex(offset - block)}..${nesSourceHex(next - block)}`);
             offset = next;
         }
         lines.push("", `${segment.name}_end:`, `  assert ((${segment.name}_end - ${segment.name}_start) & $FFFF) == ${nesSourceHex(segment.size)}, "${segment.name} size changed"`, "");

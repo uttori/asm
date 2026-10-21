@@ -1,17 +1,19 @@
 import path from "node:path";
 
-import type { SourceResearchResult } from "@uttori/asm-cli/source";
 import {
+  readAnalysisTargetState,
   isResearchMapping,
   type ResearchMapping,
   type IntervalAnnotation,
   type ResearchAnalysisChange,
   type ResearchAnalysisRecord,
 } from "@uttori/asm-disassembler";
+import type { SourceResearchResult } from "@uttori/asm-workflows/source";
 import { Uri, window, workspace } from "vscode";
 
 import type { SourceProcessClient } from "./process-client.js";
 import { editSourceResearch, type ResearchEditorContext } from "./research-editor.js";
+import { readResearchResult } from "./result-readers.js";
 
 type AnalysisSelection = Extract<SourceResearchResult, { kind: "analysis" }>;
 
@@ -86,7 +88,14 @@ async function editState(record: IntervalAnnotation): Promise<IntervalAnnotation
   if (!field) {
     return undefined;
   }
-  const state = { ...record.state };
+  const payload = readAnalysisTargetState(record.architecture, record.state);
+  if (record.architecture !== "snes.65816") {
+    await window.showInformationMessage(
+      "CPU assumption editing currently supports 65816 annotations.",
+    );
+    return undefined;
+  }
+  const state = payload?.codec === "snes.65816" ? { ...payload.state } : {};
   if (isFlagKey(field.key)) {
     const key = field.key;
     let labels = ["Set", "Clear"];
@@ -137,7 +146,11 @@ async function editState(record: IntervalAnnotation): Promise<IntervalAnnotation
     if (!value.trim()) {
       delete state[register];
     } else {
-      state[register] = parseResearchAddress(value);
+      const parsed = parseResearchAddress(value);
+      if (parsed === undefined) {
+        throw new Error("Invalid CPU register value.");
+      }
+      state[register] = parsed;
     }
   }
   return { ...record, state };
@@ -296,14 +309,14 @@ export async function editAnalysisResearch(
   if (!initial || !workspace.isTrusted) {
     throw new Error("Select a Git source project in a trusted workspace first.");
   }
-  const selection = await worker.run<SourceResearchResult>(
+  const selection = await worker.run(
     {
       action: "research",
       directory: initial.root,
       overlays: initial.buffers,
       research: { kind: "analysis" },
     },
-    { maxMemoryMiB: 512 },
+    { maxMemoryMiB: 512, readResult: readResearchResult },
   );
   if (selection.kind !== "analysis") {
     throw new Error("Research service returned an invalid analysis selection.");

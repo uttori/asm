@@ -2,12 +2,7 @@ import { promises as fs } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { test } from "../../../tests/ava-helper.js";
-import {
-  decodeFrameworkRelativePointerTable,
-  decodeFrameworkSamplePointers,
-  deriveFrameworkAssetExtractionRanges,
-  deriveFrameworkSampleExtractionRanges,
-} from "../src/index.js";
+import { decodeFrameworkRelativePointerTable, decodeFrameworkSamplePointers, deriveFrameworkAssetExtractionRanges, deriveFrameworkSampleExtractionRanges } from "@uttori/asm-plugin-snes/disassembler";
 
 const fixtureFile = fileURLToPath(
   new URL("./fixtures/framework-asset-helpers.json", import.meta.url),

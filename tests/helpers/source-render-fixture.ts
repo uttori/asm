@@ -5,24 +5,24 @@ import {
   RomImage,
   compareByteImages,
   openAnalysisProjectStore,
-  sourceContentHash,
   type AnalysisProject,
-  type AnalysisProjectManifest,
 } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 import { loadProjectEnvironment } from "@uttori/asm-plugin-loader-node";
-import snesPlugin, {
+import snesPlugin from "@uttori/asm-plugin-snes";
+import {
   exportSnes65816Source,
   inspectSnesSource,
   createSnesAnalysisProject,
   analyzeSnesProject,
   type SnesSourceExportOptions,
   type CreateSnesAnalysisProjectOptions,
-} from "@uttori/asm-plugin-snes";
+} from "@uttori/asm-plugin-snes/disassembler";
 
 /** Test-only sink writes rendered bytes into disposable fixtures; production rendering has no disk writer. */
 export function renderSourceFixture(
   project: {
-    manifest: AnalysisProject["manifest"] | AnalysisProjectManifest;
+    manifest: AnalysisProject["manifest"];
     shards: AnalysisProject["shards"];
   },
   rom: RomImage,
@@ -49,21 +49,16 @@ export function renderSourceFixture(
       }
     }
   }
-  return exportSnes65816Source(
-    { ...project, manifest: { ...project.manifest, shards: [] } },
-    rom,
-    directory,
-    {
-      ...options,
-      emitFile:
-        options.emitFile ??
-        ((file) => {
-          const destination = path.join(directory, file.path);
-          fs.mkdirSync(path.dirname(destination), { recursive: true });
-          fs.writeFileSync(destination, file.bytes);
-        }),
-    },
-  );
+  return exportSnes65816Source({ ...project, manifest: { ...project.manifest } }, rom, directory, {
+    ...options,
+    emitFile:
+      options.emitFile ??
+      ((file) => {
+        const destination = path.join(directory, file.path);
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.writeFileSync(destination, file.bytes);
+      }),
+  });
 }
 
 /** Verify renderer fixtures through the same ordinary-source inspection used by Git builds. */

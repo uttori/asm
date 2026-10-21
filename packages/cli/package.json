@@ -30,44 +30,14 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
+  "main": "./out/cli.mjs",
+  "module": "./out/cli.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./source": {
-      "uttori-source": "./src/source.ts",
-      "types": "./dist/source.d.ts",
-      "import": "./dist/source.js"
-    },
-    "./asset-source": {
-      "uttori-source": "./src/asset-source/operations.ts",
-      "types": "./dist/asset-source/operations.d.ts",
-      "import": "./dist/asset-source/operations.js"
-    },
-    "./asset-interchange": {
-      "uttori-source": "./src/asset-interchange/index.ts",
-      "types": "./dist/asset-interchange/index.d.ts",
-      "import": "./dist/asset-interchange/index.js"
-    },
-    "./asset-interchange/public-records": {
-      "uttori-source": "./src/asset-interchange/public-records.ts",
-      "types": "./dist/asset-interchange/public-records.d.ts",
-      "import": "./dist/asset-interchange/public-records.js"
-    },
-    "./asset-interchange/paths": {
-      "uttori-source": "./src/asset-interchange/paths.ts",
-      "types": "./dist/asset-interchange/paths.d.ts",
-      "import": "./dist/asset-interchange/paths.js"
-    },
-    "./asset-interchange/operation-records": {
-      "uttori-source": "./src/asset-interchange/operation-records.ts",
-      "types": "./dist/asset-interchange/operation-records.d.ts",
-      "import": "./dist/asset-interchange/operation-records.js"
+      "import": "./out/cli.mjs"
     }
   },
   "publishConfig": {
@@ -90,12 +60,14 @@
     "@uttori/asm-assets": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
+    "@uttori/asm-plugin-65xx": "1.0.0",
     "@uttori/asm-plugin-loader-node": "1.0.0",
     "@uttori/asm-plugin-snes": "1.0.0",
-    "@uttori/asm-plugin-65xx": "1.0.0"
+    "@uttori/asm-workflows": "1.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.1",
+    "@uttori/asm-game-secret-of-mana": "1.0.0",
     "esbuild": "^0.28.2"
   },
   "engines": {

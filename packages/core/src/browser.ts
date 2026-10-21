@@ -14,13 +14,48 @@ export {
   CA65_SYNTAX_PROFILE,
   ASAR_SYNTAX_PROFILE,
 } from "./syntax-profile.js";
-export { parseOperandSyntax } from "./operand-syntax.js";
-// Target encoders parse operand expressions at runtime, including in browser bundles.
-export { parseExpressionNode } from "./ir/expression-node.js";
-export * from "./services/asset-resource-snapshot.js";
-export { createEncoderRuntime } from "./architecture-types.js";
+// Target grammars and stage frames use the same portable exports in browser bundles.
+export { parseExpressionNode, isReferenceExpressionNode } from "./ir/expression-node.js";
+export {
+  type AssetResourceSnapshotHost,
+  assetSourceMediaType,
+  resolveAssetResourceSnapshot,
+} from "./services/asset-resource-snapshot.js";
+export { InstructionResolutionFrame } from "./ir/resolved-instruction.js";
+export { runTypedEncoderEntry } from "./typed-encoder-entry.js";
+export { parseInstructionOperands, bindInstructionOperands } from "./ir/parsed-operand.js";
+export type {
+  ParsedOperand,
+  ParsedInstructionOperands,
+  OperandGrammarOptions,
+  OperandScalar,
+  OperandWidthIntent,
+  OperandRegister,
+} from "./ir/parsed-operand.js";
 export type { SyntaxProfile, SyntaxRewriteContext } from "./syntax-profile.js";
 export type { DirectiveDescriptor } from "./lsp/directive-catalog.js";
-export type { InstructionDescriptor } from "./architecture-types.js";
+export type {
+  InstructionDescriptor,
+  ArchitectureEncoder,
+  ArchitectureEncoderContext,
+  OperandResolutionContext,
+} from "./architecture-types.js";
+export type {
+  ArchitectureDecodeContext,
+  ArchitectureDecodeResult,
+  ArchitectureDecoder,
+  ArchitectureInstructionSpecification,
+  DecodedInstruction,
+  DecodedOperand,
+  DecodedReference,
+  InstructionFlow,
+} from "./decoder-types.js";
 // Type-only exports keep plugin contracts available without loading Node hosts.
-export type * from "./index.js";
+export type {
+  AssemblerPlugin,
+  AssemblerEnvironment,
+  PluginActivationContext,
+  PluginSessionCapabilities,
+  SessionStateKey,
+  AssemblyStageName,
+} from "./plugin/index.js";

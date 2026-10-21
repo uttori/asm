@@ -26,6 +26,7 @@ import {
   semanticTokensLegend,
   signatureHelpFor,
 } from "../src/providers.js";
+import { diagnosticsFor } from "../src/providers/diagnostics.js";
 
 const file = path.resolve("/virtual/providers.asm");
 const source = "org $008000\nTarget:\n  LDA Target\n";
@@ -35,6 +36,45 @@ function createIndex(): WorkspaceIndex {
   index.openDocument(file, source);
   return index;
 }
+
+test("diagnostics project core expansion provenance into related source locations", (t) => {
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  const sourceFile = path.resolve("/virtual/expansion.asm");
+  index.openDocument(
+    sourceFile,
+    "lorom\norg $808000\nmacro Bad(value)\n  assert <value>\nendmacro\n    %Bad($000000000000000000)",
+  );
+  index.reindex();
+  const snapshot = index.snapshot();
+  const restored = WorkspaceIndex.fromSnapshot(
+    snesWorkspaceIndexOptions(),
+    snapshot,
+    index.overlay,
+  );
+  const diagnostics = diagnosticsFor(restored, sourceFile);
+  const failure = diagnostics.find((diagnostic) => diagnostic.message.includes("Assertion"));
+  t.truthy(failure);
+  t.is(failure?.range.start.line, 3);
+  t.is(failure?.range.start.character, 2);
+  t.is(failure?.range.end.character, 16);
+  const related = failure?.relatedInformation ?? [];
+  t.true(
+    related.some(
+      (entry) => entry.message.includes("invoked") && entry.location.range.start.line === 5,
+    ),
+  );
+  t.true(
+    related.some(
+      (entry) => entry.message.includes("defined") && entry.location.range.start.line === 2,
+    ),
+  );
+  t.true(
+    related.some(
+      (entry) => entry.message.includes("Argument") && entry.location.range.start.character === 9,
+    ),
+  );
+  t.true(related.every((entry) => entry.location.uri === pathToUri(sourceFile)));
+});
 
 test("asset editor features track binary inputs without converting during reindex", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "asset-editor-"));
@@ -144,6 +184,89 @@ test("rename edits user symbols but rejects instruction mnemonics", (t) => {
   t.true(changes.every((change) => change.newText === "Destination"));
   t.deepEqual(changes.map((change) => change.range.start.line).toSorted(), [1, 2]);
 });
+
+test("typed operand occurrences retain repeated ranges through worker snapshots and rename", (t) => {
+  const occurrenceFile = path.resolve("/virtual/typed-occurrences.asm");
+  const text = "lorom\norg $808000\nTarget = $12\n  lda #(Target + Target)\n  lda (Target,x)\n";
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(occurrenceFile, text);
+  const snapshot = JSON.parse(JSON.stringify(index.snapshot()));
+  const restored = WorkspaceIndex.fromSnapshot(
+    snesWorkspaceIndexOptions(),
+    snapshot,
+    index.overlay,
+  );
+  const references = referencesFor(restored, occurrenceFile, { line: 2, character: 2 }, false);
+  t.deepEqual(
+    references.map((item) => item.range),
+    [
+      { start: { line: 3, character: 8 }, end: { line: 3, character: 14 } },
+      { start: { line: 3, character: 17 }, end: { line: 3, character: 23 } },
+      { start: { line: 4, character: 7 }, end: { line: 4, character: 13 } },
+    ],
+  );
+  const changes =
+    renameEditsFor(restored, occurrenceFile, { line: 3, character: 18 }, "Value")?.changes?.[
+      pathToUri(occurrenceFile)
+    ] ?? [];
+  t.is(changes.length, 4);
+  t.true(
+    changes.every(
+      (change) =>
+        text
+          .split("\n")
+          [change.range.start.line].slice(
+            change.range.start.character,
+            change.range.end.character,
+          ) === "Target",
+    ),
+  );
+  t.false(
+    restored
+      .getReferences(occurrenceFile)
+      .some((reference) => reference.kind === "label" && reference.name === "x"),
+  );
+});
+
+for (const [architecture, declaration, instruction, register] of [
+  ["spc700", "Target = $12", "mov a,(Target+x)", "a"],
+  ["superfx", "Target = $1234", "iwt r1,#Target", "r1"],
+]) {
+  test(`typed ${architecture} references exclude registers and tolerate incomplete edits`, (t) => {
+    const occurrenceFile = path.resolve(`/virtual/typed-${architecture}.asm`);
+    const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+    const text = `norom\norg $8000\narch ${architecture}\n${declaration}\n${instruction}\n`;
+    index.openDocument(occurrenceFile, text);
+    const refs = index
+      .getReferences(occurrenceFile)
+      .filter((reference) => reference.kind === "label");
+    t.deepEqual(
+      refs.map((reference) => reference.name),
+      ["Target"],
+    );
+    t.false(refs.some((reference) => reference.name === register));
+    t.is(
+      renameEditsFor(index, occurrenceFile, { line: 3, character: 1 }, "Destination")?.changes?.[
+        pathToUri(occurrenceFile)
+      ]?.length,
+      2,
+    );
+    index.updateDocument(occurrenceFile, text + "lda (\n");
+    index.reindex();
+    t.true(completionsFor(index).some((entry) => entry.label === "Target"));
+    // Definition collection may defer operand diagnostics until emission; completion must remain usable.
+    t.false(index.getReferences(occurrenceFile).some((reference) => reference.name === "("));
+    index.updateDocument(occurrenceFile, text);
+    index.reindex();
+    t.deepEqual(
+      index
+        .getReferences(occurrenceFile)
+        .filter((reference) => reference.kind === "label")
+        .map((reference) => reference.name),
+      ["Target"],
+    );
+  });
+}
 
 test("document symbols keep original source lines when comments precede labels", (t) => {
   const commented = path.resolve("/virtual/hello-world.asm");

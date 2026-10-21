@@ -1,5 +1,6 @@
 import fs from "node:fs";
-import { RomImage, publishAnalysisProject, openAnalysisProjectStore, loadAnalysisProjectViewSnapshot, commitAnalysisProjectViewUpdate, assertAnalysisProjectRevision, validateProjectRom, lostCodeRanges, } from "@uttori/asm-disassembler";
+import { RomImage, publishAnalysisProject, openAnalysisProjectStore, loadAnalysisProjectViewSnapshot, commitAnalysisProjectViewUpdate, assertAnalysisProjectRevision, validateProjectRom, } from "@uttori/asm-disassembler";
+import { lostCodeRanges } from "@uttori/asm-disassembler/source-project";
 import { analyzeNes, decodeNesInstruction } from "./analysis.js";
 import { NesCartridge } from "./cartridge.js";
 import { validateNesMapper } from "./mapper.js";

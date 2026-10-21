@@ -1,43 +1,25 @@
-import { parseExpressionNode } from "../ir/expression-node.js";
+import { parseExpressionAtSite } from "../ir/expression-node.js";
+import { syntaxBoolean, syntaxExpression, syntaxOptional, syntaxRecord, syntaxString, syntaxUnion, } from "../ir/syntax-codec.js";
 const IDENTITY_INCLUDE_DEFINES = {
     resolveDefinesInStringLiteral: (content) => content,
     resolveRegularDefines: (content) => content,
 };
 /** Hex (`$808000`) or decimal `incbin ->` seek targets. Labels take the other path. */
 const NUMERIC_INCBIN_TARGET = /^\$[\da-f]+$|^-?\d+$/i;
-/**
- * Expands `!defines` in an include/incbin path. Quoted paths use string-literal
- * rules (`\!` stays literal). Unquoted paths use regular define replacement.
- * @param {string} target Raw filename token, possibly quoted.
- * @param {IncludeDefineEngine} defineEngine Define expander.
- * @returns {string} The path with defines resolved. Quotes are preserved when present.
- */
-const expandIncludeFilename = (target, defineEngine) => {
-    if (target.length >= 2) {
-        const quote = target[0];
-        const isQuoted = (quote === '"' || quote === "'" || quote === "`") && target.endsWith(quote);
-        if (isQuoted) {
-            return `${quote}${defineEngine.resolveDefinesInStringLiteral(target.slice(1, -1))}${quote}`;
-        }
-    }
-    return defineEngine.resolveRegularDefines(target);
-};
-/**
- * Resolves the `incsrc` / `include` filename from IR metadata, falling back to words.
- * @param {string[]} words Directive tokens.
- * @param {NormalizedCommand} [command] The normalized command, when the registry supplied one.
- * @param {"incsrc" | "include"} directive The keyword, used in the arity error.
- * @param {IncludeDefineEngine} defineEngine Define expander for path tokens.
- * @returns {string} The include target.
- * @throws {Error} If no filename is present.
- */
-const resolveIncludeTarget = (words, command, directive, defineEngine) => {
-    const target = command?.parsed.includeTarget?.target ?? words[1];
+/** Parse source includes once; quoted path contents remain source-valued define templates. */
+const parseIncludeTarget = (words, directive) => {
+    const target = words.slice(1).join(" ").trim();
     if (!target) {
         throw new Error(`${directive} requires exactly one filename parameter`);
     }
-    return expandIncludeFilename(target, defineEngine);
+    const quote = target[0];
+    const quoted = target.length >= 2 && ['"', "'", "`"].includes(quote) && target.endsWith(quote);
+    return { path: quoted ? target.slice(1, -1) : target, quote: quoted ? quote : "" };
 };
+/** Bind filename templates when the include executes, without interpreting them as expressions. */
+const resolveIncludeTarget = ({ path, quote }, expander) => quote
+    ? `${quote}${expander.resolveDefinesInStringLiteral(path)}${quote}`
+    : expander.resolveRegularDefines(path);
 /**
  * Splits `incbin` tokens into the source operand and optional `->` seek target.
  * @param {string[]} words Directive tokens.
@@ -216,46 +198,62 @@ const parseDeprecatedHyphenIncbinRange = (rangeStr) => {
     }
     return { start, end };
 };
+const rangeBoundNode = (value) => {
+    if (typeof value === "number") {
+        return { type: "literal", value: String(value), numericValue: value };
+    }
+    return parseExpressionAtSite(value, "include");
+};
 /**
  * Parses `start..end` (preferred) or deprecated `start-end` hyphen ranges.
  * @param {string} rangeStr Range text after the filename colon.
- * @param {RangeEvaluator} evaluate Bound evaluator for start/end expressions.
- * @param {number} fileLength Source length, used when the end bound is `0`.
- * @returns {{ startOffset: number; endOffset: number }} Inclusive start and exclusive end.
+ * @returns {{ start: ExpressionNode; end: ExpressionNode }} Bounds evaluated after the binary is read.
  * @throws {Error} If the range is malformed. Unbalanced hyphen math keeps asar's `Emismatched_parentheses` id.
  */
-const evaluateIncbinRange = (rangeStr, evaluate, fileLength) => {
+const parseIncbinRange = (rangeStr) => {
     if (rangeStr.includes("..")) {
         const parts = rangeStr.split("..");
-        if (parts.length !== 2 || parts[0] === "" || parts[1] === "") {
+        const node = parseExpressionAtSite(rangeStr, "include");
+        if (parts.length !== 2 || !parts[0] || !parts[1] || node.type !== "range") {
             throw new Error(`Invalid range specification: ${rangeStr}`);
         }
-        const rangeNode = parseExpressionNode(rangeStr);
-        if (rangeNode.type !== "range") {
-            throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        return applyEofEnd(evaluate(rangeNode.start), evaluate(rangeNode.end), fileLength);
+        return { start: node.start, end: node.end };
     }
-    if (rangeStr.includes("-")) {
-        const bounds = parseDeprecatedHyphenIncbinRange(rangeStr);
-        let startOffset;
-        if (typeof bounds.start === "number") {
-            startOffset = bounds.start;
-        }
-        else {
-            startOffset = evaluate(bounds.start);
-        }
-        let endOffset;
-        if (typeof bounds.end === "number") {
-            endOffset = bounds.end;
-        }
-        else {
-            endOffset = evaluate(bounds.end);
-        }
-        return applyEofEnd(startOffset, endOffset, fileLength);
+    if (!rangeStr.includes("-")) {
+        throw new Error(`Invalid range specification: ${rangeStr}`);
     }
-    throw new Error(`Invalid range specification: ${rangeStr}`);
+    const bounds = parseDeprecatedHyphenIncbinRange(rangeStr);
+    return { start: rangeBoundNode(bounds.start), end: rangeBoundNode(bounds.end) };
 };
+const incbinSyntax = syntaxRecord({
+    filename: syntaxString,
+    quoted: syntaxBoolean,
+    range: syntaxOptional(syntaxUnion(syntaxRecord({ start: syntaxExpression, end: syntaxExpression }), syntaxRecord({ error: syntaxString }))),
+    rangeText: syntaxOptional(syntaxString),
+    target: syntaxOptional(syntaxUnion(syntaxRecord({ address: syntaxExpression }), syntaxRecord({ label: syntaxString }))),
+});
+/** Save malformed ranges until after the file read, preserving error/effect ordering. */
+function parseIncbinPayload(words) {
+    const { sourceWords, targetLocation } = splitIncbinArrow(words);
+    const source = sourceWords.join(" ");
+    const { filename, rangeStr } = parseIncbinFilenameAndRange(source);
+    const payload = { filename, quoted: ['"', "'", "`"].includes(source[0]) };
+    if (rangeStr) {
+        payload.rangeText = rangeStr;
+        try {
+            payload.range = parseIncbinRange(rangeStr);
+        }
+        catch (cause) {
+            payload.range = { error: cause instanceof Error ? cause.message : String(cause) };
+        }
+    }
+    if (targetLocation !== undefined) {
+        payload.target = NUMERIC_INCBIN_TARGET.test(targetLocation)
+            ? { address: parseExpressionAtSite(targetLocation, "include") }
+            : { label: targetLocation };
+    }
+    return payload;
+}
 /**
  * Rejects inverted or out-of-range incbin slices.
  * @param {number} startOffset Inclusive start.
@@ -285,57 +283,46 @@ const assertIncbinBounds = (startOffset, endOffset, fileLength, filename, rangeS
  * @param {IncludeDirectiveContext} ctx The include-capable directive context.
  * @param {string[]} words Directive tokens.
  * @param {string} [_raw] Raw line, unused.
- * @param {NormalizedCommand} [command] Normalized command. `parsed.incbinRange` skips string re-parse when present.
+ * @param {NormalizedCommand} [command] Normalized command. Retained for public adapter compatibility.
  * @throws {Error} On missing file, bad range, missing `->` target, or unreadable contents.
  */
-export const handleIncbin = ({ session, includeSource, operandResolver, runtime, defineEngine }, words, _raw = "", command) => {
-    const { sourceWords, targetLocation } = splitIncbinArrow(words);
-    const filenameWithRange = sourceWords.join(" ");
-    const { filename: rawFilename, rangeStr } = parseIncbinFilenameAndRange(filenameWithRange);
+export const handleIncbin = (context, words, _raw = "", _command) => executeIncbin(context, parseIncbinPayload(words));
+/** Read, validate and emit a prepared binary slice in the established cursor order. */
+function executeIncbin({ session, includeSource, operandResolver, runtime, defineEngine }, payload) {
     const expander = defineEngine ?? IDENTITY_INCLUDE_DEFINES;
-    const quote = filenameWithRange[0];
-    let filename = rawFilename;
-    if (quote === '"' || quote === "'" || quote === "`") {
-        filename = expander.resolveDefinesInStringLiteral(rawFilename);
-    }
-    else {
-        filename = expander.resolveRegularDefines(rawFilename);
-    }
+    const filename = payload.quoted
+        ? expander.resolveDefinesInStringLiteral(payload.filename)
+        : expander.resolveRegularDefines(payload.filename);
     const fileData = includeSource.readFile(filename);
     if (!(fileData instanceof Uint8Array)) {
         throw new Error(`Failed to read file: ${filename}`);
     }
     let startOffset = 0;
     let endOffset = fileData.length;
-    const parsedRange = command?.parsed.incbinRange;
-    if (parsedRange) {
-        ({ startOffset, endOffset } = applyEofEnd(session.evaluateRangeExpression(parsedRange.start), session.evaluateRangeExpression(parsedRange.end), fileData.length));
+    if (payload.range) {
+        if ("error" in payload.range) {
+            throw new Error(payload.range.error);
+        }
+        ({ startOffset, endOffset } = applyEofEnd(session.evaluateRangeExpression(payload.range.start), session.evaluateRangeExpression(payload.range.end), fileData.length));
     }
-    else if (rangeStr) {
-        ({ startOffset, endOffset } = evaluateIncbinRange(rangeStr, (expression) => session.evaluateRangeExpression(expression), fileData.length));
-    }
-    assertIncbinBounds(startOffset, endOffset, fileData.length, filename, rangeStr);
+    assertIncbinBounds(startOffset, endOffset, fileData.length, filename, payload.rangeText);
     const incbinData = fileData.subarray(startOffset, endOffset);
-    if (targetLocation !== undefined) {
+    if (payload.target) {
         runtime.handlePushPC();
-        let targetAddress;
-        if (NUMERIC_INCBIN_TARGET.test(targetLocation)) {
-            targetAddress = operandResolver.getnum(targetLocation);
-        }
-        else {
-            targetAddress = session.symbolScope.getLabelValue(targetLocation, false);
-        }
+        const targetAddress = "address" in payload.target
+            ? operandResolver.getnum(payload.target.address)
+            : session.symbolScope.getLabelValue(payload.target.label, false);
         session.setWritePosition(targetAddress);
     }
     includeSource.recordBinarySlice?.(filename, startOffset, endOffset, fileData);
     for (const byte of incbinData) {
         session.write1(byte);
     }
-    if (targetLocation !== undefined) {
+    if (payload.target) {
         runtime.handlePullPC();
     }
     session.recordCurrentAddress();
-};
+}
 /**
  * Assembles another source file inline (`incsrc`).
  * @param {IncludeDirectiveContext} ctx The include-capable directive context.
@@ -345,7 +332,9 @@ export const handleIncbin = ({ session, includeSource, operandResolver, runtime,
  * @throws {Error} If the filename is missing.
  */
 export const handleIncsrc = ({ includeSource, defineEngine }, words, _raw = "", command) => {
-    includeSource.assembleFile(resolveIncludeTarget(words, command, "incsrc", defineEngine ?? IDENTITY_INCLUDE_DEFINES));
+    includeSource.assembleFile(resolveIncludeTarget(parseIncludeTarget(command
+        ? ["incsrc", command.parsed.includeTarget?.target ?? words.slice(1).join(" ")]
+        : words, "incsrc"), defineEngine ?? IDENTITY_INCLUDE_DEFINES));
 };
 /**
  * Includes and assembles another source file (`include`).
@@ -356,7 +345,9 @@ export const handleIncsrc = ({ includeSource, defineEngine }, words, _raw = "", 
  * @throws {Error} If the filename is missing.
  */
 export const handleInclude = ({ includeSource, defineEngine }, words, _raw = "", command) => {
-    includeSource.includeFile(resolveIncludeTarget(words, command, "include", defineEngine ?? IDENTITY_INCLUDE_DEFINES));
+    includeSource.includeFile(resolveIncludeTarget(parseIncludeTarget(command
+        ? ["include", command.parsed.includeTarget?.target ?? words.slice(1).join(" ")]
+        : words, "include"), defineEngine ?? IDENTITY_INCLUDE_DEFINES));
 };
 /**
  * Registers source and binary include directives.
@@ -364,11 +355,19 @@ export const handleInclude = ({ includeSource, defineEngine }, words, _raw = "",
  * @param {IncludeDirectiveContext} context The include-capable directive context.
  */
 export const registerIncludeSourceDirectives = (registry, context) => {
-    registry.registerLowered("incsrc", context, handleIncsrc);
-    registry.registerLowered("include", context, handleInclude);
-    registry.registerLowered("includeonce", context, ({ includeSource }) => {
-        includeSource.guardCurrentFile();
-    });
-    registry.registerLowered("incbin", context, handleIncbin);
+    for (const directive of ["incsrc", "include"]) {
+        registry.registerTyped(directive, ({ words }) => parseIncludeTarget(words, directive), syntaxRecord({ path: syntaxString, quote: syntaxString }), ({ path, quote }) => {
+            const expander = context.defineEngine ?? IDENTITY_INCLUDE_DEFINES;
+            const filename = resolveIncludeTarget({ path, quote }, expander);
+            if (directive === "incsrc") {
+                context.includeSource.assembleFile(filename);
+            }
+            else {
+                context.includeSource.includeFile(filename);
+            }
+        });
+    }
+    registry.registerTyped("includeonce", () => ({}), syntaxRecord({}), () => context.includeSource.guardCurrentFile());
+    registry.registerTyped("incbin", ({ words }) => parseIncbinPayload(words), incbinSyntax, (payload) => executeIncbin(context, payload));
 };
 //# sourceMappingURL=include-source.js.map

@@ -32,8 +32,9 @@ export type RootAnalysisCacheIdentity = {
   targetOptionsIdentity: string;
 };
 
-// Older entries can contain assertion failures calculated with skipped assets contributing zero bytes.
-const CACHE_VERSION = 5;
+// Older entries predate macro body locations and expansion provenance; recompute their artifacts.
+// Typed operand occurrences change references and rename ranges in persisted analysis.
+const CACHE_VERSION = 8;
 
 type CachePayload = {
   version: number;
@@ -79,12 +80,14 @@ export class RootAnalysisCache {
    * @param {string} root Absolute root source path.
    * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
    * @param {(file: string) => string | undefined} hashFile Content hasher.
+   * @param {(file: string) => boolean} allowMtime False for live overlays whose disk timestamp cannot establish freshness.
    * @returns {CachedRootAnalysis | undefined} The cached artifacts, or undefined on miss.
    */
   read(
     root: string,
     identity: RootAnalysisCacheIdentity,
     hashFile: (file: string) => string | undefined,
+    allowMtime: (file: string) => boolean = () => true,
   ): CachedRootAnalysis | undefined {
     const file = this.entryPath(root);
     if (!existsSync(file)) {
@@ -109,9 +112,11 @@ export class RootAnalysisCache {
         const recordedHash = payload.fileHashes[recorded];
         const recordedMtime = payload.fileMtimes?.[recorded];
 
+        // A live overlay has no disk timestamp; the host must force hashing before this shortcut.
         // Source files use the mtime fast path. Binary inputs always rehash so
         // copy tools that preserve timestamps cannot leave a stale dependency graph.
         if (
+          allowMtime(recorded) &&
           recordedMtime !== undefined &&
           !Object.hasOwn(payload.analysis.assetDependencies, recorded)
         ) {

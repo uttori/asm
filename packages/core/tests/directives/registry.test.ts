@@ -37,13 +37,14 @@ test("directive registry evaluates assert and error through the assembler sessio
 
 test("directive registry reuses shared data handler for aliases", (t) => {
   const assembler = new Assembler();
-  const dataSpy = spy(assembler.directiveRuntime, "handleDataDirective");
+  const dataSpy = spy(assembler.directiveRuntime, "executeDataStatement");
   stub(assembler, "addAddressToLine");
 
   const handled = assembler.directiveRegistry.dispatch("dc.w", ["dc.w", "$1234"], "dc.w $1234");
 
   t.true(handled);
-  t.true(dataSpy.calledOnceWithExactly("dc.w", ["$1234"]));
+  t.true(dataSpy.calledOnce);
+  t.is(dataSpy.firstCall.args[0].width, 2);
 });
 
 test("directive registry returns false for unknown directives", (t) => {
@@ -59,7 +60,7 @@ test("directive registry returns false for unknown directives", (t) => {
 
 test("directive registry dispatches struct and incbin directives", (t) => {
   const assembler = new Assembler();
-  const structSpy = stub(assembler.structEngine, "handleStruct");
+  const structSpy = stub(assembler.structEngine, "executeStruct");
   const readFileSpy = stub(assembler.includeSource, "readFile").returns(
     new Uint8Array([0x01, 0x02]),
   );
@@ -81,7 +82,7 @@ test("directive registry dispatches struct and incbin directives", (t) => {
 
   t.true(handledStruct);
   t.true(handledIncbin);
-  t.true(structSpy.calledOnceWithExactly(["struct", "Sprite"]));
+  t.is(structSpy.firstCall.args[0].name, "Sprite");
   t.true(readFileSpy.calledOnceWithExactly("test.bin"));
   t.true(sliceSpy.calledOnceWithExactly("test.bin", 0, 2, new Uint8Array([0x01, 0x02])));
 });
@@ -112,7 +113,7 @@ test("normalized dispatch preserves check bankcross behavior", (t) => {
 
 test("lowered directive dispatch preserves data directive behavior", (t) => {
   const assembler = new Assembler();
-  const dataSpy = spy(assembler.directiveRuntime, "handleDataDirective");
+  const dataSpy = spy(assembler.directiveRuntime, "executeDataStatement");
   stub(assembler, "addAddressToLine");
 
   const normalized = createNormalizedCommand(
@@ -126,7 +127,7 @@ test("lowered directive dispatch preserves data directive behavior", (t) => {
   assembler.processNormalizedCommand(normalized, false);
 
   t.true(dataSpy.calledOnce);
-  t.truthy(dataSpy.firstCall.args[1].length);
+  t.truthy(dataSpy.firstCall.args[0].operands.length);
 });
 
 test("command lowering lowers safe non-data directives directly", (t) => {
@@ -141,13 +142,13 @@ test("command lowering lowers safe non-data directives directly", (t) => {
 
   const lowered = assembler.commandLoweringService.lowerExecutableNode(normalized);
 
-  t.is(lowered.kind, "directive");
-  if (lowered.kind !== "directive") {
+  t.is(lowered.kind, "pluginSyntax");
+  if (lowered.kind !== "pluginSyntax") {
     t.fail();
     return;
   }
-  t.is(lowered.keyword, "org");
-  t.deepEqual(lowered.words, ["org", "$808000"]);
+  t.is(lowered.command.keyword, "org");
+  t.deepEqual(lowered.command.words, ["org", "$808000"]);
 });
 
 test("command lowering covers currently safe direct directive families", (t) => {
@@ -160,7 +161,6 @@ test("command lowering covers currently safe direct directive families", (t) => 
     { command: "namespace Music", keyword: "namespace" },
     { command: "pushpc", keyword: "pushpc" },
     { command: "pullpc", keyword: "pullpc" },
-    { command: "check bankcross half", keyword: "check" },
     { command: "optimize dp always", keyword: "optimize" },
     { command: "startpos $10", keyword: "startpos" },
     { command: "assert 1", keyword: "assert" },
@@ -172,15 +172,15 @@ test("command lowering covers currently safe direct directive families", (t) => 
 
   for (const { command, keyword } of cases) {
     const lowered = assembler.commandLoweringService.lowerExecutableNode(commandNode(command));
-    t.is(lowered.kind, "directive", command);
-    if (lowered.kind !== "directive") {
+    t.is(lowered.kind, "pluginSyntax", command);
+    if (lowered.kind !== "pluginSyntax") {
       continue;
     }
-    t.is(lowered.keyword, keyword, command);
+    t.is(lowered.command.keyword, keyword, command);
   }
 });
 
-test("command lowering keeps data directives on normalized passthrough", (t) => {
+test("command lowering uses typed payloads for mixed data", (t) => {
   const assembler = new Assembler();
   const normalized = createNormalizedCommand(
     'db $01, bank($123456), "TEXT"',
@@ -192,7 +192,7 @@ test("command lowering keeps data directives on normalized passthrough", (t) => 
 
   const lowered = assembler.commandLoweringService.lowerExecutableNode(normalized);
 
-  t.is(lowered.kind, "command");
+  t.is(lowered.kind, "numericData");
 });
 
 test("command lowering preserves preprocessing-sensitive commands", (t) => {
@@ -227,10 +227,10 @@ test("command lowering preserves preprocessing-sensitive commands", (t) => {
   const loweredDirectiveNamedStaticLabel =
     assembler.commandLoweringService.lowerExecutableNode(directiveNamedStaticLabel);
 
-  t.is(loweredDefine.kind, "command");
-  t.is(loweredLabel.kind, "command");
-  t.is(loweredMacroPlaceholder.kind, "command");
-  t.is(loweredDirectiveNamedStaticLabel.kind, "command");
+  t.is(loweredDefine.kind, "operation");
+  t.is(loweredLabel.kind, "label");
+  t.is(loweredMacroPlaceholder.kind, "sourceTemplate");
+  t.is(loweredDirectiveNamedStaticLabel.kind, "assignment");
 });
 
 test("lowered safe directives dispatch without normalized passthrough", (t) => {
@@ -278,44 +278,38 @@ test("front-end command kinds distinguish instructions from preprocess forms", (
   t.is(commandNode("Entry: lda #$01").kind, "labelDefinition");
 });
 
-test("cached lowered passthrough skips raw rewriting but keeps preprocessing", (t) => {
+test("cached define operations execute without source redispatch", (t) => {
   const assembler = new Assembler();
   const lowered = assembler.commandLoweringService.lowerExecutableNode(commandNode("!value = 7"));
-  t.is(lowered.kind, "command");
-  if (lowered.kind !== "command") {
+  t.is(lowered.kind, "operation");
+  if (lowered.kind !== "operation") {
     return;
   }
   const processSpy = spy(assembler, "processNormalizedCommand");
 
   assembler.executeLoweredNode(lowered);
 
-  t.true(processSpy.calledOnceWithExactly(lowered.command, false));
+  t.false(processSpy.called);
   t.is(assembler.defines.get("value"), "7");
 });
 
-test("normalized dispatch only reparses raw source when rewriting changes it", (t) => {
+test("public normalized source entry shares generated fragment parsing", (t) => {
   const unchangedAssembler = new Assembler();
-  const unchangedParseSpy = spy(unchangedAssembler, "createNormalizedCommandFromRaw");
+  const unchangedParseSpy = spy(unchangedAssembler.frontEndService, "parseFragmentCommand");
   unchangedAssembler.processNormalizedCommand(commandNode("!value = 1"), true);
-  t.false(unchangedParseSpy.called);
-
-  const changedAssembler = new Assembler();
-  stub(changedAssembler, "rewriteRawCommand").returns("!value = 2");
-  const changedParseSpy = spy(changedAssembler, "createNormalizedCommandFromRaw");
-  changedAssembler.processNormalizedCommand(commandNode("!value = 1"), true);
-  t.true(changedParseSpy.calledOnce);
-  t.is(changedAssembler.defines.get("value"), "2");
+  t.true(unchangedParseSpy.calledOnce);
 });
 
 test("normalized dispatch reparses context-sensitive variadic macro commands", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   assembler.inMacroExpansion = true;
-  stub(assembler.macroEngine, "resolveVariadicPlaceholders").returns("db $01");
-  stub(assembler.directiveRuntime, "handleDataDirective");
-  const parseSpy = spy(assembler, "createNormalizedCommandFromRaw");
+  assembler.currentVariadicArgs = ["$01"];
+  const execute = spy(assembler.directiveRuntime, "executeDataStatement");
+  const parseSpy = spy(assembler.frontEndService, "parseFragmentCommand");
 
   assembler.processNormalizedCommand(commandNode("db <...[0]>"), true);
 
-  t.true(parseSpy.calledOnce);
+  t.true(parseSpy.called);
+  t.true(execute.calledOnce);
 });

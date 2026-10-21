@@ -3,10 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
+import { SourceOperationError } from "./errors.js";
 import { acceptedSourceGeneration, generationAt, sourceContentHash, sourceCandidateRef, SOURCE_GENERATION_FILE, verifySourceGeneration, } from "./generation.js";
-import { assertNoSourceOperation, assertSourcePath, assertSourceCheckpoint, assertSourceObjectId, acquireSourceOperationLease, sourceGit, } from "./git.js";
+import { assertNoSourceOperation, assertSourceCheckpoint, assertSourceObjectId, acquireSourceOperationLease, sourceGit, } from "./git.js";
 import { registerSourcePinOwner } from "./pins.js";
-import { createSourceScratch } from "./scratch.js";
+import { SourceSnapshotIndex } from "./snapshot-index.js";
 const journalFile = (repository) => path.join(repository.stateDirectory, "merge.json");
 /**
  * Prepare one replacement proposal while excluding source publication and merge operations.
@@ -129,44 +130,12 @@ function gitObjectId(value) {
 }
 /** Compare source trees using a private index, preserving partial staging in the real index. */
 export async function snapshotSourceTree(repository, overlays = []) {
-    fs.mkdirSync(repository.stateDirectory, { recursive: true });
-    const scratch = createSourceScratch(repository, "preview");
-    const indexFile = path.join(scratch.directory, "index");
+    const snapshot = new SourceSnapshotIndex(repository);
     try {
-        await sourceGit(repository.root, ["read-tree", "HEAD"], { indexFile });
-        await sourceGit(repository.root, ["add", "--all", "--", "."], { indexFile });
-        const paths = new Set();
-        let total = 0;
-        for (const overlay of overlays) {
-            assertSourcePath(overlay.path);
-            const identity = overlay.path.normalize("NFC").toLowerCase();
-            total += overlay.bytes.length;
-            if (paths.has(identity) || total > 256 * 1024 * 1024 || paths.size >= 32768) {
-                throw new Error("Preview buffers contain duplicate paths or exceed the snapshot budget.");
-            }
-            paths.add(identity);
-            // Editor buffers become Git blobs through the private index; no save, stash, filter, or real
-            // index update is needed. Apply later requires these exact bytes in a committed checkpoint.
-            const blob = (await sourceGit(repository.root, ["hash-object", "-w", "--no-filters", "--stdin"], {
-                input: overlay.bytes,
-            })).stdout
-                .toString("utf8")
-                .trim();
-            const entry = (await sourceGit(repository.root, ["ls-files", "--stage", "-z", "--", overlay.path], {
-                indexFile,
-            })).stdout.toString("utf8");
-            if (entry && !entry.startsWith("100644 ") && !entry.startsWith("100755 ")) {
-                throw new Error(`Preview cannot replace a symlink or submodule buffer: ${overlay.path}`);
-            }
-            const mode = entry.startsWith("100755 ") ? "100755" : "100644";
-            await sourceGit(repository.root, ["update-index", "--add", "--cacheinfo", mode, blob, overlay.path], { indexFile });
-        }
-        return (await sourceGit(repository.root, ["write-tree"], { indexFile })).stdout
-            .toString("utf8")
-            .trim();
+        return await snapshot.snapshot(overlays);
     }
     finally {
-        scratch.dispose();
+        snapshot.dispose();
     }
 }
 /** Render a merge preview against saved edits. No commit is added to the user's branch. */
@@ -194,7 +163,7 @@ export async function previewSourceGeneration(repository, candidate, overlays = 
         .trim()
         .split(" ");
     if (parents.length !== 2 || parents[1] !== base) {
-        throw new Error("Generate the candidate from this source branch's accepted generation.");
+        throw new SourceOperationError("stale", "Generate the candidate from this source branch's accepted generation.");
     }
     const { descriptor: incoming } = await verifySourceGeneration(repository, candidate);
     const previous = await generationAt(repository, base);
@@ -302,7 +271,7 @@ async function beginJournal(repository, generation, kind) {
     }
     const verified = await verifySourceGeneration(repository, generation.commit);
     if (canonicalJson(verified.descriptor) !== canonicalJson(generation.descriptor)) {
-        throw new Error("Candidate descriptor changed since preparation.");
+        throw new SourceOperationError("stale", "Candidate descriptor changed since preparation.");
     }
     const status = await sourceMergeStatus(repository);
     if (["merging", "diverged"].includes(status.phase)) {
@@ -316,7 +285,7 @@ async function beginJournal(repository, generation, kind) {
         .toString("utf8")
         .trim();
     if (pinned !== generation.commit) {
-        throw new Error("The incoming generation ref changed.");
+        throw new SourceOperationError("stale", "The incoming generation ref changed.");
     }
     const journal = {
         format: "uttori-source-merge",
@@ -382,7 +351,7 @@ export async function applySourceGeneration(repository, generation, preview) {
         if (generation.commit !== preview.candidate ||
             tree !== preview.sourceTree ||
             (await acceptedSourceGeneration(repository, head)) !== preview.base) {
-            throw new Error("Regeneration preview is stale. Preview the current checkpoint again.");
+            throw new SourceOperationError("stale", "Regeneration preview is stale. Preview the current checkpoint again.");
         }
         if (generation.commit === preview.base) {
             return await sourceMergeStatus(repository);
@@ -407,7 +376,9 @@ export async function applySourceGeneration(repository, generation, preview) {
  */
 export async function finishSourceGeneration(repository, options) {
     const lease = acquireFileLease(path.join(repository.stateDirectory, "operation.lock"));
+    let snapshot;
     try {
+        snapshot = new SourceSnapshotIndex(repository);
         const status = await sourceMergeStatus(repository);
         if (!["merging", "committed"].includes(status.phase) || !status.journal) {
             throw new Error("There is no matching regeneration merge to finish.");
@@ -419,14 +390,16 @@ export async function finishSourceGeneration(repository, options) {
             await assertSourceCheckpoint(repository);
         }
         if (status.conflicts.length) {
-            throw new Error("Resolve and stage every merge conflict before verification.");
+            throw new SourceOperationError("conflict", "Resolve and stage every merge conflict before verification.");
         }
         const staged = (await sourceGit(repository.root, ["write-tree"])).stdout
             .toString("utf8")
             .trim();
-        if (staged !== (await snapshotSourceTree(repository))) {
+        options.onProgress?.("Checking staged source against the current working tree.");
+        if (staged !== (await snapshot.snapshot())) {
             throw new Error("Stage the intended result before verification; working files differ from the staged tree.");
         }
+        options.onProgress?.("Assembling and verifying the staged source.");
         const verification = await options.validate(staged);
         for (const value of [
             verification.outputSha256,
@@ -440,6 +413,7 @@ export async function finishSourceGeneration(repository, options) {
         if (!verification.checks.length) {
             throw new Error("Build verification must record the checks performed.");
         }
+        options.onProgress?.("Checking source freshness after verification.");
         const after = await sourceMergeStatus(repository);
         const indexTree = (await sourceGit(repository.root, ["write-tree"])).stdout
             .toString("utf8")
@@ -447,11 +421,12 @@ export async function finishSourceGeneration(repository, options) {
         if (after.phase !== status.phase ||
             after.head !== status.head ||
             indexTree !== staged ||
-            (await snapshotSourceTree(repository)) !== staged) {
+            (await snapshot.snapshot()) !== staged) {
             throw new Error("Source changed during validation. Validate the current staged result again.");
         }
         durableReplace(journalFile(repository), canonicalJson({ ...status.journal, validatedTree: staged, verification }));
         if (!alreadyCommitted) {
+            options.onProgress?.("Committing the verified native Git merge.");
             await sourceGit(repository.root, ["commit", "-F", "-"], { input: options.message + "\n" });
         }
         const finished = await sourceMergeStatus(repository);
@@ -463,7 +438,12 @@ export async function finishSourceGeneration(repository, options) {
         return finished;
     }
     finally {
-        lease.release();
+        try {
+            snapshot?.dispose();
+        }
+        finally {
+            lease.release();
+        }
     }
 }
 /** Release only the expected candidate; an absent pin is already retired, but a changed ref is protected. */

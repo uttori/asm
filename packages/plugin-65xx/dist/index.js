@@ -1,15 +1,15 @@
 import { definePlugin, ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, PLUGIN_API_VERSION, PluginManager, } from "@uttori/asm-core";
-import { Arch65xx } from "./architecture.js";
 import { CA65_65XX_SESSION_STATE_ID, CA65_65XX_SYNTAX_PROFILE, ca65CpuPredicateByArchitecture, ca65CpuShorthands, ca65SessionStateKey, cloneCa65SessionState, createCa65SessionState, resetCa65StageState, } from "./ca65-profile.js";
 import { Cpu6502Decoder, cpu6502Specifications } from "./decoder.js";
-import { handleAlign, handleAddr, handleByte, handleCa65Assert, handleCa65Incbin, handleCpuShorthand, handleDbyt, handleDword, handleEndScope, handleExport, handleFlatSegment, handleHibytes, handleImport, handleLobytes, handlePopcpu, handlePopseg, handlePushcpu, handlePushseg, handleRes, handleScope, handleSegment, handleSetcpu, handleUnsupportedCa65, } from "./directives/ca65.js";
+import { ca65DirectiveSyntax } from "./directives/ca65-syntax.js";
 import { buildInstructionCatalog } from "./instructions/catalog.js";
 import { nmos6502Cpu, nmos6502Forms, nmos6502xCpu, nmos6502xForms, ricoh2a03Cpu, } from "./instructions/opcodes.js";
 import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
 import { nesAssetFormats } from "./nes/assets.js";
-import { classify65xxOperand } from "./operands/classifier.js";
-import { NES_65XX_SESSION_STATE_ID, cloneNes65xxSessionState, nes65xxSessionStateKey, resetNes65xxStageState, } from "./session-state.js";
+import { parse65xxOperands } from "./operands/syntax.js";
+import { NES_65XX_SESSION_STATE_ID, cloneNes65xxSessionState, resetNes65xxStageState, } from "./session-state.js";
 import { NES_65XX_ADDRESS_SPACE_ID, NES_65XX_LIFECYCLE_ID, NES_65XX_OUTPUT_FORMAT_ID, NES_65XX_TARGET_ID, createInitialNesState, createNes65xxTargetOptions, createNesAddressSpace, createNesLifecycle, createNesOutputFormat, } from "./target/nes.js";
+import { TypedArch65xx } from "./typed-architecture.js";
 /** Flat 16-bit raw binary target (`65xx`, `6502-raw` aliases). */
 export const RAW_65XX_TARGET_ID = "65xx.raw";
 /** Identity map: logical address − origin = file offset. */
@@ -87,16 +87,15 @@ const ca65ExpressionFunctions = [
  * Registers a lowered-phase 65xx directive and attaches hover/completion copy.
  * @param {string} id The directive id.
  * @param {readonly string[]} keywords The directive keywords.
- * @param {DirectiveContribution["createHandler"]} handler The directive handler.
  * @returns {DirectiveContribution} The directive contribution.
  */
-const directive = (id, keywords, handler) => {
+const directive = (id, keywords) => {
     const wanted = new Set(keywords);
     return {
         id,
         keywords,
         phase: "lowered",
-        createHandler: handler,
+        syntax: ca65DirectiveSyntax(id),
         tooling: ca65Tooling.filter((entry) => wanted.has(entry.keyword)),
     };
 };
@@ -145,7 +144,7 @@ function createFlat65xxAddressSpace({ options }) {
 }
 /**
  * Sets ca65 CPU predicate symbols for the selected architecture.
- * @param {import("@uttori/asm-core").Assembler} session Active assembler session.
+ * @param {import("@uttori/asm-core/plugin").PluginSessionCapabilities} session Active assembler session.
  * @param {string} architecture Architecture id being selected.
  */
 function updatePredicates(session, architecture) {
@@ -178,13 +177,12 @@ export function register65xxContributions(context) {
         const catalog = buildInstructionCatalog(forms);
         context.registerArchitecture({
             id: cpu.id,
+            operandGrammar: { version: "2", parse: parse65xxOperands },
             aliases: cpu.aliases,
             displayName: cpu.displayName,
             unknownInstructionBehavior: "throw",
             // Same as 65816: `LDA $12,x` is one operand, not two.
-            splitOperands: (text) => (text.trim() ? [text.trim()] : []),
-            classifyOperand: ({ operands }, operand) => classify65xxOperand(operands, operand),
-            createEncoder: (encoderContext) => new Arch65xx(encoderContext, cpu),
+            createTypedEncoder: () => new TypedArch65xx(cpu),
             // Vendor/CMOS tables have different semantics; expose the decoder only for NMOS/Ricoh profiles.
             createDecoder: cpu.features.has("nmos") && !cpu.features.has("dtv")
                 ? () => new Cpu6502Decoder(cpu)
@@ -323,45 +321,28 @@ export function register65xxContributions(context) {
     context.registerDirectiveSet({
         id: CA65_65XX_DIRECTIVE_SET_ID,
         directives: [
-            directive("65xx.directive.segment", ["segment"], ({ targetId, session, state }) => (_ctx, words) => {
-                if (targetId === NES_65XX_TARGET_ID) {
-                    handleSegment(session, state.get(nes65xxSessionStateKey), words);
-                }
-                else {
-                    handleFlatSegment(state.get(ca65SessionStateKey), words);
-                }
-            }),
-            directive("65xx.directive.setcpu", ["setcpu", "cpu"], ({ session, state }) => (_ctx, words) => handleSetcpu(session, state.get(ca65SessionStateKey), words)),
-            directive("65xx.directive.pushcpu", ["pushcpu"], ({ session, state }) => () => handlePushcpu(session, state.get(ca65SessionStateKey))),
-            directive("65xx.directive.popcpu", ["popcpu"], ({ session, state }) => () => handlePopcpu(session, state.get(ca65SessionStateKey))),
-            directive("65xx.directive.cpu-shorthand", Object.keys(ca65CpuShorthands), ({ session, state }) => (_ctx, words) => handleCpuShorthand(session, state.get(ca65SessionStateKey), words)),
-            directive("65xx.directive.export", ["export"], ({ session }) => (_ctx, words) => handleExport(session, words)),
-            directive("65xx.directive.import", ["import"], ({ session }) => (_ctx, words) => handleImport(session, words)),
-            directive("65xx.directive.byte", ["byte", "byt"], ({ session }) => (_ctx, words) => handleByte(session, words)),
-            directive("65xx.directive.addr", ["addr", "word"], ({ session }) => (_ctx, words) => handleAddr(session, words)),
-            directive("65xx.directive.lobytes", ["lobytes"], ({ session }) => (_ctx, words) => handleLobytes(session, words)),
-            directive("65xx.directive.hibytes", ["hibytes"], ({ session }) => (_ctx, words) => handleHibytes(session, words)),
-            directive("65xx.directive.dbyt", ["dbyt"], ({ session }) => (_ctx, words) => handleDbyt(session, words)),
-            directive("65xx.directive.dword", ["dword"], ({ session }) => (_ctx, words) => handleDword(session, words)),
-            directive("65xx.directive.faraddr", ["faraddr"], ({ session }) => (_ctx, words) => handleDword(session, words, 3)),
-            directive("65xx.directive.res", ["res"], ({ session }) => (_ctx, words) => handleRes(session, words)),
-            directive("65xx.directive.align", ["align"], ({ session }) => (_ctx, words) => handleAlign(session, words)),
-            directive("65xx.directive.incbin", ["incbin"], ({ session }) => {
-                if (session.targetOptions.sourceStyle === "asar") {
-                    return undefined;
-                }
-                return (_ctx, words) => handleCa65Incbin(session, words);
-            }),
-            directive("65xx.directive.assert", ["assert"], ({ session }) => {
-                if (session.targetOptions.sourceStyle === "asar") {
-                    return undefined;
-                }
-                return (_ctx, words) => handleCa65Assert(session, words);
-            }),
-            directive("65xx.directive.scope", ["scope", "proc"], ({ session, state }) => (_ctx, words) => handleScope(session, state.get(ca65SessionStateKey), words, (words[0] ?? "").replace(/^\./, "").toLowerCase() === "proc")),
-            directive("65xx.directive.endscope", ["endscope", "endproc"], ({ session, state }) => () => handleEndScope(session, state.get(ca65SessionStateKey))),
-            directive("65xx.directive.pushseg", ["pushseg"], ({ state }) => () => handlePushseg(state.get(ca65SessionStateKey))),
-            directive("65xx.directive.popseg", ["popseg"], ({ state }) => () => handlePopseg(state.get(ca65SessionStateKey))),
+            directive("65xx.directive.segment", ["segment"]),
+            directive("65xx.directive.setcpu", ["setcpu", "cpu"]),
+            directive("65xx.directive.pushcpu", ["pushcpu"]),
+            directive("65xx.directive.popcpu", ["popcpu"]),
+            directive("65xx.directive.cpu-shorthand", Object.keys(ca65CpuShorthands)),
+            directive("65xx.directive.export", ["export"]),
+            directive("65xx.directive.import", ["import"]),
+            directive("65xx.directive.byte", ["byte", "byt"]),
+            directive("65xx.directive.addr", ["addr", "word"]),
+            directive("65xx.directive.lobytes", ["lobytes"]),
+            directive("65xx.directive.hibytes", ["hibytes"]),
+            directive("65xx.directive.dbyt", ["dbyt"]),
+            directive("65xx.directive.dword", ["dword"]),
+            directive("65xx.directive.faraddr", ["faraddr"]),
+            directive("65xx.directive.res", ["res"]),
+            directive("65xx.directive.align", ["align"]),
+            directive("65xx.directive.incbin", ["incbin"]),
+            directive("65xx.directive.assert", ["assert"]),
+            directive("65xx.directive.scope", ["scope", "proc"]),
+            directive("65xx.directive.endscope", ["endscope", "endproc"]),
+            directive("65xx.directive.pushseg", ["pushseg"]),
+            directive("65xx.directive.popseg", ["popseg"]),
             directive("65xx.directive.unsupported-object", [
                 "autoimport",
                 "constructor",
@@ -373,10 +354,8 @@ export function register65xxContributions(context) {
                 "importzp",
                 "interruptor",
                 "reloc",
-            ], () => (_ctx, words) => handleUnsupportedCa65(words)),
-            directive("65xx.directive.unsupported-macro", ["exitmacro", "local"], () => (_ctx, words) => {
-                throw new Error(`.${(words[0] ?? "").replace(/^\./, "")} is not yet supported by the ca65 macro compatibility slice.`);
-            }),
+            ]),
+            directive("65xx.directive.unsupported-macro", ["exitmacro", "local"]),
         ],
         tooling: ca65Tooling,
     });
@@ -444,9 +423,9 @@ export async function create65xxAssemblerEnvironment(options = {}) {
 }
 export default plugin;
 export { Cpu6502Decoder, cpu6502Specifications, formatCpu6502Instruction } from "./decoder.js";
-export * from "./nes/cartridge.js";
-export * from "./nes/assets.js";
-export * from "./nes/mapper.js";
+export { NesCartridge } from "./nes/cartridge.js";
+export { NES_CHR_CODEC, NES_TEXT_CODEC, nesChrPng, encodeNesChrPng, nesTextMap, decodeNesText, nesAssetFormats, } from "./nes/assets.js";
+export { initialNesMapperState, validateNesMapper, nesPrgOffset, writeNesMapper, nesExecutionContext, } from "./nes/mapper.js";
 export { ricoh2a03Cpu } from "./instructions/opcodes.js";
 export { Arch65xx, materializeOpcodeForm } from "./architecture.js";
 export { buildInstructionCatalog } from "./instructions/catalog.js";

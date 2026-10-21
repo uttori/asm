@@ -1,0 +1,1 @@
+{"version":3,"file":"macro-arguments.d.ts","sourceRoot":"","sources":["../../src/ir/macro-arguments.ts"],"names":[],"mappings":"AAAA,yFAAyF;AACzF,MAAM,MAAM,uBAAuB,GAAG;IAAE,KAAK,EAAE,MAAM,CAAC;IAAC,IAAI,EAAE,MAAM,CAAC;IAAC,KAAK,EAAE,MAAM,CAAC;IAAC,GAAG,EAAE,MAAM,CAAA;CAAE,CAAC;AAElG,mGAAmG;AACnG,wBAAgB,mBAAmB,CAAC,IAAI,EAAE,MAAM,GAAG,uBAAuB,EAAE,CAyC3E"}

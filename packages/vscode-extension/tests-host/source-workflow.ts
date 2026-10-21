@@ -3,16 +3,10 @@ import fs from "node:fs";
 import { Session } from "node:inspector/promises";
 import path from "node:path";
 
-import type { SourceResearchResult } from "@uttori/asm-cli/source";
-import {
-  sourceContentHash,
-  sourceGit,
-  readResearchInputs,
-  parseSourceProject,
-  type SourceMergePreview,
-  type ProjectLabel,
-} from "@uttori/asm-disassembler";
-import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
+import type { SourceResearchResult } from "@uttori/asm-workflows/source";
+import { sourceContentHash, sourceGit, parseSourceProject, type SourceMergePreview } from "@uttori/asm-disassembler/source-project";
+import { readResearchInputs, type ProjectLabel } from "@uttori/asm-disassembler";
+import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes/disassembler";
 import * as vscode from "vscode";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

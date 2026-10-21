@@ -1,3 +1,4 @@
+import { parseDirectiveExpression } from "../ir/directive-arguments.js";
 /**
  * Small, deliberately separate grammar for named records. Expressions remain
  * assembler expressions. This parser only recognizes their outer delimiters.
@@ -82,7 +83,7 @@ export function structInitializerStart(text) {
 /**
  * Parse field names and scalar/array shapes without evaluating assembler expressions.
  * @param {string} text One brace-delimited record literal.
- * @returns {Map<string, string | string[]>} Unique names and unevaluated values.
+ * @returns {Map<string, StructInitializerValue | StructInitializerValue[]>} Unique names and unevaluated values.
  */
 export function parseStructInitializer(text) {
     return new Map(parseStructInitializerEntries(text).map((field) => [field.name, field.value]));
@@ -120,13 +121,24 @@ export function parseStructInitializerEntries(text) {
                 elementCursor = expressionStart + expression.length;
                 return { text: expression, start: expressionStart };
             });
-            fields.push({ name, value: values, start, expressions });
+            fields.push({ name, value: values.map(parseInitializerValue), start, expressions });
         }
         else {
-            fields.push({ name, value, start, expressions: [{ text: value, start: valueStart }] });
+            fields.push({
+                name,
+                value: parseInitializerValue(value),
+                start,
+                expressions: [{ text: value, start: valueStart }],
+            });
         }
     }
     return fields;
+}
+/** Initializer values use numeric operand semantics; record delimiters have already been removed. */
+function parseInitializerValue(text) {
+    // A define may supply commas or quoting inside a call. Bind that source fragment before
+    // evaluating the resulting expression, just as numeric directive operands do.
+    return { text, expression: parseDirectiveExpression(text) };
 }
 /**
  * Only named record statements gain implicit brace continuation, not legacy source.

@@ -16,7 +16,7 @@ import {
 } from "@uttori/asm-assets/interchange";
 
 import { test } from "../../../tests/ava-helper.js";
-import { AssetRecordStore } from "../src/asset-interchange/record-store.js";
+import { AssetRecordStore } from "../../workflows/src/asset-interchange/record-store.js";
 
 test("a complete four-megapixel tile inventory fits identity, binary storage and normalization budgets", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "asset-full-inventory-"));

@@ -130,7 +130,7 @@ function audioDetails(metadata: Readonly<Record<string, unknown>> | undefined): 
 export class AssetPreviewController implements Disposable {
   #panel: WebviewPanel | undefined;
 
-  constructor(readonly client: () => LanguageClient | undefined) {}
+  constructor(readonly client: (uri: TextDocument["uri"]) => LanguageClient | undefined) {}
 
   /** Return media only while the same text revision remains open.
    * @param {TextDocument} document Open assembly source.
@@ -143,7 +143,7 @@ export class AssetPreviewController implements Disposable {
     line: number,
     token?: CancellationToken,
   ): Promise<AssetPreviewResponse | undefined> {
-    const active = this.client();
+    const active = this.client(document.uri);
     if (
       !active ||
       document.uri.scheme !== "file" ||

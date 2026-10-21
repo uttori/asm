@@ -1,4 +1,4 @@
-import type { DirectiveDescriptor } from "@uttori/asm-core";
+import type { DirectiveDescriptor } from "@uttori/asm-core/tooling";
 /**
  * The directive catalog. Keywords mirror the registrations in
  * `src/directives/*` plus control-flow, macro, and define forms that are

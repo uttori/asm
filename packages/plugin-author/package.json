@@ -2,6 +2,9 @@
   "name": "uttori-asm-plugin-author-example",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "@uttori/asm-core": "1.0.0"
+  },
   "engines": {
     "node": ">=26"
   }

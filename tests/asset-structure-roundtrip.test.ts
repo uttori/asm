@@ -9,8 +9,6 @@ import {
   encodeAsepriteDocument,
   renderAsepriteFrame,
 } from "@uttori/asm-assets/aseprite";
-import { AssetInterchangeService, somSpriteSourceAdapter } from "@uttori/asm-cli/asset-interchange";
-import { inspectSourceProject } from "@uttori/asm-cli/source";
 import {
   acceptedSourceGeneration,
   applySourceGeneration,
@@ -19,7 +17,10 @@ import {
   retainSourceGeneration,
   sourceGit,
   verifySourceGeneration,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
+import { somSpriteSourceAdapter } from "@uttori/asm-game-secret-of-mana/workflows";
+import { AssetInterchangeService } from "@uttori/asm-workflows/asset-interchange";
+import { inspectSourceProject } from "@uttori/asm-workflows/source";
 
 import { test } from "./ava-helper.js";
 import { spriteSourceFixture, buildSpriteSource } from "./fixtures/sprite-source.js";

@@ -5,7 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseCliArguments, type CliArguments } from "@uttori/asm-cli";
-import { loadAnalysisProjectSnapshot, sourceGit } from "@uttori/asm-disassembler";
+import { loadAnalysisProjectSnapshot } from "@uttori/asm-disassembler";
+import { sourceGit } from "@uttori/asm-disassembler/source-project";
 
 const consumer = process.cwd();
 const executable = path.resolve(

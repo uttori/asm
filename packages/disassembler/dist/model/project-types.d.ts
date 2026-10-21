@@ -52,8 +52,6 @@ export interface AnalysisProjectManifest {
     readonly rom: RomIdentity;
     readonly mapping: ProjectMapping;
     readonly addressSpaces: readonly AddressSpaceDescriptor[];
-    /** Always empty: records live in SQLite tables. */
-    readonly shards: readonly [];
     /**
      * Project-relative filename, fixed to `analysis.sqlite` on publication.
      */
@@ -95,20 +93,8 @@ export interface IntervalAnnotation {
     readonly end: number;
     readonly classification: "unreached" | "opcode" | "operand" | "data8" | "data16" | "data24" | "data32" | "pointer16" | "pointer24" | "pointer32" | "graphics" | "music" | "compressed" | "asset" | "empty" | "text";
     readonly architecture: string;
-    /**
-     * Optional known CPU state overlay at this interval.
-     * Flag polarity is hardware: M/X `true` is 8-bit.
-     */
-    readonly state?: {
-        readonly e?: boolean;
-        readonly m?: boolean;
-        readonly x?: boolean;
-        readonly carry?: boolean;
-        readonly programBank?: number;
-        readonly dataBank?: number;
-        readonly directPage?: number;
-        readonly stackPointer?: number;
-    };
+    /** Compact register assumptions interpreted by readAnalysisTargetState using architecture as codec identity. */
+    readonly state?: Readonly<Record<string, boolean | number>>;
     /**
      * Control-flow hints imported from tools such as DiztinGUIsh.
      * `in` seeds analysis at `start`.
@@ -426,7 +412,7 @@ export interface AnalysisProjectShards {
 }
 /** Complete replacement for full writers. Pure edit helpers can also operate on selected views. */
 export interface AnalysisProject {
-    readonly manifest: Omit<AnalysisProjectManifest, "shards">;
+    readonly manifest: AnalysisProjectManifest;
     readonly shards: AnalysisProjectShards;
 }
 /** One consistent revision, detached from storage. Readonly types do not freeze records at runtime. */

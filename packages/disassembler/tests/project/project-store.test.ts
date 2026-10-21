@@ -14,6 +14,7 @@ import {
   parseAnalysisProjectManifest,
   validateAnalysisProject,
   publishAnalysisProject,
+  analysisProjectRevision,
   type AnalysisProject,
 } from "../../src/index.js";
 
@@ -113,7 +114,11 @@ test("analysis projects preserve deterministic records without ROM bytes", async
     const loaded = loadAnalysisProject(temporary);
     const { shards: ignored, ...manifest } = loaded.manifest;
     void ignored;
-    publishAnalysisProject(temporary, { manifest, shards: loaded.shards });
+    publishAnalysisProject(
+      temporary,
+      { manifest, shards: loaded.shards },
+      analysisProjectRevision(loaded.manifest),
+    );
     const second = loadAnalysisProject(temporary).shards;
 
     t.deepEqual(second, first);

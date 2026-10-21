@@ -126,6 +126,9 @@ export const annotationQueryIndexesReady = (database: DatabaseSync): boolean =>
   ) &&
   database.prepare("SELECT v FROM meta WHERE k='annotation-query-layout'").get()?.v ===
     QUERY_LAYOUT &&
+  Boolean(
+    database.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_instruction_ranges'").get(),
+  ) &&
   !database.prepare("SELECT 1 FROM query_instruction_nodes WHERE ready=0 LIMIT 1").get() &&
   !database.prepare(`${PENDING_EXECUTIONS} LIMIT 1`).get();
 
@@ -256,6 +259,11 @@ export const ensureAnnotationQueryIndexes = (database: DatabaseSync): void => {
       "DROP INDEX IF EXISTS query_instruction_output; CREATE INDEX query_instruction_output ON analysis(query_file_offset,id) WHERE kind='cfg-node'",
     );
   }
+  // The preservation guard needs only offsets and sizes. Cover both so it does not fetch a large
+  // analysis/export row for every context variant. Existing query-data layouts remain reusable.
+  database.exec(
+    "CREATE INDEX IF NOT EXISTS query_instruction_ranges ON analysis(query_file_offset,query_size) WHERE kind='cfg-node' AND query_file_offset IS NOT NULL",
+  );
   database
     .prepare("INSERT OR REPLACE INTO meta(k,v) VALUES('annotation-query-layout',?)")
     .run(QUERY_LAYOUT);

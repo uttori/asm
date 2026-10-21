@@ -1,3 +1,4 @@
+import type { RelativeReferenceExpressionNode } from "../ir/expression-node.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
 import type { StructDefinition } from "./struct-engine.js";
 
@@ -221,8 +222,28 @@ export class SymbolScopeService {
   handleRelativeLabel(label: string): number {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) ?? []).length : (label.match(/-/g) ?? []).length;
+    return this.declareRelativeLabel({
+      direction: isPositive ? 1 : -1,
+      depth,
+      macroLocal: label.startsWith("?"),
+      spelling: label,
+    });
+  }
+
+  /** Declare a parsed relative-label stream; spelling is retained only for diagnostics. */
+  declareRelativeLabel({
+    direction,
+    depth,
+    macroLocal: isMacroLocal,
+    spelling: label,
+  }: {
+    direction: 1 | -1;
+    depth: number;
+    macroLocal: boolean;
+    spelling: string;
+  }): number {
+    const isPositive = direction === 1;
     const targetAddress = this.host.currentTargetAddress;
-    const isMacroLocal = label.startsWith("?");
 
     if (this.host.enforceResolvedLabels) {
       if (isPositive) {
@@ -332,6 +353,76 @@ export class SymbolScopeService {
       );
     }
     return ordered[parsed.count - 1];
+  }
+
+  /** Resolve a typed relative stream without recognizing its spelling again. */
+  resolveRelativeReference(
+    reference: RelativeReferenceExpressionNode,
+    address = this.host.currentTargetAddress,
+  ): number {
+    const { direction, count, stream, text } = reference;
+    if (stream === "unnamed") {
+      if (!this.host.enforceResolvedLabels) {
+        return 0;
+      }
+      const table =
+        relativeLabelBucket(
+          direction === 1 ? this.host.forwardLabels : this.host.backwardLabels,
+          0,
+        ) ?? [];
+      const unit = this.objectFileKey();
+      const values = table
+        .filter(
+          (entry) =>
+            (!entry.unit || entry.unit === unit) &&
+            (direction === 1 ? entry.addr > address : entry.addr < address),
+        )
+        .map((entry) => entry.addr)
+        .toSorted((a, b) => (direction === 1 ? a - b : b - a));
+      if (values.length < count) {
+        throw new Error(
+          `Error: No unnamed label '${text}' found ${direction === 1 ? "after" : "before"} ${address.toString(16)}.`,
+        );
+      }
+      return values[count - 1];
+    }
+    if (
+      (direction === 1 && !this.host.enforceResolvedLabels) ||
+      (direction === -1 && this.host.isDefinitionCollectionStage)
+    ) {
+      return 0;
+    }
+    const table =
+      relativeLabelBucket(
+        direction === 1 ? this.host.forwardLabels : this.host.backwardLabels,
+        count,
+      ) ?? [];
+    const local = stream === "macro" && this.host.inMacroExpansion;
+    let nearest: number | undefined;
+    for (const entry of table) {
+      if (
+        local ? entry.macroInstance !== this.host.macroLabelInstance : Boolean(entry.macroInstance)
+      ) {
+        continue;
+      }
+      // Ordinary forward references include same-address inline labels; macro and backward streams are strict.
+      const valid =
+        direction === -1
+          ? entry.addr < address
+          : entry.addr >= address && (!local || entry.addr > address);
+      if (
+        valid &&
+        (nearest === undefined || (direction === 1 ? entry.addr < nearest : entry.addr > nearest))
+      ) {
+        nearest = entry.addr;
+      }
+    }
+    if (nearest === undefined) {
+      throw new Error(
+        `Error: No ${direction === 1 ? "+" : "-"} label '${text}' found ${direction === 1 ? "after" : "before"} ${address.toString(16)}.`,
+      );
+    }
+    return nearest;
   }
 
   /**

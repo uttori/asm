@@ -4,7 +4,6 @@ import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { executeSourceOperation } from "@uttori/asm-cli/source";
 import {
   AnalysisProjectStaleError,
   commitAnalysisProjectTransaction,
@@ -12,15 +11,15 @@ import {
   loadAnalysisProjectSnapshot,
   loadAnalysisProjectViewSnapshot,
   openAnalysisProjectStore,
-  sourceGit,
-  openSourceProject,
   type ProjectLabel,
 } from "@uttori/asm-disassembler";
-import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
+import { sourceGit, openSourceProject } from "@uttori/asm-disassembler/source-project";
+import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes/disassembler";
 import {
   analyzeSnesProject,
   SnesProjectInitializationCancelledError,
-} from "@uttori/asm-plugin-snes";
+} from "@uttori/asm-plugin-snes/disassembler";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

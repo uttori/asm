@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 
 import { waveImporter, writePcmWave } from "@uttori/asm-assets/audio";
 import { pngImporter, rewriteIndexedPng } from "@uttori/asm-assets/image";
-import { convertBrrWave } from "@uttori/asm-assets/secret-of-mana/som-asset-plugin";
-import { executeSourceOperation } from "@uttori/asm-cli/source";
-import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler";
+import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler/source-project";
+import { convertBrrWave } from "@uttori/asm-game-secret-of-mana";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 
 const application = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const clone = path.join(application, "experiments/secret-of-mana-git-workflow-full");

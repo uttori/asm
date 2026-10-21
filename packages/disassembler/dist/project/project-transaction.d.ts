@@ -110,15 +110,11 @@ export declare const commitAnalysisProjectTransaction: (directory: string, expec
  */
 export declare const commitAnalysisProjectViewUpdate: (directory: string, snapshot: AnalysisProjectViewSnapshot, updates: Partial<Omit<AnalysisProjectShards, "runtime">>) => CommittedAnalysisProjectTransaction;
 /**
- * Atomically create or replace every record, including runtime history.
- * Samples the current revision when called, so an edit built from an older caller snapshot is not
- * detected. A writer racing this call is rejected. Editing clients must use the explicit
- * revision-checked commit APIs instead. Use a view update to preserve runtime history.
- * @param {string} directory Project root to create or replace.
- * @param {AnalysisProject} project Complete replacement, including runtime history.
- * @returns {CommittedAnalysisProjectTransaction} Committed manifest, revision, and publication result.
+ * Create a project, or explicitly replace it against a caller-observed revision.
+ * Omitting expected permits creation only; it never samples a newer revision on the caller's behalf.
+ * Prefer metadata updates for ordinary edits so retained runtime history cannot be replaced accidentally.
  */
-export declare const publishAnalysisProject: (directory: string, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
+export declare const publishAnalysisProject: (directory: string, project: AnalysisProject, expected?: AnalysisProjectRevision) => CommittedAnalysisProjectTransaction;
 /**
  * Explicitly checkpoint and VACUUM the current SQLite file without changing its logical revision.
  * Requires temporary free space for a second database copy. Active readers can delay checkpoints.

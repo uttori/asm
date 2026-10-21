@@ -6,6 +6,7 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { sourceContentHash } from "../internal/source-inputs.js";
 export { sourceContentHash } from "../internal/source-inputs.js";
 import { acquireFileLease } from "../internal/durable-files.js";
+import { readSourceBlobs } from "./blobs.js";
 import { assertSourceObjectId, assertSourcePath, sourceGit, type SourceRepository } from "./git.js";
 import { registerSourcePinOwner } from "./pins.js";
 import { createSourceScratch } from "./scratch.js";
@@ -89,29 +90,12 @@ export async function verifySourceGeneration(
   const files: SourceGenerationEntry[] = [];
   for (let start = 0; start < entries.length; start += 32) {
     const batch = entries.slice(start, start + 32);
-    const result = await sourceGit(repository.root, ["cat-file", "--batch"], {
-      input: batch.map((entry) => entry.blob + "\n").join(""),
-    });
-    let cursor = 0;
+    const blobs = await readSourceBlobs(
+      repository,
+      batch.map((entry) => entry.blob),
+    );
     for (const entry of batch) {
-      const end = result.stdout.indexOf(10, cursor);
-      const [oid, type, sizeText] = result.stdout.subarray(cursor, end).toString("utf8").split(" ");
-      const size = Number(sizeText);
-      if (
-        end < 0 ||
-        oid !== entry.blob ||
-        type !== "blob" ||
-        !Number.isSafeInteger(size) ||
-        size < 0 ||
-        end + size + 1 >= result.stdout.length
-      ) {
-        throw new Error("Incomplete Git generation blob stream.");
-      }
-      files.push({
-        ...entry,
-        sha256: sourceContentHash(result.stdout.subarray(end + 1, end + 1 + size)),
-      });
-      cursor = end + size + 2;
+      files.push({ ...entry, sha256: sourceContentHash(blobs.get(entry.blob)!) });
     }
   }
   const hash = sourceContentHash(

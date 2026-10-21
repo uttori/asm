@@ -189,3 +189,18 @@ await build({
   },
   logLevel: "info",
 });
+
+// Analysis runs in a sibling worker so protocol requests can use the last complete snapshot.
+await build({
+  entryPoints: [path.resolve(here, "../language-server/src/index-worker.ts")],
+  outfile: path.join(here, "server/index-worker.mjs"),
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "esm",
+  target: editorRuntime,
+  banner: {
+    js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
+  },
+  logLevel: "info",
+});

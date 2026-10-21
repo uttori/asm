@@ -1,10 +1,10 @@
 import { test } from "../../../tests/ava-helper.js";
-import { decodeBrrPcm, writePcmWave } from "../src/audio.js";
 import {
   convertBrrWave,
   sliceBrrSegment,
   verifiedBrrFromWave,
-} from "../src/secret-of-mana/som-asset-plugin.js";
+} from "../../game-secret-of-mana/src/assembly.js";
+import { decodeBrrPcm, writePcmWave } from "../src/audio.js";
 
 /** Preserve original tokens in a normal playable WAVE with an optional private RIFF chunk. */
 function fixture(native: Uint8Array, samples = decodeBrrPcm(native)) {

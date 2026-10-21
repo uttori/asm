@@ -1,7 +1,5 @@
-import {
-  exportCaptureJson,
-  recoverCaptureFile,
-} from "../packages/debug-adapter/src/capture-file.js";
+import { exportCaptureJson, recoverCaptureFile } from "@uttori/asm-capture";
+
 
 const [operation, file, destination] = process.argv.slice(2);
 if (!file || !["inspect", "export"].includes(operation)) {

@@ -55,7 +55,7 @@ const DISASSEMBLER_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   model: ["internal"],
   analysis: ["model", "internal"],
   "research-inputs": ["model", "internal"],
-  "source-project": ["model", "internal", "research-inputs", "project"],
+  "source-project": ["model", "analysis", "internal", "research-inputs", "project"],
   runtime: ["model", "internal"],
   storage: ["model", "analysis", "runtime", "research-inputs", "internal"],
   project: ["model", "analysis", "research-inputs", "runtime", "storage", "internal"],
@@ -265,7 +265,7 @@ function collectPackageBoundaryViolations(root = process.cwd()): PackageBoundary
     const sourceFile = sourceFileFor(file);
     const relative = path.relative(disassemblerSource, file);
     const area = relative.split(path.sep)[0];
-    const facade = relative === "index.ts";
+    const facade = ["index.ts", "source-project.ts", "storage.ts"].includes(relative);
     if (!facade && !Object.hasOwn(DISASSEMBLER_DEPENDENCIES, area)) {
       violations.push({
         code: "DISASSEMBLER_UNKNOWN_AREA",

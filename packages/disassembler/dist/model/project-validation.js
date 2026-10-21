@@ -66,9 +66,6 @@ export function validateAnalysisProjectManifest(manifest) {
     if (revision !== undefined && !(isSafeInteger(revision) && revision >= 0)) {
         throw new Error("Invalid analysis sqlite revision.");
     }
-    if (!Array.isArray(manifest.shards) || manifest.shards.length !== 0) {
-        throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
-    }
 }
 const FORBIDDEN_ROM_PAYLOAD_KEYS = new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
 /**

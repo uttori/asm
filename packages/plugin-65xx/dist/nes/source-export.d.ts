@@ -1,4 +1,5 @@
-import { type ProjectLabel, type ProjectComment, type IntervalAnnotation, type AnalysisControlFlowNodeRecord, type SourceGenerationFile } from "@uttori/asm-disassembler";
+import { type ProjectLabel, type ProjectComment, type IntervalAnnotation, type AnalysisControlFlowNodeRecord } from "@uttori/asm-disassembler";
+import { type SourceGenerationFile } from "@uttori/asm-disassembler/source-project";
 import type { NesCartridge } from "./cartridge.js";
 /** One physical output segment, independent of the runtime mapper selection. */
 export interface NesSourceSegment {

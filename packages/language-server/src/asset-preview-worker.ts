@@ -1,6 +1,6 @@
 import { parentPort } from "node:worker_threads";
 
-import { convertAssetPreview, type AssetPreviewInput } from "./asset-preview-conversion.js";
+import { convertAssetPreview, type AssetPreviewInput } from "./asset-preview-host.js";
 
 if (!parentPort) {
   throw new Error("Asset preview worker requires a parent port.");

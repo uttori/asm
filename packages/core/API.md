@@ -65,6 +65,18 @@ Failures can leave partial state. Use a fresh session after failure. `getBinaryO
 to the output formatter without reassembling. Copy the returned bytes for independent ownership.
 `baseImage` is copied at construction. `setIncludePaths` retains its supplied array.
 
+Expression syntax includes `relativeReference`, `sourceText`, `template` and `error` nodes. Invalid
+syntax carries a portable diagnostic and is reported when evaluation selects that occurrence; it
+never requests another evaluator. Literal nodes retain their spelling and may carry the parsed
+`numericValue`. Structured hosts can implement `ExpressionHost.resolveReference` and
+`bindExpressionTemplate`; the older string host adapter remains available during migration.
+
+Program trees include `capture` nodes for macro/function/struct/table declarations. Generated command
+provenance can carry an immutable `fragment` with all contributing source occurrences. Worker grammar
+identity is `source-ast:4`; caches from older identities must be rebuilt. Inline numeric-data fragments
+borrow tokens from the enclosing command using `wordOffset`. Callers must treat syntax and fragments
+as borrowed immutable data; binding refreshes values per invocation/stage.
+
 `analyzeSource` uses an isolated temporary session, defaults to definition collection, and returns
 recoverable diagnostics. Plugin construction or cleanup failures can still throw. `fileProvider`
 supports virtual documents. Built-in file reads are synchronous. The default Node provider searches
@@ -86,7 +98,7 @@ Session disposal reverses lifecycle order, then disposes live state slots in rev
 
 Logical addresses and physical output offsets are distinct byte addresses. Address width is in
 bits, and write widths/instruction sizes are in bytes. A decoder-only architecture can be registered
-for analysis, but every architecture selected by an assembly target must provide an encoder.
+for analysis, but every architecture selected by an assembly target must provide a typed encoder.
 Expression `output.read` accepts a logical address and applies mapping. `output.canRead` checks
 a physical offset. Both inspect the base image when present, otherwise current output.
 
@@ -108,6 +120,12 @@ Source errors can be ordinary errors. Disposal attempts all resources and report
 after cleanup failures. Repeated disposal is a no-op. Never continue using disposed sessions or
 plugin resources. Direct `AssemblerEnvironment` construction is an advanced path that assumes
 already validated, frozen contribution records. Prefer `PluginManager.freeze()`.
+
+Directive factories, handlers and lifecycle hooks receive a `PluginSessionCapabilities` view.
+It is valid only during the synchronous callback; retaining it does not extend that lifetime.
+The view exposes cursor, expression, symbol and output operations, and excludes assembly entry
+points, host services, registries and disposal. Base-image reads are owned copies; output is a
+borrowed mutable view only during its documented callback. Targets own their encoders and state.
 
 ## Loader configuration and caching
 
@@ -140,3 +158,27 @@ does not evict its replacement. Use separate loader instances for independent li
 
 See [project configuration](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md) for user settings and
 [plugin authoring](https://github.com/uttori/asm/blob/master/packages/plugin-author/GUIDE.md) for the runnable plugin example.
+
+## Typed plugin contract (API v2)
+
+`PLUGIN_API_VERSION` is 2. Architecture contributions require a versioned, pure `operandGrammar`.
+Assembly targets also require `createTypedEncoder`; decoder-only registrations still provide a
+grammar but cannot construct an assembler session. Encoder factories receive target options and
+session state. Per-instruction frames provide node evaluation, references and emission; preparation
+and sizing never write bytes or retain resolved values across stages.
+
+Directive contributions use `phase: "lowered"` and required `syntax` parse/validate/bind hooks.
+`execute(payload, context)` receives an owned payload copy and `context.command` containing only
+`keyword` and source provenance. `beforeDirective` receives `keyword`, typed `syntax` and `source`.
+Neither callback receives execution words or raw command arguments. Source spelling in provenance
+is for diagnostics. An undefined binding retains the previously registered keyword owner.
+
+The manager rejects legacy `createEncoder`, `classifyOperand`, `splitOperands`, `referenceExpressions`
+and `createHandler` contribution fields. Public word encoder entry points are parse-at-entry
+adapters to the registered typed implementations. The legacy scanner and evaluator, `LoweredInstruction`/`LoweredOperand`/`ExpandedOperand` adapters, string operand classifiers and `expandParsedOperand` capability have been removed. Source entry APIs share the registered parser; encoding and sizing require typed resolution frames.
+
+Analysis projects scalar expression nodes from that same cached operand tree onto physical source
+ranges. Registers are excluded, repeated references remain distinct, and unbound defines retain
+reference structure. Cache identities include API, target grammar versions and syntax profile;
+serialized worker syntax uses `source-ast:4`, workspace snapshots use revision 3, and persisted root
+analysis uses cache revision 8.

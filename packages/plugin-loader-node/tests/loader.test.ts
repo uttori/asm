@@ -296,11 +296,14 @@ test("one environment is cached per normalized snapshot and replacement disposes
         id: "tracked.architecture",
         displayName: "Tracked architecture",
         unknownInstructionBehavior: "throw",
-        splitOperands: () => [],
-        classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
-        createEncoder: ({ emission }) => ({
-          estimateSize: () => 1,
-          encode: () => {
+        operandGrammar: { version: "1", parse: () => ({ operands: [] }) },
+        createTypedEncoder: () => ({
+          estimate: (frame) => {
+            frame.choose("fixture", 1);
+            return 1;
+          },
+          encode: (frame, { emission }) => {
+            frame.choose("fixture", 1);
             emission.writeByte(context.options.byte);
             return true;
           },

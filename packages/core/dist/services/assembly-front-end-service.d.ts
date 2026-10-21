@@ -1,12 +1,16 @@
 import type { ExecutableNode } from "../ir/assembly-tree.js";
+import { type ExpressionNode } from "../ir/expression-node.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
+import type { ContributionSyntax } from "../ir/source-syntax.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
 import { type SourcedCommand } from "./command-text-service.js";
-import { ProgramModelBuilder } from "./program-model-builder.js";
+import { ProgramModelBuilder, type IncrementalProgramParseState } from "./program-model-builder.js";
 export type AssemblyFrontEndHost = {
     currentFile: string;
     currentLine: number;
     passProgramCache: Map<string, ExecutableNode[]>;
+    parsePluginSyntax?(command: NormalizedCommand): ContributionSyntax | undefined;
+    grammarIdentity?(): string;
     collectSourceMetadata: boolean;
     inMacroExpansion: boolean;
     isDefinitionCollectionStage: boolean;
@@ -21,6 +25,17 @@ export type AssemblyFrontEndHost = {
 export declare class AssemblyFrontEndService {
     readonly host: AssemblyFrontEndHost;
     commandBuffer: string;
+    /** Source occurrences and grammar identity are part of syntax ownership, never invocation values. */
+    private readonly fragmentCommands;
+    private readonly fragmentExpressions;
+    private readonly assemblyExpressions;
+    clearFragmentCache(): void;
+    /** String entry adapters share immutable syntax; every caller still resolves current session bindings. */
+    parseAssemblyExpression(text: string): ExpressionNode;
+    /** Parse generated expression grammar once per actual spelling; resolved values are never retained. */
+    parseFragmentExpression(text: string): ExpressionNode;
+    /** Reuse generated syntax only for the same spelling, grammar and physical occurrence. */
+    parseFragmentCommand(text: string, file: string, line: number): NormalizedCommand;
     /** Opening physical line when processCommand receives a structured statement one line at a time. */
     private statementBufferStart?;
     readonly programModelBuilder: ProgramModelBuilder;
@@ -57,7 +72,20 @@ export declare class AssemblyFrontEndService {
      * @param {boolean} [allowEmpty] When true, empty commands still produce nodes.
      * @returns {NormalizedCommand | null} The normalized command or null for empty input.
      */
-    createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty?: boolean): NormalizedCommand | null;
+    createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty?: boolean, physical?: string): NormalizedCommand | null;
+    private grammarCache?;
+    /** Serializable profile flags plus selected contributions reconstruct the same worker grammar. */
+    get grammarIdentity(): string;
+    /** One source entry family; fragment materialization belongs to the expansion owner. */
+    parseSource(source: string, file?: string, line?: number): import("./program-model-builder.js").ProgramModel;
+    /** Generated text is parsed with the same profile and grammar identity as physical text. */
+    parseGeneratedFragment(source: string, file?: string, line?: number): import("./program-model-builder.js").ProgramModel;
+    /** Incremental expansion uses the same command parser while preserving deferred control bodies. */
+    parseGeneratedCommand(state: IncrementalProgramParseState, text: string, file: string, line: number, normalized?: NormalizedCommand): ExecutableNode[];
+    /** Expression adapters share the existing expression parser; parsing never evaluates values. */
+    parseExpression(source: string): import("../ir/expression-node.js").ExpressionParseResult;
+    /** Attach only grammars whose parser is pure; deferred templates bind only when their capture is invoked. */
+    parseCommandSyntax(command: NormalizedCommand): void;
     /**
      * Creates a loop-aware normalized command node for the typed parser.
      * @param {string} command The raw command text.
@@ -65,6 +93,6 @@ export declare class AssemblyFrontEndService {
      * @param {number} [sourceLine] Optional source line.
      * @returns {NormalizedCommand} The normalized node.
      */
-    createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
+    createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number, physical?: string): NormalizedCommand;
 }
 //# sourceMappingURL=assembly-front-end-service.d.ts.map

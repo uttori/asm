@@ -5,7 +5,6 @@ import { createIndexedPng } from "@uttori/asm-assets/image";
 import { inspectFrameAtlas } from "@uttori/asm-assets/secret-of-mana/som-frame-atlas";
 import { spritePaletteColors } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
 import { spriteEditorBaselineResult } from "@uttori/asm-assets/sprite-editing";
-import { inspectSourceProject } from "@uttori/asm-cli/source";
 import {
   sourceGit,
   acceptedSourceGeneration,
@@ -15,7 +14,8 @@ import {
   applySourceGeneration,
   finishSourceGeneration,
   abortSourceGeneration,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
+import { inspectSourceProject } from "@uttori/asm-workflows/source";
 
 import { deriveFramePlacements } from "../packages/assets/src/secret-of-mana/som-frame-composition.js";
 import {

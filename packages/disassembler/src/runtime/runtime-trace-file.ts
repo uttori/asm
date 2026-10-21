@@ -21,6 +21,8 @@ const MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
 
 /** File import limits, cancellation and incremental progress. */
 export interface RuntimeTraceFileOptions {
+  /** Explicit ACT2-only recovery of checkpointed instructions after physical EOF; defaults to false. */
+  readonly recoverPartial?: boolean;
   /** Positive safe integer byte limit for the whole input file. Defaults to 32 GiB, independently of heap/work budgets. */
   readonly maxBytes?: number;
   /** Checked between reads and after the final progress callback. Aborting rejects with signal.reason. */

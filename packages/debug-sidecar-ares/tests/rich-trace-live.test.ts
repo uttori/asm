@@ -3,12 +3,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import {
-  SidecarDebugBackend,
-  DebugSidecarClient,
-  NodeStdioSidecarTransport,
-  createDebugSidecarSessionToken,
-} from "@uttori/asm-debug-adapter";
+import { SidecarDebugBackend, DebugSidecarClient, NodeStdioSidecarTransport, createDebugSidecarSessionToken } from "@uttori/asm-debug-adapter";
 import test from "ava";
 
 import { AresProcessHost, parseAresRuntimeManifest } from "../src/ares-process-host.js";

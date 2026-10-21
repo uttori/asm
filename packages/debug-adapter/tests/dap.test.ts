@@ -6,21 +6,7 @@ import { AddressToLineMapping, createDebugMap } from "@uttori/asm-core";
 
 import { test } from "../../../tests/ava-helper.js";
 import { busCapabilities, busScope } from "../../../tests/helpers/capture-bus.js";
-import {
-  DapMessageParser,
-  DebugAdapterSession,
-  ReplayDebugBackend,
-  createDebugMapReplayScript,
-  encodeDapMessage,
-  formatDebugAddress,
-  type DapRequest,
-  type DapResponse,
-  type DebugBackend,
-  type DebugBackendEvent,
-  type DapProtocolMessage,
-  type DebugAdapterSessionOptions,
-  type ReplaySnapshot,
-} from "../src/index.js";
+import { DapMessageParser, DebugAdapterSession, ReplayDebugBackend, createDebugMapReplayScript, encodeDapMessage, formatDebugAddress, type DapRequest, type DapResponse, type DebugBackend, type DebugBackendEvent, type DapProtocolMessage, type DebugAdapterSessionOptions, type ReplaySnapshot } from "../src/index.js";
 
 const request = (seq: number, command: string, args: Record<string, unknown> = {}): DapRequest => ({
   seq,

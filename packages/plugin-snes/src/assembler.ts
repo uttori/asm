@@ -4,35 +4,29 @@ import {
   PluginManager,
   PLUGIN_API_VERSION,
   type AssemblerEnvironment,
-  type DirectiveDescriptor,
 } from "@uttori/asm-core";
+import { syntaxExpression, syntaxRecord, syntaxString } from "@uttori/asm-core/plugin";
 import type {
   AssemblerPlugin,
   DirectiveContribution,
   ExpressionSetContribution,
   TargetFactoryContext,
 } from "@uttori/asm-core/plugin";
+import { type DirectiveDescriptor } from "@uttori/asm-core/tooling";
 
 import { Cpu65816Decoder } from "./architectures/65816-decoder.js";
 import { cpu65816Specifications } from "./architectures/65816-spec.js";
-import { Arch65816 } from "./architectures/65816.js";
-import {
-  classify65816Operand,
-  classifySpc700Operand,
-  classifySuperFxOperand,
-} from "./architectures/operand-classifiers.js";
+import { parse65816Operands } from "./architectures/65816-syntax.js";
+import { cachedOperandGrammar } from "./architectures/operand-plans.js";
 import { Spc700Decoder } from "./architectures/spc700-decoder.js";
 import { spc700Specifications } from "./architectures/spc700-spec.js";
-import { ArchSPC700 } from "./architectures/spc700.js";
-import {
-  splitCommaOperands,
-  splitSingleOperand,
-  splitTopLevelCommaOperands,
-  referenceExpressions65816,
-} from "./architectures/split-operands.js";
+import { parseSpcOperands } from "./architectures/spc700-syntax.js";
 import { SuperFxDecoder } from "./architectures/superfx-decoder.js";
 import { superFxSpecifications } from "./architectures/superfx-spec.js";
-import { ArchSuperFX } from "./architectures/superfx.js";
+import { parseSuperFxOperands } from "./architectures/superfx-syntax.js";
+import { Typed65816 } from "./architectures/typed-65816.js";
+import { TypedSpc700 } from "./architectures/typed-spc700.js";
+import { TypedSuperFx } from "./architectures/typed-superfx.js";
 import {
   ASAR_COMPAT_NO_OP_DIRECTIVES,
   applyMapperSelection,
@@ -44,27 +38,9 @@ import {
   shouldUseNoromAddressing,
 } from "./asar/compatibility.js";
 import { snesAssetFormats } from "./assets/assembly-formats.js";
-import {
-  handleA8,
-  handleA16,
-  handleAccu,
-  handleI8,
-  handleI16,
-  handleIndex,
-  handleSmart,
-  handleSetcpu,
-  handlePushcpu,
-  handlePopcpu,
-} from "./directives/ca65-compat.js";
-import { handleFreespace, handleFreespaceByte, handleProt } from "./directives/freespace.js";
-import {
-  handleCheck,
-  handleMapper,
-  handleOptimize,
-  handleStartpos,
-  MAPPER_KEYWORDS,
-} from "./directives/layout.js";
+import { checkDirectiveSyntax, MAPPER_KEYWORDS } from "./directives/layout.js";
 import { createSpcRuntime } from "./directives/spc.js";
+import { snesDirectiveSyntax } from "./directives/syntax.js";
 import {
   cloneSnesSessionState,
   SNES_SESSION_STATE_ID,
@@ -107,18 +83,13 @@ const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
  * Registers a lowered-phase SNES directive and attaches matching hover/completion copy.
  * @param {string} id The directive id.
  * @param {readonly string[]} keywords The directive keywords.
- * @param {DirectiveContribution["createHandler"]} handler The directive handler.
  * @returns {DirectiveContribution} The directive contribution.
  */
-const directive = (
-  id: string,
-  keywords: readonly string[],
-  handler: DirectiveContribution["createHandler"],
-): DirectiveContribution => ({
+const directive = (id: string, keywords: readonly string[]): DirectiveContribution => ({
   id,
   keywords,
   phase: "lowered",
-  createHandler: handler,
+  syntax: snesDirectiveSyntax(id),
   tooling: toolingFor(keywords),
 });
 
@@ -325,42 +296,38 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
 
     context.registerArchitecture({
       id: "snes.65816",
+      operandGrammar: { version: "2", parse: cachedOperandGrammar(parse65816Operands) },
       aliases: ["65816", "65c816", "65802"],
       displayName: "WDC 65C816",
       unknownInstructionBehavior: "throw",
-      splitOperands: splitSingleOperand,
-      referenceExpressions: referenceExpressions65816,
-      classifyOperand: ({ operands }, operand) => classify65816Operand(operands, operand),
-      createEncoder: (factory) =>
-        new Arch65816(factory, () => factory.state.get(snesSessionStateKey).optimizeDirectPage),
+
+      createTypedEncoder: (factory) =>
+        new Typed65816(() => factory.state.get(snesSessionStateKey).optimizeDirectPage),
       createDecoder: () => new Cpu65816Decoder(),
       instructionSpecifications: cpu65816Specifications,
       instructions: cpu65816Catalog,
     });
     context.registerArchitecture({
       id: "snes.spc700",
+      operandGrammar: { version: "2", parse: cachedOperandGrammar(parseSpcOperands) },
       aliases: ["spc700", "spc700-raw", "spc700-inline"],
       displayName: "Sony SPC700",
       unknownInstructionBehavior: "throw",
-      splitOperands: splitTopLevelCommaOperands,
-      classifyOperand: ({ operands }, operand) => classifySpc700Operand(operands, operand),
-      createEncoder: (factory) => new ArchSPC700(factory),
+
+      createTypedEncoder: () => new TypedSpc700(),
       createDecoder: () => new Spc700Decoder(),
       instructionSpecifications: spc700Specifications,
       instructions: spc700Catalog,
     });
     context.registerArchitecture({
       id: "snes.superfx",
+      operandGrammar: { version: "2", parse: cachedOperandGrammar(parseSuperFxOperands) },
       aliases: ["superfx"],
       displayName: "Super FX",
       unknownInstructionBehavior: "returnFalse",
-      splitOperands: splitCommaOperands,
-      classifyOperand: ({ operands }, operand) => classifySuperFxOperand(operands, operand),
-      createEncoder: (factory) =>
-        new ArchSuperFX(
-          factory,
-          () => factory.state.get(snesSessionStateKey).asarSuperFxMoveShortAddress,
-        ),
+
+      createTypedEncoder: (factory) =>
+        new TypedSuperFx(() => factory.state.get(snesSessionStateKey).asarSuperFxMoveShortAddress),
       createDecoder: () => new SuperFxDecoder(),
       instructionSpecifications: superFxSpecifications,
       instructions: superFxCatalog,
@@ -449,162 +416,52 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
 
     context.registerDirectiveSet({
       id: "snes.mapper-directives",
-      directives: [
-        directive(
-          "snes.directive.mapper",
-          MAPPER_KEYWORDS,
-          ({ state }) =>
-            (_ctx, words) =>
-              handleMapper(state.get(snesSessionStateKey), words),
-        ),
-      ],
+      directives: [directive("snes.directive.mapper", MAPPER_KEYWORDS)],
     });
     context.registerDirectiveSet({
       id: "snes.policy-directives",
       tooling: toolingFor(["arch"]),
       directives: [
-        directive(
-          "snes.directive.check",
-          ["check"],
-          ({ state }) =>
-            (_ctx, words) =>
-              handleCheck(state.get(snesSessionStateKey), words),
-        ),
-        directive(
-          "snes.directive.optimize",
-          ["optimize"],
-          ({ state }) =>
-            (_ctx, words) =>
-              handleOptimize(state.get(snesSessionStateKey), words),
-        ),
-        directive("snes.directive.asar-noops", ASAR_COMPAT_NO_OP_DIRECTIVES, () => () => undefined),
+        {
+          id: "snes.directive.check",
+          keywords: ["check"],
+          phase: "lowered",
+          syntax: checkDirectiveSyntax,
+          tooling: toolingFor(["check"]),
+        },
+        directive("snes.directive.optimize", ["optimize"]),
+        directive("snes.directive.asar-noops", ASAR_COMPAT_NO_OP_DIRECTIVES),
       ],
     });
     context.registerDirectiveSet({
       id: "snes.ca65-compat-directives",
       directives: [
-        directive(
-          "snes.directive.ca65.a8",
-          [".a8"],
-          ({ session }) =>
-            () =>
-              handleA8(session),
-        ),
-        directive(
-          "snes.directive.ca65.a16",
-          [".a16"],
-          ({ session }) =>
-            () =>
-              handleA16(session),
-        ),
-        directive(
-          "snes.directive.ca65.i8",
-          [".i8"],
-          ({ session }) =>
-            () =>
-              handleI8(session),
-        ),
-        directive(
-          "snes.directive.ca65.i16",
-          [".i16"],
-          ({ session }) =>
-            () =>
-              handleI16(session),
-        ),
-        directive(
-          "snes.directive.ca65.accu",
-          [".accu"],
-          ({ session }) =>
-            (_ctx, words) =>
-              handleAccu(session, words),
-        ),
-        directive(
-          "snes.directive.ca65.index",
-          [".index"],
-          ({ session }) =>
-            (_ctx, words) =>
-              handleIndex(session, words),
-        ),
-        directive(
-          "snes.directive.ca65.smart",
-          [".smart"],
-          ({ session }) =>
-            (_ctx, words) =>
-              handleSmart(session, words),
-        ),
-        directive(
-          "snes.directive.ca65.setcpu",
-          [".setcpu"],
-          ({ session }) =>
-            (_ctx, words) =>
-              handleSetcpu(session, words),
-        ),
-        directive(
-          "snes.directive.ca65.pushcpu",
-          [".pushcpu"],
-          ({ session, state }) =>
-            () =>
-              handlePushcpu(session, state.get(snesSessionStateKey)),
-        ),
-        directive(
-          "snes.directive.ca65.popcpu",
-          [".popcpu"],
-          ({ session, state }) =>
-            () =>
-              handlePopcpu(session, state.get(snesSessionStateKey)),
-        ),
+        directive("snes.directive.ca65.a8", [".a8"]),
+        directive("snes.directive.ca65.a16", [".a16"]),
+        directive("snes.directive.ca65.i8", [".i8"]),
+        directive("snes.directive.ca65.i16", [".i16"]),
+        directive("snes.directive.ca65.accu", [".accu"]),
+        directive("snes.directive.ca65.index", [".index"]),
+        directive("snes.directive.ca65.smart", [".smart"]),
+        directive("snes.directive.ca65.setcpu", [".setcpu"]),
+        directive("snes.directive.ca65.pushcpu", [".pushcpu"]),
+        directive("snes.directive.ca65.popcpu", [".popcpu"]),
       ],
     });
     context.registerDirectiveSet({
       id: "snes.memory-directives",
       directives: [
-        directive(
-          "snes.directive.freespace",
-          ["freecode", "freespace", "freedata"],
-          ({ session, state }) =>
-            (_ctx, words) =>
-              handleFreespace(session, state.get(snesSessionStateKey), words),
-        ),
-        directive(
-          "snes.directive.freespacebyte",
-          ["freespacebyte"],
-          ({ session, state }) =>
-            (_ctx, words) =>
-              handleFreespaceByte(session, state.get(snesSessionStateKey), words),
-        ),
-        directive(
-          "snes.directive.prot",
-          ["prot"],
-          ({ session }) =>
-            (_ctx, words) =>
-              handleProt(session, words),
-        ),
+        directive("snes.directive.freespace", ["freecode", "freespace", "freedata"]),
+        directive("snes.directive.freespacebyte", ["freespacebyte"]),
+        directive("snes.directive.prot", ["prot"]),
       ],
     });
     context.registerDirectiveSet({
       id: "snes.spc-directives",
       directives: [
-        directive(
-          "snes.directive.spcblock",
-          ["spcblock"],
-          ({ session, state }) =>
-            (_ctx, words) =>
-              createSpcRuntime(session, state.get(snesSessionStateKey)).handleSpcblock(words),
-        ),
-        directive(
-          "snes.directive.endspcblock",
-          ["endspcblock"],
-          ({ session, state }) =>
-            (_ctx, words) =>
-              createSpcRuntime(session, state.get(snesSessionStateKey)).handleEndSpcblock(words),
-        ),
-        directive(
-          "snes.directive.startpos",
-          ["startpos"],
-          ({ session, state }) =>
-            (_ctx, words) =>
-              handleStartpos(session, state.get(snesSessionStateKey), words),
-        ),
+        directive("snes.directive.spcblock", ["spcblock"]),
+        directive("snes.directive.endspcblock", ["endspcblock"]),
+        directive("snes.directive.startpos", ["startpos"]),
       ],
     });
 
@@ -612,11 +469,12 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
     context.registerExpressionSet(readExpressions);
     context.registerLifecycle({
       id: "snes.lifecycle",
+      beforeDirectiveKeywords: ["arch", "org", "namespace"],
       create: ({ state }) => ({
         onSessionCreated: ({ session }) => {
           session.outputFillByte = state.get(snesSessionStateKey).outputFillByte;
         },
-        beforeDirective: ({ session, keyword, words }) => {
+        beforeDirective: ({ session, keyword, syntax }) => {
           const targetState = state.get(snesSessionStateKey);
           if (targetState.inSpcBlock && ["arch", "org", "namespace"].includes(keyword)) {
             throw new Error(`${keyword.toUpperCase()} is unavailable inside spcblock.`);
@@ -625,7 +483,19 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
             keyword === "org" &&
             shouldRedirectOrgToSpcblock(targetState.spcInlineCompatibility)
           ) {
-            createSpcRuntime(session, targetState).handleSpcblock(["spcblock", ...words.slice(1)]);
+            const payload = syntax?.kind === "plugin" ? syntax.payload : undefined;
+            if (syntaxRecord({ address: syntaxExpression, text: syntaxString })(payload)) {
+              createSpcRuntime(session, targetState).executeSpcblock({
+                destination: payload.address,
+                destinationText: payload.text,
+              });
+            } else {
+              // Malformed or stale syntax must retain its parser diagnostic, never retry as words.
+              if (syntax?.kind === "plugin" && syntax.error) {
+                throw new Error(syntax.error);
+              }
+              throw new Error("SPC inline ORG requires its parsed address payload.");
+            }
             return "handled";
           }
           return "continue";

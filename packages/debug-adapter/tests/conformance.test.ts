@@ -1,10 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import {
-  DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
-  DEBUG_BACKEND_CONFORMANCE_VERSION,
-  ReplayDebugBackend,
-  runDebugBackendConformance,
-} from "../src/index.js";
+import { DEBUG_BACKEND_CONFORMANCE_SCENARIOS, DEBUG_BACKEND_CONFORMANCE_VERSION, ReplayDebugBackend, runDebugBackendConformance } from "../src/index.js";
 import {
   conformanceAddress,
   debugConformanceFixture,

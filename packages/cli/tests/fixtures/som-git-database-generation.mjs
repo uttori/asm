@@ -4,13 +4,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { executeSourceOperation } from "@uttori/asm-cli/source";
 import {
   openSourceProject,
   sourceGit,
   verifySourceGeneration,
   SOURCE_INPUT_SNAPSHOT_FILE,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 
 const application = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const clone = path.join(application, "experiments/secret-of-mana-git-workflow-full");

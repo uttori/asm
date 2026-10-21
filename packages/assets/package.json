@@ -82,11 +82,6 @@
       "types": "./dist/secret-of-mana/som-lz.d.ts",
       "import": "./dist/secret-of-mana/som-lz.js"
     },
-    "./secret-of-mana/som-asset-plugin": {
-      "uttori-source": "./src/secret-of-mana/som-asset-plugin.ts",
-      "types": "./dist/secret-of-mana/som-asset-plugin.d.ts",
-      "import": "./dist/secret-of-mana/som-asset-plugin.js"
-    },
     "./secret-of-mana/som-dialogue": {
       "uttori-source": "./src/secret-of-mana/som-dialogue.ts",
       "types": "./dist/secret-of-mana/som-dialogue.d.ts",
@@ -216,6 +211,31 @@
       "uttori-source": "./src/secret-of-mana/som-source.ts",
       "types": "./dist/secret-of-mana/som-source.d.ts",
       "import": "./dist/secret-of-mana/som-source.js"
+    },
+    "./secret-of-mana/som-boss-image": {
+      "uttori-source": "./src/secret-of-mana/som-boss-image.ts",
+      "types": "./dist/secret-of-mana/som-boss-image.d.ts",
+      "import": "./dist/secret-of-mana/som-boss-image.js"
+    },
+    "./secret-of-mana/som-lz": {
+      "uttori-source": "./src/secret-of-mana/som-lz.ts",
+      "types": "./dist/secret-of-mana/som-lz.d.ts",
+      "import": "./dist/secret-of-mana/som-lz.js"
+    },
+    "./secret-of-mana/som-world-rle": {
+      "uttori-source": "./src/secret-of-mana/som-world-rle.ts",
+      "types": "./dist/secret-of-mana/som-world-rle.d.ts",
+      "import": "./dist/secret-of-mana/som-world-rle.js"
+    },
+    "./preview-contracts": {
+      "uttori-source": "./src/preview-contracts.ts",
+      "types": "./dist/preview-contracts.d.ts",
+      "import": "./dist/preview-contracts.js"
+    },
+    "./secret-of-mana/som-boss-background": {
+      "uttori-source": "./src/secret-of-mana/som-boss-background.ts",
+      "types": "./dist/secret-of-mana/som-boss-background.d.ts",
+      "import": "./dist/secret-of-mana/som-boss-background.js"
     }
   },
   "publishConfig": {

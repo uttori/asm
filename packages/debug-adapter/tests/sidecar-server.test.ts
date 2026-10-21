@@ -1,15 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import {
-  DEBUG_SIDECAR_PROTOCOL,
-  DEBUG_SIDECAR_PROTOCOL_VERSION,
-  DebugSidecarMessageParser,
-  DebugSidecarServer,
-  ReplayDebugBackend,
-  createDebugSidecarSessionToken,
-  encodeDebugSidecarMessage,
-  type DebugSidecarMessage,
-  type DebugSidecarRequest,
-} from "../src/index.js";
+import { DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DebugSidecarMessageParser, DebugSidecarServer, ReplayDebugBackend, createDebugSidecarSessionToken, encodeDebugSidecarMessage, type DebugSidecarMessage, type DebugSidecarRequest } from "../src/index.js";
 import { debugConformanceScript } from "./fixtures/debug-conformance-fixture.js";
 
 const request = (

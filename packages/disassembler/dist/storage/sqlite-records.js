@@ -338,6 +338,13 @@ function readPayload(value) {
     const parsed = parseSqlitePayload(value);
     return isRecord(parsed) ? parsed : undefined;
 }
+/** Validate all captured registers before selecting decoder fields, including otherwise unused ones.
+ * Bytes are detached; the validated state belongs to the caller's decoded payload.
+ */
+export const runtimeInstructionFields = (value) => {
+    const body = requirePayload(value);
+    return { bytes: requireBytes(body.bytes), state: requireState(body.state) };
+};
 /**
  * Reconstruct a semantic fact without inventing absent optional fields. Stable-ID comparisons
  * depend on preserving the same payload across inserts and subsequent reads.
@@ -379,7 +386,6 @@ export const runtimeFromRow = (row) => {
         };
     }
     if (kind === "runtime-instruction") {
-        const body = requirePayload(extra);
         return {
             id,
             kind,
@@ -388,8 +394,7 @@ export const runtimeFromRow = (row) => {
             evidence: parsedEvidence,
             addressSpace: requireString(row.address_space, "address space"),
             address: Number(row.address),
-            bytes: requireBytes(body.bytes),
-            state: requireState(body.state),
+            ...runtimeInstructionFields(extra),
         };
     }
     if (kind === "runtime-graphics-access") {

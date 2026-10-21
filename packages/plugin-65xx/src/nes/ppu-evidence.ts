@@ -1,15 +1,15 @@
 import path from "node:path";
 
+import type { CaptureNesBusAccessV2 } from "@uttori/asm-capture";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import type { CaptureNesBusAccessV2 } from "@uttori/asm-debug-adapter";
 import {
   openAnalysisProjectStore,
-  sourceContentHash,
   type ImportReport,
   type ResearchSnapshot,
   type RuntimeGraphicsFact,
   type RuntimeGraphicsAccessRecord,
 } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
 import type { NesPPUCaptureSummary } from "./ppu.js";
 

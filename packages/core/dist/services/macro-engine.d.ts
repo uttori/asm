@@ -1,5 +1,9 @@
-import { type NormalizedCommand } from "../ir/normalized-command.js";
+import { type CommandOperation } from "../ir/command-operation.js";
+import { type MacroLineTemplate } from "../ir/macro-template.js";
+import { type CommandProvenance, type NormalizedCommand } from "../ir/normalized-command.js";
+import { type SourceFragment } from "../ir/source-fragment.js";
 import type { MathCore } from "../mathcore.js";
+import type { MacroArgumentOrigin, SourceOrigin } from "../source-provenance.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
 import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
 /** Represents a macro definition. */
@@ -14,6 +18,8 @@ export type MacroDefinition = {
     body: NormalizedCommand[];
     /** The file where this macro was defined. */
     sourceFile?: string;
+    /** Header occurrence, including the include chain in which this definition was captured. */
+    source?: CommandProvenance;
 };
 export type MacroExpansionControlEntry = {
     type: "if" | "while" | "for";
@@ -25,10 +31,7 @@ export interface MacroEngineHost {
     currentTargetAddress: number;
     defines: Map<string, string>;
     labelTable: Map<string, LabelEntry>;
-    inMacroDefinition: boolean;
     currentMacroName: string;
-    currentMacroParams: string[];
-    currentMacroBody: NormalizedCommand[];
     currentVariadicCount: number | undefined;
     currentVariadicArgs: string[];
     mathCore: MathCore;
@@ -42,7 +45,12 @@ export interface MacroEngineHost {
     symbolScope: SymbolScopeService;
     evaluateExpression(input: string): boolean;
     resolvedefines(input: string): string;
-    processCommand(command: string, preprocessed?: boolean): void;
+    resolveDefineFragment?(fragment: SourceFragment): SourceFragment;
+    processCommand(command: string, preprocessed?: boolean, template?: NormalizedCommand): void;
+    /** Core hosts accept attributed fragments; older hosts use the explicit public adapter. */
+    processSourceFragment(fragment: SourceFragment, preprocessed?: boolean, template?: NormalizedCommand): void;
+    /** Optional for older hosts; scopes provenance without changing expansion semantics. */
+    withSourceOrigin?(origin: SourceOrigin, execute: () => void): void;
     applyDefineAssignment(command: string): boolean;
     recordSymbolDefinition(kind: "macro", name: string, options?: {
         value?: number | string;
@@ -53,8 +61,8 @@ export interface MacroEngineHost {
 export declare class MacroEngine {
     host: MacroEngineHost;
     macroExpansionControlStack: MacroExpansionControlEntry[];
-    pendingMacroSourceFile: string;
-    pendingMacroSourceLine: number;
+    /** Weak ownership releases definitions when an assembly snapshot is discarded. */
+    private readonly templates;
     constructor(host: MacroEngineHost);
     /**
      * Checks whether the current macro expansion line is in an active branch.
@@ -77,23 +85,21 @@ export declare class MacroEngine {
      * @param {string} line The fully expanded line text.
      */
     updateMacroExpansionControlState(line: string): void;
-    /**
-     * Handles a macro definition command.
-     * @param {NormalizedCommand} commandNode The command node to handle.
-     * @returns {boolean} `true` if the command was handled, `false` otherwise.
-     */
-    handleDefinitionCommand(commandNode: NormalizedCommand): boolean;
-    /**
-     * Rewrites macro label references.
-     * @param {string} command The command to rewrite.
-     * @returns {string} The rewritten command.
-     */
-    rewriteMacroLabelReferences(command: string): string;
+    /** Install a captured declaration without executing or lowering its template body. */
+    installDefinition(header: Extract<CommandOperation, {
+        kind: "macroHeader";
+    }>, body: NormalizedCommand[], source: CommandProvenance): void;
     /**
      * Calls a macro.
      * @param {string} invocation The invocation to call.
      */
-    callMacro(invocation: string): void;
+    callMacro(invocation: string, source?: CommandProvenance): void;
+    /** Bind parsed arguments once; the invocation owns all mutable expansion state. */
+    executeInvocation(operation: Extract<CommandOperation, {
+        kind: "macroCall";
+    }>, source?: CommandProvenance): void;
+    /** Expand one template at a time so define writes and active branches affect the next line. */
+    private executeMacroBody;
     /**
      * Expands a macro line.
      * @param {string} line The line to expand.
@@ -102,17 +108,22 @@ export declare class MacroEngine {
      * @param {number} variadicCount The variadic count.
      * @returns {string} The expanded line.
      */
-    expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string;
-    /**
-     * Resolves variadic placeholders.
-     * @param {string} command The command to resolve.
-     * @returns {string} The resolved command.
-     */
+    expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number, template?: MacroLineTemplate): string;
+    /** Bind one macro occurrence in phase order while retaining each argument's physical source. */
+    expandMacroFragment(line: SourceFragment, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number, template?: MacroLineTemplate, argumentsOrigin?: readonly MacroArgumentOrigin[]): SourceFragment;
+    /** One numeric/index contract for eager expansion and loop-time rebinding. */
+    /** Return the selected index with its value so provenance never requires evaluating an index twice. */
+    private resolveVariadicBinding;
+    /** Public string adapter for the ordered fragment binder. */
     resolveVariadicPlaceholders(command: string): string;
+    /** Loop iterations bind count before indexes, after the loop variable/define state is refreshed. */
+    resolveVariadicFragment(fragment: SourceFragment, argumentsOrigin?: readonly MacroArgumentOrigin[]): SourceFragment;
     /**
      * Processes a macro line.
      * @param {string} line The line to process.
      */
-    processMacroLine(line: string): void;
+    processMacroLine(line: string, template?: NormalizedCommand): void;
+    /** Dispatch attributed fragments, never an anonymous command string, after active-branch selection. */
+    processMacroFragment(fragment: SourceFragment, template?: NormalizedCommand): void;
 }
 //# sourceMappingURL=macro-engine.d.ts.map

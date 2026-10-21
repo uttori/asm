@@ -1,5 +1,5 @@
 import path from "node:path";
-import { assertSourcePath, sourceContentHash } from "@uttori/asm-disassembler";
+import { assertSourcePath, sourceContentHash } from "@uttori/asm-disassembler/source-project";
 import { inspectSnesSource } from "../source-build.js";
 import { assertSnesRomExpansion, expansionHeaderOffset, } from "./expansion.js";
 const hex = (value) => `$${value.toString(16).toUpperCase()}`;

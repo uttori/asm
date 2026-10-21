@@ -5,10 +5,7 @@ import { mkdir, stat } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 
-import {
-  DEBUG_SIDECAR_SESSION_ENV,
-  type DebugBackendConnectOptions,
-} from "@uttori/asm-debug-adapter";
+import { DEBUG_SIDECAR_SESSION_ENV, type DebugBackendConnectOptions } from "@uttori/asm-debug-adapter";
 
 import { GdbRspClient, type GdbRspTransport } from "./gdb-rsp-client.js";
 import { NodeTcpGdbRspTransport } from "./node-tcp-gdb-rsp-transport.js";

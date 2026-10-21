@@ -1,50 +1,24 @@
-import type { ExpandedOperand, LoweredOperand } from "./architecture-types.js";
-import type { ExpressionNode } from "./ir/expression-node.js";
+import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expression-node.js";
+import type { ReferenceResolution } from "./ir/reference-path.js";
+/** Borrowed session bindings; parsed syntax never stores resolved addresses or pass-local values. */
 export type OperandResolverDependencies = {
-    resolveDefines(input: string): string;
-    isStructReference(input: string): boolean;
-    resolveStructLabel(input: string): number;
-    tryResolveLabel(input: string, requireStatic: boolean): number | undefined;
-    resolveLabel(input: string, requireStatic: boolean): number;
-    evaluateMath(input: string | ExpressionNode): number;
+    resolveReference(input: ReferenceExpressionNode): ReferenceResolution;
+    evaluateMath(input: ExpressionNode): number;
     shouldDeferExpressionEvaluation(): boolean;
     getCurrentAddress(): number;
-    requireStaticLabelLookup(): boolean;
 };
+/** Numeric operand evaluation. Target grammars own addressing forms and lexical width intent. */
 export declare class OperandResolver {
     readonly deps: OperandResolverDependencies;
+    private readonly parsedInputs;
     constructor(deps: OperandResolverDependencies);
-    normalizeNumericBaseMember(operand: string): string;
-    splitMathOperandSuffix(operand: string): {
-        expression: string;
-        suffix: string;
-    };
-    isNumericToken(token: string): boolean;
-    resolveArithmeticToken(token: string): number;
-    tryResolveSimpleArithmetic(operand: string): number | null;
-    determineValueLength(value: unknown): number;
-    isMathExpression(expression: unknown): boolean;
-    tryResolveLabelInOperand(operand: string): string;
-    /**
-     * Resolve defines, labels, struct references, and arithmetic under the current assembly stage.
-     * Deferred expression failures yield zero during sizing passes and throw during final emission.
-     * @param {string | ExpressionNode} operand Source operand or parsed expression, including an optional immediate prefix.
-     * @returns {number} Resolved value, or the deferred sizing placeholder.
-     */
-    getnum(operand: string | ExpressionNode): number;
-    /**
-     * Evaluate an already parsed operand with the same deferred-expression policy as getnum.
-     * @param {ExpressionNode} operand Numeric expression. Range nodes are rejected.
-     * @returns {number} Resolved value, or zero for a deferred expression failure.
-     */
+    /** Release public-entry syntax when an assembly snapshot ends. */
+    clearParsedOperands(): void;
+    /** Public string callers enter the same grammar used by numeric source directives. */
+    getnum(input: string | ExpressionNode): number;
+    /** Resolve the current occurrence, preserving deferred failures during definition/layout stages. */
     getnumFromNode(operand: ExpressionNode): number;
-    resolveReferenceValue(reference: string): number;
-    expandOperand(operand: string): ExpandedOperand;
-    lowerOperand(operand: string): LoweredOperand;
-    /**
-     * Returns the current logical address without applying architecture policy.
-     * @returns {number} Current logical address.
-     */
+    /** Current logical byte address, without target-specific mapping. */
     getCurrentAddress(): number;
 }
 //# sourceMappingURL=operand-resolver.d.ts.map

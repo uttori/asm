@@ -4,7 +4,7 @@ import { createReadStream } from "node:fs";
 import { mkdir, stat } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
-import { DEBUG_SIDECAR_SESSION_ENV, } from "@uttori/asm-debug-adapter";
+import { DEBUG_SIDECAR_SESSION_ENV } from "@uttori/asm-debug-adapter";
 import { GdbRspClient } from "./gdb-rsp-client.js";
 import { NodeTcpGdbRspTransport } from "./node-tcp-gdb-rsp-transport.js";
 export const ARES_RUNTIME_MANIFEST_VERSION = 1;

@@ -23,16 +23,21 @@ export function readSomDialogueDictionary(bytes) {
 }
 /** Convert an ordinary font code to ASCII; ambiguous or unidentified glyphs keep their exact byte. */
 function glyphText(byte) {
-    if (byte === 0x7f)
+    if (byte === 0x7f) {
         return "\n";
-    if (byte === 0x80)
+    }
+    if (byte === 0x80) {
         return " ";
-    if (byte >= 0x81 && byte <= 0x9a)
+    }
+    if (byte >= 0x81 && byte <= 0x9a) {
         return String.fromCharCode(byte - 0x81 + 97);
-    if (byte >= 0x9b && byte <= 0xb4)
+    }
+    if (byte >= 0x9b && byte <= 0xb4) {
         return String.fromCharCode(byte - 0x9b + 65);
-    if (byte >= 0xb5 && byte <= 0xbe)
+    }
+    if (byte >= 0xb5 && byte <= 0xbe) {
         return String.fromCharCode(byte - 0xb5 + 48);
+    }
     return punctuation.get(byte) ?? `\\x${byte.toString(16).padStart(2, "0").toUpperCase()}`;
 }
 /** Expand text only. Controls below 60 and the decoder's underflowing 5F case are rejected. */
@@ -40,19 +45,23 @@ export function expandSomDialogue(bytes, dictionary) {
     const output = [];
     for (const byte of bytes) {
         let index;
-        if (byte >= 0x60 && byte <= 0x7e)
+        if (byte >= 0x60 && byte <= 0x7e) {
             index = byte - 0x60;
-        else if (byte >= 0xd3)
+        }
+        else if (byte >= 0xd3) {
             index = byte - 0xc3;
+        }
         if (index !== undefined) {
             const pair = dictionary[index];
-            if (!pair)
+            if (!pair) {
                 throw new Error(`Missing SoM dialogue pair ${index}.`);
+            }
             output.push(...pair);
         }
         else {
-            if (byte < 0x7f)
+            if (byte < 0x7f) {
                 throw new Error(`Event/control byte ${byte.toString(16)} is outside a text span.`);
+            }
             output.push(byte);
         }
     }
@@ -64,39 +73,44 @@ export function decodeSomDialogue(bytes, dictionary) {
 }
 /** ASCII escapes select one native glyph; they cannot introduce commands or compressed aliases. */
 function parseGlyphs(text) {
-    const inverse = new Map([...Array.from({ length: 0x54 }, (_, i) => i + 0x7f)]
+    const inverse = new Map(Array.from({ length: 0x54 }, (_, i) => i + 0x7f)
         .filter((byte) => !glyphText(byte).startsWith("\\"))
         .map((byte) => [glyphText(byte), byte]));
     const bytes = [];
     for (let offset = 0; offset < text.length;) {
         if (text[offset] === "\\") {
-            const match = /^\\x([0-9a-f]{2})/i.exec(text.slice(offset));
-            if (!match)
+            const match = /^\\x([\da-f]{2})/i.exec(text.slice(offset));
+            if (!match) {
                 throw new Error(`Invalid dialogue escape at character ${offset}.`);
+            }
             const byte = Number.parseInt(match[1], 16);
-            if (byte < 0x7f || byte > 0xd2)
+            if (byte < 0x7f || byte > 0xd2) {
                 throw new Error("Dialogue escapes must select an ordinary glyph or line break.");
+            }
             bytes.push(byte);
             offset += 4;
         }
         else {
             const byte = inverse.get(text[offset]);
-            if (byte === undefined)
+            if (byte === undefined) {
                 throw new Error(`Unsupported dialogue character at ${offset}; use a verified glyph escape.`);
+            }
             bytes.push(byte);
             offset++;
         }
     }
-    if (bytes.length > MAX_GLYPHS)
+    if (bytes.length > MAX_GLYPHS) {
         throw new Error("Dialogue span exceeds the 4096-glyph authoring limit.");
+    }
     return bytes;
 }
 /** Reject impossible geometry instead of treating allocation size as visible width. */
 function validateLineGeometry(options) {
     const { lineColumns, initialColumn } = options;
     if (lineColumns === undefined) {
-        if (initialColumn !== undefined)
+        if (initialColumn !== undefined) {
             throw new Error("Initial dialogue column requires a line capacity.");
+        }
         return;
     }
     if (!Number.isSafeInteger(lineColumns) || lineColumns < 1 || lineColumns > 32) {
@@ -139,21 +153,27 @@ export function encodeSomDialogue(text, dictionary, options = {}) {
     for (let code = 0x60; code <= 0xff; code++) {
         // 7D is also a window-mode command at a stream entry. Its E0 alias is safe
         // in both entry and interior text contexts; untouched originals retain their alias.
-        if (code === 0x7d)
+        if (code === 0x7d) {
             continue;
+        }
         let index;
-        if (code <= 0x7e)
+        if (code <= 0x7e) {
             index = code - 0x60;
-        else if (code >= 0xd3)
+        }
+        else if (code >= 0xd3) {
             index = code - 0xc3;
-        if (index === undefined)
+        }
+        if (index === undefined) {
             continue;
+        }
         const pair = dictionary[index];
-        if (!pair)
+        if (!pair) {
             throw new Error(`Missing SoM dialogue pair ${index}.`);
+        }
         const key = pair[0] | (pair[1] << 8);
-        if (!pairs.has(key))
+        if (!pairs.has(key)) {
             pairs.set(key, code);
+        }
     }
     let target = options.byteLength;
     if (target !== undefined &&
@@ -161,8 +181,9 @@ export function encodeSomDialogue(text, dictionary, options = {}) {
         throw new Error("Dialogue byte budget must be an integer from 0 to 4096.");
     }
     if (options.original && decodeSomDialogue(options.original, dictionary) === text) {
-        if (target !== undefined && target !== options.original.length)
+        if (target !== undefined && target !== options.original.length) {
             throw new Error("Original dialogue disagrees with byte budget.");
+        }
         return options.original.slice();
     }
     const columns = new Uint8Array(glyphs.length);
@@ -170,27 +191,32 @@ export function encodeSomDialogue(text, dictionary, options = {}) {
         let column = options.initialColumn ?? 0;
         for (const [index, glyph] of glyphs.entries()) {
             columns[index] = column;
-            if (glyph === 0x7f)
+            if (glyph === 0x7f) {
                 column = 0;
-            else
+            }
+            else {
                 column = (column + 1) % options.lineColumns;
+            }
         }
     }
     const pairAt = (i) => {
-        if (i + 1 >= glyphs.length)
+        if (i + 1 >= glyphs.length) {
             return undefined;
+        }
         // Capacity exhaustion unwinds the native pair helper after its first glyph.
         // The compressed byte has already been consumed, so the second glyph is lost.
-        if (options.lineColumns !== undefined && columns[i] === options.lineColumns - 1)
+        if (options.lineColumns !== undefined && columns[i] === options.lineColumns - 1) {
             return undefined;
+        }
         return pairs.get(glyphs[i] | (glyphs[i + 1] << 8));
     };
     if (target === undefined) {
         const minimum = new Uint16Array(glyphs.length + 1);
         for (let i = glyphs.length - 1; i >= 0; i--) {
             minimum[i] = minimum[i + 1] + 1;
-            if (pairAt(i) !== undefined)
+            if (pairAt(i) !== undefined) {
                 minimum[i] = Math.min(minimum[i], minimum[i + 2] + 1);
+            }
         }
         target = minimum[0];
     }
@@ -201,12 +227,14 @@ export function encodeSomDialogue(text, dictionary, options = {}) {
     for (let i = glyphs.length - 1; i >= 0; i--) {
         for (let count = 1; count <= target; count++) {
             if (possible[(i + 1) * width + count - 1] ||
-                (pairAt(i) !== undefined && possible[(i + 2) * width + count - 1]))
+                (pairAt(i) !== undefined && possible[(i + 2) * width + count - 1])) {
                 possible[i * width + count] = 1;
+            }
         }
     }
-    if (!possible[target])
+    if (!possible[target]) {
         throw new Error(`Dialogue cannot fit its exact ${target}-byte ROM span; relocation or a different edit is required.`);
+    }
     const encoded = [];
     for (let i = 0, remaining = target; i < glyphs.length; remaining--) {
         const pair = pairAt(i);
@@ -243,53 +271,72 @@ export function previewSomDialogue(bytes, dictionary, options) {
             if (column === options.lineColumns) {
                 // The native helper returns from the line parser, rather than replaying a
                 // partially consumed DTE token on the following line.
-                if (index + 1 < expanded.length)
+                if (index + 1 < expanded.length) {
                     dropped.push({ byteOffset, glyph: expanded[index + 1] });
+                }
                 finish("capacity");
                 break;
             }
         }
     }
-    if (glyphs.length || lines.length === 0)
+    if (glyphs.length || lines.length === 0) {
         finish("end");
+    }
     return { lines, dropped, pixelWidth: options.lineColumns * 8, glyphHeight: 12 };
 }
 /** Reject malformed sidecars before any bytes are emitted. Hex is explicit; whitespace is never discarded. */
 function hexBytes(value) {
     if (typeof value !== "string" ||
         value.length > MAX_GLYPHS * 2 ||
-        !/^(?:[0-9a-f]{2})*$/i.test(value)) {
+        value.length % 2 !== 0 ||
+        /[^\da-f]/i.test(value)) {
         throw new Error("Invalid or oversized native dialogue hex.");
     }
     return Uint8Array.from(value.match(/../g) ?? [], (pair) => Number.parseInt(pair, 16));
 }
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/** Check JSON field types only; byte bounds, ordering and native command agreement are checked below. */
+function hasDialogueLayoutShape(value) {
+    return (isRecord(value) &&
+        value.format === "som-dialogue-script" &&
+        value.version === 1 &&
+        typeof value.dictionaryHex === "string" &&
+        Array.isArray(value.segments) &&
+        value.segments.length > 0 &&
+        value.segments.length <= MAX_GLYPHS &&
+        value.segments.every((segment) => isRecord(segment) &&
+            (segment.kind === "raw" || segment.kind === "text") &&
+            typeof segment.nativeHex === "string" &&
+            (segment.literal === undefined || typeof segment.literal === "boolean") &&
+            (segment.lineColumns === undefined || typeof segment.lineColumns === "number") &&
+            (segment.initialColumn === undefined || typeof segment.initialColumn === "number") &&
+            (segment.commands === undefined ||
+                (Array.isArray(segment.commands) &&
+                    segment.commands.length <= MAX_GLYPHS &&
+                    segment.commands.every((slot) => isRecord(slot) &&
+                        typeof slot.offset === "number" &&
+                        typeof slot.token === "string" &&
+                        (slot.editable === undefined || typeof slot.editable === "boolean"))))));
+}
 /** Validate the versioned sidecar and every text span, including unused source chunks. */
 export function readSomDialogueScriptLayout(value) {
-    if (!value ||
-        typeof value !== "object" ||
-        !("format" in value) ||
-        value.format !== "som-dialogue-script" ||
-        !("version" in value) ||
-        value.version !== 1 ||
-        !("dictionaryHex" in value) ||
-        !("segments" in value) ||
-        !Array.isArray(value.segments) ||
-        value.segments.length === 0 ||
-        value.segments.length > 4096) {
+    // Keep JSON values unknown until every nested field is checked; Array.isArray alone admits any[].
+    if (!hasDialogueLayoutShape(value)) {
         throw new Error("Invalid SoM dialogue-script layout.");
     }
     const dictionary = readSomDialogueDictionary(hexBytes(value.dictionaryHex));
     let total = 0;
     for (const [index, segment] of value.segments.entries()) {
-        if (!segment ||
-            !["raw", "text"].includes(segment.kind) ||
-            (index > 0 && segment.kind === value.segments[index - 1].kind))
+        if (index > 0 && segment.kind === value.segments[index - 1].kind) {
             throw new Error("Dialogue segments must alternate raw/text.");
+        }
         const bytes = hexBytes(segment.nativeHex);
-        if (!bytes.length || bytes.length > MAX_GLYPHS)
+        if (!bytes.length || bytes.length > MAX_GLYPHS) {
             throw new Error("Invalid dialogue segment size.");
-        if (segment.literal !== undefined &&
-            (segment.kind !== "text" || typeof segment.literal !== "boolean")) {
+        }
+        if (segment.literal !== undefined && segment.kind !== "text") {
             throw new Error("Literal dialogue policy requires a text segment and boolean value.");
         }
         if (segment.literal === true && bytes.some((byte) => byte < 0x7f || byte > 0xd2)) {
@@ -305,18 +352,12 @@ export function readSomDialogueScriptLayout(value) {
             throw new Error("Raw dialogue commands cannot carry text geometry.");
         }
         if (segment.commands !== undefined) {
-            if (segment.kind !== "raw" ||
-                !Array.isArray(segment.commands) ||
-                segment.commands.length > bytes.length) {
+            if (segment.kind !== "raw" || segment.commands.length > bytes.length) {
                 throw new Error("Named dialogue commands require a bounded raw segment.");
             }
             let end = 0;
             for (const slot of segment.commands) {
-                if (!slot ||
-                    !Number.isSafeInteger(slot.offset) ||
-                    slot.offset < end ||
-                    typeof slot.token !== "string" ||
-                    (slot.editable !== undefined && typeof slot.editable !== "boolean")) {
+                if (!Number.isSafeInteger(slot.offset) || slot.offset < end) {
                     throw new Error("Invalid or overlapping dialogue command slot.");
                 }
                 const command = encodeSomDialogueCommand(slot.token);
@@ -329,8 +370,9 @@ export function readSomDialogueScriptLayout(value) {
         }
         total += bytes.length;
     }
-    if (total > 65536)
+    if (total > 65536) {
         throw new Error("Dialogue script exceeds one ROM bank.");
+    }
     return value;
 }
 /** Split explicitly admitted commands from opaque bytes; their original raw owner stays intact. */
@@ -338,19 +380,21 @@ function rawParts(segment, index) {
     const native = hexBytes(segment.nativeHex), parts = [];
     let cursor = 0, opaque = 0;
     for (const slot of segment.commands ?? []) {
-        if (slot.offset > cursor)
+        if (slot.offset > cursor) {
             parts.push({
                 marker: `{raw:${index}:${opaque++}}`,
                 bytes: native.slice(cursor, slot.offset),
             });
+        }
         const bytes = encodeSomDialogueCommand(slot.token).bytes;
         parts.push({ marker: slot.token, bytes, slot });
         cursor = slot.offset + bytes.length;
     }
     if (cursor < native.length) {
         let marker = `{raw:${index}}`;
-        if (segment.commands?.length)
+        if (segment.commands?.length) {
             marker = `{raw:${index}:${opaque}}`;
+        }
         parts.push({ marker, bytes: native.slice(cursor) });
     }
     return parts;
@@ -367,8 +411,9 @@ export function exportSomDialogueScript(layout) {
             .join("")
         : decodeSomDialogue(hexBytes(segment.nativeHex), dictionary))
         .join("");
-    if (layout.segments.at(-1)?.kind === "raw")
+    if (layout.segments.at(-1)?.kind === "raw") {
         text += "\n";
+    }
     return text;
 }
 /**
@@ -378,17 +423,21 @@ export function exportSomDialogueScript(layout) {
  * interior references can be relocated safely.
  */
 export function packSomDialogueScript(source, layout, sizing = "fixed") {
-    if (!["fixed", "variable"].includes(sizing))
+    if (!["fixed", "variable"].includes(sizing)) {
         throw new Error("Invalid dialogue field sizing policy.");
-    if (source.some((byte) => byte > 127))
+    }
+    if (source.some((byte) => byte > 127)) {
         throw new Error("SoM dialogue source must be ASCII.");
+    }
     readSomDialogueScriptLayout(layout);
     const dictionary = readSomDialogueDictionary(hexBytes(layout.dictionaryHex));
     let text = new TextDecoder().decode(source).replaceAll("\r\n", "\n");
-    if (text.includes("\r"))
+    if (text.includes("\r")) {
         throw new Error("Bare carriage returns are not dialogue line breaks.");
-    if (layout.segments.at(-1)?.kind === "raw" && text.endsWith("\n"))
+    }
+    if (layout.segments.at(-1)?.kind === "raw" && text.endsWith("\n")) {
         text = text.slice(0, -1);
+    }
     const chunks = [], segments = [];
     let cursor = 0, raw = 0, nativePreserved = true, originalOffset = 0, outputOffset = 0;
     for (const segment of layout.segments) {
@@ -405,22 +454,25 @@ export function packSomDialogueScript(source, layout, sizing = "fixed") {
             else {
                 for (const part of rawParts(segment, index)) {
                     if (!part.slot) {
-                        if (!text.startsWith(part.marker, cursor))
+                        if (!text.startsWith(part.marker, cursor)) {
                             throw new Error(`Missing or reordered command marker ${part.marker}.`);
+                        }
                         cursor += part.marker.length;
                         chunks.push(part.bytes);
                         continue;
                     }
-                    const match = /^\$\{[^{}]+\}/.exec(text.slice(cursor));
-                    if (!match)
+                    const match = /^\${[^{}]+}/.exec(text.slice(cursor));
+                    if (!match) {
                         throw new Error(`Missing dialogue command ${part.slot.token}.`);
+                    }
                     const command = encodeSomDialogueCommand(match[0]), expected = encodeSomDialogueCommand(part.slot.token);
                     if (command.family !== expected.family || command.bytes.length !== part.bytes.length) {
                         throw new Error("Dialogue command edit changed its admitted family or width.");
                     }
                     const preserved = command.bytes.every((byte, i) => byte === part.bytes[i]);
-                    if (part.slot.editable === false && !preserved)
+                    if (part.slot.editable === false && !preserved) {
                         throw new Error("Dialogue command slot is read-only.");
+                    }
                     nativePreserved &&= preserved;
                     chunks.push(command.bytes);
                     cursor += match[0].length;
@@ -435,8 +487,9 @@ export function packSomDialogueScript(source, layout, sizing = "fixed") {
             let byteLength;
             // Literal spans describe indexed cells. A relocation plan may resize ordinary
             // decoder text, but cannot change this table's cell count or interior indexes.
-            if (sizing === "fixed" || segment.literal === true)
+            if (sizing === "fixed" || segment.literal === true) {
                 byteLength = original.length;
+            }
             const encoded = encodeSomDialogue(text.slice(cursor, end), dictionary, {
                 original,
                 byteLength,
@@ -470,11 +523,13 @@ export function packSomDialogueScript(source, layout, sizing = "fixed") {
         originalOffset += original.length;
         outputOffset += length;
     }
-    if (cursor !== text.length)
+    if (cursor !== text.length) {
         throw new Error("Unexpected text after the final command marker.");
+    }
     const bytes = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
-    if (bytes.length > 65536)
+    if (bytes.length > 65536) {
         throw new Error("Packed dialogue script exceeds one ROM bank.");
+    }
     let offset = 0;
     for (const chunk of chunks) {
         bytes.set(chunk, offset);
@@ -484,8 +539,9 @@ export function packSomDialogueScript(source, layout, sizing = "fixed") {
 }
 /** Build a fixed-address include; variable sizing is available only through explicit relocation planning. */
 export function convertSomDialogueScript(source, options, resources) {
-    if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout))
+    if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout)) {
         throw new Error("Dialogue layout resource is required.");
+    }
     const layout = readSomDialogueScriptLayout(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(resources[options.layout].bytes)));
     const result = packSomDialogueScript(source.bytes, layout);
     const output = {

@@ -593,18 +593,21 @@ export class PluginManager implements PluginDisposable {
     }
     for (const record of transaction.architectures) {
       validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
-      // Analysis-only contributions omit an encoder. Assembler rejects those when
-      // constructing a build session. Optional factories must still be callable.
+      // Decoder-only targets still provide syntax for analysis; build sessions require a typed factory.
       if (
         typeof record.value.displayName !== "string" ||
-        (record.value.createEncoder !== undefined &&
-          typeof record.value.createEncoder !== "function") ||
+        "createEncoder" in record.value ||
+        "classifyOperand" in record.value ||
+        "splitOperands" in record.value ||
+        "referenceExpressions" in record.value ||
+        (record.value.createTypedEncoder !== undefined &&
+          typeof record.value.createTypedEncoder !== "function") ||
+        !record.value.operandGrammar ||
+        typeof record.value.operandGrammar.version !== "string" ||
+        !record.value.operandGrammar.version ||
+        typeof record.value.operandGrammar.parse !== "function" ||
         (record.value.createDecoder !== undefined &&
           typeof record.value.createDecoder !== "function") ||
-        typeof record.value.classifyOperand !== "function" ||
-        typeof record.value.splitOperands !== "function" ||
-        (record.value.referenceExpressions !== undefined &&
-          typeof record.value.referenceExpressions !== "function") ||
         !isArray(record.value.instructions)
       ) {
         throw new PluginError(`Architecture '${record.contributionId}' is malformed.`, {
@@ -655,7 +658,14 @@ export class PluginManager implements PluginDisposable {
           directive.keywords.some(
             (keyword: unknown) => typeof keyword !== "string" || keyword === "",
           ) ||
-          typeof directive.createHandler !== "function" ||
+          directive.phase !== "lowered" ||
+          "createHandler" in directive ||
+          !directive.syntax ||
+          typeof directive.syntax.parse !== "function" ||
+          typeof directive.syntax.bind !== "function" ||
+          typeof directive.syntax.validate !== "function" ||
+          typeof directive.syntax.version !== "string" ||
+          !directive.syntax.version ||
           !isArray(directive.tooling)
         ) {
           throw new PluginError(`Directive '${directive.id}' is malformed.`, {
@@ -745,7 +755,18 @@ export class PluginManager implements PluginDisposable {
       }
     }
     for (const record of transaction.lifecycles) {
-      if (typeof record.value.create !== "function") {
+      const keywords = record.value.beforeDirectiveKeywords;
+      if (
+        typeof record.value.create !== "function" ||
+        (keywords !== undefined &&
+          (!isArray(keywords) ||
+            keywords.some(
+              (keyword: unknown) =>
+                typeof keyword !== "string" ||
+                keyword.length === 0 ||
+                keyword !== keyword.trim().toLowerCase(),
+            )))
+      ) {
         this.#malformed(transaction, record);
       }
     }

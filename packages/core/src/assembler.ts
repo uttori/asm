@@ -1,14 +1,7 @@
 import { normalizeAddressForWidth } from "./address-width.js";
-import { AddressToLineMapping, type ResolvedInstructionOperand } from "./addressToLine.js";
+import { AddressToLineMapping } from "./addressToLine.js";
 import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
-import type {
-  ArchitectureEncoder,
-  ArchitectureEncoderContext,
-  ExpressionHost,
-  LoweredInstruction,
-  LoweredOperand,
-  OperandResolutionContext,
-} from "./architecture-types.js";
+import type { ArchitectureEncoder, ExpressionHost } from "./architecture-types.js";
 import type {
   AssemblerTraceCommandEvent,
   AssemblerTraceListener,
@@ -25,29 +18,50 @@ import {
   type AssemblySymbolReferenceKind,
   createAssemblySourceLocation,
   diagnosticFromError,
+  rememberErrorSource,
 } from "./diagnostics.js";
 import { CORE_DIRECTIVE_GROUPS, type CoreDirectiveGroup } from "./directive-groups.js";
+import { inheritCoreDataHandler, isCoreDataDirective } from "./directives/data.js";
 import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
 import { NodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
-import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
-import type { ConditionalBranchNode, ExecutableNode, LoopNode } from "./ir/assembly-tree.js";
-import { parseAssetCall } from "./ir/asset-call.js";
 import {
+  withAstQualification,
+  withSourceSyntax,
+  withTypedExecution,
+  incrementInternalCounter,
+  measureInternalPhase,
+} from "./internal-instrumentation.js";
+import type { ConditionalBranchNode, ExecutableNode, LoopNode } from "./ir/assembly-tree.js";
+import { assetCallGuard, parseAssetCall } from "./ir/asset-call.js";
+import {
+  inheritExpressionOccurrence,
   isReferenceExpressionNode,
-  parseExpressionNode,
+  parseExpressionAtSite,
   renderExpressionNode,
-  renderReferenceExpressionNode,
   type ExpressionNode,
   type ReferenceExpressionNode,
 } from "./ir/expression-node.js";
 import {
   cloneNormalizedCommand,
-  setCommandKind,
-  setCommandWords,
+  createNormalizedCommand,
+  classifyCommand,
   type NormalizedCommand,
 } from "./ir/normalized-command.js";
+import { bindInstructionOperands, OperandTemplateBindingError } from "./ir/parsed-operand.js";
+import { referencePath, type ReferenceResolution } from "./ir/reference-path.js";
+import { ReferencePlanner } from "./ir/reference-plan.js";
+import { InstructionResolutionFrame } from "./ir/resolved-instruction.js";
+import {
+  fragmentText,
+  sourceFragment,
+  sliceSourceFragment,
+  type SourceFragment,
+} from "./ir/source-fragment.js";
+import { materializeNumericData } from "./ir/statement-node.js";
+import { syntaxExpression } from "./ir/syntax-codec.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
+import { PLUGIN_API_VERSION } from "./plugin/contracts.js";
 import type { AssemblyStageName } from "./plugin/contracts.js";
 import {
   type AssemblerEnvironment,
@@ -60,19 +74,22 @@ import {
   PluginSessionStateStore,
   type PluginStateSnapshot,
 } from "./plugin/index.js";
+import { clonePluginSyntax } from "./plugin/syntax-snapshot.js";
 import {
   AssemblyFrontEndService,
   type AssemblyFrontEndHost,
 } from "./services/assembly-front-end-service.js";
+import { AssemblyOutputBuffer } from "./services/assembly-output-buffer.js";
 import { AssetAssemblyService } from "./services/asset-assembly-service.js";
 import {
   CommandLoweringService,
   type LoweredCommand,
+  type LoweredStatement,
   type LoweredExecutableNode,
   type LoweredLoopNode,
   type LoweredProgram,
 } from "./services/command-lowering-service.js";
-import { getDefineVariable, isBareLabelReference } from "./services/command-text-service.js";
+import { isBareLabelReference } from "./services/command-text-service.js";
 import { DefineEngine } from "./services/define-engine.js";
 import {
   DirectiveRuntimeService,
@@ -82,6 +99,7 @@ import { FrontEndCommandService } from "./services/front-end-command-service.js"
 import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
 import { MacroEngine, type MacroDefinition } from "./services/macro-engine.js";
 import { OutputWriterService } from "./services/output-writer-service.js";
+import { createPluginSessionCapabilities } from "./services/plugin-session-capabilities.js";
 import {
   ProgramModelBuilder,
   type IncrementalProgramParseState,
@@ -91,7 +109,6 @@ import { StructEngine, type StructDefinition } from "./services/struct-engine.js
 import {
   parseStructInitializerEntries,
   structInitializerStart,
-  splitInitializerList,
 } from "./services/struct-initializer.js";
 import { getStructMetadata } from "./services/struct-metadata.js";
 import {
@@ -100,6 +117,7 @@ import {
   type LabelEntry,
 } from "./services/symbol-scope-service.js";
 import { createTextSpan, sourceLineStarts, type SourceSpan } from "./source-location.js";
+import type { SourceOrigin } from "./source-provenance.js";
 import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "./syntax-profile.js";
 
 type RuntimeConditionalNode = ConditionalBranchNode;
@@ -136,6 +154,7 @@ type StageControlState = {
   inMacroExpansion: boolean;
   macroLabelInstance: number;
 };
+
 type StageExecutionState = {
   stage: AssemblyStageName;
   capabilities: StageExecutionCapabilities;
@@ -143,10 +162,10 @@ type StageExecutionState = {
   symbols: StageSymbolState;
   control: StageControlState;
   pluginState: PluginStateSnapshot;
+  /** Reclaimable execution cache. Full builds discard completed plans; direct runStage results retain them. */
   loweredProgram: LoweredProgram | null;
 };
 
-type CommandPreprocessResult = "continue" | "handled";
 type AssemblerServiceBag = {
   defineEngine: DefineEngine;
   directiveRuntime: DirectiveRuntimeService;
@@ -169,7 +188,10 @@ type CursorAddressFacade = {
 };
 // Source context stack used to associate low-level byte writes with the
 // currently executing normalized command, even when directives recurse.
-type TraceCommandContext = Pick<AssemblerTraceCommandEvent, "file" | "line" | "raw" | "normalized">;
+type TraceCommandContext = Pick<
+  AssemblerTraceCommandEvent,
+  "file" | "line" | "raw" | "normalized" | "origin"
+>;
 
 type WhileTracker = {
   iswhile: boolean;
@@ -217,6 +239,8 @@ const TOOLING_ANALYSIS_STAGES: readonly AssemblyStageName[] = ["collectDefinitio
 type ActiveLifecycle = {
   record: OwnedContribution<LifecycleContribution>;
   instance: SessionLifecycle;
+  /** Session-local lookup; the frozen contribution retains the portable array declaration. */
+  directiveKeywords?: ReadonlySet<string>;
 };
 
 /**
@@ -238,8 +262,17 @@ export class Assembler {
 
   public pushBaseStack: number[] = [];
 
-  /** Mutable bytes produced by this assembly session. */
-  public outputBytes: number[] | Uint8Array = [];
+  private readonly outputBuffer = new AssemblyOutputBuffer();
+  /**
+   * Mutable output; large contiguous session-owned images may use typed views. Reacquire a view after
+   * growing writes; assigned arrays retain their growth behavior and assigned typed arrays stay fixed.
+   */
+  get outputBytes(): number[] | Uint8Array {
+    return this.outputBuffer.bytes;
+  }
+  set outputBytes(value: number[] | Uint8Array) {
+    this.outputBuffer.replace(value);
+  }
   /** Byte used when expanding a sparse output range. */
   public outputFillByte: number = 0;
 
@@ -251,10 +284,7 @@ export class Assembler {
   public namespaceNestingPath: string[] = [];
 
   // Current macro tracking
-  public inMacroDefinition: boolean = false;
   public currentMacroName: string = "";
-  public currentMacroParams: string[] = [];
-  public currentMacroBody: NormalizedCommand[] = [];
   public currentVariadicCount: number | undefined = undefined;
   public currentVariadicArgs: string[] = [];
 
@@ -264,14 +294,14 @@ export class Assembler {
   public operandResolver: OperandResolver;
 
   public addressToLineMapping: AddressToLineMapping = new AddressToLineMapping();
-  /** Only live during final instruction encoding; never captures speculative layout values. */
-  #encodingOperands?: ResolvedInstructionOperand[];
   public currentFile: string = "";
   public currentLine: number = 0;
+  /** Invocation-local provenance. Buffered nodes snapshot it before this scope ends. */
+  private currentSourceOrigin?: SourceOrigin;
   /** Optional sink for structured tracing used by tests and ad-hoc debug scripts. */
-  public traceListener: AssemblerTraceListener | null = null;
+  private traceListener: AssemblerTraceListener | null = null;
   /** Active command contexts so nested byte writes inherit the right source line. */
-  public traceCommandStack: TraceCommandContext[] = [];
+  private readonly traceCommandStack: TraceCommandContext[] = [];
 
   public defines: Map<string, string> = new Map();
   /** Bare numeric values exposed only while executing typed `for` loops. */
@@ -281,9 +311,6 @@ export class Assembler {
   public characterMappings: Map<string, number> = new Map();
   public currentTable: string | null = null;
   public tableStack: Map<string, number>[] = [];
-
-  public inFunctionDefinition: boolean = false;
-  public functionDefinitionLines: string[] = [];
 
   public arch: string = "";
 
@@ -331,6 +358,7 @@ export class Assembler {
   public labelParents: Map<string, string | null> = new Map(); // Track explicit label ancestry without relying on underscores
 
   public requireStaticLabelLookup: boolean = false;
+  /** Session syntax values indexed by opaque builder identities, with source keys owned by the builder. */
   readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
   directiveRegistry: DirectiveRegistry;
   architectureRegistry: ArchitectureRegistry;
@@ -342,7 +370,7 @@ export class Assembler {
   public readonly pluginState: PluginSessionStateStore;
   public readonly pluginAddressSpace: PluginTargetAddressSpace;
   public readonly pluginOutputFormat: PluginTargetOutputFormat;
-  readonly activeLifecycles: readonly ActiveLifecycle[];
+  private readonly activeLifecycles: readonly ActiveLifecycle[];
   readonly cursorAddress: CursorAddressFacade;
   readonly fileProvider: AssemblyFileProvider;
   /** Binary/resource dependencies and converted bytes owned by the active build. */
@@ -355,7 +383,7 @@ export class Assembler {
   readonly programModelBuilder: ProgramModelBuilder;
   readonly commandLoweringService: CommandLoweringService;
   readonly incrementalProgramParseState: IncrementalProgramParseState;
-  public readonly services: AssemblerServiceBag;
+  private readonly services: AssemblerServiceBag;
   public readonly stageExecutionStates: Map<AssemblyStageName, StageExecutionState> = new Map();
   public readonly diagnostics: AssemblyDiagnostic[] = [];
   public readonly symbolDefinitions: AssemblySymbolDefinition[] = [];
@@ -364,16 +392,46 @@ export class Assembler {
   readonly #symbolDefinitionKeys = new Set<string>();
   /** Deduplication index for {@link symbolReferences} — O(1) vs. the former O(n) `.some()` scan. */
   readonly #symbolReferenceKeys = new Set<string>();
+  /** Pure occurrence plans replay against the current scope instead of caching resolved references. */
+  private readonly referencePlanner = new ReferencePlanner();
+  /** Static records need replay only when the same deduplication fields or analysis epoch change. */
+  private readonly stableReferences = new WeakMap<
+    object,
+    {
+      epoch: number;
+      file: string;
+      line: number;
+      kind: AssemblySymbolReferenceKind;
+      name: string;
+      span?: SourceSpan;
+    }
+  >();
+  private referenceEpoch = 0;
   /** Deduplication index for {@link includeEdges} — O(1) vs. O(n) `.some()` scan. */
   readonly #includeEdgeKeys = new Set<string>();
   public readonly includeEdges: AssemblyIncludeEdge[] = [];
   public readonly collectSourceMetadata: boolean;
   /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
   public followIncludes = true;
-  activeStageExecutionState: StageExecutionState | null = null;
-  analysisErrorRecoveryEnabled = false;
-  runtimePassthroughRewriteEnabled = false;
-  sessionDisposed = false;
+  private activeStageExecutionState: StageExecutionState | null = null;
+  private analysisErrorRecoveryEnabled = false;
+  private sessionDisposed = false;
+  #pluginBorrowDepth = 0;
+  readonly #pluginCapabilities = createPluginSessionCapabilities(this, () => {
+    if (this.#pluginBorrowDepth === 0) {
+      throw new Error("Plugin capabilities are only valid during a synchronous callback.");
+    }
+  });
+
+  /** Nesting permits target hooks triggered synchronously by another plugin capability. */
+  private borrowPluginCapabilities<T>(callback: () => T): T {
+    this.#pluginBorrowDepth++;
+    try {
+      return callback();
+    } finally {
+      this.#pluginBorrowDepth--;
+    }
+  }
 
   get defineEngine(): DefineEngine {
     return this.services.defineEngine;
@@ -557,6 +615,7 @@ export class Assembler {
       line: traceSource?.line ?? this.currentLine,
       raw: traceSource?.raw ?? "",
       normalized: traceSource?.normalized ?? "",
+      ...(traceSource?.origin ? { origin: traceSource.origin } : {}),
     });
   }
 
@@ -578,6 +637,7 @@ export class Assembler {
     this.includeEdges.length = 0;
     this.#symbolDefinitionKeys.clear();
     this.#symbolReferenceKeys.clear();
+    this.referenceEpoch++;
     this.#includeEdgeKeys.clear();
   }
 
@@ -608,7 +668,12 @@ export class Assembler {
    * @returns {AssemblySourceLocation} The current source location.
    */
   getCurrentSourceLocation(span?: SourceSpan): AssemblySourceLocation {
-    return createAssemblySourceLocation(this.currentFile, this.currentLine, span);
+    return createAssemblySourceLocation(
+      this.currentFile,
+      this.currentLine,
+      span,
+      this.currentSourceOrigin,
+    );
   }
 
   /**
@@ -664,7 +729,7 @@ export class Assembler {
     this.symbolDefinitions.push({
       name,
       kind,
-      location: createAssemblySourceLocation(file, line, options.span),
+      location: createAssemblySourceLocation(file, line, options.span, this.currentSourceOrigin),
       value: options.value,
       containerName: options.containerName,
     });
@@ -703,8 +768,44 @@ export class Assembler {
     this.symbolReferences.push({
       name,
       kind,
-      location: createAssemblySourceLocation(file, line, options.span),
+      location: createAssemblySourceLocation(file, line, options.span, this.currentSourceOrigin),
       containerName: options.containerName,
+    });
+  }
+
+  /**
+   * Avoid rebuilding an already-recorded static occurrence. These fields match reference deduplication;
+   * hierarchy and struct-container selection stay outside this shortcut because they can change later.
+   */
+  private recordStableSymbolReference(
+    owner: object,
+    kind: AssemblySymbolReferenceKind,
+    name: string,
+    span?: SourceSpan,
+  ): void {
+    if (!this.collectSourceMetadata) {
+      return;
+    }
+    const line = span?.line ?? this.currentLine;
+    const cached = this.stableReferences.get(owner);
+    if (
+      cached?.epoch === this.referenceEpoch &&
+      cached.file === this.currentFile &&
+      cached.line === line &&
+      cached.kind === kind &&
+      cached.name === name &&
+      cached.span === span
+    ) {
+      return;
+    }
+    this.recordSymbolReference(kind, name, { span });
+    this.stableReferences.set(owner, {
+      epoch: this.referenceEpoch,
+      file: this.currentFile,
+      line,
+      kind,
+      name,
+      span,
     });
   }
 
@@ -721,58 +822,50 @@ export class Assembler {
       return;
     }
 
-    switch (expression.type) {
-      case "defineReference":
-        if (expression.name || expression.content) {
-          this.recordSymbolReference(
-            "define",
-            expression.braced ? (expression.content ?? "") : (expression.name ?? ""),
-            { span: expression.span?.line === undefined ? undefined : expression.span },
-          );
-        }
-        return;
-      case "identifier": {
-        const segments = this.hierarchicalLabelReferences(expression.name);
-        if (segments) {
-          for (const segment of segments) {
-            this.recordSymbolReference("label", segment.name, {
-              containerName: segment.containerName,
-            });
+    for (const reference of this.referencePlanner.expression(expression)) {
+      switch (reference.type) {
+        case "defineReference":
+          if (reference.name || reference.content) {
+            this.recordStableSymbolReference(
+              reference,
+              "define",
+              reference.braced ? (reference.content ?? "") : (reference.name ?? ""),
+              reference.span?.line === undefined ? undefined : reference.span,
+            );
           }
-          return;
+          break;
+        case "identifier": {
+          // Hierarchy can become known in a later stage; only the syntax walk is cached.
+          const segments = this.hierarchicalLabelReferences(reference.name);
+          if (segments) {
+            for (const segment of segments) {
+              this.recordSymbolReference("label", segment.name, {
+                containerName: segment.containerName,
+              });
+            }
+          } else {
+            this.recordStableSymbolReference(
+              reference,
+              "label",
+              reference.name,
+              reference.span?.line === undefined ? undefined : reference.span,
+            );
+          }
+          break;
         }
-        this.recordSymbolReference("label", expression.name, {
-          span: expression.span?.line === undefined ? undefined : expression.span,
-        });
-        return;
+        case "member":
+        case "index":
+          this.collectStructReferenceSegments(reference, fallbackSpan);
+          break;
+        case "call":
+          this.recordStableSymbolReference(
+            reference,
+            "function",
+            reference.callee.name,
+            reference.callee.span ?? reference.span ?? fallbackSpan,
+          );
+          break;
       }
-      case "member":
-      case "index":
-        this.collectStructReferenceSegments(expression, fallbackSpan);
-        return;
-      case "call":
-        this.recordSymbolReference("function", expression.callee.name, {
-          span: expression.callee.span ?? expression.span ?? fallbackSpan,
-        });
-        for (const argument of expression.arguments) {
-          this.collectExpressionReferences(argument, fallbackSpan);
-        }
-        return;
-      case "unary":
-        this.collectExpressionReferences(expression.argument, fallbackSpan);
-        return;
-      case "binary":
-        this.collectExpressionReferences(expression.left, fallbackSpan);
-        this.collectExpressionReferences(expression.right, fallbackSpan);
-        return;
-      case "range":
-        this.collectExpressionReferences(expression.start, fallbackSpan);
-        this.collectExpressionReferences(expression.end, fallbackSpan);
-        return;
-      case "literal":
-      case "raw":
-      case "string":
-        return;
     }
   }
 
@@ -806,6 +899,7 @@ export class Assembler {
         this.collectStructReferenceSegments(expression.object, fallbackSpan);
         this.collectExpressionReferences(expression.index, fallbackSpan);
         return;
+      case "relativeReference":
       default:
         return;
     }
@@ -829,6 +923,7 @@ export class Assembler {
         return object.property.name;
       case "index":
         return this.structSegmentContainerName(object.object);
+      case "relativeReference":
       default:
         return undefined;
     }
@@ -852,7 +947,7 @@ export class Assembler {
     if (value === undefined) {
       return undefined;
     }
-    return this.structNameFromExpression(parseExpressionNode(value), seen);
+    return this.structNameFromExpression(this.frontEndService.parseAssemblyExpression(value), seen);
   }
 
   /**
@@ -885,6 +980,10 @@ export class Assembler {
       case "call":
       case "literal":
       case "range":
+      case "error":
+      case "relativeReference":
+      case "sourceText":
+      case "template":
       case "raw":
       case "string":
         break;
@@ -940,19 +1039,25 @@ export class Assembler {
     const parsed = command.parsed;
 
     if (command.keyword.toLowerCase() === "datastruct") {
-      const args = splitInitializerList(command.words.slice(1).join(" "));
-      if (args.length !== 2) {
+      const record = parsed.declaration;
+      if (record?.kind !== "dataStruct") {
         return;
       } // The directive reports its syntax error.
-      const reference = args[0];
-      const containerName = reference.replace(/\[[^\]]+]$/, "");
+      const reference = record.reference.text;
+      const containerName = record.reference.name;
       // An array row's root name was supplied by its header, not its source line.
       if (!command.source.raw.trimStart().startsWith("[")) {
-        this.collectExpressionReferences(parseExpressionNode(reference), fallbackSpan);
+        this.collectExpressionReferences(
+          this.frontEndService.parseAssemblyExpression(reference),
+          fallbackSpan,
+        );
       } else {
         const index = reference.match(/\[([^\]]+)]$/)?.[1];
         if (index) {
-          this.collectExpressionReferences(parseExpressionNode(index), fallbackSpan);
+          this.collectExpressionReferences(
+            this.frontEndService.parseAssemblyExpression(index),
+            fallbackSpan,
+          );
         }
       }
       // Read the literal from original source: row lowering supplies a struct
@@ -973,7 +1078,7 @@ export class Assembler {
         });
         for (const expression of field.expressions) {
           this.collectExpressionReferences(
-            parseExpressionNode(expression.text, {
+            parseExpressionAtSite(expression.text, "assembler", {
               text: raw,
               offset: literalStart + expression.start,
               line: command.source.line,
@@ -987,7 +1092,10 @@ export class Assembler {
     }
     if (command.keyword.toLowerCase() === "datastructs") {
       if (command.words[1]) {
-        this.collectExpressionReferences(parseExpressionNode(command.words[1]), fallbackSpan);
+        this.collectExpressionReferences(
+          this.frontEndService.parseAssemblyExpression(command.words[1]),
+          fallbackSpan,
+        );
       }
       return;
     }
@@ -1006,7 +1114,10 @@ export class Assembler {
         span: command.source.tokenSpans[0] ?? fallbackSpan,
       });
       for (const arg of parsed.macroInvocation.args) {
-        this.collectExpressionReferences(parseExpressionNode(arg), fallbackSpan);
+        this.collectExpressionReferences(
+          this.frontEndService.parseAssemblyExpression(arg),
+          fallbackSpan,
+        );
       }
     }
 
@@ -1020,27 +1131,52 @@ export class Assembler {
       );
     }
 
-    if (parsed.opcodeOperands?.mnemonic) {
-      this.recordSymbolReference("instruction", parsed.opcodeOperands.mnemonic, {
-        span: command.source.tokenSpans[0] ?? fallbackSpan,
-      });
+    const instructionCandidate =
+      command.kind === "opcodeCandidate" &&
+      !this.directiveRegistry.has(this.canonicalizeDirectiveKeyword(command.keyword));
+    if (instructionCandidate && parsed.opcodeOperands?.mnemonic) {
+      this.recordStableSymbolReference(
+        command,
+        "instruction",
+        parsed.opcodeOperands.mnemonic,
+        command.source.tokenSpans[0] ?? fallbackSpan,
+      );
     }
 
-    for (const operand of parsed.dataDirective?.operands ?? []) {
-      this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
+    if (command.syntax?.kind === "numericData") {
+      for (const operand of command.syntax.statement.operands) {
+        this.collectExpressionReferences(operand.expression, fallbackSpan);
+      }
     }
 
-    const referenceExpressions = this.resolveActiveArchitecture().definition?.referenceExpressions;
-    const operands =
-      parsed.opcodeOperands && referenceExpressions
-        ? referenceExpressions(parsed.opcodeOperands.operandText)
-        : (parsed.opcodeOperands?.operands ?? []);
-    for (const operand of operands) {
-      this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
+    if (instructionCandidate && parsed.opcodeOperands) {
+      const instruction = this.commandLoweringService.parseInstruction(command);
+      if (instruction) {
+        for (const expression of this.referencePlanner.instruction(instruction.operands, command)) {
+          this.collectExpressionReferences(expression, fallbackSpan);
+        }
+      }
     }
 
-    for (const arg of parsed.directiveArgs?.args ?? []) {
-      this.collectExpressionReferences(parseExpressionNode(arg), fallbackSpan);
+    // Native data references were collected above. Plugin payloads already carry their
+    // parsed expressions; parsing here would duplicate references and work on every stage.
+    const directiveSyntax = command.syntax?.kind === "plugin" ? command.syntax : undefined;
+    if (directiveSyntax?.kind === "plugin" && directiveSyntax.payload !== undefined) {
+      this.collectSyntaxReferences(directiveSyntax.payload, fallbackSpan);
+    }
+  }
+
+  /** Walk portable directive payloads, collecting expression nodes without interpreting enum/path strings. */
+  private collectSyntaxReferences(payload: unknown, fallbackSpan: SourceSpan): void {
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+    if (syntaxExpression(payload)) {
+      this.collectExpressionReferences(payload, fallbackSpan);
+      return;
+    }
+    for (const value of Object.values(payload)) {
+      this.collectSyntaxReferences(value, fallbackSpan);
     }
   }
 
@@ -1151,45 +1287,53 @@ export class Assembler {
       session.coreDirectiveGroups,
       session.syntaxProfile.directivePrefixes,
     );
-    registry.registerLowered("includeasset", session, (active, _words, raw, command) => {
-      const call = command?.parsed.includeAsset ?? parseAssetCall(raw);
-      if (!call) {
-        throw new Error("includeAsset requires call syntax: includeAsset(path, format, ...).");
-      }
-      if (active.deferAssetConversion) {
-        // Editor analysis discovers dependencies while exact byte counts wait for an explicit build.
-        // This keeps PNG/WAVE codecs out of the synchronous edit path.
-        active.assetAssembly.discoverDependencies(call);
-        active.#hasDeferredAssetLayout = true;
-        return;
-      }
-      const bytes = active.assetAssembly.materialize(call);
-      const startAddress = active.currentAddress;
-      // Preserve the logical asset address, but locate its bytes through the physical load cursor.
-      const startOutput = active.outputWriter.toOutputOffset(active.currentTargetBaseAddress);
-      // Validate the complete range before the first write; a failed conversion
-      // or invalid target address must never leave a partial asset in output.
-      active.outputWriter.validateWrite(bytes.length);
-      for (const byte of bytes) {
-        active.write1(byte);
-      }
-      const asset = active.assetAssembly.lastEmission;
-      if (active.traceStage === "emitProgram" && active.collectSourceMetadata && asset) {
-        active.addressToLineMapping.assets.push({
-          fileIdx: active.addressToLineMapping.getFileIndex(active.currentFile),
-          assetFileIdx: active.addressToLineMapping.getFileIndex(asset.sourcePath),
-          line: active.currentLine + 1,
-          format: asset.format,
-          part: asset.part,
-          size: asset.size,
-          transforms: asset.transforms,
-          conversion: asset.conversion,
-          address: startAddress,
-          ...(startOutput >= 0 ? { outputOffset: startOutput } : {}),
-        });
-      }
-      active.recordCurrentAddress();
-    });
+    registry.registerImmutableTyped(
+      "includeasset",
+      ({ text }) => {
+        const call = parseAssetCall(text);
+        if (!call) {
+          throw new Error("includeAsset requires call syntax: includeAsset(path, format, ...).");
+        }
+        return call;
+      },
+      assetCallGuard,
+      (call) => {
+        const active = session;
+        if (active.deferAssetConversion) {
+          // Editor analysis discovers dependencies while exact byte counts wait for an explicit build.
+          // This keeps PNG/WAVE codecs out of the synchronous edit path.
+          active.assetAssembly.discoverDependencies(call);
+          active.#hasDeferredAssetLayout = true;
+          return;
+        }
+        const bytes = active.assetAssembly.materialize(call);
+        const startAddress = active.currentAddress;
+        // Preserve the logical asset address, but locate its bytes through the physical load cursor.
+        const startOutput = active.outputWriter.toOutputOffset(active.currentTargetBaseAddress);
+        // Validate the complete range before the first write; a failed conversion
+        // or invalid target address must never leave a partial asset in output.
+        active.outputWriter.validateWrite(bytes.length);
+        for (const byte of bytes) {
+          active.write1(byte);
+        }
+        const asset = active.assetAssembly.lastEmission;
+        if (active.traceStage === "emitProgram" && active.collectSourceMetadata && asset) {
+          active.addressToLineMapping.assets.push({
+            fileIdx: active.addressToLineMapping.getFileIndex(active.currentFile),
+            assetFileIdx: active.addressToLineMapping.getFileIndex(asset.sourcePath),
+            line: active.currentLine + 1,
+            format: asset.format,
+            part: asset.part,
+            size: asset.size,
+            transforms: asset.transforms,
+            conversion: asset.conversion,
+            address: startAddress,
+            ...(startOutput >= 0 ? { outputOffset: startOutput } : {}),
+          });
+        }
+        active.recordCurrentAddress();
+      },
+    );
     const target = session.environment.getTarget(session.targetId);
     for (const setId of target?.directiveSets ?? []) {
       const set = session.environment.getDirectiveSet(setId);
@@ -1198,13 +1342,19 @@ export class Assembler {
       }
       const pluginId = session.environment.getContributionOwner(setId);
       for (const directive of set.directives) {
-        let handler;
+        const grammar = directive.syntax;
+        let bound;
         try {
-          handler = directive.createHandler({
-            targetId: session.targetId,
-            state: session.pluginState,
-            session,
-          });
+          bound = session.borrowPluginCapabilities(() =>
+            grammar.bind({
+              targetId: session.targetId,
+              state: session.pluginState,
+              session: session.#pluginCapabilities,
+            }),
+          );
+          if (bound && typeof bound.execute !== "function") {
+            throw new Error("Typed directive binding requires execute().");
+          }
         } catch (cause) {
           throw new PluginError(`Directive factory '${directive.id}' failed.`, {
             code: "PLUGIN_ACTIVATION_FAILED",
@@ -1214,16 +1364,18 @@ export class Assembler {
             cause,
           });
         }
-        // A dialect-specific contribution can leave the built-in handler active in another source mode.
-        if (!handler) {
-          continue;
-        }
-        registry.register(
-          [...directive.keywords],
-          undefined,
-          (_context, words, raw) => {
+        if (bound) {
+          registry.registerSyntax(directive.keywords, directive.id, grammar, (payload, command) => {
             try {
-              handler({ state: session.pluginState }, words, raw);
+              session.borrowPluginCapabilities(() =>
+                bound.execute(payload, {
+                  state: session.pluginState,
+                  command: clonePluginSyntax({
+                    keyword: command.keyword,
+                    source: command.source,
+                  }),
+                }),
+              );
             } catch (cause) {
               const detail = cause instanceof Error ? ` ${cause.message}` : "";
               throw new PluginError(`Directive '${directive.id}' failed.${detail}`, {
@@ -1234,18 +1386,30 @@ export class Assembler {
                 cause,
               });
             }
-          },
-          directive.phase,
-        );
+          });
+          continue;
+        }
+        // An unavailable binding leaves the previously registered keyword owner active.
       }
     }
     for (const [keyword, handler] of registry.handlers) {
-      registry.handlers.set(keyword, (words, raw, command) => {
-        if (session.runBeforeDirective(keyword, words, raw) === "handled") {
+      const wrapped: typeof handler = (words, raw, command) => {
+        // Direct registry calls enter the same parser before hooks observe the directive.
+        command ??= createNormalizedCommand(
+          raw,
+          raw || words.join(" "),
+          [...words],
+          session.currentFile,
+          session.currentLine,
+          false,
+        );
+        if (session.runBeforeDirective(keyword, command) === "handled") {
           return;
         }
         handler(words, raw, command);
-      });
+      };
+      inheritCoreDataHandler(handler, wrapped);
+      registry.handlers.set(keyword, wrapped);
     }
     return registry;
   }
@@ -1324,9 +1488,7 @@ export class Assembler {
       return;
     }
 
-    for (let i = 0; i < Math.min(seedSize, this.baseImage.length); i++) {
-      this.outputBytes[i] = this.baseImage[i];
-    }
+    this.outputBuffer.seed(this.baseImage.subarray(0, seedSize));
   }
 
   private createServices(): AssemblerServiceBag {
@@ -1478,6 +1640,15 @@ export class Assembler {
     const readCollectSourceMetadata = (): boolean => this.collectSourceMetadata;
     const frontEndHost: AssemblyFrontEndHost = {
       passProgramCache: this.passProgramCache,
+      parsePluginSyntax: (command) =>
+        isCoreDataDirective(
+          this.directiveRegistry,
+          this.canonicalizeDirectiveKeyword(command.keyword),
+        )
+          ? undefined
+          : this.directiveRegistry.parseSyntax(command),
+      grammarIdentity: () =>
+        `api${PLUGIN_API_VERSION}:${this.targetId}:${this.syntaxProfile.id}:${target.architectures.map((id) => `${id}@${this.environment.getArchitecture(id)?.operandGrammar.version}`).join(",")}:${this.directiveRegistry.grammarIdentity}`,
       resolveVariadicPlaceholders: (command: string) =>
         this.macroEngine.resolveVariadicPlaceholders(command),
       shouldEndifCloseInnermostWhile: (
@@ -1508,53 +1679,13 @@ export class Assembler {
     this.programModelBuilder = this.frontEndService.programModelBuilder;
     this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
     this.operandResolver = new OperandResolver({
-      resolveDefines: (input) => this.resolvedefines(input),
-      isStructReference: (input) => this.structEngine.hasStructReference(input),
-      resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
-      tryResolveLabel: (input, requireStatic) => {
-        const loopValue = this.activeLoopVariables.get(input.trim());
-        if (loopValue !== undefined) {
-          return loopValue;
-        }
-        return this.symbolScope.tryGetLabelValue(input, requireStatic);
-      },
-      resolveLabel: (input, requireStatic) => {
-        const loopValue = this.activeLoopVariables.get(input.trim());
-        if (loopValue !== undefined) {
-          return loopValue;
-        }
-        return this.symbolScope.getLabelValue(input, requireStatic);
-      },
+      resolveReference: (node) =>
+        this.resolveStructuredReference(node, this.requireStaticLabelLookup),
       evaluateMath: (input) => this.mathCore.math(input),
       shouldDeferExpressionEvaluation: () =>
         !this.getActiveStageCapabilities().enforceResolvedLabels,
       getCurrentAddress: () => this.currentTargetAddress,
-      requireStaticLabelLookup: () => this.requireStaticLabelLookup,
     });
-    const encoderContext: Omit<ArchitectureEncoderContext, "operands"> = {
-      emission: {
-        write1: (value) => this.write1(value),
-        write2: (value) => this.write2(value),
-        write3: (value) => this.write3(value),
-        writeByte: (value) => this.write1(value),
-        writeBytes: (values) => this.outputWriter.writeBytes(values),
-        writeValue: (value, width, endianness) =>
-          this.outputWriter.writeValue(value, width, endianness),
-      },
-      sizing: {
-        getCurrentAddress: () => this.currentTargetAddress,
-      },
-      branches: {
-        enforceResolvedLabels: () => this.enforceResolvedLabels,
-        findNextLabel: (label, referenceAddress) =>
-          this.symbolScope.findNextLabel(label, referenceAddress),
-        findPreviousLabel: (label, referenceAddress) =>
-          this.symbolScope.findPreviousLabel(label, referenceAddress),
-      },
-      diagnostics: {
-        error: (message) => new Error(`${message} (${this.currentFile}:${this.currentLine + 1})`),
-      },
-    };
     this.architectureRegistry = new ArchitectureRegistry();
     for (const contributionId of target.architectures) {
       const contribution = this.environment.getArchitecture(contributionId);
@@ -1565,9 +1696,9 @@ export class Assembler {
           contributionId,
         });
       }
-      if (!contribution.createEncoder) {
+      if (!contribution.createTypedEncoder) {
         throw new PluginError(
-          `Architecture contribution '${contributionId}' does not provide an encoder.`,
+          `Architecture contribution '${contributionId}' does not provide a typed encoder.`,
           {
             code: "PLUGIN_TARGET_INVALID",
             targetId,
@@ -1577,36 +1708,21 @@ export class Assembler {
       }
       let encoder: ArchitectureEncoder;
       try {
-        const architectureOperands: OperandResolutionContext = {
-          expandOperand: (operand) => this.operandResolver.expandOperand(operand),
-          getnum: (expression) => {
-            const value = this.operandResolver.getnum(expression);
-            // Observe the encoder's evaluation rather than rerunning possibly stateful expressions.
-            if (
-              this.#encodingOperands &&
-              typeof expression === "string" &&
-              Number.isFinite(value)
-            ) {
-              const values = this.#encodingOperands;
-              if (
-                !values.some((entry) => entry.expression === expression && entry.value === value)
-              ) {
-                values.push({ expression, value });
-              }
-            }
-            return value;
-          },
-          getCurrentAddress: () => this.operandResolver.getCurrentAddress(),
-          lowerOperand: (operand) =>
-            contribution.classifyOperand({ operands: this.operandResolver }, operand),
-        };
-        encoder = contribution.createEncoder({
-          ...encoderContext,
-          operands: architectureOperands,
+        const typed = contribution.createTypedEncoder({
           targetId,
           options: this.targetOptions,
           state: this.pluginState,
         });
+
+        if (!typed || typeof typed.estimate !== "function" || typeof typed.encode !== "function") {
+          throw new Error("Typed encoder must provide estimate and encode operations.");
+        }
+        encoder = {
+          typed,
+          // Keep catalog discovery available through the public architecture adapter during cutover.
+          getInstructionCatalog: () => [...contribution.instructions],
+          beginPass: typed.beginPass?.bind(typed),
+        };
       } catch (cause) {
         throw new PluginError(`Architecture factory '${contributionId}' failed.`, {
           code: "PLUGIN_ACTIVATION_FAILED",
@@ -1620,12 +1736,9 @@ export class Assembler {
         {
           name: contribution.id,
           encoder,
+          operandGrammar: contribution.operandGrammar,
           instructions:
             contribution.instructions.length > 0 ? contribution.instructions : undefined,
-          classifyOperand: (resolver, operand) =>
-            contribution.classifyOperand({ operands: resolver }, operand),
-          splitOperands: contribution.splitOperands,
-          referenceExpressions: contribution.referenceExpressions,
           unknownInstructionBehavior: contribution.unknownInstructionBehavior,
         },
         [...(contribution.aliases ?? [])],
@@ -1639,7 +1752,14 @@ export class Assembler {
     this.services.lowering = this.commandLoweringService;
     this.activeLifecycles = this.environment.getTargetLifecycles(targetId).map((record) => {
       try {
-        return { record, instance: record.value.create(targetFactoryContext) };
+        return {
+          record,
+          instance: record.value.create(targetFactoryContext),
+          directiveKeywords:
+            record.value.beforeDirectiveKeywords === undefined
+              ? undefined
+              : new Set(record.value.beforeDirectiveKeywords),
+        };
       } catch (cause) {
         throw new PluginError(`Lifecycle factory '${record.contributionId}' failed.`, {
           code: "PLUGIN_ACTIVATION_FAILED",
@@ -1652,7 +1772,10 @@ export class Assembler {
     });
     measureInternalPhase("onSessionCreated", () =>
       this.runLifecycleHook("onSessionCreated", (lifecycle) =>
-        lifecycle.onSessionCreated?.({ state: this.pluginState, session: this }),
+        lifecycle.onSessionCreated?.({
+          state: this.pluginState,
+          session: this.#pluginCapabilities,
+        }),
       ),
     );
     this.selectArchitecture(this.arch, this.arch);
@@ -1665,7 +1788,7 @@ export class Assembler {
   runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void {
     for (const { record, instance } of this.activeLifecycles) {
       try {
-        invoke(instance);
+        this.borrowPluginCapabilities(() => invoke(instance));
       } catch (cause) {
         throw new PluginError(`Lifecycle hook '${hookName}' failed.`, {
           code: "PLUGIN_HOOK_FAILED",
@@ -1680,25 +1803,57 @@ export class Assembler {
 
   runBeforeDirective(
     keyword: string,
-    words: readonly string[],
-    raw: string,
+    command: NormalizedCommand,
+    syntax = command.syntax ?? this.directiveRegistry.parseSyntax(command),
   ): "continue" | "handled" {
-    let result: "continue" | "handled" = "continue";
-    this.runLifecycleHook("beforeDirective", (lifecycle) => {
-      if (
-        result === "continue" &&
-        lifecycle.beforeDirective?.({
-          state: this.pluginState,
-          session: this,
-          keyword,
-          words,
-          raw,
-        }) === "handled"
-      ) {
-        result = "handled";
+    for (const { record, instance, directiveKeywords } of this.activeLifecycles) {
+      // Irrelevant middleware must not materialize detached source/AST copies. Unfiltered hooks
+      // retain registration order and receive their own mutable snapshot for every invocation.
+      if (!instance.beforeDirective || (directiveKeywords && !directiveKeywords.has(keyword))) {
+        continue;
       }
-    });
-    return result;
+      try {
+        let observedSyntax = syntax;
+        // Compact literals remain internal syntax storage. Materialize only for an interested
+        // middleware hook so its detached AST view and mutation isolation stay unchanged.
+        if (syntax?.kind === "numericData" && syntax.statement.literalData) {
+          observedSyntax = { ...syntax, statement: materializeNumericData(syntax.statement) };
+        } else if (
+          syntax?.kind === "sequence" &&
+          syntax.following.kind === "numericDataFragment" &&
+          syntax.following.statement.literalData
+        ) {
+          observedSyntax = {
+            ...syntax,
+            following: {
+              ...syntax.following,
+              statement: materializeNumericData(syntax.following.statement),
+            },
+          };
+        }
+        const result = this.borrowPluginCapabilities(() =>
+          instance.beforeDirective!({
+            state: this.pluginState,
+            session: this.#pluginCapabilities,
+            keyword,
+            source: clonePluginSyntax(command.source),
+            syntax: observedSyntax ? clonePluginSyntax(observedSyntax) : undefined,
+          }),
+        );
+        if (result === "handled") {
+          return "handled";
+        }
+      } catch (cause) {
+        throw new PluginError("Lifecycle hook 'beforeDirective' failed.", {
+          code: "PLUGIN_HOOK_FAILED",
+          pluginId: record.pluginId,
+          contributionId: record.contributionId,
+          targetId: this.targetId,
+          cause,
+        });
+      }
+    }
+    return "continue";
   }
 
   /**
@@ -1717,7 +1872,7 @@ export class Assembler {
     this.runLifecycleHook("shouldEndifCloseInnermostWhile", (lifecycle) => {
       const resolution = lifecycle.shouldEndifCloseInnermostWhile?.({
         state: this.pluginState,
-        session: this,
+        session: this.#pluginCapabilities,
         loopType,
         loopStartLine,
         ifStartLine,
@@ -1746,7 +1901,7 @@ export class Assembler {
     this.runLifecycleHook("onArchitectureSelected", (lifecycle) =>
       lifecycle.onArchitectureSelected?.({
         state: this.pluginState,
-        session: this,
+        session: this.#pluginCapabilities,
         previousArchitecture,
         architecture: resolved,
         sourceAlias,
@@ -1759,7 +1914,7 @@ export class Assembler {
     this.runLifecycleHook("beforeWrite", (lifecycle) =>
       lifecycle.beforeWrite?.({
         state: this.pluginState,
-        session: this,
+        session: this.#pluginCapabilities,
         logicalAddress,
         width,
       }),
@@ -1818,10 +1973,16 @@ export class Assembler {
       return;
     }
     this.sessionDisposed = true;
+    this.operandResolver.clearParsedOperands();
     const errors: unknown[] = [];
     for (const { record, instance } of [...this.activeLifecycles].toReversed()) {
       try {
-        instance.onSessionDispose?.({ state: this.pluginState, session: this });
+        this.borrowPluginCapabilities(() =>
+          instance.onSessionDispose?.({
+            state: this.pluginState,
+            session: this.#pluginCapabilities,
+          }),
+        );
       } catch (cause) {
         errors.push(
           new PluginError("Lifecycle hook 'onSessionDispose' failed.", {
@@ -1839,6 +2000,20 @@ export class Assembler {
     } catch (error) {
       errors.push(error);
     }
+    // Syntax/provenance belongs to this session. Release strong cache roots after lifecycle
+    // callbacks, including failed builds whose finishPass never cleared their include caches.
+    this.programModelBuilder.clearCache();
+    this.stageExecutionStates.clear();
+    this.activeStageExecutionState = null;
+    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
+    this.includeSource.endAssemblySnapshot();
+    this.mathCore.endAssemblySnapshot();
+    this.defineEngine.clearSyntaxCache();
+    this.frontEndService.clearFragmentCache();
+    // Captured bodies can own most of a large source graph. A disposed session must release
+    // them even when a caller/JIT stack keeps the assembler alive during the next build.
+    // Remove only our bindings; externally retained definitions and output remain unchanged.
+    this.macros.clear();
     if (errors.length > 0) {
       throw new AggregateError(
         errors,
@@ -1922,7 +2097,7 @@ export class Assembler {
     if (parseUnnamedLabelReference(trimmed)) {
       return this.symbolScope.getLabelValue(trimmed, this.requireStaticLabelLookup);
     }
-    const parsed = parseExpressionNode(trimmed);
+    const parsed = this.frontEndService.parseAssemblyExpression(trimmed);
     if (isReferenceExpressionNode(parsed)) {
       return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
     }
@@ -1933,9 +2108,6 @@ export class Assembler {
     if (baseOnly && (identifier === "..." || identifier === "…")) {
       if (this.inMacroExpansion && this.currentVariadicCount !== undefined) {
         return this.currentVariadicCount;
-      }
-      if (this.inMacroDefinition) {
-        return 0;
       }
       return 0;
     }
@@ -2086,6 +2258,9 @@ export class Assembler {
   }
 
   readonly expressionHost: ExpressionHost = {
+    resolveReference: (reference) =>
+      this.resolveStructuredReference(reference, this.requireStaticLabelLookup),
+    bindExpressionTemplate: (template) => this.resolveExpressionNode(template),
     resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
     convertLogicalToOutputOffset: (address) => this.outputWriter.toOutputOffset(address),
     convertOutputOffsetToLogical: (offset) => this.outputWriter.fromOutputOffset(offset),
@@ -2158,9 +2333,16 @@ export class Assembler {
    * @param {number} length The length of the section to fill.
    */
   fillOutputBytes(start: number, value: number, length: number): void {
-    for (let i = 0; i < length; i++) {
-      this.outputBytes[start + i] = value & 0xff;
+    this.outputBuffer.fill(start, value, length);
+  }
+
+  /** Store one already-validated emitted byte, preserving sparse gap fill and public fill overrides. */
+  writeOutputByte(offset: number, value: number): void {
+    const length = this.outputBuffer.length;
+    if (offset > length) {
+      this.fillOutputBytes(length, this.outputFillByte, offset - length);
     }
+    this.outputBuffer.write(offset, value);
   }
 
   createEphemeralStageExecutionState(stage: AssemblyStageName): StageExecutionState {
@@ -2220,97 +2402,27 @@ export class Assembler {
     return this.activeStageExecutionState?.stage ?? "collectDefinitions";
   }
 
-  layoutInstruction(input: string[] | LoweredInstruction): boolean {
-    const words = Array.isArray(input) ? input : input.words;
+  /** Public word entry; all source forms use the shared parser and typed execution contracts. */
+  asblock_pick(words: string[]): boolean {
     if (words.length === 0) {
       return true;
     }
-    const architecture = this.resolveActiveArchitecture();
-    if (!architecture.definition) {
+    const raw = words.join(" ");
+    const command = this.createNormalizedCommandFromRaw(
+      raw,
+      this.currentFile,
+      this.currentLine,
+      true,
+    );
+    if (!command) {
       return true;
     }
-    const size = Array.isArray(input)
-      ? architecture.definition.encoder.estimateSize(words)
-      : (architecture.definition.encoder.estimateInstruction?.(input) ??
-        architecture.definition.encoder.estimateSize(words));
-    this.step(size);
+    const node = this.commandLoweringService.lowerExecutableNode(command);
+    if (node.kind === "typedInstruction") {
+      return this.executeTypedInstruction(node);
+    }
+    this.executeLoweredNode(node);
     return true;
-  }
-
-  /**
-   * Encode through the active architecture, observing numeric operands only during final emission.
-   * @param {string[] | LoweredInstruction} input Instruction in the current source/expansion context.
-   * @returns {boolean} Whether the architecture handled it; unsupported mnemonics follow its policy.
-   */
-  emitInstruction(input: string[] | LoweredInstruction): boolean {
-    const words = Array.isArray(input) ? input : input.words;
-    if (words.length === 0) {
-      return true;
-    }
-    const architecture = this.resolveActiveArchitecture();
-    if (!architecture.definition) {
-      return true;
-    }
-    const capture = this.collectSourceMetadata && this.canEmitBytes;
-    const address = this.currentTargetAddress;
-    const beforeBytes = this.bytes;
-    // Banked logical PCs can repeat; the load cursor identifies the instruction's actual ROM bytes.
-    const outputOffset = capture
-      ? this.outputWriter.toOutputOffset(this.currentTargetBaseAddress)
-      : -1;
-    const operands: ResolvedInstructionOperand[] | undefined = capture ? [] : undefined;
-    this.#encodingOperands = operands;
-    let encoded: boolean;
-    try {
-      encoded = Array.isArray(input)
-        ? architecture.definition.encoder.encode(words)
-        : (architecture.definition.encoder.encodeInstruction?.(input) ??
-          architecture.definition.encoder.encode(words));
-    } finally {
-      this.#encodingOperands = undefined;
-    }
-    if (encoded && operands) {
-      const command = this.traceCommandStack.at(-1);
-      this.addressToLineMapping.instructions.push({
-        fileIdx: this.addressToLineMapping.getFileIndex(command?.file ?? this.currentFile),
-        line: (command?.line ?? this.currentLine) + 1,
-        architecture: this.arch,
-        addressSpace: this.environment.getTarget(this.targetId)?.addressSpace ?? "target.logical",
-        address,
-        size: this.bytes - beforeBytes,
-        ...(outputOffset >= 0 ? { outputOffset } : {}),
-        operands,
-      });
-    }
-    if (!encoded) {
-      if (architecture.definition.unknownInstructionBehavior === "returnFalse") {
-        return false;
-      }
-      throw new Error(`Unknown instruction: ${words[0]}`);
-    }
-    return true;
-  }
-
-  /**
-   * Picks the appropriate instruction handler based on architecture.
-   * @param {string[] | LoweredInstruction} input The instruction to pick.
-   * @returns {boolean} True if the instruction was handled, false otherwise.
-   */
-  asblock_pick(input: string[] | LoweredInstruction): boolean {
-    const words = Array.isArray(input) ? input : input.words;
-    const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
-    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(raw)) {
-      return true;
-    }
-    const keyword = words[0]?.toLowerCase() ?? "";
-    if (keyword !== "" && this.directiveRegistry.has(keyword)) {
-      return this.directiveRegistry.dispatch(keyword, words, words.join(" "));
-    }
-    const instructionExecutionMode = this.getActiveStageCapabilities().instructionMode;
-    if (instructionExecutionMode === "layout") {
-      return this.layoutInstruction(input);
-    }
-    return this.emitInstruction(input);
   }
 
   resolveActiveArchitecture(): { name: string; definition?: ArchitectureDefinition } {
@@ -2321,19 +2433,6 @@ export class Assembler {
       name,
       definition: this.architectureRegistry.getDefinition(name),
     };
-  }
-
-  /**
-   * Classifies operand for active architecture.
-   * @param {string} operand The operand.
-   * @returns {LoweredOperand} The classified operand.
-   */
-  classifyOperandForActiveArchitecture(operand: string): LoweredOperand {
-    const architecture = this.resolveActiveArchitecture();
-    if (!architecture.definition) {
-      return this.operandResolver.lowerOperand(operand);
-    }
-    return architecture.definition.classifyOperand(this.operandResolver, operand);
   }
 
   /**
@@ -2433,10 +2532,6 @@ export class Assembler {
     );
   }
 
-  rewriteRawCommand(command: string): string {
-    return this.macroEngine.rewriteMacroLabelReferences(command);
-  }
-
   createNormalizedCommandFromRaw(
     command: string,
     sourceFile: string,
@@ -2475,97 +2570,52 @@ export class Assembler {
    * @returns {boolean} `true` when the line was a character mapping.
    */
   tryHandleCharacterMapping(command: string): boolean {
-    const trimmed = command.trim();
-    const singleQuoted = /^'([\S\s])'\s*=\s*(.+)$/.exec(trimmed);
-    const doubleQuoted = /^"([\S\s])"\s*=\s*(.+)$/.exec(trimmed);
-    const match = singleQuoted ?? doubleQuoted;
-    if (!match) {
+    const parsed = this.createNormalizedCommandFromRaw(
+      command,
+      this.currentFile,
+      this.currentLine,
+      true,
+    );
+    if (parsed?.parsed.declaration?.kind !== "character") {
       return false;
     }
-    const quote = singleQuoted ? "'" : '"';
-    this.directiveRuntime.handleCharacterMapping([
-      `${quote}${match[1]}${quote}`,
-      "=",
-      match[2].trim(),
-    ]);
+    this.executeLoweredNode(this.commandLoweringService.lowerExecutableNode(parsed));
     return true;
   }
 
-  preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
-    // Table rows are data, not static label assignments or macro definitions.
-    // Rewriting before dispatch keeps normal diagnostics, references and traces.
-    if (this.structEngine.data.inTable && !this.inMacroDefinition) {
-      this.structEngine.data.prepareRow(state);
-      return "continue";
+  /** Scope expansion metadata and restore caller positions even when nested expansion fails. */
+  withSourceOrigin(origin: SourceOrigin, execute: () => void): void {
+    const previous = this.currentSourceOrigin;
+    const file = this.currentFile;
+    const line = this.currentLine;
+    this.currentSourceOrigin = origin;
+    try {
+      execute();
+    } catch (error) {
+      const occurrence = origin.kind === "macro" ? origin.template : origin.location;
+      rememberErrorSource(
+        error,
+        createAssemblySourceLocation(occurrence.file, occurrence.line, occurrence.span, origin),
+      );
+      throw error;
+    } finally {
+      this.currentSourceOrigin = previous;
+      this.currentFile = file;
+      this.currentLine = line;
     }
-    // Asar `'X' = $nn` inside a macro is body text, not a define-time side effect.
-    // Applying it here would leak the last font table into later
-    // identity `db` data and leave invoke as `cleartable` only.
-    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(state.command)) {
-      setCommandKind(state, "characterMapping");
-      return "handled";
-    }
-
-    if (
-      !this.inMacroDefinition &&
-      state.words.length === 3 &&
-      state.words[1] === "=" &&
-      (state.words[0].startsWith("'") || state.words[0].startsWith('"'))
-    ) {
-      setCommandKind(state, "characterMapping");
-      this.directiveRuntime.handleCharacterMapping(state.words);
-      return "handled";
-    }
-
-    if (this.frontEndCommandService.startFunctionDefinition(state)) {
-      return "handled";
-    }
-
-    if (this.macroEngine.handleDefinitionCommand(state)) {
-      return "handled";
-    }
-
-    if (this.defineEngine.handleCommand(state)) {
-      if (state.command.includes("=")) {
-        this.cursorAddress.recordCurrentAddress();
-      }
-      return "handled";
-    }
-
-    if (this.structEngine.handleStructMode(state)) {
-      return "handled";
-    }
-
-    if (this.frontEndCommandService.handleRelativeLabelDefinition(state)) {
-      return "handled";
-    }
-
-    if (this.frontEndCommandService.handleGlobalLabel(state)) {
-      return "handled";
-    }
-
-    if (this.frontEndCommandService.consumeNamedLabelDefinitions(state)) {
-      return "handled";
-    }
-
-    // This pass must happen after label consumption to preserve macro invoke behavior.
-    if (this.macroEngine.handleDefinitionCommand(state)) {
-      return "handled";
-    }
-
-    if (this.frontEndCommandService.handleStaticLabelAssignment(state)) {
-      return "handled";
-    }
-
-    return "continue";
   }
 
-  prepareNormalizedCommandForDispatch(state: NormalizedCommand): boolean {
-    if (state.kind === "unknown") {
-      setCommandWords(state, state.words, state.command);
-      setCommandKind(state, "opcodeCandidate");
-    }
-    return true;
+  /** Include origins are execution-local; the same cached file can be reached from many callers. */
+  withIncludeSource(file: string, execute: () => void, fromFile = this.currentFile): void {
+    this.withSourceOrigin(
+      {
+        kind: "include",
+        file,
+        location: { file: fromFile, line: this.currentLine },
+        parent: this.currentSourceOrigin,
+      },
+      execute,
+    );
   }
 
   /**
@@ -2573,142 +2623,179 @@ export class Assembler {
    * @param {string} command - The command to process.
    * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
    */
-  processCommand(command: string, preprocessed = false): void {
-    if (command.trim() === "") {
-      return;
-    }
+  processCommand(command: string, preprocessed = false, template?: NormalizedCommand): void {
+    this.processSourceFragment(
+      sourceFragment(command, [{ file: this.currentFile, line: this.currentLine, text: command }]),
+      preprocessed,
+      template,
+    );
+  }
 
-    command = this.rewriteRawCommand(command);
+  /** Physical fragments retained only while the frontend buffers one multiline statement. */
+  private pendingGeneratedFragment?: SourceFragment;
 
-    if (this.frontEndCommandService.continueFunctionDefinition(command)) {
-      return;
-    }
-
-    // Macro bodies were normalized when their containing program was parsed.
-    // Preserve inline separators while skipping another block/comment scan.
-    if (preprocessed) {
-      if (!command.includes(":")) {
-        const nodes = this.programModelBuilder.consumeIncrementalCommand(
-          this.incrementalProgramParseState,
-          command.trim(),
-          this.currentFile,
-          this.currentLine,
-        );
-        this.lowerAndExecuteRuntimeNodes(nodes);
-        this.flushCompletedIncrementalNodes();
+  /** Execute an attributed generated fragment through the shared incremental frontend. */
+  processSourceFragment(
+    fragment: SourceFragment,
+    preprocessed = false,
+    template?: NormalizedCommand,
+  ): void {
+    return withSourceSyntax(() => {
+      let command = fragmentText(fragment);
+      if (command.trim() === "") {
         return;
       }
-      const splitCommands = this.frontEndService.splitInlineCommands([command]);
-      for (const splitCommand of splitCommands) {
-        const nodes = this.programModelBuilder.consumeIncrementalCommand(
-          this.incrementalProgramParseState,
-          splitCommand.trim(),
-          this.currentFile,
-          this.currentLine,
-        );
-        this.lowerAndExecuteRuntimeNodes(nodes);
-      }
-    } else {
-      const sourceFile = this.currentFile;
-      const sourceLine = this.currentLine;
-      const processedCommands = this.frontEndService.preprocessSourcedBlockCommands(command);
-      const splitCommands = this.frontEndService.splitSourcedInlineCommands(processedCommands);
 
-      for (const splitCommand of splitCommands) {
-        const nodes = this.programModelBuilder.consumeIncrementalCommand(
-          this.incrementalProgramParseState,
-          splitCommand.text.trim(),
-          sourceFile,
-          sourceLine + splitCommand.line,
-        );
-        this.lowerAndExecuteRuntimeNodes(nodes);
+      if (!preprocessed && this.frontEndService.commandBuffer && this.pendingGeneratedFragment) {
+        fragment = {
+          segments: [
+            ...this.pendingGeneratedFragment.segments,
+            ...sourceFragment("\n").segments,
+            ...fragment.segments,
+          ],
+        };
       }
+
+      const consume = (text: string, file: string, line: number): ExecutableNode[] => {
+        let normalized: NormalizedCommand | undefined;
+        if (this.currentSourceOrigin) {
+          // Stable template syntax can be shared. Variadic indexes and dialect rewrites still
+          // bind at dispatch time; their generated spelling must pass through normalization.
+          if (
+            template?.command === text &&
+            !/\?|\.{3}|…/.test(text) &&
+            !this.syntaxProfile.rewriteCommand
+          ) {
+            normalized = cloneNormalizedCommand(template);
+            normalized.kind = classifyCommand(normalized.command, normalized.words);
+          } else {
+            const occurrence =
+              this.currentSourceOrigin.kind === "macro"
+                ? this.currentSourceOrigin.template
+                : { file, line };
+            normalized = this.frontEndService.parseFragmentCommand(
+              text,
+              occurrence.file,
+              occurrence.line,
+            );
+          }
+          normalized.source = { ...normalized.source, origin: this.currentSourceOrigin };
+        }
+        // Attach only the selected fragment extent. Parser/cache identity remains syntax-only.
+        normalized ??= this.frontEndService.parseFragmentCommand(text, file, line);
+        const offset = fragmentText(fragment).indexOf(text);
+        // A buffered multiline statement or profile rewrite may have a different spelling.
+        // Keep its parsed text authoritative while retaining the contributing input occurrences.
+        const selected =
+          offset >= 0
+            ? sliceSourceFragment(fragment, offset, offset + text.length)
+            : sourceFragment(
+                text,
+                fragment.segments.flatMap((part) => part.origins),
+              );
+        let origin = normalized.source.origin;
+        if (origin?.kind === "macro") {
+          origin = { ...origin, fragment: selected };
+        }
+        normalized.source = { ...normalized.source, origin, fragment: selected };
+        // Control-stack ordering uses the call-site sequence, independently of physical body spans.
+        return this.frontEndService.parseGeneratedCommand(
+          this.incrementalProgramParseState,
+          text,
+          file,
+          line,
+          normalized,
+        );
+      };
+
+      // Macro bodies were normalized when their containing program was parsed.
+      // Preserve inline separators while skipping another block/comment scan.
+      if (preprocessed) {
+        if (!command.includes(":")) {
+          const nodes = consume(command.trim(), this.currentFile, this.currentLine);
+          this.lowerAndExecuteRuntimeNodes(nodes);
+          this.flushCompletedIncrementalNodes();
+          return;
+        }
+        const splitCommands = this.frontEndService.splitInlineCommands([command]);
+        for (const splitCommand of splitCommands) {
+          const nodes = consume(splitCommand.trim(), this.currentFile, this.currentLine);
+          this.lowerAndExecuteRuntimeNodes(nodes);
+        }
+      } else {
+        const sourceFile = this.currentFile;
+        const sourceLine = this.currentLine;
+        const processedCommands = this.frontEndService.preprocessSourcedBlockCommands(command);
+        this.pendingGeneratedFragment = this.frontEndService.commandBuffer ? fragment : undefined;
+        const splitCommands = this.frontEndService.splitSourcedInlineCommands(processedCommands);
+
+        for (const splitCommand of splitCommands) {
+          const nodes = consume(
+            splitCommand.text.trim(),
+            sourceFile,
+            sourceLine + splitCommand.line,
+          );
+          this.lowerAndExecuteRuntimeNodes(nodes);
+        }
+      }
+      this.flushCompletedIncrementalNodes();
+    });
+  }
+
+  /** Public normalized-source entry: the shared parser owns streaming captures and control flow. */
+  processNormalizedCommand(command: NormalizedCommand, rewriteRaw = true): void {
+    if (rewriteRaw) {
+      this.processSourceFragment(
+        command.source.fragment ?? sourceFragment(command.source.raw, [command.source]),
+      );
+      return;
     }
+    this.frontEndService.parseCommandSyntax(command);
+    const nodes = this.frontEndService.parseGeneratedCommand(
+      this.incrementalProgramParseState,
+      command.command,
+      command.source.file,
+      command.source.line,
+      command,
+    );
+    this.lowerAndExecuteRuntimeNodes(nodes);
     this.flushCompletedIncrementalNodes();
   }
 
-  /**
-   * Processes normalized command.
-   * @param {NormalizedCommand} state The state.
-   * @param {boolean} [rewriteRaw] The rewrite raw.
-   */
-  processNormalizedCommand(state: NormalizedCommand, rewriteRaw: boolean = true): void {
-    // Treat incoming commands as immutable execution inputs. Downstream pipeline
-    // stages still mutate `kind/words`, so run them against a per-dispatch clone
-    // instead of mutating cached pass-program nodes.
-    let workingState = cloneNormalizedCommand(state);
-    this.currentFile = workingState.source.file;
-    this.currentLine = workingState.source.line;
-
-    // Preserve legacy fixture bootstrap behavior in tree/normalized execution:
-    // `;`+ means "seed assembler output with base-image bytes" before reads/writes.
-    if (workingState.source.raw.trim().startsWith(";`+")) {
-      this.seedOutputFromBaseImage();
-      return;
-    }
-
-    if (workingState.command.trim() === "") {
-      return;
-    }
-
-    if (this.frontEndCommandService.continueFunctionDefinition(workingState.command)) {
-      return;
-    }
-
-    if (rewriteRaw) {
-      const rewrittenRaw = this.rewriteRawCommand(workingState.source.raw);
-      const requiresVariadicResolution =
-        this.inMacroExpansion &&
-        !this.isDefinitionCollectionStage &&
-        (rewrittenRaw.includes("...") || rewrittenRaw.includes("…"));
-      if (rewrittenRaw !== workingState.source.raw || requiresVariadicResolution) {
-        incrementInternalCounter("actualReparses");
-        const rewrittenState = this.createNormalizedCommandFromRaw(
-          rewrittenRaw,
-          workingState.source.file,
-          workingState.source.line,
-          true,
-        );
-        if (!rewrittenState) {
+  /** Execute typed syntax with current scope and the same source ownership as directive dispatch. */
+  private executeStatement(node: LoweredStatement): void {
+    if (node.kind === "label") {
+      this.frontEndCommandService.executeLabelStatement(node.statement);
+      if (node.statement.trailing) {
+        this.lowerAndExecuteRuntimeNodes([node.statement.trailing]);
+      }
+    } else if (node.kind === "assignment") {
+      this.frontEndCommandService.executeAssignmentStatement(node.statement);
+    } else {
+      this.executeAttributedCommand(node.command, () => {
+        const keyword = this.canonicalizeDirectiveKeyword(node.command.keyword);
+        if (this.runBeforeDirective(keyword, node.command) === "handled") {
           return;
         }
-        workingState = rewrittenState;
-      }
+        withTypedExecution(() => this.directiveRuntime.executeDataStatement(node.statement));
+      });
     }
+  }
 
-    // Macro invocations are consumed in preprocess and never reach the
-    // post-dispatch reference collector. Record them first so rename / find
-    // references can see `%greet()` as a use of `greet`.
-    if (
-      this.collectSourceMetadata &&
-      !this.inMacroDefinition &&
-      workingState.parsed.macroInvocation?.name
-    ) {
-      this.collectCommandReferences(workingState);
-    }
-
-    const preprocessResult = this.preprocessNormalizedCommand(workingState);
-    if (preprocessResult === "handled") {
-      return;
-    }
-
-    // Capture the starting PC (before processing this command)
+  /** Keep nested write attribution and trace event ordering identical for typed and legacy data. */
+  private executeAttributedCommand(command: NormalizedCommand, dispatch: () => void): void {
     const startPC = normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth);
-
-    if (!this.prepareNormalizedCommandForDispatch(workingState)) {
-      return;
-    }
-
     if (this.collectSourceMetadata) {
-      this.collectCommandReferences(workingState);
+      this.collectCommandReferences(command);
     }
 
     const traceListener = this.traceListener;
     const traceContext: TraceCommandContext = {
-      file: workingState.source.file,
-      line: workingState.source.line,
-      raw: workingState.source.raw,
-      normalized: workingState.command,
+      file: command.source.file,
+      line: command.source.line,
+      raw: command.source.raw,
+      normalized: command.command,
+      ...(this.currentSourceOrigin ? { origin: this.currentSourceOrigin } : {}),
     };
     if (traceListener) {
       traceListener({
@@ -2726,8 +2813,7 @@ export class Assembler {
     // active, so keep the current source context on a stack until dispatch ends.
     this.traceCommandStack.push(traceContext);
     try {
-      const lowered = this.commandLoweringService.lowerCommand(workingState);
-      this.dispatchLoweredNode(lowered);
+      dispatch();
     } finally {
       this.traceCommandStack.pop();
     }
@@ -2770,25 +2856,268 @@ export class Assembler {
    * @param {LoweredCommand} lowered The lowered.
    */
   dispatchLoweredNode(lowered: LoweredCommand): void {
-    if (lowered.kind === "directive") {
-      const loweredCommand = (lowered as LoweredCommand & { command?: NormalizedCommand }).command;
-      this.directiveRegistry.dispatch(
-        lowered.keyword,
-        lowered.words,
-        lowered.source.raw,
-        loweredCommand,
-      );
+    if (lowered.kind === "pluginSyntax") {
+      this.executeAttributedCommand(lowered.command, () => {
+        const keyword = this.canonicalizeDirectiveKeyword(lowered.command.keyword);
+        if (this.runBeforeDirective(keyword, lowered.command, lowered.statement) === "handled") {
+          return;
+        }
+        try {
+          this.directiveRegistry.executeSyntax(lowered.statement, lowered.command);
+        } catch (cause) {
+          // Core syntax uses the same transport contract, but retains native diagnostic identity.
+          if (lowered.statement.contributionId.startsWith("core.directive.")) {
+            throw cause;
+          }
+          if (cause instanceof PluginError) {
+            throw cause;
+          }
+          const detail = cause instanceof Error ? ` ${cause.message}` : "";
+          throw new PluginError(
+            `Directive '${lowered.statement.contributionId}' failed.${detail}`,
+            {
+              code: "PLUGIN_HOOK_FAILED",
+              contributionId: lowered.statement.contributionId,
+              targetId: this.targetId,
+              cause,
+            },
+          );
+        }
+      });
       return;
     }
-
-    let instruction = lowered;
-    if (lowered.command) {
-      const refreshed = this.commandLoweringService.lowerCommand(lowered.command);
-      if (refreshed.kind === "instruction") {
-        instruction = refreshed;
-      }
+    // Architecture selection can change in source order after the program was lowered.
+    const instruction = withSourceSyntax(() =>
+      this.commandLoweringService.lowerCommand(lowered.command),
+    );
+    if (instruction.kind !== "typedInstruction") {
+      throw new Error("Expected a typed instruction.");
     }
-    this.asblock_pick(instruction);
+    this.executeTypedInstruction(instruction);
+    lowered.resolved = instruction.resolved;
+  }
+
+  /** Classification retains its stage-entry ordering; no prepared values enter the syntax cache. */
+  prepareTypedInstruction(
+    node: import("./services/command-lowering-service.js").LoweredTypedInstruction,
+  ): void {
+    const definition = this.resolveActiveArchitecture().definition;
+    if (!definition?.encoder.typed?.prepare || !definition.operandGrammar) {
+      return;
+    }
+    let operands;
+    let bindingFailure: import("./ir/resolved-instruction.js").OperandBindingFailure | undefined;
+    try {
+      operands = bindInstructionOperands(
+        node.instruction.operands,
+        (fragment) => this.resolveDefineFragment(fragment),
+        (text) => definition.operandGrammar.parse(node.instruction.mnemonic, text),
+      );
+    } catch (cause) {
+      // Unresolved source can still determine an addressing mode. The opted-in target owns
+      // whether binding failure is observable in sizing, a numeric read, or final branch emission.
+      if (!definition.encoder.typed.deferOperandBindingErrors) {
+        return;
+      }
+      operands = node.instruction.operands;
+      bindingFailure = this.operandBindingFailure(cause);
+    }
+    node.instruction = { ...node.instruction, operands };
+    const frame = this.createInstructionFrame(node.instruction, undefined, bindingFailure);
+    try {
+      withTypedExecution(() => definition.encoder.typed.prepare!(frame));
+      node.prepared = frame.snapshot();
+    } finally {
+      frame.close();
+    }
+  }
+
+  /** Preserve binding diagnostics as data without retaining exception/session objects in a receipt. */
+  private operandBindingFailure(
+    cause: unknown,
+  ): import("./ir/resolved-instruction.js").OperandBindingFailure {
+    return {
+      reason: cause instanceof OperandTemplateBindingError ? cause.reason : "other",
+      message: cause instanceof Error ? cause.message : String(cause),
+    };
+  }
+
+  /** Every borrowed evaluation capability expires with its instruction's stage frame. */
+  private createInstructionFrame(
+    instruction: import("./ir/resolved-instruction.js").ParsedInstruction,
+    preparation?: import("./ir/resolved-instruction.js").ResolvedInstruction,
+    bindingFailure?: import("./ir/resolved-instruction.js").OperandBindingFailure,
+  ): InstructionResolutionFrame {
+    // Method syntax avoids per-instruction name wrappers while captured session access permits detached calls.
+    // oxlint-disable-next-line typescript/no-this-alias -- Detached method callbacks avoid hot-path transpiler name wrappers.
+    const session = this;
+    const identity = session.activeStageExecutionState ?? {};
+    return new InstructionResolutionFrame(
+      instruction,
+      {
+        bindingFailure,
+        evaluate(expression) {
+          return session.operandResolver.getnum(expression);
+        },
+        evaluateMath(expression) {
+          return session.mathCore.math(expression);
+        },
+        reference(expression, address) {
+          return session.resolveStructuredReference(
+            expression,
+            session.requireStaticLabelLookup,
+            address,
+          );
+        },
+        error(message) {
+          return new Error(`${message} (${session.currentFile}:${session.currentLine + 1})`);
+        },
+        currentAddress() {
+          return session.currentTargetAddress;
+        },
+        stage() {
+          return session.traceStage;
+        },
+        stageIdentity() {
+          return session.activeStageExecutionState ?? identity;
+        },
+      },
+      preparation,
+    );
+  }
+
+  /** Bind templates at the source boundary, then lend a fresh frame for exactly one stage invocation. */
+  private executeTypedInstruction(
+    node: import("./services/command-lowering-service.js").LoweredTypedInstruction,
+  ): boolean {
+    const definition = this.resolveActiveArchitecture().definition;
+    const encoder = definition?.encoder.typed;
+    const grammar = definition?.operandGrammar;
+    if (!encoder || !grammar) {
+      throw new Error("Typed architecture has no operand grammar or encoder.");
+    }
+    let operands;
+    let bindingFailure: import("./ir/resolved-instruction.js").OperandBindingFailure | undefined;
+    try {
+      operands = bindInstructionOperands(
+        node.instruction.operands,
+        (fragment) => this.resolveDefineFragment(fragment),
+        (text) => grammar.parse(node.instruction.mnemonic, text),
+      );
+    } catch (cause) {
+      if (!encoder.deferOperandBindingErrors) {
+        throw cause;
+      }
+      operands = node.instruction.operands;
+      bindingFailure = this.operandBindingFailure(cause);
+    }
+    // Instructions retain their existing write-only trace contract. Enclosing directives
+    // still own nested command attribution through the trace stack.
+    const capabilities = this.getActiveStageCapabilities();
+    const beforeBytes = this.bytes;
+    const address = this.currentTargetAddress;
+    const capture = this.collectSourceMetadata && this.canEmitBytes;
+    const outputOffset = capture
+      ? this.outputWriter.toOutputOffset(this.currentTargetBaseAddress)
+      : -1;
+    const frame = this.createInstructionFrame(
+      { ...node.instruction, operands },
+      node.prepared,
+      bindingFailure,
+    );
+    const assertLive = (): void => {
+      frame.currentAddress();
+    };
+    try {
+      if (capabilities.instructionMode === "layout") {
+        const size = withTypedExecution(() => encoder.estimate(frame));
+        node.resolved = frame.snapshot();
+        if (size !== node.resolved.size) {
+          throw new Error("Typed instruction estimate disagrees with selected form.");
+        }
+        this.step(size);
+        return true;
+      } else {
+        // oxlint-disable-next-line typescript/no-this-alias -- Capabilities remain callable detached from their method object.
+        const session = this;
+        const handled = withTypedExecution(() =>
+          encoder.encode(frame, {
+            emission: {
+              write1(value) {
+                assertLive();
+                session.write1(value);
+              },
+              write2(value) {
+                assertLive();
+                session.write2(value);
+              },
+              write3(value) {
+                assertLive();
+                session.write3(value);
+              },
+              writeByte(value) {
+                assertLive();
+                session.write1(value);
+              },
+              writeBytes(values) {
+                assertLive();
+                session.outputWriter.writeBytes(values);
+              },
+              writeValue(value, width, endianness) {
+                assertLive();
+                session.outputWriter.writeValue(value, width, endianness);
+              },
+            },
+            diagnostics: {
+              error(message) {
+                assertLive();
+                return new Error(`${message} (${session.currentFile}:${session.currentLine + 1})`);
+              },
+            },
+          }),
+        );
+        if (handled) {
+          node.resolved = frame.snapshot();
+          if (capture) {
+            const operandText = node.command.parsed.opcodeOperands?.operandText ?? "";
+            // Match the legacy numeric observer: one finite value per displayed expression,
+            // even when a compound instruction reads the same operand more than once.
+            // Width probes are preparatory reads, not emitted instruction operands.
+            const observations = node.resolved.values
+              .filter((value) => value.point !== "classification")
+              .map((value) => ({
+                expression:
+                  value.displayText ?? operandText.slice(value.span.start, value.span.end),
+                value: value.value,
+              }))
+              .filter(
+                (value, index, all) =>
+                  Number.isFinite(value.value) &&
+                  all.findIndex(
+                    (other) => other.expression === value.expression && other.value === value.value,
+                  ) === index,
+              );
+            this.addressToLineMapping.instructions.push({
+              fileIdx: this.addressToLineMapping.getFileIndex(node.source.file),
+              line: node.source.line + 1,
+              architecture: this.arch,
+              addressSpace:
+                this.environment.getTarget(this.targetId)?.addressSpace ?? "target.logical",
+              address,
+              size: this.bytes - beforeBytes,
+              ...(outputOffset >= 0 ? { outputOffset } : {}),
+              // Spelling is attribution only; values come from observations, never another evaluation.
+              operands: observations,
+            });
+          }
+        } else if (definition.unknownInstructionBehavior !== "returnFalse") {
+          throw new Error(`Unknown instruction: ${node.instruction.mnemonic}`);
+        }
+        return handled;
+      }
+    } finally {
+      frame.close();
+    }
   }
 
   /**
@@ -2798,10 +3127,7 @@ export class Assembler {
    * @param {string} defLine - The function definition line.
    */
   parseFunctionDefinition(defLine: string): void {
-    // Set the string to parse in mathCore
-    this.mathCore.str = defLine;
-    // Call the parseFunctionDefinition method without arguments
-    this.mathCore.parseFunctionDefinition();
+    this.mathCore.parseFunctionDefinition(defLine);
     const functionName = defLine.match(/^function\s+([_a-z]\w*)\s*\(/i)?.[1];
     if (functionName) {
       this.recordSymbolDefinition("function", functionName);
@@ -2830,19 +3156,7 @@ export class Assembler {
     if (isReferenceExpressionNode(resolvedExpr)) {
       return this.evaluateReferenceExpressionNode(resolvedExpr, true);
     }
-    // Try evaluating the expression numerically.
-    try {
-      const result = this.mathCore.math(resolvedExpr);
-      // Range bounds such as `(000 * 32)` legitimately evaluate to zero, so
-      // treat any numeric result as valid instead of falling through to label
-      // lookup on falsy `0`.
-      if (!Number.isNaN(result)) {
-        return result;
-      }
-    } catch (error) {}
-    // If that fails, assume it's a static label.
-    // (Pass 'true' to require that the label be static.)
-    return this.symbolScope.getLabelValue(renderExpressionNode(resolvedExpr), true);
+    return this.mathCore.math(resolvedExpr);
   }
 
   /**
@@ -2907,7 +3221,9 @@ export class Assembler {
    */
   resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode {
     const parsed =
-      typeof expression === "string" ? parseExpressionNode(expression.trim()) : expression;
+      typeof expression === "string"
+        ? this.frontEndService.parseAssemblyExpression(expression.trim())
+        : expression;
     return this.resolveExpressionNode(parsed);
   }
 
@@ -2944,12 +3260,33 @@ export class Assembler {
           ...expression,
           arguments: expression.arguments.map((argument) => this.resolveExpressionNode(argument)),
         };
-      case "raw":
-        if (/(^|[^!<=>])![\w{]/.test(expression.value)) {
-          return this.resolveExpressionInput(this.resolvedefines(expression.value));
+      case "template":
+        if (expression.form === "source") {
+          const fragment = this.resolveDefineFragment(
+            sourceFragment(expression.text, [
+              {
+                file: this.currentFile,
+                line: this.currentLine,
+                text: expression.text,
+                span: expression.span,
+              },
+            ]),
+          );
+          const text = fragmentText(fragment);
+          if (text === expression.text) {
+            throw new Error(`Unbound expression template: ${text}`);
+          }
+          return inheritExpressionOccurrence(
+            this.resolveExpressionNode(this.frontEndService.parseFragmentExpression(text)),
+            expression,
+          );
         }
         return expression;
+      case "raw":
+        throw new Error("Raw expression nodes are not executable; parse source before evaluation.");
       case "literal":
+      case "error":
+      case "sourceText":
       case "string":
         break;
     }
@@ -2975,19 +3312,18 @@ export class Assembler {
         if (value === undefined) {
           throw new Error(`Define '${defineName}' not found.`);
         }
-        return this.resolveExpressionInput(value);
+        return inheritExpressionOccurrence(
+          this.resolveExpressionNode(this.frontEndService.parseFragmentExpression(value)),
+          expression,
+        );
       }
       case "member": {
         const object = this.resolveReferenceExpressionNode(expression.object);
         if (!isReferenceExpressionNode(object)) {
-          const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
-          if (expandedReference) {
-            return expandedReference;
-          }
-          return {
-            type: "raw",
-            value: `${renderExpressionNode(object)}.${expression.property.name}`,
-          };
+          return inheritExpressionOccurrence(
+            this.bindReferenceSuffix(object, expression),
+            expression,
+          );
         }
         return {
           ...expression,
@@ -2998,14 +3334,10 @@ export class Assembler {
         const object = this.resolveReferenceExpressionNode(expression.object);
         const index = this.resolveExpressionNode(expression.index);
         if (!isReferenceExpressionNode(object)) {
-          const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
-          if (expandedReference) {
-            return expandedReference;
-          }
-          return {
-            type: "raw",
-            value: `${renderExpressionNode(object)}[${renderExpressionNode(index)}]`,
-          };
+          return inheritExpressionOccurrence(
+            this.bindReferenceSuffix(object, expression),
+            expression,
+          );
         }
         return {
           ...expression,
@@ -3013,6 +3345,7 @@ export class Assembler {
           index,
         };
       }
+      case "relativeReference":
       default:
         return expression;
     }
@@ -3051,68 +3384,97 @@ export class Assembler {
       return this.mathCore.math(resolved);
     }
 
-    return this.resolveNormalizedReferenceLabelValue(
-      this.renderResolvedReferenceExpression(resolved),
-      requireStatic,
-    );
-  }
-
-  /**
-   * Resolves an already-normalized reference string as either a struct member/base
-   * or a plain label lookup.
-   * @param {string} normalizedReference The normalized reference text.
-   * @param {boolean} [requireStatic] Whether labels must be static.
-   * @returns {number} The resolved numeric address/value.
-   */
-  resolveNormalizedReferenceLabelValue(normalizedReference: string, requireStatic = false): number {
-    // Dotted and indexed references may name either a struct member or a plain
-    // label. Try the struct path first, then fall back to standard label lookup.
-    if (this.structEngine.hasStructReference(normalizedReference)) {
-      return this.structEngine.resolveStructLabel(normalizedReference);
+    const result = this.resolveStructuredReference(resolved, requireStatic);
+    if (result.kind === "error") {
+      throw result.error;
     }
-    return this.symbolScope.getLabelValue(normalizedReference, requireStatic);
-  }
-
-  /**
-   * Renders an index expression for a normalized reference string.
-   * @param {ExpressionNode} indexExpression The index expression to render.
-   * @returns {string} The rendered numeric or source-like index text.
-   */
-  resolveReferenceIndexText(indexExpression: ExpressionNode): string {
-    const resolvedIndex = this.resolveExpressionNode(indexExpression);
-    try {
-      return this.mathCore.math(resolvedIndex).toString();
-    } catch {
-      return renderExpressionNode(resolvedIndex);
+    if (result.kind === "resolved") {
+      return result.value;
     }
+    if (result.deferred) {
+      return 0;
+    }
+    throw new Error(`Error: Label '${result.name}' not found.`);
   }
 
   /**
-   * Renders a reference expression after resolving any nested index expressions.
-   * @param {ReferenceExpressionNode} expression The reference expression to render.
-   * @returns {string} The normalized reference text.
+   * Resolve structured references with explicit stage deferral. `relativeAddress` selects
+   * relative labels at that logical byte address; omission uses the current instruction cursor.
    */
-  renderResolvedReferenceExpression(expression: ReferenceExpressionNode): string {
-    return renderReferenceExpressionNode(expression, {
-      renderIndex: (indexExpression) => this.resolveReferenceIndexText(indexExpression),
-    });
-  }
-
-  /**
-   * Re-runs `resolvedefines()` across a rendered reference expression and reparses
-   * it only when define expansion materially changes the text.
-   * @param {ReferenceExpressionNode} expression The reference expression to expand.
-   * @returns {ExpressionNode | undefined} The reparsed expression, if expansion changed it.
-   */
-  tryResolveExpandedReferenceExpression(
+  resolveStructuredReference(
     expression: ReferenceExpressionNode,
-  ): ExpressionNode | undefined {
-    const renderedReference = this.renderResolvedReferenceExpression(expression);
-    const expandedReference = this.resolvedefines(renderedReference);
-    if (expandedReference === renderedReference) {
-      return undefined;
+    requireStatic = false,
+    relativeAddress?: number,
+  ): ReferenceResolution {
+    try {
+      const resolved = this.resolveReferenceExpressionNode(expression);
+      if (!isReferenceExpressionNode(resolved)) {
+        return { kind: "resolved", value: this.mathCore.math(resolved) };
+      }
+      if (resolved.type === "relativeReference") {
+        return {
+          kind: "resolved",
+          value: this.symbolScope.resolveRelativeReference(resolved, relativeAddress),
+        };
+      }
+      const path = referencePath(resolved);
+      if (!path) {
+        throw new Error("Unbound define reference.");
+      }
+      if (!path.segments.length) {
+        const loopValue = this.activeLoopVariables.get(path.root);
+        if (loopValue !== undefined) {
+          return { kind: "resolved", value: loopValue };
+        }
+      }
+      const structValue = this.structEngine.resolveStructPath(path, (node) =>
+        this.mathCore.math(this.resolveExpressionNode(node)),
+      );
+      if (structValue !== undefined) {
+        return { kind: "resolved", value: structValue };
+      }
+      // Flat symbol tables need a key, not a second grammar pass. Member separators remain lexical.
+      let name = path.root;
+      for (const segment of path.segments) {
+        if (segment.kind === "member") {
+          name += `.${segment.name}`;
+        } else {
+          name += `[${this.mathCore.math(this.resolveExpressionNode(segment.expression))}]`;
+        }
+      }
+      const value = this.symbolScope.tryGetLabelValue(name, requireStatic);
+      if (value !== undefined) {
+        return { kind: "resolved", value };
+      }
+      return { kind: "missing", name, deferred: this.isDefinitionCollectionStage };
+    } catch (error) {
+      return { kind: "error", error: error instanceof Error ? error : new Error(String(error)) };
     }
-    return this.resolveExpressionInput(expandedReference);
+  }
+
+  /** A textual define suffix binds to its final operand; it does not introduce an implicit group. */
+  private bindReferenceSuffix(
+    object: ExpressionNode,
+    suffix: Extract<ReferenceExpressionNode, { type: "member" | "index" }>,
+  ): ExpressionNode {
+    if (isReferenceExpressionNode(object)) {
+      if (suffix.type === "member") {
+        return { ...suffix, object };
+      }
+      return { ...suffix, object, index: this.resolveExpressionNode(suffix.index) };
+    }
+    if (!object.parenthesized && object.type === "binary") {
+      return { ...object, right: this.bindReferenceSuffix(object.right, suffix) };
+    }
+    if (!object.parenthesized && object.type === "unary") {
+      return { ...object, argument: this.bindReferenceSuffix(object.argument, suffix) };
+    }
+    return {
+      type: "error",
+      value: "",
+      outcome: { kind: "unsupported", reason: "postfix" },
+      message: "Mismatched parentheses.",
+    };
   }
 
   /**
@@ -3211,107 +3573,56 @@ export class Assembler {
    * @returns {string} The string with defines resolved.
    */
   resolvedefines(input: string): string {
+    const relative = this.tryResolveRelativeLabelToken(input);
+    if (relative !== undefined) {
+      return relative;
+    }
+    const macro = this.tryResolveMacroLabelReference(input);
+    if (macro !== undefined) {
+      return macro;
+    }
+    const label = this.tryResolveBareLabelReference(input);
+    if (label !== undefined) {
+      return label;
+    }
+    return fragmentText(this.resolveDefineFragment(sourceFragment(input)));
+  }
+
+  /** Bind source-valued defines without converting symbol references into numeric source text. */
+  resolveDefineFragment(fragment: SourceFragment): SourceFragment {
+    const input = fragmentText(fragment);
     if (!input) {
-      return "";
+      return fragment;
     }
-    let result = "";
-    let index = 0;
-
-    const resolvedRelativeLabel = this.tryResolveRelativeLabelToken(input);
-    if (resolvedRelativeLabel !== undefined) {
-      return resolvedRelativeLabel;
-    }
-
-    // Special case for expressions with != operator
-    // This prevents issues with != being misinterpreted as a define
+    // Trim each comparison operand as before, but keep definition and invocation contributors.
     if (input.includes("!=")) {
-      // Process each part of the expression separately
-      const parts = input.split("!=");
-      const resolvedParts = parts.map((part) => this.resolvedefines(part.trim()));
-      return resolvedParts.join("!=");
+      const segments: SourceFragment["segments"][number][] = [];
+      let start = 0;
+      for (const part of input.split("!=")) {
+        const left = start + part.length - part.trimStart().length;
+        const right = start + part.trimEnd().length;
+        segments.push(
+          ...this.resolveDefineFragment(sliceSourceFragment(fragment, left, right)).segments,
+        );
+        start += part.length;
+        if (start < input.length) {
+          segments.push(...sliceSourceFragment(fragment, start, start + 2).segments);
+        }
+        start += 2;
+      }
+      return { segments };
     }
 
     if ((input.startsWith("sizeof(") || input.startsWith("objectsize(")) && input.endsWith(")")) {
-      return input;
+      return fragment;
     }
 
     const resolvedDirectDefine = this.tryResolveDirectDefineReference(input);
     if (resolvedDirectDefine !== undefined) {
-      return resolvedDirectDefine;
+      return this.defineEngine.resolveFragment(fragment);
     }
 
-    const resolvedMacroLabel = this.tryResolveMacroLabelReference(input);
-    if (resolvedMacroLabel !== undefined) {
-      return resolvedMacroLabel;
-    }
-
-    const resolvedBareLabel = this.tryResolveBareLabelReference(input);
-    if (resolvedBareLabel !== undefined) {
-      return resolvedBareLabel;
-    }
-
-    // Process any explicit !defines
-    while (index < input.length) {
-      const char = input[index];
-
-      if (char === "\\" && input[index + 1] === "\\") {
-        result += "\\";
-        index += 2;
-      } else if (char === "\\" && input[index + 1] === "!") {
-        result += "!";
-        index += 2;
-      } else if (char === "!") {
-        let defineName = "";
-        index++; // skip the !
-        if (input[index] === "{") {
-          index++;
-          let unprocessedName = "";
-          let braces = 1;
-          while (index < input.length) {
-            if (input[index] === "{") {
-              braces++;
-            }
-            if (input[index] === "}") {
-              braces--;
-            }
-            if (braces === 0) {
-              break;
-            }
-            unprocessedName += input[index++];
-          }
-          if (braces !== 0) {
-            throw new Error("Error: Mismatched braces in define name.");
-          }
-          index++; // skip the closing }
-          defineName = this.resolvedefines(unprocessedName);
-        } else {
-          // Handle regular define (no braces)
-          while (index < input.length && /\w/.test(input[index])) {
-            defineName += input[index++];
-          }
-        }
-
-        // `!$00` / `!(1+2)` are bitwise NOT for mathcore, not `Define ''`.
-        if (defineName === "") {
-          result += "!";
-          continue;
-        }
-
-        // Look up the variable using our helper function
-        const value = this.lookupDefineValue(defineName);
-
-        if (value === undefined) {
-          throw new Error(`Define '${defineName}' not found.`);
-        } else {
-          result += value;
-        }
-      } else {
-        result += char;
-        index++;
-      }
-    }
-
-    return result;
+    return this.defineEngine.resolveFragment(fragment);
   }
 
   /**
@@ -3336,13 +3647,18 @@ export class Assembler {
     this.inMacroExpansion = false;
 
     this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
+    this.pendingGeneratedFragment = undefined;
 
     for (const definition of this.architectureRegistry.definitions.values()) {
       definition.encoder.beginPass?.();
     }
     this.pluginState.resetForStage(stage);
     this.runLifecycleHook("onStageStart", (lifecycle) =>
-      lifecycle.onStageStart?.({ state: this.pluginState, session: this, stage }),
+      lifecycle.onStageStart?.({
+        state: this.pluginState,
+        session: this.#pluginCapabilities,
+        stage,
+      }),
     );
   }
 
@@ -3359,13 +3675,13 @@ export class Assembler {
     }
     const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
     this.runLifecycleHook("onStageEnd", (lifecycle) =>
-      lifecycle.onStageEnd?.({ state: this.pluginState, session: this, stage }),
+      lifecycle.onStageEnd?.({ state: this.pluginState, session: this.#pluginCapabilities, stage }),
     );
     if (this.getActiveStageCapabilities().canFinalize) {
       this.runLifecycleHook("beforeOutputFinalize", (lifecycle) =>
         lifecycle.beforeOutputFinalize?.({
           state: this.pluginState,
-          session: this,
+          session: this.#pluginCapabilities,
           outputBytes: this.outputBytes,
         }),
       );
@@ -3374,7 +3690,10 @@ export class Assembler {
     if (this.getActiveStageCapabilities().canFinalize) {
       this.includeSource.endAssemblySnapshot();
       this.mathCore.endAssemblySnapshot();
-      this.passProgramCache.clear();
+      this.defineEngine.clearSyntaxCache();
+      this.frontEndService.clearFragmentCache();
+      this.operandResolver.clearParsedOperands();
+      this.programModelBuilder.clearCache();
     }
   }
 
@@ -3574,39 +3893,48 @@ export class Assembler {
   }
 
   buildProgramModel(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
-    return measureInternalPhase("buildProgramModel", () => {
-      const program = this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
-      return {
-        sourceFile: program.sourceFile,
-        startLine: program.startLine,
-        nodes: program.nodes,
-      };
-    });
+    return withSourceSyntax(() =>
+      measureInternalPhase("buildProgramModel", () => {
+        const program = this.frontEndService.parseSource(source, sourceFile, startLine);
+        return program;
+      }),
+    );
   }
 
   runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState {
-    return measureInternalPhase(stage, () => {
-      if (stage === "collectDefinitions") {
-        this.#hasDeferredAssetLayout = false;
-        this.assetAssembly.beginBuild();
-        this.includeSource.beginAssemblySnapshot();
-        this.mathCore.beginAssemblySnapshot();
-        this.stageExecutionStates.clear();
-        this.activeStageExecutionState = null;
-      }
-      const stageState = this.getOrCreateStageExecutionState(stage);
-      this.activeStageExecutionState = stageState;
-      this.applyStageExecutionState(stageState);
-      this.setCurrentFile(program.sourceFile);
-      this.activateStage(stage);
-      const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
-      measureInternalPhase("executeProgram", () =>
-        this.executeLoweredNodeStream(loweredProgram.nodes),
-      );
-      measureInternalPhase("finishPass", () => this.finishPass());
-      this.captureStageExecutionState(stageState);
-      return stageState;
-    });
+    if (
+      program.grammarIdentity !== undefined &&
+      program.grammarIdentity !== this.frontEndService.grammarIdentity
+    ) {
+      throw new Error("Source grammar changed; parse the source again before execution.");
+    }
+    return withAstQualification(() =>
+      measureInternalPhase(stage, () => {
+        if (stage === "collectDefinitions") {
+          this.#hasDeferredAssetLayout = false;
+          this.assetAssembly.beginBuild();
+          this.includeSource.beginAssemblySnapshot();
+          this.mathCore.beginAssemblySnapshot();
+          this.operandResolver.clearParsedOperands();
+          this.stageExecutionStates.clear();
+          this.activeStageExecutionState = null;
+        }
+        const stageState = this.getOrCreateStageExecutionState(stage);
+        this.activeStageExecutionState = stageState;
+        this.applyStageExecutionState(stageState);
+        this.setCurrentFile(program.sourceFile);
+        this.activateStage(stage);
+        const loweredProgram = withSourceSyntax(() =>
+          this.getOrCreateLoweredProgram(stageState, program),
+        );
+        measureInternalPhase("executeProgram", () =>
+          this.executeLoweredNodeStream(loweredProgram.nodes),
+        );
+        measureInternalPhase("finishPass", () => this.finishPass());
+        this.captureStageExecutionState(stageState);
+        return stageState;
+      }),
+    );
   }
 
   /**
@@ -3615,8 +3943,12 @@ export class Assembler {
    * @param {ProgramModel} program Parsed source model produced for this target's syntax.
    */
   assembleProgram(program: ProgramModel): void {
-    this.runStage("collectDefinitions", program);
-    this.runStage("resolveLayout", program);
+    const definitions = this.runStage("collectDefinitions", program);
+    // Later stages seed symbol/plugin snapshots, not lowered instructions and their prepared values.
+    // Full builds can reclaim these caches immediately; direct runStage calls retain durable results.
+    definitions.loweredProgram = null;
+    const layout = this.runStage("resolveLayout", program);
+    layout.loweredProgram = null;
     this.runStage("emitProgram", program);
   }
 
@@ -3644,9 +3976,7 @@ export class Assembler {
     if (typeof start !== "number" || typeof value !== "number" || typeof length !== "number") {
       throw new Error("writeOutputBytes requires a number for start, value, and length");
     }
-    for (let i = 0; i < length; i++) {
-      this.outputBytes[start + i] = value & 0xff;
-    }
+    this.outputBuffer.fill(start, value, length);
   }
 
   /**
@@ -3687,21 +4017,13 @@ export class Assembler {
    * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
    */
   lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void {
-    const previousRewrite = this.runtimePassthroughRewriteEnabled;
-    this.runtimePassthroughRewriteEnabled = true;
-    try {
-      const loweredNodes = nodes.map((node) =>
-        this.commandLoweringService.lowerExecutableNode(node),
+    const loweredNodes = nodes.map((node) => this.commandLoweringService.lowerExecutableNode(node));
+    for (const node of loweredNodes) {
+      this.executeWithAnalysisRecovery(
+        node,
+        (current) => this.getLoweredNodeSpan(current),
+        (current) => this.executeLoweredNode(current),
       );
-      for (const node of loweredNodes) {
-        this.executeWithAnalysisRecovery(
-          node,
-          (currentNode) => this.getLoweredNodeSpan(currentNode),
-          (currentNode) => this.executeLoweredNode(currentNode),
-        );
-      }
-    } finally {
-      this.runtimePassthroughRewriteEnabled = previousRewrite;
     }
   }
 
@@ -3718,14 +4040,9 @@ export class Assembler {
     const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
     const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
     if (startExpression && endExpression) {
-      const startExpr = renderExpressionNode(startExpression);
-      const endExpr = renderExpressionNode(endExpression);
-      const startDefinesResolved = /^-?\d+$/.test(startExpr)
-        ? startExpr
-        : this.resolvedefines(startExpr);
-      const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
-      start = this.operandResolver.getnum(startDefinesResolved);
-      end = this.operandResolver.getnum(endDefinesResolved);
+      // Bounds bind in source order so defines and effectful functions retain stage timing.
+      start = this.operandResolver.getnum(this.resolveExpressionNode(startExpression));
+      end = this.operandResolver.getnum(this.resolveExpressionNode(endExpression));
     }
 
     return { variable, start, end };
@@ -3848,21 +4165,22 @@ export class Assembler {
       whileBlock,
       whileBlock.commands,
       (cmd) =>
-        cmd.kind === "command" && cmd.command.kind === "defineCommand"
-          ? (getDefineVariable(cmd.command.command) ?? null)
+        cmd.kind === "operation" &&
+        cmd.operation.kind === "defineAssignment" &&
+        cmd.operation.operator === "=" &&
+        !cmd.operation.dynamic &&
+        /^[A-Z_a-z]/.test(cmd.operation.name)
+          ? cmd.operation.name
           : null,
       (cmd) => this.executeLoweredNodeWithRecovery(cmd),
     );
   }
 
   getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined {
-    if (node.kind === "command") {
-      return node.command.source.normalizedSpan;
-    }
-    if (node.kind === "directive") {
+    if ("source" in node) {
       return node.source.normalizedSpan;
     }
-    if (node.kind === "loop" || node.kind === "conditional") {
+    if (node.kind === "loop" || node.kind === "conditional" || node.kind === "capture") {
       return node.header?.source.normalizedSpan;
     }
     return undefined;
@@ -3896,11 +4214,26 @@ export class Assembler {
    * @param {LoweredExecutableNode} node The node.
    */
   executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void {
-    this.executeWithAnalysisRecovery(
-      node,
-      (currentNode) => this.getLoweredNodeSpan(currentNode),
-      (currentNode) => this.executeLoweredNode(currentNode),
-    );
+    const command =
+      node.kind === "loop" || node.kind === "conditional" || node.kind === "capture"
+        ? node.header
+        : node.command;
+    const previous = this.currentSourceOrigin;
+    this.currentSourceOrigin = command?.source.origin ?? previous;
+    try {
+      this.executeWithAnalysisRecovery(
+        node,
+        (currentNode) => this.getLoweredNodeSpan(currentNode),
+        (currentNode) => this.executeLoweredNode(currentNode),
+      );
+    } catch (error) {
+      if (this.currentSourceOrigin) {
+        rememberErrorSource(error, this.getCurrentSourceLocation(this.getLoweredNodeSpan(node)));
+      }
+      throw error;
+    } finally {
+      this.currentSourceOrigin = previous;
+    }
   }
 
   /**
@@ -3909,19 +4242,188 @@ export class Assembler {
    */
   executeLoweredNode(node: LoweredExecutableNode): void {
     const sourceCommand =
-      node.kind === "loop" || node.kind === "conditional" ? node.header : node.command;
+      node.kind === "loop" || node.kind === "conditional" || node.kind === "capture"
+        ? node.header
+        : node.command;
     if (sourceCommand) {
       this.currentFile = sourceCommand.source.file;
       this.currentLine = sourceCommand.source.line;
     }
 
-    if (node.kind === "command") {
-      incrementInternalCounter("passthroughDispatches");
-      this.processNormalizedCommand(node.command, this.runtimePassthroughRewriteEnabled);
+    if (node.kind === "capture") {
+      if (node.captureKind === "macro") {
+        // An unterminated capture never installs a definition or executes its body.
+        if (!node.footer) {
+          return;
+        }
+        const declaration = node.header.parsed.operation;
+        if (declaration?.kind === "invalid") {
+          throw new Error(declaration.message);
+        }
+        if (declaration?.kind !== "macroHeader") {
+          throw new Error(`Invalid macro header: ${node.header.command}`);
+        }
+        const body = node.commands.map((command) => {
+          if (!("source" in command)) {
+            throw new Error("Macro captures must contain source templates.");
+          }
+          // Captured body syntax is shared, but the include chain belongs to this declaration occurrence.
+          return {
+            ...command,
+            source: {
+              ...command.source,
+              origin: command.source.origin ?? this.currentSourceOrigin,
+            },
+          };
+        });
+        this.macroEngine.installDefinition(declaration, body, {
+          ...node.header.source,
+          origin: node.header.source.origin ?? this.currentSourceOrigin,
+        });
+        return;
+      }
+      this.executeLoweredNodeWithRecovery(
+        this.commandLoweringService.lowerExecutableNode(node.header),
+      );
+      const scope = node.captureKind === "struct" ? "struct" : undefined;
+      for (const command of node.commands) {
+        if (
+          node.captureKind === "dataStructs" &&
+          (!("source" in command) || command.parsed.declaration?.kind !== "dataStructRow")
+        ) {
+          throw new Error("dataStructs accepts only indexed records: [index] = { field = value }.");
+        }
+        this.executeLoweredNodeWithRecovery(
+          this.commandLoweringService.lowerExecutableNode(command, scope),
+        );
+      }
+      if (node.footer) {
+        if (node.captureKind === "struct") {
+          // Closing a struct restores its cursor without emitting an executable command trace.
+          this.currentFile = node.footer.source.file;
+          this.currentLine = node.footer.source.line;
+          this.structEngine.handleStructMode(node.footer);
+        } else {
+          this.executeLoweredNodeWithRecovery(
+            this.commandLoweringService.lowerExecutableNode(node.footer),
+          );
+        }
+      }
       return;
     }
 
-    if (node.kind === "directive" || node.kind === "instruction") {
+    if (node.kind === "operation") {
+      const operation = node.operation;
+      switch (operation.kind) {
+        case "empty":
+          if (operation.seedBaseImage) {
+            this.seedOutputFromBaseImage();
+          }
+          return;
+        case "invalid":
+          throw new Error(operation.message);
+        case "macroHeader":
+          throw new Error("Macro header requires a captured body.");
+        case "macroCall":
+          if (this.collectSourceMetadata) {
+            this.collectCommandReferences(node.command);
+          }
+          this.macroEngine.executeInvocation(operation, node.source);
+          return;
+        case "defineAssignment":
+        case "defineExpansion":
+        case "undef":
+          this.defineEngine.executeOperation(operation, node.source);
+          if (operation.kind === "defineAssignment") {
+            this.cursorAddress.recordCurrentAddress();
+          }
+          return;
+      }
+    }
+    if (node.kind === "bareInvocation") {
+      if (this.macros.has(node.invocation.name)) {
+        this.macroEngine.executeInvocation(node.invocation, node.source);
+      } else {
+        // Bare invocation candidates retain their source envelope even when they bind to a directive/opcode.
+        this.executeAttributedCommand(node.command, () =>
+          this.dispatchLoweredNode(this.commandLoweringService.lowerCommand(node.command)),
+        );
+      }
+      return;
+    }
+    if (node.kind === "sourceTemplate") {
+      if (this.isDefinitionCollectionStage && node.command.syntax?.kind === "numericData") {
+        // Collection retains the template occurrence while data binding determines its reserved width.
+        this.executeStatement({
+          kind: "numericData",
+          statement: node.command.syntax.statement,
+          command: node.command,
+          source: node.source,
+        });
+        return;
+      }
+      const input = node.source.fragment ?? sourceFragment(node.source.raw, [node.source]);
+      const origin = node.source.origin;
+      const fragment = this.macroEngine.resolveVariadicFragment(
+        input,
+        origin?.kind === "macro" ? origin.arguments : [],
+      );
+      if (fragmentText(fragment) === node.command.command) {
+        throw new Error(`Unbound source template: ${node.command.command}`);
+      }
+      incrementInternalCounter("actualReparses");
+      this.processSourceFragment(fragment, true);
+      return;
+    }
+    if (node.kind === "declaration") {
+      const declaration = node.declaration;
+      switch (declaration.kind) {
+        case "invalid":
+          throw new Error(declaration.message);
+        case "character":
+          this.characterMappings.set(
+            declaration.character,
+            this.operandResolver.getnum(declaration.expression),
+          );
+          return;
+        case "function":
+          this.mathCore.installFunctionTemplate(declaration.name, declaration.template);
+          this.recordSymbolDefinition("function", declaration.name);
+          return;
+        case "structField":
+          this.structEngine.handleStructMode(node.command);
+          return;
+        case "dataStructRow": {
+          const record = this.structEngine.data.bindRow(declaration);
+          const command = {
+            ...node.command,
+            keyword: "datastruct",
+            parsed: { ...node.command.parsed, declaration: record },
+          };
+          // The row binds a declaration, then honors the current typed directive owner and middleware.
+          const lowered = withSourceSyntax(() => this.commandLoweringService.lowerCommand(command));
+          this.executeAttributedCommand(command, () => this.dispatchLoweredNode(lowered));
+          return;
+        }
+        case "struct":
+        case "endStruct":
+        case "dataStruct":
+        case "dataStructs":
+        case "endDataStructs":
+          throw new Error(`Unexpected declaration: ${declaration.kind}`);
+      }
+    }
+    if (node.kind === "label" || node.kind === "assignment" || node.kind === "numericData") {
+      // Registration can change ownership after lowering; select the replacement's parsed contract.
+      if (this.commandLoweringService.lowerStatement(node.command)) {
+        this.executeStatement(node);
+      } else {
+        this.dispatchLoweredNode(this.commandLoweringService.lowerCommand(node.command));
+      }
+      return;
+    }
+
+    if (node.kind === "typedInstruction") {
       if (node.command && this.collectSourceMetadata) {
         this.collectCommandReferences(node.command);
       }
@@ -3939,6 +4441,15 @@ export class Assembler {
       return;
     }
 
+    if (
+      node.kind === "pluginSyntax" &&
+      !node.command.keyword.startsWith(".") &&
+      !["unknown", "opcodeCandidate", "directive"].includes(node.command.kind)
+    ) {
+      // Declaration-shaped directives retain both declaration and directive trace envelopes.
+      this.executeAttributedCommand(node.command, () => this.dispatchLoweredNode(node));
+      return;
+    }
     this.dispatchLoweredNode(node);
   }
 

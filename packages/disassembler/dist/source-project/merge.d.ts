@@ -75,6 +75,8 @@ export declare function applySourceGeneration(repository: SourceRepository, gene
 export declare function finishSourceGeneration(repository: SourceRepository, options: {
     readonly message: string;
     readonly validate: (tree: string) => Promise<SourceBuildVerification>;
+    /** Human-readable phase boundaries, including native work performed between builds. */
+    readonly onProgress?: (message: string) => void;
 }): Promise<SourceMergeStatus>;
 /** Explicitly discard an unneeded pure candidate. Git's usual object expiry controls eventual reclamation. */
 export declare function discardSourceGeneration(repository: SourceRepository, candidate: string): Promise<void>;

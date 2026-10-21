@@ -5,9 +5,9 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { executeSourceOperation } from "@uttori/asm-cli/source";
-import { WorkspaceIndex } from "@uttori/asm-core";
-import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler";
+import { WorkspaceIndex } from "@uttori/asm-core/tooling";
+import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler/source-project";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 import { TextDocumentEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 

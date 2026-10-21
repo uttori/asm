@@ -66,6 +66,13 @@ Set `limits.captureBytes` in `.uttori/project.json` (bytes) for an explicit per-
 file budget is independent of heap and analysis work limits. If a companion import fails after
 CPU evidence commits, retry the same capture after adjusting the limit; CPU facts are not duplicated.
 
+For an interrupted ACT2 instruction recording, use
+`source import game-source recording.act2.partial --recover-partial` explicitly. This imports only
+checksummed chunks with durable checkpoints from an unchanged file. Corrupt frames still fail.
+The retained report identifies the recovered instruction/checkpoint boundary and warns that the
+tail and companion end boundary are unknown. Ordinary imports continue to require a valid terminal.
+Recovery preserves the input file and gives the prefix a distinct, retryable evidence identity.
+
 Pristine assets in `.uttori/generation-inputs.json` normally come from the accepted pure generation.
 New original assets may instead declare a bounded `romRange` or an `originalBlob` containing an
 immutable Git blob ID, never both. Each declaration requires the exact SHA-256 of its bytes.

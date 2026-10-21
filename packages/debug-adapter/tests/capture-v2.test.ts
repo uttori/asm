@@ -5,22 +5,15 @@ import path from "node:path";
 
 import test from "ava";
 
-import { compressCaptureChunk } from "../src/capture-compression.js";
-import {
-  LosslessCaptureFileRecorder,
-  NativeCaptureFileRecorder,
-  recoverCaptureFile,
-  exportCaptureJson,
-} from "../src/capture-file.js";
-import {
+import { compressCaptureChunk,recoverCaptureFile,exportCaptureJson,
   captureCrc32c,
   captureU64,
   decodeCaptureChunk,
   validateCaptureRequest,
   validateCapturePosition,
   type CapturePositionV2,
-  type CaptureTransportV2,
-} from "../src/capture-v2.js";
+  type CaptureTransportV2 } from "@uttori/asm-capture";
+import { LosslessCaptureFileRecorder, NativeCaptureFileRecorder } from "../src/capture-file.js";
 
 const session = "0123456789abcdef0123456789abcdef";
 const metadata = {
@@ -45,6 +38,7 @@ const position = (
   state: CapturePositionV2["state"] = "recording",
 ): CapturePositionV2 => ({
   session,
+  scope: "snes.65816.instructions",
   state,
   producedThrough: events,
   deliveredThrough: events,
@@ -469,4 +463,10 @@ test("ACT2 Ricoh scope preserves mapper and per-fetch provenance without accepti
   t.throws(() => decodeCaptureChunk(b, session, "nes.2a03.instructions"), {
     message: /pc|address/i,
   });
+});
+
+test("capture positions reject omitted scope instead of assuming an instruction stream", (t) => {
+  const missing = { ...position() };
+  Reflect.deleteProperty(missing, "scope");
+  t.throws(() => validateCapturePosition(missing), { message: /scope/ });
 });

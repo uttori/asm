@@ -32,7 +32,7 @@ export async function openRuntimeCaptureSource(
     await handle.close();
   }
   if (magic.toString("ascii") === "ACS2") {
-    const { readCaptureFileHeader } = await import("@uttori/asm-debug-adapter");
+    const { readCaptureFileHeader } = await import("@uttori/asm-capture");
     const header = await readCaptureFileHeader(file, options);
     if (header.scope !== "snes.65816.instructions" && header.scope !== "nes.2a03.instructions") {
       return { kind: "bus", source: await createRuntimeBusCaptureSource(file, options) };

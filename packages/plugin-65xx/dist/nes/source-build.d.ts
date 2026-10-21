@@ -1,5 +1,5 @@
 import { type AssemblerEnvironment } from "@uttori/asm-core";
-import { type SourceBuildVerification } from "@uttori/asm-disassembler";
+import { type SourceBuildVerification } from "@uttori/asm-disassembler/source-project";
 /** Saved inputs for a fixed-layout cartridge; pristine generations additionally require exact original bytes. */
 export interface BuildNesSourceOptions {
     readonly root: string;
@@ -45,7 +45,7 @@ export declare function inspectNesSource(options: BuildNesSourceOptions & {
 }): {
     output: Uint8Array<ArrayBuffer>;
     mapping: import("@uttori/asm-core").AddressToLineMapping;
-    snapshots: Map<string, Uint8Array<ArrayBufferLike>>;
+    snapshots: ReadonlyMap<string, Uint8Array<ArrayBufferLike>>;
     symbols: Map<string, number>;
     diagnostics: never[];
 };

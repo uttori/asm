@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { executeSourceOperation, inspectSourceProject } from "@uttori/asm-cli/source";
-import { sourceGit, sourceContentHash } from "@uttori/asm-disassembler";
+import { executeSourceOperation, inspectSourceProject } from "@uttori/asm-workflows/source";
+import { sourceGit, sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
 /** Private full-ROM proof, restricted to a separately prepared verification clone with an imported edit. */
 async function main(): Promise<void> {

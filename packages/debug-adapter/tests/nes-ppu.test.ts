@@ -6,7 +6,7 @@ import {
   captureCrc32c,
   decodeCaptureChunk,
   validateCaptureCapabilities,
-} from "../src/capture-v2.js";
+} from "@uttori/asm-capture";
 
 const fixture = new URL("./fixtures/nes-ppu/ppu-bus.chunk", import.meta.url);
 test("native NES PPU wire records retain palette aliases, restrictions and PRG provenance", async (t) => {

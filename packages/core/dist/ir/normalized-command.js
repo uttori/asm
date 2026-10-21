@@ -1,7 +1,10 @@
 import { incrementInternalCounter } from "../internal-instrumentation.js";
 import { createLineSpan, deriveTokenSpans } from "../source-location.js";
 import { parseAssetCall } from "./asset-call.js";
-import { parseExpressionNode, } from "./expression-node.js";
+import { parseCommandOperation } from "./command-operation.js";
+import { parseDeclarationNode } from "./declaration-node.js";
+import { parseDirectiveExpression } from "./directive-arguments.js";
+import { parseExpressionAtSite, } from "./expression-node.js";
 const EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
 const EMPTY_TOKEN_SPANS = Object.freeze([]);
 /**
@@ -78,6 +81,7 @@ export function cloneNormalizedCommand(command) {
  * @returns {NormalizedCommand} The same command node for chaining.
  */
 export function setCommandWords(command, words, normalized) {
+    delete command.syntax;
     command.words = words;
     command.keyword = words[0] ?? "";
     command.command = (normalized ?? words.join(" ")).trim();
@@ -120,11 +124,15 @@ export function setCommandKind(command, kind) {
  * @param {string[]} words The tokenized command words.
  * @returns {CommandKind} The inferred command kind.
  */
-function classifyCommand(command, words) {
+export function classifyCommand(command, words) {
     const trimmed = command.trim();
     const keyword = (words[0] ?? "").toLowerCase();
     if (!trimmed || trimmed.startsWith(";")) {
         return "commentOrEmpty";
+    }
+    // Apostrophe table rows can be one lexer token; their declaration grammar owns the quotes.
+    if (/^(["'])[\S\s]\1\s*=/.test(trimmed)) {
+        return "characterMapping";
     }
     if (words.length === 3 &&
         words[1] === "=" &&
@@ -206,17 +214,25 @@ function deriveCommandSemantics(command, words, line, raw = command) {
     const keyword = (words[0] ?? "").toLowerCase();
     const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
     const semantics = {};
+    const operation = parseCommandOperation(command, raw);
+    if (operation) {
+        semantics.operation = operation;
+    }
+    const declaration = parseDeclarationNode(command, words);
+    if (declaration) {
+        semantics.declaration = declaration;
+    }
     if (keyword === "includeasset") {
         semantics.includeAsset = parseAssetCall(raw, line);
     }
     if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
         semantics.condition = {
-            expression: parseExpressionNode(words.slice(1).join(" ")),
+            expression: parseExpressionAtSite(words.slice(1).join(" "), "command"),
         };
     }
     if (keyword === "for" && words.length >= 4 && words[2] === "=") {
         const variable = words[1];
-        const parsedRange = parseExpressionNode(words.slice(3).join(" "));
+        const parsedRange = parseExpressionAtSite(words.slice(3).join(" "), "command");
         if (parsedRange.type === "range") {
             semantics.forLoop = {
                 variable,
@@ -231,7 +247,7 @@ function deriveCommandSemantics(command, words, line, raw = command) {
         !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
         semantics.assignment = {
             target: words[0],
-            expression: parseExpressionNode(words[2]),
+            expression: parseDirectiveExpression(words[2], false),
         };
     }
     if (bareKeyword === "incbin" && words.length >= 2) {
@@ -242,7 +258,7 @@ function deriveCommandSemantics(command, words, line, raw = command) {
         const colonIndex = incbinSource.indexOf(":");
         const rangeCandidate = colonIndex === -1 ? undefined : incbinSource.slice(colonIndex + 1);
         if (rangeCandidate) {
-            const parsedRange = parseExpressionNode(rangeCandidate);
+            const parsedRange = parseExpressionAtSite(rangeCandidate, "command");
             if (parsedRange.type === "range") {
                 semantics.incbinRange = {
                     range: parsedRange,
@@ -279,7 +295,7 @@ function deriveCommandSemantics(command, words, line, raw = command) {
     if (labelSplit) {
         semantics.labelSplit = labelSplit;
     }
-    if (["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"].includes(keyword) && words.length >= 2) {
+    if (["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"].includes(keyword)) {
         const payload = command.slice((words[0] ?? "").length).trim();
         semantics.dataDirective = {
             directive: keyword,

@@ -9,16 +9,16 @@ import {
   type SpritePaletteCatalog,
 } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
 import type { FrameLayout } from "@uttori/asm-assets/secret-of-mana/som-types";
-import { executeSourceOperation } from "@uttori/asm-cli/source";
+import { RomImage } from "@uttori/asm-disassembler";
 import {
-  RomImage,
   sourceGit,
   sourceRepository,
   retainSourceGeneration,
   adoptSourceGeneration,
   finishSourceGeneration,
   type SourceBuildVerification,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 
 import { deriveFramePlacements } from "../../packages/assets/src/secret-of-mana/som-frame-composition.js";
 import {
@@ -207,7 +207,7 @@ export async function spriteSourceFixture(
     includePaths: ["./"],
     plugins: [
       { module: "@uttori/asm-plugin-snes", options: { checksumEnabled: false } },
-      { module: "@uttori/asm-assets/secret-of-mana/som-asset-plugin" },
+      { module: "@uttori/asm-game-secret-of-mana" },
     ],
   });
   let graphicsInclude =

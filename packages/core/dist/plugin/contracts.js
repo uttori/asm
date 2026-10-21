@@ -1,5 +1,5 @@
 /** Contract revision required by PluginManager. Independent of npm package versions. */
-export const PLUGIN_API_VERSION = 1;
+export const PLUGIN_API_VERSION = 2;
 /**
  * Preserve the plugin's option type without runtime validation.
  * @param {AssemblerPlugin<Options>} plugin Definition to expose as the module's default export.

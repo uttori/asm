@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { readSourceProjectLocalInputs } from "@uttori/asm-disassembler";
+import { readSourceProjectLocalInputs } from "@uttori/asm-disassembler/source-project";
 
 /** Find source-project configuration above an include folder, stopping at the owning Git repository. */
 export async function findSourceRoot(directory: string): Promise<string | undefined> {

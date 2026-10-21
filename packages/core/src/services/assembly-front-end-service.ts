@@ -1,5 +1,19 @@
+import { withSourceSyntax, recordSyntaxBoundary } from "../internal-instrumentation.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
-import { createNormalizedCommand, type NormalizedCommand } from "../ir/normalized-command.js";
+import {
+  parseExpressionAtSite,
+  parseExpressionResult,
+  type ExpressionNode,
+} from "../ir/expression-node.js";
+import { parseMacroArguments } from "../ir/macro-template.js";
+import {
+  cloneNormalizedCommand,
+  createNormalizedCommand,
+  type NormalizedCommand,
+} from "../ir/normalized-command.js";
+import type { ContributionSyntax } from "../ir/source-syntax.js";
+import { parseLabelStatement, parseNumericDataStatement } from "../ir/statement-node.js";
+import { deriveTokenSpans } from "../source-location.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
 import {
   preprocessBlockCommands as preprocessCommandBlock,
@@ -11,12 +25,15 @@ import {
   isOpenStructuredCommand,
   isStructuredCommandStart,
 } from "./command-text-service.js";
-import { ProgramModelBuilder } from "./program-model-builder.js";
+import { OccurrenceSyntaxCache } from "./occurrence-syntax-cache.js";
+import { ProgramModelBuilder, type IncrementalProgramParseState } from "./program-model-builder.js";
 
 export type AssemblyFrontEndHost = {
   currentFile: string;
   currentLine: number;
   passProgramCache: Map<string, ExecutableNode[]>;
+  parsePluginSyntax?(command: NormalizedCommand): ContributionSyntax | undefined;
+  grammarIdentity?(): string;
   collectSourceMetadata: boolean;
   inMacroExpansion: boolean;
   isDefinitionCollectionStage: boolean;
@@ -35,6 +52,52 @@ export type AssemblyFrontEndHost = {
  */
 export class AssemblyFrontEndService {
   commandBuffer = "";
+  /** Source occurrences and grammar identity are part of syntax ownership, never invocation values. */
+  private readonly fragmentCommands = new OccurrenceSyntaxCache<NormalizedCommand>();
+
+  private readonly fragmentExpressions = new OccurrenceSyntaxCache<ExpressionNode>();
+  private readonly assemblyExpressions = new Map<string, ExpressionNode>();
+
+  clearFragmentCache(): void {
+    this.fragmentCommands.clear();
+    this.fragmentExpressions.clear();
+    this.assemblyExpressions.clear();
+  }
+
+  /** String entry adapters share immutable syntax; every caller still resolves current session bindings. */
+  parseAssemblyExpression(text: string): ExpressionNode {
+    let syntax = this.assemblyExpressions.get(text);
+    if (!syntax) {
+      syntax = parseExpressionAtSite(text, "assembler");
+      this.assemblyExpressions.set(text, syntax);
+    }
+    return syntax;
+  }
+
+  /** Parse generated expression grammar once per actual spelling; resolved values are never retained. */
+  parseFragmentExpression(text: string): ExpressionNode {
+    const grammar = this.grammarIdentity;
+    let syntax = this.fragmentExpressions.get(grammar, "", 0, "expression", text);
+    if (!syntax) {
+      recordSyntaxBoundary("generated-fragment-parse");
+      syntax = withSourceSyntax(() => parseExpressionAtSite(text, "generated-expression"));
+      this.fragmentExpressions.set(grammar, "", 0, "expression", text, syntax);
+    }
+    return syntax;
+  }
+
+  /** Reuse generated syntax only for the same spelling, grammar and physical occurrence. */
+  parseFragmentCommand(text: string, file: string, line: number): NormalizedCommand {
+    const grammar = this.grammarIdentity;
+    let command = this.fragmentCommands.get(grammar, file, line, "command", text);
+    if (!command) {
+      recordSyntaxBoundary("generated-fragment-parse");
+      recordSyntaxBoundary("source-cache-miss");
+      command = this.createLoopCommandNode(text, file, line);
+      this.fragmentCommands.set(grammar, file, line, "command", text, command);
+    }
+    return cloneNormalizedCommand(command);
+  }
   /** Opening physical line when processCommand receives a structured statement one line at a time. */
   private statementBufferStart?: { file: string; line: number };
 
@@ -45,14 +108,20 @@ export class AssemblyFrontEndService {
       currentFile: this.host.currentFile,
       currentLine: this.host.currentLine,
       passProgramCache: this.host.passProgramCache,
+      grammarIdentity: () => this.grammarIdentity,
+      sourceBufferEmpty: () => this.commandBuffer.length === 0 && !this.statementBufferStart,
       preprocessBlockCommands: (source: string) => this.preprocessBlockCommands(source),
       splitInlineCommands: (commands: string[]) => this.splitInlineCommands(commands),
       preprocessSourcedBlockCommands: (source: string) =>
         this.preprocessSourcedBlockCommands(source),
       splitSourcedInlineCommands: (commands: SourcedCommand[]) =>
         this.splitSourcedInlineCommands(commands),
-      createLoopCommandNode: (command: string, sourceFile?: string, sourceLine?: number) =>
-        this.createLoopCommandNode(command, sourceFile, sourceLine),
+      createLoopCommandNode: (
+        command: string,
+        sourceFile?: string,
+        sourceLine?: number,
+        physical?: string,
+      ) => this.createLoopCommandNode(command, sourceFile, sourceLine, physical),
       shouldEndifCloseInnermostWhile: (
         loopType?: "for" | "while",
         loopStartLine?: number,
@@ -133,6 +202,7 @@ export class AssemblyFrontEndService {
     sourceFile: string,
     sourceLine: number,
     allowEmpty = false,
+    physical?: string,
   ): NormalizedCommand | null {
     let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
     normalizedCommand =
@@ -141,20 +211,12 @@ export class AssemblyFrontEndService {
         sourceLine,
       }) ?? normalizedCommand;
 
-    if (
-      this.host.inMacroExpansion &&
-      !this.host.isDefinitionCollectionStage &&
-      (normalizedCommand.includes("...") || normalizedCommand.includes("…"))
-    ) {
-      normalizedCommand = this.host.resolveVariadicPlaceholders(normalizedCommand);
-    }
-
     const words = splitCommandIntoWords(normalizedCommand);
     if (!allowEmpty && words.length === 0) {
       return null;
     }
 
-    return createNormalizedCommand(
+    const node = createNormalizedCommand(
       command,
       normalizedCommand,
       words,
@@ -162,6 +224,128 @@ export class AssemblyFrontEndService {
       sourceLine,
       this.host.collectSourceMetadata,
     );
+    if (physical !== undefined && physical !== command && this.host.collectSourceMetadata) {
+      node.source = {
+        ...node.source,
+        physical: { text: physical },
+        tokenSpans: deriveTokenSpans(physical, words, sourceLine),
+      };
+    }
+    this.parseCommandSyntax(node);
+    return node;
+  }
+
+  private grammarCache?: { profile: SyntaxProfile; contribution: string; identity: string };
+
+  /** Serializable profile flags plus selected contributions reconstruct the same worker grammar. */
+  get grammarIdentity(): string {
+    const contribution = this.host.grammarIdentity?.() ?? "core";
+    const cached = this.grammarCache;
+    // Profiles are readonly session contracts; registry revisions invalidate contribution identity.
+    if (cached?.profile === this.host.syntaxProfile && cached.contribution === contribution) {
+      return cached.identity;
+    }
+    const { rewriteCommand, ...profile } = this.host.syntaxProfile;
+    const identity = JSON.stringify([
+      "source-ast:4",
+      contribution,
+      Object.entries(profile).toSorted(([a], [b]) => a.localeCompare(b)),
+      !!rewriteCommand,
+    ]);
+    this.grammarCache = { profile: this.host.syntaxProfile, contribution, identity };
+    return identity;
+  }
+
+  /** One source entry family; fragment materialization belongs to the expansion owner. */
+  parseSource(source: string, file = this.host.currentFile, line = 0) {
+    return this.programModelBuilder.buildProgramModel(source, file, line);
+  }
+
+  /** Generated text is parsed with the same profile and grammar identity as physical text. */
+  parseGeneratedFragment(source: string, file = this.host.currentFile, line = 0) {
+    return this.programModelBuilder.buildProgramModel(source, file, line, "generated");
+  }
+
+  /** Incremental expansion uses the same command parser while preserving deferred control bodies. */
+  parseGeneratedCommand(
+    state: IncrementalProgramParseState,
+    text: string,
+    file: string,
+    line: number,
+    normalized?: NormalizedCommand,
+  ) {
+    return this.programModelBuilder.consumeIncrementalCommand(
+      state,
+      text,
+      file,
+      line,
+      normalized ?? this.parseFragmentCommand(text, file, line),
+    );
+  }
+
+  /** Expression adapters share the existing expression parser; parsing never evaluates values. */
+  parseExpression(source: string) {
+    return parseExpressionResult(source, "public");
+  }
+
+  /** Attach only grammars whose parser is pure; deferred templates bind only when their capture is invoked. */
+  parseCommandSyntax(command: NormalizedCommand): void {
+    if (this.host.syntaxProfile.bareMacroInvocations && command.kind === "opcodeCandidate") {
+      const text = command.command.slice(command.keyword.length).trim();
+      command.parsed.bareInvocation = {
+        kind: "macroCall",
+        name: command.keyword,
+        arguments: parseMacroArguments(text).map((argument) => argument.value),
+        parenthesized: text.length > 0,
+      };
+    }
+    if (/<[^>]+>|\\[A-Z_a-z]/.test(command.command)) {
+      // Data templates have a known element count during collection; values bind at invocation.
+      if (command.parsed.dataDirective && /\.{3}|…/.test(command.command)) {
+        const statement = parseNumericDataStatement(command);
+        if (statement) {
+          command.syntax = { kind: "numericData", statement };
+        }
+      }
+      return;
+    }
+    const plugin = this.host.parsePluginSyntax?.(command);
+    if (plugin) {
+      command.syntax = plugin;
+      return;
+    }
+    if (command.kind === "labelDefinition") {
+      const statement = parseLabelStatement(command, this.host.syntaxProfile.leadingDotLabels);
+      if (statement) {
+        if (statement.trailing) {
+          const following = statement.trailing;
+          this.parseCommandSyntax(following);
+          const declaration = { ...statement };
+          delete declaration.trailing;
+          if (following.syntax?.kind === "numericData") {
+            command.syntax = {
+              kind: "sequence",
+              declaration,
+              following: {
+                kind: "numericDataFragment",
+                command: following.command,
+                wordOffset: command.words.length - following.words.length,
+                statement: following.syntax.statement,
+              },
+            };
+          } else {
+            command.syntax = { kind: "sequence", declaration, following };
+          }
+        } else {
+          command.syntax = { kind: "label", statement };
+        }
+      }
+    } else if (command.parsed.dataDirective) {
+      const statement = parseNumericDataStatement(command);
+      if (statement) {
+        command.syntax = { kind: "numericData", statement };
+      }
+    }
   }
 
   /**
@@ -175,9 +359,10 @@ export class AssemblyFrontEndService {
     command: string,
     sourceFile = this.host.currentFile,
     sourceLine = this.host.currentLine,
+    physical?: string,
   ): NormalizedCommand {
     return (
-      this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true) ??
+      this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true, physical) ??
       createNormalizedCommand(
         command,
         "",

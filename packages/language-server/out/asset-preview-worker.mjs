@@ -49,7 +49,7 @@ var require_ms = __commonJS({
       options = options || {};
       var type = typeof val;
       if (type === "string" && val.length > 0) {
-        return parse(val);
+        return parse2(val);
       } else if (type === "number" && isFinite(val)) {
         return options.long ? fmtLong(val) : fmtShort(val);
       }
@@ -57,7 +57,7 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse(str) {
+    function parse2(str) {
       str = String(str);
       if (str.length > 100) {
         return;
@@ -801,118 +801,6 @@ var require_src = __commonJS({
 
 // packages/language-server/src/asset-preview-worker.ts
 import { parentPort } from "node:worker_threads";
-
-// packages/assets/src/validation.ts
-function integer(value, label, minimum, maximum) {
-  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-    throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
-  }
-  return value;
-}
-function unitCount(bytes, size, label) {
-  if (bytes.length % size !== 0) {
-    throw new RangeError(`${label} length ${bytes.length} is not divisible by ${size}.`);
-  }
-  return bytes.length / size;
-}
-function isNamespacedId(id2) {
-  const parts = id2.split(".");
-  return parts.length > 1 && /^[a-z][\da-z-]*$/.test(parts[0]) && parts.slice(1).every((part) => /^[\da-z][\da-z-]*$/.test(part));
-}
-function invariant(value, message = "Invalid asset value.") {
-  if (!value) {
-    throw new Error(message);
-  }
-}
-function equal(actual, expected, message = `Expected ${String(expected)}, received ${String(actual)}.`) {
-  if (!Object.is(actual, expected)) {
-    throw new Error(message);
-  }
-}
-function fail(message) {
-  throw new Error(message);
-}
-
-// packages/assets/src/registry.ts
-var AssetRegistry = class {
-  #importers = /* @__PURE__ */ new Map();
-  #encoders = /* @__PURE__ */ new Map();
-  #mediaTypes = /* @__PURE__ */ new Map();
-  registerImporter(importer) {
-    if (!isNamespacedId(importer.id) || !importer.version || importer.mediaTypes.length === 0 || this.#importers.has(importer.id)) {
-      throw new Error(`Invalid or duplicate asset importer '${importer.id}'.`);
-    }
-    for (const mediaType of importer.mediaTypes) {
-      if (this.#mediaTypes.has(mediaType)) {
-        throw new Error(`Duplicate asset media type '${mediaType}'.`);
-      }
-    }
-    this.#importers.set(importer.id, importer);
-    importer.mediaTypes.forEach((type) => this.#mediaTypes.set(type, importer));
-    return this;
-  }
-  registerEncoder(encoder) {
-    if (!isNamespacedId(encoder.id) || !encoder.version || !encoder.primaryOutput || encoder.inputKinds.length === 0 || this.#encoders.has(encoder.id)) {
-      throw new Error(`Invalid or duplicate asset encoder '${encoder.id}'.`);
-    }
-    this.#encoders.set(encoder.id, encoder);
-    return this;
-  }
-  importerFor(mediaType) {
-    const importer = this.#mediaTypes.get(mediaType);
-    if (!importer) {
-      throw new Error(`No asset importer for '${mediaType}'.`);
-    }
-    return importer;
-  }
-  encoderFor(id2) {
-    const encoder = this.#encoders.get(id2);
-    if (!encoder) {
-      throw new Error(`No asset encoder '${id2}'.`);
-    }
-    return encoder;
-  }
-};
-function convertAsset(registry4, request) {
-  const importer = registry4.importerFor(request.source.mediaType);
-  const encoder = registry4.encoderFor(request.format);
-  const source = { ...request.source, bytes: request.source.bytes.slice() };
-  const resources = Object.fromEntries(
-    Object.entries(request.resources ?? {}).map(([name, input2]) => [
-      name,
-      { ...input2, bytes: input2.bytes.slice() }
-    ])
-  );
-  const document2 = importer.import(source);
-  if (!encoder.inputKinds.includes(document2.kind)) {
-    throw new Error(`Encoder '${encoder.id}' cannot consume '${document2.kind}'.`);
-  }
-  const encoded = encoder.encode(document2, request.options ?? {}, resources);
-  if (encoded.fidelity.kind === "lossy-audio" && (encoder.id !== "snes.brr" || document2.kind !== "pcm-audio")) {
-    throw new Error(
-      `Encoder '${encoder.id}' cannot declare lossy fidelity for '${document2.kind}'.`
-    );
-  }
-  if (!Object.hasOwn(encoded.outputs, encoder.primaryOutput)) {
-    throw new Error(`Encoder '${encoder.id}' omitted primary output '${encoder.primaryOutput}'.`);
-  }
-  const outputs = {};
-  for (const [name, output] of Object.entries(encoded.outputs)) {
-    if (!(output.bytes instanceof Uint8Array)) {
-      throw new Error(`Output '${name}' is not bytes.`);
-    }
-    outputs[name] = { ...output, bytes: output.bytes.slice() };
-  }
-  return {
-    outputs,
-    primaryOutput: encoder.primaryOutput,
-    fidelity: encoded.fidelity,
-    importer: { id: importer.id, version: importer.version },
-    encoder: { id: encoder.id, version: encoder.version },
-    options: encoded.normalizedOptions,
-    document: document2
-  };
-}
 
 // node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
@@ -7677,6 +7565,37 @@ var AudioWAV = class extends data_buffer_default {
 _a = AudioWAV;
 var audio_wav_default = AudioWAV;
 
+// packages/assets/src/validation.ts
+function integer(value, label, minimum, maximum) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
+  }
+  return value;
+}
+function unitCount(bytes, size, label) {
+  if (bytes.length % size !== 0) {
+    throw new RangeError(`${label} length ${bytes.length} is not divisible by ${size}.`);
+  }
+  return bytes.length / size;
+}
+function isNamespacedId(id2) {
+  const parts2 = id2.split(".");
+  return parts2.length > 1 && /^[a-z][\da-z-]*$/.test(parts2[0]) && parts2.slice(1).every((part) => /^[\da-z][\da-z-]*$/.test(part));
+}
+function invariant(value, message = "Invalid asset value.") {
+  if (!value) {
+    throw new Error(message);
+  }
+}
+function equal(actual, expected, message = `Expected ${String(expected)}, received ${String(actual)}.`) {
+  if (!Object.is(actual, expected)) {
+    throw new Error(message);
+  }
+}
+function fail(message) {
+  throw new Error(message);
+}
+
 // packages/assets/src/snes.ts
 var planeOffset = (depth, plane, row) => {
   if (depth === 3 && plane === 2) {
@@ -8075,11 +7994,11 @@ function candidateBlock(source, start, range, filter, initial) {
     let bestSample = 0;
     let bestError = Number.POSITIVE_INFINITY;
     for (let nibble = -8; nibble <= 7; nibble++) {
-      const decoded = decodeNibble(nibble, range, filter, state);
-      const error = (target - decoded) ** 2;
+      const decoded2 = decodeNibble(nibble, range, filter, state);
+      const error = (target - decoded2) ** 2;
       if (error < bestError || error === bestError && Math.abs(nibble) < Math.abs(bestNibble)) {
         bestNibble = nibble;
-        bestSample = decoded;
+        bestSample = decoded2;
         bestError = error;
       }
     }
@@ -8341,12 +8260,12 @@ function withAudioEncoder(native) {
         const loop = options.loop;
         const brr = encodeBrrPcm(padded, Boolean(loop));
         const loopOffset = loop ? loop.start / 16 * 9 : void 0;
-        const decoded = decodeBrrPcm(brr, loopOffset);
+        const decoded2 = decodeBrrPcm(brr, loopOffset);
         let squared = 0;
         let signal = 0;
         let peakError = 0;
         for (let index = 0; index < originalCount; index++) {
-          const error = audio.samples[index] - decoded[index];
+          const error = audio.samples[index] - decoded2[index];
           squared += error * error;
           signal += audio.samples[index] * audio.samples[index];
           peakError = Math.max(peakError, Math.abs(error));
@@ -8384,7 +8303,7 @@ function withAudioEncoder(native) {
           outputs: {
             brr: { bytes: brr, mediaType: "application/octet-stream", metadata },
             reviewWav: {
-              bytes: writePcmWave(decoded, audio.sampleRate),
+              bytes: writePcmWave(decoded2, audio.sampleRate),
               mediaType: "audio/wav",
               metadata
             }
@@ -8395,7 +8314,7 @@ function withAudioEncoder(native) {
             sourceSamples: originalCount,
             paddedSamples: padded.length,
             paddingSamples: paddingCount,
-            decodedSamples: decoded.length,
+            decodedSamples: decoded2.length,
             peakError,
             rmsError,
             snrDb,
@@ -8407,50 +8326,6 @@ function withAudioEncoder(native) {
     });
   });
 }
-
-// packages/assets/src/data.ts
-var rawImporter = Object.freeze({
-  id: "uttori.import.raw",
-  version: "1.0.0",
-  mediaTypes: ["application/octet-stream"],
-  import: (input2) => ({
-    kind: "raw",
-    value: input2.bytes.slice()
-  })
-});
-var rawEncoder = Object.freeze({
-  id: "uttori.data.raw",
-  version: "1.0.0",
-  inputKinds: ["raw"],
-  primaryOutput: "data",
-  encode: (document2, options) => {
-    if (Object.keys(options).length !== 0) {
-      throw new Error("Raw encoding accepts no options.");
-    }
-    if (!(document2.value instanceof Uint8Array)) {
-      throw new Error("Raw document requires bytes.");
-    }
-    return {
-      outputs: { data: { bytes: document2.value.slice(), mediaType: "application/octet-stream" } },
-      fidelity: { kind: "exact", verification: "byte equality" },
-      normalizedOptions: {}
-    };
-  }
-});
-var jsonImporter = Object.freeze({
-  id: "uttori.import.json",
-  version: "1.0.0",
-  mediaTypes: ["application/json"],
-  import: (input2) => {
-    const value = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(input2.bytes)
-    );
-    if (value === null || typeof value !== "object" || Array.isArray(value) || !("kind" in value) || typeof value.kind !== "string") {
-      throw new Error("Asset JSON requires an object with a kind string.");
-    }
-    return { kind: value.kind, value };
-  }
-});
 
 // node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 var CRC32_POLYNOMIAL = 3988292384;
@@ -8563,7 +8438,7 @@ function freezeGlyphs() {
     "`": [8, 4, 2, 0, 0, 0, 0],
     "{": [2, 4, 4, 8, 4, 4, 2],
     "}": [8, 4, 4, 2, 4, 4, 8]
-  }).map(([key, rows]) => [key, Object.freeze(rows)])));
+  }).map(([key, rows2]) => [key, Object.freeze(rows2)])));
 }
 var GLYPHS = /* @__PURE__ */ freezeGlyphs();
 function layout(text, options = {}) {
@@ -8864,20 +8739,20 @@ var RgbaSurface = class _RgbaSurface {
       return this;
     }
     const rowLength = (right - left) * 4;
-    const rows = bottom - top;
+    const rows2 = bottom - top;
     let bytes = source.rgba;
     let stride = source.width * 4;
     let start = ((sy + top) * source.width + sx + left) * 4;
     if (bytes.buffer === this.rgba.buffer) {
-      const snapshot = new Uint8Array(rows * rowLength);
-      for (let row = 0; row < rows; row++) {
+      const snapshot = new Uint8Array(rows2 * rowLength);
+      for (let row = 0; row < rows2; row++) {
         snapshot.set(bytes.subarray(start + row * stride, start + row * stride + rowLength), row * rowLength);
       }
       bytes = snapshot;
       stride = rowLength;
       start = 0;
     }
-    for (let row = 0; row < rows; row++) {
+    for (let row = 0; row < rows2; row++) {
       let destination = ((y + top + row) * this.width + x + left) * 4;
       const input2 = start + row * stride;
       if (mode === "copy") {
@@ -9308,9 +9183,9 @@ function validateIndexed(image, bitDepth, maxPixels) {
     }
   }
 }
-function joinChunks(parts, maxBytes) {
+function joinChunks(parts2, maxBytes) {
   let length = 0;
-  for (const part of parts) {
+  for (const part of parts2) {
     length += part.length;
   }
   if (!Number.isSafeInteger(length) || length > maxBytes) {
@@ -9318,7 +9193,7 @@ function joinChunks(parts, maxBytes) {
   }
   const output = new Uint8Array(length);
   let offset = 0;
-  for (const part of parts) {
+  for (const part of parts2) {
     output.set(part, offset);
     offset += part.length;
   }
@@ -10509,26 +10384,26 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     if (pixelsChanged) {
       compressed = _ImagePNG._encodeIndexedData(next, original.sourceBitDepth, options, image._limits);
     }
-    const parts = [PNG_SIGNATURE];
+    const parts2 = [PNG_SIGNATURE];
     let wrotePixels = false;
     for (const chunk2 of image.chunks) {
       const { type } = chunk2;
       if (type === "IHDR" && pixelsChanged) {
-        parts.push(makeChunk(type, makeHeader(width, height, image.bitDepth, 3)));
+        parts2.push(makeChunk(type, makeHeader(width, height, image.bitDepth, 3)));
       } else if (type === "PLTE" && paletteChanged) {
-        parts.push(...makePaletteChunks(palette));
+        parts2.push(...makePaletteChunks(palette));
       } else if (type === "tRNS" && paletteChanged) {
         continue;
       } else if (type === "IDAT" && compressed !== void 0) {
         if (!wrotePixels) {
-          parts.push(makeChunk(type, compressed));
+          parts2.push(makeChunk(type, compressed));
           wrotePixels = true;
         }
       } else if (type === "IHDR" || type === "PLTE" || type === "tRNS" || type === "IDAT" || type === "IEND" || chunk2.safeToCopy || retained.has(type)) {
-        parts.push(chunk2.raw);
+        parts2.push(chunk2.raw);
       }
     }
-    return joinChunks(parts, image._limits.maxOutputBytes);
+    return joinChunks(parts2, image._limits.maxOutputBytes);
   }
   /**
    * Rewrite an indexed PNG using rewriteIndexed().
@@ -10587,11 +10462,11 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
     if (!Number.isSafeInteger(level) || level < 0 || level > 9) {
       throw new RangeError("Compression level must be an integer in [0, 9].");
     }
-    const rows = new Uint8Array(length);
+    const rows2 = new Uint8Array(length);
     if (filter === "none") {
       for (let y = 0; y < height; y++) {
         const offset = y * (rowBytes + 1);
-        fillRow(rows.subarray(offset + 1, offset + rowBytes + 1), y);
+        fillRow(rows2.subarray(offset + 1, offset + rowBytes + 1), y);
       }
     } else {
       let current = new Uint8Array(rowBytes);
@@ -10645,8 +10520,8 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
           }
           if (score < bestScore) {
             bestScore = score;
-            rows[offset] = type;
-            rows.set(candidate, offset + 1);
+            rows2[offset] = type;
+            rows2.set(candidate, offset + 1);
           }
         }
         const temporary = previous;
@@ -10654,7 +10529,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
         current = temporary;
       }
     }
-    return deflate(rows, { level });
+    return deflate(rows2, { level });
   }
   /**
    * No filtering, direct copy.
@@ -10780,6 +10655,66 @@ function rasterArea(width, height, label = "Raster", side = ASSET_LIMITS.rasterP
   return boundedProduct(width, height, ASSET_LIMITS.rasterPixels, `${label} pixels`);
 }
 var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
+
+// packages/assets/src/preview.ts
+function rgbaNativePng(rgba, width, height) {
+  integer(width, "Image width", 1, ASSET_LIMITS.interchangeSide);
+  integer(height, "Image height", 1, ASSET_LIMITS.interchangeSide);
+  if (width * height > ASSET_LIMITS.rasterPixels || rgba.length !== width * height * 4) {
+    throw new Error("Image pixels are missing or exceed the four-megapixel limit.");
+  }
+  const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+  const surface = new RgbaSurface(width, height, bytes, {
+    copy: false,
+    maxPixels: ASSET_LIMITS.rasterPixels
+  });
+  return data_image_png_default.encodeRGBA(surface, {
+    filter: "none",
+    level: 6,
+    maxPixels: ASSET_LIMITS.rasterPixels,
+    maxOutputBytes: ASSET_LIMITS.pngBytes
+  });
+}
+function rgbaPreviewPng(rgba, width, height, maxEdge = 256) {
+  integer(width, "Preview width", 1, ASSET_LIMITS.interchangeSide);
+  integer(height, "Preview height", 1, ASSET_LIMITS.interchangeSide);
+  integer(maxEdge, "Preview edge", 1, ASSET_LIMITS.thumbnailEdge);
+  if (width * height > ASSET_LIMITS.rasterPixels || rgba.length !== width * height * 4) {
+    throw new Error("Preview pixels are missing or exceed the four-megapixel limit.");
+  }
+  const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
+  const surface = new RgbaSurface(width, height, bytes, {
+    copy: false,
+    maxPixels: ASSET_LIMITS.rasterPixels
+  }).fitNearest(maxEdge);
+  return data_image_png_default.encodeRGBA(surface, {
+    filter: "none",
+    level: 6,
+    maxPixels: 1024 * 1024
+  });
+}
+function waveformPreviewPng(samples) {
+  const width = 256;
+  const height = 64;
+  const rgba = new Uint8Array(width * height * 4);
+  for (let x = 0; x < width; x++) {
+    const start = Math.floor(x * samples.length / width);
+    const end = Math.max(start + 1, Math.ceil((x + 1) * samples.length / width));
+    let low = 0;
+    let high = 0;
+    for (let index = start; index < Math.min(end, samples.length); index++) {
+      low = Math.min(low, samples[index]);
+      high = Math.max(high, samples[index]);
+    }
+    const top = Math.max(0, Math.floor(31 - high * 30 / 32768));
+    const bottom = Math.min(63, Math.ceil(32 - low * 30 / 32768));
+    for (let y = top; y <= bottom; y++) {
+      const pixel = (y * width + x) * 4;
+      rgba.set([68, 164, 255, 255], pixel);
+    }
+  }
+  return rgbaPreviewPng(rgba, width, height);
+}
 
 // packages/assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
@@ -10930,7 +10865,7 @@ function expandIndexedGrid(block) {
   if (typeof block.id !== "string" || !block.id || block.cells.length < 1 || block.cells.length > 65536 || block.cells.length % block.columns !== 0) {
     throw new Error("Grid requires an identity and complete bounded rows.");
   }
-  const rows = block.cells.length / block.columns;
+  const rows2 = block.cells.length / block.columns;
   return block.cells.map((cell, index) => {
     const column = index % block.columns;
     const row = Math.floor(index / block.columns);
@@ -10938,7 +10873,7 @@ function expandIndexedGrid(block) {
       ...cell,
       id: JSON.stringify([block.id, index]),
       x: block.x + (block.flipX ? block.columns - column - 1 : column) * block.cellWidth,
-      y: block.y + (block.flipY ? rows - row - 1 : row) * block.cellHeight,
+      y: block.y + (block.flipY ? rows2 - row - 1 : row) * block.cellHeight,
       flipX: block.flipX ?? false,
       flipY: block.flipY ?? false
     };
@@ -11560,124 +11495,6 @@ function withImageEncoders(native) {
   });
 }
 
-// packages/assets/src/preview.ts
-function rgbaNativePng(rgba, width, height) {
-  integer(width, "Image width", 1, ASSET_LIMITS.interchangeSide);
-  integer(height, "Image height", 1, ASSET_LIMITS.interchangeSide);
-  if (width * height > ASSET_LIMITS.rasterPixels || rgba.length !== width * height * 4) {
-    throw new Error("Image pixels are missing or exceed the four-megapixel limit.");
-  }
-  const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
-  const surface = new RgbaSurface(width, height, bytes, {
-    copy: false,
-    maxPixels: ASSET_LIMITS.rasterPixels
-  });
-  return data_image_png_default.encodeRGBA(surface, {
-    filter: "none",
-    level: 6,
-    maxPixels: ASSET_LIMITS.rasterPixels,
-    maxOutputBytes: ASSET_LIMITS.pngBytes
-  });
-}
-function rgbaPreviewPng(rgba, width, height, maxEdge = 256) {
-  integer(width, "Preview width", 1, ASSET_LIMITS.interchangeSide);
-  integer(height, "Preview height", 1, ASSET_LIMITS.interchangeSide);
-  integer(maxEdge, "Preview edge", 1, ASSET_LIMITS.thumbnailEdge);
-  if (width * height > ASSET_LIMITS.rasterPixels || rgba.length !== width * height * 4) {
-    throw new Error("Preview pixels are missing or exceed the four-megapixel limit.");
-  }
-  const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
-  const surface = new RgbaSurface(width, height, bytes, {
-    copy: false,
-    maxPixels: ASSET_LIMITS.rasterPixels
-  }).fitNearest(maxEdge);
-  return data_image_png_default.encodeRGBA(surface, {
-    filter: "none",
-    level: 6,
-    maxPixels: 1024 * 1024
-  });
-}
-function waveformPreviewPng(samples) {
-  const width = 256;
-  const height = 64;
-  const rgba = new Uint8Array(width * height * 4);
-  for (let x = 0; x < width; x++) {
-    const start = Math.floor(x * samples.length / width);
-    const end = Math.max(start + 1, Math.ceil((x + 1) * samples.length / width));
-    let low = 0;
-    let high = 0;
-    for (let index = start; index < Math.min(end, samples.length); index++) {
-      low = Math.min(low, samples[index]);
-      high = Math.max(high, samples[index]);
-    }
-    const top = Math.max(0, Math.floor(31 - high * 30 / 32768));
-    const bottom = Math.min(63, Math.ceil(32 - low * 30 / 32768));
-    for (let y = top; y <= bottom; y++) {
-      const pixel = (y * width + x) * 4;
-      rgba.set([68, 164, 255, 255], pixel);
-    }
-  }
-  return rgbaPreviewPng(rgba, width, height);
-}
-
-// packages/core/src/plugin/contracts.ts
-var PLUGIN_API_VERSION = 1;
-function definePlugin(plugin) {
-  return plugin;
-}
-
-// packages/assets/src/secret-of-mana/som-boss-graphics.ts
-function expandBossGraphics(source, size) {
-  if (!(source instanceof Uint8Array) || !Number.isInteger(size) || size <= 0 || size > 65535) {
-    throw new Error("Boss graphics need bytes and a positive 16-bit output size.");
-  }
-  const length = Math.ceil(size / 8) * 8;
-  const data = new Uint8Array(length);
-  let cursor = 0;
-  for (let output = 0; output < length; ) {
-    if (cursor >= source.length) {
-      throw new Error("Truncated boss graphics mask.");
-    }
-    const mask = source[cursor++];
-    for (let bit = 7; bit >= 0; bit--, output++) {
-      if (mask & 1 << bit) {
-        if (cursor >= source.length) {
-          throw new Error("Truncated boss graphics literal.");
-        }
-        data[output] = source[cursor++];
-      } else if (output >= 2) {
-        data[output] = data[output - 2];
-      }
-    }
-  }
-  return { data, consumed: cursor };
-}
-function encodeBossGraphics(data) {
-  if (!(data instanceof Uint8Array) || !data.length || data.length % 8) {
-    throw new Error("Boss graphics need a positive multiple-of-eight byte count.");
-  }
-  const output = [];
-  for (let start = 0; start < data.length; start += 8) {
-    let mask = 0;
-    const literals = [];
-    for (let bit = 0; bit < 8; bit++) {
-      const index = start + bit;
-      const previous = index >= 2 ? data[index - 2] : 0;
-      if (data[index] !== previous) {
-        mask |= 1 << 7 - bit;
-        literals.push(data[index]);
-      }
-    }
-    output.push(mask, ...literals);
-  }
-  const encoded = Uint8Array.from(output);
-  const decoded = expandBossGraphics(encoded, data.length);
-  if (decoded.consumed !== encoded.length || decoded.data.some((byte, index) => byte !== data[index])) {
-    throw new Error("Boss graphics mask inverse failed.");
-  }
-  return encoded;
-}
-
 // packages/assets/src/secret-of-mana/som-body-frame.ts
 var signed7 = (byte) => (byte & 63) - (byte & 64);
 function decodeBodyFrame(input2) {
@@ -11685,25 +11502,25 @@ function decodeBodyFrame(input2) {
     throw new Error("Invalid bounded body frame bytes.");
   }
   const bytes = Uint8Array.from(input2);
-  const groups = bytes[0] & 15 || 1;
+  const groups2 = bytes[0] & 15 || 1;
   const tileOffsets = [];
   let offset = 1;
-  while (tileOffsets.length < groups * 4) {
+  while (tileOffsets.length < groups2 * 4) {
     if (offset + 2 > bytes.length) {
       throw new Error("Truncated sprite tile word.");
     }
     const word = bytes[offset] | bytes[offset + 1] << 8;
     offset += 2;
     const count = word & 32768 ? (word & 15) + 1 : 1;
-    for (let i = 0; i < count && tileOffsets.length < groups * 4; i++) {
+    for (let i = 0; i < count && tileOffsets.length < groups2 * 4; i++) {
       const increment = (word & 49152) === 49152 ? i : 0;
       tileOffsets.push((word & 16368) * 2 + increment * 32 & 65535);
     }
   }
-  if (offset + groups * 2 > bytes.length) {
+  if (offset + groups2 * 2 > bytes.length) {
     throw new Error("Missing sprite block offsets.");
   }
-  const coordinateOffsets = Array.from({ length: groups }, (_, i) => ({
+  const coordinateOffsets = Array.from({ length: groups2 }, (_, i) => ({
     y: offset + i * 2,
     x: offset + i * 2 + 1
   }));
@@ -11713,14 +11530,14 @@ function decodeBodyFrame(input2) {
     flipX: !!(bytes[x] & 128),
     priority: !!(bytes[y] & 128)
   }));
-  offset += groups * 2;
+  offset += groups2 * 2;
   const boxes = Number(!!(bytes[0] & 32)) + Number(!!(bytes[0] & 64));
   if (bytes.length - offset !== boxes * (bytes[0] & 16 ? 3 : 2)) {
     throw new Error("Frame tail disagrees with header and pointer bound.");
   }
   return {
     header: bytes[0],
-    groups,
+    groups: groups2,
     tileOffsets,
     blocks,
     coordinateOffsets,
@@ -11841,12 +11658,12 @@ function validateNativeFrame(frame) {
   if (!native.bytes || !frame.blocks || !Number.isSafeInteger(native.address) || native.address < 0 || native.address > 16777215 || !Number.isSafeInteger(native.end) || native.end - native.address !== native.bytes.length) {
     throw new Error(`Invalid native frame extent: ${frame.id}.`);
   }
-  const decoded = decodeBodyFrame(native.bytes);
-  if (decoded.groups !== frame.blocks.length) {
+  const decoded2 = decodeBodyFrame(native.bytes);
+  if (decoded2.groups !== frame.blocks.length) {
     throw new Error(`Native block count differs: ${frame.id}.`);
   }
   for (const [index, block] of frame.blocks.entries()) {
-    const expected = decoded.blocks[index];
+    const expected = decoded2.blocks[index];
     if (block.size !== 16 || block.flipY || block.x !== expected.x || block.y !== expected.y || block.flipX !== expected.flipX || block.priority !== expected.priority) {
       throw new Error(`Native frame and block disagree: ${frame.id}/${block.id}.`);
     }
@@ -11854,7 +11671,7 @@ function validateNativeFrame(frame) {
       if (typeof address !== "number" || !Number.isSafeInteger(address)) {
         throw new Error(`Body tiles require ROM addresses: ${frame.id}.`);
       }
-      const relative = decoded.tileOffsets[index * 4 + quadrant];
+      const relative = decoded2.tileOffsets[index * 4 + quadrant];
       const base = address & 16711680 | address - relative & 65535;
       graphicsBase ??= base;
       if (base !== graphicsBase) {
@@ -11972,9 +11789,9 @@ function spritePalettePreview(catalog, id2) {
   if (!Number.isSafeInteger(columns) || columns < 1 || columns > 16) {
     throw new Error(`ROM palette ${id2} has invalid preview columns.`);
   }
-  const rows = Math.ceil(colors.length / columns);
+  const rows2 = Math.ceil(colors.length / columns);
   const width = columns * 9 + 1;
-  const height = rows * 9 + 1;
+  const height = rows2 * 9 + 1;
   const rgba = new Uint8Array(width * height * 4);
   for (let pixel = 0; pixel < width * height; pixel++) {
     rgba.set([64, 64, 64, 255], pixel * 4);
@@ -12372,302 +12189,467 @@ function readFrameLayout(options, resources) {
   return parsed;
 }
 
-// packages/assets/src/secret-of-mana/som-lz.ts
-var LZ_HEADER_BYTES = 4;
-var LZ_COPY_FLAG = 128;
-var LZ_TOKEN_PAYLOAD_MASK = LZ_COPY_FLAG - 1;
-var LZ_MIN_COPY_BYTES = 3;
-var LZ_MAX_LITERAL_BYTES = LZ_COPY_FLAG;
-var LZ_DISTANCE_LOW_VALUES = 256;
-var LZ_MAX_OUTPUT_BYTES = 65535;
-var MATCH_CANDIDATE_LIMIT = 128;
-var DISTANCE_MASKS = [31, 15, 7, 3, 1, 0];
-function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTPUT_BYTES) {
-  invariant(source instanceof Uint8Array, "Expected byte input.");
-  invariant(
-    Number.isSafeInteger(offset) && offset >= 0 && offset + LZ_HEADER_BYTES <= source.length,
-    "Truncated LZ header."
+// packages/assets/src/secret-of-mana/som-room-composition.ts
+var LIMITATION = "Background geometry only; omits actors, BG3, camera, mutable clones and color math.";
+function somRoomPaletteColor(word, transparent) {
+  integer(word, "Room palette word", 0, 65535);
+  if (transparent) {
+    return [0, 0, 0, 0];
+  }
+  return [
+    Math.floor((word & 31) * 255 / 31),
+    Math.floor((word >>> 5 & 31) * 255 / 31),
+    Math.floor((word >>> 10 & 31) * 255 / 31),
+    255
+  ];
+}
+function physicalGraphics(graphics, mask) {
+  if (typeof graphics !== "string" || !graphics.length || graphics.length > 32768 * 2 || graphics.length % 64 || !/^[\da-f]+$/i.test(graphics)) {
+    throw new Error("Invalid or oversized planar room graphics.");
+  }
+  if (typeof mask !== "string" || mask.length !== graphics.length || !/^(?:00|01)+$/.test(mask)) {
+    throw new Error("Preview graphics require a matching physical-coverage mask.");
+  }
+  const bytes = new Uint8Array(graphics.length / 2), known = new Uint8Array(bytes.length);
+  for (let offset = 0; offset < bytes.length; offset++) {
+    bytes[offset] = Number.parseInt(graphics.slice(offset * 2, offset * 2 + 2), 16);
+    known[offset] = mask.charCodeAt(offset * 2 + 1) - 48;
+  }
+  return { bytes, known };
+}
+function composeSomRoom(room, preview, story) {
+  if (room.format !== "som.room" || room.version !== 1 || preview.format !== "som.room.preview" || preview.version !== 1) {
+    throw new Error("Unsupported room composition inputs.");
+  }
+  if (!Array.isArray(room.header) || room.header.length !== 8) {
+    throw new Error("Room header requires eight bytes.");
+  }
+  room.header.forEach((value) => integer(value, "Room header byte", 0, 255));
+  integer(room.pieces.length, "Room piece count", 0, 65536);
+  const key = `${room.header[0] & 63}:${room.header[2]}:${room.header[1] & 127}`;
+  if (!Object.hasOwn(preview.tilesets, key)) {
+    throw new Error(`Preview resources do not contain tileset ${key}.`);
+  }
+  const assets = preview.tilesets[key], states = { ...room.previewStory, ...story }, pieces = [];
+  let columns = 0, rows2 = 0, placementWork = 0;
+  for (const [sourceIndex, piece] of room.pieces.entries()) {
+    integer(piece.variable, "Story variable", 0, 255);
+    integer(piece.minimum, "Story minimum", 0, 15);
+    integer(piece.maximum, "Story maximum", piece.minimum, 15);
+    const value = integer(states[piece.variable], `Preview story ${piece.variable}`, 0, 255);
+    if (value < piece.minimum || value > piece.maximum) {
+      continue;
+    }
+    integer(piece.x, "Piece x", 0, 127);
+    integer(piece.y, "Piece y", 0, 127);
+    integer(piece.layer, "Piece layer", 1, 2);
+    integer(piece.layout, "Layout id", 1, 1023);
+    const layout2 = Object.hasOwn(preview.layouts, piece.layout) ? preview.layouts[piece.layout] : void 0;
+    if (!layout2) {
+      throw new Error("Missing or incomplete layout preview.");
+    }
+    integer(layout2.width, "Layout width", 1, 128);
+    integer(layout2.height, "Layout height", 1, 128);
+    const area = layout2.width * layout2.height;
+    if (!Array.isArray(layout2.tiles) || layout2.tiles.length !== area) {
+      throw new Error("Missing or incomplete layout preview.");
+    }
+    columns = Math.max(columns, piece.x + layout2.width);
+    rows2 = Math.max(rows2, piece.y + layout2.height);
+    if (columns > 128 || rows2 > 128) {
+      throw new Error("Room pieces exceed the native 128-tile layer bounds.");
+    }
+    placementWork = boundedSum(
+      placementWork,
+      area * 256,
+      ASSET_LIMITS.renderPixels,
+      "Room placement work"
+    );
+    layout2.tiles.forEach((tile) => integer(tile, "Static metatile id", 0, 191));
+    pieces.push({ ...piece, sourceIndex, width: layout2.width, height: layout2.height });
+  }
+  if (!pieces.length) {
+    throw new Error("No active room pieces in this preview state.");
+  }
+  const width = columns * 16, height = rows2 * 16;
+  rasterArea(width, height, "Room composition", ASSET_LIMITS.interchangeSide);
+  const maps = [
+    new Int16Array(columns * rows2).fill(-1),
+    new Int16Array(columns * rows2).fill(-1)
+  ];
+  for (const piece of pieces) {
+    const layout2 = preview.layouts[piece.layout], map = maps[piece.layer - 1];
+    for (let y = 0; y < piece.height; y++) {
+      map.set(
+        layout2.tiles.slice(y * piece.width, (y + 1) * piece.width),
+        (piece.y + y) * columns + piece.x
+      );
+    }
+  }
+  const { bytes: graphics, known: graphicsKnown } = physicalGraphics(
+    assets.graphics,
+    assets.graphicsKnown
   );
-  invariant(Number.isSafeInteger(maxOutputBytes) && maxOutputBytes >= 0, "Invalid LZ output limit.");
-  const mode = source[offset];
-  invariant(mode < DISTANCE_MASKS.length, "Invalid LZ mode.");
-  const mask = DISTANCE_MASKS[mode];
-  const size = source[offset + 2] << 8 | source[offset + 3];
-  invariant(size <= maxOutputBytes, "LZ decoded size exceeds output limit.");
-  const data = new Uint8Array(size);
-  let cursor = offset + LZ_HEADER_BYTES;
-  let written = 0;
-  let literalRuns = 0;
-  let copyRuns = 0;
-  while (written < size) {
-    invariant(cursor < source.length, "Truncated LZ token.");
-    const token = source[cursor++];
-    if (token < LZ_COPY_FLAG) {
-      const length = token + 1;
-      invariant(cursor + length <= source.length, "Truncated LZ literal.");
-      invariant(written + length <= size, "LZ literal exceeds declared output size.");
-      data.set(source.subarray(cursor, cursor + length), written);
-      cursor += length;
-      written += length;
-      literalRuns++;
-    } else {
-      invariant(cursor < source.length, "Truncated LZ distance.");
-      const distance = ((token & mask) << 8) + source[cursor++] + 1;
-      const length = Math.floor((token & LZ_TOKEN_PAYLOAD_MASK) / (mask + 1)) + LZ_MIN_COPY_BYTES;
-      invariant(distance <= written, "LZ reference precedes output.");
-      invariant(written + length <= size, "LZ copy exceeds declared output size.");
-      for (let i = 0; i < length; i++) {
-        data[written] = data[written - distance];
-        written++;
-      }
-      copyRuns++;
-    }
+  if (!Array.isArray(assets.colors) || assets.colors.length !== 128 || !Array.isArray(assets.layerWords) || assets.layerWords.length !== 2) {
+    throw new Error("Incomplete palette/metatile preview.");
   }
-  return {
-    data,
-    mode,
-    unusedHeaderByte: source[offset + 1],
-    compressedBytes: cursor - offset,
-    end: cursor,
-    literalRuns,
-    copyRuns
-  };
-}
-function assertLzOptions(options) {
-  invariant(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
-}
-function compressSomLz(source, options = {}) {
-  invariant(source instanceof Uint8Array, "Expected byte input.");
-  invariant(source.length <= LZ_MAX_OUTPUT_BYTES, "LZ decoded size exceeds 16-bit header.");
-  assertLzOptions(options);
-  invariant(
-    Object.keys(options).every((key) => ["mode", "unusedHeaderByte"].includes(key)),
-    "Unknown LZ option."
+  const paletteWords = Uint16Array.from(
+    assets.colors,
+    (word) => integer(word, "Palette word", 0, 65535)
+  ), palette = Array.from(
+    paletteWords,
+    (word, index) => somRoomPaletteColor(word, index % 16 === 0)
   );
-  const selected = options.mode ?? "auto";
-  const header = options.unusedHeaderByte ?? 0;
-  if (selected !== "auto" && !(typeof selected === "number" && Number.isInteger(selected) && selected >= 0 && selected < DISTANCE_MASKS.length)) {
-    invariant(false, "Invalid LZ mode.");
+  for (const words of assets.layerWords) {
+    if (!Array.isArray(words) || words.length !== 768) {
+      throw new Error("Incomplete metatile preview.");
+    }
+    words.forEach((word) => integer(word, "Metatile word", 0, 65535));
   }
-  if (typeof header !== "number" || !Number.isInteger(header) || header < 0 || header > 255) {
-    invariant(false, "Invalid unused LZ header byte.");
-  }
-  const mode = selected === "auto" ? "auto" : selected;
-  const unusedHeaderByte = header;
-  const modes = mode === "auto" ? DISTANCE_MASKS.map((_, index) => index) : [mode];
-  let best;
-  for (const selectedMode of modes) {
-    const encoded = encodeMode(source, selectedMode, unusedHeaderByte);
-    if (!best || encoded.length < best.length) {
-      best = encoded;
-    }
-  }
-  invariant(best, "LZ encoder produced no candidate.");
-  return best;
-}
-function encodeMode(source, mode, unusedHeaderByte) {
-  const mask = DISTANCE_MASKS[mode];
-  const maxDistance = (mask + 1) * LZ_DISTANCE_LOW_VALUES;
-  const maxLength = Math.floor(LZ_TOKEN_PAYLOAD_MASK / (mask + 1)) + LZ_MIN_COPY_BYTES;
-  const seen = /* @__PURE__ */ new Map();
-  const matches = Array.from({ length: source.length }, () => new Uint16Array(maxLength + 1));
-  const add = (position) => {
-    if (position + 2 >= source.length) {
-      return;
-    }
-    const key = source[position] << 16 | source[position + 1] << 8 | source[position + 2];
-    const positions = seen.get(key) ?? [];
-    positions.push(position);
-    while (positions.length > MATCH_CANDIDATE_LIMIT || positions.length && position - positions[0] >= maxDistance) {
-      positions.shift();
-    }
-    seen.set(key, positions);
-  };
-  for (let cursor = 0; cursor < source.length; cursor++) {
-    if (cursor + 2 < source.length) {
-      const key = source[cursor] << 16 | source[cursor + 1] << 8 | source[cursor + 2];
-      const positions = seen.get(key) ?? [];
-      for (let index = positions.length - 1; index >= 0; index--) {
-        const candidateDistance = cursor - positions[index];
-        if (candidateDistance > maxDistance) {
-          break;
-        }
-        let candidateLength = LZ_MIN_COPY_BYTES;
-        while (candidateLength < maxLength && cursor + candidateLength < source.length && source[cursor + candidateLength] === source[cursor + candidateLength - candidateDistance]) {
-          candidateLength++;
-        }
-        for (let length = LZ_MIN_COPY_BYTES; length <= candidateLength; length++) {
-          if (matches[cursor][length] === 0 || candidateDistance < matches[cursor][length]) {
-            matches[cursor][length] = candidateDistance;
-          }
-        }
-      }
-    }
-    add(cursor);
-  }
-  const cost = new Uint32Array(source.length + 1);
-  const choice = new Int16Array(source.length);
-  const distance = new Uint16Array(source.length);
-  for (let cursor = source.length - 1; cursor >= 0; cursor--) {
-    let bestCost = Number.MAX_SAFE_INTEGER;
-    let bestChoice = 0;
-    for (let length = 1; length <= LZ_MAX_LITERAL_BYTES && cursor + length <= source.length; length++) {
-      const candidate = 1 + length + cost[cursor + length];
-      if (candidate < bestCost || candidate === bestCost && length > bestChoice) {
-        bestCost = candidate;
-        bestChoice = length;
-      }
-    }
-    for (let length = LZ_MIN_COPY_BYTES; length <= maxLength && cursor + length <= source.length; length++) {
-      const matchDistance = matches[cursor][length];
-      if (!matchDistance) {
+  const tiles = decodePlanarTiles(graphics, 4).map((tile) => Uint8Array.from(tile.flat())), passOrder = [
+    [2, 0],
+    [1, 0],
+    [2, 1],
+    [1, 1]
+  ];
+  const passes = passOrder.map(([layer, priority]) => {
+    const cells = [], map = maps[layer - 1], words = assets.layerWords[layer - 1];
+    for (let position = 0; position < map.length; position++) {
+      const metatile = map[position];
+      if (metatile < 0) {
         continue;
       }
-      const candidate = 2 + cost[cursor + length];
-      if (candidate < bestCost || candidate === bestCost && length > Math.abs(bestChoice)) {
-        bestCost = candidate;
-        bestChoice = -length;
-        distance[cursor] = matchDistance;
+      for (let quadrant = 0; quadrant < 4; quadrant++) {
+        const word = words[metatile * 4 + quadrant];
+        if ((word >>> 13 & 1) !== priority) {
+          continue;
+        }
+        const tile = word & 1023, offset = tile * 32;
+        if (offset + 32 > graphics.length) {
+          throw new Error("Preview references uncaptured graphics.");
+        }
+        if (!graphicsKnown.subarray(offset, offset + 32).every((byte) => byte === 1)) {
+          throw new Error("Preview references unknown physical graphics bytes.");
+        }
+        cells.push({
+          x: position % columns * 16 + quadrant % 2 * 8,
+          y: Math.floor(position / columns) * 16 + (quadrant >>> 1) * 8,
+          metatile,
+          word,
+          tile,
+          palette: word >>> 10 & 7,
+          flipX: !!(word & 16384),
+          flipY: !!(word & 32768)
+        });
       }
     }
-    cost[cursor] = bestCost;
-    choice[cursor] = bestChoice;
+    return { layer, priority, cells };
+  });
+  return {
+    width,
+    height,
+    tileset: key,
+    activePieces: pieces,
+    metatiles: maps,
+    passes,
+    graphics,
+    graphicsKnown,
+    tiles,
+    paletteWords,
+    palette,
+    provenance: structuredClone(preview.provenance),
+    limitation: LIMITATION
+  };
+}
+function renderSomRoomComposition(composition, layer) {
+  if (layer !== void 0) {
+    integer(layer, "Room render layer", 1, 2);
   }
-  const output = [mode, unusedHeaderByte, source.length >>> 8, source.length & 255];
-  for (let cursor = 0; cursor < source.length; ) {
-    const length = choice[cursor];
-    if (length > 0) {
-      output.push(length - 1, ...source.subarray(cursor, cursor + length));
-      cursor += length;
-    } else {
-      const runLength = -length;
-      const encodedDistance = distance[cursor] - 1;
-      output.push(
-        LZ_COPY_FLAG | (runLength - LZ_MIN_COPY_BYTES) * (mask + 1) | encodedDistance >>> 8,
-        encodedDistance & 255
-      );
-      cursor += runLength;
+  const area = rasterArea(
+    composition.width,
+    composition.height,
+    "Room render",
+    ASSET_LIMITS.interchangeSide
+  );
+  let work = 0;
+  integer(composition.passes.length, "Room passes", 1, 4);
+  integer(composition.tiles.length, "Room tiles", 1, 1024);
+  if (composition.palette.length !== 128) {
+    throw new Error("Incomplete room render palette.");
+  }
+  for (const tile of composition.tiles) {
+    if (!(tile instanceof Uint8Array) || tile.length !== 64 || tile.some((slot) => slot > 15)) {
+      throw new Error("Invalid room render tile.");
     }
   }
-  return Uint8Array.from(output);
+  for (const pass of composition.passes) {
+    integer(pass.layer, "Room pass layer", 1, 2);
+    integer(pass.priority, "Room pass priority", 0, 1);
+    if (layer !== void 0 && pass.layer !== layer) {
+      continue;
+    }
+    work = boundedSum(
+      work,
+      pass.cells.length * 64,
+      ASSET_LIMITS.renderPixels,
+      "Room rendering work"
+    );
+    for (const cell of pass.cells) {
+      integer(cell.x, "Room cell x", 0, composition.width - 8);
+      integer(cell.y, "Room cell y", 0, composition.height - 8);
+      integer(cell.tile, "Room cell tile", 0, composition.tiles.length - 1);
+      integer(cell.palette, "Room cell palette", 0, 7);
+    }
+  }
+  const rgba = new Uint8Array(
+    boundedProduct(area, 4, ASSET_LIMITS.decodedBytes, "Room RGBA bytes")
+  );
+  for (let pixel = 0; pixel < rgba.length; pixel += 4) {
+    rgba.set([10, 14, 22, 255], pixel);
+  }
+  for (const pass of composition.passes) {
+    if (layer !== void 0 && pass.layer !== layer) {
+      continue;
+    }
+    for (const cell of pass.cells) {
+      const tile = composition.tiles[cell.tile];
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          const sourceX = cell.flipX ? 7 - x : x, sourceY = cell.flipY ? 7 - y : y, slot = tile[sourceY * 8 + sourceX];
+          if (slot === 0) {
+            continue;
+          }
+          const at = ((cell.y + y) * composition.width + cell.x + x) * 4;
+          rgba.set(composition.palette[cell.palette * 16 + slot], at);
+        }
+      }
+    }
+  }
+  return { rgba, width: composition.width, height: composition.height };
 }
 
-// packages/assets/src/secret-of-mana/som-boss-image.ts
-var registry = new AssetRegistry().registerImporter(pngImporter);
-for (const encoder of withImageEncoders(snesNativeEncoders)) {
-  registry.registerEncoder(encoder);
+// packages/assets/src/secret-of-mana/som-room-assets.ts
+function isRecord5(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function nativeBossChunk(png, wanted = "soMz") {
-  const image = readAssetPng(png);
-  let native;
-  for (const { type, data } of image.chunks) {
-    if (type === wanted) {
-      if (native) {
-        throw new Error("Duplicate native boss graphics PNG chunk.");
+function isRoomEntity(value) {
+  return isRecord5(value);
+}
+function isRoomPiece(value) {
+  return isRecord5(value);
+}
+function isRoomPreview(value) {
+  return isRecord5(value) && value.format === "som.room.preview" && value.version === 1 && isRecord5(value.tilesets) && isRecord5(value.layouts);
+}
+function isRoomAsset(value) {
+  return isRecord5(value) && Array.isArray(value.entities) && value.entities.every(isRoomEntity) && Array.isArray(value.pieces) && value.pieces.every(isRoomPiece) && Array.isArray(value.triggers) && value.triggers.every((item) => typeof item === "number");
+}
+function integer2(value, maximum, name) {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
+    fail(`${name} must be 0..${maximum}.`);
+  }
+  return value;
+}
+function parseRoomAsset(source) {
+  equal(source.mediaType, "application/json", "Room source must be JSON.");
+  const parsed = JSON.parse(new TextDecoder().decode(source.bytes));
+  if (!isRecord5(parsed)) {
+    fail("Room source must be a JSON object.");
+  }
+  equal(parsed.format, "som.room");
+  equal(parsed.version, 1);
+  integer2(parsed.id, 510, "room id");
+  invariant(
+    Array.isArray(parsed.header) && parsed.header.length === 8,
+    "Room header requires eight bytes."
+  );
+  for (const byte of parsed.header) {
+    integer2(byte, 255, "header byte");
+  }
+  for (const key of ["entities", "pieces", "triggers"]) {
+    invariant(Array.isArray(parsed[key]), `Missing room ${key}.`);
+  }
+  if (!isRoomAsset(parsed)) {
+    fail("Room entities, pieces, and triggers must match the room record.");
+  }
+  return parsed;
+}
+function parseRoomPreview(bytes) {
+  const parsed = JSON.parse(new TextDecoder().decode(bytes));
+  if (!isRecord5(parsed)) {
+    fail("Room preview resource must be a JSON object.");
+  }
+  equal(parsed.format, "som.room.preview");
+  equal(parsed.version, 1);
+  if (!isRoomPreview(parsed)) {
+    fail("Room preview resource must include tileset and layout records.");
+  }
+  return parsed;
+}
+function condition(record) {
+  const variable = integer2(record.variable, 255, "story variable");
+  const minimum = integer2(record.minimum, 15, "story minimum"), maximum = integer2(record.maximum, 15, "story maximum");
+  invariant(minimum <= maximum, "Story range is reversed.");
+  return [variable, minimum << 4 | maximum];
+}
+function encodeRoomSection(room, section) {
+  invariant(
+    ["objects", "assembly", "triggers"].includes(section),
+    "Room section must be objects, assembly or triggers."
+  );
+  const bytes = [];
+  if (section === "objects") {
+    bytes.push(...room.header);
+    for (const entity of room.entities) {
+      const flags = integer2(entity.flags, 255, "entity flags");
+      equal(flags & 63, 0, "Only packed entity flags 40/80 are defined.");
+      const event = integer2(entity.event, 4095, "entity event");
+      bytes.push(
+        ...condition(entity),
+        integer2(entity.x, 127, "entity x") | (flags & 64) << 1,
+        integer2(entity.y, 127, "entity y") | flags & 128,
+        integer2(entity.orientationAndLayer, 255, "orientation/layer byte"),
+        integer2(entity.entity, 255, "entity id"),
+        event & 255,
+        integer2(entity.interaction, 15, "interaction flags") << 4 | event >>> 8
+      );
+    }
+  } else if (section === "assembly") {
+    let layer = 1;
+    for (const piece of room.pieces) {
+      if (piece.marker !== void 0) {
+        invariant(piece.marker === 254 || piece.marker === 255, "Layer marker must be FE or FF.");
+        bytes.push(piece.marker);
+        layer = piece.marker - 253;
       }
-      native = Uint8Array.from(data);
+      equal(piece.layer, layer, "A layer change requires an explicit marker.");
+      const predicate = condition(piece);
+      invariant(predicate[0] < 254, "FE/FF are layer markers, not piece story indexes.");
+      const layout2 = integer2(piece.layout, 1023, "layout id");
+      invariant(layout2 > 0, "Native layout IDs are one-based.");
+      bytes.push(
+        ...predicate,
+        layout2 & 255,
+        integer2(piece.x, 127, "piece x") << 1 | layout2 >>> 8 & 1,
+        integer2(piece.y, 127, "piece y") << 1 | layout2 >>> 9 & 1
+      );
     }
-  }
-  return native;
-}
-function decodeBossStream(native, storage, size) {
-  let intermediate = native;
-  let mode;
-  let unusedHeaderByte;
-  if (storage === "lz-rle") {
-    const decoded = decompressSomLz(native);
-    if (decoded.compressedBytes !== native.length) {
-      throw new Error("Boss LZ stream has trailing bytes.");
-    }
-    intermediate = decoded.data;
-    mode = decoded.mode;
-    unusedHeaderByte = decoded.unusedHeaderByte;
-  }
-  const expanded = expandBossGraphics(intermediate, size);
-  if (expanded.consumed !== intermediate.length) {
-    throw new Error("Boss mask stream has trailing bytes.");
-  }
-  return { bytes: expanded.data, mode, unusedHeaderByte };
-}
-function convertBossImage(source, options, resources = {}, normalized) {
-  const { storage, byteLength, sizePolicy = "fixed", mode, unusedHeaderByte = 0 } = options;
-  if (storage !== "lz-rle" && storage !== "rle") {
-    throw new Error("Boss storage must be lz-rle or rle.");
-  }
-  if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
-    throw new Error("Boss byteLength must be a positive integer.");
-  }
-  if (sizePolicy !== "fixed" && sizePolicy !== "encoded") {
-    throw new Error("Boss sizePolicy must be fixed or encoded.");
-  }
-  const layout2 = normalized?.layout ?? (options.layout ? readFrameLayout(options, resources) : void 0);
-  const catalog = normalized?.catalog ?? (options.layout ? readSpritePaletteCatalog(options, resources) : void 0);
-  let pixels;
-  let segmentName;
-  if (layout2) {
-    if (typeof options.segment !== "string") {
-      throw new Error("Frame atlas segment is required.");
-    }
-    segmentName = options.segment;
-    pixels = encodeFrameAtlas(source, layout2, segmentName, catalog);
   } else {
-    pixels = convertAsset(registry, { source, format: "snes.tile.4bpp" }).outputs.tiles.bytes;
-  }
-  const segmentIndex = segmentName ? Object.keys(layout2?.segments ?? {}).indexOf(segmentName) : -1;
-  if (segmentIndex > 25) {
-    throw new Error("Boss atlas supports at most 26 native segments.");
-  }
-  const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
-  let original;
-  if (options.native !== void 0) {
-    if (typeof options.native !== "string" || !options.native) {
-      throw new Error("Boss native data requires an explicit original compressed resource.");
-    }
-    const nativeResource = Object.hasOwn(resources, options.native) ? resources[options.native] : void 0;
-    if (!nativeResource) {
-      throw new Error("Boss native data requires an explicit original compressed resource.");
-    }
-    original = nativeResource.bytes;
-  } else {
-    original = nativeBossChunk(source.bytes, chunkName);
-  }
-  if (original) {
-    if (original.length !== byteLength) {
-      throw new Error("Boss native data has the wrong byte length.");
-    }
-    const decoded = decodeBossStream(original, storage, pixels.length);
-    if (decoded.bytes.every((byte, index) => byte === pixels[index])) {
-      return { primaryOutput: "graphics", outputs: { graphics: { bytes: original } } };
+    for (const trigger of room.triggers) {
+      integer2(trigger, 65535, "packed trigger word");
+      bytes.push(trigger & 255, trigger >>> 8);
     }
   }
-  const intermediate = encodeBossGraphics(pixels);
-  let encoded = intermediate;
-  if (storage === "lz-rle") {
-    const selectedMode = original ? original[0] : mode;
-    const selectedHeaderByte = original ? original[1] : unusedHeaderByte;
-    encoded = compressSomLz(intermediate, {
-      mode: selectedMode,
-      unusedHeaderByte: selectedHeaderByte
-    });
+  const owner = room.sections?.[section];
+  invariant(
+    owner && Number.isInteger(owner.address) && Number.isInteger(owner.bytes),
+    "Missing fixed section ownership."
+  );
+  equal(
+    bytes.length,
+    owner.bytes,
+    "Room edit changes its fixed ROM extent; relocation is required."
+  );
+  return Uint8Array.from(bytes);
+}
+function convertRoomAsset(source, options) {
+  const room = parseRoomAsset(source);
+  const outputs = {};
+  for (const section of ["objects", "assembly", "triggers"]) {
+    outputs[section] = { bytes: encodeRoomSection(room, section) };
   }
-  if (sizePolicy === "fixed" && encoded.length > byteLength) {
-    throw new Error(
-      "Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object."
-    );
+  const selected = options.section;
+  invariant(
+    typeof selected === "string" && Object.hasOwn(outputs, selected),
+    "Select a room section."
+  );
+  return { primaryOutput: selected, outputs };
+}
+function renderRoomAsset(room, preview, { layer, story } = {}) {
+  if (layer !== void 0 && layer !== 1 && layer !== 2) {
+    throw new Error("Preview layer must be 1 or 2.");
   }
-  const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
-  if (verified.some((byte, index) => byte !== pixels[index])) {
-    throw new Error("Boss graphics inverse failed.");
+  const composition = composeSomRoom(room, preview, story);
+  return {
+    ...renderSomRoomComposition(composition, layer),
+    tileset: composition.tileset,
+    activePieces: composition.activePieces.map((piece) => piece.layout),
+    limitation: composition.limitation
+  };
+}
+
+// packages/assets/src/atlas-interchange.ts
+var ATLAS_FILE_LIMIT = ASSET_LIMITS.asepriteBytes;
+function validateAtlasDocument(document2) {
+  validateIndexedPixels(document2);
+  rasterArea(document2.width, document2.height, "Atlas", ASSET_LIMITS.interchangeSide);
+  indexedPalette(document2.palette);
+  integer(document2.transparentIndex, "Atlas transparent slot", 0, document2.palette.length - 1);
+  if (document2.indexes.some((index) => index >= document2.palette.length)) {
+    throw new Error("Atlas pixel references a missing palette slot.");
   }
-  if (sizePolicy === "encoded") {
-    return { primaryOutput: "graphics", outputs: { graphics: { bytes: encoded } } };
+  if (document2.exportId !== void 0 && !/^[\da-f-]{36}$/.test(document2.exportId)) {
+    throw new Error("Invalid atlas export identity.");
   }
-  const padded = new Uint8Array(byteLength);
-  padded.set(encoded);
-  if (original) {
-    padded.set(original.subarray(encoded.length), encoded.length);
+}
+function indexedAtlasDocument(value, transparentIndex) {
+  if (!value || typeof value !== "object" || !("kind" in value) || value.kind !== "indexed-image") {
+    throw new Error("Atlas interchange requires indexed artwork; RGB mapping is not supported.");
   }
-  return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
+  if (!("width" in value) || typeof value.width !== "number" || !("height" in value) || typeof value.height !== "number" || !("indexes" in value) || !(value.indexes instanceof Uint8Array) || !("palette" in value) || !Array.isArray(value.palette)) {
+    throw new Error("Invalid indexed atlas value.");
+  }
+  const palette = indexedPalette(value.palette);
+  const document2 = {
+    width: value.width,
+    height: value.height,
+    indexes: Uint8Array.from(value.indexes),
+    palette,
+    transparentIndex
+  };
+  validateAtlasDocument(document2);
+  return document2;
+}
+function inspectAtlasChanges(before, after, policy) {
+  validateAtlasDocument(before);
+  validateAtlasDocument(after);
+  if (before.width !== after.width || before.height !== after.height || before.transparentIndex !== after.transparentIndex || before.palette.length !== after.palette.length) {
+    throw new Error("Atlas canvas, transparency or palette inventory changed.");
+  }
+  if (before.exportId !== void 0 && after.exportId !== void 0 && before.exportId !== after.exportId) {
+    throw new Error("Atlas document belongs to a different export.");
+  }
+  const colors = indexedPaletteChanges(before.palette, after.palette, policy.editablePaletteSlots);
+  const claimed = new Uint8Array(before.indexes.length);
+  const ids = /* @__PURE__ */ new Set();
+  const pixels = [];
+  for (const owner of policy.owners) {
+    if (!owner.id || ids.has(owner.id)) {
+      throw new Error("Missing or duplicate atlas owner.");
+    }
+    ids.add(owner.id);
+    const oldPixels = extractIndexedRegion(before, owner);
+    const newPixels = extractIndexedRegion(after, owner);
+    for (let y = owner.y; y < owner.y + owner.height; y++) {
+      for (let x = owner.x; x < owner.x + owner.width; x++) {
+        const offset = y * before.width + x;
+        if (claimed[offset]) {
+          throw new Error("Overlapping atlas pixel authorities require reconciliation.");
+        }
+        if (before.indexes[offset] !== after.indexes[offset] && owner.indexMap && owner.indexMap[before.indexes[offset]] === owner.indexMap[after.indexes[offset]]) {
+          throw new Error("Changed atlas slot aliases require an explicit canonical mapping.");
+        }
+        claimed[offset] = 1;
+      }
+    }
+    if (newPixels.indexes.some((index, i) => index !== oldPixels.indexes[i])) {
+      pixels.push({ owner: owner.id, indexes: newPixels.indexes });
+    }
+  }
+  if (after.indexes.some((index, i) => index !== before.indexes[i] && !claimed[i])) {
+    throw new Error("Atlas padding or derived preview pixels changed.");
+  }
+  return { pixels, colors };
 }
 
 // packages/assets/node_modules/pako/dist/pako.mjs
@@ -15294,7 +15276,7 @@ var Inflate2 = class {
 };
 
 // packages/assets/src/aseprite-binary.ts
-var ATLAS_FILE_LIMIT = ASSET_LIMITS.asepriteBytes;
+var ATLAS_FILE_LIMIT2 = ASSET_LIMITS.asepriteBytes;
 var decoder = new TextDecoder("utf-8", { fatal: true });
 var Cursor = class {
   constructor(bytes) {
@@ -15348,7 +15330,7 @@ var Fields = class {
   /** Reserved bytes are checked while appending, before allocating the combined payload. */
   length = 0;
   raw(bytes) {
-    this.length = boundedSum(this.length, bytes.length, ATLAS_FILE_LIMIT, "Aseprite output size");
+    this.length = boundedSum(this.length, bytes.length, ATLAS_FILE_LIMIT2, "Aseprite output size");
     this.parts.push(bytes);
     return this;
   }
@@ -15693,10 +15675,10 @@ function* parseAsepriteDocument(bytes, signal) {
   }
   const layers = [], tilesets = [], frames = [], tags = [];
   const paletteState = [];
-  let palette = [], modern = false, decoded = 0, metadata = 0, chunks = 0, references = 0;
+  let palette = [], modern = false, decoded2 = 0, metadata = 0, chunks = 0, references = 0;
   let exportId, userData;
   const reserve = (length) => {
-    decoded = boundedSum(decoded, length, ASSET_LIMITS.decodedBytes, "Aseprite decoded payload");
+    decoded2 = boundedSum(decoded2, length, ASSET_LIMITS.decodedBytes, "Aseprite decoded payload");
     return length;
   };
   for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
@@ -15838,7 +15820,7 @@ function* parseAsepriteDocument(bytes, signal) {
             indexes
           };
         } else if (celType === 3) {
-          const columns = data.u16(), rows = data.u16(), bits = data.u16();
+          const columns = data.u16(), rows2 = data.u16(), bits = data.u16();
           if (bits !== 8 && bits !== 16 && bits !== 32) {
             throw new Error("Unsupported Aseprite tile word width.");
           }
@@ -15849,7 +15831,7 @@ function* parseAsepriteDocument(bytes, signal) {
             diagonalMask: data.u32()
           };
           data.take(10);
-          const cellCount = boundedProduct(columns, rows, ASSET_LIMITS.references, "Tilemap cells");
+          const cellCount = boundedProduct(columns, rows2, ASSET_LIMITS.references, "Tilemap cells");
           reserve(boundedProduct(cellCount, 4, ASSET_LIMITS.decodedBytes, "Tilemap payload"));
           const raw = yield {
             bytes: data.take(data.bytes.length - data.position),
@@ -15870,7 +15852,7 @@ function* parseAsepriteDocument(bytes, signal) {
               cells[cell] = words.getUint32(cell * 4, true);
             }
           }
-          cel = { ...position, zIndex, kind: "tilemap", columns, rows, bits, ...masks, cells };
+          cel = { ...position, zIndex, kind: "tilemap", columns, rows: rows2, bits, ...masks, cells };
         } else {
           throw new Error("Unsupported Aseprite cel type.");
         }
@@ -16052,7 +16034,7 @@ async function compress(bytes, limit, signal) {
     });
   };
   signal?.addEventListener("abort", abort, { once: true });
-  const parts = [];
+  const parts2 = [];
   let size = 0;
   try {
     for (; ; ) {
@@ -16063,7 +16045,7 @@ async function compress(bytes, limit, signal) {
         break;
       }
       size = boundedSum(size, next.value.length, limit, "Aseprite compressed output");
-      parts.push(next.value);
+      parts2.push(next.value);
     }
   } catch (cause) {
     await reader.cancel().catch(() => {
@@ -16075,7 +16057,7 @@ async function compress(bytes, limit, signal) {
   }
   const output = new Uint8Array(size);
   let offset = 0;
-  for (const part of parts) {
+  for (const part of parts2) {
     output.set(part, offset);
     offset += part.length;
   }
@@ -16196,7 +16178,7 @@ async function encodeAsepriteDocument(document2, signal) {
           fields.u32(layer.tileset);
         }
         if (layer.uuid) {
-          fields.raw(Uint8Array.from(layer.uuid.match(/../g), (hex) => Number.parseInt(hex, 16)));
+          fields.raw(Uint8Array.from(layer.uuid.match(/../g), (hex2) => Number.parseInt(hex2, 16)));
         }
         chunks.push(chunk(8196, fields.build()));
         if (layer.userData !== void 0) {
@@ -16284,80 +16266,6 @@ function decodeAsepriteDocumentSync(bytes) {
     step = parser.next(rasterZlibSync(step.value.bytes, step.value.expected));
   }
   return step.value;
-}
-
-// packages/assets/src/atlas-interchange.ts
-var ATLAS_FILE_LIMIT2 = ASSET_LIMITS.asepriteBytes;
-function validateAtlasDocument(document2) {
-  validateIndexedPixels(document2);
-  rasterArea(document2.width, document2.height, "Atlas", ASSET_LIMITS.interchangeSide);
-  indexedPalette(document2.palette);
-  integer(document2.transparentIndex, "Atlas transparent slot", 0, document2.palette.length - 1);
-  if (document2.indexes.some((index) => index >= document2.palette.length)) {
-    throw new Error("Atlas pixel references a missing palette slot.");
-  }
-  if (document2.exportId !== void 0 && !/^[\da-f-]{36}$/.test(document2.exportId)) {
-    throw new Error("Invalid atlas export identity.");
-  }
-}
-function indexedAtlasDocument(value, transparentIndex) {
-  if (!value || typeof value !== "object" || !("kind" in value) || value.kind !== "indexed-image") {
-    throw new Error("Atlas interchange requires indexed artwork; RGB mapping is not supported.");
-  }
-  if (!("width" in value) || typeof value.width !== "number" || !("height" in value) || typeof value.height !== "number" || !("indexes" in value) || !(value.indexes instanceof Uint8Array) || !("palette" in value) || !Array.isArray(value.palette)) {
-    throw new Error("Invalid indexed atlas value.");
-  }
-  const palette = indexedPalette(value.palette);
-  const document2 = {
-    width: value.width,
-    height: value.height,
-    indexes: Uint8Array.from(value.indexes),
-    palette,
-    transparentIndex
-  };
-  validateAtlasDocument(document2);
-  return document2;
-}
-function inspectAtlasChanges(before, after, policy) {
-  validateAtlasDocument(before);
-  validateAtlasDocument(after);
-  if (before.width !== after.width || before.height !== after.height || before.transparentIndex !== after.transparentIndex || before.palette.length !== after.palette.length) {
-    throw new Error("Atlas canvas, transparency or palette inventory changed.");
-  }
-  if (before.exportId !== void 0 && after.exportId !== void 0 && before.exportId !== after.exportId) {
-    throw new Error("Atlas document belongs to a different export.");
-  }
-  const colors = indexedPaletteChanges(before.palette, after.palette, policy.editablePaletteSlots);
-  const claimed = new Uint8Array(before.indexes.length);
-  const ids = /* @__PURE__ */ new Set();
-  const pixels = [];
-  for (const owner of policy.owners) {
-    if (!owner.id || ids.has(owner.id)) {
-      throw new Error("Missing or duplicate atlas owner.");
-    }
-    ids.add(owner.id);
-    const oldPixels = extractIndexedRegion(before, owner);
-    const newPixels = extractIndexedRegion(after, owner);
-    for (let y = owner.y; y < owner.y + owner.height; y++) {
-      for (let x = owner.x; x < owner.x + owner.width; x++) {
-        const offset = y * before.width + x;
-        if (claimed[offset]) {
-          throw new Error("Overlapping atlas pixel authorities require reconciliation.");
-        }
-        if (before.indexes[offset] !== after.indexes[offset] && owner.indexMap && owner.indexMap[before.indexes[offset]] === owner.indexMap[after.indexes[offset]]) {
-          throw new Error("Changed atlas slot aliases require an explicit canonical mapping.");
-        }
-        claimed[offset] = 1;
-      }
-    }
-    if (newPixels.indexes.some((index, i) => index !== oldPixels.indexes[i])) {
-      pixels.push({ owner: owner.id, indexes: newPixels.indexes });
-    }
-  }
-  if (after.indexes.some((index, i) => index !== before.indexes[i] && !claimed[i])) {
-    throw new Error("Atlas padding or derived preview pixels changed.");
-  }
-  return { pixels, colors };
 }
 
 // packages/assets/src/indexed-ownership.ts
@@ -16510,953 +16418,6 @@ function reconcileIndexedViews(snapshot, candidates) {
     const change = changes.get(owner.id);
     return change ? [{ owner: owner.id, indexes: change.indexes }] : [];
   });
-}
-
-// packages/assets/src/presentation-layout.ts
-function planIndexedPresentation(nativeWidth, nativeHeight, tileWidth, tileHeight, views) {
-  rasterArea(nativeWidth, nativeHeight, "Native presentation", ASSET_LIMITS.interchangeSide);
-  rasterArea(tileWidth, tileHeight, "Inventory tile", ASSET_LIMITS.interchangeSide);
-  integer(views, "Inventory views", 1, ASSET_LIMITS.owners);
-  const pageTiles = Math.min(
-    views,
-    Math.floor(ASSET_LIMITS.rasterPixels / (tileWidth * tileHeight))
-  );
-  const desiredColumns = Math.min(
-    Math.floor(ASSET_LIMITS.interchangeSide / tileWidth),
-    Math.ceil(Math.sqrt(pageTiles * tileHeight / tileWidth))
-  );
-  const maximumWidth = Math.min(
-    ASSET_LIMITS.interchangeSide,
-    Math.floor(ASSET_LIMITS.rasterPixels / Math.max(nativeHeight, tileHeight))
-  );
-  const width = Math.max(nativeWidth, Math.min(desiredColumns * tileWidth, maximumWidth)), columns = Math.floor(width / tileWidth);
-  const maximumHeight = Math.min(
-    ASSET_LIMITS.interchangeSide,
-    Math.floor(ASSET_LIMITS.rasterPixels / width)
-  );
-  const height = Math.max(
-    nativeHeight,
-    Math.min(Math.ceil(pageTiles / columns) * tileHeight, maximumHeight)
-  );
-  rasterArea(width, height, "Indexed presentation", ASSET_LIMITS.interchangeSide);
-  const rows = Math.floor(height / tileHeight);
-  const capacity = boundedProduct(columns, rows, ASSET_LIMITS.references, "Inventory page cells");
-  if (!capacity) {
-    throw new Error("Native presentation leaves no complete inventory tile capacity.");
-  }
-  const pages = Math.ceil(views / capacity);
-  integer(pages, "Inventory pages", 1, ASSET_LIMITS.frames);
-  return { width, height, columns, rows, capacity, pages };
-}
-
-// packages/assets/src/raster-interchange.ts
-function rasterInterchangeDocument(atlas) {
-  validateAtlasDocument(atlas);
-  return {
-    width: atlas.width,
-    height: atlas.height,
-    palette: atlas.palette,
-    transparentIndex: atlas.transparentIndex,
-    exportId: atlas.exportId,
-    layers: [{ kind: "raster", flags: 3, name: "Native views \u2014 fixed raster inventory" }],
-    tilesets: [],
-    tags: [],
-    frames: [
-      {
-        durationMs: 100,
-        cels: [
-          {
-            kind: "raster",
-            layer: 0,
-            x: 0,
-            y: 0,
-            zIndex: 0,
-            width: atlas.width,
-            height: atlas.height,
-            indexes: Uint8Array.from(atlas.indexes)
-          }
-        ]
-      }
-    ]
-  };
-}
-function rasterInterchangeAtlas(document2) {
-  validateAsepriteDocument(document2);
-  if (document2.frames.length !== 1 || document2.layers.length !== 1 || document2.layers[0].kind !== "raster" || !(document2.layers[0].flags & 1) || document2.tilesets.length || document2.tags.length) {
-    throw new Error("Raster interchange requires one visible raster layer and one fixed frame.");
-  }
-  const cels = document2.frames[0].cels;
-  if (cels.length > 1 || cels.some((cel) => cel.kind !== "raster" || cel.zIndex !== 0)) {
-    throw new Error("Raster interchange does not support linked cels or additional composition.");
-  }
-  const indexes = new Uint8Array(document2.width * document2.height).fill(document2.transparentIndex);
-  for (const cel of cels) {
-    if (cel.kind !== "raster") {
-      throw new Error("Invalid raster cel.");
-    }
-    if (cel.x < 0 || cel.y < 0 || cel.x + cel.width > document2.width || cel.y + cel.height > document2.height) {
-      throw new Error("Raster cel exceeds the fixed inventory canvas.");
-    }
-    for (let y = 0; y < cel.height; y++) {
-      indexes.set(
-        cel.indexes.subarray(y * cel.width, (y + 1) * cel.width),
-        (y + cel.y) * document2.width + cel.x
-      );
-    }
-  }
-  const result = {
-    width: document2.width,
-    height: document2.height,
-    indexes,
-    palette: document2.palette,
-    transparentIndex: document2.transparentIndex,
-    exportId: document2.exportId
-  };
-  validateAtlasDocument(result);
-  return result;
-}
-
-// packages/assets/src/source-codecs.ts
-var AssetSourceCodecRegistry = class {
-  #codecs = /* @__PURE__ */ new Map();
-  #revision = 0;
-  /** Changes invalidate adapter caches when newly registered probes alter content discovery. */
-  get revision() {
-    return this.#revision;
-  }
-  register(codec) {
-    if (!codec.id || this.#codecs.has(codec.id) || typeof codec.matches !== "function" || typeof codec.decode !== "function" || typeof codec.encode !== "function" || typeof codec.embeddedIdentity !== "boolean" || !Number.isSafeInteger(codec.version) || codec.version < 1 || !/^[\w+.-]+\/[\w+.-]+$/.test(codec.mediaType) || !codec.extensions.length || codec.extensions.some((extension) => !/^\.[\d.a-z-]+$/i.test(extension))) {
-      throw new Error(`Invalid or duplicate source codec '${codec.id}'.`);
-    }
-    const extensions = codec.extensions.map((extension) => extension.toLowerCase());
-    if (new Set(extensions).size !== extensions.length) {
-      throw new Error(`Duplicate source extension for '${codec.id}'.`);
-    }
-    for (const existing of this.#codecs.values()) {
-      if (existing.extensions.some((extension) => extensions.includes(extension))) {
-        throw new Error(`Ambiguous source extension for '${codec.id}'.`);
-      }
-    }
-    this.#codecs.set(
-      codec.id,
-      Object.freeze({
-        id: codec.id,
-        version: codec.version,
-        mediaType: codec.mediaType,
-        embeddedIdentity: codec.embeddedIdentity,
-        extensions: Object.freeze(extensions),
-        matches: codec.matches.bind(codec),
-        decode: codec.decode.bind(codec),
-        encode: codec.encode.bind(codec)
-      })
-    );
-    this.#revision++;
-    return this;
-  }
-  get(id2) {
-    const codec = this.#codecs.get(id2);
-    if (!codec) {
-      throw new Error(`Unsupported asset source representation '${id2}'.`);
-    }
-    return codec;
-  }
-  /** Content establishes representation; the filename and declared media type must agree when supplied. */
-  identify(bytes, hints = {}) {
-    const candidates = [...this.#codecs.values()].filter((codec2) => codec2.matches(bytes));
-    if (candidates.length !== 1) {
-      throw new Error(`Unrecognized or ambiguous asset source content: ${hints.path ?? "input"}.`);
-    }
-    const codec = candidates[0];
-    if (hints.path && !codec.extensions.some((extension) => hints.path.toLowerCase().endsWith(extension)) || hints.mediaType && hints.mediaType !== codec.mediaType) {
-      throw new Error(
-        `Asset source extension/content mismatch: ${hints.path ?? hints.mediaType}; content is ${codec.id}.`
-      );
-    }
-    return codec;
-  }
-  /** Discovery feeds editor menus without hard-coding the set of representations into the host. */
-  representations() {
-    return [...this.#codecs.values()].map(({ id: id2, mediaType, extensions }) => ({
-      id: id2,
-      mediaType,
-      extensions
-    }));
-  }
-};
-var indexedPngSourceCodec = {
-  id: "indexed-png",
-  version: 1,
-  mediaType: "image/png",
-  extensions: [".png"],
-  embeddedIdentity: false,
-  matches: (bytes) => [137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte),
-  decode(bytes, reference) {
-    const image = indexedAtlasDocument(
-      pngImporter.import({ bytes, mediaType: "image/png" }).value,
-      reference?.transparentIndex ?? 0
-    );
-    return rasterInterchangeDocument({ ...image, exportId: reference?.exportId });
-  },
-  encode: (document2) => createIndexedPng(rasterInterchangeAtlas(document2))
-};
-var asepriteSourceCodec = {
-  id: "aseprite",
-  version: 1,
-  mediaType: "image/x-aseprite",
-  extensions: [".aseprite", ".ase"],
-  embeddedIdentity: true,
-  matches: (bytes) => bytes.length >= 128 && bytes[4] === 224 && bytes[5] === 165,
-  decode: decodeAsepriteDocumentSync,
-  encode: encodeAsepriteDocument
-};
-function indexedSourceCodecs() {
-  return new AssetSourceCodecRegistry().register(indexedPngSourceCodec).register(asepriteSourceCodec);
-}
-var asepriteRasterImporter = {
-  id: "uttori.import.aseprite-raster",
-  version: "1.0.0",
-  mediaTypes: ["image/x-aseprite"],
-  import(input2) {
-    const codec = indexedSourceCodecs().identify(input2.bytes, { mediaType: input2.mediaType });
-    const document2 = decodeAsepriteDocumentSync(input2.bytes);
-    if (codec.id !== "aseprite") {
-      throw new Error("Invalid Aseprite raster source.");
-    }
-    const atlas = rasterInterchangeAtlas(document2);
-    const value = {
-      kind: "indexed-image",
-      sourceBitDepth: 8,
-      width: atlas.width,
-      height: atlas.height,
-      indexes: atlas.indexes,
-      palette: atlas.palette
-    };
-    return { kind: value.kind, value };
-  }
-};
-
-// packages/assets/src/secret-of-mana/som-room-composition.ts
-var LIMITATION = "Background geometry only; omits actors, BG3, camera, mutable clones and color math.";
-function somRoomPaletteColor(word, transparent) {
-  integer(word, "Room palette word", 0, 65535);
-  if (transparent) {
-    return [0, 0, 0, 0];
-  }
-  return [
-    Math.floor((word & 31) * 255 / 31),
-    Math.floor((word >>> 5 & 31) * 255 / 31),
-    Math.floor((word >>> 10 & 31) * 255 / 31),
-    255
-  ];
-}
-function physicalGraphics(graphics, mask) {
-  if (typeof graphics !== "string" || !graphics.length || graphics.length > 32768 * 2 || graphics.length % 64 || !/^[\da-f]+$/i.test(graphics)) {
-    throw new Error("Invalid or oversized planar room graphics.");
-  }
-  if (typeof mask !== "string" || mask.length !== graphics.length || !/^(?:00|01)+$/.test(mask)) {
-    throw new Error("Preview graphics require a matching physical-coverage mask.");
-  }
-  const bytes = new Uint8Array(graphics.length / 2), known = new Uint8Array(bytes.length);
-  for (let offset = 0; offset < bytes.length; offset++) {
-    bytes[offset] = Number.parseInt(graphics.slice(offset * 2, offset * 2 + 2), 16);
-    known[offset] = mask.charCodeAt(offset * 2 + 1) - 48;
-  }
-  return { bytes, known };
-}
-function composeSomRoom(room, preview, story) {
-  if (room.format !== "som.room" || room.version !== 1 || preview.format !== "som.room.preview" || preview.version !== 1) {
-    throw new Error("Unsupported room composition inputs.");
-  }
-  if (!Array.isArray(room.header) || room.header.length !== 8) {
-    throw new Error("Room header requires eight bytes.");
-  }
-  room.header.forEach((value) => integer(value, "Room header byte", 0, 255));
-  integer(room.pieces.length, "Room piece count", 0, 65536);
-  const key = `${room.header[0] & 63}:${room.header[2]}:${room.header[1] & 127}`;
-  if (!Object.hasOwn(preview.tilesets, key)) {
-    throw new Error(`Preview resources do not contain tileset ${key}.`);
-  }
-  const assets = preview.tilesets[key], states = { ...room.previewStory, ...story }, pieces = [];
-  let columns = 0, rows = 0, placementWork = 0;
-  for (const [sourceIndex, piece] of room.pieces.entries()) {
-    integer(piece.variable, "Story variable", 0, 255);
-    integer(piece.minimum, "Story minimum", 0, 15);
-    integer(piece.maximum, "Story maximum", piece.minimum, 15);
-    const value = integer(states[piece.variable], `Preview story ${piece.variable}`, 0, 255);
-    if (value < piece.minimum || value > piece.maximum) {
-      continue;
-    }
-    integer(piece.x, "Piece x", 0, 127);
-    integer(piece.y, "Piece y", 0, 127);
-    integer(piece.layer, "Piece layer", 1, 2);
-    integer(piece.layout, "Layout id", 1, 1023);
-    const layout2 = Object.hasOwn(preview.layouts, piece.layout) ? preview.layouts[piece.layout] : void 0;
-    if (!layout2) {
-      throw new Error("Missing or incomplete layout preview.");
-    }
-    integer(layout2.width, "Layout width", 1, 128);
-    integer(layout2.height, "Layout height", 1, 128);
-    const area = layout2.width * layout2.height;
-    if (!Array.isArray(layout2.tiles) || layout2.tiles.length !== area) {
-      throw new Error("Missing or incomplete layout preview.");
-    }
-    columns = Math.max(columns, piece.x + layout2.width);
-    rows = Math.max(rows, piece.y + layout2.height);
-    if (columns > 128 || rows > 128) {
-      throw new Error("Room pieces exceed the native 128-tile layer bounds.");
-    }
-    placementWork = boundedSum(
-      placementWork,
-      area * 256,
-      ASSET_LIMITS.renderPixels,
-      "Room placement work"
-    );
-    layout2.tiles.forEach((tile) => integer(tile, "Static metatile id", 0, 191));
-    pieces.push({ ...piece, sourceIndex, width: layout2.width, height: layout2.height });
-  }
-  if (!pieces.length) {
-    throw new Error("No active room pieces in this preview state.");
-  }
-  const width = columns * 16, height = rows * 16;
-  rasterArea(width, height, "Room composition", ASSET_LIMITS.interchangeSide);
-  const maps = [
-    new Int16Array(columns * rows).fill(-1),
-    new Int16Array(columns * rows).fill(-1)
-  ];
-  for (const piece of pieces) {
-    const layout2 = preview.layouts[piece.layout], map = maps[piece.layer - 1];
-    for (let y = 0; y < piece.height; y++) {
-      map.set(
-        layout2.tiles.slice(y * piece.width, (y + 1) * piece.width),
-        (piece.y + y) * columns + piece.x
-      );
-    }
-  }
-  const { bytes: graphics, known: graphicsKnown } = physicalGraphics(
-    assets.graphics,
-    assets.graphicsKnown
-  );
-  if (!Array.isArray(assets.colors) || assets.colors.length !== 128 || !Array.isArray(assets.layerWords) || assets.layerWords.length !== 2) {
-    throw new Error("Incomplete palette/metatile preview.");
-  }
-  const paletteWords = Uint16Array.from(
-    assets.colors,
-    (word) => integer(word, "Palette word", 0, 65535)
-  ), palette = Array.from(
-    paletteWords,
-    (word, index) => somRoomPaletteColor(word, index % 16 === 0)
-  );
-  for (const words of assets.layerWords) {
-    if (!Array.isArray(words) || words.length !== 768) {
-      throw new Error("Incomplete metatile preview.");
-    }
-    words.forEach((word) => integer(word, "Metatile word", 0, 65535));
-  }
-  const tiles = decodePlanarTiles(graphics, 4).map((tile) => Uint8Array.from(tile.flat())), passOrder = [
-    [2, 0],
-    [1, 0],
-    [2, 1],
-    [1, 1]
-  ];
-  const passes = passOrder.map(([layer, priority]) => {
-    const cells = [], map = maps[layer - 1], words = assets.layerWords[layer - 1];
-    for (let position = 0; position < map.length; position++) {
-      const metatile = map[position];
-      if (metatile < 0) {
-        continue;
-      }
-      for (let quadrant = 0; quadrant < 4; quadrant++) {
-        const word = words[metatile * 4 + quadrant];
-        if ((word >>> 13 & 1) !== priority) {
-          continue;
-        }
-        const tile = word & 1023, offset = tile * 32;
-        if (offset + 32 > graphics.length) {
-          throw new Error("Preview references uncaptured graphics.");
-        }
-        if (!graphicsKnown.subarray(offset, offset + 32).every((byte) => byte === 1)) {
-          throw new Error("Preview references unknown physical graphics bytes.");
-        }
-        cells.push({
-          x: position % columns * 16 + quadrant % 2 * 8,
-          y: Math.floor(position / columns) * 16 + (quadrant >>> 1) * 8,
-          metatile,
-          word,
-          tile,
-          palette: word >>> 10 & 7,
-          flipX: !!(word & 16384),
-          flipY: !!(word & 32768)
-        });
-      }
-    }
-    return { layer, priority, cells };
-  });
-  return {
-    width,
-    height,
-    tileset: key,
-    activePieces: pieces,
-    metatiles: maps,
-    passes,
-    graphics,
-    graphicsKnown,
-    tiles,
-    paletteWords,
-    palette,
-    provenance: structuredClone(preview.provenance),
-    limitation: LIMITATION
-  };
-}
-function renderSomRoomComposition(composition, layer) {
-  if (layer !== void 0) {
-    integer(layer, "Room render layer", 1, 2);
-  }
-  const area = rasterArea(
-    composition.width,
-    composition.height,
-    "Room render",
-    ASSET_LIMITS.interchangeSide
-  );
-  let work = 0;
-  integer(composition.passes.length, "Room passes", 1, 4);
-  integer(composition.tiles.length, "Room tiles", 1, 1024);
-  if (composition.palette.length !== 128) {
-    throw new Error("Incomplete room render palette.");
-  }
-  for (const tile of composition.tiles) {
-    if (!(tile instanceof Uint8Array) || tile.length !== 64 || tile.some((slot) => slot > 15)) {
-      throw new Error("Invalid room render tile.");
-    }
-  }
-  for (const pass of composition.passes) {
-    integer(pass.layer, "Room pass layer", 1, 2);
-    integer(pass.priority, "Room pass priority", 0, 1);
-    if (layer !== void 0 && pass.layer !== layer) {
-      continue;
-    }
-    work = boundedSum(
-      work,
-      pass.cells.length * 64,
-      ASSET_LIMITS.renderPixels,
-      "Room rendering work"
-    );
-    for (const cell of pass.cells) {
-      integer(cell.x, "Room cell x", 0, composition.width - 8);
-      integer(cell.y, "Room cell y", 0, composition.height - 8);
-      integer(cell.tile, "Room cell tile", 0, composition.tiles.length - 1);
-      integer(cell.palette, "Room cell palette", 0, 7);
-    }
-  }
-  const rgba = new Uint8Array(
-    boundedProduct(area, 4, ASSET_LIMITS.decodedBytes, "Room RGBA bytes")
-  );
-  for (let pixel = 0; pixel < rgba.length; pixel += 4) {
-    rgba.set([10, 14, 22, 255], pixel);
-  }
-  for (const pass of composition.passes) {
-    if (layer !== void 0 && pass.layer !== layer) {
-      continue;
-    }
-    for (const cell of pass.cells) {
-      const tile = composition.tiles[cell.tile];
-      for (let y = 0; y < 8; y++) {
-        for (let x = 0; x < 8; x++) {
-          const sourceX = cell.flipX ? 7 - x : x, sourceY = cell.flipY ? 7 - y : y, slot = tile[sourceY * 8 + sourceX];
-          if (slot === 0) {
-            continue;
-          }
-          const at = ((cell.y + y) * composition.width + cell.x + x) * 4;
-          rgba.set(composition.palette[cell.palette * 16 + slot], at);
-        }
-      }
-    }
-  }
-  return { rgba, width: composition.width, height: composition.height };
-}
-
-// packages/assets/src/secret-of-mana/som-room-assets.ts
-function isRecord5(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isRoomEntity(value) {
-  return isRecord5(value);
-}
-function isRoomPiece(value) {
-  return isRecord5(value);
-}
-function isRoomPreview(value) {
-  return isRecord5(value) && value.format === "som.room.preview" && value.version === 1 && isRecord5(value.tilesets) && isRecord5(value.layouts);
-}
-function isRoomAsset(value) {
-  return isRecord5(value) && Array.isArray(value.entities) && value.entities.every(isRoomEntity) && Array.isArray(value.pieces) && value.pieces.every(isRoomPiece) && Array.isArray(value.triggers) && value.triggers.every((item) => typeof item === "number");
-}
-function integer2(value, maximum, name) {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
-    fail(`${name} must be 0..${maximum}.`);
-  }
-  return value;
-}
-function parseRoomAsset(source) {
-  equal(source.mediaType, "application/json", "Room source must be JSON.");
-  const parsed = JSON.parse(new TextDecoder().decode(source.bytes));
-  if (!isRecord5(parsed)) {
-    fail("Room source must be a JSON object.");
-  }
-  equal(parsed.format, "som.room");
-  equal(parsed.version, 1);
-  integer2(parsed.id, 510, "room id");
-  invariant(
-    Array.isArray(parsed.header) && parsed.header.length === 8,
-    "Room header requires eight bytes."
-  );
-  for (const byte of parsed.header) {
-    integer2(byte, 255, "header byte");
-  }
-  for (const key of ["entities", "pieces", "triggers"]) {
-    invariant(Array.isArray(parsed[key]), `Missing room ${key}.`);
-  }
-  if (!isRoomAsset(parsed)) {
-    fail("Room entities, pieces, and triggers must match the room record.");
-  }
-  return parsed;
-}
-function parseRoomPreview(bytes) {
-  const parsed = JSON.parse(new TextDecoder().decode(bytes));
-  if (!isRecord5(parsed)) {
-    fail("Room preview resource must be a JSON object.");
-  }
-  equal(parsed.format, "som.room.preview");
-  equal(parsed.version, 1);
-  if (!isRoomPreview(parsed)) {
-    fail("Room preview resource must include tileset and layout records.");
-  }
-  return parsed;
-}
-function condition(record) {
-  const variable = integer2(record.variable, 255, "story variable");
-  const minimum = integer2(record.minimum, 15, "story minimum"), maximum = integer2(record.maximum, 15, "story maximum");
-  invariant(minimum <= maximum, "Story range is reversed.");
-  return [variable, minimum << 4 | maximum];
-}
-function encodeRoomSection(room, section) {
-  invariant(
-    ["objects", "assembly", "triggers"].includes(section),
-    "Room section must be objects, assembly or triggers."
-  );
-  const bytes = [];
-  if (section === "objects") {
-    bytes.push(...room.header);
-    for (const entity of room.entities) {
-      const flags = integer2(entity.flags, 255, "entity flags");
-      equal(flags & 63, 0, "Only packed entity flags 40/80 are defined.");
-      const event = integer2(entity.event, 4095, "entity event");
-      bytes.push(
-        ...condition(entity),
-        integer2(entity.x, 127, "entity x") | (flags & 64) << 1,
-        integer2(entity.y, 127, "entity y") | flags & 128,
-        integer2(entity.orientationAndLayer, 255, "orientation/layer byte"),
-        integer2(entity.entity, 255, "entity id"),
-        event & 255,
-        integer2(entity.interaction, 15, "interaction flags") << 4 | event >>> 8
-      );
-    }
-  } else if (section === "assembly") {
-    let layer = 1;
-    for (const piece of room.pieces) {
-      if (piece.marker !== void 0) {
-        invariant(piece.marker === 254 || piece.marker === 255, "Layer marker must be FE or FF.");
-        bytes.push(piece.marker);
-        layer = piece.marker - 253;
-      }
-      equal(piece.layer, layer, "A layer change requires an explicit marker.");
-      const predicate = condition(piece);
-      invariant(predicate[0] < 254, "FE/FF are layer markers, not piece story indexes.");
-      const layout2 = integer2(piece.layout, 1023, "layout id");
-      invariant(layout2 > 0, "Native layout IDs are one-based.");
-      bytes.push(
-        ...predicate,
-        layout2 & 255,
-        integer2(piece.x, 127, "piece x") << 1 | layout2 >>> 8 & 1,
-        integer2(piece.y, 127, "piece y") << 1 | layout2 >>> 9 & 1
-      );
-    }
-  } else {
-    for (const trigger of room.triggers) {
-      integer2(trigger, 65535, "packed trigger word");
-      bytes.push(trigger & 255, trigger >>> 8);
-    }
-  }
-  const owner = room.sections?.[section];
-  invariant(
-    owner && Number.isInteger(owner.address) && Number.isInteger(owner.bytes),
-    "Missing fixed section ownership."
-  );
-  equal(
-    bytes.length,
-    owner.bytes,
-    "Room edit changes its fixed ROM extent; relocation is required."
-  );
-  return Uint8Array.from(bytes);
-}
-function convertRoomAsset(source, options) {
-  const room = parseRoomAsset(source);
-  const outputs = {};
-  for (const section of ["objects", "assembly", "triggers"]) {
-    outputs[section] = { bytes: encodeRoomSection(room, section) };
-  }
-  const selected = options.section;
-  invariant(
-    typeof selected === "string" && Object.hasOwn(outputs, selected),
-    "Select a room section."
-  );
-  return { primaryOutput: selected, outputs };
-}
-function renderRoomAsset(room, preview, { layer, story } = {}) {
-  if (layer !== void 0 && layer !== 1 && layer !== 2) {
-    throw new Error("Preview layer must be 1 or 2.");
-  }
-  const composition = composeSomRoom(room, preview, story);
-  return {
-    ...renderSomRoomComposition(composition, layer),
-    tileset: composition.tileset,
-    activePieces: composition.activePieces.map((piece) => piece.layout),
-    limitation: composition.limitation
-  };
-}
-
-// packages/assets/src/secret-of-mana/som-dialogue-command.ts
-function encodeSomDialogueCommand(token) {
-  const names = ["${boy}", "${girl}", "${sprite}"];
-  const index = names.indexOf(token);
-  if (index >= 0) return { family: "party-name", bytes: Uint8Array.of(87, index) };
-  if (token === "${wait}") return { family: "wait", bytes: Uint8Array.of(40, 0) };
-  const wait = /^\$\{wait:(0|[1-9][0-9]*)\}$/.exec(token);
-  if (wait) {
-    const count = Number(wait[1]);
-    if (!Number.isSafeInteger(count) || count > 255)
-      throw new Error("Dialogue wait must fit one unsigned byte.");
-    return { family: "wait", bytes: Uint8Array.of(40, count) };
-  }
-  const windows = /* @__PURE__ */ new Map([
-    ["${openDialogue}", 80],
-    ["${closeDialogue}", 81],
-    ["${clearDialogue}", 82]
-  ]);
-  const opcode = windows.get(token);
-  if (opcode !== void 0) return { family: "text-window", bytes: Uint8Array.of(opcode) };
-  throw new Error(`Unsupported dialogue command token ${token}.`);
-}
-
-// packages/assets/src/secret-of-mana/som-dialogue.ts
-var SOM_DIALOGUE_PAIR_COUNT = 61;
-var MAX_GLYPHS = 4096;
-var punctuation = /* @__PURE__ */ new Map([
-  [191, "."],
-  [192, ","],
-  [193, "/"],
-  [194, "'"],
-  [197, ":"],
-  [198, "-"],
-  [199, "%"],
-  [200, "!"],
-  [202, "?"]
-]);
-function readSomDialogueDictionary(bytes) {
-  if (bytes.length !== SOM_DIALOGUE_PAIR_COUNT * 2 || bytes.some((byte) => byte < 128 || byte > 210)) {
-    throw new Error("SoM dialogue requires 61 pairs of ordinary font codes.");
-  }
-  return Array.from({ length: SOM_DIALOGUE_PAIR_COUNT }, (_, i) => [bytes[i * 2], bytes[i * 2 + 1]]);
-}
-function glyphText(byte) {
-  if (byte === 127) return "\n";
-  if (byte === 128) return " ";
-  if (byte >= 129 && byte <= 154) return String.fromCharCode(byte - 129 + 97);
-  if (byte >= 155 && byte <= 180) return String.fromCharCode(byte - 155 + 65);
-  if (byte >= 181 && byte <= 190) return String.fromCharCode(byte - 181 + 48);
-  return punctuation.get(byte) ?? `\\x${byte.toString(16).padStart(2, "0").toUpperCase()}`;
-}
-function expandSomDialogue(bytes, dictionary) {
-  const output = [];
-  for (const byte of bytes) {
-    let index;
-    if (byte >= 96 && byte <= 126) index = byte - 96;
-    else if (byte >= 211) index = byte - 195;
-    if (index !== void 0) {
-      const pair = dictionary[index];
-      if (!pair) throw new Error(`Missing SoM dialogue pair ${index}.`);
-      output.push(...pair);
-    } else {
-      if (byte < 127) throw new Error(`Event/control byte ${byte.toString(16)} is outside a text span.`);
-      output.push(byte);
-    }
-  }
-  return Uint8Array.from(output);
-}
-function decodeSomDialogue(bytes, dictionary) {
-  return [...expandSomDialogue(bytes, dictionary)].map(glyphText).join("");
-}
-function parseGlyphs(text) {
-  const inverse = new Map([...Array.from({ length: 84 }, (_, i) => i + 127)].filter((byte) => !glyphText(byte).startsWith("\\")).map((byte) => [glyphText(byte), byte]));
-  const bytes = [];
-  for (let offset = 0; offset < text.length; ) {
-    if (text[offset] === "\\") {
-      const match = /^\\x([0-9a-f]{2})/i.exec(text.slice(offset));
-      if (!match) throw new Error(`Invalid dialogue escape at character ${offset}.`);
-      const byte = Number.parseInt(match[1], 16);
-      if (byte < 127 || byte > 210) throw new Error("Dialogue escapes must select an ordinary glyph or line break.");
-      bytes.push(byte);
-      offset += 4;
-    } else {
-      const byte = inverse.get(text[offset]);
-      if (byte === void 0) throw new Error(`Unsupported dialogue character at ${offset}; use a verified glyph escape.`);
-      bytes.push(byte);
-      offset++;
-    }
-  }
-  if (bytes.length > MAX_GLYPHS) throw new Error("Dialogue span exceeds the 4096-glyph authoring limit.");
-  return bytes;
-}
-function validateLineGeometry(options) {
-  const { lineColumns, initialColumn } = options;
-  if (lineColumns === void 0) {
-    if (initialColumn !== void 0) throw new Error("Initial dialogue column requires a line capacity.");
-    return;
-  }
-  if (!Number.isSafeInteger(lineColumns) || lineColumns < 1 || lineColumns > 32) {
-    throw new Error("Dialogue line capacity must be an integer from 1 to 32 glyphs.");
-  }
-  if (initialColumn !== void 0 && (!Number.isSafeInteger(initialColumn) || initialColumn < 0 || initialColumn >= lineColumns)) {
-    throw new Error("Initial dialogue column must be within the supplied line capacity.");
-  }
-}
-function encodeSomDialogue(text, dictionary, options = {}) {
-  const glyphs = parseGlyphs(text);
-  validateLineGeometry(options);
-  const pairs = /* @__PURE__ */ new Map();
-  for (let code = 96; code <= 255; code++) {
-    if (code === 125) continue;
-    let index;
-    if (code <= 126) index = code - 96;
-    else if (code >= 211) index = code - 195;
-    if (index === void 0) continue;
-    const pair = dictionary[index];
-    if (!pair) throw new Error(`Missing SoM dialogue pair ${index}.`);
-    const key = pair[0] | pair[1] << 8;
-    if (!pairs.has(key)) pairs.set(key, code);
-  }
-  let target = options.byteLength;
-  if (target !== void 0 && (!Number.isSafeInteger(target) || target < 0 || target > MAX_GLYPHS)) {
-    throw new Error("Dialogue byte budget must be an integer from 0 to 4096.");
-  }
-  if (options.original && decodeSomDialogue(options.original, dictionary) === text) {
-    if (target !== void 0 && target !== options.original.length) throw new Error("Original dialogue disagrees with byte budget.");
-    return options.original.slice();
-  }
-  const columns = new Uint8Array(glyphs.length);
-  if (options.lineColumns !== void 0) {
-    let column = options.initialColumn ?? 0;
-    for (const [index, glyph] of glyphs.entries()) {
-      columns[index] = column;
-      if (glyph === 127) column = 0;
-      else column = (column + 1) % options.lineColumns;
-    }
-  }
-  const pairAt = (i) => {
-    if (i + 1 >= glyphs.length) return void 0;
-    if (options.lineColumns !== void 0 && columns[i] === options.lineColumns - 1) return void 0;
-    return pairs.get(glyphs[i] | glyphs[i + 1] << 8);
-  };
-  if (target === void 0) {
-    const minimum = new Uint16Array(glyphs.length + 1);
-    for (let i = glyphs.length - 1; i >= 0; i--) {
-      minimum[i] = minimum[i + 1] + 1;
-      if (pairAt(i) !== void 0) minimum[i] = Math.min(minimum[i], minimum[i + 2] + 1);
-    }
-    target = minimum[0];
-  }
-  const width = target + 1, possible = new Uint8Array((glyphs.length + 1) * width);
-  possible[glyphs.length * width] = 1;
-  for (let i = glyphs.length - 1; i >= 0; i--) {
-    for (let count = 1; count <= target; count++) {
-      if (possible[(i + 1) * width + count - 1] || pairAt(i) !== void 0 && possible[(i + 2) * width + count - 1]) possible[i * width + count] = 1;
-    }
-  }
-  if (!possible[target]) throw new Error(`Dialogue cannot fit its exact ${target}-byte ROM span; relocation or a different edit is required.`);
-  const encoded = [];
-  for (let i = 0, remaining = target; i < glyphs.length; remaining--) {
-    const pair = pairAt(i);
-    if (pair !== void 0 && possible[(i + 2) * width + remaining - 1]) {
-      encoded.push(pair);
-      i += 2;
-    } else {
-      encoded.push(glyphs[i++]);
-    }
-  }
-  return Uint8Array.from(encoded);
-}
-function hexBytes(value) {
-  if (typeof value !== "string" || value.length > MAX_GLYPHS * 2 || !/^(?:[0-9a-f]{2})*$/i.test(value)) {
-    throw new Error("Invalid or oversized native dialogue hex.");
-  }
-  return Uint8Array.from(value.match(/../g) ?? [], (pair) => Number.parseInt(pair, 16));
-}
-function readSomDialogueScriptLayout(value) {
-  if (!value || typeof value !== "object" || !("format" in value) || value.format !== "som-dialogue-script" || !("version" in value) || value.version !== 1 || !("dictionaryHex" in value) || !("segments" in value) || !Array.isArray(value.segments) || value.segments.length === 0 || value.segments.length > 4096) {
-    throw new Error("Invalid SoM dialogue-script layout.");
-  }
-  const dictionary = readSomDialogueDictionary(hexBytes(value.dictionaryHex));
-  let total = 0;
-  for (const [index, segment] of value.segments.entries()) {
-    if (!segment || !["raw", "text"].includes(segment.kind) || index > 0 && segment.kind === value.segments[index - 1].kind) throw new Error("Dialogue segments must alternate raw/text.");
-    const bytes = hexBytes(segment.nativeHex);
-    if (!bytes.length || bytes.length > MAX_GLYPHS) throw new Error("Invalid dialogue segment size.");
-    if (segment.kind === "text") {
-      parseGlyphs(decodeSomDialogue(bytes, dictionary));
-      validateLineGeometry(segment);
-    } else if (segment.lineColumns !== void 0 || segment.initialColumn !== void 0) {
-      throw new Error("Raw dialogue commands cannot carry text geometry.");
-    }
-    if (segment.commands !== void 0) {
-      if (segment.kind !== "raw" || !Array.isArray(segment.commands) || segment.commands.length > bytes.length) {
-        throw new Error("Named dialogue commands require a bounded raw segment.");
-      }
-      let end = 0;
-      for (const slot of segment.commands) {
-        if (!slot || !Number.isSafeInteger(slot.offset) || slot.offset < end || typeof slot.token !== "string" || slot.editable !== void 0 && typeof slot.editable !== "boolean") {
-          throw new Error("Invalid or overlapping dialogue command slot.");
-        }
-        const command = encodeSomDialogueCommand(slot.token);
-        end = slot.offset + command.bytes.length;
-        if (end > bytes.length || !command.bytes.every((byte, i) => byte === bytes[slot.offset + i])) {
-          throw new Error("Named dialogue command disagrees with its native bytes.");
-        }
-      }
-    }
-    total += bytes.length;
-  }
-  if (total > 65536) throw new Error("Dialogue script exceeds one ROM bank.");
-  return value;
-}
-function rawParts(segment, index) {
-  const native = hexBytes(segment.nativeHex), parts = [];
-  let cursor = 0, opaque = 0;
-  for (const slot of segment.commands ?? []) {
-    if (slot.offset > cursor) parts.push({ marker: `{raw:${index}:${opaque++}}`, bytes: native.slice(cursor, slot.offset) });
-    const bytes = encodeSomDialogueCommand(slot.token).bytes;
-    parts.push({ marker: slot.token, bytes, slot });
-    cursor = slot.offset + bytes.length;
-  }
-  if (cursor < native.length) {
-    let marker = `{raw:${index}}`;
-    if (segment.commands?.length) marker = `{raw:${index}:${opaque}}`;
-    parts.push({ marker, bytes: native.slice(cursor) });
-  }
-  return parts;
-}
-function packSomDialogueScript(source, layout2, sizing = "fixed") {
-  if (!["fixed", "variable"].includes(sizing))
-    throw new Error("Invalid dialogue field sizing policy.");
-  if (source.some((byte) => byte > 127)) throw new Error("SoM dialogue source must be ASCII.");
-  readSomDialogueScriptLayout(layout2);
-  const dictionary = readSomDialogueDictionary(hexBytes(layout2.dictionaryHex));
-  let text = new TextDecoder().decode(source).replaceAll("\r\n", "\n");
-  if (text.includes("\r")) throw new Error("Bare carriage returns are not dialogue line breaks.");
-  if (layout2.segments.at(-1)?.kind === "raw" && text.endsWith("\n")) text = text.slice(0, -1);
-  const chunks = [], segments = [];
-  let cursor = 0, raw = 0, nativePreserved = true, originalOffset = 0, outputOffset = 0;
-  for (const segment of layout2.segments) {
-    const original = hexBytes(segment.nativeHex);
-    const firstChunk = chunks.length;
-    if (segment.kind === "raw") {
-      const index = raw++, legacy = `{raw:${index}}`;
-      if (text.startsWith(legacy, cursor)) {
-        cursor += legacy.length;
-        chunks.push(original);
-      } else {
-        for (const part of rawParts(segment, index)) {
-          if (!part.slot) {
-            if (!text.startsWith(part.marker, cursor))
-              throw new Error(`Missing or reordered command marker ${part.marker}.`);
-            cursor += part.marker.length;
-            chunks.push(part.bytes);
-            continue;
-          }
-          const match = /^\$\{[^{}]+\}/.exec(text.slice(cursor));
-          if (!match) throw new Error(`Missing dialogue command ${part.slot.token}.`);
-          const command = encodeSomDialogueCommand(match[0]), expected = encodeSomDialogueCommand(part.slot.token);
-          if (command.family !== expected.family || command.bytes.length !== part.bytes.length) {
-            throw new Error("Dialogue command edit changed its admitted family or width.");
-          }
-          const preserved2 = command.bytes.every((byte, i) => byte === part.bytes[i]);
-          if (part.slot.editable === false && !preserved2)
-            throw new Error("Dialogue command slot is read-only.");
-          nativePreserved &&= preserved2;
-          chunks.push(command.bytes);
-          cursor += match[0].length;
-        }
-      }
-    } else {
-      const boundaries = [text.indexOf("{raw:", cursor), text.indexOf("${", cursor)].filter(
-        (index) => index >= 0
-      );
-      const end = boundaries.length ? Math.min(...boundaries) : text.length;
-      let byteLength;
-      if (sizing === "fixed") byteLength = original.length;
-      const encoded = encodeSomDialogue(text.slice(cursor, end), dictionary, {
-        original,
-        byteLength,
-        lineColumns: segment.lineColumns,
-        initialColumn: segment.initialColumn
-      });
-      nativePreserved &&= encoded.length === original.length && encoded.every((byte, index) => byte === original[index]);
-      chunks.push(encoded);
-      cursor = end;
-    }
-    const emitted = chunks.slice(firstChunk);
-    const length = emitted.reduce((sum, chunk2) => sum + chunk2.length, 0);
-    let position = 0;
-    const preserved = length === original.length && emitted.every((chunk2) => {
-      const matches = chunk2.every((byte, index) => byte === original[position + index]);
-      position += chunk2.length;
-      return matches;
-    });
-    segments.push({
-      kind: segment.kind,
-      originalOffset,
-      originalLength: original.length,
-      offset: outputOffset,
-      length,
-      preserved
-    });
-    originalOffset += original.length;
-    outputOffset += length;
-  }
-  if (cursor !== text.length) throw new Error("Unexpected text after the final command marker.");
-  const bytes = new Uint8Array(chunks.reduce((sum, chunk2) => sum + chunk2.length, 0));
-  if (bytes.length > 65536) throw new Error("Packed dialogue script exceeds one ROM bank.");
-  let offset = 0;
-  for (const chunk2 of chunks) {
-    bytes.set(chunk2, offset);
-    offset += chunk2.length;
-  }
-  return { bytes, segments, nativePreserved, fixedFieldOffsets: sizing === "fixed" };
-}
-function convertSomDialogueScript(source, options, resources) {
-  if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout))
-    throw new Error("Dialogue layout resource is required.");
-  const layout2 = readSomDialogueScriptLayout(
-    JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(resources[options.layout].bytes))
-  );
-  const result = packSomDialogueScript(source.bytes, layout2);
-  const output = {
-    bytes: result.bytes,
-    mediaType: "application/octet-stream",
-    metadata: {
-      nativePreserved: result.nativePreserved,
-      fixedFieldOffsets: result.fixedFieldOffsets
-    }
-  };
-  return { primaryOutput: "script", outputs: { script: output } };
 }
 
 // packages/assets/src/interchange.ts
@@ -17751,6 +16712,660 @@ function bindingResourceKey(binding, resource) {
   return `${binding}#${resource}`;
 }
 
+// packages/assets/src/presentation-layout.ts
+function planIndexedPresentation(nativeWidth, nativeHeight, tileWidth, tileHeight, views) {
+  rasterArea(nativeWidth, nativeHeight, "Native presentation", ASSET_LIMITS.interchangeSide);
+  rasterArea(tileWidth, tileHeight, "Inventory tile", ASSET_LIMITS.interchangeSide);
+  integer(views, "Inventory views", 1, ASSET_LIMITS.owners);
+  const pageTiles = Math.min(
+    views,
+    Math.floor(ASSET_LIMITS.rasterPixels / (tileWidth * tileHeight))
+  );
+  const desiredColumns = Math.min(
+    Math.floor(ASSET_LIMITS.interchangeSide / tileWidth),
+    Math.ceil(Math.sqrt(pageTiles * tileHeight / tileWidth))
+  );
+  const maximumWidth = Math.min(
+    ASSET_LIMITS.interchangeSide,
+    Math.floor(ASSET_LIMITS.rasterPixels / Math.max(nativeHeight, tileHeight))
+  );
+  const width = Math.max(nativeWidth, Math.min(desiredColumns * tileWidth, maximumWidth)), columns = Math.floor(width / tileWidth);
+  const maximumHeight = Math.min(
+    ASSET_LIMITS.interchangeSide,
+    Math.floor(ASSET_LIMITS.rasterPixels / width)
+  );
+  const height = Math.max(
+    nativeHeight,
+    Math.min(Math.ceil(pageTiles / columns) * tileHeight, maximumHeight)
+  );
+  rasterArea(width, height, "Indexed presentation", ASSET_LIMITS.interchangeSide);
+  const rows2 = Math.floor(height / tileHeight);
+  const capacity = boundedProduct(columns, rows2, ASSET_LIMITS.references, "Inventory page cells");
+  if (!capacity) {
+    throw new Error("Native presentation leaves no complete inventory tile capacity.");
+  }
+  const pages = Math.ceil(views / capacity);
+  integer(pages, "Inventory pages", 1, ASSET_LIMITS.frames);
+  return { width, height, columns, rows: rows2, capacity, pages };
+}
+
+// packages/assets/src/raster-interchange.ts
+function rasterInterchangeDocument(atlas) {
+  validateAtlasDocument(atlas);
+  return {
+    width: atlas.width,
+    height: atlas.height,
+    palette: atlas.palette,
+    transparentIndex: atlas.transparentIndex,
+    exportId: atlas.exportId,
+    layers: [{ kind: "raster", flags: 3, name: "Native views \u2014 fixed raster inventory" }],
+    tilesets: [],
+    tags: [],
+    frames: [
+      {
+        durationMs: 100,
+        cels: [
+          {
+            kind: "raster",
+            layer: 0,
+            x: 0,
+            y: 0,
+            zIndex: 0,
+            width: atlas.width,
+            height: atlas.height,
+            indexes: Uint8Array.from(atlas.indexes)
+          }
+        ]
+      }
+    ]
+  };
+}
+function rasterInterchangeAtlas(document2) {
+  validateAsepriteDocument(document2);
+  if (document2.frames.length !== 1 || document2.layers.length !== 1 || document2.layers[0].kind !== "raster" || !(document2.layers[0].flags & 1) || document2.tilesets.length || document2.tags.length) {
+    throw new Error("Raster interchange requires one visible raster layer and one fixed frame.");
+  }
+  const cels = document2.frames[0].cels;
+  if (cels.length > 1 || cels.some((cel) => cel.kind !== "raster" || cel.zIndex !== 0)) {
+    throw new Error("Raster interchange does not support linked cels or additional composition.");
+  }
+  const indexes = new Uint8Array(document2.width * document2.height).fill(document2.transparentIndex);
+  for (const cel of cels) {
+    if (cel.kind !== "raster") {
+      throw new Error("Invalid raster cel.");
+    }
+    if (cel.x < 0 || cel.y < 0 || cel.x + cel.width > document2.width || cel.y + cel.height > document2.height) {
+      throw new Error("Raster cel exceeds the fixed inventory canvas.");
+    }
+    for (let y = 0; y < cel.height; y++) {
+      indexes.set(
+        cel.indexes.subarray(y * cel.width, (y + 1) * cel.width),
+        (y + cel.y) * document2.width + cel.x
+      );
+    }
+  }
+  const result = {
+    width: document2.width,
+    height: document2.height,
+    indexes,
+    palette: document2.palette,
+    transparentIndex: document2.transparentIndex,
+    exportId: document2.exportId
+  };
+  validateAtlasDocument(result);
+  return result;
+}
+
+// packages/assets/src/source-codecs.ts
+var AssetSourceCodecRegistry = class {
+  #codecs = /* @__PURE__ */ new Map();
+  #revision = 0;
+  /** Changes invalidate adapter caches when newly registered probes alter content discovery. */
+  get revision() {
+    return this.#revision;
+  }
+  register(codec) {
+    if (!codec.id || this.#codecs.has(codec.id) || typeof codec.matches !== "function" || typeof codec.decode !== "function" || typeof codec.encode !== "function" || typeof codec.embeddedIdentity !== "boolean" || !Number.isSafeInteger(codec.version) || codec.version < 1 || !/^[\w+.-]+\/[\w+.-]+$/.test(codec.mediaType) || !codec.extensions.length || codec.extensions.some((extension) => !/^\.[\d.a-z-]+$/i.test(extension))) {
+      throw new Error(`Invalid or duplicate source codec '${codec.id}'.`);
+    }
+    const extensions = codec.extensions.map((extension) => extension.toLowerCase());
+    if (new Set(extensions).size !== extensions.length) {
+      throw new Error(`Duplicate source extension for '${codec.id}'.`);
+    }
+    for (const existing of this.#codecs.values()) {
+      if (existing.extensions.some((extension) => extensions.includes(extension))) {
+        throw new Error(`Ambiguous source extension for '${codec.id}'.`);
+      }
+    }
+    this.#codecs.set(
+      codec.id,
+      Object.freeze({
+        id: codec.id,
+        version: codec.version,
+        mediaType: codec.mediaType,
+        embeddedIdentity: codec.embeddedIdentity,
+        extensions: Object.freeze(extensions),
+        matches: codec.matches.bind(codec),
+        decode: codec.decode.bind(codec),
+        encode: codec.encode.bind(codec)
+      })
+    );
+    this.#revision++;
+    return this;
+  }
+  get(id2) {
+    const codec = this.#codecs.get(id2);
+    if (!codec) {
+      throw new Error(`Unsupported asset source representation '${id2}'.`);
+    }
+    return codec;
+  }
+  /** Content establishes representation; the filename and declared media type must agree when supplied. */
+  identify(bytes, hints = {}) {
+    const candidates = [...this.#codecs.values()].filter((codec2) => codec2.matches(bytes));
+    if (candidates.length !== 1) {
+      throw new Error(`Unrecognized or ambiguous asset source content: ${hints.path ?? "input"}.`);
+    }
+    const codec = candidates[0];
+    if (hints.path && !codec.extensions.some((extension) => hints.path.toLowerCase().endsWith(extension)) || hints.mediaType && hints.mediaType !== codec.mediaType) {
+      throw new Error(
+        `Asset source extension/content mismatch: ${hints.path ?? hints.mediaType}; content is ${codec.id}.`
+      );
+    }
+    return codec;
+  }
+  /** Discovery feeds editor menus without hard-coding the set of representations into the host. */
+  representations() {
+    return [...this.#codecs.values()].map(({ id: id2, mediaType, extensions }) => ({
+      id: id2,
+      mediaType,
+      extensions
+    }));
+  }
+};
+var indexedPngSourceCodec = {
+  id: "indexed-png",
+  version: 1,
+  mediaType: "image/png",
+  extensions: [".png"],
+  embeddedIdentity: false,
+  matches: (bytes) => [137, 80, 78, 71, 13, 10, 26, 10].every((byte, index) => bytes[index] === byte),
+  decode(bytes, reference2) {
+    const image = indexedAtlasDocument(
+      pngImporter.import({ bytes, mediaType: "image/png" }).value,
+      reference2?.transparentIndex ?? 0
+    );
+    return rasterInterchangeDocument({ ...image, exportId: reference2?.exportId });
+  },
+  encode: (document2) => createIndexedPng(rasterInterchangeAtlas(document2))
+};
+var asepriteSourceCodec = {
+  id: "aseprite",
+  version: 1,
+  mediaType: "image/x-aseprite",
+  extensions: [".aseprite", ".ase"],
+  embeddedIdentity: true,
+  matches: (bytes) => bytes.length >= 128 && bytes[4] === 224 && bytes[5] === 165,
+  decode: decodeAsepriteDocumentSync,
+  encode: encodeAsepriteDocument
+};
+function indexedSourceCodecs() {
+  return new AssetSourceCodecRegistry().register(indexedPngSourceCodec).register(asepriteSourceCodec);
+}
+var asepriteRasterImporter = {
+  id: "uttori.import.aseprite-raster",
+  version: "1.0.0",
+  mediaTypes: ["image/x-aseprite"],
+  import(input2) {
+    const codec = indexedSourceCodecs().identify(input2.bytes, { mediaType: input2.mediaType });
+    const document2 = decodeAsepriteDocumentSync(input2.bytes);
+    if (codec.id !== "aseprite") {
+      throw new Error("Invalid Aseprite raster source.");
+    }
+    const atlas = rasterInterchangeAtlas(document2);
+    const value = {
+      kind: "indexed-image",
+      sourceBitDepth: 8,
+      width: atlas.width,
+      height: atlas.height,
+      indexes: atlas.indexes,
+      palette: atlas.palette
+    };
+    return { kind: value.kind, value };
+  }
+};
+
+// packages/assets/src/registry.ts
+var AssetRegistry = class {
+  #importers = /* @__PURE__ */ new Map();
+  #encoders = /* @__PURE__ */ new Map();
+  #mediaTypes = /* @__PURE__ */ new Map();
+  registerImporter(importer) {
+    if (!isNamespacedId(importer.id) || !importer.version || importer.mediaTypes.length === 0 || this.#importers.has(importer.id)) {
+      throw new Error(`Invalid or duplicate asset importer '${importer.id}'.`);
+    }
+    for (const mediaType of importer.mediaTypes) {
+      if (this.#mediaTypes.has(mediaType)) {
+        throw new Error(`Duplicate asset media type '${mediaType}'.`);
+      }
+    }
+    this.#importers.set(importer.id, importer);
+    importer.mediaTypes.forEach((type) => this.#mediaTypes.set(type, importer));
+    return this;
+  }
+  registerEncoder(encoder) {
+    if (!isNamespacedId(encoder.id) || !encoder.version || !encoder.primaryOutput || encoder.inputKinds.length === 0 || this.#encoders.has(encoder.id)) {
+      throw new Error(`Invalid or duplicate asset encoder '${encoder.id}'.`);
+    }
+    this.#encoders.set(encoder.id, encoder);
+    return this;
+  }
+  importerFor(mediaType) {
+    const importer = this.#mediaTypes.get(mediaType);
+    if (!importer) {
+      throw new Error(`No asset importer for '${mediaType}'.`);
+    }
+    return importer;
+  }
+  encoderFor(id2) {
+    const encoder = this.#encoders.get(id2);
+    if (!encoder) {
+      throw new Error(`No asset encoder '${id2}'.`);
+    }
+    return encoder;
+  }
+};
+function convertAsset(registry4, request) {
+  const importer = registry4.importerFor(request.source.mediaType);
+  const encoder = registry4.encoderFor(request.format);
+  const source = { ...request.source, bytes: request.source.bytes.slice() };
+  const resources = Object.fromEntries(
+    Object.entries(request.resources ?? {}).map(([name, input2]) => [
+      name,
+      { ...input2, bytes: input2.bytes.slice() }
+    ])
+  );
+  const document2 = importer.import(source);
+  if (!encoder.inputKinds.includes(document2.kind)) {
+    throw new Error(`Encoder '${encoder.id}' cannot consume '${document2.kind}'.`);
+  }
+  const encoded = encoder.encode(document2, request.options ?? {}, resources);
+  if (encoded.fidelity.kind === "lossy-audio" && (encoder.id !== "snes.brr" || document2.kind !== "pcm-audio")) {
+    throw new Error(
+      `Encoder '${encoder.id}' cannot declare lossy fidelity for '${document2.kind}'.`
+    );
+  }
+  if (!Object.hasOwn(encoded.outputs, encoder.primaryOutput)) {
+    throw new Error(`Encoder '${encoder.id}' omitted primary output '${encoder.primaryOutput}'.`);
+  }
+  const outputs = {};
+  for (const [name, output] of Object.entries(encoded.outputs)) {
+    if (!(output.bytes instanceof Uint8Array)) {
+      throw new Error(`Output '${name}' is not bytes.`);
+    }
+    outputs[name] = { ...output, bytes: output.bytes.slice() };
+  }
+  return {
+    outputs,
+    primaryOutput: encoder.primaryOutput,
+    fidelity: encoded.fidelity,
+    importer: { id: importer.id, version: importer.version },
+    encoder: { id: encoder.id, version: encoder.version },
+    options: encoded.normalizedOptions,
+    document: document2
+  };
+}
+
+// packages/assets/src/secret-of-mana/som-boss-graphics.ts
+function expandBossGraphics(source, size) {
+  if (!(source instanceof Uint8Array) || !Number.isInteger(size) || size <= 0 || size > 65535) {
+    throw new Error("Boss graphics need bytes and a positive 16-bit output size.");
+  }
+  const length = Math.ceil(size / 8) * 8;
+  const data = new Uint8Array(length);
+  let cursor = 0;
+  for (let output = 0; output < length; ) {
+    if (cursor >= source.length) {
+      throw new Error("Truncated boss graphics mask.");
+    }
+    const mask = source[cursor++];
+    for (let bit = 7; bit >= 0; bit--, output++) {
+      if (mask & 1 << bit) {
+        if (cursor >= source.length) {
+          throw new Error("Truncated boss graphics literal.");
+        }
+        data[output] = source[cursor++];
+      } else if (output >= 2) {
+        data[output] = data[output - 2];
+      }
+    }
+  }
+  return { data, consumed: cursor };
+}
+function encodeBossGraphics(data) {
+  if (!(data instanceof Uint8Array) || !data.length || data.length % 8) {
+    throw new Error("Boss graphics need a positive multiple-of-eight byte count.");
+  }
+  const output = [];
+  for (let start = 0; start < data.length; start += 8) {
+    let mask = 0;
+    const literals = [];
+    for (let bit = 0; bit < 8; bit++) {
+      const index = start + bit;
+      const previous = index >= 2 ? data[index - 2] : 0;
+      if (data[index] !== previous) {
+        mask |= 1 << 7 - bit;
+        literals.push(data[index]);
+      }
+    }
+    output.push(mask, ...literals);
+  }
+  const encoded = Uint8Array.from(output);
+  const decoded2 = expandBossGraphics(encoded, data.length);
+  if (decoded2.consumed !== encoded.length || decoded2.data.some((byte, index) => byte !== data[index])) {
+    throw new Error("Boss graphics mask inverse failed.");
+  }
+  return encoded;
+}
+
+// packages/assets/src/secret-of-mana/som-lz.ts
+var LZ_HEADER_BYTES = 4;
+var LZ_COPY_FLAG = 128;
+var LZ_TOKEN_PAYLOAD_MASK = LZ_COPY_FLAG - 1;
+var LZ_MIN_COPY_BYTES = 3;
+var LZ_MAX_LITERAL_BYTES = LZ_COPY_FLAG;
+var LZ_DISTANCE_LOW_VALUES = 256;
+var LZ_MAX_OUTPUT_BYTES = 65535;
+var MATCH_CANDIDATE_LIMIT = 128;
+var DISTANCE_MASKS = [31, 15, 7, 3, 1, 0];
+function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTPUT_BYTES) {
+  invariant(source instanceof Uint8Array, "Expected byte input.");
+  invariant(
+    Number.isSafeInteger(offset) && offset >= 0 && offset + LZ_HEADER_BYTES <= source.length,
+    "Truncated LZ header."
+  );
+  invariant(Number.isSafeInteger(maxOutputBytes) && maxOutputBytes >= 0, "Invalid LZ output limit.");
+  const mode = source[offset];
+  invariant(mode < DISTANCE_MASKS.length, "Invalid LZ mode.");
+  const mask = DISTANCE_MASKS[mode];
+  const size = source[offset + 2] << 8 | source[offset + 3];
+  invariant(size <= maxOutputBytes, "LZ decoded size exceeds output limit.");
+  const data = new Uint8Array(size);
+  let cursor = offset + LZ_HEADER_BYTES;
+  let written = 0;
+  let literalRuns = 0;
+  let copyRuns = 0;
+  while (written < size) {
+    invariant(cursor < source.length, "Truncated LZ token.");
+    const token = source[cursor++];
+    if (token < LZ_COPY_FLAG) {
+      const length = token + 1;
+      invariant(cursor + length <= source.length, "Truncated LZ literal.");
+      invariant(written + length <= size, "LZ literal exceeds declared output size.");
+      data.set(source.subarray(cursor, cursor + length), written);
+      cursor += length;
+      written += length;
+      literalRuns++;
+    } else {
+      invariant(cursor < source.length, "Truncated LZ distance.");
+      const distance = ((token & mask) << 8) + source[cursor++] + 1;
+      const length = Math.floor((token & LZ_TOKEN_PAYLOAD_MASK) / (mask + 1)) + LZ_MIN_COPY_BYTES;
+      invariant(distance <= written, "LZ reference precedes output.");
+      invariant(written + length <= size, "LZ copy exceeds declared output size.");
+      for (let i = 0; i < length; i++) {
+        data[written] = data[written - distance];
+        written++;
+      }
+      copyRuns++;
+    }
+  }
+  return {
+    data,
+    mode,
+    unusedHeaderByte: source[offset + 1],
+    compressedBytes: cursor - offset,
+    end: cursor,
+    literalRuns,
+    copyRuns
+  };
+}
+function assertLzOptions(options) {
+  invariant(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
+}
+function compressSomLz(source, options = {}) {
+  invariant(source instanceof Uint8Array, "Expected byte input.");
+  invariant(source.length <= LZ_MAX_OUTPUT_BYTES, "LZ decoded size exceeds 16-bit header.");
+  assertLzOptions(options);
+  invariant(
+    Object.keys(options).every((key) => ["mode", "unusedHeaderByte"].includes(key)),
+    "Unknown LZ option."
+  );
+  const selected = options.mode ?? "auto";
+  const header = options.unusedHeaderByte ?? 0;
+  if (selected !== "auto" && !(typeof selected === "number" && Number.isInteger(selected) && selected >= 0 && selected < DISTANCE_MASKS.length)) {
+    invariant(false, "Invalid LZ mode.");
+  }
+  if (typeof header !== "number" || !Number.isInteger(header) || header < 0 || header > 255) {
+    invariant(false, "Invalid unused LZ header byte.");
+  }
+  const mode = selected === "auto" ? "auto" : selected;
+  const unusedHeaderByte = header;
+  const modes = mode === "auto" ? DISTANCE_MASKS.map((_, index) => index) : [mode];
+  let best;
+  for (const selectedMode of modes) {
+    const encoded = encodeMode(source, selectedMode, unusedHeaderByte);
+    if (!best || encoded.length < best.length) {
+      best = encoded;
+    }
+  }
+  invariant(best, "LZ encoder produced no candidate.");
+  return best;
+}
+function encodeMode(source, mode, unusedHeaderByte) {
+  const mask = DISTANCE_MASKS[mode];
+  const maxDistance = (mask + 1) * LZ_DISTANCE_LOW_VALUES;
+  const maxLength = Math.floor(LZ_TOKEN_PAYLOAD_MASK / (mask + 1)) + LZ_MIN_COPY_BYTES;
+  const seen = /* @__PURE__ */ new Map();
+  const matches = Array.from({ length: source.length }, () => new Uint16Array(maxLength + 1));
+  const add = (position) => {
+    if (position + 2 >= source.length) {
+      return;
+    }
+    const key = source[position] << 16 | source[position + 1] << 8 | source[position + 2];
+    const positions = seen.get(key) ?? [];
+    positions.push(position);
+    while (positions.length > MATCH_CANDIDATE_LIMIT || positions.length && position - positions[0] >= maxDistance) {
+      positions.shift();
+    }
+    seen.set(key, positions);
+  };
+  for (let cursor = 0; cursor < source.length; cursor++) {
+    if (cursor + 2 < source.length) {
+      const key = source[cursor] << 16 | source[cursor + 1] << 8 | source[cursor + 2];
+      const positions = seen.get(key) ?? [];
+      for (let index = positions.length - 1; index >= 0; index--) {
+        const candidateDistance = cursor - positions[index];
+        if (candidateDistance > maxDistance) {
+          break;
+        }
+        let candidateLength = LZ_MIN_COPY_BYTES;
+        while (candidateLength < maxLength && cursor + candidateLength < source.length && source[cursor + candidateLength] === source[cursor + candidateLength - candidateDistance]) {
+          candidateLength++;
+        }
+        for (let length = LZ_MIN_COPY_BYTES; length <= candidateLength; length++) {
+          if (matches[cursor][length] === 0 || candidateDistance < matches[cursor][length]) {
+            matches[cursor][length] = candidateDistance;
+          }
+        }
+      }
+    }
+    add(cursor);
+  }
+  const cost = new Uint32Array(source.length + 1);
+  const choice = new Int16Array(source.length);
+  const distance = new Uint16Array(source.length);
+  for (let cursor = source.length - 1; cursor >= 0; cursor--) {
+    let bestCost = Number.MAX_SAFE_INTEGER;
+    let bestChoice = 0;
+    for (let length = 1; length <= LZ_MAX_LITERAL_BYTES && cursor + length <= source.length; length++) {
+      const candidate = 1 + length + cost[cursor + length];
+      if (candidate < bestCost || candidate === bestCost && length > bestChoice) {
+        bestCost = candidate;
+        bestChoice = length;
+      }
+    }
+    for (let length = LZ_MIN_COPY_BYTES; length <= maxLength && cursor + length <= source.length; length++) {
+      const matchDistance = matches[cursor][length];
+      if (!matchDistance) {
+        continue;
+      }
+      const candidate = 2 + cost[cursor + length];
+      if (candidate < bestCost || candidate === bestCost && length > Math.abs(bestChoice)) {
+        bestCost = candidate;
+        bestChoice = -length;
+        distance[cursor] = matchDistance;
+      }
+    }
+    cost[cursor] = bestCost;
+    choice[cursor] = bestChoice;
+  }
+  const output = [mode, unusedHeaderByte, source.length >>> 8, source.length & 255];
+  for (let cursor = 0; cursor < source.length; ) {
+    const length = choice[cursor];
+    if (length > 0) {
+      output.push(length - 1, ...source.subarray(cursor, cursor + length));
+      cursor += length;
+    } else {
+      const runLength = -length;
+      const encodedDistance = distance[cursor] - 1;
+      output.push(
+        LZ_COPY_FLAG | (runLength - LZ_MIN_COPY_BYTES) * (mask + 1) | encodedDistance >>> 8,
+        encodedDistance & 255
+      );
+      cursor += runLength;
+    }
+  }
+  return Uint8Array.from(output);
+}
+
+// packages/assets/src/secret-of-mana/som-boss-image.ts
+var registry = new AssetRegistry().registerImporter(pngImporter);
+for (const encoder of withImageEncoders(snesNativeEncoders)) {
+  registry.registerEncoder(encoder);
+}
+function nativeBossChunk(png, wanted = "soMz") {
+  const image = readAssetPng(png);
+  let native;
+  for (const { type, data } of image.chunks) {
+    if (type === wanted) {
+      if (native) {
+        throw new Error("Duplicate native boss graphics PNG chunk.");
+      }
+      native = Uint8Array.from(data);
+    }
+  }
+  return native;
+}
+function decodeBossStream(native, storage, size) {
+  let intermediate = native;
+  let mode;
+  let unusedHeaderByte;
+  if (storage === "lz-rle") {
+    const decoded2 = decompressSomLz(native);
+    if (decoded2.compressedBytes !== native.length) {
+      throw new Error("Boss LZ stream has trailing bytes.");
+    }
+    intermediate = decoded2.data;
+    mode = decoded2.mode;
+    unusedHeaderByte = decoded2.unusedHeaderByte;
+  }
+  const expanded = expandBossGraphics(intermediate, size);
+  if (expanded.consumed !== intermediate.length) {
+    throw new Error("Boss mask stream has trailing bytes.");
+  }
+  return { bytes: expanded.data, mode, unusedHeaderByte };
+}
+function convertBossImage(source, options, resources = {}, normalized) {
+  const { storage, byteLength, sizePolicy = "fixed", mode, unusedHeaderByte = 0 } = options;
+  if (storage !== "lz-rle" && storage !== "rle") {
+    throw new Error("Boss storage must be lz-rle or rle.");
+  }
+  if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
+    throw new Error("Boss byteLength must be a positive integer.");
+  }
+  if (sizePolicy !== "fixed" && sizePolicy !== "encoded") {
+    throw new Error("Boss sizePolicy must be fixed or encoded.");
+  }
+  const layout2 = normalized?.layout ?? (options.layout ? readFrameLayout(options, resources) : void 0);
+  const catalog = normalized?.catalog ?? (options.layout ? readSpritePaletteCatalog(options, resources) : void 0);
+  let pixels;
+  let segmentName;
+  if (layout2) {
+    if (typeof options.segment !== "string") {
+      throw new Error("Frame atlas segment is required.");
+    }
+    segmentName = options.segment;
+    pixels = encodeFrameAtlas(source, layout2, segmentName, catalog);
+  } else {
+    pixels = convertAsset(registry, { source, format: "snes.tile.4bpp" }).outputs.tiles.bytes;
+  }
+  const segmentIndex = segmentName ? Object.keys(layout2?.segments ?? {}).indexOf(segmentName) : -1;
+  if (segmentIndex > 25) {
+    throw new Error("Boss atlas supports at most 26 native segments.");
+  }
+  const chunkName = segmentIndex < 0 ? "soMz" : `soM${String.fromCharCode(65 + segmentIndex)}`;
+  let original;
+  if (options.native !== void 0) {
+    if (typeof options.native !== "string" || !options.native) {
+      throw new Error("Boss native data requires an explicit original compressed resource.");
+    }
+    const nativeResource = Object.hasOwn(resources, options.native) ? resources[options.native] : void 0;
+    if (!nativeResource) {
+      throw new Error("Boss native data requires an explicit original compressed resource.");
+    }
+    original = nativeResource.bytes;
+  } else {
+    original = nativeBossChunk(source.bytes, chunkName);
+  }
+  if (original) {
+    if (original.length !== byteLength) {
+      throw new Error("Boss native data has the wrong byte length.");
+    }
+    const decoded2 = decodeBossStream(original, storage, pixels.length);
+    if (decoded2.bytes.every((byte, index) => byte === pixels[index])) {
+      return { primaryOutput: "graphics", outputs: { graphics: { bytes: original } } };
+    }
+  }
+  const intermediate = encodeBossGraphics(pixels);
+  let encoded = intermediate;
+  if (storage === "lz-rle") {
+    const selectedMode = original ? original[0] : mode;
+    const selectedHeaderByte = original ? original[1] : unusedHeaderByte;
+    encoded = compressSomLz(intermediate, {
+      mode: selectedMode,
+      unusedHeaderByte: selectedHeaderByte
+    });
+  }
+  if (sizePolicy === "fixed" && encoded.length > byteLength) {
+    throw new Error(
+      "Edited boss graphics exceed their fixed ROM span; use sizePolicy: encoded with a declared relocatable object."
+    );
+  }
+  const verified = decodeBossStream(encoded, storage, pixels.length).bytes;
+  if (verified.some((byte, index) => byte !== pixels[index])) {
+    throw new Error("Boss graphics inverse failed.");
+  }
+  if (sizePolicy === "encoded") {
+    return { primaryOutput: "graphics", outputs: { graphics: { bytes: encoded } } };
+  }
+  const padded = new Uint8Array(byteLength);
+  padded.set(encoded);
+  if (original) {
+    padded.set(original.subarray(encoded.length), encoded.length);
+  }
+  return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
+}
+
 // packages/assets/src/secret-of-mana/som-palette-edit.ts
 function nativeBytes(atlas, source, catalog, segment) {
   const options = atlas.nativeOptions?.[segment];
@@ -17995,7 +17610,7 @@ function planSomAtlasImport(atlas, catalog, changes) {
 }
 
 // packages/assets/src/tilemap-presentation.ts
-function tilemapPresentationCel(layer, x, y, columns, rows, cells) {
+function tilemapPresentationCel(layer, x, y, columns, rows2, cells) {
   return {
     kind: "tilemap",
     layer,
@@ -18003,7 +17618,7 @@ function tilemapPresentationCel(layer, x, y, columns, rows, cells) {
     y,
     zIndex: 0,
     columns,
-    rows,
+    rows: rows2,
     cells,
     bits: 32,
     idMask: 536870911,
@@ -18048,16 +17663,16 @@ function createTilemapInventory(ownership, nativeWidth, nativeHeight, name) {
   }
   const frames = [], tags = [];
   for (let page = 0; page < layout2.pages; page++) {
-    const count = Math.min(layout2.capacity, views.length - page * layout2.capacity), rows = Math.ceil(count / layout2.columns), cels = [];
+    const count = Math.min(layout2.capacity, views.length - page * layout2.capacity), rows2 = Math.ceil(count / layout2.columns), cels = [];
     for (let layer = 0; layer < layers.length; layer++) {
-      const cells = new Uint32Array(layout2.columns * rows);
+      const cells = new Uint32Array(layout2.columns * rows2);
       for (let index = 0; index < count; index++) {
         const view = page * layout2.capacity + index;
         if (readonlyViews[view] === (layer === 1)) {
           cells[index] = view + 1;
         }
       }
-      cels.push(tilemapPresentationCel(layer, 0, 0, layout2.columns, rows, cells));
+      cels.push(tilemapPresentationCel(layer, 0, 0, layout2.columns, rows2, cells));
     }
     frames.push({ durationMs: 100, cels });
     tags.push({
@@ -18223,15 +17838,15 @@ function createSomSpriteInterchange(atlas, catalog, exportId, runs = []) {
         if (placement.external) {
           continue;
         }
-        const reference = references.get(JSON.stringify([placement.segment, placement.tile]));
-        if (!reference) {
+        const reference2 = references.get(JSON.stringify([placement.segment, placement.tile]));
+        if (!reference2) {
           throw new Error(`Pose ${key}: unknown native view ${placement.id}.`);
         }
         const x = (placement.x - block.x) / 8, y = (placement.y - block.y) / 8;
         if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= columns || y >= columns) {
           throw new Error(`Pose ${key}: block grid phase changed.`);
         }
-        values[y * columns + x] = (reference | (placement.flipX ? X : 0) | (placement.flipY ? Y : 0)) >>> 0;
+        values[y * columns + x] = (reference2 | (placement.flipX ? X : 0) | (placement.flipY ? Y : 0)) >>> 0;
       }
       cels.push(
         tilemapPresentationCel(
@@ -18400,7 +18015,7 @@ function inspectBoundSourceUncached(name, source, resources, codecs) {
   if (binding.adapter !== "som.sprite.native") {
     throw new Error(`Unsupported source adapter '${binding.adapter}'.`);
   }
-  const reference = input(resources, bindingResourceKey(name, "reference"));
+  const reference2 = input(resources, bindingResourceKey(name, "reference"));
   const layoutInput = input(resources, bindingResourceKey(name, "layout"));
   const catalog = parseSpritePaletteCatalog(
     input(resources, bindingResourceKey(name, "palettes")).bytes
@@ -18429,7 +18044,7 @@ function inspectBoundSourceUncached(name, source, resources, codecs) {
   }
   const atlas = {
     id: binding.id,
-    source: reference,
+    source: reference2,
     layout: layout2,
     nativeOptions,
     resources: nativeResources
@@ -18586,6 +18201,2074 @@ function normalizeSomSource(source, options, resources, catalog, codecs = indexe
   };
 }
 
+// packages/core/src/source-location.ts
+function createSourceSpan(start, end, line) {
+  return {
+    start,
+    end,
+    // Operand-local spans omit physical lines so cached syntax remains plain JSON data.
+    ...line === void 0 ? {} : { line },
+    columnStart: start,
+    columnEnd: end
+  };
+}
+function createTextSpan(text, start, end, line, lineStarts = sourceLineStarts(text)) {
+  let low = 0;
+  let high = lineStarts.length;
+  while (low + 1 < high) {
+    const middle = low + high >>> 1;
+    if (lineStarts[middle] <= start) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  const column = start - lineStarts[low];
+  return createSourceSpan(column, column + end - start, line + low);
+}
+function sourceLineStarts(text) {
+  const starts = [0];
+  for (let at = text.indexOf("\n"); at >= 0; at = text.indexOf("\n", at + 1)) {
+    starts.push(at + 1);
+  }
+  return starts;
+}
+
+// packages/core/src/ir/expression-parse-state.ts
+var rawOutcomes = /* @__PURE__ */ new WeakMap();
+function setRawExpressionOutcome(node, outcome2) {
+  rawOutcomes.set(node, outcome2);
+}
+function expressionOutcomeKey(outcome2) {
+  return outcome2.kind === "native" ? "native" : `${outcome2.kind}:${outcome2.reason}`;
+}
+
+// packages/core/src/internal-instrumentation.ts
+var activeInstrumentation;
+function recordExpressionParse(site, outcome2) {
+  if (syntaxOwner === "execution") {
+    recordSyntaxBoundary("execution-expression-parse");
+  }
+  const metrics = activeInstrumentation;
+  if (!metrics) {
+    return;
+  }
+  metrics.counters.expressionParserCalls++;
+  if (site === "instrumentation") {
+    metrics.counters.expressionInstrumentationParses++;
+  }
+  const key = `${site}:${expressionOutcomeKey(outcome2)}`;
+  metrics.expressionBoundaries.parses[key] = (metrics.expressionBoundaries.parses[key] ?? 0) + 1;
+}
+var migrationGuard;
+function recordSyntaxBoundary(boundary) {
+  if (migrationGuard?.forbidden.has(boundary)) {
+    migrationGuard.violations.add(boundary);
+  }
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.syntaxBoundaries[boundary] = (metrics.syntaxBoundaries[boundary] ?? 0) + 1;
+  }
+}
+var syntaxOwner = "source";
+function recordExecutionParser(kind) {
+  if (syntaxOwner === "execution") {
+    recordSyntaxBoundary(`execution-${kind}-parse`);
+  }
+}
+
+// packages/core/src/ir/source-fragment.ts
+function sourceFragment(text, origins = []) {
+  return { segments: [{ text, origins }] };
+}
+
+// packages/core/src/ir/define-template.ts
+function parseDefineTemplate(text, escapes = "basic") {
+  const parse2 = (start, end) => {
+    const parts2 = [];
+    for (let index = start; index < end; index++) {
+      const next = text.at(index + 1);
+      if (text[index] === "\\" && next !== void 0 && escapes !== "none" && (escapes === "string" || next === "\\" || next === "!")) {
+        parts2.push({ kind: "escape", start: index, end: index + 2, value: next });
+        index++;
+        continue;
+      }
+      if (text[index] !== "!") {
+        continue;
+      }
+      if (next === "{") {
+        let cursor = index + 2;
+        let depth = 1;
+        for (; cursor < end && depth > 0; cursor++) {
+          if (text[cursor] === "{") {
+            depth++;
+          } else if (text[cursor] === "}") {
+            depth--;
+          }
+        }
+        if (depth !== 0) {
+          parts2.push({ kind: "error", start: index, end });
+          break;
+        }
+        parts2.push({
+          kind: "define",
+          start: index,
+          end: cursor,
+          name: text.slice(index + 2, cursor - 1),
+          braced: true,
+          children: parse2(index + 2, cursor - 1)
+        });
+        index = cursor - 1;
+      } else if (next && /\w/.test(next)) {
+        let cursor = index + 2;
+        while (cursor < end && /\w/.test(text[cursor])) {
+          cursor++;
+        }
+        parts2.push({
+          kind: "define",
+          start: index,
+          end: cursor,
+          name: text.slice(index + 1, cursor),
+          braced: false,
+          children: []
+        });
+        index = cursor - 1;
+      }
+    }
+    return parts2;
+  };
+  return { text, parts: parse2(0, text.length) };
+}
+
+// packages/core/src/ir/expression-call-contracts.ts
+var firstSourceArgument = /* @__PURE__ */ new Set([
+  "countof",
+  "bytesof",
+  "startof",
+  "endof",
+  "defined",
+  "sizeof",
+  "objectsize",
+  "datasize",
+  "filesize",
+  "getfilestatus"
+]);
+function isSourceTextArgument(name, index) {
+  if (name === "stringsequal" || name === "stringsequalnocase") {
+    return index < 2;
+  }
+  return index === 0 && (firstSourceArgument.has(name) || /^(?:canreadfile|readfile)\d?$/.test(name));
+}
+
+// packages/core/src/ir/expression-operators.ts
+var binaryPrecedence = {
+  "||": 0,
+  "&&": 1,
+  "==": 2,
+  "=": 2,
+  "!=": 2,
+  "<": 2,
+  ">": 2,
+  "<=": 2,
+  ">=": 2,
+  "|": 3,
+  "^": 3,
+  "&": 3,
+  "<<": 3,
+  ">>": 3,
+  "+": 4,
+  "-": 4,
+  "*": 5,
+  "/": 5,
+  "%": 5,
+  "**": 6
+};
+
+// packages/core/src/ir/expression-node.ts
+function attachRootSpan(node, text, source) {
+  node.span ??= source ? createTextSpan(
+    source.text,
+    source.offset,
+    source.offset + text.length,
+    source.line,
+    source.lineStarts
+  ) : createSourceSpan(0, text.length);
+  return node;
+}
+function parseExpressionNode(input2, source) {
+  return parseExpressionAtSite(input2, "public", source);
+}
+function parseExpressionAtSite(input2, site, source) {
+  return parseExpressionResult(input2, site, source).node;
+}
+function parseExpressionResult(input2, site = "public", source) {
+  const result = parseExpressionInput(input2, site, source);
+  recordExpressionParse(site, result.outcome);
+  return result;
+}
+var ExpressionSyntaxError = class extends Error {
+  constructor(outcome2, diagnostic) {
+    super(outcome2.reason);
+    this.outcome = outcome2;
+    this.diagnostic = diagnostic;
+  }
+  outcome;
+  diagnostic;
+};
+function errorParseResult(text, outcome2, source, diagnostic) {
+  if (text.includes("!")) {
+    const defines = parseDefineTemplate(text);
+    if (defines.parts.some((part) => part.kind === "define") && !defines.parts.some((part) => part.kind === "error")) {
+      return {
+        node: attachRootSpan({ type: "template", form: "source", text, defines }, text, source),
+        outcome: { kind: "native" }
+      };
+    }
+  }
+  const node = attachRootSpan(
+    {
+      type: "error",
+      value: text,
+      outcome: outcome2,
+      ...diagnostic ?? { message: `Invalid number: ${text}` }
+    },
+    text,
+    source
+  );
+  setRawExpressionOutcome(node, outcome2);
+  return { node, outcome: outcome2 };
+}
+function parseLiteralValue(value) {
+  if (/^\$[\dA-Fa-f]+$/.test(value)) {
+    return Number.parseInt(value.slice(1), 16);
+  }
+  if (/^0x[\da-f]+$/i.test(value)) {
+    return Number.parseInt(value.slice(2), 16);
+  }
+  if (/^%[01]+$/.test(value)) {
+    return Number.parseInt(value.slice(1), 2);
+  }
+  if (/^-?\d+(?:\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+  throw new Error(`Unsupported literal expression: ${value}`);
+}
+function parseExpressionInput(input2, site, source) {
+  const trimmed = input2.trim();
+  if (source) {
+    source = { ...source, offset: source.offset + input2.length - input2.trimStart().length };
+  }
+  if (!trimmed) {
+    return errorParseResult(trimmed, { kind: "invalid", reason: "empty" }, source, {
+      code: "MATH_INVALID_INPUT",
+      message: "Invalid input: empty expression."
+    });
+  }
+  if (trimmed.startsWith("#") && trimmed.length > 1) {
+    return parseExpressionResult(
+      trimmed.slice(1),
+      site,
+      source && { ...source, offset: source.offset + 1 }
+    );
+  }
+  const rangeIndex = findTopLevelRange(trimmed);
+  if (rangeIndex !== -1) {
+    const start = parseExpressionResult(trimmed.slice(0, rangeIndex), site, source);
+    const end = parseExpressionResult(
+      trimmed.slice(rangeIndex + 2),
+      site,
+      source && { ...source, offset: source.offset + rangeIndex + 2 }
+    );
+    const outcome2 = start.outcome.kind === "native" ? end.outcome : start.outcome;
+    return {
+      node: attachRootSpan({ type: "range", start: start.node, end: end.node }, trimmed, source),
+      outcome: outcome2
+    };
+  }
+  try {
+    const parser = new ExpressionParser(tokenizeExpression(trimmed, source, site), trimmed);
+    const expression = parser.parseExpression();
+    if (!parser.isAtEnd()) {
+      const offset = parser.peek()?.offset ?? trimmed.length;
+      const rest = trimmed.slice(offset);
+      const diagnostic = rest.startsWith(",") ? { code: "MATH_INVALID_INPUT", message: `Invalid input: ${rest}` } : { code: "MATH_MISMATCHED_PARENTHESES", message: "Mismatched parentheses." };
+      return errorParseResult(
+        trimmed,
+        { kind: "invalid", reason: "trailing-tokens" },
+        source,
+        diagnostic
+      );
+    }
+    return { node: attachRootSpan(expression, trimmed, source), outcome: { kind: "native" } };
+  } catch (error) {
+    const failure = error instanceof ExpressionSyntaxError ? error.outcome : { kind: "unsupported", reason: "unclassified" };
+    const diagnostic = error instanceof ExpressionSyntaxError && error.diagnostic ? error.diagnostic : { message: `Invalid number: ${trimmed}` };
+    return errorParseResult(trimmed, failure, source, diagnostic);
+  }
+}
+function isReferenceExpressionNode(node) {
+  switch (node.type) {
+    case "identifier":
+    case "defineReference":
+    case "relativeReference":
+      return true;
+    case "member":
+    case "index":
+      return isReferenceExpressionNode(node.object);
+    case "binary":
+    case "call":
+    case "literal":
+    case "range":
+    case "raw":
+    case "string":
+    case "unary":
+    case "error":
+    case "sourceText":
+    case "template":
+      break;
+  }
+  return false;
+}
+function findTopLevelRange(input2) {
+  let depth = 0;
+  let bracketDepth = 0;
+  let quote = "";
+  for (let i = 0; i < input2.length - 1; i++) {
+    const char = input2[i];
+    if ((char === '"' || char === "'") && input2[i - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
+      continue;
+    }
+    if (quote) {
+      continue;
+    }
+    if (char === "(") {
+      depth++;
+      continue;
+    }
+    if (char === ")") {
+      depth--;
+      continue;
+    }
+    if (char === "[") {
+      bracketDepth++;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth--;
+      continue;
+    }
+    if (depth === 0 && bracketDepth === 0 && input2.slice(i, i + 2) === "..") {
+      if (i === 0) {
+        continue;
+      }
+      return i;
+    }
+  }
+  return -1;
+}
+function skipWhitespace(input2, index) {
+  let current = index;
+  while (current < input2.length && /\s/.test(input2[current])) {
+    current++;
+  }
+  return current;
+}
+function isUnaryOperator(value) {
+  return value === "<:" || value === "<" || value === ">" || value === "^" || value === "~" || value === "-" || value === "+";
+}
+function isQuote(value) {
+  return value === '"' || value === "'";
+}
+var binaryOperators = [
+  "**",
+  "<<",
+  ">>",
+  "<=",
+  ">=",
+  "==",
+  "=",
+  "!=",
+  "&&",
+  "||",
+  "*",
+  "/",
+  "%",
+  "+",
+  "-",
+  "&",
+  "|",
+  "^",
+  "<",
+  ">"
+];
+function tokenizeExpression(input2, source, site = "public") {
+  const tokens = [];
+  let index = 0;
+  const provenance = (end) => source ? {
+    offset: index,
+    span: createTextSpan(
+      source.text,
+      source.offset + index,
+      source.offset + end,
+      source.line,
+      source.lineStarts
+    )
+  } : { offset: index };
+  const astProvenance = (end) => {
+    const { offset: _offset, ...location } = provenance(end);
+    return location;
+  };
+  while (index < input2.length) {
+    const char = input2[index];
+    if (/\s/.test(char)) {
+      index++;
+      continue;
+    }
+    const previousToken = tokens.at(-1);
+    const startsOperand = !previousToken || ["operator", "lparen", "lbracket", "comma"].includes(previousToken.type);
+    const relative = input2.slice(index).match(/^([:?]?)(\++|-+)/);
+    if (relative && (relative[1] || startsOperand && /^(?:\s*$|\s*[&)*,/<=>\]^|])/.test(input2.slice(index + relative[0].length)))) {
+      let stream = "relative";
+      if (relative[1] === ":") {
+        stream = "unnamed";
+      }
+      if (relative[1] === "?") {
+        stream = "macro";
+      }
+      const text = relative[0];
+      tokens.push({
+        type: "expression",
+        node: {
+          type: "relativeReference",
+          text,
+          stream,
+          direction: relative[2][0] === "+" ? 1 : -1,
+          count: relative[2].length,
+          ...astProvenance(index + text.length)
+        },
+        offset: index
+      });
+      index += text.length;
+      continue;
+    }
+    const placeholder = startsOperand ? input2.slice(index).match(/^<(?:([A-Z_a-z]\w*)|(?:\.{3}|…)\[([^\]]+)])>/) : null;
+    if (placeholder) {
+      const text = placeholder[0];
+      const node = {
+        type: "template",
+        form: placeholder[1] ? "parameter" : "variadic",
+        text,
+        ...astProvenance(index + text.length)
+      };
+      if (placeholder[1]) {
+        node.name = placeholder[1];
+      } else {
+        node.index = parseExpressionAtSite(placeholder[2], site);
+      }
+      tokens.push({ type: "expression", node, offset: index });
+      index += text.length;
+      continue;
+    }
+    if (char === "(") {
+      tokens.push({ type: "lparen", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ")") {
+      tokens.push({ type: "rparen", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ",") {
+      tokens.push({ type: "comma", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ".") {
+      tokens.push({ type: "dot", ...provenance(index + 1) });
+      index++;
+      continue;
+    }
+    if (char === "[") {
+      tokens.push({ type: "lbracket", offset: index });
+      index++;
+      continue;
+    }
+    if (char === "]") {
+      tokens.push({ type: "rbracket", offset: index });
+      index++;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      const { value, nextIndex, quote } = readQuotedString(input2, index);
+      tokens.push({ type: "string", value, quote, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    const previous = tokens.at(-1);
+    const operandExpected = !previous || previous.type === "operator" || previous.type === "lparen" || previous.type === "lbracket" || previous.type === "comma";
+    if (operandExpected && char === "%" && !/[01]/.test(input2[index + 1] ?? "")) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "literal" },
+        { message: "Invalid number: NaN" }
+      );
+    }
+    if (char === "%" && operandExpected && /[01]/.test(input2[index + 1] ?? "")) {
+      const literal = input2.slice(index).match(/^%[01]+/)[0];
+      tokens.push({ type: "literal", value: literal, ...provenance(index + literal.length) });
+      index += literal.length;
+      continue;
+    }
+    if (char === "!" && !input2.startsWith("!=", index) && !/[A-Z_a-z{]/.test(input2[index + 1] ?? "")) {
+      tokens.push({ type: "operator", value: "~", offset: index });
+      index++;
+      continue;
+    }
+    if (char === "~") {
+      tokens.push({ type: "operator", value: "~", offset: index });
+      index++;
+      continue;
+    }
+    const operator = (input2.startsWith("<:", index) ? "<:" : void 0) ?? binaryOperators.find((candidate) => input2.startsWith(candidate, index));
+    if (operator) {
+      tokens.push({ type: "operator", value: operator, offset: index });
+      index += operator.length;
+      continue;
+    }
+    if (char === "!") {
+      const { token, nextIndex } = readDefineReference(input2, index);
+      tokens.push({ ...token, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    if (char === "@" || char === "?" || /[A-Z_a-z]/.test(char) || previousToken?.type === "dot" && /\d/.test(char)) {
+      const { value, nextIndex } = readIdentifier(input2, index);
+      if (nextIndex === index + 1 && (char === "?" || char === "@")) {
+        throw new ExpressionSyntaxError({ kind: "unsupported", reason: "token" });
+      }
+      const open = skipWhitespace(input2, nextIndex);
+      if (input2[open] === "(" && previousToken?.type !== "dot") {
+        const call = readCallSyntax(input2, value, open, site, source);
+        tokens.push({
+          type: "expression",
+          node: {
+            type: "call",
+            callee: { type: "identifier", name: value, ...astProvenance(nextIndex) },
+            arguments: call.arguments,
+            ...astProvenance(call.end)
+          },
+          offset: index
+        });
+        index = call.end;
+        continue;
+      }
+      tokens.push({ type: "identifier", value, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    if (char === "$") {
+      const match = input2.slice(index).match(/^\$[\dA-Fa-f]+/);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    if (char === "%") {
+      const match = input2.slice(index).match(/^%[01]+/);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    if (/\d/.test(char)) {
+      if (/^0x/i.test(input2.slice(index)) && !/[\dA-Fa-f]/.test(input2[index + 2] ?? "")) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      const match = input2.slice(index).match(/^(?:0x[\da-f]+|-?\d+(?:\.\d+)?)/i);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    throw new ExpressionSyntaxError({ kind: "unsupported", reason: "token" });
+  }
+  return tokens;
+}
+function readCallSyntax(input2, name, open, site, source) {
+  const args = [];
+  let start = open + 1;
+  let depth = 0;
+  let quote = "";
+  const append = (end) => {
+    const raw = input2.slice(start, end);
+    const text = raw.trim();
+    if (!text) {
+      if (start > open + 1 && isSourceTextArgument(name, args.length)) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "operand" },
+          { message: `Missing function argument for '${name}'.` }
+        );
+      }
+      return;
+    }
+    if (/^function\b/.test(text)) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "operand" },
+        { message: `Missing function argument for '${name}'.` }
+      );
+    }
+    const offset = start + raw.length - raw.trimStart().length;
+    const occurrence = source && { ...source, offset: source.offset + offset };
+    if (isSourceTextArgument(name, args.length)) {
+      let value = text;
+      if (text.startsWith('"') || text.startsWith("'")) {
+        const quoted = readQuotedString(text, 0);
+        const trailing = text.slice(quoted.nextIndex).trimStart();
+        if (trailing && /^["'A-Z_a-z]/.test(trailing)) {
+          throw new ExpressionSyntaxError(
+            { kind: "invalid", reason: "delimiter" },
+            {
+              message: `Expected ',' or ')' in function call arguments: ${input2.slice(offset + quoted.nextIndex).trimStart()}`
+            }
+          );
+        }
+      }
+      if (text.startsWith('"') && text.endsWith('"') || text.startsWith("'") && text.endsWith("'")) {
+        value = text.slice(1, -1);
+      }
+      args.push(attachRootSpan({ type: "sourceText", text, value }, text, occurrence));
+    } else {
+      args.push(parseExpressionAtSite(text, site, occurrence));
+    }
+  };
+  for (let index = start; index < input2.length; index++) {
+    const char = input2[index];
+    if (quote) {
+      if (char === quote && input2[index - 1] !== "\\") {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(" || char === "[") {
+      depth++;
+    } else if (char === "]") {
+      depth--;
+    } else if (char === ")") {
+      if (depth === 0) {
+        append(index);
+        return { arguments: args, end: index + 1 };
+      }
+      depth--;
+    } else if (char === "," && depth === 0) {
+      append(index);
+      start = index + 1;
+    }
+  }
+  let message = "Mismatched parentheses.";
+  if (depth === 0 && input2.slice(start).trim()) {
+    message = "Expected ',' or ')' in function call arguments: ";
+  }
+  if (quote) {
+    message = "Unterminated string literal in function call.";
+  }
+  throw new ExpressionSyntaxError({ kind: "invalid", reason: "delimiter" }, { message });
+}
+function readQuotedString(input2, start) {
+  const quote = input2[start];
+  if (!isQuote(quote)) {
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "string" });
+  }
+  let value = "";
+  let index = start + 1;
+  while (index < input2.length) {
+    const char = input2[index];
+    if (char === quote && input2[index - 1] !== "\\") {
+      return { value, nextIndex: index + 1, quote };
+    }
+    value += char;
+    index++;
+  }
+  throw new ExpressionSyntaxError({ kind: "invalid", reason: "string" });
+}
+function readIdentifier(input2, start) {
+  let index = start;
+  if (input2[index] === "?" && input2[index + 1] === ".") {
+    index++;
+    while (input2[index] === ".") {
+      index++;
+    }
+  }
+  if (input2[index] === "@" || input2[index] === "?") {
+    index++;
+  }
+  while (index < input2.length && /\w/.test(input2[index])) {
+    index++;
+  }
+  return { value: input2.slice(start, index), nextIndex: index };
+}
+function readDefineReference(input2, start) {
+  if (input2[start + 1] === "{") {
+    let index = start + 2;
+    let braces = 1;
+    let content = "";
+    while (index < input2.length) {
+      const char = input2[index];
+      if (char === "{") {
+        braces++;
+      } else if (char === "}") {
+        braces--;
+        if (braces === 0) {
+          return {
+            token: { type: "defineReference", content, braced: true },
+            nextIndex: index + 1
+          };
+        }
+      }
+      content += char;
+      index++;
+    }
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "define" });
+  }
+  const { value, nextIndex } = readIdentifier(input2, start + 1);
+  if (!value) {
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "define" });
+  }
+  return {
+    token: { type: "defineReference", name: value, braced: false },
+    nextIndex
+  };
+}
+var ExpressionParser = class {
+  constructor(tokens, sourceText) {
+    this.tokens = tokens;
+    this.sourceText = sourceText;
+  }
+  tokens;
+  sourceText;
+  index = 0;
+  parseExpression(minPrecedence = 0) {
+    let left = this.parsePrefix();
+    while (true) {
+      const token = this.peek();
+      if (!token || token.type !== "operator" || !isBinaryOperator(token.value)) {
+        break;
+      }
+      const precedence = binaryPrecedence[token.value];
+      if (precedence < minPrecedence) {
+        break;
+      }
+      this.consume();
+      const nextMinPrecedence = precedence + 1;
+      const next = this.peek();
+      if (this.isAtEnd() || next?.type === "identifier" && next.value === "function") {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "operand" },
+          { message: `Missing right operand for operator '${token.value}'.` }
+        );
+      }
+      const right = this.parseExpression(nextMinPrecedence);
+      left = {
+        type: "binary",
+        operator: token.value,
+        left,
+        right
+      };
+    }
+    return left;
+  }
+  isAtEnd() {
+    return this.index >= this.tokens.length;
+  }
+  parsePrefix() {
+    const token = this.peek();
+    if (!token) {
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" });
+    }
+    if (token.type === "operator" && isUnaryOperator(token.value)) {
+      this.consume();
+      return {
+        type: "unary",
+        operator: token.value,
+        argument: this.parsePrefix()
+      };
+    }
+    return this.parsePostfix(this.parsePrimary());
+  }
+  parsePrimary() {
+    if (this.peek()?.type === "dot") {
+      const firstSpan = this.peek()?.span;
+      let name = "";
+      while (this.match({ type: "dot" })) {
+        name += ".";
+      }
+      const token2 = this.consume();
+      if (token2?.type === "identifier") {
+        return {
+          type: "identifier",
+          name: name + token2.value,
+          ...firstSpan && {
+            span: createSourceSpan(firstSpan.start, token2.span.end, firstSpan.line)
+          }
+        };
+      }
+      if (token2?.type === "literal" && /^\d+$/.test(token2.value)) {
+        return {
+          type: "identifier",
+          name: name + token2.value,
+          ...firstSpan && {
+            span: createSourceSpan(firstSpan.start, token2.span.end, firstSpan.line)
+          }
+        };
+      }
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "member" });
+    }
+    const token = this.consume();
+    if (!token) {
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" });
+    }
+    switch (token.type) {
+      case "expression":
+        return token.node;
+      case "literal": {
+        const numericValue = parseLiteralValue(token.value);
+        return {
+          type: "literal",
+          value: token.value,
+          ...Number.isFinite(numericValue) && { numericValue },
+          ...token.span && { span: token.span }
+        };
+      }
+      case "string":
+        return {
+          type: "string",
+          value: token.value,
+          quote: token.quote,
+          ...token.span && { span: token.span }
+        };
+      case "defineReference":
+        return token.braced ? {
+          type: "defineReference",
+          content: token.content,
+          braced: true,
+          ...token.span && { span: token.span }
+        } : {
+          type: "defineReference",
+          name: token.name,
+          braced: false,
+          ...token.span && { span: token.span }
+        };
+      case "identifier":
+        return { type: "identifier", name: token.value, ...token.span && { span: token.span } };
+      case "lparen": {
+        const next = this.peek();
+        if (next?.type === "identifier" && next.value === "function") {
+          throw new ExpressionSyntaxError(
+            { kind: "invalid", reason: "operand" },
+            { message: "Empty parenthesized expression." }
+          );
+        }
+        const expression = this.parseExpression();
+        this.expect("rparen");
+        return { ...expression, parenthesized: true };
+      }
+      case "comma":
+      case "dot":
+      case "lbracket":
+      case "operator":
+      case "rbracket":
+      case "rparen":
+        break;
+    }
+    throw new ExpressionSyntaxError(
+      { kind: "invalid", reason: "operand" },
+      { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` }
+    );
+  }
+  parsePostfix(expression) {
+    let current = expression;
+    while (true) {
+      if (this.match({ type: "lparen" })) {
+        if (current.type !== "identifier") {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        current = {
+          type: "call",
+          callee: current,
+          arguments: this.parseCallArguments()
+        };
+        continue;
+      }
+      if (this.match({ type: "dot" })) {
+        if (!isReferenceExpressionNode(current)) {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        const property = this.consume();
+        if (!property || property.type !== "identifier") {
+          throw new ExpressionSyntaxError({ kind: "invalid", reason: "member" });
+        }
+        current = {
+          type: "member",
+          object: current,
+          property: {
+            type: "identifier",
+            name: property.value,
+            ...property.span && { span: property.span }
+          }
+        };
+        continue;
+      }
+      if (this.match({ type: "lbracket" })) {
+        if (!isReferenceExpressionNode(current)) {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        const indexExpression = this.parseExpression();
+        this.expect("rbracket");
+        current = {
+          type: "index",
+          object: current,
+          index: indexExpression
+        };
+        continue;
+      }
+      return current;
+    }
+  }
+  parseCallArguments() {
+    const args = [];
+    if (this.match({ type: "rparen" })) {
+      return args;
+    }
+    do {
+      args.push(this.parseExpression());
+    } while (this.match({ type: "comma" }));
+    this.expect("rparen");
+    return args;
+  }
+  /**
+   * Expects a value.
+   * @param {Token["type"]} type The type.
+   */
+  expect(type) {
+    const token = this.consume();
+    if (!token || token.type !== type) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "delimiter" },
+        {
+          message: type === "rbracket" ? "Mismatched brackets in struct index" : "Mismatched parentheses."
+        }
+      );
+    }
+  }
+  match(expected) {
+    const token = this.peek();
+    if (token && token.type === expected.type) {
+      this.index++;
+      return true;
+    }
+    return false;
+  }
+  consume() {
+    const token = this.tokens[this.index];
+    this.index++;
+    return token;
+  }
+  peek() {
+    return this.tokens[this.index];
+  }
+};
+function isBinaryOperator(value) {
+  return value in binaryPrecedence;
+}
+
+// packages/core/src/ir/directive-arguments.ts
+function parseDirectiveExpression(text, numeric = true, source) {
+  recordExecutionParser("directive");
+  if (/![\w{]/.test(text)) {
+    return { type: "template", form: "source", text };
+  }
+  const node = parseExpressionAtSite(text, "statement", source);
+  return numeric ? dataResolutionExpression(text, node) : node;
+}
+function unquoteDirectiveText(text) {
+  const quote = text[0];
+  if ((quote === '"' || quote === "'") && text.endsWith(quote) && text.length > 1) {
+    return text.slice(1, -1);
+  }
+  return text;
+}
+function dataResolutionExpression(text, node) {
+  if (node.parenthesized && (node.type === "member" || node.type === "index" || node.type === "literal" && node.value.includes("."))) {
+    return { type: "identifier", name: text, ...node.span ? { span: node.span } : {} };
+  }
+  return node;
+}
+
+// packages/core/src/ir/source-syntax.ts
+function copySyntaxValue(value) {
+  return copySyntaxTree(value, false);
+}
+function copySyntaxTree(value, immutable) {
+  const ancestors = /* @__PURE__ */ new Set();
+  let nodes = 0;
+  const copy = (entry, depth) => {
+    if (++nodes > 1e6) {
+      throw new Error("Plugin syntax payload exceeds structural limits (1,000,000 values).");
+    }
+    if (depth > 128) {
+      throw new Error("Plugin syntax payload exceeds structural limits (128 nesting levels).");
+    }
+    if (entry === null || typeof entry === "string" || typeof entry === "boolean") {
+      return entry;
+    }
+    if (typeof entry === "number" && Number.isFinite(entry)) {
+      return entry;
+    }
+    if (typeof entry !== "object") {
+      throw new Error("Plugin syntax payload must be plain JSON data.");
+    }
+    if (ancestors.has(entry)) {
+      throw new Error("Plugin syntax payload must be acyclic.");
+    }
+    const prototype = Object.getPrototypeOf(entry);
+    if (!Array.isArray(entry) && prototype !== Object.prototype && prototype !== null) {
+      throw new Error("Plugin syntax payload must have a plain prototype.");
+    }
+    if (Object.getOwnPropertySymbols(entry).length) {
+      throw new Error("Plugin syntax payload cannot contain symbol properties.");
+    }
+    ancestors.add(entry);
+    try {
+      const keys = Object.getOwnPropertyNames(entry);
+      if (Array.isArray(entry)) {
+        const result2 = [];
+        for (let index = 0; index < entry.length; index++) {
+          const descriptor2 = Object.getOwnPropertyDescriptor(entry, index);
+          if (!descriptor2) {
+            throw new Error("Plugin syntax arrays must be dense.");
+          }
+          if (!("value" in descriptor2)) {
+            throw new Error("Plugin syntax payload cannot contain accessors.");
+          }
+          result2.push(copy(descriptor2.value, depth + 1));
+        }
+        if (keys.length !== entry.length + 1) {
+          throw new Error("Plugin syntax arrays cannot have custom properties.");
+        }
+        return immutable ? Object.freeze(result2) : result2;
+      }
+      const result = {};
+      for (const key of keys) {
+        const descriptor2 = Object.getOwnPropertyDescriptor(entry, key);
+        if (!descriptor2 || !("value" in descriptor2)) {
+          throw new Error("Plugin syntax payload cannot contain accessors.");
+        }
+        const copied = copy(descriptor2.value, depth + 1);
+        if (Object.hasOwn(Object.prototype, key)) {
+          Object.defineProperty(result, key, {
+            value: copied,
+            enumerable: true,
+            writable: true,
+            configurable: true
+          });
+        } else {
+          result[key] = copied;
+        }
+      }
+      return immutable ? Object.freeze(result) : result;
+    } finally {
+      ancestors.delete(entry);
+    }
+  };
+  return copy(value, 0);
+}
+
+// packages/core/src/ir/syntax-codec.ts
+var syntaxString = (value) => typeof value === "string";
+var syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
+var syntaxBoolean = (value) => typeof value === "boolean";
+function syntaxLiteral(literal) {
+  return (value) => value === literal;
+}
+function syntaxArray(guard) {
+  return (value) => Array.isArray(value) && value.every(guard);
+}
+function syntaxOptional(guard) {
+  return (value) => value === void 0 || guard(value);
+}
+function syntaxObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function syntaxRecord(shape) {
+  return (value) => {
+    if (!syntaxObject(value)) {
+      return false;
+    }
+    const fields = value;
+    return Object.keys(fields).every((key) => Object.hasOwn(shape, key)) && Object.entries(shape).every(([key, guard]) => guard(fields[key]));
+  };
+}
+function syntaxUnion(...guards) {
+  return (value) => guards.some((guard) => guard(value));
+}
+var syntaxSpan = syntaxRecord({
+  start: syntaxNumber,
+  end: syntaxNumber,
+  line: syntaxOptional(syntaxNumber),
+  columnStart: syntaxOptional(syntaxNumber),
+  columnEnd: syntaxOptional(syntaxNumber)
+});
+var identifier = (value) => syntaxExpression(value) && value.type === "identifier";
+var reference = (value) => syntaxExpression(value) && ["identifier", "defineReference", "relativeReference", "member", "index"].includes(value.type);
+var outcome = syntaxUnion(
+  syntaxRecord({ kind: syntaxLiteral("native") }),
+  syntaxRecord({
+    kind: syntaxLiteral("compatibility"),
+    reason: syntaxUnion(
+      syntaxLiteral("relative-label"),
+      syntaxLiteral("macro-argument"),
+      syntaxLiteral("variadic-template")
+    )
+  }),
+  syntaxRecord({
+    kind: syntaxLiteral("invalid"),
+    reason: syntaxUnion(
+      ...[
+        "empty",
+        "literal",
+        "string",
+        "define",
+        "operand",
+        "delimiter",
+        "member",
+        "trailing-tokens"
+      ].map(syntaxLiteral)
+    )
+  }),
+  syntaxRecord({
+    kind: syntaxLiteral("unsupported"),
+    reason: syntaxUnion(
+      syntaxLiteral("token"),
+      syntaxLiteral("postfix"),
+      syntaxLiteral("unclassified")
+    )
+  })
+);
+var syntaxExpression = (value) => {
+  if (!syntaxObject(value)) {
+    return false;
+  }
+  const node = value;
+  if (node.span !== void 0 && !syntaxSpan(node.span)) {
+    return false;
+  }
+  if (node.parenthesized !== void 0 && !syntaxBoolean(node.parenthesized)) {
+    return false;
+  }
+  switch (node.type) {
+    case "literal":
+      return syntaxString(node.value) && (node.numericValue === void 0 || syntaxNumber(node.numericValue));
+    case "identifier":
+      return syntaxString(node.name);
+    case "string":
+      return syntaxString(node.value) && (node.quote === '"' || node.quote === "'");
+    case "sourceText":
+      return syntaxString(node.text) && syntaxString(node.value);
+    case "defineReference":
+      return syntaxBoolean(node.braced) && (syntaxString(node.name) || syntaxString(node.content));
+    case "relativeReference":
+      return (node.direction === 1 || node.direction === -1) && syntaxNumber(node.count) && ["relative", "unnamed", "macro"].includes(String(node.stream));
+    case "member":
+      return reference(node.object) && identifier(node.property);
+    case "index":
+      return reference(node.object) && syntaxExpression(node.index);
+    case "call":
+      return identifier(node.callee) && syntaxArray(syntaxExpression)(node.arguments);
+    case "unary":
+      return ["<:", "<", ">", "^", "~", "-", "+"].includes(String(node.operator)) && syntaxExpression(node.argument);
+    case "binary":
+      return [
+        "**",
+        "*",
+        "/",
+        "%",
+        "+",
+        "-",
+        "<<",
+        ">>",
+        "&",
+        "|",
+        "^",
+        "<",
+        ">",
+        "<=",
+        ">=",
+        "==",
+        "=",
+        "!=",
+        "&&",
+        "||"
+      ].includes(String(node.operator)) && syntaxExpression(node.left) && syntaxExpression(node.right);
+    case "range":
+      return syntaxExpression(node.start) && syntaxExpression(node.end);
+    case "template":
+      return ["parameter", "variadic", "source"].includes(String(node.form)) && syntaxString(node.text) && (node.index === void 0 || syntaxExpression(node.index));
+    case "error":
+      return syntaxString(node.value) && syntaxString(node.message) && outcome(node.outcome);
+    default:
+      return false;
+  }
+};
+function syntaxCodec(version, parse2, guard) {
+  return {
+    version,
+    parse(input2) {
+      return copySyntaxValue(JSON.parse(JSON.stringify(parse2(input2))));
+    },
+    validate: guard,
+    read(payload) {
+      if (!guard(payload)) {
+        throw new Error("Invalid typed directive payload.");
+      }
+      return payload;
+    }
+  };
+}
+
+// packages/core/src/syntax-profile.ts
+var ASAR_SYNTAX_PROFILE = Object.freeze({
+  id: "asar",
+  preserveLeadingWhitespace: false,
+  splitColonStatements: true,
+  splitRelativeLabelStatements: true,
+  leadingDotLabels: true,
+  directivePrefixes: Object.freeze(["@"]),
+  cheapLocalPrefix: "",
+  fileLocalSymbols: false
+});
+var NATIVE_SYNTAX_PROFILE = Object.freeze({
+  id: "native",
+  preserveLeadingWhitespace: true,
+  splitColonStatements: false,
+  splitRelativeLabelStatements: false,
+  leadingDotLabels: true,
+  directivePrefixes: Object.freeze([]),
+  cheapLocalPrefix: "",
+  fileLocalSymbols: false
+});
+var CA65_SYNTAX_PROFILE = Object.freeze({
+  id: "ca65",
+  preserveLeadingWhitespace: true,
+  splitColonStatements: false,
+  splitRelativeLabelStatements: false,
+  leadingDotLabels: false,
+  directivePrefixes: Object.freeze(["."]),
+  cheapLocalPrefix: "@",
+  fileLocalSymbols: true
+});
+
+// packages/core/src/services/command-text-service.ts
+var splitRespectingFunctions = (input2) => {
+  const result = [];
+  let current = "";
+  let parenDepth = 0;
+  let inQuotes = false;
+  let quoteChar = "";
+  for (let i = 0; i < input2.length; i++) {
+    const char = input2[i];
+    if ((char === '"' || char === "'") && (i === 0 || input2[i - 1] !== "\\")) {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (char === quoteChar) {
+        inQuotes = false;
+      }
+    }
+    if (!inQuotes) {
+      if (char === "(") {
+        parenDepth++;
+      } else if (char === ")") {
+        parenDepth--;
+      } else if (char === "," && parenDepth === 0) {
+        result.push(current.trim());
+        current = "";
+        continue;
+      }
+    }
+    current += char;
+  }
+  if (current) {
+    result.push(current.trim());
+  }
+  return result;
+};
+
+// packages/core/src/ir/data-node.ts
+function parseDataOperand(text) {
+  let value = text.trim();
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    return { text, expression: { type: "string", quote, value: value.slice(1, -1) } };
+  }
+  if (value.startsWith("#")) {
+    value = value.slice(1);
+  }
+  if (/![\w{]/.test(value)) {
+    return { text, expression: { type: "template", form: "source", text: value } };
+  }
+  return {
+    text,
+    expression: dataResolutionExpression(value, parseExpressionAtSite(value, "statement"))
+  };
+}
+function parseDataList(text) {
+  return splitRespectingFunctions(text).map(parseDataOperand);
+}
+
+// packages/core/src/ir/parsed-operand.ts
+function parseInstructionOperands(mnemonic, text, grammar2) {
+  const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
+  let width;
+  if (suffix === "b") {
+    width = 1;
+  } else if (suffix === "w") {
+    width = 2;
+  } else if (suffix === "l") {
+    width = 3;
+  }
+  const mnemonicBit = grammar2.bitSelectors ? /^(?:bbs|bbc|set1|clr1)([0-7])$/i.exec(mnemonic)?.[1] : void 0;
+  const result = {
+    operands: []
+  };
+  if (width) {
+    result.width = width;
+  }
+  if (mnemonicBit !== void 0) {
+    result.mnemonicBit = Number(mnemonicBit);
+  }
+  if (!text.trim()) {
+    return result;
+  }
+  if (grammar2.templates !== false && /![\w{]|<[^>]+>|\\[A-Z_a-z]/.test(text)) {
+    result.operands.push({
+      kind: "template",
+      fragment: sourceFragment(text, []),
+      structure: parseInstructionOperands(mnemonic, text, { ...grammar2, templates: false }),
+      span: { start: 0, end: text.length }
+    });
+    return result;
+  }
+  try {
+    const parts2 = operandParts(text, ",");
+    for (let index = 0; index < parts2.length; index++) {
+      let part = parts2[index];
+      const next = parts2[index + 1];
+      if (grammar2.commaIndex && next && grammar2.indexRegisters.includes(next.text.toLowerCase())) {
+        part = { text: text.slice(part.start, next.end), start: part.start, end: next.end };
+        index++;
+      }
+      result.operands.push(parseOperand(part.text, part.start, grammar2));
+    }
+  } catch (cause) {
+    result.operands = [
+      {
+        kind: "invalid",
+        message: cause instanceof Error ? cause.message : String(cause),
+        span: { start: 0, end: text.length }
+      }
+    ];
+  }
+  return result;
+}
+function operandParts(text, separator) {
+  const parts2 = [];
+  const stack = [];
+  let quote = "";
+  let start = 0;
+  const append = (end) => {
+    const raw = text.slice(start, end);
+    const value = raw.trim();
+    const offset = start + raw.length - raw.trimStart().length;
+    parts2.push({ text: value, start: offset, end: offset + value.length });
+  };
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if (quote) {
+      if (char === "\\") {
+        index++;
+      } else if (char === quote) {
+        quote = "";
+      }
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if ("([{".includes(char)) {
+      stack.push(char);
+    } else if (")]}".includes(char)) {
+      const opening = { ")": "(", "]": "[", "}": "{" }[char];
+      if (stack.pop() !== opening) {
+        throw new Error("Mismatched operand delimiters.");
+      }
+    } else if (char === separator && stack.length === 0) {
+      append(index);
+      start = index + 1;
+    }
+  }
+  if (quote || stack.length) {
+    throw new Error("Unclosed operand delimiter.");
+  }
+  append(text.length);
+  return parts2;
+}
+function scalar(text, start, force) {
+  const expression = parseDirectiveExpression(text, true, { text, offset: 0, line: 0 });
+  let spelling = "expression";
+  let literalBytes;
+  const hex2 = /^\$([\da-f]+)$/i.exec(text);
+  const binary = /^%([01]+)$/.exec(text);
+  if (hex2) {
+    spelling = "hex";
+    literalBytes = Math.max(1, Math.ceil(hex2[1].length / 2));
+  } else if (binary) {
+    spelling = "binary";
+    literalBytes = Math.max(1, Math.ceil(binary[1].length / 8));
+  } else if (/^-?\d+(?:\.\d+)?$/.test(text)) {
+    spelling = "decimal";
+  } else if (isReferenceExpressionNode(expression)) {
+    spelling = "symbol";
+  }
+  return {
+    expression,
+    ...expression.type === "template" ? {
+      referenceExpression: parseExpressionAtSite(text, "statement", {
+        text,
+        offset: 0,
+        line: 0
+      })
+    } : {},
+    width: {
+      spelling,
+      grouped: expression.parenthesized === true,
+      ...force ? { forcedBytes: force } : {},
+      ...literalBytes ? { literalBytes } : {}
+    },
+    span: { start, end: start + text.length }
+  };
+}
+function parseOperand(text, start, grammar2) {
+  const span = { start, end: start + text.length };
+  if (!text) {
+    return { kind: "invalid", message: "Missing operand.", span };
+  }
+  const name = text.toLowerCase();
+  if (grammar2.registers.includes(name)) {
+    return { kind: "register", name, span };
+  }
+  if (text.startsWith("#")) {
+    const value = text.slice(1).trim();
+    return { kind: "immediate", value: scalar(value, start + text.indexOf(value, 1)), span };
+  }
+  let body = text;
+  let offset = start;
+  let force;
+  const prefix = grammar2.ca65Widths ? /^([afz]):\s*/i.exec(body) : void 0;
+  if (prefix) {
+    const code = prefix[1].toLowerCase();
+    if (code === "z") {
+      force = 1;
+    } else if (code === "a") {
+      force = 2;
+    } else {
+      force = 3;
+    }
+    body = body.slice(prefix[0].length);
+    offset += prefix[0].length;
+  }
+  let inverted = false;
+  if (grammar2.bitSelectors && body.startsWith("/")) {
+    inverted = true;
+    body = body.slice(1);
+    offset++;
+  }
+  let index;
+  const outside = grammar2.commaIndex ? operandParts(body, ",") : operandParts(body, "+");
+  if ((grammar2.commaIndex || grammar2.plusIndex) && outside.length > 1) {
+    const last = outside.at(-1);
+    if (grammar2.indexRegisters.includes(last.text.toLowerCase())) {
+      index = {
+        register: last.text.toLowerCase(),
+        position: "outside",
+        separator: grammar2.commaIndex ? "," : "+"
+      };
+      body = body.slice(0, last.start - 1).replace(/[+,]\s*$/, "").trimEnd();
+    }
+  }
+  let postIncrement = false;
+  if (grammar2.plusIndex && /\)\s*\+$/.test(body)) {
+    postIncrement = true;
+    body = body.slice(0, body.lastIndexOf("+")).trimEnd();
+  }
+  let delimiter = "none";
+  if (body.startsWith("(") && body.endsWith(")") || body.startsWith("[") && body.endsWith("]")) {
+    const inner = body.slice(1, -1);
+    try {
+      operandParts(inner, ",");
+      delimiter = body[0] === "(" ? "parentheses" : "brackets";
+      const trimmed = inner.trim();
+      offset += 1 + inner.length - inner.trimStart().length;
+      body = trimmed;
+    } catch {
+    }
+  }
+  if (delimiter !== "none" && grammar2.plusIndex && body.endsWith("+")) {
+    const candidate = body.slice(0, -1).trimEnd();
+    if (grammar2.registers.includes(candidate.toLowerCase())) {
+      postIncrement = true;
+      body = candidate;
+    }
+  }
+  if (delimiter !== "none") {
+    const inside = operandParts(body, grammar2.commaIndex ? "," : "+");
+    if (inside.length === 2 && grammar2.indexRegisters.includes(inside[1].text.toLowerCase())) {
+      if (index) {
+        const address2 = scalar(inside[0].text, offset + inside[0].start, force);
+        return {
+          kind: "memory",
+          address: address2,
+          delimiter,
+          index,
+          innerIndex: inside[1].text.toLowerCase(),
+          span
+        };
+      }
+      index = {
+        register: inside[1].text.toLowerCase(),
+        position: "inside",
+        separator: grammar2.commaIndex ? "," : "+"
+      };
+      body = inside[0].text;
+      offset += inside[0].start;
+    }
+  }
+  let bit;
+  const bitMatch = grammar2.bitSelectors ? /\.([0-7])$/.exec(body) : void 0;
+  if (bitMatch) {
+    bit = { selector: scalar(bitMatch[1], offset + body.length - 1), inverted };
+    body = body.slice(0, bitMatch.index).trimEnd();
+  }
+  const register = body.toLowerCase();
+  const address = delimiter !== "none" && grammar2.registers.includes(register) ? {
+    kind: "register",
+    name: register,
+    span: { start: offset, end: offset + body.length }
+  } : scalar(body, offset, force);
+  return {
+    kind: "memory",
+    address,
+    delimiter,
+    span,
+    ...index ? { index } : {},
+    ...postIncrement ? { postIncrement } : {},
+    ...bit ? { bit } : {}
+  };
+}
+
+// packages/core/src/plugin/contracts.ts
+var PLUGIN_API_VERSION = 2;
+function definePlugin(plugin2) {
+  return plugin2;
+}
+
+// packages/assets/src/secret-of-mana/som-dialogue-command.ts
+function encodeSomDialogueCommand(token) {
+  const names = ["${boy}", "${girl}", "${sprite}"];
+  const index = names.indexOf(token);
+  if (index >= 0) {
+    return { family: "party-name", bytes: Uint8Array.of(87, index) };
+  }
+  if (token === "${wait}") {
+    return { family: "wait", bytes: Uint8Array.of(40, 0) };
+  }
+  const wait = /^\${wait:(0|[1-9]\d*)}$/.exec(token);
+  if (wait) {
+    const count = Number(wait[1]);
+    if (!Number.isSafeInteger(count) || count > 255) {
+      throw new Error("Dialogue wait must fit one unsigned byte.");
+    }
+    return { family: "wait", bytes: Uint8Array.of(40, count) };
+  }
+  const windows = /* @__PURE__ */ new Map([
+    ["${openDialogue}", 80],
+    ["${closeDialogue}", 81],
+    ["${clearDialogue}", 82]
+  ]);
+  const opcode = windows.get(token);
+  if (opcode !== void 0) {
+    return { family: "text-window", bytes: Uint8Array.of(opcode) };
+  }
+  throw new Error(`Unsupported dialogue command token ${token}.`);
+}
+
+// packages/assets/src/secret-of-mana/som-dialogue.ts
+var SOM_DIALOGUE_PAIR_COUNT = 61;
+var MAX_GLYPHS = 4096;
+var punctuation = /* @__PURE__ */ new Map([
+  [191, "."],
+  [192, ","],
+  [193, "/"],
+  [194, "'"],
+  [197, ":"],
+  [198, "-"],
+  [199, "%"],
+  [200, "!"],
+  [202, "?"]
+]);
+function readSomDialogueDictionary(bytes) {
+  if (bytes.length !== SOM_DIALOGUE_PAIR_COUNT * 2 || bytes.some((byte) => byte < 128 || byte > 210)) {
+    throw new Error("SoM dialogue requires 61 pairs of ordinary font codes.");
+  }
+  return Array.from(
+    { length: SOM_DIALOGUE_PAIR_COUNT },
+    (_, i) => [bytes[i * 2], bytes[i * 2 + 1]]
+  );
+}
+function glyphText(byte) {
+  if (byte === 127) {
+    return "\n";
+  }
+  if (byte === 128) {
+    return " ";
+  }
+  if (byte >= 129 && byte <= 154) {
+    return String.fromCharCode(byte - 129 + 97);
+  }
+  if (byte >= 155 && byte <= 180) {
+    return String.fromCharCode(byte - 155 + 65);
+  }
+  if (byte >= 181 && byte <= 190) {
+    return String.fromCharCode(byte - 181 + 48);
+  }
+  return punctuation.get(byte) ?? `\\x${byte.toString(16).padStart(2, "0").toUpperCase()}`;
+}
+function expandSomDialogue(bytes, dictionary) {
+  const output = [];
+  for (const byte of bytes) {
+    let index;
+    if (byte >= 96 && byte <= 126) {
+      index = byte - 96;
+    } else if (byte >= 211) {
+      index = byte - 195;
+    }
+    if (index !== void 0) {
+      const pair = dictionary[index];
+      if (!pair) {
+        throw new Error(`Missing SoM dialogue pair ${index}.`);
+      }
+      output.push(...pair);
+    } else {
+      if (byte < 127) {
+        throw new Error(`Event/control byte ${byte.toString(16)} is outside a text span.`);
+      }
+      output.push(byte);
+    }
+  }
+  return Uint8Array.from(output);
+}
+function decodeSomDialogue(bytes, dictionary) {
+  return [...expandSomDialogue(bytes, dictionary)].map(glyphText).join("");
+}
+function parseGlyphs(text) {
+  const inverse = new Map(
+    Array.from({ length: 84 }, (_, i) => i + 127).filter((byte) => !glyphText(byte).startsWith("\\")).map((byte) => [glyphText(byte), byte])
+  );
+  const bytes = [];
+  for (let offset = 0; offset < text.length; ) {
+    if (text[offset] === "\\") {
+      const match = /^\\x([\da-f]{2})/i.exec(text.slice(offset));
+      if (!match) {
+        throw new Error(`Invalid dialogue escape at character ${offset}.`);
+      }
+      const byte = Number.parseInt(match[1], 16);
+      if (byte < 127 || byte > 210) {
+        throw new Error("Dialogue escapes must select an ordinary glyph or line break.");
+      }
+      bytes.push(byte);
+      offset += 4;
+    } else {
+      const byte = inverse.get(text[offset]);
+      if (byte === void 0) {
+        throw new Error(
+          `Unsupported dialogue character at ${offset}; use a verified glyph escape.`
+        );
+      }
+      bytes.push(byte);
+      offset++;
+    }
+  }
+  if (bytes.length > MAX_GLYPHS) {
+    throw new Error("Dialogue span exceeds the 4096-glyph authoring limit.");
+  }
+  return bytes;
+}
+function validateLineGeometry(options) {
+  const { lineColumns, initialColumn } = options;
+  if (lineColumns === void 0) {
+    if (initialColumn !== void 0) {
+      throw new Error("Initial dialogue column requires a line capacity.");
+    }
+    return;
+  }
+  if (!Number.isSafeInteger(lineColumns) || lineColumns < 1 || lineColumns > 32) {
+    throw new Error("Dialogue line capacity must be an integer from 1 to 32 glyphs.");
+  }
+  if (initialColumn !== void 0 && (!Number.isSafeInteger(initialColumn) || initialColumn < 0 || initialColumn >= lineColumns)) {
+    throw new Error("Initial dialogue column must be within the supplied line capacity.");
+  }
+}
+function encodeSomDialogue(text, dictionary, options = {}) {
+  const glyphs = parseGlyphs(text);
+  validateLineGeometry(options);
+  if (options.literal !== void 0 && typeof options.literal !== "boolean") {
+    throw new Error("Dialogue literal policy must be boolean.");
+  }
+  if (options.literal === true) {
+    if (options.original?.some((byte) => byte < 127 || byte > 210)) {
+      throw new Error("Literal dialogue requires uncompressed native glyphs.");
+    }
+    if (options.byteLength !== void 0 && (!Number.isSafeInteger(options.byteLength) || options.byteLength < 0 || options.byteLength > MAX_GLYPHS)) {
+      throw new Error("Dialogue byte budget must be an integer from 0 to 4096.");
+    }
+    if (options.byteLength !== void 0 && glyphs.length !== options.byteLength) {
+      throw new Error(
+        `Literal dialogue cannot fit its exact ${options.byteLength}-byte glyph cells.`
+      );
+    }
+    return Uint8Array.from(glyphs);
+  }
+  const pairs = /* @__PURE__ */ new Map();
+  for (let code = 96; code <= 255; code++) {
+    if (code === 125) {
+      continue;
+    }
+    let index;
+    if (code <= 126) {
+      index = code - 96;
+    } else if (code >= 211) {
+      index = code - 195;
+    }
+    if (index === void 0) {
+      continue;
+    }
+    const pair = dictionary[index];
+    if (!pair) {
+      throw new Error(`Missing SoM dialogue pair ${index}.`);
+    }
+    const key = pair[0] | pair[1] << 8;
+    if (!pairs.has(key)) {
+      pairs.set(key, code);
+    }
+  }
+  let target = options.byteLength;
+  if (target !== void 0 && (!Number.isSafeInteger(target) || target < 0 || target > MAX_GLYPHS)) {
+    throw new Error("Dialogue byte budget must be an integer from 0 to 4096.");
+  }
+  if (options.original && decodeSomDialogue(options.original, dictionary) === text) {
+    if (target !== void 0 && target !== options.original.length) {
+      throw new Error("Original dialogue disagrees with byte budget.");
+    }
+    return options.original.slice();
+  }
+  const columns = new Uint8Array(glyphs.length);
+  if (options.lineColumns !== void 0) {
+    let column = options.initialColumn ?? 0;
+    for (const [index, glyph] of glyphs.entries()) {
+      columns[index] = column;
+      if (glyph === 127) {
+        column = 0;
+      } else {
+        column = (column + 1) % options.lineColumns;
+      }
+    }
+  }
+  const pairAt = (i) => {
+    if (i + 1 >= glyphs.length) {
+      return void 0;
+    }
+    if (options.lineColumns !== void 0 && columns[i] === options.lineColumns - 1) {
+      return void 0;
+    }
+    return pairs.get(glyphs[i] | glyphs[i + 1] << 8);
+  };
+  if (target === void 0) {
+    const minimum = new Uint16Array(glyphs.length + 1);
+    for (let i = glyphs.length - 1; i >= 0; i--) {
+      minimum[i] = minimum[i + 1] + 1;
+      if (pairAt(i) !== void 0) {
+        minimum[i] = Math.min(minimum[i], minimum[i + 2] + 1);
+      }
+    }
+    target = minimum[0];
+  }
+  const width = target + 1, possible = new Uint8Array((glyphs.length + 1) * width);
+  possible[glyphs.length * width] = 1;
+  for (let i = glyphs.length - 1; i >= 0; i--) {
+    for (let count = 1; count <= target; count++) {
+      if (possible[(i + 1) * width + count - 1] || pairAt(i) !== void 0 && possible[(i + 2) * width + count - 1]) {
+        possible[i * width + count] = 1;
+      }
+    }
+  }
+  if (!possible[target]) {
+    throw new Error(
+      `Dialogue cannot fit its exact ${target}-byte ROM span; relocation or a different edit is required.`
+    );
+  }
+  const encoded = [];
+  for (let i = 0, remaining = target; i < glyphs.length; remaining--) {
+    const pair = pairAt(i);
+    if (pair !== void 0 && possible[(i + 2) * width + remaining - 1]) {
+      encoded.push(pair);
+      i += 2;
+    } else {
+      encoded.push(glyphs[i++]);
+    }
+  }
+  return Uint8Array.from(encoded);
+}
+function hexBytes(value) {
+  if (typeof value !== "string" || value.length > MAX_GLYPHS * 2 || value.length % 2 !== 0 || /[^\da-f]/i.test(value)) {
+    throw new Error("Invalid or oversized native dialogue hex.");
+  }
+  return Uint8Array.from(value.match(/../g) ?? [], (pair) => Number.parseInt(pair, 16));
+}
+function isRecord6(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function hasDialogueLayoutShape(value) {
+  return isRecord6(value) && value.format === "som-dialogue-script" && value.version === 1 && typeof value.dictionaryHex === "string" && Array.isArray(value.segments) && value.segments.length > 0 && value.segments.length <= MAX_GLYPHS && value.segments.every(
+    (segment) => isRecord6(segment) && (segment.kind === "raw" || segment.kind === "text") && typeof segment.nativeHex === "string" && (segment.literal === void 0 || typeof segment.literal === "boolean") && (segment.lineColumns === void 0 || typeof segment.lineColumns === "number") && (segment.initialColumn === void 0 || typeof segment.initialColumn === "number") && (segment.commands === void 0 || Array.isArray(segment.commands) && segment.commands.length <= MAX_GLYPHS && segment.commands.every(
+      (slot) => isRecord6(slot) && typeof slot.offset === "number" && typeof slot.token === "string" && (slot.editable === void 0 || typeof slot.editable === "boolean")
+    ))
+  );
+}
+function readSomDialogueScriptLayout(value) {
+  if (!hasDialogueLayoutShape(value)) {
+    throw new Error("Invalid SoM dialogue-script layout.");
+  }
+  const dictionary = readSomDialogueDictionary(hexBytes(value.dictionaryHex));
+  let total = 0;
+  for (const [index, segment] of value.segments.entries()) {
+    if (index > 0 && segment.kind === value.segments[index - 1].kind) {
+      throw new Error("Dialogue segments must alternate raw/text.");
+    }
+    const bytes = hexBytes(segment.nativeHex);
+    if (!bytes.length || bytes.length > MAX_GLYPHS) {
+      throw new Error("Invalid dialogue segment size.");
+    }
+    if (segment.literal !== void 0 && segment.kind !== "text") {
+      throw new Error("Literal dialogue policy requires a text segment and boolean value.");
+    }
+    if (segment.literal === true && bytes.some((byte) => byte < 127 || byte > 210)) {
+      throw new Error("Literal dialogue requires uncompressed native glyphs.");
+    }
+    if (segment.kind === "text") {
+      parseGlyphs(decodeSomDialogue(bytes, dictionary));
+      validateLineGeometry(segment);
+    } else if (segment.lineColumns !== void 0 || segment.initialColumn !== void 0) {
+      throw new Error("Raw dialogue commands cannot carry text geometry.");
+    }
+    if (segment.commands !== void 0) {
+      if (segment.kind !== "raw" || segment.commands.length > bytes.length) {
+        throw new Error("Named dialogue commands require a bounded raw segment.");
+      }
+      let end = 0;
+      for (const slot of segment.commands) {
+        if (!Number.isSafeInteger(slot.offset) || slot.offset < end) {
+          throw new Error("Invalid or overlapping dialogue command slot.");
+        }
+        const command = encodeSomDialogueCommand(slot.token);
+        end = slot.offset + command.bytes.length;
+        if (end > bytes.length || !command.bytes.every((byte, i) => byte === bytes[slot.offset + i])) {
+          throw new Error("Named dialogue command disagrees with its native bytes.");
+        }
+      }
+    }
+    total += bytes.length;
+  }
+  if (total > 65536) {
+    throw new Error("Dialogue script exceeds one ROM bank.");
+  }
+  return value;
+}
+function rawParts(segment, index) {
+  const native = hexBytes(segment.nativeHex), parts2 = [];
+  let cursor = 0, opaque = 0;
+  for (const slot of segment.commands ?? []) {
+    if (slot.offset > cursor) {
+      parts2.push({
+        marker: `{raw:${index}:${opaque++}}`,
+        bytes: native.slice(cursor, slot.offset)
+      });
+    }
+    const bytes = encodeSomDialogueCommand(slot.token).bytes;
+    parts2.push({ marker: slot.token, bytes, slot });
+    cursor = slot.offset + bytes.length;
+  }
+  if (cursor < native.length) {
+    let marker = `{raw:${index}}`;
+    if (segment.commands?.length) {
+      marker = `{raw:${index}:${opaque}}`;
+    }
+    parts2.push({ marker, bytes: native.slice(cursor) });
+  }
+  return parts2;
+}
+function packSomDialogueScript(source, layout2, sizing = "fixed") {
+  if (!["fixed", "variable"].includes(sizing)) {
+    throw new Error("Invalid dialogue field sizing policy.");
+  }
+  if (source.some((byte) => byte > 127)) {
+    throw new Error("SoM dialogue source must be ASCII.");
+  }
+  readSomDialogueScriptLayout(layout2);
+  const dictionary = readSomDialogueDictionary(hexBytes(layout2.dictionaryHex));
+  let text = new TextDecoder().decode(source).replaceAll("\r\n", "\n");
+  if (text.includes("\r")) {
+    throw new Error("Bare carriage returns are not dialogue line breaks.");
+  }
+  if (layout2.segments.at(-1)?.kind === "raw" && text.endsWith("\n")) {
+    text = text.slice(0, -1);
+  }
+  const chunks = [], segments = [];
+  let cursor = 0, raw = 0, nativePreserved = true, originalOffset = 0, outputOffset = 0;
+  for (const segment of layout2.segments) {
+    const original = hexBytes(segment.nativeHex);
+    const firstChunk = chunks.length;
+    if (segment.kind === "raw") {
+      const index = raw++, legacy = `{raw:${index}}`;
+      if (text.startsWith(legacy, cursor)) {
+        cursor += legacy.length;
+        chunks.push(original);
+      } else {
+        for (const part of rawParts(segment, index)) {
+          if (!part.slot) {
+            if (!text.startsWith(part.marker, cursor)) {
+              throw new Error(`Missing or reordered command marker ${part.marker}.`);
+            }
+            cursor += part.marker.length;
+            chunks.push(part.bytes);
+            continue;
+          }
+          const match = /^\${[^{}]+}/.exec(text.slice(cursor));
+          if (!match) {
+            throw new Error(`Missing dialogue command ${part.slot.token}.`);
+          }
+          const command = encodeSomDialogueCommand(match[0]), expected = encodeSomDialogueCommand(part.slot.token);
+          if (command.family !== expected.family || command.bytes.length !== part.bytes.length) {
+            throw new Error("Dialogue command edit changed its admitted family or width.");
+          }
+          const preserved2 = command.bytes.every((byte, i) => byte === part.bytes[i]);
+          if (part.slot.editable === false && !preserved2) {
+            throw new Error("Dialogue command slot is read-only.");
+          }
+          nativePreserved &&= preserved2;
+          chunks.push(command.bytes);
+          cursor += match[0].length;
+        }
+      }
+    } else {
+      const boundaries = [text.indexOf("{raw:", cursor), text.indexOf("${", cursor)].filter(
+        (index) => index >= 0
+      );
+      const end = boundaries.length ? Math.min(...boundaries) : text.length;
+      let byteLength;
+      if (sizing === "fixed" || segment.literal === true) {
+        byteLength = original.length;
+      }
+      const encoded = encodeSomDialogue(text.slice(cursor, end), dictionary, {
+        original,
+        byteLength,
+        lineColumns: segment.lineColumns,
+        initialColumn: segment.initialColumn,
+        literal: segment.literal
+      });
+      nativePreserved &&= encoded.length === original.length && encoded.every((byte, index) => byte === original[index]);
+      chunks.push(encoded);
+      cursor = end;
+    }
+    const emitted = chunks.slice(firstChunk);
+    const length = emitted.reduce((sum, chunk2) => sum + chunk2.length, 0);
+    let position = 0;
+    const preserved = length === original.length && emitted.every((chunk2) => {
+      const matches = chunk2.every((byte, index) => byte === original[position + index]);
+      position += chunk2.length;
+      return matches;
+    });
+    segments.push({
+      kind: segment.kind,
+      originalOffset,
+      originalLength: original.length,
+      offset: outputOffset,
+      length,
+      preserved
+    });
+    originalOffset += original.length;
+    outputOffset += length;
+  }
+  if (cursor !== text.length) {
+    throw new Error("Unexpected text after the final command marker.");
+  }
+  const bytes = new Uint8Array(chunks.reduce((sum, chunk2) => sum + chunk2.length, 0));
+  if (bytes.length > 65536) {
+    throw new Error("Packed dialogue script exceeds one ROM bank.");
+  }
+  let offset = 0;
+  for (const chunk2 of chunks) {
+    bytes.set(chunk2, offset);
+    offset += chunk2.length;
+  }
+  return { bytes, segments, nativePreserved, fixedFieldOffsets: sizing === "fixed" };
+}
+function convertSomDialogueScript(source, options, resources) {
+  if (typeof options.layout !== "string" || !Object.hasOwn(resources, options.layout)) {
+    throw new Error("Dialogue layout resource is required.");
+  }
+  const layout2 = readSomDialogueScriptLayout(
+    JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(resources[options.layout].bytes))
+  );
+  const result = packSomDialogueScript(source.bytes, layout2);
+  const output = {
+    bytes: result.bytes,
+    mediaType: "application/octet-stream",
+    metadata: {
+      nativePreserved: result.nativePreserved,
+      fixedFieldOffsets: result.fixedFieldOffsets
+    }
+  };
+  return { primaryOutput: "script", outputs: { script: output } };
+}
+
 // packages/assets/src/secret-of-mana/som-world-rle.ts
 function decodeWorldRow(bytes, size = 512) {
   if (!Number.isSafeInteger(size) || size < 1 || size > 65536) {
@@ -18637,7 +20320,7 @@ function encodeWorldRow(bytes) {
   return Uint8Array.from(output);
 }
 
-// packages/assets/src/secret-of-mana/som-asset-plugin.ts
+// packages/game-secret-of-mana/src/assembly.ts
 var registry2 = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry2.registerEncoder(encoder);
@@ -18693,8 +20376,8 @@ function readBrrWave(source) {
 }
 function convertBrrWave(source, options = {}) {
   const { audio, native } = readBrrWave(source);
-  const decoded = native ? decodeBrrPcm(native) : void 0;
-  const unchanged = decoded?.length === audio.samples.length && decoded.every((sample, index) => sample === audio.samples[index]);
+  const decoded2 = native ? decodeBrrPcm(native) : void 0;
+  const unchanged = decoded2?.length === audio.samples.length && decoded2.every((sample, index) => sample === audio.samples[index]);
   let loop;
   if (options.loop !== void 0) {
     loop = resolveBrrAudioOptions({ loop: options.loop, padding: options.padding }, audio).loop;
@@ -18947,8 +20630,8 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
             throw new Error("actor group must be 0..2.");
           }
           const packed = encodeActor3bpp(native, group);
-          const decoded = decodeActor3bpp(packed, group);
-          if (decoded.length !== native.length || decoded.some((byte, index) => byte !== native[index])) {
+          const decoded2 = decodeActor3bpp(packed, group);
+          if (decoded2.length !== native.length || decoded2.some((byte, index) => byte !== native[index])) {
             throw new Error("Actor conversion failed exact inverse verification.");
           }
           return {
@@ -19026,121 +20709,9 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
     }
   });
 }
-var som_asset_plugin_default = createSomAssetPlugin();
+var assembly_default = createSomAssetPlugin();
 
-// packages/plugin-65xx/src/nes/assets.ts
-var NES_CHR_CODEC = "nes.chr.2bpp";
-var NES_TEXT_CODEC = "nes.text.tiles";
-function encodeNesChrPng(bytes) {
-  const png = readAssetPng(bytes);
-  if (png.colorType !== 3) {
-    throw new Error("NES CHR assets require an indexed PNG.");
-  }
-  const image = png.toIndexed({ copy: false });
-  if (!image.width || !image.height || image.width % 8 || image.height % 8 || image.indexes.some((value) => value > 3)) {
-    throw new Error("NES CHR assets require 8-pixel tile dimensions and indexes 0..3.");
-  }
-  const columns = image.width / 8;
-  const count = columns * image.height / 8;
-  const output = new Uint8Array(count * 16);
-  for (let tile = 0; tile < count; tile++) {
-    const left = tile % columns * 8;
-    const top = Math.floor(tile / columns) * 8;
-    for (let y = 0; y < 8; y++) {
-      for (let x = 0; x < 8; x++) {
-        const value = image.indexes[(top + y) * image.width + left + x];
-        output[tile * 16 + y] |= (value & 1) << 7 - x;
-        output[tile * 16 + y + 8] |= value >> 1 << 7 - x;
-      }
-    }
-  }
-  return output;
-}
-function nesTextMap(options) {
-  if (typeof options !== "object" || options === null || Array.isArray(options) || Object.keys(options).some((key) => key !== "characters") || !("characters" in options) || typeof options.characters !== "object" || options.characters === null || Array.isArray(options.characters)) {
-    throw new Error("NES tile text requires an explicit characters object.");
-  }
-  const result = /* @__PURE__ */ new Map();
-  const bytes = /* @__PURE__ */ new Set();
-  for (const [character, value] of Object.entries(options.characters)) {
-    if (character.length !== 1 || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 255 || bytes.has(value)) {
-      throw new Error("NES tile text mappings require unique characters and byte values.");
-    }
-    result.set(character, value);
-    bytes.add(value);
-  }
-  if (!result.size) {
-    throw new Error("NES tile text mappings must not be empty.");
-  }
-  return result;
-}
-var nesAssetFormats = [
-  {
-    id: NES_CHR_CODEC,
-    version: "1.0.0",
-    targets: ["65xx.nes"],
-    sourceRepresentations: [{ id: "indexed-png", mediaType: "image/png", extensions: [".png"] }],
-    convert(source, options) {
-      if (source.mediaType !== "image/png" || Object.keys(options).length) {
-        throw new Error("NES CHR conversion accepts an indexed PNG without options.");
-      }
-      return { primaryOutput: "chr", outputs: { chr: { bytes: encodeNesChrPng(source.bytes) } } };
-    }
-  },
-  {
-    id: NES_TEXT_CODEC,
-    version: "1.0.0",
-    targets: ["65xx.nes"],
-    optionSchema: {
-      characters: {
-        summary: "Explicit character-to-tile byte mapping",
-        valueSyntax: '{ A: $0A, " ": $FC }'
-      }
-    },
-    sourceRepresentations: [{ id: "utf8-text", mediaType: "text/plain", extensions: [".txt"] }],
-    convert(source, options) {
-      if (source.mediaType !== "text/plain") {
-        throw new Error("NES tile text requires UTF-8 text.");
-      }
-      const map = nesTextMap(options);
-      const text = new TextDecoder("utf-8", { fatal: true }).decode(source.bytes);
-      const bytes = Uint8Array.from(
-        // Mapping keys are single UTF-16 units; splitting uses the same contract and rejects unknown units.
-        text.split("").map((character) => {
-          const value = map.get(character);
-          if (value === void 0) {
-            throw new Error(`Unmapped NES text character ${JSON.stringify(character)}.`);
-          }
-          return value;
-        })
-      );
-      return { primaryOutput: "text", outputs: { text: { bytes } } };
-    }
-  }
-];
-
-// packages/language-server/src/asset-preview-conversion.ts
-var registry3 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(asepriteRasterImporter).registerImporter(waveImporter);
-for (const encoder of [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder]) {
-  registry3.registerEncoder(encoder);
-}
-function storagePixels(composed, width, height, indexByCoordinate) {
-  const widthTiles = width / 8;
-  const heightTiles = height / 8;
-  const result = new Uint8Array(composed.length);
-  for (let logical = 0; logical < indexByCoordinate.length; logical++) {
-    const storage = indexByCoordinate[logical];
-    if (!Number.isSafeInteger(storage) || storage < 0 || storage >= widthTiles * heightTiles) {
-      throw new Error("Image layout contains an invalid storage tile index.");
-    }
-    for (let row = 0; row < 8; row++) {
-      const source = ((Math.floor(logical / widthTiles) * 8 + row) * width + logical % widthTiles * 8) * 4;
-      const target = ((Math.floor(storage / widthTiles) * 8 + row) * width + storage % widthTiles * 8) * 4;
-      result.set(composed.subarray(source, source + 32), target);
-    }
-  }
-  return result;
-}
+// packages/game-secret-of-mana/src/preview.ts
 function convertSomFramePreview(input2) {
   let layout2 = readFrameLayout(input2.options, input2.resources);
   let catalog = readSpritePaletteCatalog(input2.options, input2.resources);
@@ -19301,7 +20872,7 @@ function convertSomBrrPreview(input2) {
   const sourceAudio = readPcmAudio(waveImporter.import(input2.source).value);
   const segment = input2.format === "som.brr.segment";
   const selected = segment ? sliceBrrSegment(native, input2.options) : native;
-  const decoded = decodeBrrPcm(native);
+  const decoded2 = decodeBrrPcm(native);
   const metadata = { ...converted.metadata, previewScope: "full-stream" };
   if (segment) {
     metadata.segmentStartByte = input2.options.startByte;
@@ -19317,24 +20888,4959 @@ function convertSomBrrPreview(input2) {
     metadata,
     waveformPngBase64: Buffer.from(waveformPreviewPng(sourceAudio.samples)).toString("base64"),
     sourceWavBase64: Buffer.from(input2.source.bytes).toString("base64"),
-    decodedWavBase64: Buffer.from(writePcmWave(decoded, sourceAudio.sampleRate)).toString("base64")
+    decodedWavBase64: Buffer.from(writePcmWave(decoded2, sourceAudio.sampleRate)).toString("base64")
   };
 }
-function convertAssetPreview(input2) {
+var somPreviewAdapters = Object.freeze([
+  { formats: ["som.room"], convert: convertSomRoomPreview },
+  { formats: ["som.brr.pcm", "som.brr.segment"], convert: convertSomBrrPreview },
+  { formats: ["som.palette.bgr555"], convert: convertSomPalettePreview },
+  { formats: ["som.sprite.frames", "som.boss.graphics"], convert: convertSomFramePreview }
+]);
+
+// packages/assets/src/data.ts
+var rawImporter = Object.freeze({
+  id: "uttori.import.raw",
+  version: "1.0.0",
+  mediaTypes: ["application/octet-stream"],
+  import: (input2) => ({
+    kind: "raw",
+    value: input2.bytes.slice()
+  })
+});
+var rawEncoder = Object.freeze({
+  id: "uttori.data.raw",
+  version: "1.0.0",
+  inputKinds: ["raw"],
+  primaryOutput: "data",
+  encode: (document2, options) => {
+    if (Object.keys(options).length !== 0) {
+      throw new Error("Raw encoding accepts no options.");
+    }
+    if (!(document2.value instanceof Uint8Array)) {
+      throw new Error("Raw document requires bytes.");
+    }
+    return {
+      outputs: { data: { bytes: document2.value.slice(), mediaType: "application/octet-stream" } },
+      fidelity: { kind: "exact", verification: "byte equality" },
+      normalizedOptions: {}
+    };
+  }
+});
+var jsonImporter = Object.freeze({
+  id: "uttori.import.json",
+  version: "1.0.0",
+  mediaTypes: ["application/json"],
+  import: (input2) => {
+    const value = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(input2.bytes)
+    );
+    if (value === null || typeof value !== "object" || Array.isArray(value) || !("kind" in value) || typeof value.kind !== "string") {
+      throw new Error("Asset JSON requires an object with a kind string.");
+    }
+    return { kind: value.kind, value };
+  }
+});
+
+// packages/plugin-65xx/src/ca65-profile.ts
+var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
+function isSessionStateKey(value) {
+  return value.id.length > 0;
+}
+function createSessionStateKey(id2) {
+  const key = { id: id2 };
+  if (!isSessionStateKey(key)) {
+    throw new Error(`Invalid session state key '${id2}'.`);
+  }
+  return key;
+}
+var ca65SessionStateKey = createSessionStateKey(
+  CA65_65XX_SESSION_STATE_ID
+);
+function createCa65SessionState() {
+  return {
+    defaultArchitecture: "65xx.6502",
+    currentArchitecture: "65xx.6502",
+    cpuStack: [],
+    scopeStack: [],
+    segmentStack: [],
+    currentFlatSegment: ""
+  };
+}
+function cloneCa65SessionState(state) {
+  return {
+    ...state,
+    cpuStack: [...state.cpuStack],
+    scopeStack: [...state.scopeStack],
+    segmentStack: [...state.segmentStack]
+  };
+}
+function resetCa65StageState(state) {
+  state.currentArchitecture = state.defaultArchitecture;
+  state.cpuStack = [];
+  state.scopeStack = [];
+  state.segmentStack = [];
+  state.currentFlatSegment = "";
+}
+var ca65CpuNames = Object.freeze({
+  "6502": "65xx.6502",
+  "6502x": "65xx.6502x",
+  "2a03": "65xx.2a03",
+  "2a07": "65xx.2a03",
+  "6502dtv": "65xx.6502dtv",
+  "65sc02": "65xx.65sc02",
+  "65c02": "65xx.65c02",
+  w65c02: "65xx.w65c02",
+  "65ce02": "65xx.65ce02",
+  "4510": "65xx.4510",
+  "45gs02": "65xx.45gs02",
+  huc6280: "65xx.huc6280",
+  m740: "65xx.m740"
+});
+function resolve65xxCpuName(name) {
+  return ca65CpuNames[name.trim().toLowerCase()];
+}
+var ca65CpuShorthands = Object.freeze({
+  p02: "6502",
+  p02x: "6502x",
+  pdtv: "6502dtv",
+  psc02: "65sc02",
+  pc02: "65c02",
+  pwc02: "w65c02",
+  pce02: "65ce02",
+  p4510: "4510",
+  p45gs02: "45gs02",
+  p6280: "huc6280",
+  pm740: "m740"
+});
+var cpuPredicateSymbols = Object.freeze({
+  ifp02: "__CA65_CPU_6502__",
+  ifp02x: "__CA65_CPU_6502X__",
+  ifpdtv: "__CA65_CPU_6502DTV__",
+  ifpsc02: "__CA65_CPU_65SC02__",
+  ifpc02: "__CA65_CPU_65C02__",
+  ifpwc02: "__CA65_CPU_W65C02__",
+  ifpce02: "__CA65_CPU_65CE02__",
+  ifp4510: "__CA65_CPU_4510__",
+  ifp45gs02: "__CA65_CPU_45GS02__",
+  ifp6280: "__CA65_CPU_HUC6280__",
+  ifpm740: "__CA65_CPU_M740__"
+});
+var ca65CpuPredicateByArchitecture = Object.freeze({
+  "65xx.6502": "__CA65_CPU_6502__",
+  "65xx.6502x": "__CA65_CPU_6502X__",
+  "65xx.2a03": "__CA65_CPU_6502X__",
+  "65xx.6502dtv": "__CA65_CPU_6502DTV__",
+  "65xx.65sc02": "__CA65_CPU_65SC02__",
+  "65xx.65c02": "__CA65_CPU_65C02__",
+  "65xx.w65c02": "__CA65_CPU_W65C02__",
+  "65xx.65ce02": "__CA65_CPU_65CE02__",
+  "65xx.4510": "__CA65_CPU_4510__",
+  "65xx.45gs02": "__CA65_CPU_45GS02__",
+  "65xx.huc6280": "__CA65_CPU_HUC6280__",
+  "65xx.m740": "__CA65_CPU_M740__"
+});
+function splitArguments(value) {
+  const parts2 = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(") {
+      depth++;
+    } else if (character === ")") {
+      depth--;
+    } else if (character === "," && depth === 0) {
+      parts2.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts2.push(value.slice(start).trim());
+  return parts2.filter(Boolean);
+}
+function rewriteScopedNames(value) {
+  let result = "";
+  let quote = "";
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if ((character === '"' || character === "'") && value[index - 1] !== "\\") {
+      quote = quote === character ? "" : quote || character;
+    }
+    if (!quote && character === ":" && value[index + 1] === ":") {
+      result += "_";
+      index++;
+    } else {
+      result += character;
+    }
+  }
+  return result;
+}
+function rewriteCa65Command(command, context) {
+  let rewritten = rewriteScopedNames(command);
+  rewritten = rewritten.replace(/\.(defined|lobyte|hibyte|bankbyte|loword|hiword)\s*\(/gi, "$1(");
+  rewritten = rewritten.replace(
+    /(^|[^\w@])@([0-7]+)\b/g,
+    (_match, prefix, digits) => `${prefix}${Number.parseInt(digits, 8)}`
+  );
+  rewritten = rewritten.replace(/<>/g, "!=");
+  const match = rewritten.match(/^(\s*)\.([\dA-Za-z]+)\b(.*)$/);
+  if (!match) {
+    return rewritten;
+  }
+  const [, indent, rawKeyword, rawRest] = match;
+  const keyword = rawKeyword.toLowerCase();
+  const rest = rawRest.trim();
+  const predicate = cpuPredicateSymbols[keyword];
+  if (predicate) {
+    return `${indent}if ${predicate}`;
+  }
+  if (["if", "elseif", "else", "endif"].includes(keyword)) {
+    return `${indent}${keyword}${rest ? ` ${rest}` : ""}`;
+  }
+  if (keyword === "ifdef") {
+    return `${indent}if defined(${rest})`;
+  }
+  if (keyword === "ifndef") {
+    return `${indent}if defined(${rest}) == 0`;
+  }
+  if (keyword === "macro") {
+    const header = rest.match(/^([A-Z_a-z]\w*)\s*(.*)$/);
+    if (!header) {
+      return rewritten;
+    }
+    const params = splitArguments(header[2]).join(",");
+    return `${indent}macro ${header[1]}(${params})`;
+  }
+  if (keyword === "endmacro") {
+    return `${indent}endmacro`;
+  }
+  if (keyword === "repeat") {
+    const [count = "0", variable = `__ca65_repeat_${context.sourceLine}`] = splitArguments(rest);
+    return `${indent}for ${variable} = 0..(${count})`;
+  }
+  if (keyword === "endrepeat") {
+    return `${indent}endfor`;
+  }
+  if (keyword === "undefine") {
+    return `${indent}undef ${rest}`;
+  }
+  return rewritten;
+}
+var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
+  ...CA65_SYNTAX_PROFILE,
+  id: "ca65-65xx",
+  rewriteCommand: rewriteCa65Command,
+  bareMacroInvocations: true,
+  macroParameterPrefix: "\\"
+});
+
+// packages/plugin-65xx/src/instructions/schema.ts
+function matchesFeatures(expression, features) {
+  if (expression.allOf?.some((feature) => !features.has(feature))) {
+    return false;
+  }
+  if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) {
+    return false;
+  }
+  if (expression.noneOf?.some((feature) => features.has(feature))) {
+    return false;
+  }
+  return true;
+}
+function getOperandCodec(mode) {
+  switch (mode) {
+    case "implied":
+    case "accumulator":
+    case "quadAccumulator":
+      return "none";
+    case "absolute":
+    case "absoluteIndexedX":
+    case "absoluteIndexedY":
+    case "indirect":
+    case "absoluteIndexedIndirect":
+      return "unsigned16-le";
+    case "absoluteLongIndexedX":
+      return "unsigned24-le";
+    case "relative":
+      return "relative8";
+    case "relative16":
+      return "relative16";
+    case "zeroPageRelative":
+      return "zero-page-relative8";
+    case "accumulatorRelative":
+      return "accumulator-relative8";
+    case "zeroPageImmediate":
+      return "zero-page-immediate8";
+    case "specialPage":
+      return "special-page";
+    case "blockTransfer":
+      return "three-unsigned16-le";
+    case "immediateZeroPage":
+    case "immediateZeroPageIndexedX":
+      return "immediate-unsigned8";
+    case "immediateAbsolute":
+    case "immediateAbsoluteIndexedX":
+      return "immediate-unsigned16";
+    case "immediate":
+    case "zeroPage":
+    case "zeroPageIndexedX":
+    case "zeroPageIndexedY":
+    case "zeroPageIndirect":
+    case "zeroPageIndirectLong":
+    case "indexedIndirectX":
+    case "indirectIndexedY":
+    case "zeroPageIndirectIndexedZ":
+    case "stackRelative":
+    case "stackRelativeIndirectIndexedY":
+    case "basePageIndirectIndexedZ":
+      return "unsigned8";
+  }
+  const leftover = mode;
+  throw new Error(`Unsupported addressing mode: ${String(leftover)}`);
+}
+function getOperandFields(codec) {
+  switch (codec) {
+    case "none":
+      return [];
+    case "unsigned16-le":
+      return [{ name: "address", width: 2 }];
+    case "unsigned24-le":
+      return [{ name: "address", width: 3 }];
+    case "relative8":
+      return [{ name: "target", width: 1, signed: true, relative: true }];
+    case "relative16":
+      return [{ name: "target", width: 2, signed: true, relative: true }];
+    case "zero-page-relative8":
+      return [
+        { name: "address", width: 1 },
+        { name: "target", width: 1, signed: true, relative: true }
+      ];
+    case "accumulator-relative8":
+      return [{ name: "target", width: 1, signed: true, relative: true }];
+    case "zero-page-immediate8":
+      return [
+        { name: "address", width: 1 },
+        { name: "value", width: 1 }
+      ];
+    case "special-page":
+      return [{ name: "address", width: 1 }];
+    case "three-unsigned16-le":
+      return [
+        { name: "source", width: 2 },
+        { name: "destination", width: 2 },
+        { name: "length", width: 2 }
+      ];
+    case "immediate-unsigned8":
+      return [
+        { name: "value", width: 1 },
+        { name: "address", width: 1 }
+      ];
+    case "immediate-unsigned16":
+      return [
+        { name: "value", width: 1 },
+        { name: "address", width: 2 }
+      ];
+    case "unsigned8":
+      return [{ name: "value", width: 1 }];
+  }
+  return [];
+}
+
+// packages/plugin-65xx/src/instructions/variant-tables.generated.ts
+var ca65EaTable = [
+  [
+    0,
+    0,
+    5,
+    13,
+    15,
+    21,
+    29,
+    31,
+    0,
+    25,
+    18,
+    0,
+    7,
+    17,
+    23,
+    1,
+    0,
+    0,
+    0,
+    3,
+    19,
+    9,
+    0,
+    9,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0
+  ],
+  [
+    8,
+    8,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    20,
+    28,
+    0,
+    128,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    36,
+    44,
+    15,
+    52,
+    60,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    137,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    58,
+    58,
+    198,
+    206,
+    0,
+    214,
+    222,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    26,
+    26,
+    230,
+    238,
+    0,
+    246,
+    254,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    96,
+    152,
+    0,
+    112,
+    158,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    32,
+    0,
+    0,
+    0,
+    0,
+    48,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    144,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    220,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    64,
+    1,
+    65,
+    0,
+    9,
+    73,
+    0,
+    0,
+    0,
+    0,
+    81,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    64,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    16,
+    0,
+    32,
+    48,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    234,
+    0,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    8,
+    8,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    20,
+    28,
+    0,
+    128,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    8,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    76,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    178,
+    108,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    5,
+    13,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0,
+    18,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0
+  ],
+  [
+    10,
+    10,
+    6,
+    14,
+    0,
+    22,
+    30,
+    0,
+    0,
+    0,
+    18,
+    0,
+    18,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    10
+  ],
+  [
+    3,
+    3,
+    4,
+    12,
+    0,
+    20,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3
+  ]
+];
+var ca65VariantTables = {
+  "4510": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 9479788, 160, 0, "Put4510"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["MAP", 1, 92, 0, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1091180, 128, 0, "Put4510"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  "6502DTV": [
+    ["ADC", 8430188, 96, 0, "PutAll"],
+    ["ALR", 8388608, 75, 0, "PutAll"],
+    ["ANC", 8388608, 11, 0, "PutAll"],
+    ["AND", 8430188, 32, 0, "PutAll"],
+    ["ANE", 8388608, 139, 0, "PutAll"],
+    ["ARR", 8388608, 107, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["AXS", 8388608, 203, 0, "PutAll"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 12, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 18, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8430188, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEC", 108, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8430188, 64, 0, "PutAll"],
+    ["INC", 108, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 2056, 76, 6, "PutJMP"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LAS", 512, 187, 0, "PutAll"],
+    ["LAX", 8430348, 163, 11, "PutAll"],
+    ["LDA", 8430188, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 8388717, 0, 10, "PutAll"],
+    ["ORA", 8430188, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["RLA", 41580, 35, 0, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RRA", 41580, 99, 0, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SAC", 8388608, 50, 1, "PutAll"],
+    ["SBC", 8430188, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SHA", 8704, 147, 1, "PutAll"],
+    ["SHX", 512, 158, 1, "PutAll"],
+    ["SHY", 64, 156, 1, "PutAll"],
+    ["SIR", 8388608, 66, 1, "PutAll"],
+    ["STA", 41580, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  "65SC02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  "65C02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  W65C02: [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STP", 1, 219, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["WAI", 1, 203, 0, "PutAll"]
+  ],
+  "65CE02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["AUG", 1, 92, 0, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 9479788, 160, 0, "Put4510"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1091180, 128, 0, "Put4510"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  "45GS02": [
+    ["ADC", 1082173036, 96, 0, "Put45GS02"],
+    ["ADCQ", 5132, 96, 13, "Put45GS02_Q"],
+    ["AND", 1082173036, 32, 0, "Put45GS02"],
+    ["ANDQ", 5132, 32, 13, "Put45GS02_Q"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASLQ", 2147483886, 0, 14, "Put45GS02_Q"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASRQ", 2147483686, 64, 15, "Put45GS02_Q"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BITQ", 12, 32, 15, "Put45GS02_Q"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 1, 0, 0, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 1082173036, 192, 0, "Put45GS02"],
+    ["CMPQ", 5132, 192, 13, "Put45GS02_Q"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEQ", 2147483886, 192, 14, "Put45GS02_Q"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 1082173036, 64, 0, "Put45GS02"],
+    ["EORQ", 5132, 64, 13, "Put45GS02_Q"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INQ", 2147483886, 224, 14, "Put45GS02_Q"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 1083221612, 160, 0, "Put45GS02"],
+    ["LDQ", 1073746956, 160, 13, "Put45GS02_Q"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["LSRQ", 2147483886, 64, 14, "Put45GS02_Q"],
+    ["MAP", 1, 92, 0, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 1082173036, 0, 0, "Put45GS02"],
+    ["ORQ", 5132, 0, 13, "Put45GS02_Q"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROLQ", 2147483886, 32, 14, "Put45GS02_Q"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RORQ", 2147483886, 96, 14, "Put45GS02_Q"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 1082173036, 224, 0, "Put45GS02"],
+    ["SBCQ", 5132, 224, 13, "Put45GS02_Q"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1074833004, 128, 0, "Put45GS02"],
+    ["STQ", 5132, 128, 13, "Put45GS02_Q"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  HuC6280: [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 131072, 68, 0, "PutPCRel8"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLA", 1, 98, 0, "PutAll"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CLX", 1, 130, 0, "PutAll"],
+    ["CLY", 1, 194, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CSH", 1, 212, 0, "PutAll"],
+    ["CSL", 1, 84, 0, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SAX", 1, 34, 0, "PutAll"],
+    ["SAY", 1, 66, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SET", 1, 244, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["ST0", 8388608, 3, 1, "PutAll"],
+    ["ST1", 8388608, 19, 1, "PutAll"],
+    ["ST2", 8388608, 35, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["SXY", 1, 2, 0, "PutAll"],
+    ["TAI", 33554432, 243, 0, "PutBlockTransfer"],
+    ["TAM", 8388608, 83, 1, "PutAll"],
+    ["TAM0", 1, 1, 0, "PutTAMn"],
+    ["TAM1", 1, 2, 0, "PutTAMn"],
+    ["TAM2", 1, 4, 0, "PutTAMn"],
+    ["TAM3", 1, 8, 0, "PutTAMn"],
+    ["TAM4", 1, 16, 0, "PutTAMn"],
+    ["TAM5", 1, 32, 0, "PutTAMn"],
+    ["TAM6", 1, 64, 0, "PutTAMn"],
+    ["TAM7", 1, 128, 0, "PutTAMn"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TDD", 33554432, 195, 0, "PutBlockTransfer"],
+    ["TIA", 33554432, 227, 0, "PutBlockTransfer"],
+    ["TII", 33554432, 115, 0, "PutBlockTransfer"],
+    ["TIN", 33554432, 211, 0, "PutBlockTransfer"],
+    ["TMA", 8388608, 67, 1, "PutTMA"],
+    ["TMA0", 1, 1, 0, "PutTMAn"],
+    ["TMA1", 1, 2, 0, "PutTMAn"],
+    ["TMA2", 1, 4, 0, "PutTMAn"],
+    ["TMA3", 1, 8, 0, "PutTMAn"],
+    ["TMA4", 1, 16, 0, "PutTMAn"],
+    ["TMA5", 1, 32, 0, "PutTMAn"],
+    ["TMA6", 1, 64, 0, "PutTMAn"],
+    ["TMA7", 1, 128, 0, "PutTMAn"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TST", 108, 131, 9, "PutTST"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  M740: [
+    ["ADC", 8430188, 96, 0, "PutAll"],
+    ["AND", 8430188, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBC0", 268435458, 19, 10, "PutBitBranch_m740"],
+    ["BBC1", 268435458, 51, 10, "PutBitBranch_m740"],
+    ["BBC2", 268435458, 83, 10, "PutBitBranch_m740"],
+    ["BBC3", 268435458, 115, 10, "PutBitBranch_m740"],
+    ["BBC4", 268435458, 147, 10, "PutBitBranch_m740"],
+    ["BBC5", 268435458, 179, 10, "PutBitBranch_m740"],
+    ["BBC6", 268435458, 211, 10, "PutBitBranch_m740"],
+    ["BBC7", 268435458, 243, 10, "PutBitBranch_m740"],
+    ["BBS0", 268435458, 3, 10, "PutBitBranch_m740"],
+    ["BBS1", 268435458, 35, 10, "PutBitBranch_m740"],
+    ["BBS2", 268435458, 67, 10, "PutBitBranch_m740"],
+    ["BBS3", 268435458, 99, 10, "PutBitBranch_m740"],
+    ["BBS4", 268435458, 131, 10, "PutBitBranch_m740"],
+    ["BBS5", 268435458, 163, 10, "PutBitBranch_m740"],
+    ["BBS6", 268435458, 195, 10, "PutBitBranch_m740"],
+    ["BBS7", 268435458, 227, 10, "PutBitBranch_m740"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 12, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 1, 0, 0, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLB0", 6, 27, 10, "PutAll"],
+    ["CLB1", 6, 59, 10, "PutAll"],
+    ["CLB2", 6, 91, 10, "PutAll"],
+    ["CLB3", 6, 123, 10, "PutAll"],
+    ["CLB4", 6, 155, 10, "PutAll"],
+    ["CLB5", 6, 187, 10, "PutAll"],
+    ["CLB6", 6, 219, 10, "PutAll"],
+    ["CLB7", 6, 251, 10, "PutAll"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLT", 1, 18, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8430188, 192, 0, "PutAll"],
+    ["COM", 4, 68, 1, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8430188, 64, 0, "PutAll"],
+    ["FST", 1, 226, 0, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 3080, 0, 12, "PutAll"],
+    ["JSR", 536871944, 0, 0, "PutJSR_m740"],
+    ["LDA", 8430188, 160, 0, "PutAll"],
+    ["LDM", 268435456, 60, 0, "PutLDM_m740"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8430188, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["RMB0", 6, 27, 10, "PutAll"],
+    ["RMB1", 6, 59, 10, "PutAll"],
+    ["RMB2", 6, 91, 10, "PutAll"],
+    ["RMB3", 6, 123, 10, "PutAll"],
+    ["RMB4", 6, 155, 10, "PutAll"],
+    ["RMB5", 6, 187, 10, "PutAll"],
+    ["RMB6", 6, 219, 10, "PutAll"],
+    ["RMB7", 6, 251, 10, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RRF", 4, 130, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8430188, 224, 0, "PutAll"],
+    ["SEB0", 6, 11, 10, "PutAll"],
+    ["SEB1", 6, 43, 10, "PutAll"],
+    ["SEB2", 6, 75, 10, "PutAll"],
+    ["SEB3", 6, 107, 10, "PutAll"],
+    ["SEB4", 6, 139, 10, "PutAll"],
+    ["SEB5", 6, 171, 10, "PutAll"],
+    ["SEB6", 6, 203, 10, "PutAll"],
+    ["SEB7", 6, 235, 10, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SET", 1, 50, 0, "PutAll"],
+    ["SLW", 1, 194, 0, "PutAll"],
+    ["STA", 41580, 128, 0, "PutAll"],
+    ["STP", 1, 66, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TST", 4, 100, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ]
+};
+
+// packages/plugin-65xx/src/instructions/variants.ts
+var commonModes = {
+  0: { mode: "implied" },
+  1: { mode: "accumulator" },
+  2: { mode: "zeroPage" },
+  3: { mode: "absolute" },
+  5: { mode: "zeroPageIndexedX" },
+  6: { mode: "absoluteIndexedX" },
+  7: { mode: "absoluteLongIndexedX", codec: "unsigned24-le" },
+  8: { mode: "zeroPageIndexedY" },
+  9: { mode: "absoluteIndexedY" },
+  11: { mode: "indirect" },
+  12: { mode: "zeroPageIndirectLong" },
+  13: { mode: "indirectIndexedY" },
+  15: { mode: "indexedIndirectX" },
+  16: { mode: "absoluteIndexedIndirect" },
+  17: { mode: "relative" },
+  18: { mode: "relative16" },
+  20: { mode: "stackRelativeIndirectIndexedY" },
+  21: { mode: "immediate" },
+  22: { mode: "immediate" },
+  23: { mode: "immediate" },
+  27: { mode: "immediate", codec: "unsigned16-le" },
+  30: { mode: "basePageIndirectIndexedZ" },
+  31: { mode: "quadAccumulator" }
+};
+var featureByTable = {
+  "6502DTV": "dtv",
+  "65SC02": "cmos",
+  "65C02": "rockwell",
+  W65C02: "wdc",
+  "65CE02": "ce02",
+  "4510": "4510",
+  "45GS02": "45gs02",
+  HuC6280: "huc6280",
+  M740: "m740"
+};
+function opcodeFor(row, modeIndex) {
+  if (row[4] === "PutJSR_m740") {
+    if (modeIndex === 10) {
+      return 2;
+    }
+    if (modeIndex === 29) {
+      return 34;
+    }
+    return 32;
+  }
+  if (row[4] === "PutBitBranch_m740") {
+    return modeIndex === 28 ? row[2] + 4 : row[2];
+  }
+  if (row[4] === "PutLDM_m740") {
+    return row[2];
+  }
+  const [, , base, eaTable] = row;
+  const eaRow = eaTable >= 0 && eaTable < ca65EaTable.length ? ca65EaTable[eaTable] : void 0;
+  const extension = eaRow !== void 0 && modeIndex >= 0 && modeIndex < eaRow.length ? eaRow[modeIndex] : void 0;
+  if (extension === void 0) {
+    throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
+  }
+  let opcode = base | extension;
+  if (row[4] === "Put4510" || row[4] === "Put45GS02") {
+    opcode = (/* @__PURE__ */ new Map([
+      [71, 68],
+      [87, 84],
+      [147, 130],
+      [156, 139],
+      [158, 155],
+      [175, 171],
+      [191, 187],
+      [179, 226],
+      [208, 194],
+      [252, 35]
+    ])).get(opcode) ?? opcode;
+  }
+  if (row[4] === "Put45GS02_Q") {
+    if (opcode === 234) {
+      opcode = 26;
+    } else if (opcode === 202) {
+      opcode = 58;
+    }
+  }
+  return opcode;
+}
+function modeFor(table, row, modeIndex) {
+  if (row[4] === "PutBlockTransfer" && modeIndex === 25) {
+    return { mode: "blockTransfer", codec: "three-unsigned16-le" };
+  }
+  if (row[4] === "PutTST") {
+    if (modeIndex === 2) {
+      return { mode: "immediateZeroPage", codec: "immediate-unsigned8" };
+    }
+    if (modeIndex === 3) {
+      return { mode: "immediateAbsolute", codec: "immediate-unsigned16" };
+    }
+    if (modeIndex === 5) {
+      return { mode: "immediateZeroPageIndexedX", codec: "immediate-unsigned8" };
+    }
+    if (modeIndex === 6) {
+      return { mode: "immediateAbsoluteIndexedX", codec: "immediate-unsigned16" };
+    }
+  }
+  if (row[4] === "PutBitBranch_m740") {
+    if (modeIndex === 1) {
+      return { mode: "accumulatorRelative", codec: "accumulator-relative8" };
+    }
+    if (modeIndex === 28) {
+      return { mode: "zeroPageRelative", codec: "zero-page-relative8" };
+    }
+  }
+  if (row[4] === "PutLDM_m740" && modeIndex === 28) {
+    return { mode: "zeroPageImmediate", codec: "zero-page-immediate8" };
+  }
+  if (row[4] === "PutJSR_m740" && modeIndex === 29) {
+    return { mode: "specialPage", codec: "special-page" };
+  }
+  if (modeIndex === 10) {
+    return table === "65CE02" || table === "4510" || table === "45GS02" ? { mode: "zeroPageIndirectIndexedZ" } : { mode: "zeroPageIndirect" };
+  }
+  return commonModes[modeIndex];
+}
+function createForm(table, row, modeIndex, modeDefinition) {
+  let opcode = opcodeFor(row, modeIndex);
+  const codec = modeDefinition.codec ?? getOperandCodec(modeDefinition.mode);
+  const prefixes = [];
+  if (row[4] === "PutTAMn") {
+    prefixes.push(83);
+    opcode = row[2];
+  } else if (row[4] === "PutTMAn") {
+    prefixes.push(67);
+    opcode = row[2];
+  } else if (row[4] === "Put45GS02_Q") {
+    prefixes.push(66, 66);
+    if (modeIndex === 12 || modeIndex === 30) {
+      prefixes.push(234);
+    }
+  } else if (row[4] === "Put45GS02" && modeIndex === 30) {
+    prefixes.push(234);
+  }
+  let relativeBaseOffset;
+  if (row[4] === "PutPCRel4510") {
+    relativeBaseOffset = 2;
+  } else if (row[4] === "PutBitBranch_m740") {
+    relativeBaseOffset = 3;
+  }
+  return Object.freeze({
+    opcode,
+    mnemonic: row[0],
+    mode: modeDefinition.mode,
+    encoding: [...prefixes, opcode],
+    operands: getOperandFields(codec),
+    codec,
+    availableWhen: { allOf: [featureByTable[table]] },
+    canonical: true,
+    documented: true,
+    stability: "documented",
+    relativeBaseOffset,
+    operandConstraint: row[4] === "PutTMA" ? "power-of-two" : void 0
+  });
+}
+function decodeTable(table) {
+  const forms = [];
+  for (const row of ca65VariantTables[table]) {
+    if (row[4] === "PutBitBranch") {
+      forms.push(
+        Object.freeze({
+          opcode: row[2],
+          mnemonic: row[0],
+          mode: "zeroPageRelative",
+          encoding: [row[2]],
+          operands: getOperandFields("zero-page-relative8"),
+          codec: "zero-page-relative8",
+          availableWhen: { allOf: [featureByTable[table]] },
+          canonical: true,
+          documented: true,
+          stability: "documented",
+          relativeBaseOffset: 3
+        })
+      );
+      continue;
+    }
+    if (row[4] === "PutPCRel8" || row[4] === "PutPCRel4510") {
+      const modeIndex = row[4] === "PutPCRel8" ? 17 : 18;
+      const modeDefinition = commonModes[modeIndex];
+      if (modeDefinition) {
+        forms.push(createForm(table, row, modeIndex, modeDefinition));
+      }
+      continue;
+    }
+    const seenModes = /* @__PURE__ */ new Set();
+    for (let modeIndex = 0; modeIndex < 32; modeIndex++) {
+      if ((row[1] & 2 ** modeIndex) === 0) {
+        continue;
+      }
+      if (modeIndex === 0 && (row[1] & 2) !== 0) {
+        continue;
+      }
+      const modeDefinition = modeFor(table, row, modeIndex);
+      if (!modeDefinition) {
+        throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
+      }
+      const key = `${modeDefinition.mode}:${modeDefinition.codec ?? ""}`;
+      if (seenModes.has(key)) {
+        continue;
+      }
+      seenModes.add(key);
+      forms.push(createForm(table, row, modeIndex, modeDefinition));
+    }
+  }
+  return Object.freeze(forms);
+}
+var mos6502DtvForms = decodeTable("6502DTV");
+var cmos65sc02Forms = decodeTable("65SC02");
+var cmos65c02Forms = decodeTable("65C02");
+var wdc65c02Forms = decodeTable("W65C02");
+var csg65ce02Forms = decodeTable("65CE02");
+var commodore4510Forms = decodeTable("4510");
+var mega65Gs02Forms = decodeTable("45GS02");
+var hudsonHuC6280Forms = decodeTable("HuC6280");
+var mitsubishiM740Forms = decodeTable("M740");
+var mos6502DtvCpu = Object.freeze({
+  id: "65xx.6502dtv",
+  displayName: "C64DTV 6502",
+  aliases: ["6502dtv", "dtv"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented", "dtv"])
+});
+var cmos65sc02Cpu = Object.freeze({
+  id: "65xx.65sc02",
+  displayName: "65SC02",
+  aliases: ["65sc02"],
+  features: /* @__PURE__ */ new Set(["cmos"])
+});
+var cmos65c02Cpu = Object.freeze({
+  id: "65xx.65c02",
+  displayName: "65C02 with Rockwell extensions",
+  aliases: ["65c02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell"])
+});
+var wdc65c02Cpu = Object.freeze({
+  id: "65xx.w65c02",
+  displayName: "WDC W65C02",
+  aliases: ["w65c02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "wdc"])
+});
+var csg65ce02Cpu = Object.freeze({
+  id: "65xx.65ce02",
+  displayName: "CSG 65CE02",
+  aliases: ["65ce02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02"])
+});
+var commodore4510Cpu = Object.freeze({
+  id: "65xx.4510",
+  displayName: "Commodore 4510",
+  aliases: ["4510"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02", "4510"])
+});
+var mega65Gs02Cpu = Object.freeze({
+  id: "65xx.45gs02",
+  displayName: "MEGA65 45GS02",
+  aliases: ["45gs02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02", "4510", "45gs02"])
+});
+var hudsonHuC6280Cpu = Object.freeze({
+  id: "65xx.huc6280",
+  displayName: "Hudson HuC6280",
+  aliases: ["huc6280", "6280"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "huc6280"])
+});
+var mitsubishiM740Cpu = Object.freeze({
+  id: "65xx.m740",
+  displayName: "Mitsubishi M740",
+  aliases: ["m740", "740"],
+  features: /* @__PURE__ */ new Set(["m740"])
+});
+var variantCpus = Object.freeze([
+  mos6502DtvCpu,
+  cmos65sc02Cpu,
+  cmos65c02Cpu,
+  wdc65c02Cpu,
+  csg65ce02Cpu,
+  commodore4510Cpu,
+  mega65Gs02Cpu,
+  hudsonHuC6280Cpu,
+  mitsubishiM740Cpu
+]);
+var variantFormsByCpuId = Object.freeze({
+  [mos6502DtvCpu.id]: mos6502DtvForms,
+  [cmos65sc02Cpu.id]: cmos65sc02Forms,
+  [cmos65c02Cpu.id]: cmos65c02Forms,
+  [wdc65c02Cpu.id]: wdc65c02Forms,
+  [csg65ce02Cpu.id]: csg65ce02Forms,
+  [commodore4510Cpu.id]: commodore4510Forms,
+  [mega65Gs02Cpu.id]: mega65Gs02Forms,
+  [hudsonHuC6280Cpu.id]: hudsonHuC6280Forms,
+  [mitsubishiM740Cpu.id]: mitsubishiM740Forms
+});
+
+// packages/plugin-65xx/src/instructions/opcodes.ts
+var rows = [
+  "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
+  "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
+  "JSR:abs AND:inx JAM:imp RLA:inx BIT:zp AND:zp ROL:zp RLA:zp PLP:imp AND:imm ROL:acc ANC:imm BIT:abs AND:abs ROL:abs RLA:abs",
+  "BMI:rel AND:iny JAM:imp RLA:iny NOP:zpx AND:zpx ROL:zpx RLA:zpx SEC:imp AND:aby NOP:imp RLA:aby NOP:abx AND:abx ROL:abx RLA:abx",
+  "RTI:imp EOR:inx JAM:imp SRE:inx NOP:zp EOR:zp LSR:zp SRE:zp PHA:imp EOR:imm LSR:acc ALR:imm JMP:abs EOR:abs LSR:abs SRE:abs",
+  "BVC:rel EOR:iny JAM:imp SRE:iny NOP:zpx EOR:zpx LSR:zpx SRE:zpx CLI:imp EOR:aby NOP:imp SRE:aby NOP:abx EOR:abx LSR:abx SRE:abx",
+  "RTS:imp ADC:inx JAM:imp RRA:inx NOP:zp ADC:zp ROR:zp RRA:zp PLA:imp ADC:imm ROR:acc ARR:imm JMP:ind ADC:abs ROR:abs RRA:abs",
+  "BVS:rel ADC:iny JAM:imp RRA:iny NOP:zpx ADC:zpx ROR:zpx RRA:zpx SEI:imp ADC:aby NOP:imp RRA:aby NOP:abx ADC:abx ROR:abx RRA:abx",
+  "NOP:imm STA:inx NOP:imm SAX:inx STY:zp STA:zp STX:zp SAX:zp DEY:imp NOP:imm TXA:imp ANE:imm STY:abs STA:abs STX:abs SAX:abs",
+  "BCC:rel STA:iny JAM:imp SHA:iny STY:zpx STA:zpx STX:zpy SAX:zpy TYA:imp STA:aby TXS:imp TAS:aby SHY:abx STA:abx SHX:aby SHA:aby",
+  "LDY:imm LDA:inx LDX:imm LAX:inx LDY:zp LDA:zp LDX:zp LAX:zp TAY:imp LDA:imm TAX:imp LAX:imm LDY:abs LDA:abs LDX:abs LAX:abs",
+  "BCS:rel LDA:iny JAM:imp LAX:iny LDY:zpx LDA:zpx LDX:zpy LAX:zpy CLV:imp LDA:aby TSX:imp LAS:aby LDY:abx LDA:abx LDX:aby LAX:aby",
+  "CPY:imm CMP:inx NOP:imm DCP:inx CPY:zp CMP:zp DEC:zp DCP:zp INY:imp CMP:imm DEX:imp AXS:imm CPY:abs CMP:abs DEC:abs DCP:abs",
+  "BNE:rel CMP:iny JAM:imp DCP:iny NOP:zpx CMP:zpx DEC:zpx DCP:zpx CLD:imp CMP:aby NOP:imp DCP:aby NOP:abx CMP:abx DEC:abx DCP:abx",
+  "CPX:imm SBC:inx NOP:imm ISC:inx CPX:zp SBC:zp INC:zp ISC:zp INX:imp SBC:imm NOP:imp SBC:imm CPX:abs SBC:abs INC:abs ISC:abs",
+  "BEQ:rel SBC:iny JAM:imp ISC:iny NOP:zpx SBC:zpx INC:zpx ISC:zpx SED:imp SBC:aby NOP:imp ISC:aby NOP:abx SBC:abx INC:abx ISC:abx"
+];
+var modeNames = {
+  imp: "implied",
+  acc: "accumulator",
+  imm: "immediate",
+  zp: "zeroPage",
+  zpx: "zeroPageIndexedX",
+  zpy: "zeroPageIndexedY",
+  abs: "absolute",
+  abx: "absoluteIndexedX",
+  aby: "absoluteIndexedY",
+  ind: "indirect",
+  inx: "indexedIndirectX",
+  iny: "indirectIndexedY",
+  rel: "relative"
+};
+var legalOpcodes = /* @__PURE__ */ new Set([
+  0,
+  1,
+  5,
+  6,
+  8,
+  9,
+  10,
+  13,
+  14,
+  16,
+  17,
+  21,
+  22,
+  24,
+  25,
+  29,
+  30,
+  32,
+  33,
+  36,
+  37,
+  38,
+  40,
+  41,
+  42,
+  44,
+  45,
+  46,
+  48,
+  49,
+  53,
+  54,
+  56,
+  57,
+  61,
+  62,
+  64,
+  65,
+  69,
+  70,
+  72,
+  73,
+  74,
+  76,
+  77,
+  78,
+  80,
+  81,
+  85,
+  86,
+  88,
+  89,
+  93,
+  94,
+  96,
+  97,
+  101,
+  102,
+  104,
+  105,
+  106,
+  108,
+  109,
+  110,
+  112,
+  113,
+  117,
+  118,
+  120,
+  121,
+  125,
+  126,
+  129,
+  132,
+  133,
+  134,
+  136,
+  138,
+  140,
+  141,
+  142,
+  144,
+  145,
+  148,
+  149,
+  150,
+  152,
+  153,
+  154,
+  157,
+  160,
+  161,
+  162,
+  164,
+  165,
+  166,
+  168,
+  169,
+  170,
+  172,
+  173,
+  174,
+  176,
+  177,
+  180,
+  181,
+  182,
+  184,
+  185,
+  186,
+  188,
+  189,
+  190,
+  192,
+  193,
+  196,
+  197,
+  198,
+  200,
+  201,
+  202,
+  204,
+  205,
+  206,
+  208,
+  209,
+  213,
+  214,
+  216,
+  217,
+  221,
+  222,
+  224,
+  225,
+  228,
+  229,
+  230,
+  232,
+  233,
+  234,
+  236,
+  237,
+  238,
+  240,
+  241,
+  245,
+  246,
+  248,
+  249,
+  253,
+  254
+]);
+var aliases = {
+  ALR: ["ASR"],
+  ANC: ["AAC"],
+  ANE: ["XAA"],
+  AXS: ["SBX"],
+  DCP: ["DCM"],
+  ISC: ["ISB", "INS"],
+  JAM: ["KIL", "HLT"],
+  LAS: ["LAR"],
+  SAX: ["AAX"],
+  SHA: ["AHX"],
+  SHX: ["SXA"],
+  SHY: ["SYA"],
+  SRE: ["LSE"],
+  TAS: ["SHS"]
+};
+var unstable = /* @__PURE__ */ new Set([
+  "ANE:immediate",
+  "LAX:immediate",
+  "SHA:indirectIndexedY",
+  "SHA:absoluteIndexedY",
+  "SHX:absoluteIndexedY",
+  "SHY:absoluteIndexedX",
+  "TAS:absoluteIndexedY"
+]);
+var decoded = rows.flatMap((row) => row.split(" "));
+if (decoded.length !== 256) {
+  throw new Error(`Expected 256 NMOS opcode entries, got ${decoded.length}.`);
+}
+var mutableForms = decoded.map((entry, opcode) => {
+  const [mnemonic, shortMode] = entry.split(":");
+  const mode = modeNames[shortMode];
+  if (!mnemonic || !mode) {
+    throw new Error(`Invalid opcode table entry '${entry}' at $${opcode.toString(16)}.`);
+  }
+  const documented = legalOpcodes.has(opcode);
+  const codec = getOperandCodec(mode);
+  const key = `${mnemonic}:${mode}`;
+  let stability = "stable-undocumented";
+  if (documented) {
+    stability = "documented";
+  } else if (unstable.has(key)) {
+    stability = "unstable-undocumented";
+  }
+  let note;
+  if (unstable.has(key)) {
+    note = "Opcode semantics are unstable or chip-dependent. Assembly emits the canonical ca65-compatible byte.";
+  } else if (opcode === 108) {
+    note = "NMOS hardware wraps the high-byte fetch within the same page when the indirect pointer ends in $FF.";
+  }
+  return {
+    opcode,
+    mnemonic,
+    aliases: aliases[mnemonic],
+    mode,
+    encoding: [opcode],
+    operands: getOperandFields(codec),
+    codec,
+    availableWhen: { allOf: documented ? ["nmos"] : ["nmos", "undocumented"] },
+    canonical: false,
+    documented,
+    stability,
+    note
+  };
+});
+var groups = /* @__PURE__ */ new Map();
+for (const form of mutableForms) {
+  const key = `${form.mnemonic}:${form.mode}`;
+  const group = groups.get(key) ?? [];
+  group.push(form);
+  groups.set(key, group);
+}
+for (const group of groups.values()) {
+  const documented = group.find((form) => form.documented);
+  const fallback = group.length > 0 ? group[0] : void 0;
+  const preferred = documented ?? fallback;
+  if (preferred) {
+    preferred.canonical = true;
+  }
+}
+var nmos6502DecodeTable = Object.freeze(
+  mutableForms.map((form) => Object.freeze({ ...form }))
+);
+var brkSignatureForms = Object.freeze(
+  ["immediate", "zeroPage", "absolute"].map((mode) => ({
+    opcode: 0,
+    mnemonic: "BRK",
+    mode,
+    encoding: [0],
+    operands: [{ name: "signature", width: 1 }],
+    codec: "unsigned8",
+    availableWhen: { allOf: ["nmos"] },
+    canonical: true,
+    documented: true,
+    stability: "documented",
+    note: "Current ca65-guide BRK signature extension. Pinned ca65 V2.19 rejects this form."
+  }))
+);
+var nmos6502Forms = Object.freeze([
+  ...nmos6502DecodeTable.filter((form) => form.documented && form.canonical),
+  ...brkSignatureForms
+]);
+var nmos6502xForms = Object.freeze([
+  ...nmos6502DecodeTable.filter((form) => form.canonical),
+  ...brkSignatureForms
+]);
+var nmos6502Cpu = Object.freeze({
+  id: "65xx.6502",
+  displayName: "NMOS 6502",
+  aliases: ["6502", "6510", "8502", "6507"],
+  features: /* @__PURE__ */ new Set(["nmos"])
+});
+var nmos6502xCpu = Object.freeze({
+  id: "65xx.6502x",
+  displayName: "NMOS 6502 with undocumented opcodes",
+  aliases: ["6502x"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented"])
+});
+var ricoh2a03Cpu = Object.freeze({
+  id: "65xx.2a03",
+  displayName: "Ricoh 2A03 / 2A07",
+  aliases: ["2a03", "2a07"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented"])
+});
+function cpuVariantForms(cpuId) {
+  return Object.hasOwn(variantFormsByCpuId, cpuId) ? variantFormsByCpuId[cpuId] : void 0;
+}
+function getCpuDecodeTable(cpu) {
+  const variantForms = cpuVariantForms(cpu.id);
+  if (variantForms) {
+    return variantForms;
+  }
+  return nmos6502DecodeTable.filter((form) => matchesFeatures(form.availableWhen, cpu.features));
+}
+function getCpuAssemblyForms(cpu) {
+  const variantForms = cpuVariantForms(cpu.id);
+  if (variantForms) {
+    return variantForms;
+  }
+  return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
+}
+
+// packages/plugin-65xx/src/decoder.ts
+var hex = (value, width = 2) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+var sizeOf = (form) => form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
+function cpu6502Specifications(cpu) {
+  return getCpuDecodeTable(cpu).map((form) => ({
+    id: `${cpu.id}:${form.opcode.toString(16).padStart(2, "0")}`,
+    architecture: cpu.id,
+    opcode: form.encoding,
+    mnemonic: form.mnemonic,
+    mode: form.mode,
+    minimumSize: sizeOf(form),
+    maximumSize: sizeOf(form),
+    summary: form.note
+  }));
+}
+var Cpu6502Decoder = class {
+  constructor(cpu = nmos6502Cpu) {
+    this.cpu = cpu;
+    if (!cpu.features.has("nmos") || cpu.features.has("dtv")) {
+      throw new Error("The NMOS decoder requires an NMOS 6502 or Ricoh CPU profile.");
+    }
+    this.#forms = new Map(getCpuDecodeTable(cpu).map((form) => [form.opcode, form]));
+  }
+  cpu;
+  #forms;
+  decode(context) {
+    const { source, offset, logicalAddress } = context;
+    if (!Number.isInteger(logicalAddress) || logicalAddress < 0 || logicalAddress > 65535) {
+      return {
+        kind: "error",
+        code: "invalidState",
+        offset,
+        message: "6502 PC must be an unsigned 16-bit address."
+      };
+    }
+    const opcode = source.readByte(offset);
+    if (opcode === void 0) {
+      return {
+        kind: "error",
+        code: "outOfBounds",
+        offset,
+        message: "Opcode is outside the byte source."
+      };
+    }
+    const form = this.#forms.get(opcode);
+    if (!form) {
+      return {
+        kind: "error",
+        code: "invalidOpcode",
+        offset,
+        message: `Unsupported ${this.cpu.id} opcode ${hex(opcode)}.`
+      };
+    }
+    const size = sizeOf(form);
+    const bytes = source.readBytes(offset, size);
+    if (!bytes) {
+      return {
+        kind: "error",
+        code: "truncated",
+        offset,
+        requiredBytes: size,
+        availableBytes: Math.max(0, source.length - offset),
+        message: "Truncated 6502 instruction."
+      };
+    }
+    let value = bytes[1] ?? 0;
+    if (size === 3) {
+      value |= bytes[2] << 8;
+    }
+    const operands = [];
+    const references = [];
+    let flow = { kind: "fallthrough", fallthrough: true };
+    if (form.mode === "relative") {
+      const displacement = value >= 128 ? value - 256 : value;
+      const targetAddress = logicalAddress + size + displacement & 65535;
+      operands.push({
+        kind: "displacement",
+        value: displacement,
+        width: 1,
+        signed: true,
+        targetAddress
+      });
+      references.push({ kind: "branch", address: targetAddress, operandIndex: 0 });
+      flow = { kind: "conditionalBranch", fallthrough: true };
+    } else if (size > 1) {
+      const immediate = form.mode === "immediate";
+      operands.push({ kind: immediate ? "immediate" : "address", value, width: size - 1 });
+      if (!immediate) {
+        const indirect = form.mode === "indirect" || form.mode === "indexedIndirectX" || form.mode === "indirectIndexedY";
+        let kind = "data";
+        if (form.mnemonic === "JSR") {
+          kind = "call";
+        }
+        if (form.mnemonic === "JMP") {
+          kind = "jump";
+        }
+        references.push({ kind, address: value, indirect, operandIndex: 0 });
+      }
+    } else if (form.mode === "accumulator") {
+      operands.push({ kind: "accumulator", register: "a" });
+    }
+    if (form.mnemonic === "JSR") {
+      flow = { kind: "call", fallthrough: true };
+    }
+    if (form.mnemonic === "JMP") {
+      flow = { kind: "jump", fallthrough: false, indirect: form.mode === "indirect" };
+    }
+    if (form.mnemonic === "RTS" || form.mnemonic === "RTI") {
+      flow = { kind: "return", fallthrough: false };
+    }
+    if (form.mnemonic === "BRK") {
+      flow = { kind: "interrupt", fallthrough: false };
+    }
+    if (form.mnemonic === "JAM") {
+      flow = { kind: "stop", fallthrough: false };
+    }
+    return {
+      kind: "instruction",
+      instruction: {
+        architecture: this.cpu.id,
+        specificationId: `${this.cpu.id}:${opcode.toString(16).padStart(2, "0")}`,
+        opcode,
+        mnemonic: form.mnemonic,
+        mode: form.mode,
+        offset,
+        logicalAddress,
+        bytes,
+        size,
+        operands,
+        references,
+        flow,
+        effects: [{ kind: "custom", name: "nmos6502", details: { opcode } }]
+      }
+    };
+  }
+};
+
+// packages/plugin-65xx/src/session-state.ts
+var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
+function isSessionStateKey2(value) {
+  return value.id.length > 0;
+}
+function createSessionStateKey2(id2) {
+  const key = { id: id2 };
+  if (!isSessionStateKey2(key)) {
+    throw new Error(`Invalid session state key '${id2}'.`);
+  }
+  return key;
+}
+var nes65xxSessionStateKey = createSessionStateKey2(NES_65XX_SESSION_STATE_ID);
+function cloneNes65xxSessionState(value) {
+  return {
+    ...value,
+    header: [...value.header],
+    memoryCursors: { ...value.memoryCursors }
+  };
+}
+function resetNes65xxStageState(state) {
+  state.memoryCursors = {};
+  for (const memory of state.linker.memories.values()) {
+    state.memoryCursors[memory.name] = memory.start;
+  }
+  state.currentSegment = null;
+  state.currentLoadMemory = null;
+  state.segmentLoadStart = 0;
+  state.segmentRunStart = 0;
+}
+
+// packages/plugin-65xx/src/directives/ca65.ts
+function parameterList(words) {
+  const joined = words.slice(1).join(" ");
+  const parts2 = [];
+  let current = "";
+  let parenDepth = 0;
+  let quote;
+  for (const char of joined) {
+    if (quote) {
+      current += char;
+      if (char === quote) {
+        quote = void 0;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === "(") {
+      parenDepth++;
+    } else if (char === ")") {
+      parenDepth--;
+    }
+    if (char === "," && parenDepth === 0) {
+      const trimmed2 = current.trim();
+      if (trimmed2) {
+        parts2.push(trimmed2);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed) {
+    parts2.push(trimmed);
+  }
+  return parts2;
+}
+function markGlobalSymbol(session, name) {
+  if (!name) {
+    return;
+  }
+  const localKey = session.symbolScope.qualifySymbolName(name);
+  session.globalSymbols.add(name);
+  if (localKey !== name) {
+    const existing = session.labelTable.get(localKey);
+    if (existing) {
+      session.symbolScope.setLabel(name, existing.value, existing.isStatic);
+    }
+  }
+}
+function closeActiveSegment(session, state) {
+  if (!state.currentSegment) {
+    return;
+  }
+  const segment = state.linker.segments.get(state.currentSegment);
+  if (!segment) {
+    state.currentSegment = null;
+    return;
+  }
+  const size = session.currentTargetBaseAddress - state.segmentLoadStart;
+  state.memoryCursors[segment.load] = session.currentTargetBaseAddress;
+  if (segment.define) {
+    const loadName = `__${segment.name}_LOAD__`;
+    const runName = `__${segment.name}_RUN__`;
+    const sizeName = `__${segment.name}_SIZE__`;
+    const runEndName = `__${segment.name}_RUN_END__`;
+    session.globalSymbols.add(loadName);
+    session.globalSymbols.add(runName);
+    session.globalSymbols.add(sizeName);
+    session.globalSymbols.add(runEndName);
+    session.symbolScope.setLabel(loadName, state.segmentLoadStart, true);
+    session.symbolScope.setLabel(runName, state.segmentRunStart, true);
+    session.symbolScope.setLabel(sizeName, size, true);
+    session.symbolScope.setLabel(runEndName, state.segmentRunStart + size, true);
+  }
+  state.currentSegment = null;
+  state.currentLoadMemory = null;
+}
+function applyLinkerSymbols(session, state) {
+  for (const symbol of state.linker.symbols) {
+    session.globalSymbols.add(symbol.name);
+    const value = session.operandResolver.getnum(symbol.valueExpr);
+    session.symbolScope.setLabel(symbol.name, value, true);
+  }
+}
+function openSegment(session, state, segment) {
+  const loadMemory = state.linker.memories.get(segment.load);
+  const runMemory = state.linker.memories.get(segment.run);
+  if (!loadMemory || !runMemory) {
+    throw new Error(`.segment "${segment.name}" references unknown MEMORY.`);
+  }
+  const loadCursor = Object.hasOwn(state.memoryCursors, segment.load) ? state.memoryCursors[segment.load] : void 0;
+  const loadStart = segment.start ?? loadCursor ?? loadMemory.start;
+  session.setWritePosition(loadStart);
+  const runStart = segment.run === segment.load ? loadStart : runMemory.start;
+  if (runStart !== loadStart) {
+    session.currentTargetAddress = runStart;
+    session.currentTargetStartAddress = runStart;
+  }
+  state.currentSegment = segment.name;
+  state.currentLoadMemory = segment.load;
+  state.segmentLoadStart = loadStart;
+  state.segmentRunStart = runStart;
+}
+function handlePushcpu(session, state) {
+  state.cpuStack.push(session.resolveActiveArchitecture().name);
+}
+function handlePopcpu(session, state) {
+  const architecture = state.cpuStack.pop();
+  if (!architecture) {
+    throw new Error(".popcpu: CPU stack is empty.");
+  }
+  session.selectArchitecture(architecture, architecture);
+  state.currentArchitecture = architecture;
+}
+function handleEndScope(session, state) {
+  const previous = state.scopeStack.pop();
+  if (previous === void 0) {
+    throw new Error("ca65 scope stack is empty.");
+  }
+  session.currentNamespace = previous;
+}
+function handlePushseg(state) {
+  state.segmentStack.push(state.currentFlatSegment);
+}
+function handlePopseg(state) {
+  const segment = state.segmentStack.pop();
+  if (segment === void 0) {
+    throw new Error(".popseg: segment stack is empty.");
+  }
+  state.currentFlatSegment = segment;
+}
+
+// packages/plugin-65xx/src/linker-config.ts
+var DEFAULT_LINKER_CONFIG = `MEMORY {
+    ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
+}
+SEGMENTS {
+    CODE: load = ROM, type = ro ;
+}
+`;
+function defaultLd65ConfigText() {
+  return DEFAULT_LINKER_CONFIG;
+}
+function parseLd65Config(source) {
+  const text = source.replace(/\/\*[\S\s]*?\*\//g, " ");
+  const memories = /* @__PURE__ */ new Map();
+  const segments = /* @__PURE__ */ new Map();
+  const symbols = [];
+  let fileOffset = 0;
+  for (const statement of readBlockStatements(text, "MEMORY")) {
+    const parsed = parseNamedStatement(statement);
+    const start = requireNumber(parsed.attrs, "start", parsed.name);
+    const size = requireNumber(parsed.attrs, "size", parsed.name);
+    const file = parsed.attrs.file ?? "%O";
+    const isRam = file === '""' || file === "''" || file === "";
+    const region = {
+      name: parsed.name,
+      start,
+      size,
+      fileOffset: isRam ? -1 : fileOffset,
+      fill: parseYesNo(parsed.attrs.fill) ?? false,
+      fillval: parseNumberToken(parsed.attrs.fillval ?? "0") ?? 0
+    };
+    memories.set(region.name, region);
+    if (!isRam) {
+      fileOffset += size;
+    }
+  }
+  for (const statement of readBlockStatements(text, "SEGMENTS")) {
+    const parsed = parseNamedStatement(statement);
+    const load = parsed.attrs.load;
+    if (!load) {
+      throw new Error(`ld65 segment '${parsed.name}' is missing load = MEMORY.`);
+    }
+    if (!memories.has(load)) {
+      throw new Error(`ld65 segment '${parsed.name}' loads unknown memory '${load}'.`);
+    }
+    const run = parsed.attrs.run ?? load;
+    if (!memories.has(run)) {
+      throw new Error(`ld65 segment '${parsed.name}' runs in unknown memory '${run}'.`);
+    }
+    segments.set(parsed.name, {
+      name: parsed.name,
+      load,
+      run,
+      start: parseNumberToken(parsed.attrs.start),
+      define: parseYesNo(parsed.attrs.define) ?? false,
+      type: parsed.attrs.type ?? "ro"
+    });
+  }
+  for (const statement of readBlockStatements(text, "SYMBOLS")) {
+    const parsed = parseNamedStatement(statement);
+    const valueExpr = parsed.attrs.value;
+    if (!valueExpr) {
+      throw new Error(`ld65 symbol '${parsed.name}' is missing value = EXPR.`);
+    }
+    symbols.push({ name: parsed.name, valueExpr });
+  }
+  if (memories.size === 0) {
+    throw new Error("ld65 config MEMORY block is empty.");
+  }
+  return {
+    memories,
+    segments,
+    symbols,
+    imageSize: fileOffset
+  };
+}
+function linkerDefinedSymbolNames(config) {
+  const names = [];
+  for (const segment of config.segments.values()) {
+    if (!segment.define) {
+      continue;
+    }
+    names.push(
+      `__${segment.name}_LOAD__`,
+      `__${segment.name}_RUN__`,
+      `__${segment.name}_SIZE__`,
+      `__${segment.name}_RUN_END__`
+    );
+  }
+  for (const symbol of config.symbols) {
+    names.push(symbol.name);
+  }
+  return names;
+}
+var LD65_BLOCK_BODY = {
+  MEMORY: /memory\s*{([\S\s]*?)}/i,
+  SEGMENTS: /segments\s*{([\S\s]*?)}/i,
+  SYMBOLS: /symbols\s*{([\S\s]*?)}/i
+};
+function readBlockStatements(source, block) {
+  const match = source.match(LD65_BLOCK_BODY[block]);
+  if (!match) {
+    return [];
+  }
+  return match[1].split(";").map((entry) => entry.trim()).filter(Boolean);
+}
+function parseNamedStatement(statement) {
+  const colon = statement.indexOf(":");
+  if (colon <= 0) {
+    throw new Error(`Invalid ld65 statement: ${statement}`);
+  }
+  const name = statement.slice(0, colon).trim();
+  const attrs = {};
+  for (const part of splitTopLevelCommas(statement.slice(colon + 1))) {
+    const equals = part.indexOf("=");
+    if (equals <= 0) {
+      continue;
+    }
+    const key = part.slice(0, equals).trim().toLowerCase();
+    const value = part.slice(equals + 1).trim();
+    attrs[key] = value;
+  }
+  return { name, attrs };
+}
+function splitTopLevelCommas(input2) {
+  const parts2 = [];
+  let current = "";
+  let quote;
+  for (const char of input2) {
+    if (quote) {
+      current += char;
+      if (char === quote) {
+        quote = void 0;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ",") {
+      const trimmed2 = current.trim();
+      if (trimmed2) {
+        parts2.push(trimmed2);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed) {
+    parts2.push(trimmed);
+  }
+  return parts2;
+}
+function parseNumberToken(token) {
+  if (token === void 0 || token === "") {
+    return void 0;
+  }
+  if (token.startsWith("$")) {
+    const value = Number.parseInt(token.slice(1), 16);
+    return Number.isFinite(value) ? value : void 0;
+  }
+  if (/^-?\d+$/.test(token)) {
+    return Number.parseInt(token, 10);
+  }
+  return void 0;
+}
+function requireNumber(attrs, key, owner) {
+  const value = parseNumberToken(attrs[key]);
+  if (value === void 0) {
+    throw new Error(`ld65 '${owner}' is missing numeric ${key}.`);
+  }
+  return value;
+}
+function parseYesNo(raw) {
+  if (raw === void 0) {
+    return void 0;
+  }
+  const normalized = raw.toLowerCase();
+  if (normalized === "yes" || normalized === "true") {
+    return true;
+  }
+  if (normalized === "no" || normalized === "false") {
+    return false;
+  }
+  return void 0;
+}
+
+// packages/plugin-65xx/src/target/nes.ts
+var NES_65XX_TARGET_ID = "65xx.nes";
+var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
+var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
+var NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
+var INES_MAGIC = [78, 69, 83, 26];
+function isRecord7(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function createNes65xxTargetOptions(configured) {
+  const value = isRecord7(configured) ? configured : {};
+  const sourceStyle = value.sourceStyle ?? "ca65";
+  if (sourceStyle !== "asar" && sourceStyle !== "ca65") {
+    throw new Error("NES sourceStyle must be 'asar' or 'ca65'.");
+  }
+  const linkerConfig = typeof value.linkerConfig === "string" && value.linkerConfig.trim() ? value.linkerConfig : defaultLd65ConfigText();
+  const linker = parseLd65Config(linkerConfig);
+  const fillByte = typeof value.fillByte === "number" && Number.isInteger(value.fillByte) ? value.fillByte & 255 : 255;
+  const header = normalizeHeader(value.header, linker.imageSize);
+  return { header, linkerConfig, fillByte, linker, sourceStyle };
+}
+function createInitialNesState(context) {
+  const options = createNes65xxTargetOptions(context.targetOptions);
+  const state = {
+    header: options.header,
+    fillByte: options.fillByte,
+    linker: options.linker,
+    memoryCursors: {},
+    currentSegment: null,
+    currentLoadMemory: null,
+    segmentLoadStart: 0,
+    segmentRunStart: 0
+  };
+  resetNes65xxStageState(state);
+  return state;
+}
+function validate(address) {
+  if (!Number.isInteger(address) || address < 0 || address > 65535) {
+    throw new Error(`Address $${address.toString(16).toUpperCase()} is outside 16-bit NES space.`);
+  }
+  return address;
+}
+function createNesAddressSpace({
+  state,
+  options
+}) {
+  if (options.sourceStyle === "asar") {
+    const nes = state.get(nes65xxSessionStateKey);
+    const physical = (address) => {
+      if (!Number.isSafeInteger(address) || address < 0 || address >= nes.linker.imageSize) {
+        throw new Error(
+          `NES physical write offset ${address} is outside the fixed cartridge layout.`
+        );
+      }
+      return address;
+    };
+    return {
+      addressWidth: 32,
+      defaultOrigin: 0,
+      normalizeForWrite: physical,
+      advance: (address, amount) => address + amount,
+      toOutputOffset(address) {
+        if (!Number.isSafeInteger(address) || address < 0 || address > nes.linker.imageSize) {
+          return -1;
+        }
+        return nes.header.length + address;
+      },
+      fromOutputOffset(offset) {
+        const address = offset - nes.header.length;
+        return address >= 0 && address < nes.linker.imageSize ? address : -1;
+      },
+      validateWrite: physical
+    };
+  }
+  return {
+    addressWidth: 16,
+    defaultOrigin: 0,
+    normalizeForWrite: validate,
+    advance(address, amount) {
+      return validate(address + amount & 65535);
+    },
+    toOutputOffset(address) {
+      const nes = state.get(nes65xxSessionStateKey);
+      if (!nes.currentLoadMemory) {
+        return -1;
+      }
+      const memory = nes.linker.memories.get(nes.currentLoadMemory);
+      if (!memory || memory.fileOffset < 0) {
+        return -1;
+      }
+      if (address < memory.start || address >= memory.start + memory.size) {
+        return -1;
+      }
+      return nes.header.length + memory.fileOffset + (address - memory.start);
+    },
+    fromOutputOffset(offset) {
+      const nes = state.get(nes65xxSessionStateKey);
+      const prgOffset = offset - nes.header.length;
+      if (prgOffset < 0) {
+        return -1;
+      }
+      for (const memory of nes.linker.memories.values()) {
+        if (memory.fileOffset < 0) {
+          continue;
+        }
+        if (prgOffset >= memory.fileOffset && prgOffset < memory.fileOffset + memory.size) {
+          return memory.start + (prgOffset - memory.fileOffset);
+        }
+      }
+      return -1;
+    },
+    validateWrite(address) {
+      validate(address);
+    }
+  };
+}
+function createNesOutputFormat() {
+  return {
+    finalize: () => void 0,
+    getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+  };
+}
+function createNesLifecycle({ state }) {
+  const prefill = (session) => {
+    const nes = state.get(nes65xxSessionStateKey);
+    resetNes65xxStageState(nes);
+    session.outputFillByte = nes.fillByte;
+    const total = nes.header.length + nes.linker.imageSize;
+    const image = Array.from({ length: total }, () => nes.fillByte);
+    for (let index = 0; index < nes.header.length; index++) {
+      image[index] = nes.header[index] ?? 0;
+    }
+    session.outputBytes = image;
+    session.bytes = 0;
+    for (const name of linkerDefinedSymbolNames(nes.linker)) {
+      session.globalSymbols.add(name);
+    }
+  };
+  return {
+    onSessionCreated: ({ session }) => {
+      prefill(session);
+    },
+    onStageStart: ({ session }) => {
+      prefill(session);
+    },
+    onStageEnd: ({ session }) => {
+      const nes = state.get(nes65xxSessionStateKey);
+      closeActiveSegment(session, nes);
+      applyLinkerSymbols(session, nes);
+    }
+  };
+}
+function normalizeHeader(configured, imageSize) {
+  if (configured instanceof Uint8Array || Array.isArray(configured)) {
+    const bytes = [...configured].map((value) => Number(value) & 255);
+    if (bytes.length === 0) {
+      throw new Error("65xx NES target header must not be empty.");
+    }
+    return bytes;
+  }
+  if (configured !== void 0) {
+    throw new Error("65xx NES target header must be a byte array.");
+  }
+  const prgBanks = Math.max(1, Math.ceil(imageSize / 16384));
+  const header = Array.from({ length: 16 }, () => 0);
+  header[0] = INES_MAGIC[0];
+  header[1] = INES_MAGIC[1];
+  header[2] = INES_MAGIC[2];
+  header[3] = INES_MAGIC[3];
+  header[4] = prgBanks & 255;
+  return header;
+}
+
+// packages/plugin-65xx/src/directives/ca65-syntax.ts
+var operation = (name) => syntaxLiteral(name);
+var schema = syntaxUnion(
+  syntaxRecord({ operation: operation("segment"), name: syntaxString }),
+  syntaxRecord({ operation: operation("cpu"), name: syntaxString, architecture: syntaxString }),
+  syntaxRecord({ operation: operation("symbols"), names: syntaxArray(syntaxString) }),
+  syntaxRecord({
+    operation: operation("data"),
+    width: syntaxUnion(syntaxLiteral(1), syntaxLiteral(2), syntaxLiteral(3), syntaxLiteral(4)),
+    operands: syntaxArray(syntaxRecord({ text: syntaxString, expression: syntaxExpression }))
+  }),
+  syntaxRecord({
+    operation: operation("mapped"),
+    mode: syntaxUnion(syntaxLiteral("low"), syntaxLiteral("high"), syntaxLiteral("big")),
+    values: syntaxArray(syntaxExpression)
+  }),
+  syntaxRecord({
+    operation: syntaxUnion(operation("reserve"), operation("align")),
+    count: syntaxExpression,
+    fill: syntaxOptional(syntaxExpression)
+  }),
+  syntaxRecord({
+    operation: operation("binary"),
+    filename: syntaxString,
+    offset: syntaxOptional(syntaxExpression),
+    size: syntaxOptional(syntaxExpression)
+  }),
+  syntaxRecord({
+    operation: operation("assert"),
+    condition: syntaxExpression,
+    message: syntaxString
+  }),
+  syntaxRecord({
+    operation: operation("scope"),
+    name: syntaxOptional(syntaxString),
+    procedure: syntaxBoolean
+  }),
+  syntaxRecord({
+    operation: syntaxUnion(
+      operation("pushcpu"),
+      operation("popcpu"),
+      operation("pushseg"),
+      operation("popseg"),
+      operation("endscope")
+    )
+  }),
+  syntaxRecord({ operation: operation("error"), message: syntaxString })
+);
+function parse(id2, { words }) {
+  const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
+  const family = id2.slice("65xx.directive.".length);
+  if (family === "pushcpu" || family === "popcpu" || family === "pushseg" || family === "popseg" || family === "endscope") {
+    return { operation: family };
+  }
+  if (family === "segment") {
+    const name = unquoteDirectiveText(words[1] ?? "").trim();
+    if (!name) {
+      throw new Error(".segment requires a segment name.");
+    }
+    return { operation: "segment", name };
+  }
+  if (family === "setcpu" || family === "cpu-shorthand") {
+    const name = family === "setcpu" ? unquoteDirectiveText(words.slice(1).join(" ").trim()) : ca65CpuShorthands[keyword];
+    if (!name) {
+      throw new Error(".setcpu requires a CPU name argument.");
+    }
+    const architecture = resolve65xxCpuName(name);
+    if (!architecture) {
+      throw new Error(
+        `.setcpu "${name}" is not a supported 65xx CPU. Supported names: ${Object.keys(ca65CpuNames).join(", ")}.`
+      );
+    }
+    return { operation: "cpu", name: name.toLowerCase(), architecture };
+  }
+  if (family === "scope") {
+    return {
+      operation: "scope",
+      name: words[1]?.trim() || void 0,
+      procedure: keyword === "proc"
+    };
+  }
+  if (family === "unsupported-object") {
+    return {
+      operation: "error",
+      message: `.${keyword} requires relocatable ca65 object/linker semantics, which the flat-image compatibility profile does not implement.`
+    };
+  }
+  if (family === "unsupported-macro") {
+    return {
+      operation: "error",
+      message: `.${keyword} is not yet supported by the ca65 macro compatibility slice.`
+    };
+  }
+  if (family === "byte" || family === "addr" || family === "dword" || family === "faraddr") {
+    const widths = { byte: 1, addr: 2, dword: 4, faraddr: 3 };
+    const width = widths[family];
+    const operands = parseDataList(words.slice(1).join(" "));
+    if (!operands.length) {
+      throw new Error(
+        `${["", "DB", "DW", "DL", "DD"][width]} directive requires at least one parameter.`
+      );
+    }
+    return { operation: "data", width, operands };
+  }
+  const params = parameterList(words);
+  if (family === "export" || family === "import") {
+    const names = params.map((value) => unquoteDirectiveText(value).trim()).filter(Boolean);
+    if (!names.length) {
+      throw new Error(`.${family} requires at least one identifier.`);
+    }
+    return { operation: "symbols", names };
+  }
+  if (family === "lobytes" || family === "hibytes" || family === "dbyt") {
+    if (!params.length) {
+      throw new Error(`${words[0]} requires at least one parameter.`);
+    }
+    let mode = "low";
+    if (family === "hibytes") {
+      mode = "high";
+    } else if (family === "dbyt") {
+      mode = "big";
+    }
+    return {
+      operation: "mapped",
+      mode,
+      values: params.map((value) => parseDirectiveExpression(value))
+    };
+  }
+  if (family === "res" || family === "align") {
+    if (params.length < 1 || params.length > 2) {
+      throw new Error(
+        family === "res" ? ".res expects count and an optional fill value." : ".align expects a boundary and optional fill value."
+      );
+    }
+    return {
+      operation: family === "res" ? "reserve" : "align",
+      count: parseDirectiveExpression(params[0]),
+      fill: params[1] ? parseDirectiveExpression(params[1]) : void 0
+    };
+  }
+  if (family === "incbin") {
+    if (params.length < 1 || params.length > 3) {
+      throw new Error(".incbin expects a filename, optional offset, and optional size.");
+    }
+    return {
+      operation: "binary",
+      filename: unquoteDirectiveText(params[0]),
+      offset: params[1] ? parseDirectiveExpression(params[1]) : void 0,
+      size: params[2] ? parseDirectiveExpression(params[2]) : void 0
+    };
+  }
+  if (family === "assert") {
+    if (!params.length) {
+      throw new Error(".assert requires an expression.");
+    }
+    const message = params.find((part) => /^["']/.test(part));
+    return {
+      operation: "assert",
+      condition: parseDirectiveExpression(params[0], false),
+      message: message ? unquoteDirectiveText(message) : ".assert expression evaluated to false."
+    };
+  }
+  throw new Error(`Missing typed ca65 directive grammar '${id2}'.`);
+}
+function execute(node, { session, state, targetId }) {
+  const profile = state.get(ca65SessionStateKey);
+  switch (node.operation) {
+    case "error":
+      throw new Error(node.message);
+    case "pushcpu":
+      return handlePushcpu(session, profile);
+    case "popcpu":
+      return handlePopcpu(session, profile);
+    case "pushseg":
+      return handlePushseg(profile);
+    case "popseg":
+      return handlePopseg(profile);
+    case "endscope":
+      return handleEndScope(session, profile);
+    case "cpu":
+      session.selectArchitecture(node.architecture, node.name);
+      profile.currentArchitecture = node.architecture;
+      return;
+    case "segment": {
+      if (targetId !== NES_65XX_TARGET_ID) {
+        profile.currentFlatSegment = node.name;
+        return;
+      }
+      const nes = state.get(nes65xxSessionStateKey);
+      const segment = nes.linker.segments.get(node.name);
+      if (!segment) {
+        throw new Error(`.segment "${node.name}" is not defined in the linker configuration.`);
+      }
+      closeActiveSegment(session, nes);
+      openSegment(session, nes, segment);
+      return;
+    }
+    case "scope": {
+      const name = node.name ?? `__anonymous_scope_${session.currentLine}`;
+      if (node.procedure) {
+        session.symbolScope.setLabel(session.symbolScope.qualifySymbolName(name));
+      }
+      profile.scopeStack.push(session.currentNamespace);
+      session.currentNamespace = session.currentNamespace ? `${session.currentNamespace}_${name}` : name;
+      return;
+    }
+    case "symbols":
+      for (const name of node.names) {
+        markGlobalSymbol(session, name);
+      }
+      return;
+    case "data":
+      session.directiveRuntime.executeDataStatement(node);
+      return;
+    case "mapped":
+      if (session.isDefinitionCollectionStage) {
+        session.step(node.values.length * (node.mode === "big" ? 2 : 1));
+        return;
+      }
+      for (const expression of node.values) {
+        const value = session.operandResolver.getnum(expression);
+        if (node.mode !== "low") {
+          session.write1(value >> 8 & 255);
+        }
+        if (node.mode !== "high") {
+          session.write1(value & 255);
+        }
+      }
+      return;
+    case "reserve":
+    case "align": {
+      const value = session.operandResolver.getnum(node.count);
+      const fill = node.fill ? session.operandResolver.getnum(node.fill) : 0;
+      if (!Number.isInteger(value) || value < (node.operation === "align" ? 1 : 0)) {
+        throw new Error(
+          node.operation === "align" ? ".align boundary must be a positive integer." : ".res count must be non-negative."
+        );
+      }
+      const count = node.operation === "reserve" ? value : (value - session.currentTargetAddress % value) % value;
+      if (session.isDefinitionCollectionStage) {
+        session.step(count);
+        return;
+      }
+      for (let index = 0; index < count; index++) {
+        session.write1(fill & 255);
+      }
+      return;
+    }
+    case "binary": {
+      const data = session.includeSource.readFile(node.filename);
+      if (!(data instanceof Uint8Array)) {
+        throw new Error(`Failed to read binary include: ${node.filename}`);
+      }
+      const offset = node.offset ? session.operandResolver.getnum(node.offset) : 0;
+      const size = node.size ? session.operandResolver.getnum(node.size) : data.length - offset;
+      if (!Number.isInteger(offset) || !Number.isInteger(size) || offset < 0 || size < 0 || offset + size > data.length) {
+        throw new Error(
+          `.incbin range ${offset}+${size} is outside '${node.filename}' (${data.length} bytes).`
+        );
+      }
+      if (session.isDefinitionCollectionStage) {
+        session.step(size);
+        return;
+      }
+      for (const byte of data.subarray(offset, offset + size)) {
+        session.write1(byte);
+      }
+      return;
+    }
+    case "assert":
+      if (session.evaluateAssertion(node.condition) === false) {
+        throw new Error(node.message);
+      }
+      return;
+  }
+}
+function ca65DirectiveSyntax(id2) {
+  const codec = syntaxCodec("1", (input2) => parse(id2, input2), schema);
+  return {
+    ...codec,
+    bind(context) {
+      if ((id2 === "65xx.directive.incbin" || id2 === "65xx.directive.assert") && context.session.targetOptions.sourceStyle === "asar") {
+        return void 0;
+      }
+      return { execute: (payload) => execute(codec.read(payload), context) };
+    }
+  };
+}
+
+// packages/plugin-65xx/src/instructions/catalog.ts
+var syntax = {
+  implied: "",
+  accumulator: "A",
+  immediate: "#value",
+  zeroPage: "zp",
+  zeroPageIndexedX: "zp,x",
+  zeroPageIndexedY: "zp,y",
+  absolute: "addr",
+  absoluteIndexedX: "addr,x",
+  absoluteIndexedY: "addr,y",
+  absoluteLongIndexedX: "long,x",
+  indirect: "(addr)",
+  zeroPageIndirect: "(zp)",
+  zeroPageIndirectLong: "[zp]",
+  indexedIndirectX: "(zp,x)",
+  indirectIndexedY: "(zp),y",
+  absoluteIndexedIndirect: "(addr,x)",
+  zeroPageIndirectIndexedZ: "(zp),z",
+  stackRelative: "offset,s",
+  stackRelativeIndirectIndexedY: "(offset,s),y",
+  relative: "target",
+  relative16: "target",
+  zeroPageRelative: "zp,target",
+  accumulatorRelative: "A,target",
+  zeroPageImmediate: "zp,#value",
+  specialPage: "$FFnn",
+  blockTransfer: "source,destination,length",
+  immediateZeroPage: "#value,zp",
+  immediateZeroPageIndexedX: "#value,zp,x",
+  immediateAbsolute: "#value,addr",
+  immediateAbsoluteIndexedX: "#value,addr,x",
+  basePageIndirectIndexedZ: "[zp],z",
+  quadAccumulator: "Q"
+};
+var summaries = {
+  ADC: "Add memory to the accumulator with carry.",
+  AND: "Bitwise AND memory with the accumulator.",
+  ASL: "Shift left one bit.",
+  BCC: "Branch when carry is clear.",
+  BCS: "Branch when carry is set.",
+  BEQ: "Branch when equal (zero set).",
+  BIT: "Test accumulator bits without storing a result.",
+  BMI: "Branch when negative.",
+  BNE: "Branch when not equal (zero clear).",
+  BPL: "Branch when positive.",
+  BRK: "Trigger a software interrupt.",
+  BVC: "Branch when overflow is clear.",
+  BVS: "Branch when overflow is set.",
+  CMP: "Compare memory with the accumulator.",
+  CPX: "Compare memory with X.",
+  CPY: "Compare memory with Y.",
+  EOR: "Exclusive-OR memory with the accumulator.",
+  JMP: "Jump to an address.",
+  JSR: "Call a subroutine.",
+  LDA: "Load the accumulator.",
+  LDX: "Load X.",
+  LDY: "Load Y.",
+  NOP: "Perform no operation.",
+  ORA: "Bitwise OR memory with the accumulator.",
+  SBC: "Subtract memory and borrow from the accumulator.",
+  STA: "Store the accumulator.",
+  STX: "Store X.",
+  STY: "Store Y."
+};
+function buildInstructionCatalog(forms) {
+  const grouped = /* @__PURE__ */ new Map();
+  for (const form of forms) {
+    const entries = grouped.get(form.mnemonic) ?? [];
+    entries.push(form);
+    grouped.set(form.mnemonic, entries);
+  }
+  return [...grouped.entries()].toSorted(([left], [right]) => left.localeCompare(right)).map(([mnemonic, entries]) => ({
+    mnemonic,
+    summary: summaries[mnemonic] ?? (entries.some((entry) => !entry.documented) ? "Undocumented NMOS 6502 instruction." : `${mnemonic} instruction.`),
+    modes: entries.map((form) => ({
+      mode: form.mode,
+      syntax: syntax[form.mode],
+      opcode: form.opcode,
+      size: form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0)
+    }))
+  }));
+}
+
+// packages/plugin-65xx/src/nes/assets.ts
+var NES_CHR_CODEC = "nes.chr.2bpp";
+var NES_TEXT_CODEC = "nes.text.tiles";
+function encodeNesChrPng(bytes) {
+  const png = readAssetPng(bytes);
+  if (png.colorType !== 3) {
+    throw new Error("NES CHR assets require an indexed PNG.");
+  }
+  const image = png.toIndexed({ copy: false });
+  if (!image.width || !image.height || image.width % 8 || image.height % 8 || image.indexes.some((value) => value > 3)) {
+    throw new Error("NES CHR assets require 8-pixel tile dimensions and indexes 0..3.");
+  }
+  const columns = image.width / 8;
+  const count = columns * image.height / 8;
+  const output = new Uint8Array(count * 16);
+  for (let tile = 0; tile < count; tile++) {
+    const left = tile % columns * 8;
+    const top = Math.floor(tile / columns) * 8;
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const value = image.indexes[(top + y) * image.width + left + x];
+        output[tile * 16 + y] |= (value & 1) << 7 - x;
+        output[tile * 16 + y + 8] |= value >> 1 << 7 - x;
+      }
+    }
+  }
+  return output;
+}
+function nesTextMap(options) {
+  if (typeof options !== "object" || options === null || Array.isArray(options) || Object.keys(options).some((key) => key !== "characters") || !("characters" in options) || typeof options.characters !== "object" || options.characters === null || Array.isArray(options.characters)) {
+    throw new Error("NES tile text requires an explicit characters object.");
+  }
+  const result = /* @__PURE__ */ new Map();
+  const bytes = /* @__PURE__ */ new Set();
+  for (const [character, value] of Object.entries(options.characters)) {
+    if (character.length !== 1 || typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 255 || bytes.has(value)) {
+      throw new Error("NES tile text mappings require unique characters and byte values.");
+    }
+    result.set(character, value);
+    bytes.add(value);
+  }
+  if (!result.size) {
+    throw new Error("NES tile text mappings must not be empty.");
+  }
+  return result;
+}
+var nesAssetFormats = [
+  {
+    id: NES_CHR_CODEC,
+    version: "1.0.0",
+    targets: ["65xx.nes"],
+    sourceRepresentations: [{ id: "indexed-png", mediaType: "image/png", extensions: [".png"] }],
+    convert(source, options) {
+      if (source.mediaType !== "image/png" || Object.keys(options).length) {
+        throw new Error("NES CHR conversion accepts an indexed PNG without options.");
+      }
+      return { primaryOutput: "chr", outputs: { chr: { bytes: encodeNesChrPng(source.bytes) } } };
+    }
+  },
+  {
+    id: NES_TEXT_CODEC,
+    version: "1.0.0",
+    targets: ["65xx.nes"],
+    optionSchema: {
+      characters: {
+        summary: "Explicit character-to-tile byte mapping",
+        valueSyntax: '{ A: $0A, " ": $FC }'
+      }
+    },
+    sourceRepresentations: [{ id: "utf8-text", mediaType: "text/plain", extensions: [".txt"] }],
+    convert(source, options) {
+      if (source.mediaType !== "text/plain") {
+        throw new Error("NES tile text requires UTF-8 text.");
+      }
+      const map = nesTextMap(options);
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(source.bytes);
+      const bytes = Uint8Array.from(
+        // Mapping keys are single UTF-16 units; splitting uses the same contract and rejects unknown units.
+        text.split("").map((character) => {
+          const value = map.get(character);
+          if (value === void 0) {
+            throw new Error(`Unmapped NES text character ${JSON.stringify(character)}.`);
+          }
+          return value;
+        })
+      );
+      return { primaryOutput: "text", outputs: { text: { bytes } } };
+    }
+  }
+];
+
+// packages/plugin-65xx/src/operands/syntax.ts
+var grammar = {
+  registers: ["a", "q"],
+  indexRegisters: ["x", "y", "z", "s"],
+  commaIndex: true,
+  ca65Widths: true
+};
+function parts(text) {
+  const result = [];
+  let depth = 0;
+  let quote = "";
+  let start = 0;
+  const append = (end) => {
+    const raw = text.slice(start, end);
+    const trimmed = raw.trim();
+    if (trimmed) {
+      result.push({ text: trimmed, start: start + raw.length - raw.trimStart().length });
+    }
+  };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === "\\") {
+        i++;
+      } else if (ch === quote) {
+        quote = "";
+      }
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+    } else if (ch === "(" || ch === "[") {
+      depth++;
+    } else if (ch === ")" || ch === "]") {
+      depth--;
+    } else if (ch === "," && depth === 0) {
+      append(i);
+      start = i + 1;
+    }
+  }
+  append(text.length);
+  return result;
+}
+function containsCall(node) {
+  if (node.type === "call") {
+    return true;
+  }
+  if (node.type === "binary") {
+    return containsCall(node.left) || containsCall(node.right);
+  }
+  if (node.type === "unary") {
+    return containsCall(node.argument);
+  }
+  if (node.type === "index") {
+    return containsCall(node.object) || containsCall(node.index);
+  }
+  if (node.type === "member") {
+    return containsCall(node.object);
+  }
+  return false;
+}
+function scalar2(text, start, force) {
+  const expression = parseExpressionNode(text);
+  let spelling = "expression";
+  let literalBytes;
+  if (expression.type === "literal" && !expression.parenthesized) {
+    if (text.startsWith("$")) {
+      spelling = "hex";
+      literalBytes = Math.max(1, Math.ceil((text.length - 1) / 2));
+    } else if (text.startsWith("%")) {
+      spelling = "binary";
+      literalBytes = Math.max(1, Math.ceil((text.length - 1) / 8));
+    } else if (!text.startsWith("0x")) {
+      spelling = "decimal";
+    }
+  } else if (isReferenceExpressionNode(expression)) {
+    spelling = "symbol";
+  }
+  return {
+    expression,
+    span: { start, end: start + text.length },
+    width: {
+      spelling,
+      grouped: expression.parenthesized === true,
+      ...literalBytes ? { literalBytes } : {},
+      ...force ? { forcedBytes: force } : {}
+    }
+  };
+}
+function plan(input2, start) {
+  let text = input2.trim();
+  const prefix = /^([afz]):\s*/i.exec(text);
+  let force;
+  if (prefix) {
+    if (prefix[1].toLowerCase() === "z") {
+      force = 1;
+    } else if (prefix[1].toLowerCase() === "a") {
+      force = 2;
+    } else {
+      force = 3;
+    }
+    text = text.slice(prefix[0].length);
+    start += prefix[0].length;
+  }
+  text = text.replace(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i, "$1$2$3");
+  const immediate = text.startsWith("#");
+  const body = immediate ? text.slice(1).trim() : text;
+  const suffix = !immediate ? /^(.*),\s*([sxy])$/i.exec(body) : null;
+  const expressionText = suffix ? suffix[1].trim() : body;
+  const numeric = scalar2(expressionText, start + text.indexOf(expressionText), force);
+  const mathematicalScalar = numeric;
+  const relative = /^(?:\?[+-]|:?\++|:?-+)$/.test(text);
+  const mathematical = /^[A-Z_a-z]\w*\s*\(/.test(body) || /[&*+/^|-]|<<|>>/.test(body);
+  let probeText = body;
+  if (text.startsWith("[") && text.endsWith("]")) {
+    probeText = text.slice(1, -1).trim();
+  } else if (!immediate && text.includes(",")) {
+    probeText = text.slice(0, text.lastIndexOf(",")).trim();
+  }
+  let probe;
+  if (!/^[\d$%(]/.test(probeText) && !probeText.includes(",")) {
+    const candidate = scalar2(probeText, start + text.indexOf(probeText));
+    if (isReferenceExpressionNode(candidate.expression) && candidate.expression.type !== "relativeReference") {
+      probe = candidate;
+    }
+  }
+  let hexWidth;
+  if (body.startsWith("$")) {
+    const atom = body.slice(1).split(",")[0];
+    hexWidth = Math.max(1, Math.ceil(atom.length / 2));
+  }
+  const groupedAtom = numeric.expression.parenthesized && (isReferenceExpressionNode(numeric.expression) || numeric.expression.type === "literal" && numeric.expression.value.includes("."));
+  const native = !relative && !/^[([]/.test(text) && !/^[aq]$/i.test(text) && numeric.expression.type !== "error" && numeric.expression.type !== "range" && numeric.expression.type !== "template" && !containsCall(numeric.expression) && !groupedAtom;
+  let numericScalar = numeric;
+  if (groupedAtom && expressionText.includes(".") && !mathematical) {
+    numericScalar = { ...numeric, expression: { type: "identifier", name: expressionText } };
+  }
+  return {
+    scalar: numericScalar,
+    unbound: /![\w{]|<[^>]+>|\\[A-Z_a-z]/.test(input2),
+    display: expressionText,
+    ...suffix ? { index: suffix[2].toLowerCase() } : {},
+    immediate,
+    relative,
+    directHex: body.startsWith("$"),
+    native,
+    ...force ? { force } : {},
+    ...hexWidth ? { hexWidth } : {},
+    ...probe ? { probe } : {},
+    ...mathematical && !relative ? { math: mathematicalScalar } : {}
+  };
+}
+function parse65xxOperands(mnemonic, text) {
+  const common = parseInstructionOperands(mnemonic, text, grammar);
+  const parsedMnemonic = /^([A-Z][\dA-Z]{2,4})(?:\.([BW]))?$/.exec(mnemonic.trim().toUpperCase());
+  let forcedWidth;
+  if (parsedMnemonic?.[2] === "B") {
+    forcedWidth = 1;
+  } else if (parsedMnemonic?.[2] === "W") {
+    forcedWidth = 2;
+  }
+  const whole = plan(text, 0);
+  const split = parts(text);
+  const unboundOperands = common.operands[0]?.kind === "template" ? common.operands[0].structure.operands : common.operands;
+  const first = unboundOperands.at(0);
+  let inner;
+  if (first?.kind === "memory" && !("kind" in first.address)) {
+    const span = first.address.span;
+    inner = plan(text.slice(span.start, span.end), span.start);
+  }
+  const register = text.trim().toLowerCase();
+  const originalRegister = register === "a" || register === "q" ? register : void 0;
+  const selected = operandScalar(first);
+  const scalarDisplay = whole.native || !selected ? whole.display : text.slice(selected.span.start, selected.span.end);
+  return {
+    ...common,
+    policy65xx: {
+      kind: "65xx-v1",
+      mnemonic: parsedMnemonic?.[1] ?? mnemonic.trim().toUpperCase(),
+      ...forcedWidth ? { forcedWidth } : {},
+      ...originalRegister ? { originalRegister } : {},
+      whole,
+      unboundOperands,
+      scalarDisplay,
+      parts: split.map((p) => plan(p.text, p.start)),
+      ...inner ? { inner } : {},
+      hasOperand: text.trim().length > 0,
+      hexSpecialPage: /^(?:\$ff[\da-f]{2}|0xff[\da-f]{2})$/i.test(text.trim())
+    }
+  };
+}
+function syntax65xx(syntax2) {
+  if (!has65xxPolicy(syntax2)) {
+    throw new Error("65xx encoder requires its registered operand grammar.");
+  }
+  return syntax2;
+}
+function operandScalar(operand) {
+  if (operand?.kind === "immediate") {
+    return operand.value;
+  }
+  if (operand?.kind === "memory" && !("kind" in operand.address)) {
+    return operand.address;
+  }
+  return void 0;
+}
+function has65xxPolicy(syntax2) {
+  return "policy65xx" in syntax2 && typeof syntax2.policy65xx === "object" && syntax2.policy65xx !== null && "kind" in syntax2.policy65xx && syntax2.policy65xx.kind === "65xx-v1";
+}
+
+// packages/plugin-65xx/src/operands/resolution.ts
+function valueWidth(value) {
+  if (!Number.isFinite(value)) {
+    return 4;
+  }
+  let integer3 = Math.floor(Math.abs(value));
+  let digits = 1;
+  while (integer3 >= 16) {
+    integer3 = Math.floor(integer3 / 16);
+    digits++;
+  }
+  if (value < 0) {
+    digits++;
+  }
+  let fraction = Math.abs(value) % 1;
+  if (fraction) {
+    digits++;
+    for (let n = 0; fraction && n < 268; n++) {
+      fraction = fraction * 16 % 1;
+      digits++;
+    }
+  }
+  return Math.max(1, Math.ceil(digits / 2));
+}
+function expand2(plan2, frame) {
+  let length = plan2.hexWidth ?? 2;
+  let value = 0;
+  let generated = false;
+  let flattened = false;
+  if (plan2.unbound && frame.bindingFailure?.reason === "other") {
+    return { length: plan2.force ?? length, value, flattened, generated };
+  }
+  if (plan2.relative) {
+    return { length: 2, value, generated, flattened };
+  }
+  if (plan2.probe && isReferenceExpressionNode(plan2.probe.expression)) {
+    const result = frame.reference(plan2.probe.expression);
+    if (result.kind === "resolved") {
+      value = result.value;
+      generated = true;
+      length = valueWidth(value);
+    }
+  }
+  if (plan2.immediate && !generated && (plan2.math || !plan2.directHex)) {
+    try {
+      value = frame.evaluate(plan2.scalar, "classification", true).value;
+      generated = true;
+      length = valueWidth(value);
+    } catch {
+    }
+  }
+  if (!generated && plan2.math) {
+    try {
+      const result = frame.evaluate(plan2.math, "classification", true, "math").value;
+      if (!Number.isNaN(result)) {
+        value = result;
+        generated = true;
+        flattened = true;
+        length = valueWidth(value);
+      }
+    } catch {
+    }
+  }
+  if (plan2.force === 1) {
+    length = 1;
+  } else if (plan2.force) {
+    length = Math.max(plan2.force, length);
+  }
+  return { length, value, generated, flattened };
+}
+function classify(syntax2, frame) {
+  const policy = syntax2.policy65xx;
+  const whole = expand2(policy.whole, frame);
+  const operands = syntax2.operands;
+  const first = operands.at(0);
+  let mode = "unknown";
+  let length = whole.length;
+  if (!policy.hasOperand) {
+    mode = "implied";
+  } else if (policy.originalRegister === "a") {
+    mode = "accumulator";
+  } else if (policy.originalRegister === "q") {
+    mode = "quadAccumulator";
+  } else if (policy.whole.immediate && whole.generated) {
+    mode = "immediate";
+  } else if (first?.kind === "immediate" && operands.length >= 2) {
+    const address = expand2(policy.parts[1], frame);
+    const second = operands[1];
+    const indexed = second.kind === "memory" && second.index?.register === "x";
+    mode = address.length <= 1 ? "immediateZeroPage" : "immediateAbsolute";
+    if (indexed) {
+      mode += "IndexedX";
+    }
+  } else if (first?.kind === "immediate") {
+    mode = "immediate";
+  } else if (operands.length >= 2 && policy.whole.index && policy.whole.scalar.expression.type === "error") {
+    mode = length <= 1 ? "zeroPage" : "absolute";
+    mode += "Indexed" + policy.whole.index.toUpperCase();
+  } else if (first?.kind === "invalid") {
+    mode = length <= 1 ? "zeroPage" : "absolute";
+  } else if (operands.length >= 2) {
+    if (policy.parts.length === 3) {
+      mode = "blockTransfer";
+    } else if (first?.kind === "register" && first.name === "a") {
+      mode = "accumulatorRelative";
+    } else if (operands[1].kind === "immediate") {
+      mode = "zeroPageImmediate";
+    } else {
+      mode = "zeroPageRelative";
+    }
+  } else if (first?.kind === "memory") {
+    const index = first.index?.register;
+    const delimiter = whole.flattened ? "none" : first.delimiter;
+    if (delimiter === "parentheses" && first.innerIndex === "s" && index === "y") {
+      mode = "stackRelativeIndirectIndexedY";
+    } else if (delimiter === "parentheses" && first.index?.position === "inside" && index === "x") {
+      length = expand2(policy.inner, frame).length;
+      mode = length <= 1 ? "indexedIndirectX" : "absoluteIndexedIndirect";
+    } else if (delimiter === "parentheses" && first.index?.position === "outside" && index === "y") {
+      mode = "indirectIndexedY";
+    } else if (delimiter === "parentheses" && first.index?.position === "outside" && index === "z") {
+      mode = "zeroPageIndirectIndexedZ";
+    } else if (delimiter === "brackets" && index === "z") {
+      mode = "basePageIndirectIndexedZ";
+    } else if (delimiter === "brackets" && !index) {
+      mode = "zeroPageIndirectLong";
+    } else if (delimiter === "parentheses" && !index) {
+      length = expand2(policy.inner, frame).length;
+      mode = length <= 1 ? "zeroPageIndirect" : "indirect";
+    } else if (delimiter === "none") {
+      if (index === "s") {
+        mode = "stackRelative";
+      } else if (index === "z") {
+        mode = "unknown";
+      } else if (index === "x" && length > 2) {
+        mode = "absoluteLongIndexedX";
+      } else {
+        mode = length <= 1 ? "zeroPage" : "absolute";
+        if (index === "x" || index === "y") {
+          mode += "Indexed" + index.toUpperCase();
+        }
+      }
+    }
+  }
+  return {
+    mode,
+    length,
+    generated: whole.generated,
+    value: whole.value,
+    native: policy.whole.native,
+    specialPage: mode === "absolute" && (whole.generated && whole.value >= 65280 && whole.value <= 65535 || policy.hexSpecialPage)
+  };
+}
+function prepare65xx(syntax2, frame) {
+  if (syntax2.policy65xx.parts.length === 1) {
+    const first = classify(syntax2, frame);
+    if (first.native && !(first.generated && (first.value < 0 || !Number.isInteger(first.value)))) {
+      return first;
+    }
+  } else {
+    for (const part of syntax2.policy65xx.parts) {
+      expand2(part, frame);
+    }
+  }
+  return classify(syntax2, frame);
+}
+function generatedValue(value) {
+  if (value < 0 || Number.isNaN(value)) {
+    throw new Error("Invalid number: NaN");
+  }
+  if (!Number.isFinite(value)) {
+    throw new Error("Invalid number: $" + String(value).toUpperCase());
+  }
+  if (!Number.isInteger(value)) {
+    throw new Error("Invalid number: $" + value.toString(16).toUpperCase());
+  }
+  return value;
+}
+function selectedScalar(syntax2) {
+  if (syntax2.policy65xx.whole.native || syntax2.operands.length >= 2 && syntax2.policy65xx.whole.index && syntax2.policy65xx.whole.scalar.expression.type === "error") {
+    return syntax2.policy65xx.whole.scalar;
+  }
+  const selected = operandScalar(syntax2.operands[0]);
+  if (selected?.expression.type === "template") {
+    return syntax2.policy65xx.inner?.scalar ?? syntax2.policy65xx.whole.scalar;
+  }
+  return selected ?? syntax2.policy65xx.whole.scalar;
+}
+
+// packages/plugin-65xx/src/typed-architecture.ts
+var directToAbsolute = {
+  zeroPage: "absolute",
+  zeroPageIndexedX: "absoluteIndexedX",
+  zeroPageIndexedY: "absoluteIndexedY",
+  zeroPageIndirect: "indirect",
+  indexedIndirectX: "absoluteIndexedIndirect"
+};
+var absoluteToDirect = {
+  absolute: "zeroPage",
+  absoluteIndexedX: "zeroPageIndexedX",
+  absoluteIndexedY: "zeroPageIndexedY",
+  indirect: "zeroPageIndirect",
+  absoluteIndexedIndirect: "indexedIndirectX"
+};
+var addressingModes = {
+  implied: true,
+  accumulator: true,
+  immediate: true,
+  zeroPage: true,
+  zeroPageIndexedX: true,
+  zeroPageIndexedY: true,
+  absolute: true,
+  absoluteIndexedX: true,
+  absoluteIndexedY: true,
+  absoluteLongIndexedX: true,
+  indirect: true,
+  zeroPageIndirect: true,
+  zeroPageIndirectLong: true,
+  indexedIndirectX: true,
+  indirectIndexedY: true,
+  absoluteIndexedIndirect: true,
+  zeroPageIndirectIndexedZ: true,
+  stackRelative: true,
+  stackRelativeIndirectIndexedY: true,
+  relative: true,
+  relative16: true,
+  zeroPageRelative: true,
+  accumulatorRelative: true,
+  zeroPageImmediate: true,
+  specialPage: true,
+  blockTransfer: true,
+  immediateZeroPage: true,
+  immediateZeroPageIndexedX: true,
+  immediateAbsolute: true,
+  immediateAbsoluteIndexedX: true,
+  basePageIndirectIndexedZ: true,
+  quadAccumulator: true
+};
+function isAddressingMode(value) {
+  for (const mode of Object.keys(addressingModes)) {
+    if (value === mode) {
+      return true;
+    }
+  }
+  return false;
+}
+function mappedAddressingMode(table, mode) {
+  if (mode === void 0 || !isAddressingMode(mode)) {
+    return void 0;
+  }
+  return table[mode];
+}
+var aliasToMnemonic = /* @__PURE__ */ new Map();
+for (const form of nmos6502DecodeTable) {
+  for (const alias of form.aliases ?? []) {
+    aliasToMnemonic.set(alias, form.mnemonic);
+  }
+}
+var modeSize = (form) => form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
+var TypedArch65xx = class {
+  constructor(cpu) {
+    this.cpu = cpu;
+    this.forms = getCpuAssemblyForms(cpu).filter(
+      (form) => matchesFeatures(form.availableWhen, cpu.features)
+    );
+    this.catalog = buildInstructionCatalog(this.forms);
+    for (const form of this.forms) {
+      this.formsByMnemonic.set(form.mnemonic, [
+        ...this.formsByMnemonic.get(form.mnemonic) ?? [],
+        form
+      ]);
+    }
+  }
+  cpu;
+  deferOperandBindingErrors = true;
+  forms;
+  catalog;
+  formsByMnemonic = /* @__PURE__ */ new Map();
+  /** Failed binding retains parsed punctuation so addressing errors keep precedence over value reads. */
+  syntax(frame) {
+    const syntax2 = syntax65xx(frame.instruction.operands);
+    return frame.bindingFailure ? { ...syntax2, operands: syntax2.policy65xx.unboundOperands } : syntax2;
+  }
+  /** Record classification effects before form selection; this receipt does not yet carry a size. */
+  prepare(frame) {
+    const state = prepare65xx(this.syntax(frame), frame);
+    frame.chooseScalars(
+      state.mode,
+      0,
+      state.mode,
+      state.length,
+      state.generated,
+      state.value,
+      state.native,
+      state.specialPage
+    );
+  }
+  /** Reuse this occurrence's preparation without repeating its width probes during encoding. */
+  classification(frame) {
+    const value = frame.preparation?.state;
+    if (Array.isArray(value)) {
+      const tuple = value;
+      const [mode, length, generated, scalar3, native, specialPage] = tuple;
+      if (value.length !== 6 || typeof mode !== "string" || typeof length !== "number" || typeof generated !== "boolean" || typeof scalar3 !== "number" || typeof native !== "boolean" || typeof specialPage !== "boolean") {
+        throw new Error("Invalid prepared 65xx snapshot.");
+      }
+      return { mode, length, generated, value: scalar3, native, specialPage };
+    }
+    if (value && typeof value === "object" && !Array.isArray(value) && "mode" in value && "length" in value && "generated" in value && "value" in value && "native" in value && "specialPage" in value && typeof value.mode === "string" && typeof value.length === "number" && typeof value.generated === "boolean" && typeof value.value === "number" && typeof value.native === "boolean" && typeof value.specialPage === "boolean") {
+      return {
+        mode: value.mode,
+        length: value.length,
+        generated: value.generated,
+        value: value.value,
+        native: value.native,
+        specialPage: value.specialPage
+      };
+    }
+    return prepare65xx(this.syntax(frame), frame);
+  }
+  estimate(frame) {
+    const state = this.classification(frame);
+    const form = this.resolveForm(frame, this.syntax(frame), state);
+    const size = form ? modeSize(form) : 0;
+    frame.choose(form ? form.mnemonic + ":" + form.mode : "unknown", size, {
+      cpu: this.cpu.id,
+      mode: form?.mode ?? "unknown"
+    });
+    return size;
+  }
+  resolveForm(frame, syntax2, operand) {
+    const parsed = syntax2.policy65xx;
+    let mnemonic = parsed.mnemonic;
+    let forms = this.formsByMnemonic.get(mnemonic);
+    if (!forms) {
+      const canonical = aliasToMnemonic.get(mnemonic);
+      const aliasedForms = canonical ? this.formsByMnemonic.get(canonical) : void 0;
+      if (canonical && aliasedForms) {
+        mnemonic = canonical;
+        forms = aliasedForms;
+      }
+    }
+    const { forcedWidth } = parsed;
+    if (!forms) {
+      const variantArchitectures = Object.entries(variantFormsByCpuId).filter(([, entries]) => entries.some((entry) => entry.mnemonic === parsed.mnemonic)).map(([cpuId]) => cpuId);
+      if (variantArchitectures.length > 0) {
+        throw frame.error(
+          `Instruction '${parsed.mnemonic}' is available on ${variantArchitectures.join(", ")}, not ${this.cpu.id}.`
+        );
+      }
+      const knownOnlyOn6502x = nmos6502DecodeTable.some(
+        (form2) => form2.mnemonic === mnemonic || form2.aliases?.includes(mnemonic)
+      );
+      if (knownOnlyOn6502x) {
+        throw frame.error(
+          `Instruction '${mnemonic}' or this operand form requires architecture '65xx.6502x'.`
+        );
+      }
+      return void 0;
+    }
+    const hasOperand = parsed.hasOperand;
+    if (mnemonic === "BRK" && forcedWidth === 2) {
+      throw frame.error("BRK accepts at most an 8-bit signature byte.");
+    }
+    let mode = operand.mode;
+    if (parsed.originalRegister === "a") {
+      mode = "accumulator";
+    }
+    if (parsed.originalRegister === "q") {
+      mode = "quadAccumulator";
+    }
+    if (this.cpu.id === "65xx.m740" && mnemonic === "JSR" && mode === "absolute" && operand.specialPage) {
+      mode = "specialPage";
+    }
+    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) {
+      mode = "relative16";
+    } else if (hasOperand && forms.some((entry) => entry.mode === "relative")) {
+      mode = "relative";
+    }
+    if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
+      if (forms.some((entry) => entry.mode === "accumulator")) {
+        mode = "accumulator";
+      } else if (forms.some((entry) => entry.mode === "quadAccumulator")) {
+        mode = "quadAccumulator";
+      }
+    }
+    if (forcedWidth) {
+      const byteMode = mappedAddressingMode(absoluteToDirect, mode);
+      const wordMode = mappedAddressingMode(directToAbsolute, mode);
+      const alreadyRequestedWidth = forcedWidth === 1 && mode.startsWith("zeroPage") || forcedWidth === 2 && (mode === "absolute" || mode === "indirect" || mode.startsWith("absoluteIndexed"));
+      if (!byteMode && !wordMode && !alreadyRequestedWidth) {
+        throw frame.error(
+          `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode}.`
+        );
+      }
+      const promoted = forcedWidth === 1 ? byteMode : wordMode;
+      mode = promoted ?? mode;
+    }
+    let form = forms.find((entry) => entry.mode === mode);
+    const widened = mappedAddressingMode(directToAbsolute, mode);
+    if (!form && widened) {
+      form = forms.find((entry) => entry.mode === widened);
+    }
+    if (!form) {
+      const accepted = forms.map((entry) => entry.mode).join(", ");
+      throw frame.error(
+        `${mnemonic} does not support addressing mode '${mode}' on ${this.cpu.id}. Expected ${accepted}.`
+      );
+    }
+    return form;
+  }
+  /** Validate the complete operand tuple before the first opcode/prefix write. */
+  encode(frame, context) {
+    const syntax2 = this.syntax(frame);
+    const state = this.classification(frame);
+    const form = this.resolveForm(frame, syntax2, state);
+    if (!form) {
+      return false;
+    }
+    frame.choose(form.mnemonic + ":" + form.mode, modeSize(form), {
+      cpu: this.cpu.id,
+      mode: form.mode
+    });
+    const scalar3 = selectedScalar(syntax2);
+    const generated = state.generated && (!state.native || state.value < 0 || !Number.isInteger(state.value));
+    const value = (width, description, immediate = false) => this.readValue(
+      frame,
+      scalar3,
+      width,
+      description,
+      immediate,
+      generated ? state.value : void 0,
+      state.generated ? "$" + state.value.toString(16).toUpperCase() : syntax2.policy65xx.scalarDisplay,
+      syntax2.policy65xx.whole.unbound
+    );
+    const p = syntax2.policy65xx.parts;
+    const expect = (count, description) => {
+      if (p.length !== count) {
+        throw frame.error(form.mnemonic + " expects " + description + ".");
+      }
+    };
+    const branch = (operand, prepared, display, unbound = false) => this.readBranch(
+      frame,
+      operand,
+      form.relativeBaseOffset ?? modeSize(form),
+      form.codec === "relative16" ? 2 : 1,
+      prepared,
+      display,
+      unbound
+    );
+    const values = [];
+    switch (form.codec) {
+      case "none":
+        break;
+      case "unsigned8":
+      case "unsigned16-le":
+      case "unsigned24-le": {
+        let width = 1;
+        if (form.codec === "unsigned16-le") {
+          width = 2;
+        } else if (form.codec === "unsigned24-le") {
+          width = 3;
+        }
+        const v = value(
+          width,
+          form.mnemonic + (width === 1 ? " operand" : " address"),
+          state.mode === "immediate"
+        );
+        if (form.operandConstraint === "power-of-two" && (v === 0 || (v & v - 1) !== 0)) {
+          throw frame.error(form.mnemonic + " operand must be a power of two.");
+        }
+        values.push(v);
+        break;
+      }
+      case "relative8":
+      case "relative16":
+        values.push(
+          branch(
+            scalar3,
+            state.generated ? state.value : void 0,
+            state.generated ? "$" + state.value.toString(16).toUpperCase() : syntax2.policy65xx.scalarDisplay,
+            syntax2.policy65xx.whole.unbound
+          )
+        );
+        break;
+      case "zero-page-relative8":
+        expect(2, "a zero-page address and branch target");
+        values.push(
+          this.readValue(
+            frame,
+            p[0].scalar,
+            1,
+            form.mnemonic + " address",
+            false,
+            void 0,
+            p[0].display,
+            p[0].unbound
+          ),
+          branch(p[1].scalar, void 0, p[1].display, p[1].unbound)
+        );
+        break;
+      case "accumulator-relative8":
+        expect(2, "A and a branch target");
+        if (syntax2.operands[0]?.kind !== "register" || syntax2.operands[0].name !== "a") {
+          throw frame.error(form.mnemonic + " accumulator branch must use A.");
+        }
+        values.push(branch(p[1].scalar, void 0, p[1].display, p[1].unbound));
+        break;
+      case "zero-page-immediate8":
+        expect(2, "a zero-page address and immediate value");
+        if (!p[1].immediate) {
+          throw frame.error(form.mnemonic + " second operand must be immediate.");
+        }
+        values.push(
+          this.readValue(
+            frame,
+            p[0].scalar,
+            1,
+            form.mnemonic + " address",
+            false,
+            void 0,
+            p[0].display,
+            p[0].unbound
+          ),
+          this.readValue(
+            frame,
+            p[1].scalar,
+            1,
+            form.mnemonic + " immediate",
+            true,
+            void 0,
+            p[1].display,
+            p[1].unbound
+          )
+        );
+        break;
+      case "three-unsigned16-le":
+        expect(3, "source, destination, and length operands");
+        for (let i = 0; i < p.length; i++) {
+          values.push(
+            this.readValue(
+              frame,
+              p[i].scalar,
+              2,
+              form.mnemonic + " " + ["source", "destination", "length"][i],
+              false,
+              void 0,
+              p[i].display,
+              p[i].unbound
+            )
+          );
+        }
+        break;
+      case "immediate-unsigned8":
+      case "immediate-unsigned16": {
+        const indexed = form.mode.endsWith("IndexedX");
+        expect(indexed ? 3 : 2, "an immediate value and address");
+        if (!p[0].immediate) {
+          throw frame.error(form.mnemonic + " first operand must be immediate.");
+        }
+        values.push(
+          this.readValue(
+            frame,
+            p[0].scalar,
+            1,
+            form.mnemonic + " immediate",
+            true,
+            void 0,
+            p[0].display,
+            p[0].unbound
+          ),
+          this.readValue(
+            frame,
+            p[1].scalar,
+            form.codec === "immediate-unsigned8" ? 1 : 2,
+            form.mnemonic + " address",
+            false,
+            void 0,
+            p[1].display,
+            p[1].unbound
+          )
+        );
+        break;
+      }
+      case "special-page": {
+        const v = value(2, form.mnemonic + " special-page address");
+        if ((v & 65280) !== 65280) {
+          throw frame.error(form.mnemonic + " special-page address must be in $FF00-$FFFF.");
+        }
+        values.push(v & 255);
+        break;
+      }
+    }
+    context.emission.writeBytes(form.encoding);
+    for (let i = 0; i < values.length; i++) {
+      const width = form.operands[i].width;
+      const mask = 2 ** (width * 8) - 1;
+      context.emission.writeValue(values[i] & mask, width, "little");
+    }
+    return true;
+  }
+  /** Validate before writing, retaining a classification value only when its evaluation schedule requires it. */
+  readValue(frame, scalar3, width, description, immediate = false, prepared, displayText, unbound = false) {
+    let value;
+    if (unbound && frame.bindingFailure?.reason === "other") {
+      throw new Error(frame.bindingFailure.message);
+    } else if (prepared === void 0) {
+      value = frame.evaluate(scalar3, "beforeOpcode", false, "numeric", displayText).value;
+    } else {
+      value = frame.stageName !== "emitProgram" && (!Number.isInteger(prepared) || prepared < 0) ? 0 : generatedValue(prepared);
+      frame.observe(scalar3, value, "beforeOpcode", displayText);
+    }
+    const minimum = width === 1 && immediate ? -128 : 0;
+    const maximum = 2 ** (width * 8) - 1;
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+      throw frame.error(description + " " + value + " is outside the " + width * 8 + "-bit range.");
+    }
+    return value & maximum;
+  }
+  /** Relative streams select against the same reference cursor used by the wrapping subtraction. */
+  readBranch(frame, scalar3, offset, width, prepared, displayText, unbound = false) {
+    if (frame.stageName !== "emitProgram") {
+      return 0;
+    }
+    const reference2 = frame.currentAddress() + offset & 65535;
+    let target;
+    if (unbound && frame.bindingFailure?.reason === "other") {
+      throw new Error(frame.bindingFailure.message);
+    } else if (prepared !== void 0) {
+      target = generatedValue(prepared);
+      frame.observe(scalar3, target, "beforeOpcode", displayText);
+    } else if (scalar3.expression.type === "relativeReference" && scalar3.expression.stream === "relative") {
+      const result = frame.reference(scalar3.expression, reference2);
+      if (result.kind === "error") {
+        throw result.error;
+      }
+      if (result.kind === "missing") {
+        throw new Error("Error: Label '" + result.name + "' not found.");
+      }
+      target = result.value;
+    } else {
+      target = frame.evaluate(scalar3, "beforeOpcode", false, "numeric", displayText).value;
+    }
+    if (!Number.isInteger(target) || target < 0 || target > 65535) {
+      throw frame.error("Branch target " + target + " is outside the 16-bit address space.");
+    }
+    const delta = (target - reference2 + 32768 & 65535) - 32768;
+    const minimum = width === 1 ? -128 : -32768;
+    const maximum = width === 1 ? 127 : 32767;
+    if (delta < minimum || delta > maximum) {
+      throw frame.error(
+        "Branch target $" + target.toString(16).toUpperCase() + " is out of range from $" + reference2.toString(16).toUpperCase() + " (" + delta + ")."
+      );
+    }
+    return delta;
+  }
+};
+
+// packages/plugin-65xx/src/index.ts
+var RAW_65XX_TARGET_ID = "65xx.raw";
+var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
+var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
+var RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
+var CA65_RAW_65XX_TARGET_ID = "65xx.ca65-raw";
+var CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
+var CA65_65XX_EXPRESSION_SET_ID = "65xx.ca65-expressions";
+var CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
+function createRaw65xxTargetOptions(configured) {
+  if (configured === void 0) {
+    return { origin: 0 };
+  }
+  if (typeof configured !== "object" || configured === null || Array.isArray(configured)) {
+    throw new Error("65xx raw target options must be an object with an optional numeric 'origin'.");
+  }
+  const keys = Object.keys(configured);
+  const unknown = keys.filter((key) => key !== "origin");
+  if (unknown.length > 0) {
+    throw new Error(`Unknown 65xx raw target option(s): ${unknown.join(", ")}.`);
+  }
+  const value = "origin" in configured ? configured.origin : 0;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 65535) {
+    throw new Error("65xx raw target origin must be an integer from 0 through 65535.");
+  }
+  return { origin: value };
+}
+var descriptor = (keyword, summary, syntax2, group) => ({ keyword, summary, syntax: syntax2, group });
+var ca65Tooling = [
+  descriptor("setcpu", "Select a 65xx CPU.", '.setcpu "CPU"', "architecture"),
+  descriptor("cpu", "Alias for .setcpu.", '.cpu "CPU"', "architecture"),
+  descriptor("pushcpu", "Push the current CPU.", ".pushcpu", "architecture"),
+  descriptor("popcpu", "Restore the pushed CPU.", ".popcpu", "architecture"),
+  descriptor("segment", "Switch to an ld65 segment.", '.segment "NAME"', "layout"),
+  descriptor("pushseg", "Push the current flat segment.", ".pushseg", "layout"),
+  descriptor("popseg", "Restore the pushed flat segment.", ".popseg", "layout"),
+  descriptor("export", "Export a symbol to other files.", ".export ident[, ident...]", "label"),
+  descriptor(
+    "import",
+    "Import a symbol defined in another file.",
+    ".import ident[, ident...]",
+    "label"
+  ),
+  descriptor("byte", "Emit one or more bytes.", ".byte value[, value...]", "data"),
+  descriptor("byt", "Alias for .byte.", ".byt value[, value...]", "data"),
+  descriptor("addr", "Emit 16-bit little-endian addresses.", ".addr value[, value...]", "data"),
+  descriptor("word", "Alias for .addr.", ".word value[, value...]", "data"),
+  descriptor(
+    "lobytes",
+    "Emit the low byte of each expression.",
+    ".lobytes expr[, expr...]",
+    "data"
+  ),
+  descriptor(
+    "hibytes",
+    "Emit the high byte of each expression.",
+    ".hibytes expr[, expr...]",
+    "data"
+  ),
+  descriptor("dbyt", "Emit 16-bit big-endian words.", ".dbyt value[, value...]", "data"),
+  descriptor("dword", "Emit 32-bit little-endian values.", ".dword value[, value...]", "data"),
+  descriptor(
+    "faraddr",
+    "Emit 24-bit little-endian addresses.",
+    ".faraddr value[, value...]",
+    "data"
+  ),
+  descriptor("res", "Reserve bytes with an optional fill value.", ".res count[, fill]", "data"),
+  descriptor("align", "Align the location counter.", ".align boundary[, fill]", "layout"),
+  descriptor("incbin", "Include a binary range.", '.incbin "file"[, offset[, size]]', "include"),
+  descriptor(
+    "assert",
+    "Require an expression to be true.",
+    '.assert expr[, error[, "message"]]',
+    "diagnostic"
+  ),
+  descriptor("scope", "Enter a lexical scope.", ".scope [name]", "label"),
+  descriptor("endscope", "Leave a lexical scope.", ".endscope", "label"),
+  descriptor("proc", "Define and enter a procedure scope.", ".proc name", "label"),
+  descriptor("endproc", "Leave a procedure scope.", ".endproc", "label")
+];
+var ca65ExpressionFunctions = [
+  ["lobyte", "Low byte of a value.", (value) => value & 255],
+  ["hibyte", "High byte of a value.", (value) => value >>> 8 & 255],
+  ["bankbyte", "Bank byte of a value.", (value) => value >>> 16 & 255],
+  ["loword", "Low word of a value.", (value) => value & 65535],
+  ["hiword", "High word of a value.", (value) => value >>> 16 & 65535]
+];
+var directive = (id2, keywords) => {
+  const wanted = new Set(keywords);
+  return {
+    id: id2,
+    keywords,
+    phase: "lowered",
+    syntax: ca65DirectiveSyntax(id2),
+    tooling: ca65Tooling.filter((entry) => wanted.has(entry.keyword))
+  };
+};
+function validate2(address) {
+  if (!Number.isInteger(address) || address < 0 || address > 65535) {
+    throw new Error(`Address $${address.toString(16).toUpperCase()} is outside flat16.`);
+  }
+  return address;
+}
+function createFlat65xxAddressSpace({ options }) {
+  const { origin } = createRaw65xxTargetOptions(options);
+  return {
+    addressWidth: 16,
+    defaultOrigin: origin,
+    normalizeForWrite: validate2,
+    advance(address, amount) {
+      return validate2(address + amount);
+    },
+    toOutputOffset(address) {
+      return Number.isInteger(address) && address >= origin && address <= 65535 ? address - origin : -1;
+    },
+    fromOutputOffset(offset) {
+      const address = origin + offset;
+      return Number.isInteger(offset) && offset >= 0 && address <= 65535 ? address : -1;
+    },
+    validateWrite(address, width) {
+      validate2(address);
+      validate2(address + width - 1);
+      if (address < origin) {
+        throw new Error(
+          `Address $${address.toString(16).toUpperCase()} precedes raw origin $${origin.toString(16).toUpperCase()}.`
+        );
+      }
+    }
+  };
+}
+function updatePredicates(session, architecture) {
+  for (const symbol of new Set(Object.values(ca65CpuPredicateByArchitecture))) {
+    session.globalSymbols.add(symbol);
+    session.labelTable.set(symbol, {
+      value: ca65CpuPredicateByArchitecture[architecture] === symbol ? 1 : 0,
+      isStatic: true
+    });
+  }
+}
+function register65xxContributions(context) {
+  for (const format of nesAssetFormats) {
+    context.registerAssetFormat(format);
+  }
+  for (const [cpu, forms] of [
+    [nmos6502Cpu, nmos6502Forms],
+    [nmos6502xCpu, nmos6502xForms],
+    [ricoh2a03Cpu, nmos6502xForms],
+    ...variantCpus.map(
+      (variantCpu) => [variantCpu, variantFormsByCpuId[variantCpu.id] ?? []]
+    )
+  ]) {
+    const catalog = buildInstructionCatalog(forms);
+    context.registerArchitecture({
+      id: cpu.id,
+      operandGrammar: { version: "2", parse: parse65xxOperands },
+      aliases: cpu.aliases,
+      displayName: cpu.displayName,
+      unknownInstructionBehavior: "throw",
+      // Same as 65816: `LDA $12,x` is one operand, not two.
+      createTypedEncoder: () => new TypedArch65xx(cpu),
+      // Vendor/CMOS tables have different semantics; expose the decoder only for NMOS/Ricoh profiles.
+      createDecoder: cpu.features.has("nmos") && !cpu.features.has("dtv") ? () => new Cpu6502Decoder(cpu) : void 0,
+      instructionSpecifications: cpu.features.has("nmos") && !cpu.features.has("dtv") ? cpu6502Specifications(cpu) : void 0,
+      instructions: catalog
+    });
+  }
+  context.registerAddressSpace({
+    id: FLAT_65XX_ADDRESS_SPACE_ID,
+    create: createFlat65xxAddressSpace
+  });
+  context.registerOutputFormat({
+    id: RAW_65XX_OUTPUT_FORMAT_ID,
+    // Emit the buffer as a headerless image, without checksum or padding.
+    create: () => ({
+      finalize: () => void 0,
+      getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+    })
+  });
+  context.registerLifecycle({
+    id: RAW_65XX_LIFECYCLE_ID,
+    create: ({ options }) => {
+      const { origin } = createRaw65xxTargetOptions(options);
+      return {
+        onStageStart: ({ session }) => {
+          session.setWritePosition(origin);
+          session.bytes = 0;
+        }
+      };
+    }
+  });
+  context.registerTarget({
+    id: RAW_65XX_TARGET_ID,
+    aliases: ["65xx", "6502-raw"],
+    displayName: "65xx flat 16-bit raw binary",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
+    addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
+    outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [],
+    expressionSets: [],
+    lifecycle: [RAW_65XX_LIFECYCLE_ID],
+    syntaxProfile: NATIVE_SYNTAX_PROFILE,
+    defaultOutputExtension: ".bin",
+    createOptions: createRaw65xxTargetOptions
+  });
+  context.registerSessionState({
+    id: CA65_65XX_SESSION_STATE_ID,
+    create: createCa65SessionState,
+    clone: cloneCa65SessionState,
+    resetForStage: resetCa65StageState
+  });
+  context.registerExpressionSet({
+    id: CA65_65XX_EXPRESSION_SET_ID,
+    functions: ca65ExpressionFunctions.map(([name, summary, transform]) => ({
+      name,
+      signature: { parameters: ["value"], minimumArguments: 1, maximumArguments: 1 },
+      summary,
+      evaluate: (_expressionContext, args) => {
+        const value = args[0];
+        if (typeof value !== "number") {
+          throw new Error(`${name}() expects a numeric argument.`);
+        }
+        return transform(value);
+      }
+    }))
+  });
+  context.registerLifecycle({
+    id: CA65_65XX_LIFECYCLE_ID,
+    create: () => {
+      return {
+        onSessionCreated: ({ session, state }) => {
+          const profile = state.get(ca65SessionStateKey);
+          profile.defaultArchitecture = session.resolveActiveArchitecture().name;
+          profile.currentArchitecture = profile.defaultArchitecture;
+          updatePredicates(session, profile.defaultArchitecture);
+        },
+        onStageStart: ({ session, state }) => {
+          const profile = state.get(ca65SessionStateKey);
+          session.selectArchitecture(profile.defaultArchitecture, profile.defaultArchitecture);
+        },
+        onArchitectureSelected: ({ session, state, architecture }) => {
+          const profile = state.get(ca65SessionStateKey);
+          profile.currentArchitecture = architecture;
+          updatePredicates(session, architecture);
+        }
+      };
+    }
+  });
+  context.registerTarget({
+    id: CA65_RAW_65XX_TARGET_ID,
+    aliases: ["ca65-raw"],
+    displayName: "65xx ca65-compatible flat 16-bit raw binary",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
+    addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
+    outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
+    expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
+    lifecycle: [RAW_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
+    defaultOutputExtension: ".bin",
+    createOptions: createRaw65xxTargetOptions
+  });
+  context.registerSessionState({
+    id: NES_65XX_SESSION_STATE_ID,
+    create: createInitialNesState,
+    clone: cloneNes65xxSessionState,
+    resetForStage: resetNes65xxStageState
+  });
+  context.registerAddressSpace({
+    id: NES_65XX_ADDRESS_SPACE_ID,
+    create: createNesAddressSpace
+  });
+  context.registerOutputFormat({
+    id: NES_65XX_OUTPUT_FORMAT_ID,
+    create: createNesOutputFormat
+  });
+  context.registerLifecycle({
+    id: NES_65XX_LIFECYCLE_ID,
+    create: createNesLifecycle
+  });
+  context.registerDirectiveSet({
+    id: CA65_65XX_DIRECTIVE_SET_ID,
+    directives: [
+      directive("65xx.directive.segment", ["segment"]),
+      directive("65xx.directive.setcpu", ["setcpu", "cpu"]),
+      directive("65xx.directive.pushcpu", ["pushcpu"]),
+      directive("65xx.directive.popcpu", ["popcpu"]),
+      directive("65xx.directive.cpu-shorthand", Object.keys(ca65CpuShorthands)),
+      directive("65xx.directive.export", ["export"]),
+      directive("65xx.directive.import", ["import"]),
+      directive("65xx.directive.byte", ["byte", "byt"]),
+      directive("65xx.directive.addr", ["addr", "word"]),
+      directive("65xx.directive.lobytes", ["lobytes"]),
+      directive("65xx.directive.hibytes", ["hibytes"]),
+      directive("65xx.directive.dbyt", ["dbyt"]),
+      directive("65xx.directive.dword", ["dword"]),
+      directive("65xx.directive.faraddr", ["faraddr"]),
+      directive("65xx.directive.res", ["res"]),
+      directive("65xx.directive.align", ["align"]),
+      directive("65xx.directive.incbin", ["incbin"]),
+      directive("65xx.directive.assert", ["assert"]),
+      directive("65xx.directive.scope", ["scope", "proc"]),
+      directive("65xx.directive.endscope", ["endscope", "endproc"]),
+      directive("65xx.directive.pushseg", ["pushseg"]),
+      directive("65xx.directive.popseg", ["popseg"]),
+      directive("65xx.directive.unsupported-object", [
+        "autoimport",
+        "constructor",
+        "debuginfo",
+        "destructor",
+        "exportzp",
+        "forceimport",
+        "globalzp",
+        "importzp",
+        "interruptor",
+        "reloc"
+      ]),
+      directive("65xx.directive.unsupported-macro", ["exitmacro", "local"])
+    ],
+    tooling: ca65Tooling
+  });
+  context.registerTarget({
+    id: NES_65XX_TARGET_ID,
+    aliases: ["nes", "ines", "6502-nes"],
+    displayName: "NES iNES (Asar source or ca65 layout)",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [
+      nmos6502Cpu.id,
+      nmos6502xCpu.id,
+      ricoh2a03Cpu.id,
+      ...variantCpus.map((cpu) => cpu.id)
+    ],
+    addressSpace: NES_65XX_ADDRESS_SPACE_ID,
+    outputFormat: NES_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
+    expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
+    lifecycle: [NES_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
+    createSyntaxProfile: (options) => options.sourceStyle === "asar" ? ASAR_SYNTAX_PROFILE : CA65_65XX_SYNTAX_PROFILE,
+    defaultOutputExtension: ".nes",
+    createOptions: createNes65xxTargetOptions
+  });
+}
+function validate65xxPluginOptions(configured) {
+  if (configured && typeof configured === "object" && !Array.isArray(configured) && ("header" in configured || "linkerConfig" in configured || "fillByte" in configured || "sourceStyle" in configured)) {
+    const unknown = Object.keys(configured).filter(
+      (key) => !["header", "linkerConfig", "fillByte", "sourceStyle"].includes(key)
+    );
+    if (unknown.length) {
+      throw new Error(`Unknown NES target option(s): ${unknown.join(", ")}.`);
+    }
+    createNes65xxTargetOptions(configured);
+    return { ...configured };
+  }
+  return createRaw65xxTargetOptions(configured);
+}
+var plugin = definePlugin({
+  manifest: {
+    id: "uttori.asm-plugin-65xx",
+    name: "Uttori ASM 65xx",
+    version: "1.0.0",
+    apiVersion: PLUGIN_API_VERSION,
+    description: "65xx NMOS, CMOS, Commodore, MEGA65, Hudson, and Mitsubishi architectures with raw and NES iNES targets."
+  },
+  validateOptions: validate65xxPluginOptions,
+  activate: register65xxContributions
+});
+
+// packages/language-server/src/asset-preview-conversion.ts
+var registry3 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(asepriteRasterImporter).registerImporter(waveImporter);
+for (const encoder of [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder]) {
+  registry3.registerEncoder(encoder);
+}
+function storagePixels(composed, width, height, indexByCoordinate) {
+  const widthTiles = width / 8;
+  const heightTiles = height / 8;
+  const result = new Uint8Array(composed.length);
+  for (let logical = 0; logical < indexByCoordinate.length; logical++) {
+    const storage = indexByCoordinate[logical];
+    if (!Number.isSafeInteger(storage) || storage < 0 || storage >= widthTiles * heightTiles) {
+      throw new Error("Image layout contains an invalid storage tile index.");
+    }
+    for (let row = 0; row < 8; row++) {
+      const source = ((Math.floor(logical / widthTiles) * 8 + row) * width + logical % widthTiles * 8) * 4;
+      const target = ((Math.floor(storage / widthTiles) * 8 + row) * width + storage % widthTiles * 8) * 4;
+      result.set(composed.subarray(source, source + 32), target);
+    }
+  }
+  return result;
+}
+function convertAssetPreview(input2, adapters = []) {
   if (input2.format === NES_CHR_CODEC) {
     return convertNesChrPreview(input2);
   }
-  if (input2.format === "som.room") {
-    return convertSomRoomPreview(input2);
+  const matches = adapters.filter((adapter) => adapter.formats.includes(input2.format));
+  if (matches.length > 1) {
+    throw new Error("Ambiguous asset preview registration.");
   }
-  if (input2.format === "som.brr.pcm" || input2.format === "som.brr.segment") {
-    return convertSomBrrPreview(input2);
-  }
-  if (input2.format === "som.palette.bgr555") {
-    return convertSomPalettePreview(input2);
-  }
-  if (input2.format === "som.sprite.frames" || input2.format === "som.boss.graphics") {
-    return convertSomFramePreview(input2);
+  if (matches.length === 1) {
+    return matches[0].convert(input2);
   }
   const result = convertAsset(registry3, input2);
   const outputName = input2.output ?? result.primaryOutput;
@@ -19421,13 +25927,16 @@ function convertNesChrPreview(input2) {
   };
 }
 
+// packages/language-server/src/asset-preview-host.ts
+var convertAssetPreview2 = (input2) => convertAssetPreview(input2, somPreviewAdapters);
+
 // packages/language-server/src/asset-preview-worker.ts
 if (!parentPort) {
   throw new Error("Asset preview worker requires a parent port.");
 }
 parentPort.on("message", (message) => {
   try {
-    parentPort.postMessage({ id: message.id, result: convertAssetPreview(message.input) });
+    parentPort.postMessage({ id: message.id, result: convertAssetPreview2(message.input) });
   } catch (error) {
     parentPort.postMessage({
       id: message.id,

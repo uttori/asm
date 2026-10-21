@@ -10,7 +10,6 @@ import {
   sourceExportSha256,
   projectSourceLabelNames,
   validateSourceLabelName,
-  type InstructionExportRecord,
   type AnalysisProjectManifest,
   type AnalysisProjectShards,
   type IntervalAnnotation,
@@ -20,6 +19,7 @@ import {
   type SourceExportSpan,
   type SourceExportSpanRole,
 } from "@uttori/asm-disassembler";
+import { type InstructionExportRecord } from "@uttori/asm-disassembler/storage";
 
 import {
   Cpu65816Decoder,
@@ -640,10 +640,19 @@ const known = (value: unknown): number | undefined => {
   return entry.kind === "known" && typeof entry.value === "number" ? entry.value : undefined;
 };
 
+/** Preserve unknown flags; only proven numeric states can select an instruction width. */
+const knownFlag = (value: unknown): 0 | 1 | undefined => {
+  const flag = known(value);
+  if (flag === undefined) {
+    return undefined;
+  }
+  return flag === 0 ? 0 : 1;
+};
+
 const decodeState = (record: Readonly<Record<string, unknown>>): Cpu65816DecodeState => ({
-  ...(known(record.e) === undefined ? {} : { e: known(record.e) === 0 ? 0 : 1 }),
-  ...(known(record.m) === undefined ? {} : { m: known(record.m) === 0 ? 0 : 1 }),
-  ...(known(record.x) === undefined ? {} : { x: known(record.x) === 0 ? 0 : 1 }),
+  ...(knownFlag(record.e) === undefined ? {} : { e: knownFlag(record.e) }),
+  ...(knownFlag(record.m) === undefined ? {} : { m: knownFlag(record.m) }),
+  ...(knownFlag(record.x) === undefined ? {} : { x: knownFlag(record.x) }),
   ...(known(record.pbr) === undefined ? {} : { programBank: known(record.pbr)! & 0xff }),
   ...(known(record.dbr) === undefined ? {} : { dataBank: known(record.dbr)! & 0xff }),
   ...(known(record.d) === undefined ? {} : { directPage: known(record.d)! & 0xffff }),
@@ -727,10 +736,8 @@ export const formatSnes65816SourceInstruction = (
     "directIndexedX",
     "directIndexedY",
   ].includes(instruction.mode);
-  const structField =
-    namedAddress === undefined
-      ? undefined
-      : (indexed ? (indexedStructFields ?? structFields) : structFields)?.get(namedAddress);
+  const fields = indexed ? (indexedStructFields ?? structFields) : structFields;
+  const structField = namedAddress === undefined ? undefined : fields?.get(namedAddress);
   if ((structField || ramVariable) && rawValue !== undefined) {
     const rawWidth = instruction.operands[0]?.width ?? 1;
     const encoded = `$${rawValue
@@ -1552,36 +1559,13 @@ const regionIdsFor = (
     .map((region) => region.id)
     .toSorted();
 
-/**
- * Renders a deterministic 65816 source tree that can be reassembled with this plugin.
- * Confident CFG nodes become width-qualified instructions. Unknown bytes remain
- * `incbin` assets. The internal/expanded SNES headers, vector words, and explicitly
- * bound ROM struct fields become native data source. An optional 512-byte copier
- * header remains an asset. Optional struct bindings also name RAM/ROM operands.
- * Checksums are preserved, not recomputed.
- * @param {{ readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards }} project Loaded analysis project.
- * @param {RomImage} rom Immutable ROM used for asset bytes and copier-header extraction.
- * @param {string} directory Immutable input snapshot containing research recipes and build configuration.
- * @param {SnesSourceExportOptions} options Provenance hash and required output sink. The renderer never publishes files.
- * @returns {SourceExportManifest} Rendered file inventory, spans, and rebuild configuration.
- */
-export const exportSnes65816Source = (
+/** Resolve and validate target policy and immutable input files before the first output is emitted. */
+const planSnes65816Source = (
   project: { readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards },
   rom: RomImage,
   directory: string,
   options: SnesSourceExportOptions,
-): SourceExportManifest => {
-  const emitFile = (
-    _root: string,
-    relative: string,
-    bytes: string | Uint8Array,
-    kind: SourceExportFile["kind"],
-    files: SourceExportFile[],
-  ): void => {
-    const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
-    options.emitFile({ path: relative, bytes: value });
-    files.push({ path: relative, kind, size: value.length, sha256: sourceExportSha256(value) });
-  };
+) => {
   const commentLineWidth = options.commentLineWidth ?? 100;
   if (!Number.isSafeInteger(commentLineWidth) || commentLineWidth < 20) {
     throw new Error("commentLineWidth must be an integer of at least 20 columns.");
@@ -1704,6 +1688,84 @@ export const exportSnes65816Source = (
       emittedLabels.set(span.start, name);
     }
   }
+  const defaultConfiguration = canonicalJson({
+    $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
+    plugins: [
+      {
+        module: "@uttori/asm-plugin-snes",
+        options: { checksumEnabled: false, checksumMode: "asar" },
+      },
+    ],
+    target: "snes.sfc",
+    architecture: "snes.65816",
+    entryPoints: ["main.asm"],
+    includePaths: ["./"],
+    buildOutput: "build/rebuilt-content.sfc",
+  });
+  const configurationPath = path.join(directory, "uttori-asm.config.json");
+  // An existing source project may register asset formats and custom compressors.
+  // Rewriting its build configuration would leave regenerated includes unassemblable.
+  const configuration = fs.existsSync(configurationPath)
+    ? fs.readFileSync(configurationPath)
+    : Buffer.from(defaultConfiguration);
+  return {
+    mapper,
+    context,
+    structure,
+    assetIncludes,
+    ramMap,
+    structMap,
+    typedData,
+    instructions,
+    metadata,
+    bankSize,
+    planned,
+    emittedLabels,
+    formatComments,
+    structLineWidth,
+    configuration,
+  };
+};
+
+/** Validated target decisions and owned input snapshots, completed before the output sink is called. */
+type SnesSourceRenderPlan = ReturnType<typeof planSnes65816Source>;
+
+/** Emit a completed plan without rereading authoring inputs or choosing instruction boundaries. */
+const emitSnes65816Source = (
+  project: { readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards },
+  rom: RomImage,
+  directory: string,
+  options: SnesSourceExportOptions,
+  plan: SnesSourceRenderPlan,
+): SourceExportManifest => {
+  const {
+    mapper,
+    context,
+    structure,
+    assetIncludes,
+    ramMap,
+    structMap,
+    typedData,
+    instructions,
+    metadata,
+    bankSize,
+    planned,
+    emittedLabels,
+    formatComments,
+    structLineWidth,
+    configuration,
+  } = plan;
+  const emitFile = (
+    _root: string,
+    relative: string,
+    bytes: string | Uint8Array,
+    kind: SourceExportFile["kind"],
+    files: SourceExportFile[],
+  ): void => {
+    const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
+    options.emitFile({ path: relative, bytes: value });
+    files.push({ path: relative, kind, size: value.length, sha256: sourceExportSha256(value) });
+  };
   const files: SourceExportFile[] = [];
   {
     // Fixed original-ROM blocks keep binary identity independent of new code/data boundaries.
@@ -1746,21 +1808,22 @@ export const exportSnes65816Source = (
     );
     // Stable symbol identity is deliberately smaller than a source ownership map. Editor renames
     // need the original research key, not line ranges that become stale after ordinary text edits.
-    const symbols = planned.flatMap((span) =>
-      span.structured
-        ? []
-        : (metadata.get(span.start) ?? [])
-            .filter((line) => line.name && line.identity)
-            .map((line) => ({
-              id: line.inferredFunction
-                ? `symbol:${line.identity!.addressSpace}:${line.identity!.address.toString(16)}`
-                : line.identity!.id,
-              name: line.name!,
-              addressSpace: line.identity!.addressSpace,
-              address: line.identity!.address,
-              evidence: line.identity!.evidence,
-            })),
-    );
+    const symbols = planned.flatMap((span) => {
+      if (span.structured) {
+        return [];
+      }
+      return (metadata.get(span.start) ?? [])
+        .filter((line) => line.name && line.identity)
+        .map((line) => ({
+          id: line.inferredFunction
+            ? `symbol:${line.identity!.addressSpace}:${line.identity!.address.toString(16)}`
+            : line.identity!.id,
+          name: line.name!,
+          addressSpace: line.identity!.addressSpace,
+          address: line.identity!.address,
+          evidence: line.identity!.evidence,
+        }));
+    });
     emitFile(
       directory,
       "source-symbols.json",
@@ -1796,9 +1859,10 @@ export const exportSnes65816Source = (
         throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex(span.start)}.`);
       }
       const spanMetadata = metadata.get(span.start);
+      const metadataIndent = span.structRecord ? "" : "  ";
       const named = span.structured
         ? []
-        : renderedMetadata(spanMetadata, Boolean(span.instruction), span.structRecord ? "" : "  ");
+        : renderedMetadata(spanMetadata, Boolean(span.instruction), metadataIndent);
       let closedTable = false;
       if (
         table &&
@@ -2106,26 +2170,6 @@ export const exportSnes65816Source = (
     "configuration",
     files,
   );
-  const defaultConfiguration = canonicalJson({
-    $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
-    plugins: [
-      {
-        module: "@uttori/asm-plugin-snes",
-        options: { checksumEnabled: false, checksumMode: "asar" },
-      },
-    ],
-    target: "snes.sfc",
-    architecture: "snes.65816",
-    entryPoints: ["main.asm"],
-    includePaths: ["./"],
-    buildOutput: "build/rebuilt-content.sfc",
-  });
-  const configurationPath = path.join(directory, "uttori-asm.config.json");
-  // An existing source project may register asset formats and custom compressors.
-  // Rewriting its build configuration would leave regenerated includes unassemblable.
-  const configuration = fs.existsSync(configurationPath)
-    ? fs.readFileSync(configurationPath)
-    : Buffer.from(defaultConfiguration);
   const manifest: SourceExportManifest = {
     format: SOURCE_EXPORT_FORMAT,
     schemaVersion: SOURCE_EXPORT_SCHEMA_VERSION,
@@ -2186,3 +2230,30 @@ export const exportSnes65816Source = (
   };
   return manifest;
 };
+
+/**
+ * Renders a deterministic 65816 source tree that can be reassembled with this plugin.
+ * Confident CFG nodes become width-qualified instructions. Unknown bytes remain
+ * `incbin` assets. The internal/expanded SNES headers, vector words, and explicitly
+ * bound ROM struct fields become native data source. An optional 512-byte copier
+ * header remains an asset. Optional struct bindings also name RAM/ROM operands.
+ * Checksums are preserved, not recomputed.
+ * @param {{ readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards }} project Loaded analysis project.
+ * @param {RomImage} rom Immutable ROM used for asset bytes and copier-header extraction.
+ * @param {string} directory Immutable input snapshot containing research recipes and build configuration.
+ * @param {SnesSourceExportOptions} options Provenance hash and required output sink. The renderer never publishes files.
+ * @returns {SourceExportManifest} Rendered file inventory, spans, and rebuild configuration.
+ */
+export const exportSnes65816Source = (
+  project: { readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards },
+  rom: RomImage,
+  directory: string,
+  options: SnesSourceExportOptions,
+): SourceExportManifest =>
+  emitSnes65816Source(
+    project,
+    rom,
+    directory,
+    options,
+    planSnes65816Source(project, rom, directory, options),
+  );

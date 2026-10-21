@@ -9,14 +9,11 @@ import { crc32 } from "node:zlib";
 
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { createDebugMap } from "@uttori/asm-core/debug-map";
-import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
-import plugin65xx from "@uttori/asm-plugin-65xx";
 import {
   discoverProjectConfigurationPath,
   PROJECT_CONFIG_FILENAME,
   validateProjectConfiguration,
 } from "@uttori/asm-plugin-loader-node";
-import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   createConnection,
@@ -24,9 +21,11 @@ import {
   Diagnostic,
   DiagnosticSeverity,
   DidChangeConfigurationNotification,
+  LSPErrorCodes,
   PositionEncodingKind,
   ProposedFeatures,
   Range,
+  ResponseError,
   SymbolInformation,
   TextDocumentSyncKind,
   TextDocuments,
@@ -45,7 +44,9 @@ import {
   formatElapsed,
   resolveBuildEntry,
 } from "./build.js";
+import { bundledProjectOptions } from "./bundled-plugins.js";
 import { OverlayFileProvider, type WorkspaceIndex } from "./core.js";
+import { IndexWorkerClient } from "./index-worker-client.js";
 import {
   ProjectEnvironmentController,
   type PluginModuleSetting,
@@ -79,18 +80,16 @@ const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 /** Conversion media stays in a bounded worker-owned cache. */
 const assetPreviews = new AssetPreviewService();
+/** One read worker and one replacement candidate; neither performs analysis on the protocol loop. */
+const reindexWorker = new IndexWorkerClient();
+const configurationIndexer = new IndexWorkerClient();
+let documentRevision = 0;
+let indexStale = false;
+let configurationRevision = 0;
 /** Owns the plugin lifecycle and keeps build and analysis environments in sync. */
 const environmentController = new ProjectEnvironmentController({
-  bundledPlugins: new Map<string, AssemblerPlugin>([
-    ["@uttori/asm-plugin-snes", snesPlugin],
-    ["@uttori/asm-plugin-65xx", plugin65xx],
-  ]),
-  activateBundledPlugins: true,
-  defaults: {
-    plugins: [{ module: "@uttori/asm-plugin-snes" }],
-    target: SNES_TARGET_ID,
-    includePaths: ["./"],
-  },
+  ...bundledProjectOptions,
+  indexer: (configuration, overlays) => configurationIndexer.analyze(configuration, overlays),
   logger: {
     debug: (message) => connection.console.log(message),
     info: (message) => connection.console.info(message),
@@ -181,6 +180,7 @@ function requireIndex(): WorkspaceIndex {
 let workspaceRoots: string[] = [];
 /** Whether settings can be pulled with workspace/configuration rather than pushed by the client. */
 let hasConfigurationCapability = false;
+let hasSemanticTokenRefreshCapability = false;
 /** Whether the client permits dynamic subscription to workspace setting changes. */
 let hasDidChangeConfigurationDynamicRegistration = false;
 /** Pending 500 ms edit-burst debounce; cleared when reindexing starts. */
@@ -405,13 +405,21 @@ function setConfigurationDiagnostic(
  */
 async function replaceProjectEnvironment(next: ServerSettings): Promise<void> {
   try {
+    const revision = documentRevision;
     const state = await environmentController.replace(projectSettings(next), currentOverlays());
     index = state.index;
+    indexStale = revision !== documentRevision;
+    if (indexStale) {
+      scheduleReindex();
+    }
     settings = next;
     setConfigurationDiagnostic(next, state.trustNotice, DiagnosticSeverity.Warning);
     publishAllDiagnostics();
     notifyIndexUpdated();
   } catch (error) {
+    if (error instanceof Error && error.message.includes("superseded")) {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : String(error);
     settings = next;
     connection.console.error(`Assembly project configuration failed: ${message}`);
@@ -431,9 +439,13 @@ async function replaceProjectEnvironment(next: ServerSettings): Promise<void> {
 async function applyQueuedEnvironment(
   previous: Promise<void>,
   next: ServerSettings,
+  revision: number,
 ): Promise<void> {
   try {
     await previous;
+    if (revision !== configurationRevision) {
+      return;
+    }
     await replaceProjectEnvironment(next);
   } catch {
     // Configuration failures are already logged and published as diagnostics.
@@ -445,34 +457,53 @@ async function applyQueuedEnvironment(
  * @param {ServerSettings} next Effective settings to apply after earlier replacements finish.
  */
 function enqueueProjectEnvironment(next: ServerSettings): void {
-  configurationQueue = applyQueuedEnvironment(configurationQueue, next);
+  configurationIndexer.invalidate();
+  reindexWorker.invalidate();
+  indexStale = true;
+  configurationQueue = applyQueuedEnvironment(configurationQueue, next, ++configurationRevision);
 }
 
 /**
  * Restarts the 500 ms debounce for a full workspace reindex using the index active when it fires.
  * Completion republishes diagnostics/status and asks the client to refresh semantic tokens.
  */
+/** Rebuild from a captured revision, then publish the complete snapshot with one pointer swap. */
+async function reindexNow(): Promise<void> {
+  await configurationQueue;
+  const active = requireIndex();
+  const revision = documentRevision;
+  const overlays = currentOverlays();
+  const snapshot = await reindexWorker.analyze(projectSettings(settings), overlays);
+  if (revision !== documentRevision || index !== active) {
+    throw new Error("Analysis revision superseded.");
+  }
+  index = environmentController.publishAnalysis(snapshot, overlays);
+  indexStale = false;
+  publishAllDiagnostics();
+  // Refresh is an optional client capability. A rejected optional request must not terminate indexing.
+  if (hasSemanticTokenRefreshCapability) {
+    void connection.languages.semanticTokens.refresh().catch((error: unknown) => {
+      connection.console.warn(`Semantic token refresh failed: ${String(error)}`);
+    });
+  }
+  notifyIndexUpdated();
+}
+
 function scheduleReindex(): void {
+  documentRevision++;
+  indexStale = true;
+  notifyIndexUpdated();
+  reindexWorker.invalidate();
   if (reindexTimer) {
     clearTimeout(reindexTimer);
   }
   reindexTimer = setTimeout(() => {
     reindexTimer = undefined;
-    const active = requireIndex();
-    connection.console.info("Full workspace reindex starting");
-    active.reindex();
-    const status = active.getStatus();
-    connection.console.info(
-      `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms ` +
-        `(roots=${status.lastReindexRootCount}, analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, ` +
-        `files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`,
-    );
-    connection.console.info(
-      `Index contains ${status.referenceCount} references across ${status.fileCount} files`,
-    );
-    publishAllDiagnostics();
-    void connection.languages.semanticTokens.refresh();
-    notifyIndexUpdated();
+    void reindexNow().catch((error: unknown) => {
+      if (!(error instanceof Error) || !error.message.includes("superseded")) {
+        connection.console.error(String(error));
+      }
+    });
   }, 500);
 }
 
@@ -504,24 +535,28 @@ function notifyIndexUpdated(): void {
   if (!index || !clientInitialized) {
     return;
   }
-  void connection.sendNotification("asm/indexUpdated", index.getStatus());
+  void connection.sendNotification("asm/indexUpdated", { ...index.getStatus(), stale: indexStale });
 }
 
 connection.onInitialize(async (params: InitializeParams): Promise<InitializeResult> => {
   hasConfigurationCapability = Boolean(params.capabilities.workspace?.configuration);
+  hasSemanticTokenRefreshCapability =
+    params.capabilities.workspace?.semanticTokens?.refreshSupport === true;
   hasDidChangeConfigurationDynamicRegistration = Boolean(
     params.capabilities.workspace?.didChangeConfiguration?.dynamicRegistration,
   );
   workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
-  // Older clients omit workspaceFolders and still send rootUri.
-  // oxlint-disable-next-line typescript/no-deprecated
-  if (workspaceRoots.length === 0 && params.rootUri) {
-    workspaceRoots = [
-      uriToPath(
-        // oxlint-disable-next-line typescript/no-deprecated
-        params.rootUri,
-      ),
-    ];
+  // Each editor client owns one root even when the editor advertises other open workspace folders.
+  if (
+    isRecord(params.initializationOptions) &&
+    typeof params.initializationOptions.owningRoot === "string"
+  ) {
+    workspaceRoots = [uriToPath(params.initializationOptions.owningRoot)];
+  }
+  // Legacy LSP clients may only supply rootUri; read it as input data rather than the deprecated API.
+  const legacyRoot: unknown = Object.getOwnPropertyDescriptor(params, "rootUri")?.value;
+  if (workspaceRoots.length === 0 && typeof legacyRoot === "string") {
+    workspaceRoots = [uriToPath(legacyRoot)];
   }
   editorSettings = mergeServerSettings(defaultSettings, params.initializationOptions);
   const requested = applyConfigFileDefaults(editorSettings);
@@ -575,7 +610,11 @@ connection.onInitialized(() => {
  */
 async function refreshConfiguration(): Promise<void> {
   try {
-    const config: unknown = await connection.workspace.getConfiguration("asm");
+    // A per-root server must also scope pull requests, or global defaults overwrite folder settings.
+    const config: unknown = await connection.workspace.getConfiguration({
+      section: "asm",
+      scopeUri: pathToUri(workspaceRoot()),
+    });
     editorSettings = mergeServerSettings(editorSettings, config);
     enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
   } catch (error) {
@@ -922,23 +961,10 @@ connection.onDidChangeWatchedFiles((params) => {
   }
 });
 
-documents.onDidOpen((event) => {
-  const active = requireIndex();
-  const file = uriToPath(event.document.uri);
-  active.openDocument(file, event.document.getText());
-  publishAllDiagnostics();
-  if (active.isFileDirtyOrUncovered(file)) {
-    scheduleReindex();
-  }
-});
-
-documents.onDidChangeContent((event) => {
-  requireIndex().updateDocument(uriToPath(event.document.uri), event.document.getText());
-  scheduleReindex();
-});
-
+documents.onDidOpen(() => scheduleReindex());
+documents.onDidChangeContent(() => scheduleReindex());
 documents.onDidClose((event) => {
-  requireIndex().closeDocument(uriToPath(event.document.uri));
+  scheduleReindex();
   void connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 
@@ -951,15 +977,35 @@ connection.onCompletion((params) => {
 });
 connection.onHover((params) => {
   const document = documents.get(params.textDocument.uri);
-  return document
-    ? hoverFor(
-        requireIndex(),
-        uriToPath(params.textDocument.uri),
-        params.position,
-        document.getText(),
-      )
-    : null;
+  if (!document) {
+    return null;
+  }
+  const hover = hoverFor(
+    requireIndex(),
+    uriToPath(params.textDocument.uri),
+    params.position,
+    document.getText(),
+  );
+  if (hover && indexStale) {
+    const notice = {
+      language: "text",
+      value: "Index updating; this result is from the previous complete snapshot.",
+    };
+    const contents = hover.contents;
+    if (Array.isArray(contents)) {
+      hover.contents = [...contents, notice];
+    } else if (typeof contents === "object" && "kind" in contents) {
+      hover.contents = {
+        ...contents,
+        value: contents.value + "\n\n_Index updating; previous complete snapshot._",
+      };
+    } else {
+      hover.contents = [contents, notice];
+    }
+  }
+  return hover;
 });
+
 connection.onDefinition((params) =>
   definitionFor(requireIndex(), uriToPath(params.textDocument.uri), params.position),
 );
@@ -971,9 +1017,12 @@ connection.onReferences((params) =>
     params.context.includeDeclaration,
   ),
 );
-connection.onDocumentSymbol((params) =>
-  documentSymbolsFor(requireIndex(), uriToPath(params.textDocument.uri)),
-);
+connection.onDocumentSymbol(async (params, token) => {
+  // Editors cache an outline by document version. An empty/stale answer during indexing can remain
+  // visible indefinitely, so this provider waits for current buffers while hover/completion stay live.
+  await flushCurrentIndex(token);
+  return documentSymbolsFor(requireIndex(), uriToPath(params.textDocument.uri));
+});
 connection.onWorkspaceSymbol((params): SymbolInformation[] => {
   const active = requireIndex();
   const query = params.query.toLowerCase();
@@ -1002,20 +1051,40 @@ connection.onSignatureHelp((params) => {
   });
   return signatureHelpFor(lineText, requireIndex());
 });
-/** F2 must see the latest buffers even when it immediately follows another rename or typing burst. */
-function flushRenameIndex(): void {
-  if (reindexTimer) {
-    clearTimeout(reindexTimer);
-    reindexTimer = undefined;
-    requireIndex().reindex();
+/** Concurrent outline/F2 requests share one fresh pass instead of cancelling each other's workers. */
+let freshIndexRequest: Promise<void> | undefined;
+async function flushCurrentIndex(token: CancellationToken): Promise<void> {
+  while (true) {
+    if (token.isCancellationRequested) {
+      throw new ResponseError(LSPErrorCodes.RequestCancelled, "Index request cancelled.");
+    }
+    await configurationQueue;
+    if (!indexStale) {
+      return;
+    }
+    if (!freshIndexRequest) {
+      clearTimeout(reindexTimer);
+      reindexTimer = undefined;
+      freshIndexRequest = reindexNow().finally(() => {
+        freshIndexRequest = undefined;
+      });
+    }
+    try {
+      await freshIndexRequest;
+    } catch (error) {
+      // A newer edit/configuration owns the next pass; waiting readers retry that revision only.
+      if (!(error instanceof Error) || !error.message.includes("superseded")) {
+        throw error;
+      }
+    }
   }
 }
-connection.onPrepareRename((params) => {
-  flushRenameIndex();
+connection.onPrepareRename(async (params, token) => {
+  await flushCurrentIndex(token);
   return prepareRenameFor(requireIndex(), uriToPath(params.textDocument.uri), params.position);
 });
-connection.onRenameRequest(async (params) => {
-  flushRenameIndex();
+connection.onRenameRequest(async (params, token) => {
+  await flushCurrentIndex(token);
   const active = requireIndex();
   const file = uriToPath(params.textDocument.uri);
   const root = researchRenameRootFor(active, file, params.position);
@@ -1029,7 +1098,11 @@ connection.onRenameRequest(async (params) => {
   const researchBuffers = root
     ? await connection.sendRequest<RenameBuffer[]>("asm/researchBuffers", { root })
     : [];
-  if (sourceBuffers.some((buffer) => documents.get(buffer.uri)?.version !== buffer.version)) {
+  if (
+    indexStale ||
+    index !== active ||
+    sourceBuffers.some((buffer) => documents.get(buffer.uri)?.version !== buffer.version)
+  ) {
     throw new Error("Source changed during rename. Retry at the current symbol.");
   }
   return researchRenameEditsFor(active, file, params.position, params.newName, [
@@ -1040,7 +1113,14 @@ connection.onRenameRequest(async (params) => {
 connection.languages.semanticTokens.on((params) =>
   semanticTokensFor(requireIndex(), uriToPath(params.textDocument.uri)),
 );
-connection.onShutdown(() => environmentController.dispose());
+connection.onShutdown(() => {
+  if (reindexTimer) {
+    clearTimeout(reindexTimer);
+  }
+  reindexWorker.dispose();
+  configurationIndexer.dispose();
+  return environmentController.dispose();
+});
 
 documents.listen(connection);
 connection.listen();

@@ -4,12 +4,7 @@ import { AssetRegistry, convertAsset } from "@uttori/asm-assets";
 import { waveImporter, withAudioEncoder } from "@uttori/asm-assets/audio";
 import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
 import { snesNativeEncoders } from "@uttori/asm-assets/snes";
-import {
-  MemoryAssemblyFileProvider,
-  PluginManager,
-  definePlugin,
-  PLUGIN_API_VERSION,
-} from "@uttori/asm-core";
+import { MemoryAssemblyFileProvider, PluginManager, definePlugin, PLUGIN_API_VERSION } from "@uttori/asm-core";
 import { createDebugMap, validateDebugMap } from "@uttori/asm-core/debug-map";
 
 import { test } from "../../../tests/ava-helper.js";

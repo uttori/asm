@@ -6,7 +6,7 @@ import { createTraceCollector } from "../../../tests/helpers/assembler-trace.js"
 import { Assembler } from "../../../tests/test-assembler.js";
 import { handleIncbin } from "../../core/src/directives/include-source.js";
 import { handleArch } from "../../core/src/directives/layout.js";
-import { parseExpressionNode } from "../../core/src/ir/expression-node.js";
+import { renderExpressionNode, parseExpressionNode } from "../../core/src/ir/expression-node.js";
 import { createNormalizedCommand } from "../../core/src/ir/normalized-command.js";
 import {
   getDefineVariable,
@@ -109,12 +109,6 @@ test("getnum - handles labels", (t) => {
 test("getnum - handles math expressions", (t) => {
   const assembler = new Assembler();
 
-  // Mock the math method
-  const mathStub = sinon.stub(assembler.mathCore, "math");
-  mathStub.withArgs("10+5").returns(15);
-  mathStub.withArgs("$10*2").returns(32);
-  mathStub.withArgs("(20-5)/3").returns(5);
-
   t.is(assembler.operandResolver.getnum("10+5"), 15, "Should evaluate addition expressions");
   t.is(
     assembler.operandResolver.getnum("$10*2"),
@@ -209,15 +203,11 @@ test("getnum - keeps parent stride for extended struct array members", (t) => {
 test("getnum - throws error for undefined defines", (t) => {
   const assembler = new Assembler();
 
-  // Mock resolvedefines to throw for undefined defines
-  const resolvedefinesStub = sinon.stub(assembler, "resolvedefines");
-  resolvedefinesStub
-    .withArgs("UNDEFINED_DEFINE")
-    .throws(new Error("Define 'UNDEFINED_DEFINE' not found."));
+  assembler.activateStage("emitProgram");
 
   t.throws(
     () => {
-      assembler.operandResolver.getnum("UNDEFINED_DEFINE");
+      assembler.operandResolver.getnum("!UNDEFINED_DEFINE");
     },
     { message: "Define 'UNDEFINED_DEFINE' not found." },
     "Should throw for undefined defines",
@@ -689,215 +679,6 @@ test("expandOutput - throws error when fillByte is not a number", (t) => {
   });
 
   t.is(error.message, "expandOutput requires a number for newSize and fillByte");
-});
-
-test("expandOperand - handles resolvedefines errors", (t) => {
-  const assembler = new Assembler();
-
-  // Set up a stub for resolvedefines to throw an error
-  const resolvedefinesStub = sinon
-    .stub(assembler, "resolvedefines")
-    .throws(new Error("Define not found"));
-
-  // Call expandOperand with an operand that would trigger resolvedefines
-  const { expanded, length } = assembler.operandResolver.expandOperand("SOME_DEFINE");
-
-  // Verify that the original operand is returned unchanged
-  t.is(expanded, "SOME_DEFINE");
-  t.is(length, 2); // Default length should be used
-
-  t.true(resolvedefinesStub.calledOnce);
-  t.true(resolvedefinesStub.calledWith("SOME_DEFINE"));
-
-  // Clean up
-  sinon.restore();
-});
-
-test("expandOperand - immediate mode with small value", (t) => {
-  const assembler = new Assembler();
-  const { expanded, length } = assembler.operandResolver.expandOperand("#$10");
-
-  t.is(expanded, "#$10");
-  t.is(length, 1);
-});
-
-test("expandOperand - immediate mode with large value", (t) => {
-  const assembler = new Assembler();
-  const { expanded, length } = assembler.operandResolver.expandOperand("#$1000");
-
-  t.is(expanded, "#$1000");
-  t.is(length, 2);
-});
-
-test("expandOperand - immediate mode with very large value", (t) => {
-  const assembler = new Assembler();
-  const { expanded, length } = assembler.operandResolver.expandOperand("#$100000");
-
-  t.is(expanded, "#$100000");
-  t.is(length, 3);
-});
-
-test("expandOperand - immediate mode with decimal value", (t) => {
-  const assembler = new Assembler();
-  const { expanded, length } = assembler.operandResolver.expandOperand("#42");
-
-  t.is(expanded, "#$2A");
-  t.is(length, 1);
-});
-
-test("expandOperand - immediate mode with expression", (t) => {
-  const assembler = new Assembler();
-  const { expanded, length } = assembler.operandResolver.expandOperand("#10+20");
-
-  t.is(expanded, "#$1E");
-  t.is(length, 1);
-});
-
-test("expandOperand - immediate mode with failed expression evaluation", (t) => {
-  const assembler = new Assembler();
-  sinon.stub(assembler.operandResolver, "getnum").throws(new Error("Invalid expression"));
-
-  const { expanded, length } = assembler.operandResolver.expandOperand("#invalid_expr");
-
-  t.is(expanded, "#invalid_expr");
-  t.is(length, 2);
-});
-
-test("expandOperand - immediate mode with unresolved label", (t) => {
-  const assembler = new Assembler();
-  sinon.stub(assembler.operandResolver, "getnum").throws(new Error("Label not found"));
-
-  const { expanded, length } = assembler.operandResolver.expandOperand("#unknown_label");
-
-  t.is(expanded, "#unknown_label");
-  t.is(length, 2);
-});
-
-test("65816 classifier owns bank-operation width forcing", (t) => {
-  const assembler = new Assembler();
-  sinon.stub(assembler.mathCore, "math").returns(0x10); // Return a small value that would normally be 1 byte
-
-  const { expanded, length } = assembler.operandResolver.expandOperand("bank(label)");
-
-  t.is(expanded, "$10");
-  t.is(length, 1);
-  t.is(assembler.classifyOperandForActiveArchitecture("bank(label)").length, 2);
-});
-
-test("65816 classifier owns immediate bank-operation width forcing", (t) => {
-  const assembler = new Assembler();
-  sinon.stub(assembler.mathCore, "math").returns(0x10);
-
-  const { expanded, length } = assembler.operandResolver.expandOperand("#bank(label)");
-
-  t.is(expanded, "#$10");
-  t.is(length, 1);
-  t.is(assembler.classifyOperandForActiveArchitecture("#bank(label)").length, 2);
-});
-
-test("expandOperand - indexed mode", (t) => {
-  const assembler = new Assembler();
-  const { expanded, length } = assembler.operandResolver.expandOperand("$1000,X");
-
-  t.is(expanded, "$1000,X");
-  t.is(length, 2);
-});
-
-test("expandOperand - indirect mode", (t) => {
-  const assembler = new Assembler();
-  const { expanded, length } = assembler.operandResolver.expandOperand("[$1234]");
-
-  t.is(expanded, "[$1234]");
-  t.is(length, 2);
-});
-
-test("expandOperand - resolves defines", (t) => {
-  const assembler = new Assembler();
-  assembler.defines.set("TEST_DEFINE", "$2000");
-
-  const { expanded, length } = assembler.operandResolver.expandOperand("!TEST_DEFINE");
-
-  t.is(expanded, "$2000");
-  t.is(length, 2);
-});
-
-test("expandOperand - evaluates math expressions", (t) => {
-  const assembler = new Assembler();
-
-  // Set up a stub for mathCore.math to return a predictable value
-  sinon.stub(assembler.mathCore, "math").returns(0x30);
-  sinon.stub(assembler, "resolvedefines").returns("10+20");
-
-  const { expanded, length } = assembler.operandResolver.expandOperand("10+20");
-
-  t.is(expanded, "$30");
-  t.is(length, 1); // Small value, so 1 byte
-});
-
-test("expandOperand - handles label references", (t) => {
-  const assembler = new Assembler();
-  assembler.activateStage("resolveLayout");
-
-  // Test 1: Label not found
-  const { expanded: expanded1, length: length1 } =
-    assembler.operandResolver.expandOperand("some_label");
-  t.is(expanded1, "some_label");
-  t.is(length1, 2); // Default for labels
-
-  // Test 2: Label found
-  // Set up the label in the label table
-  assembler.symbolScope.setLabel("found_label", 0x1234, false);
-
-  const { expanded: expanded2, length: length2 } =
-    assembler.operandResolver.expandOperand("found_label");
-  t.is(expanded2, "$1234");
-  t.is(length2, 2); // Should be 2 bytes for this address
-});
-
-test("expandOperand - handles complex math expressions", (t) => {
-  const assembler = new Assembler();
-
-  // Set up stubs
-  sinon.stub(assembler, "resolvedefines").returns("($1000 + $20) & $FF");
-  sinon.stub(assembler.mathCore, "math").returns(0x20);
-
-  const { expanded, length } = assembler.operandResolver.expandOperand("($1000 + $20) & $FF");
-
-  t.is(expanded, "$20");
-  t.is(length, 1);
-});
-
-test("expandOperand - skips math evaluation when it fails", (t) => {
-  const assembler = new Assembler();
-
-  // Make resolvedefines work but math throw an error
-  sinon.stub(assembler, "resolvedefines").returns("complex_expression");
-  sinon.stub(assembler.mathCore, "math").throws(new Error("Invalid expression"));
-
-  const { expanded, length } = assembler.operandResolver.expandOperand("complex_expression");
-
-  t.is(expanded, "complex_expression");
-  t.is(length, 2); // Default length
-});
-
-test("expandOperand - handles math expressions that throw errors", (t) => {
-  const assembler = new Assembler();
-
-  // Set up a math expression that will throw an error
-  sinon.stub(assembler, "resolvedefines").returns("(1 + 2) * 3");
-  const mathStub = sinon
-    .stub(assembler.mathCore, "math")
-    .throws(new Error("Math evaluation error"));
-
-  // Call expandOperand with the expression
-  const { expanded, length } = assembler.operandResolver.expandOperand("(1 + 2) * 3");
-
-  // Verify that the original expression is returned unchanged
-  t.is(expanded, "(1 + 2) * 3");
-  t.is(length, 2); // Default length should be used
-
-  t.true(mathStub.calledOnce);
-  t.true(mathStub.calledWith("(1 + 2) * 3"));
 });
 
 test("getExpressionObjectSize - returns size for non-extended struct", (t) => {
@@ -1582,7 +1363,11 @@ test("assemblefile - basic file assembly", (t) => {
   t.is(dispatchLoweredNodeStub.callCount, 2);
   const mnemonics = dispatchLoweredNodeStub
     .getCalls()
-    .map((call) => call.args[0].mnemonic?.toLowerCase());
+    .map((call) =>
+      call.args[0].kind === "typedInstruction"
+        ? call.args[0].instruction.mnemonic.toLowerCase()
+        : undefined,
+    );
   t.deepEqual(mnemonics.toSorted(), ["lda", "sta"]);
 
   // Cleanup
@@ -3064,7 +2849,7 @@ test("handleIncbin", (t) => {
   assembler.directiveRuntime.handlePushPC = () => {}; // Mock
   assembler.directiveRuntime.handlePullPC = () => {}; // Mock
   assembler.operandResolver.getnum = (val) =>
-    parseInt((typeof val === "string" ? val : "").replace("$", ""), 16); // Mock
+    parseInt((typeof val === "string" ? val : renderExpressionNode(val)).replace("$", ""), 16); // Mock
   assembler.addAddressToLine = () => {}; // Mock
 
   handleIncbin(
@@ -4725,90 +4510,36 @@ test("handleDataDirective - deprecated # syntax", (t) => {
   // ).
 });
 
-test("handleDataDirective - math expressions", (t) => {
+test("handleDataDirective - typed math expressions", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
-  const write1Spy = sinon.spy(assembler, "write1");
-  const mathStub = sinon.stub(assembler.mathCore, "math");
-
-  // Setup math stub to return predictable values
-  mathStub.withArgs("10+5").returns(15);
-  mathStub.withArgs("20*2").returns(40);
-
-  // Test with math expressions
-  assembler.directiveRuntime.handleDataDirective("db", ["10+5"]);
-  t.true(mathStub.calledWith("10+5"), "Should evaluate math expressions");
-  t.true(write1Spy.calledWith(15), "Should write result of math expression");
-
-  write1Spy.resetHistory();
-  assembler.directiveRuntime.handleDataDirective("db", ["20*2"]);
-  t.true(mathStub.calledWith("20*2"), "Should evaluate complex expressions");
-  t.true(write1Spy.calledWith(40), "Should write result of complex expression");
+  const write = sinon.spy(assembler, "write1");
+  const evaluate = sinon.spy(assembler.mathCore, "math");
+  assembler.directiveRuntime.handleDataDirective("db", ["10+5, 20*2"]);
+  t.deepEqual(
+    write.args.map(([value]) => value),
+    [15, 40],
+  );
+  t.true(evaluate.args.every(([node]) => typeof node === "object"));
 });
 
-test("handleDataDirective - struct references", (t) => {
+test("handleDataDirective - typed member and label references", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
-  const write1Spy = sinon.spy(assembler, "write1");
-  sinon
-    .stub(assembler.structEngine, "hasStructReference")
-    .callsFake((reference) => reference === "sprite.x_pos");
-  const resolveStructLabelStub = sinon.stub(assembler.structEngine, "resolveStructLabel");
-  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
-
-  // Setup struct resolution stub
-  resolveStructLabelStub.withArgs("sprite.x_pos").returns(42);
-
-  // Test with valid struct reference
-  assembler.directiveRuntime.handleDataDirective("db", ["sprite.x_pos"]);
-  t.true(
-    resolveStructLabelStub.calledWith("sprite.x_pos"),
-    "Should attempt to resolve struct references",
+  assembler.symbolScope.setLabel("sprite.x_pos", 42);
+  assembler.symbolScope.setLabel("LABEL1", 50);
+  const write = sinon.spy(assembler, "write1");
+  const resolve = sinon.spy(assembler, "resolveStructuredReference");
+  assembler.directiveRuntime.handleDataDirective("db", ["sprite.x_pos, LABEL1"]);
+  t.deepEqual(
+    write.args.map(([value]) => value),
+    [42, 50],
   );
-  t.true(write1Spy.calledWith(42), "Should write resolved struct value");
-
-  // Test fallback to numeric resolver when the reference is not a struct
-  getnumStub.withArgs("unknown.field").returns(100);
-  write1Spy.resetHistory();
-  assembler.directiveRuntime.handleDataDirective("db", ["unknown.field"]);
-  t.true(
-    getnumStub.calledWith("unknown.field"),
-    "Should fall back to numeric resolution when struct resolution fails",
-  );
-  t.true(write1Spy.calledWith(100), "Should write result from numeric fallback");
-});
-
-test("handleDataDirective - label references", (t) => {
-  const assembler = new Assembler();
-  assembler.activateStage("resolveLayout");
-  const write1Spy = sinon.spy(assembler, "write1");
-  const getLabelValueStub = sinon.stub(assembler.symbolScope, "getLabelValue");
-
-  // Setup label resolution stubs used by getnum + static fallback path.
-  getLabelValueStub.withArgs("LABEL1", false).returns(50);
-  getLabelValueStub.withArgs("LABEL1", true).returns(50);
-
-  // Test with label reference
-  assembler.directiveRuntime.handleDataDirective("db", ["LABEL1"]);
-  t.true(
-    getLabelValueStub.calledWith("LABEL1", false),
-    "Should attempt to resolve label through numeric resolver",
-  );
-  t.true(write1Spy.calledWith(50), "Should write resolved label value");
-
-  // Test error when label resolution fails
-  getLabelValueStub
-    .withArgs("UNKNOWN_LABEL", false)
-    .throws(new Error("Label 'UNKNOWN_LABEL' not found."));
-
-  const error = t.throws(
-    () => {
-      assembler.directiveRuntime.handleDataDirective("db", ["UNKNOWN_LABEL"]);
-    },
-    { instanceOf: Error },
-  );
-
-  t.true(error.message.includes("UNKNOWN_LABEL"), "Should throw when label resolution fails");
+  t.true(resolve.args.some(([node]) => node.type === "member"));
+  t.true(resolve.args.some(([node]) => node.type === "identifier"));
+  t.throws(() => assembler.directiveRuntime.handleDataDirective("db", ["UNKNOWN_LABEL"]), {
+    message: /UNKNOWN_LABEL/,
+  });
 });
 
 test("handleDataDirective - throws on unsupported directive type", (t) => {
@@ -5149,10 +4880,7 @@ test("typed conditional nodes execute the first matching branch", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.defines.set("state", "1");
-  const executed: string[] = [];
-  sinon.stub(assembler, "processNormalizedCommand").callsFake((command) => {
-    executed.push(command.command);
-  });
+  assembler.setWritePosition(0x808000);
 
   const node = elementAt(
     assembler.programModelBuilder.parseCommandStreamToNodes(
@@ -5169,7 +4897,7 @@ test("typed conditional nodes execute the first matching branch", (t) => {
   }
 
   assembler.lowerAndExecuteRuntimeNodes([node]);
-  t.deepEqual(executed, ["db $01"]);
+  t.deepEqual([...assembler.getBinaryOutput()], [0x01]);
 });
 
 test("Asar if treats = as equality for defines", (t) => {
@@ -5219,10 +4947,7 @@ test("typed conditional nodes support nested branch execution", (t) => {
   assembler.activateStage("emitProgram");
   assembler.defines.set("outer", "1");
   assembler.defines.set("inner", "0");
-  const executed: string[] = [];
-  sinon.stub(assembler, "processNormalizedCommand").callsFake((command) => {
-    executed.push(command.command);
-  });
+  assembler.setWritePosition(0x808000);
 
   const node = elementAt(
     assembler.programModelBuilder.parseCommandStreamToNodes(
@@ -5249,7 +4974,7 @@ test("typed conditional nodes support nested branch execution", (t) => {
   }
 
   assembler.lowerAndExecuteRuntimeNodes([node]);
-  t.deepEqual(executed, ["db $22"]);
+  t.deepEqual([...assembler.getBinaryOutput()], [0x22]);
 });
 
 test("getDefineVariable - extracts variable name from define statements", (t) => {
@@ -7375,47 +7100,26 @@ test("asblock_pick - pass 0 handling", (t) => {
   );
 });
 
-test("asblock_pick - lowered instruction path uses architecture adapters", (t) => {
+test("asblock_pick - public source entry uses the typed architecture", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "65816";
-  let calledWithWords: string[] | undefined;
-  const original = assembler.arch65816.encodeInstruction;
-  assembler.arch65816.encodeInstruction = (instruction) => {
-    calledWithWords = instruction.words;
+  let calledMnemonic: string | undefined;
+  let immediate = false;
+  const original = assembler.arch65816.encode;
+  assembler.arch65816.encode = (instruction) => {
+    instruction.choose("test", 0);
+    calledMnemonic = instruction.instruction.mnemonic;
+    immediate = instruction.instruction.operands.operands[0]?.kind === "immediate";
     return true;
   };
 
-  const handled = assembler.asblock_pick({
-    kind: "instruction",
-    mnemonic: "lda",
-    operandText: "#$10",
-    operands: ["#$10"],
-    loweredOperands: [
-      {
-        raw: "#$10",
-        expanded: "#$10",
-        length: 1,
-        immediate: true,
-        indirect: false,
-      },
-    ],
-    loweredOperand: {
-      raw: "#$10",
-      expanded: "#$10",
-      length: 1,
-      immediate: true,
-      indirect: false,
-    },
-    words: ["lda", "#$10"],
-    sourceFile: "test.asm",
-    sourceLine: 1,
-    sourceRaw: "lda #$10",
-  });
+  const handled = assembler.asblock_pick(["lda", "#$10"]);
 
   t.true(handled);
-  t.deepEqual(calledWithWords, ["lda", "#$10"]);
-  assembler.arch65816.encodeInstruction = original;
+  t.is(calledMnemonic, "lda");
+  t.true(immediate);
+  assembler.arch65816.encode = original;
 });
 
 test("asblock_pick - spc700 architecture", (t) => {
@@ -7425,7 +7129,8 @@ test("asblock_pick - spc700 architecture", (t) => {
 
   const originalMethod = assembler.archSPC700.encode;
   let wasCalled = false;
-  assembler.archSPC700.encode = () => {
+  assembler.archSPC700.encode = (frame) => {
+    frame.choose("test", 0);
     wasCalled = true;
     return true;
   };
@@ -7467,7 +7172,8 @@ test("asblock_pick - superfx architecture", (t) => {
 
   const originalMethod = assembler.archSuperFX.encode;
   let wasCalled = false;
-  assembler.archSuperFX.encode = () => {
+  assembler.archSuperFX.encode = (frame) => {
+    frame.choose("test", 0);
     wasCalled = true;
     return true;
   };
@@ -7501,7 +7207,7 @@ test("asblock_pick - superfx architecture error handling", (t) => {
 
   const originalMethod = assembler.archSuperFX.encode;
   assembler.archSuperFX.encode = (words) => {
-    throw new Error(`Unknown instruction: ${words[0]}`);
+    throw new Error(`Unknown instruction: ${words.instruction.mnemonic}`);
   };
 
   const error = t.throws(
@@ -7527,7 +7233,8 @@ test("asblock_pick - 65816 architecture", (t) => {
 
   const originalMethod = assembler.arch65816.encode;
   let wasCalled = false;
-  assembler.arch65816.encode = () => {
+  assembler.arch65816.encode = (frame) => {
+    frame.choose("test", 0);
     wasCalled = true;
     return true;
   };
@@ -7567,24 +7274,25 @@ test("asblock_pick - default architecture", (t) => {
   assembler.activateStage("emitProgram");
   assembler.arch = "unknown_arch"; // Set to an unrecognized architecture
 
-  // Should default to returning true for unrecognized architectures
-  t.true(
-    assembler.asblock_pick(["some_instruction"]),
-    "Should return true for unrecognized architectures",
-  );
+  t.throws(() => assembler.asblock_pick(["some_instruction"]), {
+    message: "Architecture 'unknown_arch' requires a typed encoder and operand grammar.",
+  });
 });
 
 test("asblock_pick - pass 0 uses active encoder estimateSize", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("collectDefinitions");
   assembler.arch = "spc700";
-  const originalMethod = assembler.archSPC700.estimateSize;
-  assembler.archSPC700.estimateSize = () => 5;
+  const originalMethod = assembler.archSPC700.estimate;
+  assembler.archSPC700.estimate = (frame) => {
+    frame.choose("test", 5);
+    return 5;
+  };
 
   t.true(assembler.asblock_pick(["mov", "a", "#$42"]), "Should succeed during pass 0");
   t.is(assembler.currentTargetAddress, 5, "Should step by the encoder-provided estimated size");
 
-  assembler.archSPC700.estimateSize = originalMethod;
+  assembler.archSPC700.estimate = originalMethod;
 });
 
 test("asblock_pick - selected spc700 architecture uses spc700 encoder", (t) => {
@@ -7593,7 +7301,8 @@ test("asblock_pick - selected spc700 architecture uses spc700 encoder", (t) => {
   assembler.selectArchitecture("spc700");
   const originalMethod = assembler.archSPC700.encode;
   let wasCalled = false;
-  assembler.archSPC700.encode = () => {
+  assembler.archSPC700.encode = (frame) => {
+    frame.choose("test", 0);
     wasCalled = true;
     return true;
   };

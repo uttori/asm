@@ -23,12 +23,6 @@ export declare const handlePullBase: ({ session }: AddressStackDirectiveContext)
  * @throws {Error} If the architecture name is missing, unknown, or not allowed on the target.
  */
 export declare const handleArch: ({ session }: ArchitectureDirectiveContext, words: readonly string[]) => void;
-/**
- * Registers `base`, `org`, `pushbase`/`pullbase`, `pushpc`/`pullpc`, and `arch`.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {DirectiveRegistryContexts["layout"]} context Layout-capable sessions and runtime.
- * @returns {void}
- */
 export declare const registerGenericLayoutDirectives: (registry: DirectiveRegistry, context: DirectiveRegistryContexts["layout"]) => void;
 /**
  * Registers the core layout directive group.

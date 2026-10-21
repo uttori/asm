@@ -79,14 +79,14 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
    * @returns {string | undefined} First existing file identity, or undefined.
    */
   resolvePath(filename: string, options: AssemblyFileResolutionOptions = {}): string | undefined {
-    const fs = requireNodeFs();
+    requireNodeFs();
     if (!filename) {
       return undefined;
     }
 
     const normalized = stripWrappingQuotes(filename);
     if (path.isAbsolute(normalized)) {
-      return fs.existsSync(normalized) ? normalized : undefined;
+      return this.stat(normalized).exists ? normalized : undefined;
     }
 
     const candidates = new Set<string>();
@@ -102,7 +102,8 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
     }
 
     for (const candidate of candidates) {
-      if (fs.existsSync(candidate)) {
+      // Resolve through the provider's view so snapshot overlays can create or hide candidates.
+      if (this.stat(candidate).exists) {
         return candidate;
       }
     }
@@ -136,6 +137,109 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
     const fs = requireNodeFs();
     this.readFiles.add(filePath);
     return fs.readFileSync(filePath, encoding);
+  }
+}
+
+/** Bounds owned overlay bytes and consumed snapshots independently; defaults to 256 MiB each. */
+export interface NodeAssemblySnapshotOptions {
+  /** Absolute file identities. Null hides a saved file; supplied maps and bytes are copied. */
+  readonly overlays?: ReadonlyMap<string, Uint8Array | null>;
+  /** Positive safe-integer byte limit, including binary includes. */
+  readonly maxBytes?: number;
+}
+
+/**
+ * One Node build's owned input view. All passes see the first bytes read, including after disk
+ * changes; call assertUnchanged before accepting the result. Create a new provider for each build.
+ * Node path/filesystem policy stays here; assemblers consume the portable AssemblyFileProvider contract.
+ */
+export class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
+  readonly #overlays = new Map<string, Uint8Array | null>();
+  readonly #snapshots = new Map<string, Uint8Array>();
+  readonly #maxBytes: number;
+  #bytes = 0;
+  /** Exact consumed bytes keyed by absolute path. Entries and buffers are borrowed read-only. */
+  readonly snapshots: ReadonlyMap<string, Uint8Array> = this.#snapshots;
+
+  constructor(options: NodeAssemblySnapshotOptions = {}) {
+    super();
+    requireNodeFs();
+    this.#maxBytes = options.maxBytes ?? 256 * 1024 * 1024;
+    if (!Number.isSafeInteger(this.#maxBytes) || this.#maxBytes < 1) {
+      throw new Error("Source snapshot byte limit must be a positive safe integer.");
+    }
+    let bytes = 0;
+    for (const [file, value] of options.overlays ?? []) {
+      if (!path.isAbsolute(file)) {
+        throw new Error(`Source overlay requires an absolute path: ${file}`);
+      }
+      bytes += value?.length ?? 0;
+      if (bytes > this.#maxBytes) {
+        throw new Error(`Source overlays exceed ${this.#maxBytes} bytes.`);
+      }
+      this.#overlays.set(path.resolve(file), value === null ? null : Uint8Array.from(value));
+    }
+  }
+
+  override stat(file: string): AssemblyFileStat {
+    const name = path.resolve(file);
+    if (this.#overlays.has(name)) {
+      const bytes = this.#overlays.get(name);
+      return { exists: bytes !== null, readable: bytes !== null, size: bytes?.length };
+    }
+    const snapshot = this.#snapshots.get(name);
+    if (snapshot) {
+      // Resolution and length checks must keep seeing the consumed input until freshness validation.
+      return { exists: true, readable: true, size: snapshot.length };
+    }
+    return super.stat(name);
+  }
+
+  override readFile(file: string): Uint8Array {
+    const name = path.resolve(file);
+    let bytes = this.#snapshots.get(name);
+    if (!bytes) {
+      const overlay = this.#overlays.get(name);
+      if (overlay === null) {
+        throw new Error(`Candidate source removed '${name}'.`);
+      }
+      const size = overlay?.length ?? super.stat(name).size ?? 0;
+      if (size > this.#maxBytes - this.#bytes) {
+        throw new Error(`Source build input snapshot exceeds ${this.#maxBytes} bytes.`);
+      }
+      bytes = overlay ?? super.readFile(name);
+      // Recheck actual bytes because a disk file may grow between stat and read.
+      if (bytes.length > this.#maxBytes - this.#bytes) {
+        throw new Error(`Source build input snapshot exceeds ${this.#maxBytes} bytes.`);
+      }
+      this.#bytes += bytes.length;
+      this.#snapshots.set(name, bytes);
+      this.readFiles.add(name);
+    }
+    // Encoders and converters cannot mutate the input observed by later passes or receipts.
+    return bytes.slice();
+  }
+
+  override readTextFile(file: string, encoding: BufferEncoding = "utf8"): string {
+    return Buffer.from(this.readFile(file)).toString(encoding);
+  }
+
+  /** Reject changed or removed saved inputs; copied overlays remain independent of the host disk. */
+  assertUnchanged(): void {
+    const fs = requireNodeFs();
+    for (const [file, bytes] of this.#snapshots) {
+      if (this.#overlays.has(file)) {
+        continue;
+      }
+      try {
+        if (fs.statSync(file).size === bytes.length && fs.readFileSync(file).equals(bytes)) {
+          continue;
+        }
+      } catch (cause) {
+        throw new Error(`Source dependency changed during assembly: ${file}`, { cause });
+      }
+      throw new Error(`Source dependency changed during assembly: ${file}`);
+    }
   }
 }
 

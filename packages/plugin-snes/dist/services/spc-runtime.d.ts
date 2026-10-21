@@ -1,5 +1,18 @@
-import type { Assembler } from "@uttori/asm-core";
+import type { ExpressionNode } from "@uttori/asm-core";
+import { type PluginSessionCapabilities } from "@uttori/asm-core/plugin";
 import type { SnesSessionState } from "../session-state.js";
+/** Prepared operands preserve validation timing relative to block-state checks and header writes. */
+export type SpcBlockSyntax = {
+    destination: ExpressionNode;
+    destinationText: string;
+    modeError?: string;
+};
+export type EndSpcBlockSyntax = {
+    execute?: ExpressionNode;
+    error?: string;
+};
+export declare function parseSpcBlock(words: readonly string[]): SpcBlockSyntax;
+export declare function parseEndSpcBlock(words: readonly string[]): EndSpcBlockSyntax;
 /**
  * Session-bound runtime for SPC block directives and stage cleanup.
  *
@@ -11,9 +24,9 @@ import type { SnesSessionState } from "../session-state.js";
  * `:SPCBLOCK:_` + the previous namespace so they cannot collide with SNES labels.
  */
 export declare class SnesSpcRuntimeService {
-    readonly session: Assembler;
+    readonly session: PluginSessionCapabilities;
     readonly state: SnesSessionState;
-    constructor(session: Assembler, state: SnesSessionState);
+    constructor(session: PluginSessionCapabilities, state: SnesSessionState);
     /**
      * Closes an implicit inline-SPC block (`arch spc700-inline`), then errors if
      * a block is still open. Called from `onStageEnd`.
@@ -28,6 +41,8 @@ export declare class SnesSpcRuntimeService {
      * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
      */
     handleSpcblock(words: readonly string[]): void;
+    /** Bind destination before reporting mode errors, then commit the NSPC header and switch CPU. */
+    executeSpcblock(node: SpcBlockSyntax): void;
     /**
      * Closes the open block: patches the NSPC size word, optionally writes an
      * execute trailer, then restores namespace and the previous architecture.
@@ -41,5 +56,7 @@ export declare class SnesSpcRuntimeService {
      * @param {readonly string[]} words Tokenized line.
      */
     handleEndSpcblock(words: readonly string[]): void;
+    /** Size patching precedes trailer validation; an execute expression runs after its zero word. */
+    executeEndSpcblock(node: EndSpcBlockSyntax): void;
 }
 //# sourceMappingURL=spc-runtime.d.ts.map

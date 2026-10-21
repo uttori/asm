@@ -3,8 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { sourceGit, sourceRepository, sourceContentHash } from "@uttori/asm-disassembler";
-import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes";
+import { sourceGit, sourceRepository, sourceContentHash } from "@uttori/asm-disassembler/source-project";
+import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes/disassembler";
 import * as vscode from "vscode";
 
 /** Inspect the production tree through the disposable test entry, never a shipped command. */

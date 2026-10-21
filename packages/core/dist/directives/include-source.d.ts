@@ -12,10 +12,10 @@ import type { IncludeDirectiveContext } from "./types.js";
  * @param {IncludeDirectiveContext} ctx The include-capable directive context.
  * @param {string[]} words Directive tokens.
  * @param {string} [_raw] Raw line, unused.
- * @param {NormalizedCommand} [command] Normalized command. `parsed.incbinRange` skips string re-parse when present.
+ * @param {NormalizedCommand} [command] Normalized command. Retained for public adapter compatibility.
  * @throws {Error} On missing file, bad range, missing `->` target, or unreadable contents.
  */
-export declare const handleIncbin: ({ session, includeSource, operandResolver, runtime, defineEngine }: IncludeDirectiveContext, words: readonly string[], _raw?: string, command?: NormalizedCommand) => void;
+export declare const handleIncbin: (context: IncludeDirectiveContext, words: readonly string[], _raw?: string, _command?: NormalizedCommand) => void;
 /**
  * Assembles another source file inline (`incsrc`).
  * @param {IncludeDirectiveContext} ctx The include-capable directive context.

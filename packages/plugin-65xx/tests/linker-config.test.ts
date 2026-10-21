@@ -1,5 +1,4 @@
 import { test } from "../../../tests/ava-helper.js";
-
 import { parseLd65Config } from "../src/linker-config.js";
 
 const zeldaConfig = `MEMORY

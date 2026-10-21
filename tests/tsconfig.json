@@ -19,6 +19,8 @@
     "../packages/core/tests/lsp/instruction-catalog.test.ts",
     "../packages/core/tests/lsp/root-analysis-cache.test.ts",
     "../packages/core/tests/services/struct-initializer.test.ts",
+    "../packages/core/tests/services/output-writer-service.test.ts",
+    "../packages/core/tests/file-provider.test.ts",
     "../packages/debug-adapter/tests/trace-detail-validation.test.ts",
     "../packages/debug-sidecar-ares/tests/sidecar.test.ts",
     "../packages/debug-sidecar-ares/tests/node-tcp-gdb-rsp-transport.test.ts",

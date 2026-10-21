@@ -1,5 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import { captureCrc32c } from "../src/capture-v2.js";
+import { captureCrc32c } from "@uttori/asm-capture";
 
 /** Independent bitwise Castagnoli oracle, including view-relative ACT2 masking. */
 function reference(bytes: Uint8Array, zeroChecksum: boolean): number {

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { decodeNesPPUState, validateNesMapper, readCaptureFileHeader, recoverCaptureFile, } from "@uttori/asm-debug-adapter";
+import { decodeNesPPUState, validateNesMapper, readCaptureFileHeader, recoverCaptureFile, } from "@uttori/asm-capture";
 import { DEFAULT_RUNTIME_TRACE_MAX_BYTES, verifyRuntimeCaptureCompanion, } from "@uttori/asm-disassembler";
 /** NPP1 is a halted graphics view, not a save state or a rendered frame. */
 export const NES_PPU_SNAPSHOT_BYTES = 13056;

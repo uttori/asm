@@ -1,4 +1,5 @@
-import { getStructMetadata, parseExpressionNode, type ExpressionNode } from "@uttori/asm-core";
+import { parseExpressionNode, type ExpressionNode } from "@uttori/asm-core";
+import { getStructMetadata } from "@uttori/asm-core/frontend";
 
 import type {
   SnesStructBinding,
@@ -165,13 +166,17 @@ export class SnesStructExpressionResolver {
           return reference(node);
         case "call": {
           const name = node.callee.name;
-          const callArgument = node.arguments.length === 1 ? node.arguments[0] : undefined;
+          let callArgument = node.arguments.length === 1 ? node.arguments[0] : undefined;
           if (!callArgument) {
             throw new Error(`Struct expression ${name}() requires one argument.`);
           }
           if (name === "bank") {
             const resolved = visit(callArgument);
             return checked((resolved.value >> 16) & 0xff, `bank(${resolved.expression})`);
+          }
+          // Reflection slots now preserve source data explicitly; this whitelist still accepts only a single name.
+          if (callArgument.type === "sourceText" && /^[A-Z_a-z]\w*$/.test(callArgument.text)) {
+            callArgument = { type: "identifier", name: callArgument.value };
           }
           if (callArgument.type !== "identifier") {
             throw new Error("Struct reflection requires a layout or binding name.");
@@ -278,6 +283,10 @@ export class SnesStructExpressionResolver {
           }
           return checked(value, `(${left.expression} ${node.operator} ${right.expression})`);
         }
+        case "error":
+        case "relativeReference":
+        case "sourceText":
+        case "template":
         case "defineReference":
         case "range":
         case "raw":

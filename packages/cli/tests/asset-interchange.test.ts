@@ -9,7 +9,12 @@ import {
   type TilemapInterchangeBaseline,
 } from "@uttori/asm-assets/interchange";
 import { AddressToLineMapping } from "@uttori/asm-core";
-import type { SourceRepository } from "@uttori/asm-disassembler";
+import type { SourceRepository } from "@uttori/asm-disassembler/source-project";
+import {
+  executeAssetOperation,
+  registerAssetAdapter,
+  readAssetExportManifest,
+} from "@uttori/asm-workflows/asset-interchange";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -17,7 +22,7 @@ import {
   type AssetSourceAdapter,
   type AssetSourceDraft,
   type AssetSourceHost,
-} from "../src/asset-interchange/index.js";
+} from "../../workflows/src/asset-interchange/index.js";
 
 const hash = (value: string | Uint8Array): string =>
   createHash("sha256").update(value).digest("hex");
@@ -240,6 +245,8 @@ function fixture() {
     root,
     file,
     service,
+    adapter,
+    host,
     outputs,
     repository,
     plans: () => plans,
@@ -452,4 +459,26 @@ test("locally corrupted baseline capabilities cannot enable edits unsupported by
   } finally {
     f.cleanup();
   }
+});
+
+// A second game exercises the same host entry used by terminal and editor composition.
+test("host registration dispatches an independent game adapter", async (t) => {
+  const f = fixture();
+  t.teardown(f.cleanup);
+  const selection = path.join(f.root, "selection.json");
+  fs.writeFileSync(selection, JSON.stringify({ file: "native.bin" }));
+  const result = await executeAssetOperation(
+    {
+      action: "asset-export",
+      directory: f.root,
+      adapter: f.adapter.id,
+      selection,
+      document: f.outputs.document,
+      manifest: f.outputs.manifest,
+    },
+    { host: f.host, adapters: [registerAssetAdapter(f.adapter)] },
+  );
+  const manifest = readAssetExportManifest(result);
+  t.is(manifest.adapter.id, "second-game.rectangular");
+  t.true(fs.existsSync(f.outputs.document));
 });

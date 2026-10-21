@@ -2,7 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { Assembler, WorkspaceIndex } from "@uttori/asm-core";
+import { Assembler } from "@uttori/asm-core";
+import { WorkspaceIndex } from "@uttori/asm-core/tooling";
 
 import { test } from "../../../tests/ava-helper.js";
 import { create65xxAssemblerEnvironment, nesChrPng } from "../src/index.js";

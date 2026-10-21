@@ -1,3 +1,4 @@
+import { canonicalValue } from "@uttori/asm-core/canonical-json";
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -43,12 +44,14 @@ function isMemoryAccess(entry) {
  * Validate execution details for persistence.
  * @param {unknown} value Untrusted detail array.
  * @param {number} count Expected instruction count.
- * @returns {readonly RuntimeInstructionDetail[]} Normalized details.
+ * @returns {readonly RuntimeInstructionDetail[]} Owned details with recursively canonical key order.
  */
 export const validateRuntimeInstructionDetails = (value, count) => {
     if (!isUnknownArray(value) || value.length !== count) {
         throw new Error("Trace details must align one-to-one with instruction addresses.");
     }
+    let previousKeys = [];
+    let sortedKeys = [];
     return value.map((entry) => {
         if (!isRecord(entry)) {
             throw new Error("Trace instruction bytes must contain 1–16 byte values.");
@@ -69,11 +72,30 @@ export const validateRuntimeInstructionDetails = (value, count) => {
             throw new Error("Trace instruction state contains an invalid register value.");
         }
         const state = {};
-        for (const [key, stateValue] of Object.entries(rawState)) {
+        const keys = Object.keys(rawState);
+        // Captures repeat one register layout millions of times. Sort only when the shape changes;
+        // values are always revalidated and copied, so mutable producers cannot reuse stale state.
+        if (keys.length !== previousKeys.length ||
+            keys.some((key, index) => key !== previousKeys[index])) {
+            previousKeys = keys;
+            sortedKeys = keys.toSorted((left, right) => left.localeCompare(right));
+        }
+        for (const key of sortedKeys) {
+            const stateValue = rawState[key];
             if (!key || !isStateValue(stateValue)) {
                 throw new Error("Trace instruction state contains an invalid register value.");
             }
-            state[key] = stateValue;
+            if (key === "__proto__") {
+                Object.defineProperty(state, key, {
+                    value: stateValue,
+                    enumerable: true,
+                    writable: true,
+                    configurable: true,
+                });
+            }
+            else {
+                state[key] = stateValue;
+            }
         }
         const droppedMemoryAccesses = entry.droppedMemoryAccesses;
         let droppedCount;
@@ -93,13 +115,19 @@ export const validateRuntimeInstructionDetails = (value, count) => {
                 if (!isMemoryAccess(access)) {
                     throw new Error("Trace contains an invalid bus operation.");
                 }
-                return access;
+                // Optional producer fields also participate in historical hashes. Canonicalize those
+                // records completely rather than dropping fields outside the required bus schema.
+                const normalized = canonicalValue(access);
+                if (!isMemoryAccess(normalized)) {
+                    throw new Error("Trace contains an invalid normalized bus operation.");
+                }
+                return normalized;
             });
         return {
             bytes,
-            state,
-            ...(memoryAccesses === undefined ? {} : { memoryAccesses }),
             ...(droppedCount === undefined ? {} : { droppedMemoryAccesses: droppedCount }),
+            ...(memoryAccesses === undefined ? {} : { memoryAccesses }),
+            state,
         };
     });
 };

@@ -14,27 +14,27 @@ import {
   DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH,
   DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS,
   DEFAULT_RUNTIME_TRACE_MAX_BYTES,
-  type AnalysisStoragePolicy,
   validateProjectRom,
 } from "@uttori/asm-disassembler";
+import { type AnalysisStoragePolicy } from "@uttori/asm-disassembler/storage";
+import somPlugin from "@uttori/asm-game-secret-of-mana";
 import {
   loadProjectEnvironment,
   PROJECT_CONFIG_FILENAME,
   type PluginModuleRequest,
   type ProjectConfigurationOverrides,
 } from "@uttori/asm-plugin-loader-node";
-import snesPlugin, {
+import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+import {
   SNES_MAPPERS,
-  SNES_TARGET_ID,
   analyzeSnesProject,
   createSnesAnalysisProject,
   type SnesMapper,
-} from "@uttori/asm-plugin-snes";
+} from "@uttori/asm-plugin-snes/disassembler";
 
 import { assetUsage, runAssetCli } from "./asset-interchange/cli.js";
 import { publishOutputFiles } from "./output-files.js";
 import { runSourceCli, sourceUsage } from "./source.js";
-export { executeSourceOperation, type SourceAction, type SourceOperation } from "./source.js";
 
 /** Explicit subcommands. An invocation without one defaults to assemble. */
 export type CliCommand =
@@ -706,6 +706,7 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
   };
   const useSnesHostDefault = !hasProjectConfiguration && pluginModules.length === 0;
   const bundledPlugins = new Map<string, AssemblerPlugin>([
+    ["@uttori/asm-game-secret-of-mana", somPlugin],
     ["@uttori/asm-plugin-snes", snesPlugin],
   ]);
 

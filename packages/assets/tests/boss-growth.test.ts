@@ -1,6 +1,6 @@
 import { test } from "../../../tests/ava-helper.js";
+import { convertBossImage } from "../../game-secret-of-mana/src/assembly.js";
 import { createIndexedPng } from "../src/png-edit.js";
-import { convertBossImage } from "../src/secret-of-mana/som-asset-plugin.js";
 import { expandBossGraphics } from "../src/secret-of-mana/som-boss-graphics.js";
 import { decompressSomLz } from "../src/secret-of-mana/som-lz.js";
 

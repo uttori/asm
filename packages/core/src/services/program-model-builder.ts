@@ -1,8 +1,10 @@
 import {
   incrementInternalCounter,
+  recordSyntaxBoundary,
   recordInternalCounterPeak,
 } from "../internal-instrumentation.js";
 import type {
+  CaptureNode,
   ConditionalBranch,
   ConditionalBranchNode,
   ExecutableNode,
@@ -10,11 +12,15 @@ import type {
 } from "../ir/assembly-tree.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 import type { SourcedCommand } from "./command-text-service.js";
+import { OccurrenceSyntaxCache } from "./occurrence-syntax-cache.js";
 
 export type ProgramModel = {
   sourceFile: string;
   startLine: number;
   nodes: ExecutableNode[];
+  /** Original input, including comments/continuations; syntax never stores bound values. */
+  sourceText?: string;
+  grammarIdentity?: string;
 };
 
 export type IncludeProgramNode = {
@@ -28,15 +34,17 @@ export type IncrementalProgramParseState = {
   loopStack: LoopNode[];
   ifStack: ConditionalBranchNode[];
   branchStack: ConditionalBranch[];
-  inMacroDefinition: boolean;
-  inFunctionDefinition: boolean;
-  inDataStructs?: boolean;
+  /** Capture frames own parser routing; values and execution bindings remain outside the AST. */
+  captures: { node: CaptureNode; loopDepth: number; branchDepth: number }[];
 };
 
 export type ProgramModelBuilderHost = {
   currentFile: string;
   currentLine: number;
   passProgramCache: Map<string, ExecutableNode[]>;
+  grammarIdentity?(): string;
+  /** Raw-source hits may skip preprocessing only when no incremental statement is buffered. */
+  sourceBufferEmpty?(): boolean;
   preprocessBlockCommands(source: string): string[];
   splitInlineCommands(commands: string[]): string[];
   preprocessSourcedBlockCommands(source: string): SourcedCommand[];
@@ -45,6 +53,7 @@ export type ProgramModelBuilderHost = {
     command: string,
     sourceFile?: string,
     sourceLine?: number,
+    physical?: string,
   ): NormalizedCommand;
   shouldEndifCloseInnermostWhile(
     loopType?: "for" | "while",
@@ -62,6 +71,16 @@ function stackTop<T>(stack: readonly T[]): T | undefined {
  * Builds reusable program models from command streams.
  */
 export class ProgramModelBuilder {
+  private readonly identities = new OccurrenceSyntaxCache<string>();
+  private nextProgramId = 0;
+
+  /** Release the lookup index together with the public program values at snapshot end/disposal. */
+  clearCache(): void {
+    this.identities.clear();
+    this.host.passProgramCache.clear();
+    this.nextProgramId = 0;
+  }
+
   constructor(readonly host: ProgramModelBuilderHost) {}
 
   /**
@@ -74,8 +93,7 @@ export class ProgramModelBuilder {
       loopStack: [],
       ifStack: [],
       branchStack: [],
-      inMacroDefinition: false,
-      inFunctionDefinition: false,
+      captures: [],
     };
   }
 
@@ -88,9 +106,7 @@ export class ProgramModelBuilder {
     state.loopStack.length = 0;
     state.ifStack.length = 0;
     state.branchStack.length = 0;
-    state.inMacroDefinition = false;
-    state.inFunctionDefinition = false;
-    state.inDataStructs = false;
+    state.captures.length = 0;
   }
 
   /**
@@ -104,14 +120,50 @@ export class ProgramModelBuilder {
     source: string,
     sourceFile = this.host.currentFile,
     startLine = 0,
+    sourceKind: "physical" | "generated" = "physical",
   ): ProgramModel {
+    const grammar = this.host.grammarIdentity?.() ?? "";
+    const reusableSource = this.host.sourceBufferEmpty?.() ?? false;
+    const family = `source:${sourceKind}`;
+    const cachedId = reusableSource
+      ? this.identities.get(grammar, sourceFile, startLine, family, source)
+      : undefined;
+    const cached = cachedId === undefined ? undefined : this.host.passProgramCache.get(cachedId);
+    if (cached) {
+      incrementInternalCounter("passProgramCacheHits");
+      return {
+        sourceFile,
+        startLine,
+        sourceText: source,
+        grammarIdentity: this.host.grammarIdentity?.(),
+        nodes: cached,
+      };
+    }
     const commands = this.host.splitSourcedInlineCommands(
       this.host.preprocessSourcedBlockCommands(source),
     );
+    const lines = source.split("\n");
+    let nextLine = lines.length;
+    for (let index = commands.length - 1; index >= 0; index--) {
+      const current = commands[index];
+      if (commands[index + 1]?.line > current.line) {
+        nextLine = commands[index + 1].line;
+      }
+      current.physical = lines.slice(Math.max(0, current.line), nextLine).join("\n");
+    }
     return {
       sourceFile,
       startLine,
-      nodes: this.getOrBuildPassProgram(commands, sourceFile, startLine),
+      sourceText: source,
+      grammarIdentity: this.host.grammarIdentity?.(),
+      // An unfinished streaming statement changes the meaning of the next input block. Only
+      // complete, buffer-independent source can bypass preprocessing on a later stage.
+      nodes:
+        reusableSource && this.host.sourceBufferEmpty?.()
+          ? this.getOrBuildCachedProgram(source, family, sourceFile, startLine, () =>
+              this.parseCommandStreamToNodes(commands, sourceFile, startLine, sourceKind),
+            )
+          : this.getOrBuildPassProgram(commands, sourceFile, startLine, sourceKind),
     };
   }
 
@@ -122,14 +174,8 @@ export class ProgramModelBuilder {
    * @returns {IncludeProgramNode} The include node.
    */
   createIncludeNode(file: string, source: string): IncludeProgramNode {
-    const commands = this.host.splitSourcedInlineCommands(
-      this.host.preprocessSourcedBlockCommands(source),
-    );
-    return {
-      type: "include",
-      file,
-      commands: this.getOrBuildPassProgram(commands, file, 0),
-    };
+    const program = this.buildProgramModel(source, file, 0);
+    return { type: "include", file, commands: program.nodes };
   }
 
   /**
@@ -143,21 +189,49 @@ export class ProgramModelBuilder {
     commands: Array<string | SourcedCommand>,
     sourceFile = this.host.currentFile,
     startLine = this.host.currentLine,
+    sourceKind: "physical" | "generated" = "physical",
   ): ExecutableNode[] {
-    // Include source line numbers so identical text at different locations has distinct cache entries.
-    const commandStream = commands
-      .map((command) => (typeof command === "string" ? command : `${command.line}:${command.text}`))
-      .join("\n");
-    const cacheKey = `${sourceFile}::${startLine}::${commandStream}`;
-    const cached = this.host.passProgramCache.get(cacheKey);
+    // Structured encoding distinguishes sourced commands, physical spelling and embedded separators.
+    // Most complete-source calls use the original source string directly and never build this key.
+    const stream = JSON.stringify(
+      commands.map((command) =>
+        typeof command === "string"
+          ? [command]
+          : [command.line, command.text, command.physical ?? null],
+      ),
+    );
+    return this.getOrBuildCachedProgram(
+      stream,
+      `commands:${sourceKind}`,
+      sourceFile,
+      startLine,
+      () => this.parseCommandStreamToNodes(commands, sourceFile, startLine, sourceKind),
+    );
+  }
+
+  /** Index text separately from short public cache identities; never retain a second joined source copy. */
+  private getOrBuildCachedProgram(
+    text: string,
+    family: string,
+    file: string,
+    line: number,
+    build: () => ExecutableNode[],
+  ): ExecutableNode[] {
+    const grammar = this.host.grammarIdentity?.() ?? "";
+    let id = this.identities.get(grammar, file, line, family, text);
+    const cached = id === undefined ? undefined : this.host.passProgramCache.get(id);
     if (cached) {
       incrementInternalCounter("passProgramCacheHits");
       return cached;
     }
-
     incrementInternalCounter("passProgramCacheMisses");
-    const nodes = this.parseCommandStreamToNodes(commands, sourceFile, startLine);
-    this.host.passProgramCache.set(cacheKey, nodes);
+    recordSyntaxBoundary("source-cache-miss");
+    const nodes = build();
+    if (id === undefined) {
+      id = `program:${this.nextProgramId++}`;
+      this.identities.set(grammar, file, line, family, text, id);
+    }
+    this.host.passProgramCache.set(id, nodes);
     recordInternalCounterPeak("passProgramCachePeakSize", this.host.passProgramCache.size);
     return nodes;
   }
@@ -176,8 +250,12 @@ export class ProgramModelBuilder {
     rawCommand: string,
     sourceFile = this.host.currentFile,
     sourceLine = this.host.currentLine,
+    normalized?: NormalizedCommand,
   ): ExecutableNode[] {
-    this.consumeCommandIntoState(state, rawCommand, sourceFile, sourceLine);
+    if (!normalized) {
+      recordSyntaxBoundary("generated-fragment-parse");
+    }
+    this.consumeCommandIntoState(state, rawCommand, sourceFile, sourceLine, normalized);
     return this.drainCompletedRoots(state);
   }
 
@@ -192,13 +270,21 @@ export class ProgramModelBuilder {
     commands: Array<string | SourcedCommand>,
     sourceFile = this.host.currentFile,
     startLine = this.host.currentLine,
+    sourceKind: "physical" | "generated" = "physical",
   ): ExecutableNode[] {
+    recordSyntaxBoundary(
+      sourceKind === "physical" ? "physical-source-parse" : "generated-fragment-parse",
+    );
     const state = this.createIncrementalParseState();
     for (let index = 0; index < commands.length; index++) {
       const command = commands[index];
       const text = typeof command === "string" ? command : command.text;
       const sourceLine = typeof command === "string" ? startLine + index : startLine + command.line;
-      this.consumeCommandIntoState(state, text, sourceFile, sourceLine);
+      const normalized =
+        typeof command === "string"
+          ? undefined
+          : this.host.createLoopCommandNode(text, sourceFile, sourceLine, command.physical);
+      this.consumeCommandIntoState(state, text, sourceFile, sourceLine, normalized);
     }
 
     return state.roots;
@@ -210,6 +296,15 @@ export class ProgramModelBuilder {
    * @param {ExecutableNode} node The node.
    */
   pushToCurrent(state: IncrementalProgramParseState, node: ExecutableNode): void {
+    const capture = stackTop(state.captures);
+    if (
+      capture &&
+      state.branchStack.length <= capture.branchDepth &&
+      state.loopStack.length <= capture.loopDepth
+    ) {
+      capture.node.commands.push(node);
+      return;
+    }
     const currentBranch = stackTop(state.branchStack);
     const currentLoop = stackTop(state.loopStack);
     if (currentBranch && currentLoop) {
@@ -243,48 +338,74 @@ export class ProgramModelBuilder {
     rawCommand: string,
     sourceFile: string,
     sourceLine: number,
+    normalized?: NormalizedCommand,
   ): void {
-    const command = this.host.createLoopCommandNode(rawCommand, sourceFile, sourceLine);
+    // Expanded templates may already own parsed syntax and occurrence provenance.
+    const command =
+      normalized ?? this.host.createLoopCommandNode(rawCommand, sourceFile, sourceLine);
     const keyword = command.keyword.toLowerCase();
 
-    if (keyword === "macro") {
-      state.inMacroDefinition = true;
-      this.pushToCurrent(state, command);
-      return;
-    }
-
-    if (state.inMacroDefinition) {
-      // Macro bodies are stored as source commands and interpreted when the
-      // macro expands. Even instruction-looking lines require preprocessing.
-      setCommandKind(command, "macroDefinitionOrInvoke");
-      this.pushToCurrent(state, command);
-      if (keyword === "endmacro") {
-        state.inMacroDefinition = false;
+    const capture = stackTop(state.captures);
+    if (capture) {
+      const kind = capture.node.captureKind;
+      const closing = keyword === `end${kind.toLowerCase()}`;
+      if (closing) {
+        capture.node.footer = command;
+        capture.node.endLine = command.source.line;
+        state.captures.pop();
+        return;
       }
-      return;
+      if (kind === "macro" || kind === "function" || kind === "dataStructs") {
+        // Macro/control-looking table rows remain syntax until the owning declaration selects them.
+        if (kind === "macro") {
+          setCommandKind(command, "macroDefinitionOrInvoke");
+        }
+        if (kind === "function") {
+          setCommandKind(command, "functionDefinition");
+        }
+        if (kind === "dataStructs") {
+          setCommandKind(command, "structCommand");
+        }
+        capture.node.commands.push(command);
+        if (kind === "function" && !command.command.trimEnd().endsWith("\\")) {
+          capture.node.endLine = command.source.line;
+          state.captures.pop();
+        }
+        return;
+      }
     }
-
-    // A record table is a data-only block. Preserve even malformed/control-like
-    // rows for its runtime validator instead of interpreting them as if/for/org.
-    if (state.inDataStructs || keyword === "datastructs") {
-      state.inDataStructs = keyword !== "enddatastructs";
-      setCommandKind(command, "structCommand");
-      this.pushToCurrent(state, command);
-      return;
-    }
-
-    if (state.inFunctionDefinition) {
-      setCommandKind(command, "functionDefinition");
-      this.pushToCurrent(state, command);
-      state.inFunctionDefinition = command.command.trimEnd().endsWith("\\");
-      return;
-    }
-
     const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
-    if (functionSource.toLowerCase().startsWith("function")) {
-      setCommandKind(command, "functionDefinition");
-      this.pushToCurrent(state, command);
-      state.inFunctionDefinition = functionSource.trimEnd().endsWith("\\");
+    let captureKind: CaptureNode["captureKind"] | undefined;
+    if (keyword === "macro") {
+      captureKind = "macro";
+    } else if (keyword === "struct") {
+      captureKind = "struct";
+    } else if (keyword === "datastructs") {
+      captureKind = "dataStructs";
+    } else if (functionSource.toLowerCase().startsWith("function")) {
+      captureKind = "function";
+    }
+    if (captureKind) {
+      const node: CaptureNode = {
+        type: "capture",
+        captureKind,
+        header: command,
+        commands: [],
+        startLine: command.source.line,
+      };
+      this.pushToCurrent(state, node);
+      if (captureKind === "function") {
+        setCommandKind(command, "functionDefinition");
+      }
+      if (captureKind === "function" && !functionSource.trimEnd().endsWith("\\")) {
+        node.endLine = command.source.line;
+      } else {
+        state.captures.push({
+          node,
+          loopDepth: state.loopStack.length,
+          branchDepth: state.branchStack.length,
+        });
+      }
       return;
     }
 

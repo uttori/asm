@@ -1,8 +1,12 @@
 import { type SourceSpan } from "../source-location.js";
+import { type DefineTemplate } from "./define-template.js";
+import { type ExpressionParseOutcome, type ExpressionParseSite } from "./expression-parse-state.js";
 type ExpressionNodeBase = {
     span?: SourceSpan;
+    /** Explicit grouping is a rounding boundary even when the group has one literal. */
+    parenthesized?: boolean;
 };
-export type ExpressionNode = IdentifierExpressionNode | LiteralExpressionNode | StringExpressionNode | DefineReferenceExpressionNode | MemberExpressionNode | IndexExpressionNode | CallExpressionNode | UnaryExpressionNode | BinaryExpressionNode | RangeExpressionNode | RawExpressionNode;
+export type ExpressionNode = IdentifierExpressionNode | LiteralExpressionNode | StringExpressionNode | DefineReferenceExpressionNode | MemberExpressionNode | IndexExpressionNode | CallExpressionNode | UnaryExpressionNode | BinaryExpressionNode | RangeExpressionNode | RelativeReferenceExpressionNode | SourceTextExpressionNode | TemplateExpressionNode | ErrorExpressionNode | RawExpressionNode;
 export type IdentifierExpressionNode = ExpressionNodeBase & {
     type: "identifier";
     name: string;
@@ -10,6 +14,8 @@ export type IdentifierExpressionNode = ExpressionNodeBase & {
 export type LiteralExpressionNode = ExpressionNodeBase & {
     type: "literal";
     value: string;
+    /** Parsed numeric value; lexical spelling remains authoritative for width intent. */
+    numericValue?: number;
 };
 export type StringExpressionNode = ExpressionNodeBase & {
     type: "string";
@@ -22,7 +28,7 @@ export type DefineReferenceExpressionNode = ExpressionNodeBase & {
     content?: string;
     braced: boolean;
 };
-export type ReferenceExpressionNode = IdentifierExpressionNode | DefineReferenceExpressionNode | MemberExpressionNode | IndexExpressionNode;
+export type ReferenceExpressionNode = IdentifierExpressionNode | RelativeReferenceExpressionNode | DefineReferenceExpressionNode | MemberExpressionNode | IndexExpressionNode;
 export type MemberExpressionNode = ExpressionNodeBase & {
     type: "member";
     object: ReferenceExpressionNode;
@@ -56,22 +62,81 @@ export type RangeExpressionNode = ExpressionNodeBase & {
     start: ExpressionNode;
     end: ExpressionNode;
 };
+/** Relative references retain direction, depth and stream instead of a lookup string. */
+export type RelativeReferenceExpressionNode = ExpressionNodeBase & {
+    type: "relativeReference";
+    direction: 1 | -1;
+    count: number;
+    stream: "relative" | "unnamed" | "macro";
+    text: string;
+};
+/** A function's source-valued slot; its text is data and must never be evaluated as a label. */
+export type SourceTextExpressionNode = ExpressionNodeBase & {
+    type: "sourceText";
+    text: string;
+    value: string;
+};
+/** Unbound macro syntax is valid input whose activation belongs to ordered expansion. */
+export type TemplateExpressionNode = ExpressionNodeBase & {
+    type: "template";
+    form: "parameter" | "variadic" | "source";
+    /** Ordered define sites for a fragment whose substitution can create expression grammar. */
+    defines?: DefineTemplate;
+    text: string;
+    name?: string;
+    index?: ExpressionNode;
+};
+/** A portable parser diagnostic, reported only when this occurrence is selected for evaluation. */
+export type ErrorExpressionNode = ExpressionNodeBase & {
+    type: "error";
+    value: string;
+    outcome: Exclude<ExpressionParseOutcome, {
+        kind: "native";
+    }>;
+    message: string;
+    code?: "MATH_INVALID_INPUT" | "MATH_MISMATCHED_PARENTHESES";
+};
 export type RawExpressionNode = ExpressionNodeBase & {
     type: "raw";
     value: string;
 };
 /**
- * Parses a minimal expression node used by the early IR/tree stages.
+ * Parses portable expression syntax without resolving values or activating diagnostics.
  * @param {string} input The expression source text.
  * @returns {ExpressionNode} The parsed expression node.
  */
 export declare function parseExpressionNode(input: string, source?: ExpressionSource): ExpressionNode;
+/** Internal adapter retains the public node-only API while labeling the real parser caller. */
+export declare function parseExpressionAtSite(input: string, site: ExpressionParseSite, source?: ExpressionSource): ExpressionNode;
+/** Internal outcome separates grammar coverage from legacy acceptance and evaluation errors. */
+export type ExpressionParseResult = {
+    node: ExpressionNode;
+    outcome: ExpressionParseOutcome;
+};
+/**
+ * Parse with bounded coverage evidence. Each entry counts once, including recursive
+ * immediate/range slices and compatibility probes; cache misses are a separate metric. Malformed
+ * and unknown syntax retain diagnostic nodes; valid unbound fragments retain their template sites.
+ */
+export declare function parseExpressionResult(input: string, site?: ExpressionParseSite, source?: ExpressionSource): ExpressionParseResult;
+/** Literal interpretation is shared by parsed and externally constructed syntax. */
+export declare function parseLiteralValue(value: string): number;
 /**
  * Renders an expression node back into a source-like string.
+ * Parsed trees retain their explicit rounding boundaries. Constructed trees that
+ * require new groups to express precedence must mark those rounding boundaries
+ * themselves; keep transformed trees as nodes when evaluating rounded arithmetic.
  * @param {ExpressionNode} node The expression node to render.
  * @returns {string} The rendered expression text.
  */
 export declare function renderExpressionNode(node: ExpressionNode): string;
+/**
+ * Copy replacement syntax into an occurrence without mutating either input. Only
+ * the root inherits the physical occurrence span: replacement-relative child
+ * offsets do not identify characters in the invoking source. Explicit groups
+ * on either root remain rounding boundaries.
+ */
+export declare function inheritExpressionOccurrence(replacement: ExpressionNode, occurrence: ExpressionNode): ExpressionNode;
 /**
  * Checks whether an expression belongs to the reference-expression subtree.
  * @param {ExpressionNode} node The expression node to inspect.
@@ -82,7 +147,9 @@ type RenderReferenceExpressionOptions = {
     renderIndex?: (node: ExpressionNode) => string;
 };
 /**
- * Renders a reference-expression subtree back into a source-like string.
+ * Renders a canonical lookup key. Root/object grouping is intentionally omitted
+ * for symbol lookup; numeric index expressions keep their grouping. Use
+ * renderExpressionNode when rendering a reference as a numeric expression.
  * @param {ReferenceExpressionNode} node The reference node to render.
  * @param {RenderReferenceExpressionOptions} [options] Optional rendering overrides.
  * @returns {string} The rendered reference text.

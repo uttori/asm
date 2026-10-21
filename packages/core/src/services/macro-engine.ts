@@ -1,9 +1,30 @@
 import { incrementInternalCounter } from "../internal-instrumentation.js";
-import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+import { parseCommandOperation, type CommandOperation } from "../ir/command-operation.js";
+import {
+  createMacroLineTemplate,
+  bindNumericMacroTemplate,
+  parseMacroArguments,
+  bindMacroFragment,
+  type MacroLineTemplate,
+} from "../ir/macro-template.js";
+import { type CommandProvenance, type NormalizedCommand } from "../ir/normalized-command.js";
+import {
+  fragmentText,
+  sourceFragment,
+  sliceSourceFragment,
+  bindSourceFragment,
+  type SourceFragment,
+} from "../ir/source-fragment.js";
 import type { MathCore } from "../mathcore.js";
+import type { MacroArgumentOrigin, SourceOrigin, SourceOccurrence } from "../source-provenance.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
 import { removeInlineComment } from "./command-text-service.js";
 import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
+
+/** Copy only location fields: retaining a command here would duplicate its entire expansion chain. */
+function occurrence(source: SourceOccurrence & { raw?: string }): SourceOccurrence {
+  return { file: source.file, line: source.line, span: source.span, text: source.raw };
+}
 
 /** Represents a macro definition. */
 export type MacroDefinition = {
@@ -17,6 +38,8 @@ export type MacroDefinition = {
   body: NormalizedCommand[];
   /** The file where this macro was defined. */
   sourceFile?: string;
+  /** Header occurrence, including the include chain in which this definition was captured. */
+  source?: CommandProvenance;
 };
 
 export type MacroExpansionControlEntry = {
@@ -30,10 +53,7 @@ export interface MacroEngineHost {
   currentTargetAddress: number;
   defines: Map<string, string>;
   labelTable: Map<string, LabelEntry>;
-  inMacroDefinition: boolean;
   currentMacroName: string;
-  currentMacroParams: string[];
-  currentMacroBody: NormalizedCommand[];
   currentVariadicCount: number | undefined;
   currentVariadicArgs: string[];
   mathCore: MathCore;
@@ -47,7 +67,16 @@ export interface MacroEngineHost {
   symbolScope: SymbolScopeService;
   evaluateExpression(input: string): boolean;
   resolvedefines(input: string): string;
-  processCommand(command: string, preprocessed?: boolean): void;
+  resolveDefineFragment?(fragment: SourceFragment): SourceFragment;
+  processCommand(command: string, preprocessed?: boolean, template?: NormalizedCommand): void;
+  /** Core hosts accept attributed fragments; older hosts use the explicit public adapter. */
+  processSourceFragment(
+    fragment: SourceFragment,
+    preprocessed?: boolean,
+    template?: NormalizedCommand,
+  ): void;
+  /** Optional for older hosts; scopes provenance without changing expansion semantics. */
+  withSourceOrigin?(origin: SourceOrigin, execute: () => void): void;
   applyDefineAssignment(command: string): boolean;
   recordSymbolDefinition(
     kind: "macro",
@@ -59,8 +88,8 @@ export interface MacroEngineHost {
 export class MacroEngine {
   host: MacroEngineHost;
   macroExpansionControlStack: MacroExpansionControlEntry[] = [];
-  pendingMacroSourceFile = "";
-  pendingMacroSourceLine = 0;
+  /** Weak ownership releases definitions when an assembly snapshot is discarded. */
+  private readonly templates = new WeakMap<MacroDefinition, readonly MacroLineTemplate[]>();
 
   constructor(host: MacroEngineHost) {
     this.host = host;
@@ -182,229 +211,62 @@ export class MacroEngine {
     }
   }
 
-  /**
-   * Handles a macro definition command.
-   * @param {NormalizedCommand} commandNode The command node to handle.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
-   */
-  handleDefinitionCommand(commandNode: NormalizedCommand): boolean {
-    const command = commandNode.command;
-    const { keyword, words } = commandNode;
-    if (this.host.inMacroDefinition) {
-      if (command.trim().toLowerCase() === "endmacro") {
-        if (this.host.isDefinitionCollectionStage) {
-          let variadic = false;
-          if (
-            this.host.currentMacroParams.length > 0 &&
-            (this.host.currentMacroParams[this.host.currentMacroParams.length - 1] === "..." ||
-              this.host.currentMacroParams[this.host.currentMacroParams.length - 1] === "…")
-          ) {
-            variadic = true;
-            this.host.currentMacroParams.pop();
-          }
-
-          const macroDef: MacroDefinition = {
-            name: this.host.currentMacroName,
-            params: this.host.currentMacroParams,
-            variadic,
-            body: this.host.currentMacroBody,
-            sourceFile:
-              this.pendingMacroSourceFile ||
-              this.host.currentMacroBody[0]?.source.file ||
-              this.host.currentFile,
-          };
-
-          if (this.host.macros.has(macroDef.name)) {
-            throw new Error(`Macro '${macroDef.name}' is already defined.`);
-          }
-
-          this.host.macros.set(macroDef.name, macroDef);
-          this.host.recordSymbolDefinition("macro", macroDef.name, {
-            file: this.pendingMacroSourceFile || macroDef.sourceFile || this.host.currentFile,
-            line: this.pendingMacroSourceLine,
-          });
-        }
-
-        this.host.inMacroDefinition = false;
-        this.host.currentMacroName = "";
-        this.host.currentMacroParams = [];
-        this.host.currentMacroBody = [];
-        this.pendingMacroSourceFile = "";
-        this.pendingMacroSourceLine = 0;
-        setCommandKind(commandNode, "macroDefinitionOrInvoke");
-        return true;
-      }
-
-      if (this.host.isDefinitionCollectionStage) {
-        this.host.currentMacroBody.push(commandNode);
-      }
-      setCommandKind(commandNode, "macroDefinitionOrInvoke");
-      return true;
+  /** Install a captured declaration without executing or lowering its template body. */
+  installDefinition(
+    header: Extract<CommandOperation, { kind: "macroHeader" }>,
+    body: NormalizedCommand[],
+    source: CommandProvenance,
+  ): void {
+    if (!this.host.isDefinitionCollectionStage) {
+      return;
     }
-
-    if (keyword.toLowerCase() === "macro" || command.trim().toLowerCase().startsWith("macro ")) {
-      const match = command.trim().match(/^macro\s+(\w+)\((.*)\)$/i);
-      if (!match) {
-        throw new Error(`Invalid macro header: ${command.trim()}`);
-      }
-
-      this.host.currentMacroName = match[1].trim();
-      const paramsStr = match[2].trim();
-      this.host.currentMacroParams = paramsStr
-        ? paramsStr.split(",").map((entry) => entry.trim())
-        : [];
-      this.host.inMacroDefinition = true;
-      this.host.currentMacroBody = [];
-      this.pendingMacroSourceFile = commandNode.source.file || this.host.currentFile;
-      this.pendingMacroSourceLine = commandNode.source.line;
-      setCommandKind(commandNode, "macroDefinitionOrInvoke");
-      return true;
+    if (this.host.macros.has(header.name)) {
+      throw new Error(`Macro '${header.name}' is already defined.`);
     }
-
-    if (keyword.startsWith("%")) {
-      const parsedInvocation = commandNode.parsed.macroInvocation;
-      let invocation = words.join(" ").substring(1);
-      if (parsedInvocation) {
-        invocation = parsedInvocation.name;
-        if (parsedInvocation.args.length > 0) {
-          invocation = `${parsedInvocation.name}(${parsedInvocation.args.join(", ")})`;
-        }
-      }
-      this.callMacro(invocation);
-      setCommandKind(commandNode, "macroDefinitionOrInvoke");
-      return true;
+    const parameters = [...header.parameters];
+    const last = parameters.at(-1);
+    const variadic = last === "..." || last === "…";
+    if (variadic) {
+      parameters.pop();
     }
-
-    if (this.host.syntaxProfile.bareMacroInvocations && this.host.macros.has(keyword)) {
-      const argumentText = command.slice(keyword.length).trim();
-      this.callMacro(argumentText ? `${keyword}(${argumentText})` : keyword);
-      setCommandKind(commandNode, "macroDefinitionOrInvoke");
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * Rewrites macro label references.
-   * @param {string} command The command to rewrite.
-   * @returns {string} The rewritten command.
-   */
-  rewriteMacroLabelReferences(command: string): string {
-    if (!this.host.inMacroExpansion || (!command.includes("?") && !command.includes("#"))) {
-      return command;
-    }
-
-    let modifiedCommand = command;
-
-    if (modifiedCommand.includes("?+") || modifiedCommand.includes("?-")) {
-      if (modifiedCommand.includes("?+")) {
-        const currentMacroInstance = this.host.macroLabelInstance;
-        const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
-        let nextAddr: number | null = null;
-
-        if (!modifiedCommand.trim().startsWith("?+:")) {
-          for (const [key, info] of this.host.labelTable.entries()) {
-            if (
-              key.startsWith(macroLabelPrefix) &&
-              (key === `${macroLabelPrefix}+` ||
-                key.endsWith("_+") ||
-                key === `:pos_${currentMacroInstance}_1`) &&
-              info.value > this.host.currentTargetAddress
-            ) {
-              if (nextAddr === null || info.value < nextAddr) {
-                nextAddr = info.value;
-              }
-            }
-          }
-
-          nextAddr ??= this.host.symbolScope.findNextLabel("?+");
-
-          modifiedCommand = modifiedCommand.replace(/\?\+/g, `$${nextAddr.toString(16)}`);
-        }
-      }
-
-      if (modifiedCommand.includes("?-")) {
-        const currentMacroInstance = this.host.macroLabelInstance;
-        const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
-        let prevAddr: number | null = null;
-
-        if (!modifiedCommand.trim().startsWith("?-:")) {
-          for (const [key, info] of this.host.labelTable.entries()) {
-            if (
-              key.startsWith(macroLabelPrefix) &&
-              (key === `${macroLabelPrefix}-` ||
-                key.endsWith("_-") ||
-                key === `:neg_${currentMacroInstance}_1`) &&
-              info.value < this.host.currentTargetAddress
-            ) {
-              if (prevAddr === null || info.value > prevAddr) {
-                prevAddr = info.value;
-              }
-            }
-          }
-
-          prevAddr ??= this.host.symbolScope.findPreviousLabel("?-");
-
-          modifiedCommand = modifiedCommand.replace(/\?-/g, `$${prevAddr.toString(16)}`);
-        }
-      }
-    }
-
-    if (modifiedCommand.includes("?")) {
-      modifiedCommand = modifiedCommand.replace(
-        /(?<!\w)(\?[\w+.-]+_[\w+.-]+)(?!:)/g,
-        (match: string, labelRef: string) => {
-          if (
-            modifiedCommand.trim().startsWith(match) &&
-            (modifiedCommand.includes(":") || modifiedCommand.includes("="))
-          ) {
-            return match;
-          }
-
-          try {
-            const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
-            return `$${labelValue.toString(16)}`;
-          } catch (error) {
-            if (this.host.isDefinitionCollectionStage) {
-              return "$0000";
-            }
-            throw error;
-          }
-        },
-      );
-
-      modifiedCommand = modifiedCommand.replace(
-        /(?<!\w)(\?[\w+.-]+)(?!:)/g,
-        (match: string, labelRef: string) => {
-          if (
-            modifiedCommand.trim().startsWith(match) &&
-            (modifiedCommand.includes(":") || modifiedCommand.includes("="))
-          ) {
-            return match;
-          }
-
-          try {
-            const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
-            return `$${labelValue.toString(16)}`;
-          } catch (error) {
-            if (this.host.isDefinitionCollectionStage) {
-              return "$0000";
-            }
-            throw error;
-          }
-        },
-      );
-    }
-
-    return modifiedCommand;
+    const definition: MacroDefinition = {
+      name: header.name,
+      params: parameters,
+      variadic,
+      body,
+      source,
+      sourceFile: source.file || this.host.currentFile,
+    };
+    this.templates.set(definition, body.map(createMacroLineTemplate));
+    this.host.macros.set(header.name, definition);
+    this.host.recordSymbolDefinition("macro", header.name, {
+      file: definition.sourceFile,
+      line: source.line,
+    });
   }
 
   /**
    * Calls a macro.
    * @param {string} invocation The invocation to call.
    */
-  callMacro(invocation: string): void {
+  callMacro(invocation: string, source?: CommandProvenance): void {
+    const operation = parseCommandOperation(
+      invocation.startsWith("%") ? invocation : `%${invocation}`,
+    );
+    if (operation?.kind !== "macroCall") {
+      throw new Error(
+        operation?.kind === "invalid" ? operation.message : "Invalid macro invocation.",
+      );
+    }
+    this.executeInvocation(operation, source);
+  }
+
+  /** Bind parsed arguments once; the invocation owns all mutable expansion state. */
+  executeInvocation(
+    operation: Extract<CommandOperation, { kind: "macroCall" }>,
+    source?: CommandProvenance,
+  ): void {
+    const invocation = source?.raw ?? operation.name;
     incrementInternalCounter("macroExpansions");
     this.host.macroLabelInstance++;
 
@@ -423,11 +285,8 @@ export class MacroEngine {
     this.macroExpansionControlStack = [];
 
     try {
-      const invocationRegex = /^(\w+)\((.*)\)$/;
-      const match = invocation.match(invocationRegex);
-
-      if (!match) {
-        const macroName = invocation.startsWith("%") ? invocation.substring(1) : invocation;
+      if (!operation.parenthesized) {
+        const macroName = operation.name;
         const macro = this.host.macros.get(macroName);
         if (!macro) {
           throw new Error(`Error: Macro '${macroName}' not defined.`);
@@ -446,21 +305,16 @@ export class MacroEngine {
           this.host.currentVariadicCount = 0;
           this.host.currentVariadicArgs = [];
 
-          for (const lineNode of macro.body) {
-            const expandedLine = this.expandMacroLine(lineNode.command, fixedArgs, [], 0);
-            this.processMacroLine(expandedLine);
-          }
+          this.executeMacroBody(macro, fixedArgs, [], 0, source, invocation);
         } else {
-          for (const lineNode of macro.body) {
-            this.processMacroLine(lineNode.command);
-          }
+          // Bare zero-parameter calls historically inherit the enclosing variadic context.
+          this.executeMacroBody(macro, undefined, [], 0, source, invocation);
         }
 
         return;
       }
 
-      const macroName = match[1];
-      const args = match[2].trim();
+      const macroName = operation.name;
       const macro = this.host.macros.get(macroName);
       if (!macro) {
         throw new Error(`Error: Macro '${macroName}' not defined.`);
@@ -471,47 +325,7 @@ export class MacroEngine {
         this.host.currentFile = macro.sourceFile;
       }
 
-      const argValues: string[] = [];
-      let currentArg = "";
-      let inQuotes = false;
-      let escapeNext = false;
-
-      for (let i = 0; i < args.length; i++) {
-        const char = args[i];
-
-        if (escapeNext) {
-          currentArg += char;
-          escapeNext = false;
-          continue;
-        }
-
-        if (char === "\\") {
-          escapeNext = true;
-          continue;
-        }
-
-        if (char === '"') {
-          if (inQuotes && i + 1 < args.length && args[i + 1] === '"') {
-            currentArg += '"';
-            i++;
-            continue;
-          }
-          inQuotes = !inQuotes;
-          continue;
-        }
-
-        if (char === "," && !inQuotes) {
-          argValues.push(currentArg.trim());
-          currentArg = "";
-          continue;
-        }
-
-        currentArg += char;
-      }
-
-      if (currentArg.length > 0) {
-        argValues.push(currentArg.trim());
-      }
+      const argValues = operation.arguments;
 
       const fixedArgs = new Map<string, string>();
       for (let i = 0; i < macro.params.length; i++) {
@@ -530,15 +344,7 @@ export class MacroEngine {
       this.host.currentVariadicCount = variadicCount;
       this.host.currentVariadicArgs = variadicArgs;
 
-      for (const lineNode of macro.body) {
-        const expandedLine = this.expandMacroLine(
-          lineNode.command,
-          fixedArgs,
-          variadicArgs,
-          variadicCount,
-        );
-        this.processMacroLine(expandedLine);
-      }
+      this.executeMacroBody(macro, fixedArgs, variadicArgs, variadicCount, source, invocation);
     } finally {
       this.host.currentMacroName = previousMacroName;
       this.host.currentParentLabel = previousParentLabel;
@@ -548,6 +354,86 @@ export class MacroEngine {
       this.host.inMacroExpansion = previousMacroExpansionState;
       this.host.currentFile = previousFile;
       this.macroExpansionControlStack = previousMacroExpansionControlStack;
+    }
+  }
+
+  /** Expand one template at a time so define writes and active branches affect the next line. */
+  private executeMacroBody(
+    macro: MacroDefinition,
+    fixedArgs: Map<string, string> | undefined,
+    variadicArgs: string[],
+    variadicCount: number,
+    source: CommandProvenance | undefined,
+    invocationText: string,
+  ): void {
+    let templates = this.templates.get(macro);
+    if (!templates) {
+      templates = macro.body.map(createMacroLineTemplate);
+      this.templates.set(macro, templates);
+    }
+    const invocation = occurrence(source ?? { file: this.host.currentFile, line: 0 });
+    // Use the original argument spelling for ranges, independently of decoding/binding values.
+    const sourceText = source?.raw ?? invocationText;
+    const open = sourceText.indexOf("(");
+    const close = sourceText.lastIndexOf(")");
+    let argumentStart = open + 1;
+    let argumentText = sourceText.slice(argumentStart, close);
+    if (open < 0 || close < open) {
+      argumentStart = sourceText.search(/\s/) + 1;
+      argumentText = argumentStart > 0 ? sourceText.slice(argumentStart) : "";
+    }
+    argumentStart += argumentText.length - argumentText.trimStart().length;
+    argumentText = argumentText.trim();
+    const argumentsOrigin = parseMacroArguments(argumentText).map((argument, index) => ({
+      parameter: macro.params[index],
+      index,
+      text: argument.text,
+      location: {
+        file: invocation.file,
+        line: invocation.line,
+        text: sourceText,
+        span: {
+          start: argumentStart + argument.start,
+          end: argumentStart + argument.end,
+          line: invocation.line,
+        },
+      },
+    }));
+    for (const template of templates) {
+      const origin: SourceOrigin = {
+        kind: "macro",
+        name: macro.name,
+        invocation,
+        definition: occurrence(
+          macro.source ?? { file: macro.sourceFile ?? invocation.file, line: 0 },
+        ),
+        template: occurrence(template.command.source),
+        arguments: argumentsOrigin,
+        definitionContext: template.command.source.origin,
+        parent: source?.origin,
+      };
+      const execute = (): void => {
+        const body = sourceFragment(template.text, [origin.template]);
+        const fragment = fixedArgs
+          ? this.expandMacroFragment(
+              body,
+              fixedArgs,
+              variadicArgs,
+              variadicCount,
+              template,
+              argumentsOrigin,
+            )
+          : body;
+        const bound = fixedArgs
+          ? bindNumericMacroTemplate(template, fixedArgs, fragment)
+          : undefined;
+        this.processMacroFragment(fragment, bound ?? template.command);
+      };
+      if (this.host.withSourceOrigin) {
+        this.host.withSourceOrigin(origin, execute);
+      } else {
+        execute();
+      }
     }
   }
 
@@ -564,8 +450,54 @@ export class MacroEngine {
     fixedArgs: Map<string, string>,
     variadicArgs: string[],
     variadicCount: number,
+    template?: MacroLineTemplate,
   ): string {
-    line = line.replace(/!<(\w+)>/g, (match, paramName: string) => {
+    return fragmentText(
+      this.expandMacroFragment(
+        sourceFragment(line),
+        fixedArgs,
+        variadicArgs,
+        variadicCount,
+        template,
+      ),
+    );
+  }
+
+  /** Bind one macro occurrence in phase order while retaining each argument's physical source. */
+  expandMacroFragment(
+    line: SourceFragment,
+    fixedArgs: Map<string, string>,
+    variadicArgs: string[],
+    variadicCount: number,
+    template?: MacroLineTemplate,
+    argumentsOrigin: readonly MacroArgumentOrigin[] = [],
+  ): SourceFragment {
+    const replace = (
+      fragment: SourceFragment,
+      kind: import("../ir/macro-template.js").MacroPlaceholderKind,
+      resolve: (match: string, payload: string) => string | SourceFragment,
+    ): SourceFragment =>
+      bindMacroFragment(template, fragment, kind, (part) => {
+        const value = resolve(part.text, part.payload);
+        const origins = argumentsOrigin
+          .filter((argument) => argument.parameter === part.payload)
+          .map((argument) => argument.location);
+        if (typeof value !== "string") {
+          return {
+            segments: value.segments.map((segment) => ({
+              text: segment.text,
+              origins: [...origins, ...segment.origins],
+            })),
+          };
+        }
+        return sourceFragment(value, origins);
+      });
+    const variadicValue = (expr: string): SourceFragment => {
+      const binding = this.resolveVariadicBinding(expr, variadicArgs);
+      const argument = argumentsOrigin.at(fixedArgs.size + binding.index);
+      return sourceFragment(binding.value, argument ? [argument.location] : []);
+    };
+    line = replace(line, "defineName", (match, paramName: string) => {
       if (!fixedArgs.has(paramName)) {
         return match;
       }
@@ -576,12 +508,14 @@ export class MacroEngine {
       return `!${name}`;
     });
 
-    const substituteParamValue = (raw: string): string => {
+    const substituteParamValue = (raw: string): string | SourceFragment => {
       const value = raw.trim();
       if (!value.includes("!")) {
         return value;
       }
-      return this.host.resolvedefines(value);
+      return this.host.resolveDefineFragment
+        ? this.host.resolveDefineFragment(sourceFragment(value))
+        : this.host.resolvedefines(value);
     };
 
     const resolveDeprecatedBangAngle = (match: string, name: string): string => {
@@ -601,71 +535,58 @@ export class MacroEngine {
       return defineValue ?? match;
     };
 
-    if (line.trim().startsWith("!") && line.includes("=")) {
-      const defineMatch = line.trim().match(/^!(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
+    const lineText = fragmentText(line);
+    if (lineText.trim().startsWith("!") && lineText.includes("=")) {
+      const defineMatch = lineText.trim().match(/^!(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
       if (defineMatch) {
         const varName = defineMatch[1];
         const operator = defineMatch[2];
         const value = defineMatch[3];
 
-        let expandedValue = value;
-        expandedValue = expandedValue.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
-        expandedValue = expandedValue.replace(/<(\w+)>/g, (match: string, paramName: string) => {
+        const valueStart = lineText.lastIndexOf(value);
+        let expandedValue = sliceSourceFragment(line, valueStart, valueStart + value.length);
+        expandedValue = replace(expandedValue, "deprecated", resolveDeprecatedBangAngle);
+        expandedValue = replace(expandedValue, "named", (match: string, paramName: string) => {
           if (fixedArgs.has(paramName)) {
             return substituteParamValue(fixedArgs.get(paramName) ?? "");
           }
           return match;
         });
-        expandedValue = expandedValue.replace(
-          /<(?:\.{3}|…)\[([^\]]+)]>/g,
-          (match: string, expr: string) => {
-            if (this.isMacroExpansionLoopActive()) {
-              return match;
-            }
+        expandedValue = replace(expandedValue, "variadic", (match: string, expr: string) => {
+          if (this.isMacroExpansionLoopActive()) {
+            return match;
+          }
 
-            const processedExpr = expr.replace(/!(\w+)/g, (defMatch: string, defName: string) => {
-              if (this.host.defines.has(defName)) {
-                return this.host.defines.get(defName) ?? defMatch;
-              }
-              return defMatch;
-            });
+          return variadicValue(expr);
+        });
+        expandedValue = replace(expandedValue, "count", () => variadicCount.toString());
 
-            const resolvedExpr = this.host.resolvedefines(processedExpr);
-            let index = this.host.mathCore.math(resolvedExpr);
-            if (Number.isNaN(index)) {
-              throw new Error(
-                `Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`,
-              );
-            }
-
-            index = Math.floor(index);
-            if (index < 0 || index >= variadicCount) {
-              throw new Error(`Variadic index ${index} out of range (0..${variadicCount - 1}).`);
-            }
-
-            return variadicArgs[index];
-          },
+        const headerOrigins = sliceSourceFragment(line, 0, valueStart).segments.flatMap(
+          (part) => part.origins,
         );
-        expandedValue = expandedValue.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
-
-        return `!${varName} ${operator} ${expandedValue}`;
+        return {
+          segments: [
+            ...sourceFragment(`!${varName} ${operator} `, headerOrigins).segments,
+            ...expandedValue.segments,
+          ],
+        };
       }
     }
 
-    if (line.match(/^\s*[#?][\w+.-]+:/) || line.match(/^\s*[#?][\w+.-]+\s*=/)) {
+    if (lineText.match(/^\s*[#?][\w+.-]+:/) || lineText.match(/^\s*[#?][\w+.-]+\s*=/)) {
       return line;
     }
 
     let expanded = line;
-    expanded = expanded.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
-    expanded = expanded.replace(/<(\w+)>/g, (match: string, paramName: string) => {
+    expanded = replace(expanded, "deprecated", resolveDeprecatedBangAngle);
+    expanded = replace(expanded, "named", (match: string, paramName: string) => {
       if (fixedArgs.has(paramName)) {
         return substituteParamValue(fixedArgs.get(paramName) ?? "");
       }
       return match;
     });
     if (this.host.syntaxProfile.macroParameterPrefix === "\\") {
-      expanded = expanded.replace(/\\([A-Z_a-z]\w*)/g, (match: string, paramName: string) => {
+      expanded = replace(expanded, "backslash", (match: string, paramName: string) => {
         if (fixedArgs.has(paramName)) {
           return substituteParamValue(fixedArgs.get(paramName) ?? "");
         }
@@ -678,76 +599,98 @@ export class MacroEngine {
       return expanded;
     }
 
-    expanded = expanded.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
+    expanded = replace(expanded, "variadic", (match: string, expr: string) => {
       if (this.isMacroExpansionLoopActive()) {
         return match;
       }
 
-      const processedExpr = expr.replace(/!(\w+)/g, (defMatch: string, defName: string) => {
-        if (this.host.defines.has(defName)) {
-          return this.host.defines.get(defName) ?? defMatch;
-        }
-        return defMatch;
-      });
-
-      const resolvedExpr = this.host.resolvedefines(processedExpr);
-      let index = this.host.mathCore.math(resolvedExpr);
-      if (Number.isNaN(index)) {
-        throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
-      }
-
-      index = Math.floor(index);
-      if (index < 0 || index >= variadicCount) {
-        throw new Error(`Variadic index ${index} out of range (0..${variadicCount - 1}).`);
-      }
-
-      return variadicArgs[index];
+      return variadicValue(expr);
     });
 
-    expanded = expanded.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
+    expanded = replace(expanded, "count", () => variadicCount.toString());
     return expanded;
   }
 
-  /**
-   * Resolves variadic placeholders.
-   * @param {string} command The command to resolve.
-   * @returns {string} The resolved command.
-   */
-  resolveVariadicPlaceholders(command: string): string {
-    if (!command.includes("...") && !command.includes("…")) {
-      return command;
+  /** One numeric/index contract for eager expansion and loop-time rebinding. */
+  /** Return the selected index with its value so provenance never requires evaluating an index twice. */
+  private resolveVariadicBinding(
+    expr: string,
+    args: readonly string[],
+  ): { index: number; value: string } {
+    const processedExpr = fragmentText(
+      bindSourceFragment(
+        sourceFragment(expr),
+        Array.from(expr.matchAll(/!(\w+)/g), (match) => ({
+          start: match.index,
+          end: match.index + match[0].length,
+          value: sourceFragment(this.host.defines.get(match[1]) ?? match[0]),
+        })),
+      ),
+    );
+    const resolvedExpr = this.host.resolvedefines(processedExpr);
+    const value = this.host.mathCore.math(resolvedExpr);
+    if (Number.isNaN(value)) {
+      throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
     }
+    const index = Math.floor(value);
+    if (index < 0 || index >= args.length) {
+      throw new Error(`Variadic index ${index} out of range (0..${args.length - 1}).`);
+    }
+    return { index, value: args[index] };
+  }
 
-    const variadicCount = this.host.currentVariadicArgs.length;
-    let resolved = command.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
-    resolved = resolved.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
-      const processedExpr = expr.replace(/!(\w+)/g, (defMatch: string, defName: string) => {
-        const defineValue = this.host.defines.get(defName);
-        return defineValue ?? defMatch;
-      });
+  /** Public string adapter for the ordered fragment binder. */
+  resolveVariadicPlaceholders(command: string): string {
+    return fragmentText(this.resolveVariadicFragment(sourceFragment(command)));
+  }
 
-      const resolvedExpr = this.host.resolvedefines(processedExpr);
-      let index = this.host.mathCore.math(resolvedExpr);
-      if (Number.isNaN(index)) {
-        throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
-      }
-
-      index = Math.floor(index);
-      if (index < 0 || index >= variadicCount) {
-        throw new Error(`Variadic index ${index} out of range (0..${variadicCount - 1}).`);
-      }
-
-      return this.host.currentVariadicArgs[index];
+  /** Loop iterations bind count before indexes, after the loop variable/define state is refreshed. */
+  resolveVariadicFragment(
+    fragment: SourceFragment,
+    argumentsOrigin: readonly MacroArgumentOrigin[] = [],
+  ): SourceFragment {
+    const text = fragmentText(fragment);
+    if (!text.includes("...") && !text.includes("…")) {
+      return fragment;
+    }
+    const args = this.host.currentVariadicArgs;
+    fragment = bindMacroFragment(undefined, fragment, "count", () =>
+      sourceFragment(String(args.length)),
+    );
+    return bindMacroFragment(undefined, fragment, "variadic", (part) => {
+      const binding = this.resolveVariadicBinding(part.payload, args);
+      const argument = argumentsOrigin.filter((origin) => origin.parameter === undefined)[
+        binding.index
+      ];
+      return sourceFragment(binding.value, argument ? [argument.location] : []);
     });
-
-    return resolved;
   }
 
   /**
    * Processes a macro line.
    * @param {string} line The line to process.
    */
-  processMacroLine(line: string): void {
+  processMacroLine(line: string, template?: NormalizedCommand): void {
+    this.processMacroFragment(
+      sourceFragment(line, template ? [occurrence(template.source)] : []),
+      template,
+    );
+  }
+
+  /** Dispatch attributed fragments, never an anonymous command string, after active-branch selection. */
+  processMacroFragment(fragment: SourceFragment, template?: NormalizedCommand): void {
+    const line = fragmentText(fragment);
+    const dispatch = (text: string): void => {
+      const start = line.indexOf(text);
+      const selected =
+        start >= 0
+          ? sliceSourceFragment(fragment, start, start + text.length)
+          : sourceFragment(
+              text,
+              fragment.segments.flatMap((part) => part.origins),
+            );
+      this.host.processSourceFragment(selected, true, template);
+    };
     incrementInternalCounter("macroLinesProcessed");
     const preprocessedLine = removeInlineComment(line);
     const trimmed = preprocessedLine.trim();
@@ -777,7 +720,7 @@ export class MacroEngine {
         const remainder = trimmed.substring(3).trim();
         this.host.symbolScope.handleRelativeLabel(labelChar);
         if (remainder) {
-          this.host.processCommand(remainder, true);
+          dispatch(remainder);
           this.updateMacroExpansionControlState(remainder);
         }
         return;
@@ -789,7 +732,7 @@ export class MacroEngine {
         const remainder = trimmed.substring(match[0].length).trim();
         this.host.symbolScope.setLabel(labelName, undefined, false, true);
         if (remainder) {
-          this.host.processCommand(remainder, true);
+          dispatch(remainder);
           this.updateMacroExpansionControlState(remainder);
         }
         return;
@@ -816,7 +759,7 @@ export class MacroEngine {
     if (isDefineAssignment && !this.isMacroExpansionLoopActive()) {
       this.host.applyDefineAssignment(commandLine);
     } else {
-      this.host.processCommand(commandLine, true);
+      dispatch(commandLine);
     }
     this.updateMacroExpansionControlState(trimmed);
   }

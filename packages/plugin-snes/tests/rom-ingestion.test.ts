@@ -1,14 +1,6 @@
 import { test } from "../../../tests/ava-helper.js";
 import { RomImage } from "../../disassembler/src/index.js";
-import {
-  SNES_MAPPERS,
-  createSnesAddressContext,
-  detectSnesRom,
-  identifySnesCpuAddress,
-  identifySnesFileOffset,
-  parseSnesInternalRomHeader,
-  SNES_CPU_VECTOR_DEFINITIONS,
-} from "../src/index.js";
+import { SNES_MAPPERS, createSnesAddressContext, detectSnesRom, identifySnesCpuAddress, identifySnesFileOffset, parseSnesInternalRomHeader, SNES_CPU_VECTOR_DEFINITIONS } from "@uttori/asm-plugin-snes/disassembler";
 
 const syntheticLoRom = (expanded = false): RomImage => {
   const bytes = new Uint8Array(0x10000).fill(0xea);

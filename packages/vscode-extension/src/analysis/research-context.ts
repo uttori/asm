@@ -1,12 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { readResearchInputs, type ResearchSnapshot } from "@uttori/asm-disassembler";
 import {
   parseSourceProject,
-  readResearchInputs,
   readSourceProjectLocalInputs,
-  type ResearchSnapshot,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
 
 /** Saved authoring files for one evidence query. Unsaved edits remain editor documents until saved. */
 export interface AnalysisResearchContext {

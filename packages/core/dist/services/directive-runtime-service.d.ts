@@ -1,3 +1,5 @@
+import type { ExpressionNode } from "../ir/expression-node.js";
+import { type NumericDataStatement } from "../ir/statement-node.js";
 import type { OperandResolver } from "../operand-resolver.js";
 import type { DefineEngine } from "./define-engine.js";
 import type { StructEngine } from "./struct-engine.js";
@@ -56,12 +58,16 @@ export declare class DirectiveRuntimeService {
      * @param {string[]} params The directive parameters.
      */
     handleOrg(params: string[]): void;
+    /** ORG uses mathematical evaluation, including grouped fractions, before checking the target range. */
+    executeOrg(expression: ExpressionNode, spelling: string): void;
     /**
      * Handles data directives.
      * @param {string} type The data directive keyword.
      * @param {string[]} params The directive parameters.
      */
-    handleDataDirective(type: string, params: string[]): void;
+    handleDataDirective(type: string, params: string[], numeric?: NumericDataStatement): void;
+    /** Resolve each element at its write cursor; sizing binds lists but never evaluates numeric values. */
+    executeDataStatement(statement: NumericDataStatement, estimateOnly?: boolean): void;
     /**
      * Writes a value using the data directive byte width.
      * @param {number} len The byte width.

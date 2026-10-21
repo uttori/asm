@@ -1,6 +1,6 @@
 import { test } from "../../../../tests/ava-helper.js";
 import { Assembler } from "../../../../tests/test-assembler.js";
-
+import { Typed65816 as Arch65816 } from "../../src/architectures/typed-65816.js";
 import {
   handleA8,
   handleA16,
@@ -14,7 +14,6 @@ import {
   handlePopcpu,
   resolveSnesCpuName,
 } from "../../src/directives/ca65-compat.js";
-import { Arch65816 } from "../../src/architectures/65816.js";
 
 // ---------------------------------------------------------------------------
 // Arch65816 width-state methods (unit tests, no session needed)
@@ -46,7 +45,7 @@ test("Arch65816 smart mode is on by default and controls SEP/REP tracking", (t) 
   // Smart mode on: SEP #$30 should set both 8-bit
   arch.m16 = true;
   arch.x16 = true;
-  arch.applySepRep("SEP", "#$30");
+  assembler.processCommand("SEP #$30");
   t.false(arch.m16, "SEP #$30 clears m16 when smartMode is on");
   t.false(arch.x16, "SEP #$30 clears x16 when smartMode is on");
 
@@ -54,13 +53,13 @@ test("Arch65816 smart mode is on by default and controls SEP/REP tracking", (t) 
   arch.setSmartMode(false);
   arch.m16 = false;
   arch.x16 = false;
-  arch.applySepRep("REP", "#$30");
+  assembler.processCommand("REP #$30");
   t.false(arch.m16, "REP #$30 does not set m16 when smartMode is off");
   t.false(arch.x16, "REP #$30 does not set x16 when smartMode is off");
 
   // Smart mode back on: REP should track again
   arch.setSmartMode(true);
-  arch.applySepRep("REP", "#$30");
+  assembler.processCommand("REP #$30");
   t.true(arch.m16, "REP #$30 sets m16 after smartMode re-enabled");
   t.true(arch.x16, "REP #$30 sets x16 after smartMode re-enabled");
 });
@@ -159,7 +158,18 @@ test(".smart enables/disables SEP/REP auto-tracking", (t) => {
 
 test("ca65 width directives are registered in the SNES assembler", (t) => {
   const assembler = new Assembler();
-  for (const kw of [".a8", ".a16", ".i8", ".i16", ".accu", ".index", ".smart", ".setcpu", ".pushcpu", ".popcpu"]) {
+  for (const kw of [
+    ".a8",
+    ".a16",
+    ".i8",
+    ".i16",
+    ".accu",
+    ".index",
+    ".smart",
+    ".setcpu",
+    ".pushcpu",
+    ".popcpu",
+  ]) {
     t.true(assembler.directiveRegistry.has(kw), `${kw} is registered`);
   }
 });
@@ -239,7 +249,7 @@ test("snes.65816 is accessible via 65C816 and 65802 aliases", (t) => {
   // selectArchitecture in test-assembler resolves via architectureRegistry
   assembler.selectArchitecture("65c816");
   t.is(assembler.arch, "65816", "65c816 alias resolves to 65816 arch");
-  t.truthy(assembler.arch65816 instanceof Arch65816, "encoder is still Arch65816");
+  t.truthy(assembler.arch65816 instanceof Arch65816, "alias retains the typed 65816 encoder");
 
   assembler.selectArchitecture("65802");
   t.is(assembler.arch, "65816", "65802 alias resolves to 65816 arch");
@@ -271,9 +281,9 @@ test(".pushcpu / .popcpu support nested saves", (t) => {
   const assembler = new Assembler();
   const state = assembler.targetState;
 
-  handlePushcpu(assembler, state);              // save 65816
+  handlePushcpu(assembler, state); // save 65816
   assembler.selectArchitecture("snes.spc700");
-  handlePushcpu(assembler, state);              // save spc700
+  handlePushcpu(assembler, state); // save spc700
   assembler.selectArchitecture("snes.superfx");
 
   handlePopcpu(assembler, state);

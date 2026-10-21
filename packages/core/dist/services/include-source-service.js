@@ -1,4 +1,4 @@
-import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
+import { incrementInternalCounter, measureInternalPhase, withSourceSyntax, } from "../internal-instrumentation.js";
 /**
  * Owns source and binary include resolution and source execution orchestration.
  */
@@ -130,10 +130,16 @@ export class IncludeSourceService {
             else {
                 this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
             }
-            measureInternalPhase("includeParseLowerExecute", () => {
+            measureInternalPhase("includeParseLowerExecute", () => withSourceSyntax(() => {
                 const includeNode = this.host.programModelBuilder.createIncludeNode(resolvedPath, content);
-                this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
-            });
+                const execute = () => this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
+                if (this.host.withIncludeSource) {
+                    this.host.withIncludeSource(resolvedPath, execute, previousFile);
+                }
+                else {
+                    execute();
+                }
+            }));
         }
         catch (error) {
             const message = error instanceof Error ? error.message : (stringifyCaught(error) ?? "Unknown error");

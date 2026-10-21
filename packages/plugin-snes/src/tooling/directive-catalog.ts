@@ -1,4 +1,4 @@
-import type { DirectiveDescriptor, DirectiveOperandDescriptor } from "@uttori/asm-core";
+import type { DirectiveDescriptor, DirectiveOperandDescriptor } from "@uttori/asm-core/tooling";
 
 /**
  * Builds a nested directive-operand descriptor for hover/completion.

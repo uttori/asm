@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "output": "packages/vscode-extension/out/editor-information-worker.cjs",
+  "source": "packages/vscode-extension/src/editor-info/worker.ts",
+  "target": "node24",
+  "notices": "packages/vscode-extension/out/editor-information-worker.cjs.licenses.txt",
+  "sha256": "b0fd72c9c00490611c75e17d68b54b6ee99ec8b69c2a201dcd483f81c8afaacd",
+  "noticesSha256": "fcfc842aeb2910110fcdc8fb8c1f8378d0d70310445d6ef4cb3104fc0d0a370f",
+  "inputs": [
+    {
+      "file": "package-lock.json",
+      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
+    },
+    {
+      "file": "packages/core/src/canonical-json.ts",
+      "sha256": "5f18a6e6e37a7b2735307d6268e1a5b3056641ab67b692a183b5b248e717f684"
+    },
+    {
+      "file": "packages/core/src/debug-map.ts",
+      "sha256": "a5db5b6f7963b7ac4b04d3e0d8f132f3728e4465fb36082bbce296e8ab75ad4f"
+    },
+    {
+      "file": "packages/vscode-extension/esbuild.mjs",
+      "sha256": "b640ee4a290b4f884ff588b67ea2b3d7d6ba205686970f97ec9dbca3b54763fe"
+    },
+    {
+      "file": "packages/vscode-extension/src/editor-info/provider.ts",
+      "sha256": "e18aa828fe77069f83e0a2f6211de7d70b5d6772c783e30a766c41cc11f07120"
+    },
+    {
+      "file": "packages/vscode-extension/src/editor-info/worker.ts",
+      "sha256": "c0a3ca970bb6cdec2253620059415c6bb60e388926e16da6c8ba7286e1ae5cf8"
+    },
+    {
+      "file": "scripts/bundle-notices.mjs",
+      "sha256": "9ca1813012e4fd363f71f6ea59679358a2df035e8147a545c1d04c7f7365b1f1"
+    },
+    {
+      "file": "scripts/runtime-bundles.mjs",
+      "sha256": "1b47a5860356045fdbed9b4a92591094f0d4e6c88e5ad9a7c0e5f1b70f703132"
+    }
+  ]
+}

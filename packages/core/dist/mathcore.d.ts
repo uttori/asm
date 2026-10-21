@@ -1,5 +1,6 @@
 import type { ExpressionHost, MathValue } from "./architecture-types.js";
 import type { BinaryOperator, ExpressionNode, ReferenceExpressionNode, UnaryOperator } from "./ir/expression-node.js";
+import { type FunctionTemplate } from "./ir/function-template.js";
 type UserFunction = {
     readonly args: readonly string[];
     readonly content: string;
@@ -17,6 +18,10 @@ type OperatorTable = {
     readonly [K in BinaryOperator]: BinaryOperatorSpec;
 };
 export declare class MathCore {
+    /** Definition identity owns cached syntax; replacing a function releases its previous template. */
+    private readonly functionTemplates;
+    /** Parsed syntax is reused only within an assembly snapshot; state-dependent values are never cached. */
+    readonly parsedStringExpressions: Map<string, ExpressionNode>;
     readonly pureStringExpressionCache: Map<string, number>;
     readonly roundedPureStringExpressionCache: Map<string, number>;
     readonly pureStringClassification: Map<string, boolean>;
@@ -29,35 +34,6 @@ export declare class MathCore {
     readonly userFunctions: Map<string, UserFunction>;
     readonly expressionFunctions: Map<string, RegisteredExpressionFunction>;
     readonly operators: OperatorTable;
-    /** Full expression currently being scanned. */
-    scanSource: string;
-    /** Byte offset into `scanSource`. `str` is the slice from here to the end. */
-    scanIndex: number;
-    /**
-     * Remaining unconsumed expression text.
-     * @returns {string} The unconsumed source from the scan cursor.
-     */
-    get str(): string;
-    /**
-     * Replaces the expression being scanned.
-     * @param {string} value The new expression source.
-     */
-    set str(value: string);
-    /**
-     * Advances the scan cursor past ASCII / trim whitespace.
-     */
-    skipWhitespace(): void;
-    /**
-     * Returns whether the remaining source starts with a literal.
-     * @param {string} text The literal to match.
-     * @returns {boolean} Whether the literal is present at the cursor.
-     */
-    remainingStartsWith(text: string): boolean;
-    /**
-     * Consumes a fixed number of characters from the scan cursor.
-     * @param {number} count The number of characters to consume.
-     */
-    advance(count: number): void;
     /**
      * Initialize the math core.
      */
@@ -110,75 +86,26 @@ export declare class MathCore {
      * @returns {boolean} Whether the result is independent of assembler state.
      */
     isPureExpressionNode(expression: ExpressionNode): boolean;
-    /**
-     * Evaluates a string expression using the legacy parser.
-     * @param {string} expression The expression to evaluate.
-     * @returns {number} The result of the expression.
-     */
+    /** Public string entry point; source and IR callers share the same evaluator. */
     evaluateStringExpression(expression: string): number;
     /**
-     * Evaluates an expression node using typed dispatch before falling back to string parsing.
+     * Evaluates syntax directly; parser diagnostics are raised only when their occurrence is selected.
      * @param {ExpressionNode} expression The expression node to evaluate.
      * @returns {number} The numeric result.
      */
-    evaluateExpressionNode(expression: ExpressionNode): number;
+    evaluateExpressionNode(expression: ExpressionNode, round?: boolean): number;
+    /** Typed dispatch is shared by parsed strings and IR callers; unparsed nodes cannot execute. */
+    private evaluateNodeValue;
     evaluateCallArgument(functionName: string, argumentIndex: number, argument: ExpressionNode): number | string;
     evaluateUnaryExpressionNode(operator: UnaryOperator, argument: ExpressionNode): number;
     evaluateBinaryExpressionNode(operator: BinaryOperator, left: ExpressionNode, right: ExpressionNode): number;
+    /** Numeric argument lookup preserves unresolved identifier arguments as source strings. */
     resolveNumericIdentifierArgument(identifier: string): number | string;
+    /** Resolve typed paths without converting indexes or member access back to source. */
     evaluateReferenceExpressionNode(expression: ReferenceExpressionNode): number;
-    resolveLeadingLocalLabelReference(input: string): {
-        label: string;
-        length: number;
-    } | undefined;
     isStringArgument(functionName: string, argumentIndex: number): boolean;
+    /** Interpret externally constructed literals; parsed literals already retain this value. */
     parseLiteralNode(value: string): number;
-    /**
-     * Evaluates a mathematical expression.
-     * This replaces the C++ `eval` function.
-     * @param {number} depth The current depth of nested expressions.
-     * @param {string} [stopChar] The character to stop the evaluation at.
-     * @returns {number | undefined} The result of the evaluated expression, or
-     * `undefined` when an inline function definition consumes the expression.
-     */
-    evalMath(depth?: number, stopChar?: string): number | undefined;
-    /**
-     * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
-     * @param {OperatorTable} operators The operators to check.
-     * @param {number} depth The current depth of nested expressions.
-     * @returns {BinaryOperator | null} The matching operator or null if no match.
-     */
-    peekNextOperator(operators: OperatorTable, depth: number): BinaryOperator | null;
-    /**
-     * Parses numbers from a string while consuming valid characters.
-     * @param {RegExp} regex The regular expression to test against the string.
-     * @returns {string} The substring of the string that matches the regular expression.
-     */
-    consumeWhile(regex: RegExp): string;
-    /**
-     * Retrieves a number from the string.
-     * This implements `getnumcore` and `getnum`.
-     * @returns {number} The number from the string.
-     */
-    getnum: () => number;
-    /**
-     * Scans a function-call name if the next token is `name(`.
-     * Leaves the cursor on `(`.
-     * @returns {string | undefined} The function name, if a call starts here.
-     */
-    scanFunctionCallName(): string | undefined;
-    /**
-     * Parses a string literal from the current string with support for quotes.
-     * @returns {string} The parsed string literal.
-     */
-    parseStringLiteral: () => string;
-    /**
-     * Parses an unquoted string function argument up to a top-level comma or closing parenthesis.
-     * Depth tracks nested `()` / `[]` so `Foo[1].bar` and `data/64kb.bin` stay one argument.
-     * @param {string} functionName The function being called.
-     * @returns {string} The raw argument text.
-     */
-    parseUnquotedStringArgument(functionName: string): string;
     /**
      * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
      * @param {string} name The name of the function to call.
@@ -214,10 +141,10 @@ export declare class MathCore {
      * @returns {string} The validated string.
      */
     strArg: (funcName: string, arg: number | string) => string;
-    /**
-     * Parses a function definition.
-     */
-    parseFunctionDefinition: () => void;
+    /** Parse a public declaration through the same grammar used by source commands. */
+    parseFunctionDefinition(source: string): void;
+    /** Install immutable declaration syntax; replacing a name releases its previous template cache. */
+    installFunctionTemplate(name: string, template: FunctionTemplate): void;
     getHost(): ExpressionHost;
 }
 export {};

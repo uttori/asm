@@ -406,7 +406,7 @@ const isLegacySourceNote = (note: string): boolean => {
     return parts.every(isLegacySourceNote);
   }
   const citation = note.endsWith(".") ? note.slice(0, -1) : note;
-  if (/^[A-Z_a-z]\w* in [\w./-]+\.(?:txt|md|asm|json)$/i.test(citation)) {
+  if (/^[_a-z]\w* in [\w./-]+\.(?:txt|md|asm|json)$/i.test(citation)) {
     return true;
   }
   const separator = citation.lastIndexOf(":");

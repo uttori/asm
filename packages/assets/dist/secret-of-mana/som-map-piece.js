@@ -180,8 +180,9 @@ function decodeMapStream(bytes, width, height, motifs, memory, origin) {
         const decoded = decodeMapStream(motif.bytes, motif.width, motif.height, [], memory, motifOrigin);
         motifInstances.push(decoded);
         // Keep first-insertion compatibility while retaining each contextual variant separately.
-        if (!motif.tiles)
+        if (!motif.tiles) {
             Object.assign(motif, decoded);
+        }
         for (let dy = 0; dy < motif.height; dy++) {
             for (let dx = 0; dx < motif.width; dx++) {
                 tiles[(y + dy) * width + x + dx] = decoded.tiles[dy * motif.width + dx];

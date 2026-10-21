@@ -9,6 +9,7 @@ import { type InstructionExecutionSummaryRow, type AnnotationQueryRange, type Sq
 import { type GraphicsEvidenceQuery } from "./sqlite-graphics-query.js";
 import { type RuntimeTracePublicationSink } from "./sqlite-runtime-batch.js";
 import { type AnalysisStoragePolicy } from "./sqlite-storage-policy.js";
+import type { SqliteTraceStage } from "./sqlite-trace-stage.js";
 /** On-disk sqlite filename stored in `analysis.json` `db`. */
 export declare const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 /** Physical SQLite layout version, independent of semantic manifest schema and edit revisions. */
@@ -62,13 +63,14 @@ export declare class SqliteAnalysisStore {
      */
     transaction<T>(action: () => T, write?: boolean): T;
     /**
-     * Index trace chunks in a connection-local disk table. This transaction never reads or writes
-     * main, allowing other project writers to proceed during asynchronous capture parsing.
-     * @param {Function} action Async parser using only the supplied temporary counter index.
+     * Index trace chunks in temporary or privately staged disk counters. This transaction never
+     * reads or writes the destination project, allowing other writers during asynchronous parsing.
+     * @param {Function} action Async parser using only the supplied counter index.
      * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-     * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
+     * @param {SqliteTraceStage} stage Optional private counters retained across publication failures.
+     * @returns {Promise} Parser result after counters commit. Staged counters survive connection close.
      */
-    indexTrace<T>(action: (index: RuntimeTraceFactIndex) => Promise<T>, metrics?: TraceIndexMetrics): Promise<T>;
+    indexTrace<T>(action: (index: RuntimeTraceFactIndex) => Promise<T>, metrics?: TraceIndexMetrics, stage?: SqliteTraceStage): Promise<T>;
     /** Apply a selected metadata edit by stable ID. Omitted records are never deleted.
      * Validation and optimistic revision checks belong to the publication API.
      * @param {AnalysisProjectShards} before Original selected view.
@@ -96,8 +98,10 @@ export declare class SqliteAnalysisStore {
      * imported facts. Overridden IDs retain their observation shadows; removing a decision on a
      * later branch therefore restores the original record. Return the exact projected replacements
      * for validation without reparsing a million-row graph into a second set of JS objects.
+     * An optional base view must belong to the revision checked under this writer lock. Its unchanged
+     * collections combine with the projected replacements for the same complete publication validation.
      */
-    replaceResearchAnalysis(snapshot: ResearchSnapshot, updates: Partial<Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">>, onProgress?: (collection: string) => void): Partial<Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">>;
+    replaceResearchAnalysis(snapshot: ResearchSnapshot, updates: Partial<Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">>, onProgress?: (collection: string) => void, baseView?: AnalysisProjectShards): Partial<Pick<AnalysisProjectShards, "analysis" | "annotations" | "comments" | "evidence">>;
     /**
      * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
      * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
@@ -173,6 +177,11 @@ export declare class SqliteAnalysisStore {
     loadTable(kind: "analysis"): AnalysisProjectShards["analysis"];
     loadTable(kind: "evidence"): AnalysisProjectShards["evidence"];
     loadTable(kind: "imports"): AnalysisProjectShards["imports"];
+    /** Read at most 200 metadata records by stable ID. The cursor belongs to the caller's read snapshot. */
+    metadataPage<Kind extends Exclude<ShardKind, "runtime">>(kind: Kind, after: string | undefined, limit?: number): {
+        records: readonly AnalysisProjectShards[Kind][number][];
+        next?: string;
+    };
     /** Validate a query view against this read snapshot, including every included provenance reference.
      * @param {AnalysisProjectShards} shards Selected records, with unused collections empty.
      */
@@ -294,13 +303,15 @@ export declare class SqliteAnalysisStore {
      * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
      * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
      * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
+     * @param {Function} [onReadProgress] Representatives staged in storage order; throwing aborts the cursor.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
-     * Prepare before starting the consuming read transaction.
+     * Preparation precedes the consuming read transaction. Standalone iteration owns a snapshot;
+     * close a partially consumed cursor to release it.
      */
     runtimeInstructionVariants(architecture: string, space: string, stateFields: readonly string[], masks?: Readonly<Record<string, {
         readonly max: number;
         readonly mask: number;
-    }>>, onProgress?: (observations: number, totalObservations: number) => void): IterableIterator<RuntimeEvidenceRecord>;
+    }>>, onProgress?: (observations: number, totalObservations: number) => void, onReadProgress?: (representatives: number) => void): IterableIterator<RuntimeEvidenceRecord>;
     /** Exact execution seed totals grouped by PC, without decoding execution payloads.
      * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
      * storage. Static seed selection needs their union, not millions of duplicate PC records.
@@ -350,6 +361,18 @@ export declare class SqliteAnalysisStore {
         manifest: AnalysisProjectManifest;
         shards: AnalysisProjectShards;
     };
+    /**
+     * Prepare an optional, lossless export projection before opening the rendering read transaction.
+     * Dependency triggers reject publication after intervening analysis/provenance edits. Cache misses
+     * still use the authoritative ordered cursor; no manifest revision or Git files are changed.
+     */
+    prepareSourceExport(signal?: AbortSignal): void;
+    /**
+     * Render inside one read snapshot, staging a lossless projection during the first cursor pass.
+     * The callback must synchronously consume all groups. Only a surviving dependency token can
+     * publish the staged cache after rendering releases its read lock; concurrent edits win.
+     */
+    sourceExportSnapshot<T>(render: (groups: Iterable<readonly InstructionExportRecord[]>) => T, signal?: AbortSignal): T;
     /**
      * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
      * The caller prepares annotation indexes first and owns a read transaction until iteration ends.

@@ -1,0 +1,4 @@
+/** tooling contracts. Node host operations own filesystem resources and must honor documented disposal/publication rules. */
+export { directiveCatalog, findDirective, OverlayFileProvider, RootAnalysisCache, fingerprintFor, hashBytes, WorkspaceIndex, WORKSPACE_ANALYSIS_SNAPSHOT_VERSION, locationRange, positionInRange, referenceAt, symbolAt, resolveDefinition, findReferences, InstructionCatalogRegistry, getInstructionCatalog, findInstruction, findDirectiveInCatalog, findDirectiveOperand, renderInstructionDocs, renderDirectiveDocs, renderExpressionFunctionDocs, buildCompletionEntries, } from "./lsp/index.js";
+export { sourceOriginLocations, sourceOccurrenceRange, } from "./source-provenance.js";
+//# sourceMappingURL=tooling.js.map

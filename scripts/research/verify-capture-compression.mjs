@@ -5,9 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { decodeCaptureChunkBytes } from "../../packages/debug-adapter/src/capture-compression.ts";
-import { recoverCaptureFile } from "../../packages/debug-adapter/src/capture-file.ts";
-import { captureCrc32c } from "../../packages/debug-adapter/src/capture-v2.ts";
+import { decodeCaptureChunkBytes, recoverCaptureFile, captureCrc32c } from "@uttori/asm-capture";
 
 /**
  * Read exactly one bounded field at the descriptor's current position.
@@ -20,7 +18,7 @@ function read(fd, length) {
   const bytes = Buffer.alloc(length);
   let offset = 0;
   while (offset < length) {
-    const count = fs.readSync(fd, bytes, offset, length - offset);
+    const count = fs.readSync(fd, bytes, offset, length - offset, null);
     assert(count > 0, "Unexpected EOF");
     offset += count;
   }
@@ -105,9 +103,21 @@ function parseRun(json) {
     assert("durableThrough" in position && typeof position.durableThrough === "string");
     assert("droppedInScope" in position && typeof position.droppedInScope === "string");
     assert("state" in position && typeof position.state === "string");
-    return { ...value, position: { ...position } };
+    // Materialize validated fields explicitly: spreading the unknown object loses their narrowed types.
+    return {
+      ...value,
+      mode: value.mode,
+      stateEqual: value.stateEqual,
+      position: {
+        ...position,
+        producedThrough: position.producedThrough,
+        durableThrough: position.durableThrough,
+        droppedInScope: position.droppedInScope,
+        state: position.state,
+      },
+    };
   }
-  return { ...value, position };
+  return { ...value, mode: value.mode, stateEqual: value.stateEqual, position };
 }
 for (const directory of directories) {
   const runs = fs
@@ -126,11 +136,10 @@ for (const directory of directories) {
     let recovery;
     if (directory.endsWith("-1")) {
       recovery = await recoverCaptureFile(file);
-      assert(recovery.complete, recovery.reason);
-      assert.equal(
-        recovery.eventThrough,
-        runs.find((run) => run.mode === mode).position.producedThrough,
-      );
+      assert(recovery.complete, recovery.reason ?? "Capture recovery is incomplete");
+      const run = runs.find((entry) => entry.mode === mode);
+      assert(run?.position, `Missing capture position for ${mode}`);
+      assert.equal(recovery.eventThrough, run.position.producedThrough);
     }
     pair[mode] = { ...evidence, recovery };
   }

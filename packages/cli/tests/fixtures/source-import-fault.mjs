@@ -23,5 +23,5 @@ DatabaseSync.prototype.exec = function (sql) {
   }
   return result;
 };
-const { executeSourceOperation } = await import("../../src/source.ts");
+const { executeSourceOperation } = await import("../../../workflows/src/source.ts");
 await executeSourceOperation({ directory, action: "import", capture });

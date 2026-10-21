@@ -1,5 +1,12 @@
 import { maximumAddressForWidth } from "../address-width.js";
+import {
+  checkedDeclaration,
+  parseDeclarationNode,
+  type DeclarationNode,
+} from "../ir/declaration-node.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { ReferencePath } from "../ir/reference-path.js";
 import { DataStructEngine, type DataStructHost } from "./data-struct-engine.js";
 
 /** Encoding information is separate from Asar's address-only member labels. */
@@ -38,7 +45,7 @@ export type StructHost = DataStructHost & {
   readonly addressWidth: number;
   currentStruct: StructDefinition | null;
   structs: Map<string, StructDefinition>;
-  operandResolver: { getnum(input: string): number };
+  operandResolver: { getnum(input: string | ExpressionNode): number };
   enterStructDefinition(base: number): void;
   restoreStructDefinition(): void;
   recordSymbolDefinition(
@@ -66,19 +73,13 @@ export class StructEngine {
       return false;
     }
 
-    const { words } = command;
-    const keyword = words[0] ?? "";
-
-    if (keyword.startsWith(".")) {
-      const hasColon = keyword.endsWith(":");
-      const labelName = keyword.replace(/:$/, "").substring(1);
-      const declaration = words.slice(1).join(" ");
-      // oxlint-disable-next-line security/detect-unsafe-regex -- Width, spaces and bracketed count do not overlap.
-      const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
+    const declaration = checkedDeclaration(command.parsed.declaration);
+    if (declaration?.kind === "structField") {
+      const labelName = declaration.name;
+      const typed = declaration.storage;
       if (typed) {
-        const width = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
-        const countText = typed.length > 2 ? typed[2] : undefined;
-        const count = countText === undefined ? 1 : this.host.operandResolver.getnum(countText);
+        const width = typed.width;
+        const count = typed.count === undefined ? 1 : this.host.operandResolver.getnum(typed.count);
         if (!Number.isSafeInteger(count) || count < 1 || count * width > 0x10000) {
           throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
         }
@@ -90,10 +91,12 @@ export class StructEngine {
           offset: currentStruct.offset,
           width,
           count,
-          array: countText !== undefined,
+          array: typed.count !== undefined,
         });
-      } else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
-        throw new Error(`Invalid typed field '${currentStruct.name}.${labelName}': ${declaration}`);
+      } else if (declaration.error) {
+        throw new Error(
+          `Invalid typed field '${currentStruct.name}.${labelName}': ${declaration.error}`,
+        );
       }
       currentStruct.labels.set(labelName, currentStruct.offset);
       this.host.recordSymbolDefinition("structMember", labelName, {
@@ -104,13 +107,8 @@ export class StructEngine {
       if (typed) {
         const field = currentStruct.fields!.get(labelName)!;
         currentStruct.offset += field.width * field.count;
-      } else if (words[1]?.toLowerCase() === "skip") {
-        if (words.length !== 3) {
-          throw new Error(
-            `skip directive in struct requires exactly one parameter: ${words.length}`,
-          );
-        }
-        const skipAmount = this.host.operandResolver.getnum(words[2]);
+      } else if (declaration.skip) {
+        const skipAmount = this.host.operandResolver.getnum(declaration.skip);
         // Preserve skip's historical layout behavior. Initializers accept a
         // positive named skip only as an explicit list of raw bytes.
         if (Number.isSafeInteger(skipAmount) && skipAmount > 0) {
@@ -125,13 +123,12 @@ export class StructEngine {
         currentStruct.offset += skipAmount;
       }
 
-      void hasColon;
       setCommandKind(command, "structCommand");
       return true;
     }
 
-    if (keyword.toLowerCase() === "endstruct") {
-      this.handleEndStruct(words);
+    if (declaration?.kind === "endStruct") {
+      this.executeEndStruct(declaration);
       setCommandKind(command, "structCommand");
       return true;
     }
@@ -145,30 +142,28 @@ export class StructEngine {
    * @param {string[]} words The words of the command.
    */
   handleStruct(words: readonly string[]): void {
-    if (words.length < 2) {
-      throw new Error("Struct definition requires at least two parameters.");
+    const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
+    if (node?.kind !== "struct") {
+      throw new Error("Expected struct declaration.");
     }
+    this.executeStruct(node);
+  }
 
-    const structName = words[1];
-    let base: number;
-    let parent: string | undefined;
-
-    if (words.length === 2) {
-      base = 0;
-    } else if (words[2].toLowerCase() === "extends") {
-      if (words.length < 4) {
-        throw new Error("Struct extension must specify a parent struct.");
-      }
-      parent = words[3];
+  /** Bind a declaration's base in the current stage, before changing struct scope. */
+  executeStruct(node: Extract<DeclarationNode, { kind: "struct" }>): void {
+    const structName = node.name;
+    const parent = node.parent;
+    let base = 0;
+    if (parent !== undefined) {
       const parentStruct = this.host.structs.get(parent);
       if (!parentStruct) {
         throw new Error(`Parent struct '${parent}' not defined.`);
       }
       base = parentStruct.base;
-    } else {
-      base = this.host.operandResolver.getnum(words[2]);
+    } else if (node.base) {
+      base = this.host.operandResolver.getnum(node.base);
       if (base < 0 || base > maximumAddressForWidth(this.host.addressWidth)) {
-        throw new Error(`Invalid logical address for struct: ${words[2]}`);
+        throw new Error(`Invalid logical address for struct: ${node.baseText}`);
       }
     }
 
@@ -191,6 +186,15 @@ export class StructEngine {
    * @param {string[]} words The words of the command.
    */
   handleEndStruct(words: readonly string[]): void {
+    const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
+    if (node?.kind !== "endStruct") {
+      throw new Error("Expected endstruct declaration.");
+    }
+    this.executeEndStruct(node);
+  }
+
+  /** Resolve options in source order; finalize the layout before restoring its enclosing cursor. */
+  executeEndStruct(node: Extract<DeclarationNode, { kind: "endStruct" }>): void {
     const currentStruct = this.host.currentStruct;
     if (!currentStruct) {
       throw new Error("endstruct encountered but not inside a struct definition.");
@@ -200,22 +204,9 @@ export class StructEngine {
     let count: number | undefined;
     let first = 0;
     const seen = new Set<string>();
-    for (let index = 1; index < words.length; index += 2) {
-      const option = words[index].toLowerCase();
-      const parameterIndex = index + 1;
-      const parameter = parameterIndex < words.length ? words[parameterIndex] : undefined;
-      if (
-        !["align", "count", "firstindex"].includes(option) ||
-        seen.has(option) ||
-        parameter === undefined
-      ) {
-        if (words[1]?.toLowerCase() === "align") {
-          throw new Error("endstruct align requires a single alignment parameter.");
-        }
-        throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
-      }
+    for (const { name: option, expression } of node.options) {
       seen.add(option);
-      const value = this.host.operandResolver.getnum(parameter);
+      const value = this.host.operandResolver.getnum(expression);
       if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
         throw new Error(
           option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`,
@@ -289,6 +280,91 @@ export class StructEngine {
     }
     const root = rootEnd === -1 ? labelRef : labelRef.slice(0, rootEnd);
     return root.length > 0 && this.host.structs.has(root);
+  }
+
+  /** Resolve a parsed path directly; index values are refreshed in the caller's active stage. */
+  resolveStructPath(
+    path: ReferencePath,
+    evaluate: (node: ExpressionNode) => number,
+  ): number | undefined {
+    const names = [path.root];
+    let indexNode: ExpressionNode | undefined;
+    const members: string[] = [];
+    for (const segment of path.segments) {
+      if (segment.kind === "index") {
+        if (indexNode) {
+          throw new Error("Multiple struct indexes are not supported.");
+        }
+        indexNode = segment.expression;
+      } else if (indexNode) {
+        members.push(segment.name);
+      } else {
+        names.push(segment.name);
+      }
+    }
+    const directName = names.join(".");
+    if (!indexNode) {
+      const direct = this.host.structs.get(directName);
+      if (names.length === 2 && direct?.parent === names[0]) {
+        const parent = this.host.structs.get(names[0]);
+        if (parent) {
+          return parent.base + parent.size;
+        }
+      }
+      if (direct) {
+        return direct.base;
+      }
+    }
+    // Select the longest declared struct prefix before binding the first array index.
+    for (let length = names.length; length >= 1; length--) {
+      const name = names.slice(0, length).join(".");
+      const def = this.host.structs.get(name);
+      if (!def) {
+        continue;
+      }
+      const index = indexNode ? evaluate(indexNode) : 0;
+      const tail = [...names.slice(length), ...members];
+      let stride = def.size;
+      if (def.align) {
+        stride = Math.ceil(stride / def.align) * def.align;
+      }
+      if (def.extensionSize > 0) {
+        stride += def.extensionSize;
+      }
+      if (!tail.length) {
+        return def.base + index * stride;
+      }
+      const member = tail[0];
+      const offset = def.labels.get(member);
+      if (offset === undefined) {
+        const child = this.host.structs.get(member);
+        if (child?.parent === name) {
+          const childAddress = this.resolveStructPath(
+            {
+              root: member,
+              segments: tail.slice(1).map((part) => ({ kind: "member", name: part })),
+            },
+            evaluate,
+          );
+          if (childAddress !== undefined) {
+            return def.base + index * stride + childAddress - child.base;
+          }
+        }
+        throw new Error(`Member '${member}' not defined in struct '${name}'.`);
+      }
+      if (def.parent) {
+        const parent = this.host.structs.get(def.parent);
+        if (!parent) {
+          throw new Error(`Parent struct '${def.parent}' not defined for extension '${name}'.`);
+        }
+        const parentSize = parent.align
+          ? Math.ceil(parent.size / parent.align) * parent.align
+          : parent.size;
+        return parent.base + parentSize + index * def.size + offset;
+      }
+      return def.base + index * stride + offset;
+    }
+    return undefined;
   }
 
   /**

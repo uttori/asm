@@ -32,10 +32,20 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "browser": "./src/browser.ts",
+      "browser": "./dist/browser.js",
       "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./disassembler": {
+      "uttori-source": "./src/disassembler.ts",
+      "types": "./dist/disassembler.d.ts",
+      "import": "./dist/disassembler.js"
+    },
+    "./target": {
+      "uttori-source": "./src/target.ts",
+      "types": "./dist/target.d.ts",
+      "import": "./dist/target.js"
     }
   },
   "publishConfig": {

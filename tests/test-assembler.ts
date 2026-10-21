@@ -1,14 +1,12 @@
 import { Assembler as CoreAssembler } from "@uttori/asm-core";
-import type { AssemblyFileProvider, WorkspaceIndexOptions } from "@uttori/asm-core";
-import {
-  Arch65816,
-  ArchSPC700,
-  ArchSuperFX,
-  createSnesAssemblerEnvironment,
-  createSpcRuntime,
-  SNES_TARGET_ID,
-  snesSessionStateKey,
-} from "@uttori/asm-plugin-snes";
+import type { AssemblyFileProvider } from "@uttori/asm-core";
+import type { WorkspaceIndexOptions } from "@uttori/asm-core/tooling";
+import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+import { createSpcRuntime, snesSessionStateKey } from "@uttori/asm-plugin-snes/target";
+
+import { Typed65816 as Arch65816 } from "../packages/plugin-snes/src/architectures/typed-65816.js";
+import { TypedSpc700 as ArchSPC700 } from "../packages/plugin-snes/src/architectures/typed-spc700.js";
+import { TypedSuperFx as ArchSuperFX } from "../packages/plugin-snes/src/architectures/typed-superfx.js";
 
 export const snesTestEnvironment = await createSnesAssemblerEnvironment();
 export const snesTestAssemblerOptions = {
@@ -44,7 +42,7 @@ export class Assembler extends CoreAssembler {
   }
 
   get arch65816(): Arch65816 {
-    const encoder = this.architectureRegistry.getDefinition("65816")?.encoder;
+    const encoder = this.architectureRegistry.getDefinition("65816")?.encoder.typed;
     if (!(encoder instanceof Arch65816)) {
       throw new Error("65816 encoder is not registered.");
     }
@@ -52,7 +50,7 @@ export class Assembler extends CoreAssembler {
   }
 
   get archSPC700(): ArchSPC700 {
-    const encoder = this.architectureRegistry.getDefinition("spc700")?.encoder;
+    const encoder = this.architectureRegistry.getDefinition("spc700")?.encoder.typed;
     if (!(encoder instanceof ArchSPC700)) {
       throw new Error("SPC700 encoder is not registered.");
     }
@@ -60,7 +58,7 @@ export class Assembler extends CoreAssembler {
   }
 
   get archSuperFX(): ArchSuperFX {
-    const encoder = this.architectureRegistry.getDefinition("superfx")?.encoder;
+    const encoder = this.architectureRegistry.getDefinition("superfx")?.encoder.typed;
     if (!(encoder instanceof ArchSuperFX)) {
       throw new Error("SuperFX encoder is not registered.");
     }

@@ -1,5 +1,9 @@
 import type { AssemblyFileProvider } from "../file-provider.js";
-import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
+import {
+  incrementInternalCounter,
+  measureInternalPhase,
+  withSourceSyntax,
+} from "../internal-instrumentation.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
 import type { ProgramModelBuilder } from "./program-model-builder.js";
 
@@ -20,6 +24,8 @@ export interface IncludeSourceHost {
   readonly programModelBuilder: ProgramModelBuilder;
   lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
   recordIncludeEdge(fromFile: string, toFile: string): void;
+  /** Scope include ownership without attaching caller state to cached file syntax. */
+  withIncludeSource?(file: string, execute: () => void, fromFile: string): void;
   /** Final-pass hosts record which raw input bytes reach output for orphaned-edit validation. */
   recordBinarySlice?(file: string, start: number, end: number, bytes: Uint8Array): void;
   /** When false, include directives record an edge without parsing the target. */
@@ -167,10 +173,20 @@ export class IncludeSourceService {
         this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
       }
 
-      measureInternalPhase("includeParseLowerExecute", () => {
-        const includeNode = this.host.programModelBuilder.createIncludeNode(resolvedPath, content);
-        this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
-      });
+      measureInternalPhase("includeParseLowerExecute", () =>
+        withSourceSyntax(() => {
+          const includeNode = this.host.programModelBuilder.createIncludeNode(
+            resolvedPath,
+            content,
+          );
+          const execute = (): void => this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
+          if (this.host.withIncludeSource) {
+            this.host.withIncludeSource(resolvedPath, execute, previousFile);
+          } else {
+            execute();
+          }
+        }),
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : (stringifyCaught(error) ?? "Unknown error");

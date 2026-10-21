@@ -1,9 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import {
-  identifySnesHardwareRegister,
-  renderSnesHardwareDefines,
-  snesHardwareDefineRecords,
-} from "../src/index.js";
+import { identifySnesHardwareRegister, renderSnesHardwareDefines, snesHardwareDefineRecords } from "@uttori/asm-plugin-snes/disassembler";
 
 test("SNESdev PPU/MMIO register names and documented aliases are complete", (t) => {
   const records = snesHardwareDefineRecords();

@@ -1,4 +1,4 @@
-import type { CaptureNesBusAccessV2 } from "@uttori/asm-debug-adapter";
+import type { CaptureNesBusAccessV2 } from "@uttori/asm-capture";
 import { type ResearchSnapshot, type RuntimeGraphicsAccessRecord } from "@uttori/asm-disassembler";
 import type { NesPPUCaptureSummary } from "./ppu.js";
 /** Aggregate verified PPU port accesses without timing/register snapshots multiplying every fact.

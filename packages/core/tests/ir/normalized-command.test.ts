@@ -4,6 +4,7 @@ import { test } from "../../../../tests/ava-helper.js";
 import { Assembler } from "../../../../tests/test-assembler.js";
 import { handleIncbin } from "../../src/directives/include-source.js";
 import { MemoryAssemblyFileProvider } from "../../src/file-provider.js";
+import { runWithInternalInstrumentation } from "../../src/internal-instrumentation.js";
 import {
   isReferenceExpressionNode,
   parseLeadingReferenceExpression,
@@ -21,12 +22,13 @@ import type { StructDefinition } from "../../src/services/struct-engine.js";
 
 type AssemblerReferenceTestAccess = {
   resolveReferenceExpressionNode: (expression: ReferenceExpressionNode) => ExpressionNode;
-  renderResolvedReferenceExpression: (expression: ReferenceExpressionNode) => string;
   evaluateReferenceExpressionNode: (expression: ReferenceExpressionNode) => number;
 };
 
 const stripExpressionSpans = (node: unknown): unknown => {
-  const text = JSON.stringify(node, (key, value) => (key === "span" ? undefined : value));
+  const text = JSON.stringify(node, (key, value) =>
+    key === "span" || key === "numericValue" ? undefined : value,
+  );
   const parsed: unknown = JSON.parse(text);
   return parsed;
 };
@@ -395,14 +397,11 @@ test("typed while nodes retain normalized loop body commands", (t) => {
   });
 });
 
-test("typed loop nodes execute through normalized dispatch", (t) => {
+test("typed loop nodes execute data with the current iteration binding", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.currentFile = "/Users/matthew/uttori/snes-asm-js/tests/ir.test.ts";
-  const executed: Array<{ command: string; value: string | undefined }> = [];
-  stub(assembler, "processNormalizedCommand").callsFake((command) => {
-    executed.push({ command: command.command, value: assembler.defines.get("i") });
-  });
+  assembler.setWritePosition(0x808000);
   const loop = elementAt(
     assembler.programModelBuilder.parseCommandStreamToNodes(
       ["for i = 0..3", "db !i", "endfor"],
@@ -419,11 +418,8 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
 
   assembler.lowerAndExecuteRuntimeNodes([loop]);
 
-  t.deepEqual(executed, [
-    { command: "db !i", value: "0" },
-    { command: "db !i", value: "1" },
-    { command: "db !i", value: "2" },
-  ]);
+  t.deepEqual([...assembler.getBinaryOutput()], [0, 1, 2]);
+  t.false(assembler.defines.has("i"));
 });
 
 test("tree pass programs are cached per source block key", (t) => {
@@ -521,9 +517,14 @@ test("define references and member/index nodes resolve structurally", (t) => {
   assembler.defines.set("NAME_1", "41");
   assembler.defines.set("IDX", "1");
 
-  stub(assembler.structEngine, "hasStructReference").returns(true);
-  const structStub = stub(assembler.structEngine, "resolveStructLabel");
-  structStub.withArgs("Player[1].hp").returns(1);
+  assembler.structs.set("Player", {
+    name: "Player",
+    base: 0,
+    size: 1,
+    offset: 1,
+    extensionSize: 0,
+    labels: new Map([["hp", 0]]),
+  });
 
   t.true(assembler.evaluateExpression(parseExpressionNode("!VALUE + 1 == 42")));
   t.true(assembler.evaluateExpression(parseExpressionNode("!VALUE + 1 = 42")));
@@ -574,8 +575,6 @@ function isReferenceAccess(value: Assembler): value is Assembler & AssemblerRefe
   return (
     "resolveReferenceExpressionNode" in value &&
     typeof value.resolveReferenceExpressionNode === "function" &&
-    "renderResolvedReferenceExpression" in value &&
-    typeof value.renderResolvedReferenceExpression === "function" &&
     "evaluateReferenceExpressionNode" in value &&
     typeof value.evaluateReferenceExpressionNode === "function"
   );
@@ -602,12 +601,16 @@ test("assembler reference seam resolves defines and normalizes label paths", (t)
     return;
   }
 
-  const normalized = assembler.renderResolvedReferenceExpression(resolved);
-  t.is(normalized, "Player[2].hp");
+  t.is(renderReferenceExpressionNode(resolved), "Player[1 + 1].hp");
 
-  stub(assembler.structEngine, "hasStructReference").returns(true);
-  const structStub = stub(assembler.structEngine, "resolveStructLabel");
-  structStub.withArgs("Player[2].hp").returns(99);
+  assembler.structs.set("Player", {
+    name: "Player",
+    base: 97,
+    size: 1,
+    offset: 1,
+    extensionSize: 0,
+    labels: new Map([["hp", 0]]),
+  });
   t.is(assembler.evaluateReferenceExpressionNode(reference), 99);
 });
 
@@ -623,22 +626,29 @@ test("expression host label resolution delegates to canonical reference seam", (
   };
   assembler.structs.set("MyStruct", structDefinition);
 
-  stub(assembler.structEngine, "hasStructReference").callsFake(
-    (reference) => reference === "MyStruct" || reference.startsWith("Player"),
-  );
-  const structStub = stub(assembler.structEngine, "resolveStructLabel");
-  structStub.withArgs("MyStruct").returns(0);
-  structStub.withArgs("Player[2].hp").returns(33);
+  assembler.structs.set("Player", {
+    name: "Player",
+    base: 31,
+    size: 1,
+    offset: 1,
+    extensionSize: 0,
+    labels: new Map([["hp", 0]]),
+  });
 
   t.is(assembler.expressionHost.resolveLabel("MyStruct"), 0);
   t.is(assembler.expressionHost.resolveLabel("Player[1 + 1].hp"), 33);
 });
 
-test("mathcore legacy string parsing routes compound references through the reference subtree", (t) => {
+test("mathcore string input and conditional evaluation share structured references", (t) => {
   const assembler = new Assembler();
-  stub(assembler.structEngine, "hasStructReference").returns(true);
-  const structStub = stub(assembler.structEngine, "resolveStructLabel");
-  structStub.withArgs("Player[2].hp").returns(2);
+  assembler.structs.set("Player", {
+    name: "Player",
+    base: 0,
+    size: 1,
+    offset: 1,
+    extensionSize: 0,
+    labels: new Map([["hp", 0]]),
+  });
 
   t.true(assembler.evaluateExpression("Player[1 + 1].hp == 2"));
   t.is(assembler.mathCore.math("Player[1 + 1].hp"), 2);
@@ -656,14 +666,17 @@ test("incbin range evaluation adopts expression nodes for bounds", (t) => {
     writtenBytes.push(value);
   });
 
-  handleIncbin(
-    {
-      session: assembler,
-      includeSource: assembler.includeSource,
-      operandResolver: assembler.operandResolver,
-    },
-    ["incbin", '"test.bin":$1..$3'],
+  const { metrics } = runWithInternalInstrumentation(() =>
+    handleIncbin(
+      {
+        session: assembler,
+        includeSource: assembler.includeSource,
+        operandResolver: assembler.operandResolver,
+      },
+      ["incbin", '"test.bin":$1..$3'],
+    ),
   );
+  t.is(metrics.expressionBoundaries.parses["include:native"], 3);
 
   t.deepEqual(writtenBytes, [0x20, 0x30]);
 });

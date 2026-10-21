@@ -7,36 +7,38 @@ import {
   RomImage,
   openAnalysisProjectStore,
   publishAnalysisProject,
+  type AnalysisProject,
+  readCaptureImportNotes,
+  RUNTIME_INSTRUCTION_TRACE_FORMAT,
+  RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
+} from "@uttori/asm-disassembler";
+import {
   sourceGit,
   sourceRepository,
   retainSourceGeneration,
   pinSourceCandidate,
   adoptSourceGeneration,
   finishSourceGeneration,
-  type AnalysisProject,
   type SourceMergePreview,
   type SourceMergeStatus,
   acceptedSourceGeneration,
   openSourceProject,
   sourceProjectLocalInputs,
-  readCaptureImportNotes,
   readSourceCaptureCatalog,
   sourceContentHash,
   readSourceInputSnapshot,
   SOURCE_INPUT_SNAPSHOT_FILE,
-  RUNTIME_INSTRUCTION_TRACE_FORMAT,
-  RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
-} from "@uttori/asm-disassembler";
+} from "@uttori/asm-disassembler/source-project";
 import {
   exportSnes65816Source,
   type PreparedSnesGeneration,
   type SnesSourceBuild,
-} from "@uttori/asm-plugin-snes";
+} from "@uttori/asm-plugin-snes/disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
-import type { SourceCaptureImportBatchResult } from "../src/source-capture-imports.js";
-import { prepareSourceResearch } from "../src/source-research.js";
-import { executeSourceOperation } from "../src/source.js";
+import type { SourceCaptureImportBatchResult } from "../../workflows/src/source-capture-imports.js";
+import { prepareSourceResearch } from "../../workflows/src/source-research.js";
+import { executeSourceOperation } from "../../workflows/src/source.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -210,7 +212,7 @@ test("prepare reports invalid struct recipes at the editable project path", asyn
   t.true(error!.message.includes(file));
   t.regex(
     error!.message,
-    /instructionUses\[0\] at CPU \$808000:.*Set operand, memoryOperand, stackOperand/,
+    /instructionUses\[0] at CPU \$808000:.*Set operand, memoryOperand, stackOperand/,
   );
   t.false(error!.message.includes("scratch"));
 });
@@ -346,7 +348,7 @@ async function fixture(teardown: (cleanup: () => void) => void) {
   });
   const files: { path: string; bytes: Uint8Array }[] = [];
   exportSnes65816Source(
-    { manifest: { ...project.manifest, shards: [] }, shards: project.shards },
+    { manifest: { ...project.manifest }, shards: project.shards },
     rom,
     path.join(directory, "source"),
     {
@@ -425,7 +427,7 @@ test("headless source commands preserve an edited raw byte through verified rege
   t.is(generation.verification.outputSha256, rom.identity.contentSha256);
   const candidate = generation.generation.commit;
   const pendingStatus = await executeSourceOperation({ directory, action: "status", candidate });
-  t.true(isRecord(pendingStatus) && pendingStatus.candidateStale === false);
+  t.true(isRecord(pendingStatus) && !pendingStatus.candidateStale);
   t.is(
     (
       await sourceGit(directory, ["for-each-ref", "--format=%(refname)", "refs/uttori/candidates/"])
@@ -470,15 +472,15 @@ test("headless source commands preserve an edited raw byte through verified rege
   const refs = (await sourceGit(directory, ["show-ref"])).stdout.toString();
   await executeSourceOperation({ directory, action: "apply", candidate });
   const completedStatus = await executeSourceOperation({ directory, action: "status", candidate });
-  t.true(isRecord(completedStatus) && completedStatus.candidateAccepted === true);
-  t.true(isRecord(completedStatus) && completedStatus.candidateStale === false);
+  t.true(isRecord(completedStatus) && completedStatus.candidateAccepted);
+  t.true(isRecord(completedStatus) && !completedStatus.candidateStale);
   const staleStatus = await executeSourceOperation({
     directory,
     action: "status",
     candidate: supersededCandidate,
   });
-  t.true(isRecord(staleStatus) && staleStatus.candidateAccepted === false);
-  t.true(isRecord(staleStatus) && staleStatus.candidateStale === true);
+  t.true(isRecord(staleStatus) && !staleStatus.candidateAccepted);
+  t.true(isRecord(staleStatus) && staleStatus.candidateStale);
   // Later staged and unstaged edits, including generation inputs, are independent of a finished
   // merge. A stale editor command must preserve both and must not recreate the released preview.
   const recipeFile = path.join(directory, "source/ram-map.json");
@@ -650,22 +652,30 @@ test("capture import records portable archive identity and survives idempotent r
       bytes: fs.statSync(file).size,
     },
   ]);
+  const retryProgress: string[] = [];
   const retried = await expectOperation(
     {
       directory,
       action: "import",
       capture: file,
+      onProgress: (message) => retryProgress.push(message),
     },
     isChangedResult,
   );
   t.false(retried.changed);
+  t.true(retryProgress.some((message) => message.includes("already validated and committed")));
+  t.false(
+    retryProgress.some(
+      (message) => message.includes("Indexing") || message.includes("Merging runtime facts"),
+    ),
+  );
   t.is(
     readSourceCaptureCatalog(directory, ".uttori/captures.json", rom.identity.contentSha256)
       .fileSha256,
     saved.fileSha256,
   );
   const readyStatus = await executeSourceOperation({ directory, action: "status" });
-  t.true(isRecord(readyStatus) && readyStatus.catalogReady === true);
+  t.true(isRecord(readyStatus) && readyStatus.catalogReady);
   // Even a verified archive binding describes a past input, not a retained reconstruction source.
   t.deepEqual(await executeSourceOperation({ directory, action: "catalog" }), {
     captures: 1,
@@ -676,7 +686,7 @@ test("capture import records portable archive identity and survives idempotent r
   const staleCatalog = JSON.stringify({ ...saved.catalog, captures: [] });
   fs.writeFileSync(path.join(directory, ".uttori/captures.json"), staleCatalog);
   const staleStatus = await executeSourceOperation({ directory, action: "status" });
-  t.true(isRecord(staleStatus) && staleStatus.catalogReady === false);
+  t.true(isRecord(staleStatus) && !staleStatus.catalogReady);
   t.is(fs.readFileSync(path.join(directory, ".uttori/captures.json"), "utf8"), staleCatalog);
   t.deepEqual(await executeSourceOperation({ directory, action: "catalog" }), {
     captures: 1,
@@ -699,6 +709,24 @@ test("capture import records portable archive identity and survives idempotent r
   t.is(completed?.analysis?.status, "incomplete");
   t.deepEqual(completed?.analysis?.sources, ["capture.json"]);
   t.false(fs.existsSync(file));
+});
+
+test("a retained recovered prefix still requires explicit recovery on every import", async (t) => {
+  const { writeCaptureFixture } = await import("../../../tests/helpers/capture-archive.js");
+  const { directory, rom } = await fixture(t.teardown);
+  const capture = path.join(directory, ".uttori-local/prefix.act2");
+  await writeCaptureFixture(capture, 3, 1, rom.identity.contentSha256);
+  const bytes = fs.readFileSync(capture);
+  fs.writeFileSync(capture, bytes.subarray(0, bytes.lastIndexOf(Buffer.from("END2"))));
+  const imported = await expectOperation(
+    { directory, action: "import", capture, recoverPartial: true },
+    isImportResult,
+  );
+  t.true(imported.changed);
+  t.false(fs.existsSync(path.join(directory, ".uttori-local/validated-traces")));
+  await t.throwsAsync(executeSourceOperation({ directory, action: "import", capture }), {
+    message: /incomplete/,
+  });
 });
 
 test("bulk source imports preserve per-file commits, retry idempotently and accept CLI queues", async (t) => {
@@ -892,7 +920,17 @@ for (const boundary of ["before", "after"] as const) {
       t.true(interrupted.runtime.length > 0);
       t.true(interrupted.revision > before.revision);
     }
-    const retry = await expectOperation({ directory, action: "import", capture }, isChangedResult);
+    const retryProgress: string[] = [];
+    const retry = await expectOperation(
+      {
+        directory,
+        action: "import",
+        capture,
+        onProgress: (message) => retryProgress.push(message),
+      },
+      isChangedResult,
+    );
+    t.true(retryProgress.some((message) => message.includes("Reusing validated trace index")));
     t.is(retry.changed, boundary === "before");
     const recovered = inspect();
     t.is(recovered.imports.length, 1);

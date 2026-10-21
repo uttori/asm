@@ -19,7 +19,7 @@ export const createRuntimeBusCaptureSource = async (
   file: string,
   options: RuntimeTraceFileOptions = {},
 ): Promise<RuntimeBusTraceSource> => {
-  const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-debug-adapter");
+  const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-capture");
   const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
   options.signal?.throwIfAborted();
   const header = await readCaptureFileHeader(file, limits);

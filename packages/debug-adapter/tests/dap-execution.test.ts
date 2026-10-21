@@ -7,17 +7,7 @@ import type { ExecutionContext } from "ava";
 import sinon from "sinon";
 
 import { test } from "../../../tests/ava-helper.js";
-import {
-  DebugAdapterSession,
-  DebugSidecarClient,
-  DebugSidecarServer,
-  DebugSidecarMessageParser,
-  SidecarDebugBackend,
-  createDebugSidecarSessionToken,
-  type DapProtocolMessage,
-  type DebugBackend,
-  type DebugSidecarTransport,
-} from "../src/index.js";
+import { DebugAdapterSession, DebugSidecarClient, DebugSidecarServer, DebugSidecarMessageParser, SidecarDebugBackend, createDebugSidecarSessionToken, type DapProtocolMessage, type DebugBackend, type DebugSidecarTransport } from "../src/index.js";
 import { ControlledExecutionBackend } from "./fixtures/controlled-execution-backend.js";
 
 const ignoreSidecarFrame = (): void => undefined;

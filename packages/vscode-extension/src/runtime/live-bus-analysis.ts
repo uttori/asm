@@ -1,6 +1,6 @@
 import { fork, type ChildProcess } from "node:child_process";
 
-import type { NativeCaptureFilePosition } from "@uttori/asm-debug-adapter";
+import type { NativeCaptureFilePosition } from "@uttori/asm-capture";
 import type {
   RuntimeBusProjectImportResult,
   RuntimeBusTraceProgress,
@@ -79,11 +79,9 @@ export class LiveBusAnalysis {
               this.#fail(error instanceof Error ? error : new Error(String(error)));
               return;
             }
-            this.#worker.send({ type: "preview-accepted" }, (error) => {
-              if (error) {
-                this.#fail(error);
-              }
-            });
+            // The child can finish and close IPC while its terminal result is still queued here.
+            // Preview acknowledgments only release backpressure; result/error/exit owns completion.
+            this.#worker.send({ type: "preview-accepted" }, () => undefined);
           } else if (message.type === "result" && message.value) {
             this.#settled = true;
             clearTimeout(this.#cancelTimer);

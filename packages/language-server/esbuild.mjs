@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { build as esbuild } from "esbuild";
 
-import { withBundleNotices } from "../../scripts/bundle-notices.mjs";
+import { withBundleNotices, pruneRuntimeOutputs } from "../../scripts/bundle-notices.mjs";
 
 const build = withBundleNotices(esbuild);
 
@@ -58,3 +58,20 @@ await build({
   },
   logLevel: "info",
 });
+
+// Analysis runs in a sibling worker so protocol requests can use the last complete snapshot.
+await build({
+  entryPoints: [path.resolve(here, "src/index-worker.ts")],
+  outfile: path.join(here, "out/index-worker.mjs"),
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "esm",
+  target: "node26",
+  banner: {
+    js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
+  },
+  logLevel: "info",
+});
+
+pruneRuntimeOutputs(path.join(here, "out"));

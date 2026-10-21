@@ -1,0 +1,34 @@
+import type { ExpressionNode } from "./expression-node.js";
+import { type SyntaxGrammar, type SyntaxParseInput, type SyntaxValue } from "./source-syntax.js";
+/** Runtime guards validate transported syntax before a session receives it. */
+export type SyntaxGuard<T> = (value: unknown) => value is T;
+export declare const syntaxString: SyntaxGuard<string>;
+export declare const syntaxNumber: SyntaxGuard<number>;
+export declare const syntaxBoolean: SyntaxGuard<boolean>;
+export declare function syntaxLiteral<const T extends string | number | boolean>(literal: T): SyntaxGuard<T>;
+export declare function syntaxArray<T>(guard: SyntaxGuard<T>): SyntaxGuard<T[]>;
+export declare function syntaxOptional<T>(guard: SyntaxGuard<T>): SyntaxGuard<T | undefined>;
+type Guarded<G> = G extends SyntaxGuard<infer T> ? T : never;
+/** Narrow unknown objects before checking fields; transport validation separately rejects host objects. */
+export declare function syntaxObject(value: unknown): value is Record<string, unknown>;
+/** Reject unknown fields as well as wrong types, so versioned payloads cannot silently lose meaning. */
+export declare function syntaxRecord<S extends Record<string, SyntaxGuard<unknown>>>(shape: S): SyntaxGuard<{
+    [K in keyof S]: Guarded<S[K]>;
+}>;
+export declare function syntaxUnion<T extends readonly SyntaxGuard<unknown>[]>(...guards: T): SyntaxGuard<Guarded<T[number]>>;
+/** UTF-16 offsets are nonnegative; a physical line is optional for detached fragments. */
+export declare const syntaxSpan: SyntaxGuard<{
+    start: number;
+    end: number;
+    line: number | undefined;
+    columnStart: number | undefined;
+    columnEnd: number | undefined;
+}>;
+/** Validate expression children recursively; raw public adapters are never portable execution syntax. */
+export declare const syntaxExpression: SyntaxGuard<ExpressionNode>;
+/** Build the same portable parse/validate contract for core directives and plugin contributions. */
+export declare function syntaxCodec<T>(version: string, parse: (input: SyntaxParseInput) => T, guard: SyntaxGuard<T>): SyntaxGrammar & {
+    read(payload: SyntaxValue): T;
+};
+export {};
+//# sourceMappingURL=syntax-codec.d.ts.map

@@ -3,6 +3,7 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import type {
   AnalysisRecord,
   RuntimeEvidenceRecord,
+  RuntimeInstructionRecord,
   RuntimeStateValue,
 } from "../model/project-types.js";
 import { isFiniteNumber, isRecord, isStringArray } from "../model/record-shape.js";
@@ -400,6 +401,16 @@ function readPayload(value: unknown): Record<string, unknown> | undefined {
   return isRecord(parsed) ? parsed : undefined;
 }
 
+/** Validate all captured registers before selecting decoder fields, including otherwise unused ones.
+ * Bytes are detached; the validated state belongs to the caller's decoded payload.
+ */
+export const runtimeInstructionFields = (
+  value: Record<string, unknown> | undefined,
+): Pick<RuntimeInstructionRecord, "bytes" | "state"> => {
+  const body = requirePayload(value);
+  return { bytes: requireBytes(body.bytes), state: requireState(body.state) };
+};
+
 /**
  * Reconstruct a semantic fact without inventing absent optional fields. Stable-ID comparisons
  * depend on preserving the same payload across inserts and subsequent reads.
@@ -441,7 +452,6 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
     };
   }
   if (kind === "runtime-instruction") {
-    const body = requirePayload(extra);
     return {
       id,
       kind,
@@ -450,8 +460,7 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
       evidence: parsedEvidence,
       addressSpace: requireString(row.address_space, "address space"),
       address: Number(row.address),
-      bytes: requireBytes(body.bytes),
-      state: requireState(body.state),
+      ...runtimeInstructionFields(extra),
     };
   }
   if (kind === "runtime-graphics-access") {

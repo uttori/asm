@@ -1,16 +1,7 @@
 import { fileURLToPath } from "node:url";
 
 import { test } from "../../../tests/ava-helper.js";
-import {
-  DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
-  DebugSidecarClient,
-  NodeStdioSidecarTransport,
-  ReplayDebugBackend,
-  SidecarDebugBackend,
-  createDebugSidecarSessionToken,
-  runDebugBackendConformance,
-  type DebugBackendEvent,
-} from "../src/index.js";
+import { DEBUG_BACKEND_CONFORMANCE_SCENARIOS, DebugSidecarClient, NodeStdioSidecarTransport, ReplayDebugBackend, SidecarDebugBackend, createDebugSidecarSessionToken, runDebugBackendConformance, type DebugBackendEvent } from "../src/index.js";
 import {
   debugConformanceFixture,
   debugConformanceScript,
@@ -287,4 +278,22 @@ test("sidecar backend rejects malformed trace capability declarations", (t) => {
       }),
     { message: /trace.addressSpaces must be unique/ },
   );
+});
+
+test("sidecar capabilities require explicit and consistent step and trace detail declarations", (t) => {
+  const cases = [
+    (value: Mutable<typeof capabilities>) => { Reflect.deleteProperty(value, "stepKinds"); },
+    (value: Mutable<typeof capabilities>) => { Reflect.deleteProperty(value.architectures[0]!, "stepKinds"); },
+    (value: Mutable<typeof capabilities>) => { value.step = false; },
+    (value: Mutable<typeof capabilities>) => { value.architectures[0]!.stepKinds = []; },
+    (value: Mutable<typeof capabilities>) => { Reflect.deleteProperty(value.architectures[0]!.trace!, "instructionDetails"); },
+  ];
+  for (const mutate of cases) {
+    const malformed = mutableClone(capabilities);
+    mutate(malformed);
+    t.throws(() => new SidecarDebugBackend({
+      backend: "malformed-sidecar", capabilities: malformed,
+      createClient: () => { throw new Error("must not launch"); },
+    }), { message: /stepKinds|instructionDetails/ });
+  }
 });

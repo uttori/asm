@@ -13,7 +13,7 @@ import { createOperandResolver, testDouble } from "./test-stubs.js";
 const createLayoutHarness = () => {
   const calls: string[][] = [];
   const runtime = testDouble<DirectiveRuntimeService>({
-    handleOrg: (args: string[]) => calls.push(["org", ...args]),
+    executeOrg: (_expression, text: string) => calls.push(["org", text]),
     handlePushPC: () => calls.push(["pushpc"]),
     handlePullPC: () => calls.push(["pullpc"]),
   });

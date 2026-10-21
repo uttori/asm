@@ -1,18 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import {
-  DEBUG_SIDECAR_PROTOCOL,
-  DEBUG_SIDECAR_PROTOCOL_VERSION,
-  DEFAULT_DEBUG_SIDECAR_LIMITS,
-  DebugSidecarClient,
-  DebugSidecarMessageParser,
-  encodeDebugSidecarMessage,
-  type DebugSidecarEvent,
-  type DebugSidecarMessage,
-  type DebugSidecarRequest,
-  type DebugSidecarResponse,
-  type DebugSidecarTransport,
-  type DebugSubscription,
-} from "../src/index.js";
+import { DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEFAULT_DEBUG_SIDECAR_LIMITS, DebugSidecarClient, DebugSidecarMessageParser, encodeDebugSidecarMessage, type DebugSidecarEvent, type DebugSidecarMessage, type DebugSidecarRequest, type DebugSidecarResponse, type DebugSidecarTransport, type DebugSubscription } from "../src/index.js";
 
 /** Returns the indexed element, or undefined when the index is past the end. */
 const elementAt = <T>(items: readonly T[], index: number): T | undefined =>

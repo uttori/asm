@@ -72,7 +72,7 @@ export const loadAnalysisProjectViewSnapshot = (directory, createProjection) => 
  * @returns {PreparedAnalysisProjectTransaction} Validated replacement. The caller retains ownership.
  */
 export const prepareAnalysisProjectTransaction = (_directory, project) => {
-    validateAnalysisProjectManifest({ ...project.manifest, shards: [] });
+    validateAnalysisProjectManifest(project.manifest);
     validateLoadedShards(project.shards, project.manifest);
     return { project };
 };
@@ -163,27 +163,11 @@ export const commitAnalysisProjectViewUpdate = (directory, snapshot, updates) =>
     return publish(directory, project, snapshot.revision, updates);
 };
 /**
- * Atomically create or replace every record, including runtime history.
- * Samples the current revision when called, so an edit built from an older caller snapshot is not
- * detected. A writer racing this call is rejected. Editing clients must use the explicit
- * revision-checked commit APIs instead. Use a view update to preserve runtime history.
- * @param {string} directory Project root to create or replace.
- * @param {AnalysisProject} project Complete replacement, including runtime history.
- * @returns {CommittedAnalysisProjectTransaction} Committed manifest, revision, and publication result.
+ * Create a project, or explicitly replace it against a caller-observed revision.
+ * Omitting expected permits creation only; it never samples a newer revision on the caller's behalf.
+ * Prefer metadata updates for ordinary edits so retained runtime history cannot be replaced accidentally.
  */
-export const publishAnalysisProject = (directory, project) => {
-    let expected;
-    if (fs.existsSync(path.join(directory, ANALYSIS_PROJECT_MANIFEST))) {
-        const store = openAnalysisProjectStore(directory);
-        try {
-            expected = store.transaction(() => analysisProjectRevision(store.manifest()), false);
-        }
-        finally {
-            store.close();
-        }
-    }
-    return publish(directory, project, expected);
-};
+export const publishAnalysisProject = (directory, project, expected) => publish(directory, project, expected);
 /**
  * Explicitly checkpoint and VACUUM the current SQLite file without changing its logical revision.
  * Requires temporary free space for a second database copy. Active readers can delay checkpoints.

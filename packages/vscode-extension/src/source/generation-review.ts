@@ -1,4 +1,8 @@
-import { sourceGit, sourceStatusPaths, type SourceMergePreview } from "@uttori/asm-disassembler";
+import {
+  sourceGit,
+  sourceStatusPaths,
+  type SourceMergePreview,
+} from "@uttori/asm-disassembler/source-project";
 
 /** Immutable revisions and paths for native text/image diffs; reading them never updates the checkout. */
 export interface SourceGenerationReview {

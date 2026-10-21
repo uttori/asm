@@ -4,8 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { executeSourceOperation } from "@uttori/asm-cli/source";
-import { sourceGit } from "@uttori/asm-disassembler";
+import { sourceGit } from "@uttori/asm-disassembler/source-project";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 
 const application = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const clone = path.join(application, "experiments/secret-of-mana-git-workflow-full");

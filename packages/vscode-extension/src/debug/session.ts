@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { validateCaptureResult, type NativeCaptureFilePosition } from "@uttori/asm-capture";
 import { validateDebugMap, type DebugMap } from "@uttori/asm-core/debug-map";
 import {
   DebugSidecarClient,
@@ -11,7 +12,6 @@ import {
   SidecarDebugBackend,
   createDebugMapReplayScript,
   createDebugSidecarSessionToken,
-  validateCaptureResult,
   type DebugBackend,
   type DebugAdapterSessionOptions,
   type DapProtocolMessage,
@@ -19,12 +19,11 @@ import {
   type ReplayScript,
   LosslessCaptureFileRecorder,
   NativeCaptureFileRecorder,
-  type NativeCaptureFilePosition,
 } from "@uttori/asm-debug-adapter";
 import { ARES_RSP_BACKEND_ID, ARES_RSP_CAPABILITIES } from "@uttori/asm-debug-sidecar-ares/profile";
 import { parseAresRuntimeManifest } from "@uttori/asm-debug-sidecar-ares/runtime-manifest";
 import { DEFAULT_RUNTIME_TRACE_MAX_BYTES } from "@uttori/asm-disassembler";
-import type { SnesSourceBuild } from "@uttori/asm-plugin-snes";
+import type { SnesSourceBuild } from "@uttori/asm-plugin-snes/disassembler";
 import {
   DebugAdapterInlineImplementation,
   EventEmitter,
@@ -696,7 +695,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
         "Famicom supports lossless instructions and lossless PPU bus capture; select either mode.",
       );
     }
-    let captureScope: import("@uttori/asm-debug-adapter").CaptureScopeV2 = nes
+    let captureScope: import("@uttori/asm-capture").CaptureScopeV2 = nes
       ? "nes.2a03.instructions"
       : "snes.65816.instructions";
     if (bus) {

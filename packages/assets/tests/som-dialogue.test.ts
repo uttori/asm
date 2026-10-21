@@ -24,10 +24,16 @@ function fixture() {
   return { bytes, dictionary: readSomDialogueDictionary(bytes) };
 }
 
+function textInput(text: string) {
+  return { mediaType: "text/plain", bytes: new TextEncoder().encode(text) };
+}
+
 test("SoM DTE expands every valid code and retains overlapping original aliases", (t) => {
   const { dictionary } = fixture();
   for (let code = 0x60; code <= 0xff; code++) {
-    if (code > 0x7e && code < 0xd3) continue;
+    if (code > 0x7e && code < 0xd3) {
+      continue;
+    }
     const index = code <= 0x7e ? code - 0x60 : code - 0xc3;
     t.deepEqual([...expandSomDialogue(Uint8Array.of(code), dictionary)], [...dictionary[index]]);
   }
@@ -271,10 +277,11 @@ test("SoM text exact-fit packing can leave pairs literal without moving the next
     encodeSomDialogue("aaaa", dictionary, { byteLength: 4 }),
     Uint8Array.of(0x81, 0x81, 0x81, 0x81),
   );
-  for (const byteLength of [1, 5])
+  for (const byteLength of [1, 5]) {
     t.throws(() => encodeSomDialogue("aaaa", dictionary, { byteLength }), {
       message: /cannot fit/,
     });
+  }
   t.deepEqual(encodeSomDialogue("", dictionary), new Uint8Array());
   t.throws(() => encodeSomDialogue("a".repeat(4097), dictionary), { message: /4096-glyph/ });
   t.throws(() => encodeSomDialogue("a", dictionary, { byteLength: 4097 }), {
@@ -307,8 +314,9 @@ test("literal text protects indexed glyph cells from a compressed overlength edi
     { kind: "text", nativeHex: "60", literal: true },
     { kind: "raw", nativeHex: "00", literal: true },
     { kind: "text", nativeHex: "81", literal: "yes" },
-  ])
+  ]) {
     t.throws(() => readSomDialogueScriptLayout({ ...layout, segments: [segment] }));
+  }
   t.throws(
     () => encodeSomDialogue("aa", dictionary, { original: Uint8Array.of(0x60), literal: true }),
     { message: /uncompressed native glyphs/ },
@@ -328,22 +336,22 @@ test("SoM ASCII preserves line breaks and unresolved glyphs without accepting ev
   const bytes = Uint8Array.of(0x9b, 0x81, 0xb5, 0xbf, 0x7f, 0xc3, 0xcc);
   t.is(decodeSomDialogue(bytes, dictionary), "Aa0.\n\\xC3\\xCC");
   t.deepEqual(encodeSomDialogue("Aa0.\n\\xC3\\xCC", dictionary), bytes);
-  for (const byte of [0, 0x53, 0x5f])
+  for (const byte of [0, 0x53, 0x5f]) {
     t.throws(() => decodeSomDialogue(Uint8Array.of(byte), dictionary), {
       message: /outside a text span/,
     });
-  for (const text of ["é", '"', "\\x53", "\\xD3", "\\n"])
+  }
+  for (const text of ["é", '"', "\\x53", "\\xD3", "\\n"]) {
     t.throws(() => encodeSomDialogue(text, dictionary));
+  }
 });
 
 test("ASCII script editing preserves raw command blocks and exact byte identities", (t) => {
   const { bytes } = fixture();
-  const hex = (data: Uint8Array) =>
-    [...data].map((byte) => byte.toString(16).padStart(2, "0")).join("");
   const layout: SomDialogueScriptLayout = {
     format: "som-dialogue-script",
     version: 1,
-    dictionaryHex: hex(bytes),
+    dictionaryHex: Buffer.from(bytes).toString("hex"),
     segments: [
       { kind: "raw", nativeHex: "50" },
       { kind: "text", nativeHex: "81d3" },
@@ -356,26 +364,22 @@ test("ASCII script editing preserves raw command blocks and exact byte identitie
       bytes: new TextEncoder().encode(JSON.stringify(layout)),
     },
   };
-  const source = (text: string) => ({
-    mediaType: "text/plain",
-    bytes: new TextEncoder().encode(text),
-  });
   const exported = exportSomDialogueScript(layout);
   t.deepEqual(
-    convertSomDialogueScript(source(exported), { layout: "layout" }, resources).outputs.script
+    convertSomDialogueScript(textInput(exported), { layout: "layout" }, resources).outputs.script
       .bytes,
     Uint8Array.of(0x50, 0x81, 0xd3, 0x28, 0, 0),
   );
   t.is(
     convertSomDialogueScript(
-      source(exported.replaceAll("\n", "\r\n")),
+      textInput(exported.replaceAll("\n", "\r\n")),
       { layout: "layout" },
       resources,
     ).outputs.script.metadata?.nativePreserved,
     true,
   );
   const edited = convertSomDialogueScript(
-    source("{raw:0}aaa{raw:1}\n"),
+    textInput("{raw:0}aaa{raw:1}\n"),
     { layout: "layout" },
     resources,
   );
@@ -386,8 +390,9 @@ test("ASCII script editing preserves raw command blocks and exact byte identitie
     "{raw:0}a{raw:1}\n",
     "{raw:0}aaa{raw:1}\n\n",
     "{raw:0}é{raw:1}\n",
-  ])
-    t.throws(() => convertSomDialogueScript(source(text), { layout: "layout" }, resources));
+  ]) {
+    t.throws(() => convertSomDialogueScript(textInput(text), { layout: "layout" }, resources));
+  }
   t.throws(() =>
     readSomDialogueScriptLayout({ ...layout, segments: [{ kind: "text", nativeHex: "5f" }] }),
   );
@@ -413,14 +418,80 @@ test("ASCII script editing preserves raw command blocks and exact byte identitie
   );
 });
 
+test("dialogue sidecars reject malformed nested JSON before native validation", (t) => {
+  const layout: SomDialogueScriptLayout = {
+    format: "som-dialogue-script",
+    version: 1,
+    dictionaryHex: Buffer.from(fixture().bytes).toString("hex"),
+    segments: [{ kind: "raw", nativeHex: "5700" }],
+  };
+  const malformed: unknown[] = [null, [], false, "raw", {}, { kind: "raw", nativeHex: 5700 }];
+  for (const property of ["literal", "lineColumns", "initialColumn", "commands"]) {
+    malformed.push({ kind: "text", nativeHex: "81", [property]: "invalid" });
+  }
+  for (const slot of [
+    null,
+    [],
+    0,
+    {},
+    { offset: "0", token: "${boy}" },
+    { offset: 0, token: 0 },
+    { offset: 0, token: "${boy}", editable: 0 },
+  ]) {
+    malformed.push({ kind: "raw", nativeHex: "5700", commands: [slot] });
+  }
+  for (const segment of malformed) {
+    t.throws(() => readSomDialogueScriptLayout({ ...layout, segments: [segment] }), {
+      message: /Invalid SoM dialogue-script layout/,
+    });
+  }
+  // Correct field types still require integer offsets and agreement with the original bytes.
+  for (const offset of [-1, 0.5, NaN, Infinity, 2]) {
+    t.throws(() =>
+      readSomDialogueScriptLayout({
+        ...layout,
+        segments: [{ kind: "raw", nativeHex: "5700", commands: [{ offset, token: "${boy}" }] }],
+      }),
+    );
+  }
+});
+
+test("dialogue native hex accepts complete byte pairs and rejects whitespace and oversized inputs", (t) => {
+  const layout: SomDialogueScriptLayout = {
+    format: "som-dialogue-script",
+    version: 1,
+    dictionaryHex: Buffer.from(fixture().bytes).toString("hex").toUpperCase(),
+    segments: [{ kind: "text", nativeHex: "aBcD" }],
+  };
+  t.is(readSomDialogueScriptLayout(layout), layout);
+  for (const nativeHex of ["0", "0g", "00\n", " 00", "00 00", "00".repeat(4097)]) {
+    t.throws(
+      () =>
+        readSomDialogueScriptLayout({
+          ...layout,
+          segments: [{ kind: "raw", nativeHex }],
+        }),
+      { message: /Invalid or oversized native dialogue hex/ },
+    );
+  }
+});
+
 test("named dialogue commands distinguish runtime party names from input and timed waits", (t) => {
   t.deepEqual(encodeSomDialogueCommand("${boy}").bytes, Uint8Array.of(0x57, 0));
   t.deepEqual(encodeSomDialogueCommand("${girl}").bytes, Uint8Array.of(0x57, 1));
   t.deepEqual(encodeSomDialogueCommand("${sprite}").bytes, Uint8Array.of(0x57, 2));
   t.deepEqual(encodeSomDialogueCommand("${wait}").bytes, Uint8Array.of(0x28, 0));
   t.deepEqual(encodeSomDialogueCommand("${wait:255}").bytes, Uint8Array.of(0x28, 255));
-  for (const token of ["${wait:-1}", "${wait:256}", "${wait:3.5}", "${wait:01}", "${enemy}", "boy"])
+  for (const token of [
+    "${wait:-1}",
+    "${wait:256}",
+    "${wait:3.5}",
+    "${wait:01}",
+    "${enemy}",
+    "boy",
+  ]) {
     t.throws(() => encodeSomDialogueCommand(token));
+  }
 });
 
 test("reviewed name and wait slots are editable while opaque commands and field offsets stay exact", (t) => {
@@ -468,8 +539,9 @@ test("reviewed name and wait slots are editable while opaque commands and field 
     exported.replace("${wait}", "${boy}"),
     exported.replace("{raw:1:0}", ""),
     exported.replace("aq ", "a${boy}q "),
-  ])
+  ]) {
     t.throws(() => convert(value));
+  }
 });
 
 test("command slots cannot reinterpret text, mismatch native bytes or bypass a read-only policy", (t) => {
@@ -513,6 +585,7 @@ test("command slots cannot reinterpret text, mismatch native bytes or bypass a r
       ],
     },
     { kind: "raw", nativeHex: "5700", commands: [{ offset: 0, token: "${boy}", editable: "yes" }] },
-  ])
+  ]) {
     t.throws(() => readSomDialogueScriptLayout({ ...layout, segments: [segment] }));
+  }
 });

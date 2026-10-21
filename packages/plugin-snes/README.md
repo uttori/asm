@@ -108,3 +108,7 @@ can select the constant through `operand` or combine it with layout expressions.
 Substitution remains instruction-specific and byte/value guarded; equal literals at
 other instructions are unaffected. `REP`/`SEP` status masks are supported; other
 signature opcodes are not. Constants have no size, fields, or storage ownership.
+
+## Typed assembly entry points
+
+The shipped 65816, SPC700 and SuperFX encoders consume target-owned operand trees for sizing and emission. Public `Arch65816`, `ArchSPC700` and `ArchSuperFX` word-array entries parse the same grammar and call those typed implementations. Old private word encoders, operand classifiers and string-expansion helpers have been removed. Plugin API v2 requires `operandGrammar` and `createTypedEncoder`; directive contributions require parsed, validated payloads. Numeric and reference values stay in stage-owned resolution frames.

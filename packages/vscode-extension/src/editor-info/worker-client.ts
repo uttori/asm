@@ -4,6 +4,7 @@ import { Worker } from "node:worker_threads";
 import type { DebugMapInstruction, DebugMapRange } from "@uttori/asm-core/debug-map";
 import type { InstructionAnalysisAnnotation } from "@uttori/asm-disassembler";
 
+import { WorkerRequestSlots, workerTimeout } from "../workers/lifecycle.js";
 import type { EditorLocation, InformationRequirements, LineInformation } from "./format.js";
 import type {
   EditorInformationHost,
@@ -118,52 +119,80 @@ export class EditorInformationWorker implements EditorInformationService {
   readonly #worker: Worker;
   readonly #pending = new Map<
     number,
-    { resolve(value: unknown): void; reject(error: Error): void }
+    { resolve(value: unknown): void; reject(error: Error): void; timer: NodeJS.Timeout }
   >();
   readonly #tracked = new Set<string>();
-  #sequence = 0;
+  readonly #slots: WorkerRequestSlots;
+  readonly #timeout: number;
   #failure?: Error;
   constructor(
     file: string,
     readonly host: EditorInformationHost,
+    limits: { readonly maxPending?: number; readonly timeoutMs?: number } = {},
   ) {
+    this.#slots = new WorkerRequestSlots(limits.maxPending ?? 32);
+    this.#timeout = workerTimeout(limits.timeoutMs, 30_000);
     this.#worker = new Worker(file, { resourceLimits: { maxOldGenerationSizeMb: 768 } });
-    this.#worker.on(
-      "message",
-      (message: {
-        id: number;
-        type: string;
-        method?: string;
-        args?: unknown[];
-        value?: unknown;
-        error?: string;
-        tracked?: string[];
-      }) => {
-        if (message.type === "host") {
-          void this.#hostRequest(message);
-          return;
+    this.#worker.on("message", (value: unknown) => {
+      if (
+        !isRecord(value) ||
+        typeof value.type !== "string" ||
+        !["host", "failure", "result"].includes(value.type) ||
+        (value.type !== "failure" &&
+          (typeof value.id !== "number" || !Number.isSafeInteger(value.id))) ||
+        (value.error !== undefined && typeof value.error !== "string") ||
+        (value.method !== undefined && typeof value.method !== "string") ||
+        (value.args !== undefined && !Array.isArray(value.args)) ||
+        (value.tracked !== undefined &&
+          (!Array.isArray(value.tracked) ||
+            !value.tracked.every((tracked) => typeof tracked === "string")))
+      ) {
+        this.#fail(new Error("Malformed source information response."));
+        return;
+      }
+      const message = {
+        id: typeof value.id === "number" ? value.id : -1,
+        type: value.type,
+        method: typeof value.method === "string" ? value.method : undefined,
+        args: Array.isArray(value.args) ? value.args : undefined,
+        error: typeof value.error === "string" ? value.error : undefined,
+        tracked: Array.isArray(value.tracked)
+          ? value.tracked.filter((item): item is string => typeof item === "string")
+          : undefined,
+        value: value.value,
+      };
+      if (message.type === "host") {
+        void this.#hostRequest(message);
+        return;
+      }
+      if (message.type === "failure") {
+        this.#fail(new Error(message.error ?? "Source information worker failed."));
+        return;
+      }
+      if (message.type === "result" && !this.#pending.has(message.id)) {
+        return;
+      }
+      if (message.tracked) {
+        // Each published set replaces one completed discovery snapshot. An append-only set
+        // would retain every historical build path across branch switches and rebuilds.
+        this.#tracked.clear();
+        for (const trackedFile of message.tracked) {
+          this.#tracked.add(trackedFile);
         }
-        if (message.type === "failure") {
-          this.#fail(new Error(message.error ?? "Source information worker failed."));
-          return;
-        }
-        if (message.tracked) {
-          // Each published set replaces one completed discovery snapshot. An append-only set
-          // would retain every historical build path across branch switches and rebuilds.
-          this.#tracked.clear();
-          for (const trackedFile of message.tracked) {
-            this.#tracked.add(trackedFile);
-          }
-        }
-        const request = this.#pending.get(message.id);
-        this.#pending.delete(message.id);
-        if (message.error) {
-          request?.reject(new Error(message.error));
-        } else {
-          request?.resolve(message.value);
-        }
-      },
-    );
+      }
+      const request = this.#pending.get(message.id);
+      if (!request) {
+        return;
+      }
+      clearTimeout(request.timer);
+      this.#slots.release(message.id);
+      this.#pending.delete(message.id);
+      if (message.error) {
+        request.reject(new Error(message.error));
+      } else {
+        request.resolve(message.value);
+      }
+    });
     this.#worker.on("error", (error: unknown) =>
       this.#fail(error instanceof Error ? error : new Error(String(error))),
     );
@@ -202,7 +231,10 @@ export class EditorInformationWorker implements EditorInformationService {
   }
   #fail(error: Error): void {
     this.#failure ??= error;
+    this.#slots.dispose();
+    void this.#worker.terminate();
     for (const request of this.#pending.values()) {
+      clearTimeout(request.timer);
       request.reject(error);
     }
     this.#pending.clear();
@@ -211,14 +243,26 @@ export class EditorInformationWorker implements EditorInformationService {
     if (this.#failure) {
       return Promise.reject(this.#failure);
     }
-    const id = ++this.#sequence;
+    let id: number;
+    try {
+      id = this.#slots.acquire();
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
     return new Promise((resolve, reject) => {
-      this.#pending.set(id, { resolve, reject });
+      const timer = setTimeout(
+        () => this.#fail(new Error("Source information request timed out.")),
+        this.#timeout,
+      );
+      timer.unref();
+      this.#pending.set(id, { resolve, reject, timer });
       try {
         this.#worker.postMessage({ type: "query", id, method, args });
       } catch (error) {
         // A serialization or closed-port failure must not retain a request that can never reply.
         this.#pending.delete(id);
+        clearTimeout(timer);
+        this.#slots.release(id);
         reject(error instanceof Error ? error : new Error(String(error)));
       }
     });

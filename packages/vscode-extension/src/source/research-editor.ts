@@ -1,7 +1,7 @@
 import path from "node:path";
 
-import type { SourceResearchRequest, SourceResearchResult } from "@uttori/asm-cli/source";
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
+import type { SourceResearchRequest, SourceResearchResult } from "@uttori/asm-workflows/source";
 import {
   commands,
   Range,
@@ -13,6 +13,7 @@ import {
 } from "vscode";
 
 import type { SourceProcessClient } from "./process-client.js";
+import { readResearchResult } from "./result-readers.js";
 
 /** Selected source context is reread before application; unsaved research buffers support repeated edits. */
 export interface ResearchEditorContext {
@@ -34,14 +35,14 @@ export async function editSourceResearch(
     throw new Error("Select a Git source project first.");
   }
   const run = (research?: SourceResearchRequest) =>
-    worker.run<SourceResearchResult>(
+    worker.run(
       {
         action: "research",
         directory: initial.root,
         overlays: initial.buffers,
         research,
       },
-      { maxMemoryMiB: 512 },
+      { maxMemoryMiB: 512, readResult: readResearchResult },
     );
   if (!request) {
     const result = await run();

@@ -1,11 +1,13 @@
 import type { ArchitectureEncoderContext } from "../../packages/core/src/architecture-types.js";
 import { renderExpressionNode } from "../../packages/core/src/ir/expression-node.js";
+import { MathCore } from "../../packages/core/src/mathcore.js";
 import { OperandResolver } from "../../packages/core/src/operand-resolver.js";
 
 export type EncoderTestHost = {
   context: ArchitectureEncoderContext;
   operandResolver: OperandResolver;
   emitted: number[];
+  symbols: Map<string, number>;
   currentTargetAddress: number;
   optimizeDirectPage: boolean;
   enforceResolvedLabels: boolean;
@@ -38,6 +40,7 @@ const parseNumber = (input: string): number => {
 export const createEncoderTestHost = (): EncoderTestHost => {
   const host = {
     emitted: [] as number[],
+    symbols: new Map<string, number>(),
     currentTargetAddress: 0,
     optimizeDirectPage: true,
     enforceResolvedLabels: false,
@@ -67,25 +70,47 @@ export const createEncoderTestHost = (): EncoderTestHost => {
       host.write1(value >> 16);
     },
   };
-  const operandResolver = new OperandResolver({
-    resolveDefines: (input) => input,
-    isStructReference: () => false,
-    resolveStructLabel: () => {
-      throw new Error("Not a test struct label");
-    },
-    tryResolveLabel: (input) => {
-      try {
-        return parseNumber(input);
-      } catch {
-        return undefined;
-      }
-    },
-    resolveLabel: (input) => parseNumber(input),
-    evaluateMath: (input) =>
-      parseNumber(typeof input === "string" ? input : renderExpressionNode(input)),
-    shouldDeferExpressionEvaluation: () => !host.enforceResolvedLabels,
+  const math = new MathCore();
+  const resolveReference = (
+    node: import("../../packages/core/src/ir/expression-node.js").ReferenceExpressionNode,
+  ): import("../../packages/core/src/ir/reference-path.js").ReferenceResolution => {
+    const name = renderExpressionNode(node);
+    const symbol = host.symbols.get(name);
+    if (symbol !== undefined) {
+      return { kind: "resolved", value: symbol };
+    }
+    const hint = /^_([\dA-Fa-f]{6})$/.exec(name);
+    if (hint) {
+      return { kind: "resolved", value: Number.parseInt(hint[1], 16) };
+    }
+    try {
+      return { kind: "resolved", value: parseNumber(name) };
+    } catch (cause) {
+      return { kind: "error", error: cause instanceof Error ? cause : new Error(String(cause)) };
+    }
+  };
+  math.host = {
+    resolveReference,
+    resolveLabel: parseNumber,
+    convertLogicalToOutputOffset: (value) => value,
+    convertOutputOffsetToLogical: (value) => value,
     getCurrentAddress: () => host.currentTargetAddress,
-    requireStaticLabelLookup: () => false,
+    getCurrentBaseAddress: () => host.currentTargetAddress,
+    isDefined: (name) => Number(host.symbols.has(name)),
+    getExpressionObjectSize: () => 0,
+    getFileSize: () => 0,
+    getFileStatus: () => 0,
+    canReadFile: () => 0,
+    readFile: () => 0,
+    canReadBaseImage: () => 0,
+    readBaseImage: () => 0,
+  };
+  const operandResolver = new OperandResolver({
+    resolveReference,
+    evaluateMath: (node) => math.math(node),
+    // Public encoder hosts report unresolved reads; the typed encoder owns speculative sizing.
+    shouldDeferExpressionEvaluation: () => false,
+    getCurrentAddress: () => host.currentTargetAddress,
   });
   const context: ArchitectureEncoderContext = {
     operands: operandResolver,

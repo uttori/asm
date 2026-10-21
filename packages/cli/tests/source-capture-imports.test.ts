@@ -1,8 +1,8 @@
 import path from "node:path";
 
 import { test } from "../../../tests/ava-helper.js";
-import { importSourceCaptures } from "../src/source-capture-imports.js";
-import { createSourceMergeProgress } from "../src/source-progress.js";
+import { importSourceCaptures } from "../../workflows/src/source-capture-imports.js";
+import { createSourceMergeProgress } from "../../workflows/src/source-progress.js";
 
 /** An import outcome with deliberately large navigation data that a queue should not retain. */
 const result = {

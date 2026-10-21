@@ -32,7 +32,12 @@ For a complete SNES create/analyze/export workflow, use `@uttori/asm-cli` or the
 pointer. Current projects use semantic schema 3 and SQLite storage format 4. ROM images remain
 external. Records can retain bounded instruction observations from captures.
 
-Use revision-checked transaction APIs for edits and `SqliteAnalysisStore` queries for bounded views.
+Use `withAnalysisReadSession` for consistent read snapshots. Its metadata pages contain at most 200
+records and use stable-ID cursors; runtime evidence is an explicit stream. Consume pages and streams
+inside the synchronous callback. Reopen a session to observe publications from another connection.
+Use revision-checked transaction APIs for edits. `publishAnalysisProject` creates a project when no
+expected revision is supplied; replacing an existing project requires the revision you read.
+`SqliteAnalysisStore` remains the lower-level storage interface for administrative operations.
 Full snapshot APIs materialize all requested records. Address spaces are explicit and ranges are
 half-open. Conflicting evidence remains visible. Close stores when finished. Back up through
 SQLite's backup facilities or close every connection before copying project files.

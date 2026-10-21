@@ -1,11 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import {
-  DEBUG_BACKEND_PROTOCOL_VERSION,
-  ReplayDebugBackend,
-  type DebugAddress,
-  type DebugBackendEvent,
-  type ReplaySnapshot,
-} from "../src/index.js";
+import { DEBUG_BACKEND_PROTOCOL_VERSION, ReplayDebugBackend, type DebugAddress, type DebugBackendEvent, type ReplaySnapshot } from "../src/index.js";
 
 /** Returns the indexed element, or undefined when the index is past the end. */
 const elementAt = <T>(items: readonly T[], index: number): T | undefined =>

@@ -1,10 +1,18 @@
 import { createSourceSpan, type SourceSpan } from "../source-location.js";
+import { parseDirectiveExpression } from "./directive-arguments.js";
+import type { ExpressionNode } from "./expression-node.js";
+import { syntaxExpression, syntaxSpan, syntaxObject } from "./syntax-codec.js";
 
 /** Typed source value; numeric leaves keep assembler expressions for later evaluation. */
 export type AssetValueNode =
   | { readonly kind: "string"; readonly value: string; readonly span: SourceSpan }
   | { readonly kind: "boolean"; readonly value: boolean; readonly span: SourceSpan }
-  | { readonly kind: "number"; readonly expression: string; readonly span: SourceSpan }
+  | {
+      readonly kind: "number";
+      readonly expression: ExpressionNode;
+      readonly text: string;
+      readonly span: SourceSpan;
+    }
   | { readonly kind: "array"; readonly items: readonly AssetValueNode[]; readonly span: SourceSpan }
   | {
       readonly kind: "object";
@@ -171,7 +179,12 @@ export function parseAssetCall(command: string, line?: number): ParsedAssetCall 
     if (!expression) {
       fail("expected value");
     }
-    return { kind: "number", expression, span: span(start, at) };
+    return {
+      kind: "number",
+      expression: parseDirectiveExpression(expression, false),
+      text: expression,
+      span: span(start, at),
+    };
   };
   const positional: AssetValueNode[] = [];
   const options: Record<string, AssetValueNode> = {};
@@ -229,4 +242,54 @@ export function parseAssetCall(command: string, line?: number): ParsedAssetCall 
     options,
     span: span(callStart, at),
   };
+}
+
+/** Transport validation mirrors the recursive asset grammar without interpreting string data. */
+export const assetCallGuard: import("./syntax-codec.js").SyntaxGuard<ParsedAssetCall> = (
+  value,
+): value is ParsedAssetCall => {
+  if (!syntaxObject(value)) {
+    return false;
+  }
+  const call = value;
+  return (
+    assetValueGuard(call.path) &&
+    call.path.kind === "string" &&
+    assetValueGuard(call.format) &&
+    call.format.kind === "string" &&
+    assetEntriesGuard(call.options) &&
+    syntaxSpan(call.span)
+  );
+};
+
+function assetEntriesGuard(value: unknown): value is Readonly<Record<string, AssetValueNode>> {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.values(value).every(assetValueGuard)
+  );
+}
+function assetValueGuard(value: unknown): value is AssetValueNode {
+  if (!syntaxObject(value)) {
+    return false;
+  }
+  const node = value;
+  if (!syntaxSpan(node.span)) {
+    return false;
+  }
+  switch (node.kind) {
+    case "string":
+      return typeof node.value === "string";
+    case "boolean":
+      return typeof node.value === "boolean";
+    case "number":
+      return typeof node.text === "string" && syntaxExpression(node.expression);
+    case "array":
+      return Array.isArray(node.items) && node.items.every(assetValueGuard);
+    case "object":
+      return assetEntriesGuard(node.entries);
+    default:
+      return false;
+  }
 }

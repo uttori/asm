@@ -1,5 +1,7 @@
 /** A preprocessed command tagged with its original 0-based source line. */
 export type SourcedCommand = {
+    /** Physical extent is attached by the program boundary after normalization. */
+    physical?: string;
     /** Normalized command text. */
     text: string;
     /** Zero-based line number in the source block. */

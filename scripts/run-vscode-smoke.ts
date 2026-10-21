@@ -164,6 +164,7 @@ const testInstalledArchive = async (
         "--disable-gpu",
         "--skip-welcome",
         "--skip-release-notes",
+        ...(process.env.UTTORI_ASM_LSP_TRACE === "verbose" ? ["--log", "trace"] : []),
       ];
       const env = { UTTORI_VSCODE_RELEASE_PHASE: phase, UTTORI_VSCODE_INSTALLED_ROOT: extensions };
       if (phase !== "restricted") {
@@ -209,6 +210,18 @@ const testInstalledArchive = async (
         });
       });
     }
+  } catch (error) {
+    // Disposable profiles own the only language-client startup diagnostics. Preserve their useful
+    // log tails in the test output before cleanup, so a failed host check remains diagnosable.
+    for (const file of fs.readdirSync(isolation, { recursive: true, withFileTypes: true })) {
+      if (file.isFile() && /(?:uttori|exthost).*\.log$/i.test(file.name)) {
+        const log = path.join(file.parentPath, file.name);
+        console.error(
+          `${path.relative(isolation, log)}\n${fs.readFileSync(log, "utf8").slice(-12000)}`,
+        );
+      }
+    }
+    throw error;
   } finally {
     fs.rmSync(isolation, { recursive: true, force: true });
   }

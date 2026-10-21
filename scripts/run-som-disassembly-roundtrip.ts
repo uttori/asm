@@ -36,8 +36,8 @@ try {
     [
       "source",
       "init",
-      rom,
       source,
+      rom,
       "--mapper",
       SECRET_OF_MANA_ANALYSIS_FIXTURE.mapper,
       "--dizraw",

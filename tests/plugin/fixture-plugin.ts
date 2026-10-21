@@ -22,6 +22,7 @@ function readCoreDirectiveGroups(value: unknown): CoreDirectiveGroup[] | undefin
 }
 import {
   definePlugin,
+  parseInstructionOperands,
   PLUGIN_API_VERSION,
   type AssemblerPlugin,
   type PluginActivationContext,
@@ -51,11 +52,22 @@ export const registerFixtureContributions = (
     aliases: ["fixture-cpu"],
     displayName: "Fixture one-byte CPU",
     unknownInstructionBehavior: "throw",
-    splitOperands: (text) => (text ? [text] : []),
-    classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
-    createEncoder: (encoderContext) => ({
-      estimateSize: () => 1,
-      encode: () => {
+    operandGrammar: {
+      version: "1",
+      parse: (mnemonic, text) =>
+        parseInstructionOperands(mnemonic, text, {
+          registers: [],
+          indexRegisters: [],
+          commaIndex: false,
+        }),
+    },
+    createTypedEncoder: () => ({
+      estimate: (frame) => {
+        frame.choose("fixture", 1);
+        return 1;
+      },
+      encode: (frame, encoderContext) => {
+        frame.choose("fixture", 1);
         encoderContext.emission.writeByte(context.options.byte);
         return true;
       },
@@ -93,13 +105,18 @@ export const registerFixtureContributions = (
         id: "fixture.directive.emit",
         keywords: ["fixturebyte"],
         phase: "lowered",
-        createHandler:
-          ({ state }) =>
-          () => {
-            const value = state.get(fixtureState);
-            value.count++;
-            value.history.values.push(value.count);
-          },
+        syntax: {
+          version: "1",
+          parse: () => null,
+          validate: (payload) => payload === null,
+          bind: ({ state }) => ({
+            execute: () => {
+              const value = state.get(fixtureState);
+              value.count++;
+              value.history.values.push(value.count);
+            },
+          }),
+        },
         tooling: [
           {
             keyword: "fixturebyte",

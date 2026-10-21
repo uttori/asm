@@ -1,10 +1,4 @@
-import {
-  DEBUG_SIDECAR_SESSION_ENV,
-  DebugSidecarServer,
-  ReplayDebugBackend,
-  assertDebugSidecarSessionToken,
-  type DebugBackend,
-} from "../../src/index.js";
+import { DEBUG_SIDECAR_SESSION_ENV, DebugSidecarServer, ReplayDebugBackend, assertDebugSidecarSessionToken, type DebugBackend } from "../../src/index.js";
 import { debugConformanceScript } from "./debug-conformance-fixture.js";
 
 const session = process.env[DEBUG_SIDECAR_SESSION_ENV];

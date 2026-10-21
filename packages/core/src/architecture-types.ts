@@ -1,50 +1,12 @@
 import type { ExpressionNode } from "./ir/expression-node.js";
-import type { NormalizedCommand } from "./ir/normalized-command.js";
-import type { OperandSyntax } from "./operand-syntax.js";
 
 /** Expression values are numeric or string literals. Conversion is the caller's responsibility. */
 export type MathValue = number | string;
 
-/** Text after define/expression expansion with target-neutral lexical information. */
-export interface ExpandedOperand {
-  /** Original operand spelling before define, symbol, or expression resolution. */
-  raw: string;
-  expanded: string;
-  /** Target-neutral byte width inferred from the resolved value or literal spelling. */
-  length: number;
-  /** Lexical facts only. Register and addressing-mode validity remain architecture-owned. */
-  syntax: OperandSyntax;
-}
-
-/** Operand classification passed to encoders. Architecture-specific modes live in mode/metadata. */
-export interface LoweredOperand {
-  /** Architecture-owned addressing-mode identifier. */
-  mode?: string;
-  baseExpression?: string;
-  registerName?: string;
-  explicitDirectPage?: boolean;
-  explicitDirectPageIndexedX?: boolean;
-  raw: string;
-  expanded: string;
-  /** Inferred operand width in bytes, not full instruction size. */
-  length: number;
-  /** The index register for indexed addressing modes. */
-  indexRegister?: string;
-  immediate: boolean;
-  indirect: boolean;
-  /** Architecture-specific lowering metadata for extension encoders. */
-  metadata?: Readonly<Record<string, unknown>>;
-}
-
 /** Live access to the current session's symbols and operand expressions. */
 export interface OperandResolutionContext {
-  expandOperand(operand: string): ExpandedOperand;
-  /**
-   * Architecture-bound contexts classify through their registered contribution.
-   * The bare resolver returns target-neutral metadata with mode `unknown`.
-   */
-  lowerOperand(operand: string): LoweredOperand;
-  getnum(expression: string | ExpressionNode): number;
+  /** displayText preserves emission attribution when a typed expression replaces a text input. */
+  getnum(expression: string | ExpressionNode, displayText?: string): number;
   getCurrentAddress(): number;
 }
 
@@ -56,7 +18,10 @@ export interface EncoderEmissionContext {
   write3(value: number): void;
   writeByte(value: number): void;
   writeBytes(values: readonly number[]): void;
-  /** Width is in bytes. Omitted endianness means little-endian. */
+  /**
+   * Emit the low 1–4 bytes of a safe integer (two's complement for negatives), little-endian
+   * by default. Invalid arguments throw before writes or cursor changes; use writeBytes for wider data.
+   */
   writeValue(value: number, width: number, endianness?: "little" | "big"): void;
 }
 
@@ -86,54 +51,16 @@ export interface ArchitectureEncoderContext {
   diagnostics: EncoderDiagnosticContext;
 }
 
-/** Convenience facade over encoder capabilities. Address and label policy remain live getters. */
-export interface EncoderRuntime {
-  operandResolver: OperandResolutionContext;
-  write1(value: number): void;
-  write2(value: number): void;
-  write3(value: number): void;
-  writeByte(value: number): void;
-  writeBytes(values: readonly number[]): void;
-  writeValue(value: number, width: number, endianness?: "little" | "big"): void;
-  readonly currentTargetAddress: number;
-  readonly enforceResolvedLabels: boolean;
-  symbolScope: {
-    findNextLabel(label: string, referenceAddress: number): number;
-    findPreviousLabel(label: string, referenceAddress: number): number;
-  };
-  diagnostics: EncoderDiagnosticContext;
-}
-
-/**
- * Adapt capability groups to a flat encoder facade without copying session state.
- * @param {ArchitectureEncoderContext} context Capabilities borrowed from the owning session.
- * @returns {EncoderRuntime} A facade whose address and label-policy getters read live session values.
- */
-export const createEncoderRuntime = (context: ArchitectureEncoderContext): EncoderRuntime => ({
-  operandResolver: context.operands,
-  write1: (value) => context.emission.write1(value),
-  write2: (value) => context.emission.write2(value),
-  write3: (value) => context.emission.write3(value),
-  writeByte: (value) => context.emission.writeByte(value),
-  writeBytes: (values) => context.emission.writeBytes(values),
-  writeValue: (value, width, endianness) => context.emission.writeValue(value, width, endianness),
-  get currentTargetAddress() {
-    return context.sizing.getCurrentAddress();
-  },
-  get enforceResolvedLabels() {
-    return context.branches.enforceResolvedLabels();
-  },
-  symbolScope: {
-    findNextLabel: (label, referenceAddress) =>
-      context.branches.findNextLabel(label, referenceAddress),
-    findPreviousLabel: (label, referenceAddress) =>
-      context.branches.findPreviousLabel(label, referenceAddress),
-  },
-  diagnostics: context.diagnostics,
-});
-
 /** Host services used by the expression evaluator. Logical addresses are distinct from file offsets. */
 export interface ExpressionHost {
+  /** Bind explicitly generated expression grammar using the session's ordered define state. */
+  bindExpressionTemplate?(
+    template: import("./ir/expression-node.js").TemplateExpressionNode,
+  ): import("./ir/expression-node.js").ExpressionNode;
+  /** Typed hosts preserve reference structure and distinguish a missing value from a real zero. */
+  resolveReference(
+    reference: import("./ir/expression-node.js").ReferenceExpressionNode,
+  ): import("./ir/reference-path.js").ReferenceResolution;
   resolveLabel(identifier: string): MathValue;
   convertLogicalToOutputOffset(address: number): number;
   convertOutputOffsetToLogical(offset: number): number;
@@ -152,22 +79,6 @@ export interface ExpressionHost {
   readFile(filename: string, position: number, size: number, defaultValue?: number): number;
   canReadBaseImage(position: number, size: number): number;
   readBaseImage(position: number, size: number, defaultValue?: number): number;
-}
-
-/** Parsed instruction and source context for encoders that consume structured operands. */
-export interface LoweredInstruction {
-  kind: "instruction";
-  command?: NormalizedCommand;
-  mnemonic: string;
-  operandText: string;
-  operands: string[];
-  loweredOperands: LoweredOperand[];
-  loweredOperand: LoweredOperand;
-  words: readonly string[];
-  sourceFile: string;
-  /** Zero-based source line index. */
-  sourceLine: number;
-  sourceRaw: string;
 }
 
 /**
@@ -199,12 +110,8 @@ export interface InstructionDescriptor {
 
 /** Per-session encoder. Sizing returns byte counts. Encoding reports whether it handled the instruction. */
 export interface ArchitectureEncoder {
-  /** Estimate total instruction bytes without emitting output. Words include the mnemonic. */
-  estimateSize(words: readonly string[]): number;
-  /** Emit through the supplied emission context. False indicates an unrecognized instruction. */
-  encode(words: readonly string[]): boolean;
-  estimateInstruction?(instruction: LoweredInstruction): number;
-  encodeInstruction?(instruction: LoweredInstruction): boolean;
+  /** Converted families use only parsed instructions and a fresh stage-owned resolution frame. */
+  typed: import("./ir/resolved-instruction.js").TypedArchitectureEncoder;
   /** Resets pass-local encoder state (M/X flags, etc.) at the start of each assembly stage. */
   beginPass?(): void;
   /**

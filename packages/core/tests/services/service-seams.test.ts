@@ -16,18 +16,6 @@ function isCommandNode(value: unknown): value is { keyword?: string; words?: str
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function hasStageDispatch(value: Assembler): value is Assembler & {
-  layoutInstruction(...args: unknown[]): unknown;
-  emitInstruction(...args: unknown[]): unknown;
-} {
-  return (
-    "layoutInstruction" in value &&
-    typeof value.layoutInstruction === "function" &&
-    "emitInstruction" in value &&
-    typeof value.emitInstruction === "function"
-  );
-}
-
 /** Returns the indexed element, or undefined when the index is past the end. */
 const elementAt = <T>(items: readonly T[], index: number): T | undefined =>
   index >= 0 && index < items.length ? items[index] : undefined;
@@ -94,17 +82,12 @@ test("define engine resolves standalone define commands through normalized dispa
   t.is(assembler.arch, "spc700");
 });
 
-test("front-end service finalizes collected function definitions", (t) => {
+test("streaming function declarations use the shared continuation parser", (t) => {
   const assembler = new Assembler();
-  const parseFunctionDefinition = stub(assembler, "parseFunctionDefinition");
-
-  assembler.inFunctionDefinition = true;
-  assembler.functionDefinitionLines = ["function sum(x, y) = x +"];
+  t.teardown(() => assembler.dispose());
+  assembler.processCommand("function sum(x, y) = x + \\");
   assembler.processCommand("y");
-
-  t.true(parseFunctionDefinition.calledOnceWithExactly("function sum(x, y) = x + y"));
-  t.false(assembler.inFunctionDefinition);
-  t.deepEqual(assembler.functionDefinitionLines, []);
+  t.is(assembler.mathCore.math("sum(2,3)"), 5);
 });
 
 test("front-end service handles global labels before directive dispatch", (t) => {
@@ -153,11 +136,11 @@ test("normalized dispatch also loads test rom directive", (t) => {
 
 test("normalized command preprocessing handles character mappings", (t) => {
   const assembler = new Assembler();
-  const handleCharacterMapping = spy(assembler.directiveRuntime, "handleCharacterMapping");
+  const evaluate = spy(assembler.operandResolver, "getnum");
 
   assembler.processNormalizedCommand(commandNode('"A" = $42'), false);
 
-  t.true(handleCharacterMapping.calledOnceWithExactly(['"A"', "=", "$42"]));
+  t.is(typeof evaluate.firstCall.args[0], "object");
   t.is(assembler.characterMappings.get("A"), 0x42);
 });
 
@@ -455,10 +438,8 @@ test("symbol scope resolves double-dot local label references", (t) => {
 
 test("typed conditional nodes skip inactive branches during execution", (t) => {
   const assembler = new Assembler();
-  const executed: string[] = [];
-  stub(assembler, "processNormalizedCommand").callsFake((command) => {
-    executed.push(command.command);
-  });
+  assembler.activateStage("emitProgram");
+  assembler.setWritePosition(0x808000);
 
   const node = elementAt(
     assembler.programModelBuilder.parseCommandStreamToNodes(
@@ -475,7 +456,7 @@ test("typed conditional nodes skip inactive branches during execution", (t) => {
   }
 
   assembler.lowerAndExecuteRuntimeNodes([node]);
-  t.deepEqual(executed, ["db $20"]);
+  t.deepEqual([...assembler.getBinaryOutput()], [0x20]);
 });
 
 test("macro-expanded control flow executes through typed nodes", (t) => {
@@ -612,10 +593,8 @@ test("node parser lifts loops and conditionals into typed nodes", (t) => {
 
 test("node execution seam dispatches typed command and conditional nodes", (t) => {
   const assembler = new Assembler();
-  const processed: string[] = [];
-  stub(assembler, "processNormalizedCommand").callsFake((command) => {
-    processed.push(command.command);
-  });
+  assembler.activateStage("emitProgram");
+  assembler.setWritePosition(0x808000);
 
   assembler.lowerAndExecuteRuntimeNodes(
     assembler.programModelBuilder.parseCommandStreamToNodes([
@@ -627,7 +606,7 @@ test("node execution seam dispatches typed command and conditional nodes", (t) =
     ]),
   );
 
-  t.deepEqual(processed, ["db $01"]);
+  t.deepEqual([...assembler.getBinaryOutput()], [0x01]);
 });
 
 test("node execution seam does not re-normalize cached command nodes", (t) => {
@@ -642,7 +621,6 @@ test("node execution seam does not re-normalize cached command nodes", (t) => {
   }
 
   const createLoopNodeStub = stub(assembler.frontEndService, "createLoopCommandNode");
-  stub(assembler, "processNormalizedCommand").callsFake(() => {});
   assembler.lowerAndExecuteRuntimeNodes([parsedCommand]);
   t.false(createLoopNodeStub.called);
 });
@@ -671,10 +649,8 @@ test("macro/include lifting preserves typed commands", (t) => {
 
 test("typed parser keeps nested condition-loop structures executable", (t) => {
   const assembler = new Assembler();
-  const executed: string[] = [];
-  stub(assembler, "processNormalizedCommand").callsFake((command) => {
-    executed.push(command.command);
-  });
+  assembler.activateStage("emitProgram");
+  assembler.setWritePosition(0x808000);
 
   const nodes = assembler.programModelBuilder.parseCommandStreamToNodes([
     "if 1",
@@ -686,7 +662,7 @@ test("typed parser keeps nested condition-loop structures executable", (t) => {
     "endif",
   ]);
   assembler.lowerAndExecuteRuntimeNodes(nodes);
-  t.deepEqual(executed, ["db $01"]);
+  t.deepEqual([...assembler.getBinaryOutput()], [0x01]);
 });
 
 test("stage runner builds program once and executes all stages", (t) => {
@@ -792,19 +768,16 @@ test("stage states keep symbols, control, and plugin state isolated by stage", (
 
 test("instruction dispatch follows active stage capabilities", (t) => {
   const assembler = new Assembler();
-  if (!hasStageDispatch(assembler)) {
-    throw new Error("Instruction dispatch seam is missing.");
-  }
-  const layoutSpy = stub(assembler, "layoutInstruction").returns(true);
-  const emitSpy = stub(assembler, "emitInstruction").returns(true);
+  const estimate = spy(assembler.arch65816, "estimate");
+  const encode = spy(assembler.arch65816, "encode");
   const program = assembler.buildProgramModel("lda #$01", "test.asm", 0);
-
   assembler.runStage("collectDefinitions", program);
-  t.true(layoutSpy.called);
-
-  layoutSpy.resetHistory();
+  t.true(estimate.calledOnce);
+  t.false(encode.called);
+  estimate.resetHistory();
   assembler.runStage("resolveLayout", program);
-  t.true(emitSpy.called);
+  t.true(encode.calledOnce);
+  t.false(estimate.called);
 });
 
 test("architecture registry resolves aliases through arch directive", (t) => {
@@ -860,7 +833,7 @@ test("runStage materializes a durable lowered program tree", (t) => {
   const stageState = assembler.runStage("resolveLayout", program);
 
   t.truthy(stageState.loweredProgram);
-  t.is(stageState.loweredProgram?.nodes[0]?.kind, "command");
+  t.is(stageState.loweredProgram?.nodes[0]?.kind, "numericData");
   t.is(stageState.loweredProgram?.nodes[1]?.kind, "conditional");
 });
 
@@ -936,8 +909,8 @@ test("lowered instructions refresh against architecture changes at dispatch", (t
     t.fail("registered architectures must support operand classification");
     return;
   }
-  const spcLowerSpy = spy(spcDefinition, "classifyOperand");
-  const mainLowerSpy = spy(mainDefinition, "classifyOperand");
+  const spcLowerSpy = spy(assembler.archSPC700, "prepare");
+  const mainLowerSpy = spy(assembler.arch65816, "prepare");
   const program = assembler.buildProgramModel(
     ["arch spc700", "nop", "arch 65816", "nop"].join("\n"),
     "arch-switch.asm",

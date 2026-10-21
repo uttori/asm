@@ -2,13 +2,7 @@ import * as fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import {
-  commitAnalysisProjectTransaction,
-  importRuntimeInstructionTrace,
-  loadAnalysisProjectSnapshot,
-  mergeRuntimeEvidence,
-  openAnalysisProjectStore,
-} from "@uttori/asm-disassembler";
+import { commitAnalysisProjectTransaction, importRuntimeInstructionTrace, loadAnalysisProjectSnapshot, mergeRuntimeEvidence, openAnalysisProjectStore } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -16,11 +10,7 @@ import {
   renderAnalysisFixture,
   verifyRenderedFixture,
 } from "../../../tests/helpers/source-render-fixture.js";
-import {
-  analyzeSnesProject,
-  SnesProjectInitializationCancelledError,
-  probeSnesProject,
-} from "../src/index.js";
+import { analyzeSnesProject, SnesProjectInitializationCancelledError, probeSnesProject } from "@uttori/asm-plugin-snes/disassembler";
 
 /** Small LoROM with a reset entry and no interrupt handlers outside the tested code. */
 const fixtureRom = (): Uint8Array => {

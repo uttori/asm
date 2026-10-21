@@ -40,7 +40,7 @@ if (phase === "export") {
     return result;
   };
 }
-const { executeSourceOperation } = await import("../../src/source.ts");
+const { executeSourceOperation } = await import("../../../workflows/src/source.ts");
 await assert.rejects(
   executeSourceOperation({ directory, action: "prepare", signal: abort.signal }),
   new RegExp(`Cancelled during ${phase}`),

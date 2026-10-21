@@ -22,7 +22,7 @@ export interface RuntimeInstructionDetail {
  * Validate execution details for persistence.
  * @param {unknown} value Untrusted detail array.
  * @param {number} count Expected instruction count.
- * @returns {readonly RuntimeInstructionDetail[]} Normalized details.
+ * @returns {readonly RuntimeInstructionDetail[]} Owned details with recursively canonical key order.
  */
 export declare const validateRuntimeInstructionDetails: (value: unknown, count: number) => readonly RuntimeInstructionDetail[];
 //# sourceMappingURL=trace-detail.d.ts.map

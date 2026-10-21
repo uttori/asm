@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 
 import { pngImporter, rewriteIndexedPng } from "@uttori/asm-assets/image";
 import { decompressSomLz } from "@uttori/asm-assets/secret-of-mana/lz";
-import { convertBossImage } from "@uttori/asm-assets/secret-of-mana/som-asset-plugin";
-import { executeSourceOperation } from "@uttori/asm-cli/source";
-import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler";
+import { sourceContentHash, sourceGit } from "@uttori/asm-disassembler/source-project";
+import { convertBossImage } from "@uttori/asm-game-secret-of-mana";
+import { executeSourceOperation } from "@uttori/asm-workflows/source";
 
 const application = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const clone = path.join(application, "experiments/secret-of-mana-git-workflow-full");

@@ -1,6 +1,8 @@
 import type { AssetEmissionConversion } from "../addressToLine.js";
 import type { Assembler } from "../assembler.js";
 import type { ParsedAssetCall, AssetValueNode } from "../ir/asset-call.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
+import { sourceFragment, fragmentText } from "../ir/source-fragment.js";
 import type {
   AssetFormatContribution,
   AssetFormatResult,
@@ -11,6 +13,20 @@ import { assetSourceMediaType, resolveAssetResourceSnapshot } from "./asset-reso
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Asset options cannot read layout state, symbols, files or effectful functions. */
+function isConstantExpression(node: ExpressionNode): boolean {
+  if (node.type === "literal") {
+    return true;
+  }
+  if (node.type === "unary") {
+    return isConstantExpression(node.argument);
+  }
+  if (node.type === "binary") {
+    return isConstantExpression(node.left) && isConstantExpression(node.right);
+  }
+  return false;
 }
 
 function isUnknownArray(value: unknown): value is readonly unknown[] {
@@ -104,27 +120,35 @@ export class AssetAssemblyService {
       );
     }
     let expanded = node.expression;
-    // General symbol replacement can reinterpret numeric tokens as relative
-    // labels during definition collection. Expand only explicit !defines here.
-    for (let depth = 0; depth < 32; depth++) {
-      const next = this.session.defineEngine.resolveRegularDefines(expanded);
-      if (next === expanded) {
-        break;
+    if (expanded.type === "template" && expanded.form === "source") {
+      let fragment = sourceFragment(expanded.text, [
+        {
+          file: this.session.currentFile,
+          line: this.session.currentLine,
+          text: node.text,
+          span: node.span,
+        },
+      ]);
+      // Resource options preserve their bounded, unbraced-define policy before constant validation.
+      // In particular, symbol lookup and effectful calls must not run to decide layout independence.
+      for (let depth = 0; depth < 32; depth++) {
+        const next = this.session.defineEngine.resolveRegularFragment(fragment);
+        if (fragmentText(next) === fragmentText(fragment)) {
+          break;
+        }
+        fragment = next;
+        if (depth === 31) {
+          throw new Error("includeAsset numeric define expansion is recursive.");
+        }
       }
-      expanded = next;
-      if (depth === 31) {
-        throw new Error("includeAsset numeric define expansion is recursive.");
-      }
+      expanded = this.session.frontEndService.parseFragmentExpression(fragmentText(fragment));
     }
-    const withoutLiterals = expanded.replace(/\$[\da-f]+|0x[\da-f]+|%[01]+/gi, "0");
-    if (/[!?A-Z_a-z]/.test(withoutLiterals)) {
-      throw new Error(
-        `includeAsset numeric option '${node.expression}' must be layout-independent.`,
-      );
+    if (!isConstantExpression(expanded)) {
+      throw new Error(`includeAsset numeric option '${node.text}' must be layout-independent.`);
     }
     const value = this.session.mathCore.math(expanded);
     if (!Number.isFinite(value)) {
-      throw new Error(`includeAsset numeric option '${node.expression}' is not finite.`);
+      throw new Error(`includeAsset numeric option '${node.text}' is not finite.`);
     }
     return value;
   }

@@ -1,4 +1,5 @@
-import { type NormalizedCommand } from "../ir/normalized-command.js";
+import { type DeclarationNode } from "../ir/declaration-node.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
 import type { OutputWriterService } from "./output-writer-service.js";
 import type { StructDefinition, StructEngine } from "./struct-engine.js";
 export interface DataStructHost {
@@ -6,7 +7,7 @@ export interface DataStructHost {
     currentTargetBaseAddress: number;
     canEmitBytes: boolean;
     operandResolver: {
-        getnum(input: string): number;
+        getnum(input: string | ExpressionNode): number;
     };
     outputWriter: Pick<OutputWriterService, "step" | "writeBytes">;
     /** Final scalar attribution before record bytes are written; offsets are relative to the record. */
@@ -26,20 +27,31 @@ export declare class DataStructEngine {
     get inTable(): boolean;
     reset(): void;
     finish(): void;
-    /**
-     * Rewrite a row into a normal directive so it retains source/trace ownership.
-     * @param {NormalizedCommand} command Per-dispatch mutable command, never the cached node.
-     */
-    prepareRow(command: NormalizedCommand): void;
+    /** Bind a row's table name while retaining its parsed field values and source ranges. */
+    bindRow(node: Extract<DeclarationNode, {
+        kind: "dataStructRow";
+    }>): Extract<DeclarationNode, {
+        kind: "dataStruct";
+    }>;
     begin(words: readonly string[]): void;
+    /** Enter a record table only after the referenced layout exists. */
+    executeBegin(node: Exclude<DeclarationNode, {
+        kind: "invalid";
+    }> | undefined): void;
     end(words: readonly string[]): void;
+    /** Closing a table checks its row invariant before releasing sequencing state. */
+    executeEnd(argumentCount: number): void;
     /**
      * Resolve an addressed record, keeping the established Asar index/stride rules.
-     * @param {string} reference Previously declared name with an optional logical index.
+     * @param {RecordReference} reference Previously declared name with an unevaluated logical index.
      * @returns {{ definition: StructDefinition; index: number }} Layout and checked index.
      */
     private resolveRecord;
     private fieldsFor;
     emit(words: readonly string[]): void;
+    /** Validate the entire typed record before committing bytes or field ownership. */
+    executeRecord(node: Extract<DeclarationNode, {
+        kind: "dataStruct";
+    }>): void;
 }
 //# sourceMappingURL=data-struct-engine.d.ts.map

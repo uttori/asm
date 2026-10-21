@@ -4,15 +4,13 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { verifyCaptureContext, readCaptureFileHeader } from "@uttori/asm-capture";
 import {
   importRuntimeTraceSourceIntoProject,
   loadAnalysisProjectViewSnapshot,
   commitAnalysisProjectViewUpdate,
   createRuntimeCaptureSource,
 } from "@uttori/asm-disassembler";
-
-import { verifyCaptureContext } from "../../packages/debug-adapter/src/capture-context.ts";
-import { readCaptureFileHeader } from "../../packages/debug-adapter/src/capture-file.ts";
 
 /** @typedef {{session:string,start:{masterClock:string},end:{masterClock:string,eventThrough:string}}} ContextBoundaries */
 

@@ -1,6 +1,54 @@
+import { parseCommandOperation } from "../ir/command-operation.js";
+import { parseDefineTemplate, bindDefineTemplate, } from "../ir/define-template.js";
 import { setCommandKind } from "../ir/normalized-command.js";
+import { sourceFragment, fragmentText, sliceSourceFragment, bindSourceFragment, } from "../ir/source-fragment.js";
 export class DefineEngine {
     host;
+    /** Value identity remains in defines; metadata is refreshed when a declaration executes. */
+    origins = new Map();
+    syntaxCache = new Map();
+    /** Release snapshot-owned syntax while retaining live declaration values. */
+    clearSyntaxCache() {
+        this.syntaxCache.clear();
+        this.origins.clear();
+    }
+    template(text, escapes = "basic") {
+        const key = `${escapes}:${text}`;
+        let template = this.syntaxCache.get(key);
+        if (!template) {
+            template = parseDefineTemplate(text, escapes);
+            this.syntaxCache.set(key, template);
+        }
+        return template;
+    }
+    /** Bind one define phase; dynamic names may themselves be attributed generated fragments. */
+    resolveFragment(fragment) {
+        const text = fragmentText(fragment);
+        if (!text.includes("!") && !text.includes("\\")) {
+            return fragment;
+        }
+        return bindDefineTemplate(this.template(text), fragment, (part) => {
+            let name = part.name;
+            if (part.braced) {
+                const nameFragment = sliceSourceFragment(fragment, part.start + 2, part.end - 1);
+                name = this.host.resolveDefineFragment
+                    ? fragmentText(this.host.resolveDefineFragment(nameFragment))
+                    : this.host.resolvedefines(part.name);
+            }
+            const value = this.host.lookupDefineValue
+                ? this.host.lookupDefineValue(name)
+                : this.host.defines.get(name);
+            if (value === undefined) {
+                throw new Error(`Define '${name}' not found.`);
+            }
+            const origin = this.origins.get(name);
+            return sourceFragment(value, origin ? [origin] : []);
+        });
+    }
+    /** Attribute a generated statement to its invoking define rather than reparsing an anonymous string. */
+    dispatch(fragment) {
+        this.host.processSourceFragment(fragment);
+    }
     constructor(host) {
         this.host = host;
     }
@@ -14,34 +62,20 @@ export class DefineEngine {
      * @returns {boolean} `true` if the command was handled, `false` otherwise.
      */
     handleCommand(commandNode) {
-        const command = commandNode.command;
-        const trimmedCommand = command.trim();
-        if (commandNode.keyword.toLowerCase() === "undef") {
-            this.handleDefineCommand(trimmedCommand);
-            setCommandKind(commandNode, "defineCommand");
-            return true;
-        }
-        if (!trimmedCommand.startsWith("!")) {
+        const operation = commandNode.parsed.operation;
+        if (!operation ||
+            !["defineAssignment", "undef", "defineExpansion", "invalid"].includes(operation.kind)) {
             return false;
         }
-        if (command.includes("=")) {
-            this.handleDefineCommand(command);
+        if (operation.kind === "defineAssignment" ||
+            operation.kind === "undef" ||
+            operation.kind === "defineExpansion" ||
+            operation.kind === "invalid") {
+            this.executeOperation(operation, commandNode.source);
             setCommandKind(commandNode, "defineCommand");
             return true;
         }
-        if (trimmedCommand.startsWith("!{")) {
-            const processedCommand = this.processValueWithBracedDefines(trimmedCommand);
-            this.host.processCommand(processedCommand);
-            setCommandKind(commandNode, "defineCommand");
-            return true;
-        }
-        const defineName = trimmedCommand.substring(1);
-        if (!this.host.defines.has(defineName)) {
-            throw new Error(`Error: Define '${defineName}' not found.`);
-        }
-        this.host.processCommand(this.host.defines.get(defineName) ?? "");
-        setCommandKind(commandNode, "defineCommand");
-        return true;
+        return false;
     }
     /**
      * Handles a define command.
@@ -55,43 +89,45 @@ export class DefineEngine {
      * undef identifier // Remove a define
      * undef "identifier" // Remove a define
      */
-    handleDefineCommand(command) {
-        const trimmedCommand = command.trim();
-        if (trimmedCommand.toLowerCase().startsWith("undef")) {
-            this.applyUndefOperation(trimmedCommand);
-            return;
-        }
-        const line = command.substring(1).trim();
-        if (line.startsWith("{")) {
-            let braceLevel = 1;
-            let closingBraceIndex = 1;
-            while (braceLevel > 0 && closingBraceIndex < line.length) {
-                if (line[closingBraceIndex] === "{") {
-                    braceLevel++;
-                }
-                if (line[closingBraceIndex] === "}") {
-                    braceLevel--;
-                }
-                closingBraceIndex++;
-            }
-            if (braceLevel !== 0) {
-                throw new Error(`Mismatched braces in define: ${command}`);
-            }
-            const nestedContent = line.substring(1, closingBraceIndex - 1);
-            const resolvedIdentifier = this.processNestedDefines(nestedContent);
-            const restOfLine = line.substring(closingBraceIndex).trim();
-            const operatorMatch = restOfLine.match(/^\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
-            if (!operatorMatch) {
-                throw new Error(`Invalid define syntax after braces: ${command}`);
-            }
-            this.applyDefineOperation(resolvedIdentifier, operatorMatch[1], operatorMatch[2].trim());
-            return;
-        }
-        const match = line.match(/^(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
-        if (!match) {
+    handleDefineCommand(command, source) {
+        const operation = parseCommandOperation(command);
+        if (!operation ||
+            (operation.kind !== "defineAssignment" &&
+                operation.kind !== "undef" &&
+                operation.kind !== "invalid")) {
             throw new Error(`Invalid define syntax: ${command}`);
         }
-        this.applyDefineOperation(match[1], match[2], match[3].trim());
+        this.executeOperation(operation, source);
+    }
+    /** Apply a parsed declaration or expand a source-valued define in the current scope. */
+    executeOperation(operation, source) {
+        if (operation.kind === "invalid") {
+            throw new Error(operation.message);
+        }
+        if (operation.kind === "undef") {
+            this.host.defines.delete(operation.name);
+            this.origins.delete(operation.name);
+            return;
+        }
+        if (operation.kind === "defineAssignment") {
+            const name = operation.dynamic ? this.processNestedDefines(operation.name) : operation.name;
+            this.applyDefineOperation(name, operation.operator, operation.value, source);
+            return;
+        }
+        if (operation.dynamic) {
+            this.dispatch(this.resolveFragment(sourceFragment(`!${operation.name}`, source ? [source] : [])));
+            return;
+        }
+        const value = this.host.defines.get(operation.name);
+        if (value === undefined) {
+            throw new Error(`Error: Define '${operation.name}' not found.`);
+        }
+        const origins = source ? [source] : [];
+        const declaration = this.origins.get(operation.name);
+        if (declaration) {
+            origins.push(declaration);
+        }
+        this.dispatch(sourceFragment(value, origins));
     }
     /**
      * Resolves nested defines in a string.
@@ -119,46 +155,27 @@ export class DefineEngine {
      * @returns {string} The processed content with one level of defines resolved.
      */
     resolveOneLevelOfDefines(content) {
-        const openBracePositions = [];
-        for (let i = 0; i < content.length - 1; i++) {
-            if (content.substring(i, i + 2) === "!{") {
-                openBracePositions.push(i);
-                i++;
-            }
-        }
-        if (openBracePositions.length === 0) {
-            return this.resolveRegularDefines(content);
-        }
-        const lastOpenBracePos = openBracePositions[openBracePositions.length - 1];
-        let nestLevel = 1;
-        let closingBracePos = -1;
-        for (let i = lastOpenBracePos + 2; i < content.length; i++) {
-            if (i < content.length - 1 && content.substring(i, i + 2) === "!{") {
-                nestLevel++;
-                i++;
-            }
-            else if (content[i] === "}") {
-                nestLevel--;
-                if (nestLevel === 0) {
-                    closingBracePos = i;
-                    break;
+        const template = this.template(content, "none");
+        let selected;
+        const visit = (parts) => {
+            for (const part of parts) {
+                if (part.kind === "error") {
+                    throw new Error(`Mismatched braces in content: ${content}`);
+                }
+                if (part.kind === "define" && part.braced) {
+                    selected = part;
+                    visit(part.children);
                 }
             }
+        };
+        visit(template.parts);
+        if (!selected) {
+            return this.resolveRegularDefines(content);
         }
-        if (closingBracePos === -1) {
-            throw new Error(`Mismatched braces in content: ${content}`);
-        }
-        const braceContent = content.substring(lastOpenBracePos + 2, closingBracePos);
-        if (braceContent.includes("!{")) {
-            const resolvedInnerContent = this.resolveOneLevelOfDefines(braceContent);
-            return (content.substring(0, lastOpenBracePos + 2) +
-                resolvedInnerContent +
-                content.substring(closingBracePos));
-        }
-        const replacement = this.host.defines.has(braceContent)
-            ? (this.host.defines.get(braceContent) ?? braceContent)
-            : braceContent;
-        return (content.substring(0, lastOpenBracePos) + replacement + content.substring(closingBracePos + 1));
+        const value = this.host.defines.get(selected.name) ?? selected.name;
+        return fragmentText(bindSourceFragment(sourceFragment(content), [
+            { start: selected.start, end: selected.end, value: sourceFragment(value) },
+        ]));
     }
     /**
      * Resolves regular defines in a string.
@@ -166,31 +183,23 @@ export class DefineEngine {
      * @returns {string} The processed content with regular defines resolved.
      */
     resolveRegularDefines(content) {
-        let result = "";
-        let index = 0;
-        let foundDefine = false;
-        while (index < content.length) {
-            if (content.substring(index).startsWith("!") &&
-                index + 1 < content.length &&
-                /\w/.test(content[index + 1])) {
-                index++;
-                let defineName = "";
-                while (index < content.length && /\w/.test(content[index])) {
-                    defineName += content[index++];
-                }
-                if (this.host.defines.has(defineName)) {
-                    result += this.host.defines.get(defineName);
-                    foundDefine = true;
-                }
-                else {
-                    throw new Error(`Define '${defineName}' not found.`);
-                }
+        return fragmentText(this.resolveRegularFragment(sourceFragment(content)));
+    }
+    /** Bind only unbraced defines, preserving string/resource grammar and physical contributors. */
+    resolveRegularFragment(fragment) {
+        const template = this.template(fragmentText(fragment), "none");
+        const regular = {
+            ...template,
+            parts: template.parts.filter((part) => part.kind === "define" && !part.braced),
+        };
+        return bindDefineTemplate(regular, fragment, (part) => {
+            const value = this.host.defines.get(part.name);
+            if (value === undefined) {
+                throw new Error(`Define '${part.name}' not found.`);
             }
-            else {
-                result += content[index++];
-            }
-        }
-        return foundDefine ? result : content;
+            const origin = this.origins.get(part.name);
+            return sourceFragment(value, origin ? [origin] : []);
+        });
     }
     /**
      * Resolves defines in a string literal.
@@ -198,53 +207,19 @@ export class DefineEngine {
      * @returns {string} The processed content with defines in string literal resolved.
      */
     resolveDefinesInStringLiteral(content) {
-        let result = "";
-        let index = 0;
-        while (index < content.length) {
-            const char = content[index];
-            if (char === "\\") {
-                const nextIndex = index + 1;
-                const next = nextIndex < content.length ? content[nextIndex] : undefined;
-                if (next === undefined) {
-                    result += "\\";
-                    index++;
-                    continue;
-                }
-                if (next === "!") {
-                    result += "!";
-                    index += 2;
-                    while (index < content.length && /\w/.test(content[index])) {
-                        result += content[index];
-                        index++;
-                    }
-                    continue;
-                }
-                if (next === "\\") {
-                    result += "\\";
-                    index += 2;
-                    continue;
-                }
-                result += next;
-                index += 2;
-                continue;
+        const template = this.template(content, "string");
+        // String-literal binding resolves ordinary defines only; braced syntax retains its spelling.
+        const regular = {
+            ...template,
+            parts: template.parts.filter((part) => part.kind === "escape" || (part.kind === "define" && !part.braced)),
+        };
+        return fragmentText(bindDefineTemplate(regular, sourceFragment(content), (part) => {
+            const value = this.host.defines.get(part.name);
+            if (value === undefined) {
+                throw new Error(`Define '${part.name}' not found.`);
             }
-            if (char === "!" && index + 1 < content.length && /\w/.test(content[index + 1])) {
-                index++;
-                let defineName = "";
-                while (index < content.length && /\w/.test(content[index])) {
-                    defineName += content[index];
-                    index++;
-                }
-                if (!this.host.defines.has(defineName)) {
-                    throw new Error(`Define '${defineName}' not found.`);
-                }
-                result += this.host.defines.get(defineName);
-                continue;
-            }
-            result += char;
-            index++;
-        }
-        return result;
+            return sourceFragment(value);
+        }));
     }
     /**
      * Processes a value with braced defines.
@@ -252,38 +227,12 @@ export class DefineEngine {
      * @returns {string} The processed value with braced defines resolved.
      */
     processValueWithBracedDefines(value) {
-        let result = "";
-        let index = 0;
-        while (index < value.length) {
-            if (value.substring(index).startsWith("!{")) {
-                let braceContent = "";
-                index += 2;
-                let braceLevel = 1;
-                while (index < value.length && braceLevel > 0) {
-                    if (value[index] === "{") {
-                        braceLevel++;
-                    }
-                    else if (value[index] === "}") {
-                        braceLevel--;
-                    }
-                    if (braceLevel === 0) {
-                        break;
-                    }
-                    braceContent += value[index];
-                    index++;
-                }
-                if (braceLevel !== 0) {
-                    throw new Error(`Mismatched braces in value: ${value}`);
-                }
-                index++;
-                const resolvedIdentifier = this.processNestedDefines(braceContent);
-                result += `!{${resolvedIdentifier}}`;
-            }
-            else {
-                result += value[index++];
-            }
-        }
-        return result;
+        const template = this.template(value, "none");
+        const braced = {
+            ...template,
+            parts: template.parts.filter((part) => part.kind === "error" || (part.kind === "define" && part.braced)),
+        };
+        return fragmentText(bindDefineTemplate(braced, sourceFragment(value), (part) => sourceFragment(`!{${this.processNestedDefines(part.name)}}`), `Mismatched braces in value: ${value}`));
     }
     /**
      * Applies a define operation.
@@ -291,7 +240,7 @@ export class DefineEngine {
      * @param {string} operator The operator to apply.
      * @param {string} initialValue The initial value to apply the operation to.
      */
-    applyDefineOperation(identifier, operator, initialValue) {
+    applyDefineOperation(identifier, operator, initialValue, source) {
         let value = initialValue;
         if (value.includes("!{")) {
             if (!value.includes("FF") && !value.includes("$")) {
@@ -346,6 +295,14 @@ export class DefineEngine {
             catch { }
         }
         this.host.defines.set(identifier, value);
+        if (source) {
+            this.origins.set(identifier, {
+                file: source.file,
+                line: source.line,
+                span: source.span,
+                text: source.text ?? source.raw,
+            });
+        }
         this.host.recordSymbolDefinition("define", identifier, {
             value,
             containerName: this.host.currentNamespace || undefined,
@@ -356,17 +313,7 @@ export class DefineEngine {
      * @param {string} command The normalized undef command.
      */
     applyUndefOperation(command) {
-        const match = command.match(/^undef\s+(.+)$/i);
-        if (!match) {
-            throw new Error("undef requires exactly one identifier parameter");
-        }
-        const raw = match[1].trim();
-        const unquoted = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
-        const identifier = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
-        if (!identifier) {
-            throw new Error("undef requires a non-empty identifier");
-        }
-        this.host.defines.delete(identifier);
+        this.handleDefineCommand(command);
     }
 }
 //# sourceMappingURL=define-engine.js.map

@@ -205,7 +205,6 @@ const minimalManifest = (): AnalysisProjectManifest => ({
   },
   mapping: { mapper: "fuzz", source: "override", candidates: [] },
   addressSpaces: [{ id: "rom.file", name: "ROM", addressBits: 24, kind: "file" }],
-  shards: [],
   db: "analysis.sqlite",
 });
 

@@ -5,7 +5,7 @@ import type { RuntimeEvidenceRecord } from "../model/project-types.js";
 import { isFiniteNumber, isRecord } from "../model/record-shape.js";
 import { parseSqlitePayload } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
-import { runtimeFromRow } from "./sqlite-records.js";
+import { runtimeInstructionFields, runtimeFromRow } from "./sqlite-records.js";
 import { runtimeIdentityKey } from "./sqlite-runtime-facts.js";
 
 /** Masks affect grouping only. The representative keeps its original, unmasked register values. */
@@ -20,18 +20,27 @@ const BUILD = "instruction_variants_build";
 const INVALIDATE = `DELETE FROM query_cache WHERE name IN ('${KEY}','${BUILD}');`;
 
 /**
- * Order compact references before fetching payloads. LIMIT prevents subquery flattening and CROSS
- * JOIN keeps its coroutine outermost, so the sorter never receives complete register/provenance rows.
- * Address/evidence/key order preserves decoder tie-breaking even when new keys get larger IDs.
+ * Decode each shared representative fact once in storage order. GROUP BY receives only integer
+ * references; LIMIT and CROSS JOIN keep history payloads outside the compact sort. The TEMP table
+ * is keyed by ascending fact ID, avoiding random writes of large, provenance-expanded records.
  */
-export const RUNTIME_SUMMARY_ROWS_SQL = `SELECT i.value AS id,f.kind,f.architecture,f.address_space,f.address,
-    grouped.total AS count,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload,
-    p.value AS id_prefix,e.value AS evidence
-  FROM (SELECT s.sample,s.total FROM query_runtime_variant_sources s
-    JOIN query_runtime_variant_keys k ON k.id=s.variant
-    ORDER BY k.address,s.evidence,k.key LIMIT -1) grouped
-  CROSS JOIN runtime_observations o ON o.oid=grouped.sample
-  CROSS JOIN runtime_facts f ON f.fid=o.fact_id
+export const RUNTIME_SUMMARY_ROWS_SQL = `SELECT f.fid,
+    CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
+  FROM (SELECT o.fact_id
+    FROM query_runtime_variant_sources s
+    CROSS JOIN runtime_observations o ON o.oid=s.sample
+    GROUP BY o.fact_id ORDER BY o.fact_id LIMIT -1) grouped
+  CROSS JOIN runtime_facts f ON f.fid=grouped.fact_id`;
+
+/** Restore the historical address/evidence/key tie-breaking while sorting only sample references. */
+const ORDERED_STAGED_ROWS_SQL = `SELECT i.value AS id,f.kind,f.architecture,f.address_space,f.address,
+    ordered.total AS count,rows.payload,p.value AS id_prefix,e.value AS evidence
+  FROM (SELECT s.sample,s.total FROM query_runtime_variant_keys k
+    CROSS JOIN query_runtime_variant_sources s ON s.variant=k.id
+    ORDER BY k.address,s.evidence,k.key LIMIT -1) ordered
+  CROSS JOIN runtime_observations o ON o.oid=ordered.sample
+  CROSS JOIN runtime_fact_locations f ON f.fid=o.fact_id
+  CROSS JOIN temp.runtime_summary_rows rows ON rows.fact=o.fact_id
   LEFT JOIN runtime_identities i ON i.iid=o.identity_id
   LEFT JOIN runtime_prefixes p ON p.id=o.prefix_id
   LEFT JOIN runtime_evidence e ON e.id=o.evidence_id`;
@@ -102,16 +111,19 @@ const installSummary = (db: DatabaseSync): void => {
 };
 
 /** Stream compact keys, counts and representatives without a blocking sort or aggregate.
- * Pending IDs drive incremental joins so an append does not scan unrelated captures or shared facts.
+ * Pending IDs drive incremental joins so an append does not scan unrelated observations. Sort only
+ * their compact coordinates by fact ID before decoding, reusing shared compressed history blocks.
  * A full rebuild walks observation storage order to retain locality in compressed history blocks.
  * @param {boolean} incremental Whether to select pending observations instead of all history.
  * @returns {string} Input cursor SQL binding architecture and address space, in that order.
  */
 export const runtimeSummaryInputSql = (incremental: boolean): string => {
   const from = incremental
-    ? `query_runtime_variant_pending pending
+    ? `(SELECT o.fact_id,o.evidence_id,o.count,o.oid FROM query_runtime_variant_pending pending
       CROSS JOIN runtime_observations o ON o.oid=pending.oid
-      CROSS JOIN runtime_facts f ON f.fid=o.fact_id`
+      CROSS JOIN runtime_fact_locations f ON f.fid=o.fact_id
+      WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?
+      ORDER BY o.fact_id LIMIT -1) o CROSS JOIN runtime_facts f ON f.fid=o.fact_id`
     : // The address index visits the same compressed history blocks repeatedly, once per observed PC.
       // A sequential physical scan trades coordinate filtering for bounded, reusable decoder buffers;
       // payload decoding still happens only after the architecture/kind predicate. Appends stay indexed.
@@ -120,7 +132,7 @@ export const runtimeSummaryInputSql = (incremental: boolean): string => {
       CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
       o.evidence_id AS evidence,o.count AS total,o.oid AS sample
     FROM ${from}
-    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?`;
+    ${incremental ? "" : "WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?"}`;
 };
 
 /** Normalize only decoder inputs, preserving aliases, invalid values, null and missing fields.
@@ -177,7 +189,7 @@ const isCurrent = (db: DatabaseSync, signature: string): boolean =>
  * ordinary appends aggregate only pending observations. Temporary grouping holds a read snapshot,
  * then a short write publishes only if no input or competing builder changed its ownership token.
  * Failure, cancellation by connection close, or process death leaves the base/pending work retryable.
- * Consume the returned cursor inside the caller's read transaction, after preparation completes.
+ * The cursor reuses an existing read transaction or owns one until it closes.
  * @param {DatabaseSync} db Owned current-format project connection.
  * @param {Transaction} transaction Store transaction wrapper; write defaults to true.
  * @param {string} architecture Exact target processor ID.
@@ -185,6 +197,8 @@ const isCurrent = (db: DatabaseSync, signature: string): boolean =>
  * @param {readonly string[]} fields Ordered decoder fields; other registers remain in full evidence.
  * @param {StateMasks} masks Grouping-only masks for valid numeric fields.
  * @param {Function} [onProgress] Cumulative and total observations in this build snapshot; throwing aborts it.
+ * @param {Function} [onReadProgress] Representatives staged so far; throwing releases TEMP rows and aborts reading.
+ * @param {Function} [resetSnapshot] Clear connection-owned codec/dictionary caches at owned snapshot boundaries.
  * @returns {IterableIterator<RuntimeEvidenceRecord>} One representative per decoder key and evidence list.
  */
 export const runtimeInstructionSummary = (
@@ -195,6 +209,8 @@ export const runtimeInstructionSummary = (
   fields: readonly string[],
   masks: StateMasks,
   onProgress?: (observations: number, totalObservations: number) => void,
+  onReadProgress?: (representatives: number) => void,
+  resetSnapshot?: () => void,
 ): IterableIterator<RuntimeEvidenceRecord> => {
   if (fields.some((field) => !/^\w+$/.test(field))) {
     throw new Error("Invalid instruction state field.");
@@ -310,22 +326,68 @@ export const runtimeInstructionSummary = (
       throw cleanupError;
     }
   }
+  const transactionActive = (): boolean => db.isTransaction;
   return (function* () {
-    if (!isCurrent(db, signature)) {
-      throw new Error("Runtime changed before reading instruction variants. Retry reanalysis.");
+    // A standalone cursor needs the same snapshot across staging and ordered hydration. Joining
+    // fresh main rows after the staging SELECT ends could otherwise mix counts or drop new facts.
+    const ownsSnapshot = !transactionActive();
+    if (ownsSnapshot) {
+      resetSnapshot?.();
+      db.exec("BEGIN");
     }
-    const rows = db.prepare(RUNTIME_SUMMARY_ROWS_SQL);
-    for (const row of rows.iterate()) {
-      const record = runtimeFromRow(row);
-      if (record.kind !== "runtime-instruction") {
-        throw new Error("Invalid instruction summary representative.");
+    try {
+      if (!isCurrent(db, signature)) {
+        throw new Error("Runtime changed before reading instruction variants. Retry reanalysis.");
       }
-      yield {
-        ...record,
-        state: Object.fromEntries(
-          Object.entries(record.state).filter(([key]) => fields.includes(key)),
-        ),
-      };
+      // Decoder order is deliberately unrelated to history storage order. Stage only the selected,
+      // unmasked fields on disk; sorting hydrated histories would retain native buffers and thrash
+      // the bounded history cache. Each next() releases SQLite's temporary buffer handles.
+      db.exec(
+        "CREATE TEMP TABLE runtime_summary_rows(fact INTEGER PRIMARY KEY,payload TEXT NOT NULL)",
+      );
+      try {
+        let staged = 0;
+        const insert = db.prepare("INSERT INTO temp.runtime_summary_rows VALUES(?,?)");
+        for (const row of db.prepare(RUNTIME_SUMMARY_ROWS_SQL).iterate()) {
+          const parsed = parseSqlitePayload(row.payload);
+          const record = runtimeInstructionFields(isRecord(parsed) ? parsed : undefined);
+          insert.run(
+            row.fid,
+            JSON.stringify({
+              ...record,
+              state: Object.fromEntries(
+                Object.entries(record.state).filter(([key]) => fields.includes(key)),
+              ),
+            }),
+          );
+          staged++;
+          if (staged % 4096 === 0) {
+            onReadProgress?.(staged);
+          }
+        }
+        onReadProgress?.(staged);
+        for (const row of db.prepare(ORDERED_STAGED_ROWS_SQL).iterate()) {
+          const record = runtimeFromRow(row);
+          if (record.kind !== "runtime-instruction") {
+            throw new Error("Invalid instruction summary representative.");
+          }
+          yield record;
+        }
+      } finally {
+        db.exec("DROP TABLE IF EXISTS temp.runtime_summary_rows");
+      }
+    } finally {
+      // TEMP rows belong only to this cursor. Release its snapshot and transaction-local codec
+      // caches on success, error or early return, including when SQLite already rolled it back.
+      if (ownsSnapshot) {
+        try {
+          if (transactionActive()) {
+            db.exec("ROLLBACK");
+          }
+        } finally {
+          resetSnapshot?.();
+        }
+      }
     }
   })();
 };

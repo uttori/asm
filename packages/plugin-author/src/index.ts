@@ -1,6 +1,12 @@
 import type { DecodedInstruction } from "@uttori/asm-core";
-import { definePlugin, PLUGIN_API_VERSION, type AssemblerPlugin } from "@uttori/asm-core/plugin";
+import {
+  definePlugin,
+  parseInstructionOperands,
+  PLUGIN_API_VERSION,
+  type AssemblerPlugin,
+} from "@uttori/asm-core/plugin";
 
+/** Encoder/decoder share one configured opcode; defaults to $42 and accepts integers in [0, 255]. */
 interface ExampleOptions {
   readonly byte: number;
 }
@@ -14,13 +20,19 @@ const plugin: AssemblerPlugin<ExampleOptions> = definePlugin({
     description: "A minimal raw-binary target for the Uttori ASM plugin author guide.",
   },
   validateOptions(configured) {
-    const value =
-      typeof configured === "object" &&
-      configured !== null &&
-      "byte" in configured &&
-      typeof configured.byte === "number"
-        ? configured.byte
-        : 0x42;
+    // Defaults apply only to omitted options; malformed explicit values must not silently change output.
+    let value = 0x42;
+    if (configured !== undefined) {
+      if (typeof configured !== "object" || configured === null || Array.isArray(configured)) {
+        throw new Error("options must be an object");
+      }
+      if ("byte" in configured) {
+        if (typeof configured.byte !== "number") {
+          throw new Error("byte must be an unsigned byte");
+        }
+        value = configured.byte;
+      }
+    }
     if (!Number.isInteger(value) || value < 0 || value > 0xff) {
       throw new Error("byte must be an unsigned byte");
     }
@@ -40,11 +52,22 @@ const plugin: AssemblerPlugin<ExampleOptions> = definePlugin({
       aliases: ["byte"],
       displayName: "Example one-byte architecture",
       unknownInstructionBehavior: "throw",
-      splitOperands: (text) => (text ? [text] : []),
-      classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
-      createEncoder: ({ emission }) => ({
-        estimateSize: () => 1,
-        encode: () => {
+      operandGrammar: {
+        version: "1",
+        parse: (mnemonic, text) =>
+          parseInstructionOperands(mnemonic, text, {
+            registers: [],
+            indexRegisters: [],
+            commaIndex: false,
+          }),
+      },
+      createTypedEncoder: () => ({
+        estimate: (frame) => {
+          frame.choose("byte", 1);
+          return 1;
+        },
+        encode: (frame, { emission }) => {
+          frame.choose("byte", 1);
           emission.writeByte(context.options.byte);
           return true;
         },
@@ -133,11 +156,16 @@ const plugin: AssemblerPlugin<ExampleOptions> = definePlugin({
           id: "example.mark",
           keywords: ["mark"],
           phase: "lowered",
-          createHandler:
-            ({ state: sessionState }) =>
-            () => {
-              sessionState.get(state).marks++;
-            },
+          syntax: {
+            version: "1",
+            parse: () => null,
+            validate: (payload) => payload === null,
+            bind: ({ state: sessionState }) => ({
+              execute: () => {
+                sessionState.get(state).marks++;
+              },
+            }),
+          },
           tooling: [
             {
               keyword: "mark",

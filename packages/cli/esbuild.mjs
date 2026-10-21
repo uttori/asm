@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { build as esbuild } from "esbuild";
 
-import { withBundleNotices } from "../../scripts/bundle-notices.mjs";
+import { withBundleNotices, pruneRuntimeOutputs } from "../../scripts/bundle-notices.mjs";
 
 const build = withBundleNotices(esbuild);
 
@@ -25,3 +25,5 @@ await build({
 });
 
 chmodSync(outfile, 0o755);
+
+pruneRuntimeOutputs(path.join(here, "out"));

@@ -43,11 +43,7 @@ test("activation accepts decoder-only architectures and rejects malformed option
                 id: "fixture.decoder-cpu",
                 displayName: "Decoder CPU",
                 unknownInstructionBehavior: "throw" as const,
-                splitOperands: () => [],
-                classifyOperand: (
-                  { operands }: { operands: { lowerOperand(operand: string): string } },
-                  operand: string,
-                ) => operands.lowerOperand(operand),
+                operandGrammar: { version: "1", parse: () => ({ operands: [] }) },
                 createDecoder: malformed
                   ? 42
                   : () => ({
@@ -74,7 +70,7 @@ test("activation accepts decoder-only architectures and rejects malformed option
       } else {
         await activation;
         const architecture = manager.freeze().getArchitecture("fixture.decoder-cpu");
-        t.is(architecture?.createEncoder, undefined);
+        t.is(architecture?.createTypedEncoder, undefined);
         t.truthy(architecture?.createDecoder);
       }
     } finally {
@@ -137,7 +133,7 @@ test("plugin manager validates module default exports and API versions", async (
               id: "fixture.incompatible",
               name: "Incompatible",
               version: "1.0.0",
-              apiVersion: 2,
+              apiVersion: 1,
             },
             activate() {},
           },
@@ -343,7 +339,12 @@ test("target freezing rejects alias, directive, expression, and reference collis
                 id: "fixture.directive.collision",
                 keywords: ["fixturebyte"],
                 phase: "lowered",
-                createHandler: () => () => undefined,
+                syntax: {
+                  version: "1",
+                  parse: () => null,
+                  validate: (payload) => payload === null,
+                  bind: () => ({ execute: () => undefined }),
+                },
                 tooling: [],
               },
             ],
@@ -441,9 +442,17 @@ test("target and architecture aliases fail with owner-rich diagnostics", async (
       aliases: ["fixture-cpu"],
       displayName: "Second CPU",
       unknownInstructionBehavior: "throw",
-      splitOperands: () => [],
-      classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
-      createEncoder: () => ({ estimateSize: () => 0, encode: () => true }),
+      operandGrammar: { version: "1", parse: () => ({ operands: [] }) },
+      createTypedEncoder: () => ({
+        estimate: (frame) => {
+          frame.choose("fixture", 0);
+          return 0;
+        },
+        encode: (frame) => {
+          frame.choose("fixture", 0);
+          return true;
+        },
+      }),
       instructions: [],
     });
     context.registerTarget({

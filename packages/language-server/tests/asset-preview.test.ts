@@ -13,7 +13,8 @@ import { nesChrPng } from "@uttori/asm-plugin-65xx";
 import { test } from "../../../tests/ava-helper.js";
 import { spriteFixture } from "../../../tests/fixtures/sprite-source.js";
 import { assetCallContainingLine } from "../src/asset-language.js";
-import { convertAssetPreview } from "../src/asset-preview-conversion.js";
+import { convertAssetPreview as convertRegisteredPreview } from "../src/asset-preview-conversion.js";
+import { convertAssetPreview } from "../src/asset-preview-host.js";
 import { supportsPortableAssetPreview } from "../src/asset-preview-service.js";
 
 function isPcmAudio(value: unknown): value is PcmAudio {
@@ -505,4 +506,31 @@ test("SoM room preview validates section output and responds to edited room plac
   t.throws(() => convertAssetPreview({ ...input, output: "missing" }), {
     message: /Unknown room output/,
   });
+});
+
+test("independent game preview registration receives bytes without publication authority", (t) => {
+  const input = {
+    format: "second-game.pixels",
+    source: { bytes: Uint8Array.of(1, 2) },
+    resources: {},
+    options: {},
+  };
+  const adapter = {
+    formats: ["second-game.pixels"],
+    convert: (value: typeof input) => ({
+      kind: "binary" as const,
+      sourceBytes: value.source.bytes.length,
+      encodedBytes: 2,
+      format: value.format,
+      output: "native",
+    }),
+  };
+  t.deepEqual(convertRegisteredPreview(input, [adapter]), {
+    kind: "binary",
+    sourceBytes: 2,
+    encodedBytes: 2,
+    format: "second-game.pixels",
+    output: "native",
+  });
+  t.throws(() => convertRegisteredPreview(input, [adapter, adapter]), { message: /Ambiguous/ });
 });

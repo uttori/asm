@@ -8,10 +8,9 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import { decompressSomLz } from "@uttori/asm-assets/secret-of-mana/lz";
-import { sourceContentHash } from "@uttori/asm-disassembler";
+import { recoverCaptureFile, validateCapturePosition } from "@uttori/asm-capture";
+import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
 
-import { recoverCaptureFile } from "../../../debug-adapter/src/capture-file.ts";
-import { validateCapturePosition } from "../../../debug-adapter/src/capture-v2.ts";
 import { GdbRspClient } from "../../../debug-sidecar-ares/src/gdb-rsp-client.ts";
 import { NodeTcpGdbRspTransport } from "../../../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts";
 
