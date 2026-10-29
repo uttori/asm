@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync, type StatementSync } from "node:sqlite";
@@ -14,6 +14,7 @@ import {
   type ProjectEvidenceExplanation,
 } from "../analysis/project-evidence.js";
 import { TraceCache, type TraceIndexMetrics } from "../internal/trace-cache.js";
+import { EvidencePool } from "../model/evidence-pool.js";
 import {
   ANALYSIS_PROJECT_MANIFEST,
   type AnalysisProjectManifest,
@@ -39,6 +40,12 @@ import {
   type ResearchSnapshot,
   type ResearchCollection,
 } from "../research-inputs/inputs.js";
+import {
+  SNES_ANALYSIS_TRACE_PROFILE,
+  SNES_ANALYSIS_STATE_FIELDS,
+  SNES_ANALYSIS_STATE_MASKS,
+  snesAnalysisTraceState,
+} from "../runtime/runtime-analysis-profile.js";
 import {
   mergeRuntimeEvidence,
   inspectRuntimeEvidence,
@@ -394,6 +401,8 @@ const sqliteFileIdentity = (file: string): string => {
  * automatically. WAL readers can retain old snapshots and delay checkpoint/truncation.
  */
 export class SqliteAnalysisStore {
+  /** Connection-scoped sharing bounds repeated provenance allocation in metadata query views. */
+  readonly #evidencePool = new EvidencePool();
   readonly #database: DatabaseSync;
   readonly #fileIdentity: string;
   /** Block cache is owned by this connection and reset on commit, rollback, and snapshot entry. */
@@ -1420,7 +1429,11 @@ export class SqliteAnalysisStore {
     for (const row of this.#database
       .prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`)
       .iterate()) {
-      records.push(requireMetadataRecord(kind, parseRecord(row.payload)));
+      const record = requireMetadataRecord(kind, parseRecord(row.payload));
+      if ("evidence" in record) {
+        Object.assign(record, { evidence: this.#evidencePool.intern(record.evidence) });
+      }
+      records.push(record);
     }
     return records;
   }
@@ -1954,6 +1967,7 @@ export class SqliteAnalysisStore {
    */
   runtimeExecutionSeeds(architecture: string, space: string): RuntimeEvidenceRecord[] {
     const seeds = new Map<number, { count: number; evidence: Set<string> }>();
+    const evidenceById = new Map<number, readonly string[]>();
     for (const row of this.#database
       .prepare(`SELECT r.address,SUM(r.count) AS count,r.evidence_id,e.value AS evidence FROM runtime r JOIN runtime_evidence e ON e.id=r.evidence_id
       WHERE r.kind='runtime-execution' AND r.architecture=? AND r.address_space=? GROUP BY r.address,r.evidence_id`)
@@ -1961,11 +1975,17 @@ export class SqliteAnalysisStore {
       const address = Number(row.address);
       const seed = seeds.get(address) ?? { count: 0, evidence: new Set<string>() };
       seed.count += Number(row.count);
-      const parsedEvidence: unknown = JSON.parse(String(row.evidence));
-      if (!isStringArray(parsedEvidence)) {
-        throw new Error("Invalid runtime evidence list.");
+      const evidenceId = Number(row.evidence_id);
+      let evidence = evidenceById.get(evidenceId);
+      if (!evidence) {
+        const parsed: unknown = JSON.parse(String(row.evidence));
+        if (!isStringArray(parsed)) {
+          throw new Error("Invalid runtime evidence list.");
+        }
+        evidence = this.#evidencePool.intern(parsed);
+        evidenceById.set(evidenceId, evidence);
       }
-      for (const id of parsedEvidence) {
+      for (const id of evidence) {
         seed.evidence.add(id);
       }
       seeds.set(address, seed);
@@ -1979,7 +1999,7 @@ export class SqliteAnalysisStore {
         addressSpace: space,
         address,
         count: seed.count,
-        evidence: [...seed.evidence].toSorted(),
+        evidence: this.#evidencePool.sorted([...seed.evidence]),
       }));
   }
 
@@ -2390,7 +2410,10 @@ export class SqliteAnalysisStore {
   /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
   compact(): void {
     const disk = fs.statfsSync(path.dirname(this.file));
-    const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
+    // VACUUM copies live pages, not the high-water allocation left by retired runtime tables.
+    const pageCount =
+      Number(this.#database.prepare("PRAGMA page_count").get()?.page_count) -
+      Number(this.#database.prepare("PRAGMA freelist_count").get()?.freelist_count);
     const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
     if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
       throw new Error(
@@ -2407,6 +2430,234 @@ export class SqliteAnalysisStore {
       `);
     });
     this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
+    // WAL-mode VACUUM shrinks the main file only after its replacement pages checkpoint.
+    const checkpoint = this.#database.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get();
+    if (Number(checkpoint?.busy ?? 0) !== 0) {
+      throw new Error(
+        "Compacted pages are committed; active readers delayed reclamation. Close readers and retry compaction.",
+      );
+    }
+  }
+
+  /**
+   * Explicitly consolidate full SNES snapshots into counted decoder variants. A bounded staging
+   * database is verified first; one transaction swaps physical runtime tables, avoiding millions
+   * of deletion triggers and a database-sized WAL. Metadata, memory facts and research shadows
+   * retain their exact payloads. Refresh the portable capture catalog and compact() afterward.
+   */
+  retainSnesAnalysisEvidence(onProgress?: (message: string) => void): void {
+    const manifest = this.manifest();
+    if (manifest.target !== "snes.sfc") {
+      throw new Error("Analysis retention currently requires a SNES project.");
+    }
+    const variants = this.runtimeInstructionVariants(
+      "snes.65816",
+      "snes.cpu",
+      SNES_ANALYSIS_STATE_FIELDS,
+      SNES_ANALYSIS_STATE_MASKS,
+      (processed, total) =>
+        onProgress?.(`Grouping ${processed}/${total} instruction observations.`),
+    );
+    const staging = path.join(
+      path.dirname(this.file),
+      `.analysis-retention-${randomUUID()}.sqlite`,
+    );
+    let target: SqliteAnalysisStore | undefined;
+    const lifecycle = { attached: false };
+    const retainedSources = new Set<string>();
+    const secureDelete = Number(
+      this.#database.prepare("PRAGMA secure_delete").get()?.secure_delete,
+    );
+    try {
+      target = new SqliteAnalysisStore(staging);
+      const destination = target;
+      // Finished tables receive a foreign-key check before COMMIT. Disabling implicit DROP TABLE
+      // deletes avoids traversing the old history; rollback still protects all original pages.
+      // Retired pages are reclaimed by the following VACUUM. Zeroing every page during DROP
+      // would first write the entire retired history into WAL, defeating low-space maintenance.
+      this.#database.exec("PRAGMA foreign_keys=OFF; PRAGMA secure_delete=OFF");
+      this.transaction(() => {
+        destination.transaction(() => {
+          destination.publishManifest(manifest);
+          const batch = new SqliteRuntimeTraceBatch(
+            destination.#database,
+            undefined,
+            (table, value) => destination.#intern(table, value),
+          );
+          let count = 0;
+          let total = 0;
+          for (const sample of variants) {
+            if (sample.kind !== "runtime-instruction") {
+              throw new Error("Invalid retained instruction representative.");
+            }
+            const match = /^(runtime:instruction-trace:[\da-f]{64}):code:[\da-f]{64}$/.exec(
+              sample.id,
+            );
+            if (!match) {
+              throw new Error(
+                "Cannot consolidate instructions outside a canonical capture namespace.",
+              );
+            }
+            const state = snesAnalysisTraceState(sample.state);
+            retainedSources.add(match[1].slice("runtime:instruction-trace:".length));
+            const identity = createHash("sha256")
+              .update(
+                JSON.stringify(
+                  {
+                    address: sample.address,
+                    bytes: sample.bytes,
+                    state,
+                  },
+                  undefined,
+                  2,
+                ) + "\n",
+              )
+              .digest("hex");
+            batch.add({ ...sample, state, id: `${match[1]}:code:${identity}` });
+            batch.add({
+              ...sample,
+              state,
+              id: `${match[1]}:state:${identity}`,
+              kind: "runtime-cpu-state",
+            });
+            total += sample.count;
+            if (++count % 10000 === 0) {
+              onProgress?.(`Retained ${count} counted instruction variants.`);
+            }
+          }
+          batch.finish();
+          // Only the selected SNES instruction pairs are replaced. Stream both logical branches
+          // for other processors, preserving their original paired states and independent facts.
+          const retained =
+            "(d.kind!='runtime-instruction' OR d.architecture!='snes.65816' OR d.address_space!='snes.cpu')";
+          let copied = 0;
+          for (const [index, stream] of RUNTIME_RECORD_STREAM_SQL.entries()) {
+            const order = index === 0 ? "ORDER BY o.oid DESC" : "ORDER BY o.oid ASC";
+            const condition = index === 0 ? `AND ${retained}` : `WHERE ${retained}`;
+            const sql = stream
+              .replace(
+                "FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id",
+                `FROM runtime_descriptors d CROSS JOIN runtime_fact_rows owners ON owners.descriptor_id=d.did
+               CROSS JOIN runtime_facts f ON f.fid=owners.fid
+               CROSS JOIN runtime_observations o ON o.fact_id=f.fid`,
+              )
+              .replace(order, condition);
+            for (const row of this.#database.prepare(sql).iterate()) {
+              destination.#insertRecord("runtime", runtimeFromRow(row));
+              if (++copied % 10000 === 0) {
+                onProgress?.(
+                  `Preserved ${copied} execution, memory and independent state records.`,
+                );
+              }
+            }
+          }
+          const written = destination.#database
+            .prepare(`SELECT SUM(o.count) AS n
+            FROM runtime_descriptors d CROSS JOIN runtime_fact_rows f ON f.descriptor_id=d.did
+            CROSS JOIN runtime_observations o ON o.fact_id=f.fid WHERE d.kind='runtime-instruction'
+            AND d.architecture='snes.65816' AND d.address_space='snes.cpu'`)
+            .get();
+          if (Number(written?.n ?? 0) !== total) {
+            throw new Error("Compact instruction observation totals do not match.");
+          }
+        });
+        destination.#database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+        if (
+          destination.#database.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok" ||
+          destination.#database.prepare("PRAGMA foreign_key_check").get()
+        ) {
+          throw new Error("Retention staging database failed integrity validation.");
+        }
+        destination.close();
+        target = undefined;
+        this.#database.prepare("ATTACH DATABASE ? AS retained").run(staging);
+        lifecycle.attached = true;
+        onProgress?.("Publishing compact runtime tables atomically.");
+        // Query projections are disposable application-owned tables. Retire their invalidation
+        // triggers before replacement; their consumers rebuild from the retained observations.
+        for (const row of this.#database
+          .prepare(`SELECT name FROM sqlite_schema WHERE type='trigger'
+          AND (name GLOB 'cache_*' OR name GLOB 'query_*' OR name GLOB 'summary_*')`)
+          .all()) {
+          this.#database.exec(`DROP TRIGGER "${String(row.name).replaceAll('"', '""')}"`);
+        }
+        for (const row of this.#database
+          .prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name GLOB 'query_*'")
+          .all()) {
+          this.#database.exec(`DROP TABLE "${String(row.name).replaceAll('"', '""')}"`);
+        }
+        for (const row of this.#database
+          .prepare(`SELECT type,name FROM sqlite_schema WHERE
+          (type='view' AND name IN ('runtime','runtime_facts','runtime_fact_locations'))
+          OR (type='trigger' AND name GLOB 'runtime_*')`)
+          .all()) {
+          this.#database.exec(
+            `DROP ${String(row.type).toUpperCase()} IF EXISTS "${String(row.name).replaceAll('"', '""')}"`,
+          );
+        }
+        const tables = [
+          "runtime_observations",
+          "runtime_fact_rows",
+          "runtime_identities",
+          "runtime_descriptors",
+          "runtime_history",
+          "runtime_prefixes",
+          "runtime_evidence",
+        ];
+        for (const table of tables) {
+          this.#database.exec(`DROP TABLE ${table}`);
+        }
+        this.#database
+          .exec(`CREATE TABLE runtime_prefixes(id INTEGER PRIMARY KEY,value TEXT NOT NULL UNIQUE);
+          CREATE TABLE runtime_evidence(id INTEGER PRIMARY KEY,value TEXT NOT NULL UNIQUE);
+          ${RUNTIME_STORAGE_SCHEMA}`);
+        // Owners precede references, even while FK enforcement is deferred until verification.
+        for (const table of tables.toReversed()) {
+          this.#database.exec(`INSERT INTO ${table} SELECT * FROM retained.${table}`);
+        }
+        for (const sql of SCHEMA_INDEX_STATEMENTS) {
+          this.#database.exec(sql);
+        }
+        // Metadata columns survive, but their invalidation triggers were retired with the caches.
+        // Force the ordinary query preparer to reinstall the complete layout on its next use.
+        this.#database.exec("DELETE FROM meta WHERE k='annotation-query-layout'");
+        const reports = this.loadTable("imports").map((report) => {
+          if (
+            report.format !== "uttori-asm-instruction-trace" ||
+            !retainedSources.has(report.sourceSha256)
+          ) {
+            return report;
+          }
+          return Object.assign({}, report, { indexProfile: SNES_ANALYSIS_TRACE_PROFILE });
+        });
+        this.replaceTables({ imports: reports });
+        this.#database.exec(`UPDATE capture_catalog SET profile='${SNES_ANALYSIS_TRACE_PROFILE}'
+          WHERE sha256 IN (SELECT json_extract(analysis_json(payload),'$.sourceSha256') FROM imports
+          WHERE json_extract(analysis_json(payload),'$.indexProfile')='${SNES_ANALYSIS_TRACE_PROFILE}')`);
+        const current = this.researchInputsAreCurrent(this.researchInputsIdentity() ?? "");
+        const published = this.publishManifest(manifest);
+        if (current) {
+          this.#database
+            .prepare("UPDATE meta SET v=? WHERE k='research-index-revision'")
+            .run(String(published.revision));
+        }
+        this.#clearDictionaryCache();
+        if (this.#database.prepare("PRAGMA foreign_key_check").get()) {
+          throw new Error("Retained runtime tables failed foreign-key validation.");
+        }
+        onProgress?.("Validated compact runtime tables; committing retention publication.");
+      });
+    } finally {
+      target?.close();
+      if (lifecycle.attached) {
+        this.#database.exec("DETACH DATABASE retained");
+      }
+      this.#database.exec("PRAGMA foreign_keys=ON");
+      this.#database.exec(`PRAGMA secure_delete=${secureDelete}`);
+      for (const suffix of ["", "-wal", "-shm"]) {
+        fs.rmSync(`${staging}${suffix}`, { force: true });
+      }
+    }
   }
 
   /** Current persisted policy. Defaults do not write or change the semantic revision.

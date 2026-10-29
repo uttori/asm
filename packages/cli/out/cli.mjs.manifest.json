@@ -4,7 +4,7 @@
   "source": "packages/cli/src/index.ts",
   "target": "node26",
   "notices": "packages/cli/out/cli.mjs.licenses.txt",
-  "sha256": "88f3cdbf487a4edad56df50391bd984037d434883f614bbfb3e0fdac4d28b1e2",
+  "sha256": "f166482a9f7fef713d33246c721d29d0dad918a88b2b9187aede24b5a9b7e513",
   "noticesSha256": "3ad2806843abf5c1d35f576398def835844d5a0e3b20c14a267c9d79ef11c768",
   "inputs": [
     {
@@ -397,15 +397,15 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-atlas.ts",
-      "sha256": "97c5c4d943496d97f3b296d0fa7bef16875166e56502e6cbf7cc4c8780b91581"
+      "sha256": "a167db7aafe9e408d2c156597bd24822577aa65e70b7c04a262c30c0082ecbe3"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-composition.ts",
-      "sha256": "34a73703a34ca987721675088b82682d37653f9b150b6c0cdb3b21a5ed4c0377"
+      "sha256": "76266b1a324c87bbca3ad58d8bb32ff2285c0984359e75d8fe0ecf2e47eaa9b7"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-edit.ts",
-      "sha256": "fdf233c984648c792966ee720d860f1adf4658b4ce9102a7884d5998917cc33f"
+      "sha256": "11950974ddf22c3acfcd8583cf32960b8fd3bb24a108458496b6afcef3648abc"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-lz.ts",
@@ -413,7 +413,7 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-map-piece.ts",
-      "sha256": "598e0048e75ad860411bbf431817e676cec095af65b02c78e64a9d391a01f961"
+      "sha256": "4fe01d14e4add2eeec40882c4aaddd4a53e2b694cff5c7a2841b91ec8c81393f"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-observation-evidence.ts",
@@ -421,7 +421,7 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-palette-edit.ts",
-      "sha256": "fb0ff902d967a42bf4142bb1a4f0b61885540d3e803fe65150fc5bdee9e4b3ab"
+      "sha256": "741ec451e7974eae3612e56c202433bcc3bca8063e544fc6974dd33cc11568b3"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-room-assets.ts",
@@ -481,7 +481,7 @@
     },
     {
       "file": "packages/capture/src/capture-context.ts",
-      "sha256": "655acdeb2f90eed72f3e0098ba68b4d662fe42ee9204fd554c18fb5cf2b9ffa1"
+      "sha256": "c780b49a6672e00f288bda6e70c16acac7892cb74761946aac2a9d425b059927"
     },
     {
       "file": "packages/capture/src/capture-file-reader.ts",
@@ -529,7 +529,7 @@
     },
     {
       "file": "packages/cli/src/index.ts",
-      "sha256": "d16235ded06ca96f55705535324f1fe8498c1f01e886497ba1eae64dade1b0ee"
+      "sha256": "1c8089a6b1e4c7fd0047704bbdc27f0e2af8d31b8cc662d67a3d5d445f39392a"
     },
     {
       "file": "packages/cli/src/output-files.ts",
@@ -897,11 +897,11 @@
     },
     {
       "file": "packages/disassembler/src/analysis/static-analysis.ts",
-      "sha256": "ea03d07005cffaf48cfde70c1433de06708c21f288f4eaf633cd31e7eb263a81"
+      "sha256": "12be44af58ede9dfff51cbb2aa759bc87a6926acdd3f2b28bb9d4d8011b353b7"
     },
     {
       "file": "packages/disassembler/src/index.ts",
-      "sha256": "c85b3024fc8f25d6d571e7f22b5febc24e630cd19d5c9ac45aed7cdc35812c35"
+      "sha256": "1f742f37c1ddd8488c78d431ff60068b76a9d48882bc496c897ab51f464d79a5"
     },
     {
       "file": "packages/disassembler/src/internal/capture-limits.ts",
@@ -930,6 +930,10 @@
     {
       "file": "packages/disassembler/src/model/analysis-ownership.ts",
       "sha256": "c108554886e61d0f80025494e4acb93f174c6f72cc38f87293720266f96ba0e7"
+    },
+    {
+      "file": "packages/disassembler/src/model/evidence-pool.ts",
+      "sha256": "f7ebf2fbfc0ab6894a06e65f285b5f846e1bf18a8b126ed977bbb52cd4492781"
     },
     {
       "file": "packages/disassembler/src/model/metadata-validation.ts",
@@ -993,7 +997,7 @@
     },
     {
       "file": "packages/disassembler/src/project/project-transaction.ts",
-      "sha256": "4d8a9ad88c2f00a2236fea69f28fe8f701bb689033c1599c4aafc08a940f6bcb"
+      "sha256": "9bc14627c5933895bc2462d97785bac0ca3b3eea56fa7c03050254801b3db643"
     },
     {
       "file": "packages/disassembler/src/project/read-session.ts",
@@ -1036,6 +1040,10 @@
       "sha256": "64fd198dbd836b0292ed6d0d06859d0a92bf70022a03b149b24f224cbc8a301d"
     },
     {
+      "file": "packages/disassembler/src/runtime/runtime-analysis-profile.ts",
+      "sha256": "86548b0bbc9a122ac3f4280d8cb6adb517e22a6a8970357691a06a4f14f257fa"
+    },
+    {
       "file": "packages/disassembler/src/runtime/runtime-bus-trace.ts",
       "sha256": "ea11d6ec8a30a0de8512d05cea3b4b4e312e3bc47d1ee054675e265d4896eedf"
     },
@@ -1057,7 +1065,7 @@
     },
     {
       "file": "packages/disassembler/src/runtime/runtime-trace.ts",
-      "sha256": "47806b593562c0b3126af739ac34d0939ef4578647cf54731418c0b0703ce341"
+      "sha256": "ab8d8b4002b036df90b808c6f2524cb1630c2afa43ee3177f26c33b1c4b2d1b6"
     },
     {
       "file": "packages/disassembler/src/runtime/runtime-transfer.ts",
@@ -1085,7 +1093,7 @@
     },
     {
       "file": "packages/disassembler/src/source-project/captures.ts",
-      "sha256": "d6c96f813c38d108730ad55adf406d92bf9b6863c29f4c94e028e54090512294"
+      "sha256": "cbff409d3b6c26f5a9d3f51b37645ca009826b36de7799a0ef90b96ac3401f6f"
     },
     {
       "file": "packages/disassembler/src/source-project/code-preservation.ts",
@@ -1173,7 +1181,7 @@
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-runtime-batch.ts",
-      "sha256": "ec26e174fc919bf9877644086fb568ab531aa28ffb1e003ae1d20381ad3d4135"
+      "sha256": "3a2268d550ad13ecbdc2e15fe517261fa10f2effd4385a22d89d6663ce4d3bc4"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-runtime-facts.ts",
@@ -1209,7 +1217,7 @@
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-store.ts",
-      "sha256": "39a4d3e64ebb3c23789ed49a9f3b1083807b4f45d394b12cb8dd2c13862d704d"
+      "sha256": "8b16b6a257705edd91f6d966f1a0c58d55852d3cbabcf1bb5693a3e55e96e150"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-trace-stage.ts",
@@ -1517,7 +1525,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/65816-analysis.ts",
-      "sha256": "e84f8a5bc3e5d78bc641acb06bc95ddd34ff0efb93f1d09a0e4766ae82f693f7"
+      "sha256": "c58a00c47ecfd860072add7dbbb598c93fe30971106f742b5209374612caf1de"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/65816-state.ts",
@@ -1530,6 +1538,10 @@
     {
       "file": "packages/plugin-snes/src/disassembler/analysis-record-values.ts",
       "sha256": "4c1cb2712fe8a5bb0aacc7bd7cb56adfafba3ed8f3d61276da41dca452221e79"
+    },
+    {
+      "file": "packages/plugin-snes/src/disassembler/asset-requirements.ts",
+      "sha256": "95b516f29025d5b3265c1e3410a3ed9033af13a62a41d8553c0bf5388816fce3"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/code-preservation.ts",
@@ -1593,7 +1605,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/runtime-code.ts",
-      "sha256": "571b123ce03109c4943bd155e118d555d0a7e7102ab517ee2bb52515e458ee62"
+      "sha256": "fc33a3d1c9c652a97b5b01e7630f6ce081c78259e93502255b9aa1990a2d73ae"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-build.ts",
@@ -1601,7 +1613,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-export.ts",
-      "sha256": "e971cd12ccb4b294a708a6c39fc1b692d1f46a6715623503bc3732f430f92274"
+      "sha256": "0c03b903aa8eeaf564d721c72c09089e5f0d41b92e88572090a1d4cb5cb70a66"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-generation-blobs.ts",
@@ -1785,7 +1797,7 @@
     },
     {
       "file": "packages/workflows/src/source.ts",
-      "sha256": "556fd1649e58956269d97f28d665eb79d4093c75c7932aa75d009c538b99e133"
+      "sha256": "9a435f519d7e26d775131cacc913b786514f8132d4d1ddffd056327308df8e2d"
     },
     {
       "file": "scripts/bundle-notices.mjs",

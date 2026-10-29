@@ -696,7 +696,7 @@ export async function executeSourceOperation(
       ) {
         const retained = catalogSnapshot.catalog.captures.find(
           (entry) =>
-            entry.profile === "full" &&
+            (entry.profile === "full" || entry.profile === "65816-analysis-v3") &&
             entry.archives.some(
               (prior) =>
                 prior.sha256 === archive.sha256 &&
@@ -758,7 +758,7 @@ export async function executeSourceOperation(
         result = await importRuntimeTraceSourceIntoProject(
           selected.source,
           local.evidence,
-          { ...context, indexMode: "full" },
+          { ...context, indexMode: "analysis" },
           {
             ...options,
             storageStatistics: false,

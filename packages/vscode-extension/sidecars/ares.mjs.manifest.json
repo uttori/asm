@@ -4,7 +4,7 @@
   "source": "packages/debug-sidecar-ares/src/sidecar.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/sidecars/ares.mjs.licenses.txt",
-  "sha256": "5ae1d552f5bf5255e8810b95ecaa5b9ab95d674eba449a6e7a66e9445cf7593b",
+  "sha256": "1453c4bb2a2daffc3e4a035bde678491741d24d7f83b944a1279623bb97a5b26",
   "noticesSha256": "f325c5f66539b503ef71aec95dfe578634512c184168b1f2c6e649fabbf85a9e",
   "inputs": [
     {
@@ -365,7 +365,7 @@
     },
     {
       "file": "packages/capture/src/capture-context.ts",
-      "sha256": "655acdeb2f90eed72f3e0098ba68b4d662fe42ee9204fd554c18fb5cf2b9ffa1"
+      "sha256": "c780b49a6672e00f288bda6e70c16acac7892cb74761946aac2a9d425b059927"
     },
     {
       "file": "packages/capture/src/capture-file-reader.ts",
@@ -805,7 +805,7 @@
     },
     {
       "file": "packages/debug-sidecar-ares/src/ares-rsp-backend.ts",
-      "sha256": "2f3b0da30dc5649ce0fa9bac1858586f8facca0c58d8af885a00964d7a22438b"
+      "sha256": "c2a09269c30dff17c7b15e9e11fddc4ea7396fc1b2d46d3541431bb3ebea684a"
     },
     {
       "file": "packages/debug-sidecar-ares/src/gdb-rsp-client.ts",

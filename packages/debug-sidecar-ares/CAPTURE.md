@@ -40,7 +40,8 @@ Both streaming and native-file sinks create `<capture>.act2.context/` beside the
 Use **Assembly: Add Capture Milestone** (`asm.trace.mark`) to pause and label a scene such
 as payment, refund, or recruitment. Continue resumes from that same position.
 **Assembly: Replay Capture Inputs** (`asm.trace.replay`) checks every artifact hash and
-requires the matching ROM/build and region/PPU, then restores the pre-action state. Continue
+requires the matching ROM and region/PPU, then restores the pre-action state. Producer build
+revisions remain recording provenance; a different current build may attempt state loading. Continue
 replays the recorded console inputs and pauses at the saved endpoint. The native replay
 status detects input-clock/port divergence, unconsumed inputs, and a different final WRAM image.
 **Assembly: Restore Capture Pre-action State** (`asm.trace.restore`) restores the same starting
@@ -205,5 +206,6 @@ passive storage reads. NES context uses physical 2 KiB RAM images, a synchronize
 state plus a capture-only supplement, controller polling samples, screenshots and
 a canonical CPU/APU/PPU/mapper/controller endpoint. Instruction captures include a
 full-window graphics companion. Replay requires full iNES and payload hashes plus
-the exact runtime and machine profile. SNES context and serial-input schemas are unchanged. See [NES PPU evidence](./NES.md)
+the matching machine profile. State loading and endpoint checks determine compatibility with
+the current build. SNES context and serial-input schemas are unchanged. See [NES PPU evidence](./NES.md)
 for the wire layout, supported boards, reader APIs and limits.

@@ -33,6 +33,11 @@ import {
   SNES_FILE_ADDRESS_SPACE,
 } from "./address-identities.js";
 import {
+  parseSnesAssetRequirements,
+  verifySnesAssetRequirements,
+  type SnesAssetRequirement,
+} from "./asset-requirements.js";
+import {
   identifySnesHardwareRegister,
   renderSnesHardwareDefines,
   SNES_HARDWARE_DEFINES_SOURCE,
@@ -214,6 +219,7 @@ interface PlannedSpan {
 
 interface AssetIncludeMap {
   readonly sourceBytes: Uint8Array;
+  readonly requirements: readonly SnesAssetRequirement[];
   readonly entries: readonly {
     readonly start: number;
     readonly end: number;
@@ -224,6 +230,7 @@ interface AssetIncludeMap {
 function isAssetIncludeFile(value: unknown): value is {
   readonly version: 1;
   readonly entries: readonly unknown[];
+  readonly requirements?: unknown;
 } {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -283,7 +290,11 @@ const loadAssetIncludeMap = (directory: string): AssetIncludeMap | undefined => 
       throw new Error("asset-includes.json has overlapping ROM spans.");
     }
   }
-  return { sourceBytes, entries: ordered };
+  return {
+    sourceBytes,
+    entries: ordered,
+    requirements: parseSnesAssetRequirements(data.requirements),
+  };
 };
 
 /**
@@ -1598,6 +1609,11 @@ const planSnes65816Source = (
   const ramMap = loadSnesRamMap(directory);
   const ramVariables = indexSnesRamMap(ramMap.variables);
   const structMap = loadSnesStructMap(directory);
+  verifySnesAssetRequirements(
+    assetIncludes?.requirements ?? [],
+    assetIncludes?.entries ?? [],
+    structMap,
+  );
   const structRomFields = planSnesStructRomFields(structMap, rom.length, (offset) =>
     snesRomAddressSpace.fromOutputOffset(offset, context),
   );

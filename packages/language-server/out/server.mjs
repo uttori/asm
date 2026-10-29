@@ -5313,15 +5313,15 @@ var require_main = __commonJS({
         }
         URI2.is = is;
       })(URI || (exports2.URI = URI = {}));
-      var integer5;
-      (function(integer6) {
-        integer6.MIN_VALUE = -2147483648;
-        integer6.MAX_VALUE = 2147483647;
+      var integer6;
+      (function(integer7) {
+        integer7.MIN_VALUE = -2147483648;
+        integer7.MAX_VALUE = 2147483647;
         function is(value) {
-          return typeof value === "number" && integer6.MIN_VALUE <= value && value <= integer6.MAX_VALUE;
+          return typeof value === "number" && integer7.MIN_VALUE <= value && value <= integer7.MAX_VALUE;
         }
-        integer6.is = is;
-      })(integer5 || (exports2.integer = integer5 = {}));
+        integer7.is = is;
+      })(integer6 || (exports2.integer = integer6 = {}));
       var uinteger;
       (function(uinteger2) {
         uinteger2.MIN_VALUE = 0;
@@ -6885,10 +6885,10 @@ var require_main = __commonJS({
           return toString3.call(value) === "[object Number]" && min <= value && value <= max;
         }
         Is2.numberRange = numberRange;
-        function integer6(value) {
+        function integer7(value) {
           return toString3.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
         }
-        Is2.integer = integer6;
+        Is2.integer = integer7;
         function uinteger2(value) {
           return toString3.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
         }
@@ -41509,7 +41509,8 @@ function placementValue(p) {
     p.segment ?? null,
     p.tile ?? null,
     p.external?.romAddress ?? null,
-    p.external?.indexes ?? null
+    p.external?.indexes ?? null,
+    p.paletteGroup ?? null
   ];
 }
 function deriveFramePlacements(layout2, frame) {
@@ -41562,6 +41563,13 @@ function deriveFramePlacements(layout2, frame) {
       throw new Error(`Invalid native block: ${frame.id}/${block.id}.`);
     }
     ids.add(block.id);
+    const display = {};
+    if (block.paletteGroup !== void 0) {
+      if (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+      display.paletteGroup = block.paletteGroup;
+    }
     const references = block.tiles.map(resolve);
     return expandIndexedGrid({
       ...block,
@@ -41581,7 +41589,8 @@ function deriveFramePlacements(layout2, frame) {
           flipX: p.flipX,
           flipY: p.flipY
         },
-        references[index2]
+        references[index2],
+        display
       )
     );
   });
@@ -41856,6 +41865,16 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   }
   if (!isKnownTileSource(layout2.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
+  }
+  if (Array.isArray(layout2.frames)) for (const frame of layout2.frames) {
+    if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
+      throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
+    }
+    if (Array.isArray(frame.blocks)) for (const block of frame.blocks) {
+      if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+    }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
   for (const name of names) {
@@ -46955,18 +46974,25 @@ function convertAsset(registry5, request) {
 
 // packages/assets/src/secret-of-mana/som-boss-graphics.ts
 function expandBossGraphics(source, size) {
+  validateSize(source, size);
+  return expandBossMask(source, Math.ceil(size / 8) * 8);
+}
+function validateSize(source, size) {
   if (!(source instanceof Uint8Array) || !Number.isInteger(size) || size <= 0 || size > 65535) {
     throw new Error("Boss graphics need bytes and a positive 16-bit output size.");
   }
-  const length = Math.ceil(size / 8) * 8;
-  const data = new Uint8Array(length);
+}
+function expandBossMask(source, size) {
+  if (size !== 65536) validateSize(source, size);
+  else if (!(source instanceof Uint8Array)) throw new Error("Boss mask source requires bytes.");
+  const data = new Uint8Array(size);
   let cursor = 0;
-  for (let output = 0; output < length; ) {
+  for (let output = 0; output < size; ) {
     if (cursor >= source.length) {
       throw new Error("Truncated boss graphics mask.");
     }
     const mask = source[cursor++];
-    for (let bit2 = 7; bit2 >= 0; bit2--, output++) {
+    for (let bit2 = 7; bit2 >= 0 && output < size; bit2--, output++) {
       if (mask & 1 << bit2) {
         if (cursor >= source.length) {
           throw new Error("Truncated boss graphics literal.");
@@ -46983,11 +47009,17 @@ function encodeBossGraphics(data) {
   if (!(data instanceof Uint8Array) || !data.length || data.length % 8) {
     throw new Error("Boss graphics need a positive multiple-of-eight byte count.");
   }
+  return encodeBossMask(data);
+}
+function encodeBossMask(data) {
+  if (!(data instanceof Uint8Array) || !data.length || data.length > 65536) {
+    throw new Error("Boss mask needs 1..65536 bytes.");
+  }
   const output = [];
   for (let start = 0; start < data.length; start += 8) {
     let mask = 0;
     const literals = [];
-    for (let bit2 = 0; bit2 < 8; bit2++) {
+    for (let bit2 = 0; bit2 < 8 && start + bit2 < data.length; bit2++) {
       const index2 = start + bit2;
       const previous = index2 >= 2 ? data[index2 - 2] : 0;
       if (data[index2] !== previous) {
@@ -46998,7 +47030,7 @@ function encodeBossGraphics(data) {
     output.push(mask, ...literals);
   }
   const encoded = Uint8Array.from(output);
-  const decoded2 = expandBossGraphics(encoded, data.length);
+  const decoded2 = expandBossMask(encoded, data.length);
   if (decoded2.consumed !== encoded.length || decoded2.data.some((byte, index2) => byte !== data[index2])) {
     throw new Error("Boss graphics mask inverse failed.");
   }
@@ -47433,7 +47465,8 @@ function renderStableFrameAtlas(tiles, layout2) {
         y: origin[1] + p.y,
         flipX: p.flipX,
         flipY: p.flipY,
-        indexMap: Array.from({ length: 16 }, (_, i) => segment.palette * 16 + i)
+        // Display colors can vary without changing the one native tile source.
+        indexMap: Array.from({ length: 16 }, (_, i) => (p.paletteGroup ?? frame.paletteGroup ?? segment.palette) * 16 + i)
       });
     }
   }
@@ -48136,6 +48169,36 @@ function normalizeSomSource(source, options, resources, catalog, codecs = indexe
     layout: layout2,
     catalog: effective
   };
+}
+
+// packages/assets/src/secret-of-mana/som-boss-background.ts
+function integer3(value, minimum, maximum) {
+  if (!Number.isInteger(value) || value < minimum || value > maximum) {
+    throw new Error(`Boss background value must be ${minimum}..${maximum}.`);
+  }
+  return value;
+}
+function decodeBossTilemap(source, size) {
+  integer3(size, 2, 65534);
+  if (size % 2) throw new Error("Boss tilemaps require complete two-byte tile words.");
+  if (!source.length) throw new Error("Missing boss tilemap storage tag.");
+  const tag = source[0];
+  if (!tag) {
+    if (source.length < size + 1) throw new Error("Truncated raw boss tilemap.");
+    return { data: source.slice(1, size + 1), consumed: size + 1, tag };
+  }
+  const result = expandBossMask(source.subarray(1), size);
+  return { ...result, consumed: result.consumed + 1, tag };
+}
+function encodeBossTilemap(data, tag = 1) {
+  integer3(data.length, 2, 65534);
+  if (data.length % 2) throw new Error("Boss tilemaps require complete two-byte tile words.");
+  integer3(tag, 0, 255);
+  const body = tag ? encodeBossMask(data) : data;
+  const result = new Uint8Array(body.length + 1);
+  result[0] = tag;
+  result.set(body, 1);
+  return result;
 }
 
 // packages/assets/src/secret-of-mana/som-dialogue-command.ts
@@ -48998,6 +49061,27 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
             primaryOutput: "brr",
             outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } }
           };
+        }
+      });
+      context.registerAssetTransform({
+        id: "som.boss.tilemap",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        optionSchema: {
+          size: { type: "integer", minimum: 2, maximum: 65534 },
+          tag: { type: "integer", minimum: 0, maximum: 255 }
+        },
+        encode: (bytes, options) => {
+          if (bytes.length !== options.size) throw new Error("Boss tilemap size mismatch.");
+          return encodeBossTilemap(bytes, options.tag === void 0 ? 1 : Number(options.tag));
+        },
+        decode: (bytes, options, maxOutputBytes) => {
+          const size = Number(options.size);
+          if (size > maxOutputBytes) throw new Error("Boss tilemap exceeds output limit.");
+          const result = decodeBossTilemap(bytes, size);
+          if (result.consumed !== bytes.length)
+            throw new Error("Trailing bytes after boss tilemap.");
+          return result.data;
         }
       });
       context.registerAssetTransform({
@@ -53114,10 +53198,10 @@ function valueWidth(value) {
   if (!Number.isFinite(value)) {
     return 4;
   }
-  let integer5 = Math.floor(Math.abs(value));
+  let integer6 = Math.floor(Math.abs(value));
   let digits = 1;
-  while (integer5 >= 16) {
-    integer5 = Math.floor(integer5 / 16);
+  while (integer6 >= 16) {
+    integer6 = Math.floor(integer6 / 16);
     digits++;
   }
   if (value < 0) {
@@ -59566,10 +59650,10 @@ function valueWidth2(value) {
   if (!Number.isFinite(value)) {
     return 4;
   }
-  let integer5 = Math.floor(Math.abs(value));
+  let integer6 = Math.floor(Math.abs(value));
   let digits = 1;
-  while (integer5 >= 16) {
-    integer5 = Math.floor(integer5 / 16);
+  while (integer6 >= 16) {
+    integer6 = Math.floor(integer6 / 16);
     digits++;
   }
   if (value < 0) {
@@ -64857,7 +64941,7 @@ var record2 = (value) => {
   }
   return value;
 };
-var integer3 = (value, min, max) => {
+var integer4 = (value, min, max) => {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) {
     throw new Error(`Invalid struct instruction-use integer '${String(value)}'.`);
   }
@@ -64885,7 +64969,7 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
   return value.map((input2, index2) => {
     try {
       const entry = record2(input2);
-      const address3 = integer3(entry.address, 0, 16777215);
+      const address3 = integer4(entry.address, 0, 16777215);
       if (addresses.has(address3)) {
         throw new Error(`Duplicate struct instruction use at ${hex3(address3)}.`);
       }
@@ -64893,21 +64977,21 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
       if (!Array.isArray(entry.expectedBytes) || entry.expectedBytes.length < 1 || entry.expectedBytes.length > 4) {
         throw new Error("Struct instruction uses require 1\u20134 complete expectedBytes.");
       }
-      const expectedBytes = entry.expectedBytes.map((byte) => integer3(byte, 0, 255));
+      const expectedBytes = entry.expectedBytes.map((byte) => integer4(byte, 0, 255));
       if (entry.comment !== void 0 && typeof entry.comment !== "string") {
         throw new Error("Struct instruction-use comment must be a string, or omitted.");
       }
       let operand;
       if (entry.operand !== void 0) {
         const resolved = resolver.resolve(entry.operand);
-        operand = { expression: resolved.expression, value: integer3(resolved.value, 0, 65535) };
+        operand = { expression: resolved.expression, value: integer4(resolved.value, 0, 65535) };
       }
       let memoryOperand;
       if (entry.memoryOperand !== void 0) {
         const resolved = resolver.resolve(entry.memoryOperand);
         memoryOperand = {
           expression: resolved.expression,
-          value: integer3(resolved.value, 0, 16777215)
+          value: integer4(resolved.value, 0, 16777215)
         };
       }
       let stackOperand;
@@ -64915,7 +64999,7 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
         const resolved = resolver.resolve(entry.stackOperand);
         stackOperand = {
           expression: resolved.expression,
-          value: integer3(resolved.value, 0, 255)
+          value: integer4(resolved.value, 0, 255)
         };
       }
       if (entry.observations !== void 0 && !Array.isArray(entry.observations)) {
@@ -64925,7 +65009,7 @@ var validateSnesStructInstructionUses = (value, structures, bindings, constants 
         (inputObservation, observationIndex) => {
           try {
             const observation = record2(inputObservation);
-            const width = integer3(observation.width, 1, 2);
+            const width = integer4(observation.width, 1, 2);
             const target = resolver.resolve(observation.target);
             if (target.bindings.length !== 1) {
               throw new Error("Struct observation target must reference exactly one binding.");
@@ -65005,7 +65089,7 @@ var object = (value) => {
   }
   return value;
 };
-var integer4 = (value, minimum = 0, maximum = 16777215) => {
+var integer5 = (value, minimum = 0, maximum = 16777215) => {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new Error(`Invalid struct-map integer '${String(value)}'.`);
   }
@@ -65062,7 +65146,7 @@ var validateSnesStructMap = (value) => {
   const structures = file.structures.map((input2) => {
     const entry = object(input2);
     const id2 = uniqueName(entry.id);
-    const size = integer4(entry.size, 1, 65536);
+    const size = integer5(entry.size, 1, 65536);
     if (entry.byteOrder !== void 0 && entry.byteOrder !== "little") {
       throw new Error(`Struct '${id2}' must use little-endian fields.`);
     }
@@ -65080,7 +65164,7 @@ var validateSnesStructMap = (value) => {
       if (field.description !== void 0 && typeof field.description !== "string") {
         throw new Error(`Invalid description for '${id2}.${name}'.`);
       }
-      const fieldSize = integer4(field.size, 1, size);
+      const fieldSize = integer5(field.size, 1, size);
       let type;
       if (field.type !== void 0) {
         if (typeof field.type !== "string") {
@@ -65095,7 +65179,7 @@ var validateSnesStructMap = (value) => {
       }
       return {
         name,
-        offset: integer4(field.offset, 0, size - 1),
+        offset: integer5(field.offset, 0, size - 1),
         size: fieldSize,
         ...type === void 0 ? {} : { type },
         ...field.description === void 0 ? {} : { description: comment(field.description) }
@@ -65118,9 +65202,9 @@ var validateSnesStructMap = (value) => {
     if (!structure) {
       throw new Error(`Unknown layout '${String(entry.structure)}' for '${name}'.`);
     }
-    const address3 = integer4(entry.address);
-    const count = integer4(entry.count, 1);
-    const firstIndex = integer4(entry.firstIndex ?? 0);
+    const address3 = integer5(entry.address);
+    const count = integer5(entry.count, 1);
+    const firstIndex = integer5(entry.firstIndex ?? 0);
     if (address3 - firstIndex * structure.size < 0) {
       throw new Error(`Struct binding '${name}' has an invalid first index.`);
     }
@@ -65128,7 +65212,7 @@ var validateSnesStructMap = (value) => {
     if (address3 + length > 16777216) {
       throw new Error(`Struct binding '${name}' exceeds CPU memory.`);
     }
-    const fileOffset = entry.fileOffset === void 0 ? void 0 : integer4(entry.fileOffset);
+    const fileOffset = entry.fileOffset === void 0 ? void 0 : integer5(entry.fileOffset);
     if (fileOffset === void 0 && (address3 < 8257536 || address3 + length > 8388608)) {
       throw new Error(`RAM struct '${name}' must be bound inside canonical WRAM.`);
     }
@@ -65173,7 +65257,7 @@ var validateSnesStructMap = (value) => {
     }
     return {
       name: uniqueName(entry.name),
-      value: integer4(entry.value),
+      value: integer5(entry.value),
       description: comment(entry.description)
     };
   });

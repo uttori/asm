@@ -5,7 +5,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { RomImage, publishAnalysisProject, openAnalysisProjectStore, type AnalysisProjectShards, type RuntimeEvidenceRecord, type RuntimeStateValue } from "@uttori/asm-disassembler";
+import {
+  RomImage,
+  publishAnalysisProject,
+  openAnalysisProjectStore,
+  type AnalysisProjectShards,
+  type RuntimeEvidenceRecord,
+  type RuntimeStateValue,
+} from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import { analyzeSnesRuntimeCode } from "../src/disassembler/runtime-code.js";
@@ -219,4 +226,18 @@ test("large captured graphs preserve every node and conditional edge", async (t)
     evidencePreserved: true,
     deterministicOrder: true,
   });
+});
+
+test("repeated capture provenance fits a bounded analyzer heap without losing source attribution", async (t) => {
+  const { stdout } = await promisify(execFile)(
+    process.execPath,
+    [
+      "--max-old-space-size=384",
+      "--conditions=uttori-source",
+      "--import=tsx",
+      fileURLToPath(new URL("./fixtures/runtime-provenance-memory.ts", import.meta.url)),
+    ],
+    { timeout: 60_000 },
+  );
+  t.deepEqual(JSON.parse(stdout), { nodes: 65536, evidenceLists: 1, evidence: 120 });
 });

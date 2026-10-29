@@ -50,6 +50,7 @@ export {
   type LoadedAnalysisProjectView,
 } from "./model/project-types.js";
 export { resolveProjectNativeAssetId } from "./model/project-asset-ids.js";
+export { EvidencePool } from "./model/evidence-pool.js";
 export {
   validateSourceLabelName,
   legacySourceLabelName,

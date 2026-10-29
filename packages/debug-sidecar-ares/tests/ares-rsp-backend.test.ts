@@ -1,4 +1,14 @@
-import { DEBUG_BACKEND_CONFORMANCE_SCENARIOS, runDebugBackendConformance, type DebugBackendConformanceFixture, type DebugSubscription } from "@uttori/asm-debug-adapter";
+import { createHash } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import {
+  DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
+  runDebugBackendConformance,
+  type DebugBackendConformanceFixture,
+  type DebugSubscription,
+} from "@uttori/asm-debug-adapter";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -931,6 +941,79 @@ test("capture context binds the runtime identity and holds the setup boundary", 
   await backend.pause();
   await backend.capture({ operation: "context", action: "abort" });
   await backend.disconnect();
+});
+
+test("context restore/replay accepts a recorded build while authenticating its companion", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "ares-context-build-"));
+  t.teardown(() => rm(directory, { recursive: true, force: true }));
+  const romContentSha256 = "a".repeat(64),
+    producer = { id: "ares", revision: "recorded-build" };
+  // Native state deserialization is outside this fake transport test. The complete companion
+  // exercises real artifact verification before the backend sends the old producer identity.
+  const artifacts: Record<string, Buffer> = {
+    "start.bst": Buffer.alloc(538),
+    "wram-start.bin": Buffer.alloc(131072),
+    "wram-end.bin": Buffer.alloc(131072),
+    "inputs.bin": Buffer.alloc(0),
+    "identity.txt": Buffer.from(`${romContentSha256}\nares\nrecorded-build\n`),
+    "machine.json": Buffer.from('{"region":"NTSC","accuratePpu":false}'),
+    "start-clock.txt": Buffer.from("0"),
+    "end-clock.txt": Buffer.from("100"),
+    "boundaries.json": Buffer.from("{}"),
+  };
+  const files: Record<string, { bytes: number; sha256: string }> = {};
+  for (const [name, bytes] of Object.entries(artifacts)) {
+    await writeFile(path.join(directory, name), bytes);
+    files[name] = { bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+  }
+  await writeFile(
+    path.join(directory, "manifest.json"),
+    JSON.stringify({
+      format: "uttori-capture-context",
+      version: 1,
+      romContentSha256,
+      producer,
+      files,
+    }),
+  );
+  const client = new FakeAresRspClient(fakeState()),
+    original = client.request.bind(client);
+  const sent: string[] = [];
+  client.request = async (command) => {
+    if (!command.startsWith("qUttoriContext:")) return original(command);
+    sent.push(command);
+    if (command.startsWith("qUttoriContext:restore:")) return "restored";
+    if (command.startsWith("qUttoriContext:replay:")) return "replaying";
+    return "aborted";
+  };
+  const backend = new AresRspDebugBackend({
+    createClient: async () => client,
+    nativeFileIdentity: { romSha256: romContentSha256, executableSha256: "b".repeat(64) },
+  });
+  await backend.connect();
+  t.teardown(() => backend.disconnect());
+  const request = {
+    operation: "context",
+    action: "restore",
+    directory,
+    romContentSha256,
+    producer: { id: "ares", revision: "b".repeat(64) },
+  } as const;
+  t.deepEqual(await backend.capture(request), { contextState: "restored" });
+  t.deepEqual(await backend.capture({ ...request, action: "replay" }), {
+    contextState: "replaying",
+  });
+  t.true(sent.every((command) => command.endsWith(Buffer.from(producer.revision).toString("hex"))));
+  await t.throwsAsync(backend.capture({ ...request, producer, action: "prepare" }), {
+    message: /does not match/,
+  });
+  await t.throwsAsync(backend.capture({ ...request, romContentSha256: "c".repeat(64) }), {
+    message: /does not match/,
+  });
+  await writeFile(path.join(directory, "start-clock.txt"), "1");
+  const before = sent.length;
+  await t.throwsAsync(backend.capture(request), { message: /checksum mismatch/ });
+  t.is(sent.length, before);
 });
 
 test("Famicom context requires full iNES identity before sending a native prepare", async (t) => {

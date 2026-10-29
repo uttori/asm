@@ -4,6 +4,7 @@ import { readAssetPng } from "../png.js";
 import type { AssetInput } from "../registry.js";
 import { convertBossImage } from "./som-boss-image.js";
 import { inspectFrameAtlas, encodeInspectedFrameSegment } from "./som-frame-atlas.js";
+import { validateFrameComposition } from "./som-frame-composition.js";
 import {
   spritePaletteBytes,
   spritePaletteColors,
@@ -45,10 +46,27 @@ export function inspectSpritePaletteUsers(
       const segments = Object.keys(layout.segments).filter(
         (name) => layout.segments[name].palette === group,
       );
-      if (!segments.length) {
+      // Display-only groups use existing native tiles; their catalogue ownership
+      // is a runtime variant rather than another ROM graphics segment.
+      const displayed = new Set<string>();
+      let displayReferenced = false;
+      for (const frame of layout.frames ?? []) {
+        for (const placement of validateFrameComposition(layout, frame) ?? []) {
+          if ((placement.paletteGroup ?? frame.paletteGroup) === group) {
+            displayReferenced = true;
+            if (placement.segment && !segments.includes(placement.segment)) displayed.add(placement.segment);
+          }
+        }
+      }
+      if (!segments.length && !displayReferenced) {
         errors.push(`${id}: palette group ${group} has no segment.`);
       }
-      actual.add(useKey(palette, id, "primary", segments));
+      if (segments.length) actual.add(useKey(palette, id, "primary", segments));
+      // An explicitly colored blank pose references a palette without owning
+      // nonblank tiles. Keep its use with an empty segment set rather than
+      // inventing another native owner or accepting an unreferenced group.
+      if (displayed.size || (!segments.length && displayReferenced))
+        actual.add(useKey(palette, id, "runtime-variant", [...displayed]));
     }
     for (const variant of layout.paletteVariants ?? []) {
       const segments = Object.keys(layout.segments).filter(

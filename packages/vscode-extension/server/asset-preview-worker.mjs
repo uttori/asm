@@ -11571,7 +11571,8 @@ function placementValue(p) {
     p.segment ?? null,
     p.tile ?? null,
     p.external?.romAddress ?? null,
-    p.external?.indexes ?? null
+    p.external?.indexes ?? null,
+    p.paletteGroup ?? null
   ];
 }
 function deriveFramePlacements(layout2, frame) {
@@ -11624,6 +11625,13 @@ function deriveFramePlacements(layout2, frame) {
       throw new Error(`Invalid native block: ${frame.id}/${block.id}.`);
     }
     ids.add(block.id);
+    const display = {};
+    if (block.paletteGroup !== void 0) {
+      if (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+      display.paletteGroup = block.paletteGroup;
+    }
     const references = block.tiles.map(resolve);
     return expandIndexedGrid({
       ...block,
@@ -11643,7 +11651,8 @@ function deriveFramePlacements(layout2, frame) {
           flipX: p.flipX,
           flipY: p.flipY
         },
-        references[index]
+        references[index],
+        display
       )
     );
   });
@@ -11918,6 +11927,16 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   }
   if (!isKnownTileSource(layout2.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
+  }
+  if (Array.isArray(layout2.frames)) for (const frame of layout2.frames) {
+    if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
+      throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
+    }
+    if (Array.isArray(frame.blocks)) for (const block of frame.blocks) {
+      if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+    }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
   for (const name of names) {
@@ -17508,7 +17527,8 @@ function renderStableFrameAtlas(tiles, layout2) {
         y: origin[1] + p.y,
         flipX: p.flipX,
         flipY: p.flipY,
-        indexMap: Array.from({ length: 16 }, (_, i) => segment.palette * 16 + i)
+        // Display colors can vary without changing the one native tile source.
+        indexMap: Array.from({ length: 16 }, (_, i) => (p.paletteGroup ?? frame.paletteGroup ?? segment.palette) * 16 + i)
       });
     }
   }

@@ -2,14 +2,16 @@ import { mkdtemp, mkdir, readFile, rm, writeFile, readdir, symlink } from "node:
 import os from "node:os";
 import path from "node:path";
 
+import {
+  verifyCaptureContext,
+  recoverCaptureFile,
+  validateCaptureRequest,
+  type CaptureTransportV2,
+  type CapturePositionV2,
+} from "@uttori/asm-capture";
 import test from "ava";
 
 import { verifyRuntimeCaptureCompanion } from "../../disassembler/src/runtime/capture-companion.js";
-import { verifyCaptureContext,recoverCaptureFile,
-  validateCaptureRequest,
-  type CaptureTransportV2,
-  type CapturePositionV2 } from "@uttori/asm-capture";
-
 import { LosslessCaptureFileRecorder } from "../src/capture-file.js";
 
 const metadata = {
@@ -159,7 +161,7 @@ test("default recording publishes complete context only after matching ACT2 boun
   });
   await t.throwsAsync(
     verifyCaptureContext(directory, { ...metadata, producer: { id: "ares", revision: "wrong" } }),
-    { message: /matching ROM/ },
+    { message: /recording identity/ },
   );
   await writeFile(path.join(directory, "inputs.bin"), Buffer.alloc(18, 3));
   await t.throwsAsync(verifyCaptureContext(directory, metadata), { message: /checksum/ });

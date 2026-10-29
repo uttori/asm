@@ -1,5 +1,6 @@
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
+import { EvidencePool } from "../model/evidence-pool.js";
 import { matchesResearchMapping, type ResearchMapping } from "../model/research-mapping.js";
 /**
  * Target-neutral control-flow kinds emitted by a static-analysis adapter.
@@ -316,9 +317,6 @@ const contextKey = (context: readonly CallFrame[]): string =>
 const nodeIdFor = (address: number, context: readonly CallFrame[]): string =>
   `cfg:${hexAddress(address)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
 
-const sortedUnique = (values: readonly string[]): readonly string[] =>
-  [...new Set(values)].toSorted();
-
 /**
  * Semantic priority shared by the work heap and historical deterministic traversal.
  * Do not add insertion order here: the heap supplies it only as a final stability tie-breaker, so
@@ -468,6 +466,11 @@ export const analyzeStaticControlFlow = <State>(
     readonly targetOverrides?: readonly StaticTargetOverride[];
   } = {},
 ): StaticAnalysisResult<State> => {
+  // Successors often consume no new provenance. Share their exact unions instead of retaining
+  // another capture-sized array at every node, edge, work item and function candidate.
+  const evidencePool = new EvidencePool();
+  const sortedUnique = (values: readonly string[]): readonly string[] =>
+    evidencePool.sorted(values);
   const maxWorkItems = options.maxWorkItems ?? DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS;
   const maxCallDepth = options.maxCallDepth ?? DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH;
   if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {

@@ -147,7 +147,11 @@ rows are retained, and removal of evidence checks references from retained runti
 
 `compactAnalysisProject()` and `uttori-asm project-compact` checkpoint and VACUUM SQLite during
 explicit maintenance, pruning unused runtime dictionary entries after replacements. They check for
-temporary disk space and do not run after no-op imports. For backups, use SQLite's backup
+temporary disk space and do not run after no-op imports. Explicit `{ analysisOnly: true }` or
+`--analysis-only` consolidates full SNES register snapshots first and advances the revision. It
+preserves capture hashes, decoder variants, exact counts, memory evidence and research metadata.
+Refresh the source capture catalog afterward; omitted general registers cannot be recovered without
+the original input. Interrupted physical compaction can be retried without repeating retention. For backups, use SQLite's backup
 facilities or close every connection before copying the database and pointer. Copying a live database
 without its WAL can omit committed data.
 
@@ -285,8 +289,9 @@ Instruction trace artifacts can retain execution-time bytes/state and CPU/DMA/HD
 
 ## Working-index and storage
 
-Instruction imports retain all supplied bytes, registers, execution counts and bus observations.
-`full` is the only supported index mode. In-memory imports default to an 8M distinct-record
+Source and CLI instruction imports default to compact `analysis` retention: SNES decoder state,
+paired opcode bytes, exact counts and memory evidence. Explicit `full` retains all registers;
+the library default remains `full` for compatibility. In-memory imports default to an 8M distinct-record
 budget; SQLite project imports have no fixed record ceiling when counters and emitted facts
 both remain on disk. Explicit input, record and storage budgets still apply.
 

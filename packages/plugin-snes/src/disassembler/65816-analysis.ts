@@ -2,6 +2,7 @@ import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-co
 import {
   readAnalysisTargetState,
   analyzeStaticControlFlow,
+  EvidencePool,
   HalfOpenIntervalIndex,
   type AnalysisRecord,
   type AnalysisTargetOverrideRecord,
@@ -314,80 +315,94 @@ const annotationState = (
 const recordsFor = (
   result: StaticAnalysisResult<Cpu65816AbstractState>,
   runEvidence: string,
-): readonly AnalysisRecord[] => [
-  ...result.nodes.map((node): AnalysisRecord => ({
-    id: `static:${node.id}`,
-    kind: "cfg-node",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    address: node.address,
-    fileOffset: node.fileOffset,
-    size: node.size,
-    opcode: node.opcode,
-    specificationId: node.specificationId,
-    mnemonic: node.mnemonic,
-    mode: node.mode,
-    context: node.context,
-    incomingState: cpu65816StateRecord(node.incomingState),
-    outgoingState: cpu65816StateRecord(node.outgoingState),
-    effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
-    entryPoint: node.entryPoint,
-    evidencePath: node.evidencePath.map((id) => `static:${id}`),
-    evidence: [...new Set([...node.evidence, runEvidence])].toSorted(),
-  })),
-  ...result.edges.map((edge): AnalysisRecord => ({
-    id: `static:${edge.id}`,
-    kind: "cfg-edge",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    from: `static:${edge.from}`,
-    fromAddress: edge.fromAddress,
-    ...(edge.to ? { to: `static:${edge.to}` } : {}),
-    ...(edge.toAddress === undefined ? {} : { toAddress: edge.toAddress }),
-    edgeKind: edge.kind,
-    indirect: edge.indirect,
-    ...(edge.override ? { override: edge.override } : {}),
-    ...(edge.explanation ? { explanation: edge.explanation } : {}),
-    evidence: [...new Set([...edge.evidence, runEvidence])].toSorted(),
-  })),
-  ...result.functions.map((fn): AnalysisRecord => ({
-    id: `static:${fn.id}`,
-    kind: "function",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    address: fn.address,
-    source: fn.source,
-    evidencePath: fn.evidencePath.map((id) => `static:${id}`),
-    evidence: [...new Set([...fn.evidence, runEvidence])].toSorted(),
-  })),
-  ...result.conflicts.map((conflict): AnalysisRecord => ({
-    id: `static:${conflict.id}`,
-    kind: "conflict",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    address: conflict.address,
-    conflictKind: conflict.kind,
-    message: conflict.message,
-    nodes: conflict.nodes.map((id) => `static:${id}`),
-    evidence: [...new Set([...conflict.evidence, runEvidence])].toSorted(),
-  })),
-  ...result.unresolved.map((flow): AnalysisRecord => ({
-    id: `static:${flow.id}`,
-    kind: "unresolved",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    address: flow.address,
-    flowKind: flow.kind,
-    indirect: flow.indirect,
-    reason: flow.reason,
-    evidence: [...new Set([...flow.evidence, runEvidence])].toSorted(),
-  })),
-  {
-    id: "static:65816:summary",
-    kind: "summary",
-    architecture: "snes.65816",
-    status: result.status,
-    coverage: coverageRecord(result.coverage),
-    processedWorkItems: result.processedWorkItems,
-    incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
-    evidence: [runEvidence],
-  },
-];
+): readonly AnalysisRecord[] => {
+  const evidencePool = new EvidencePool();
+  const ids = new Map<string, string>();
+  // Paths and edges repeat the same CFG identities. Prefix each identity once so publication
+  // does not allocate a distinct string for every occurrence along every discovery path.
+  const staticId = (id: string): string => {
+    let value = ids.get(id);
+    if (value === undefined) {
+      value = `static:${id}`;
+      ids.set(id, value);
+    }
+    return value;
+  };
+  return [
+    ...result.nodes.map((node): AnalysisRecord => ({
+      id: staticId(node.id),
+      kind: "cfg-node",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      address: node.address,
+      fileOffset: node.fileOffset,
+      size: node.size,
+      opcode: node.opcode,
+      specificationId: node.specificationId,
+      mnemonic: node.mnemonic,
+      mode: node.mode,
+      context: node.context,
+      incomingState: cpu65816StateRecord(node.incomingState),
+      outgoingState: cpu65816StateRecord(node.outgoingState),
+      effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
+      entryPoint: node.entryPoint,
+      evidencePath: node.evidencePath.map((id) => staticId(id)),
+      evidence: evidencePool.sorted([...node.evidence, runEvidence]),
+    })),
+    ...result.edges.map((edge): AnalysisRecord => ({
+      id: staticId(edge.id),
+      kind: "cfg-edge",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      from: staticId(edge.from),
+      fromAddress: edge.fromAddress,
+      ...(edge.to ? { to: staticId(edge.to) } : {}),
+      ...(edge.toAddress === undefined ? {} : { toAddress: edge.toAddress }),
+      edgeKind: edge.kind,
+      indirect: edge.indirect,
+      ...(edge.override ? { override: edge.override } : {}),
+      ...(edge.explanation ? { explanation: edge.explanation } : {}),
+      evidence: evidencePool.sorted([...edge.evidence, runEvidence]),
+    })),
+    ...result.functions.map((fn): AnalysisRecord => ({
+      id: staticId(fn.id),
+      kind: "function",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      address: fn.address,
+      source: fn.source,
+      evidencePath: fn.evidencePath.map((id) => staticId(id)),
+      evidence: evidencePool.sorted([...fn.evidence, runEvidence]),
+    })),
+    ...result.conflicts.map((conflict): AnalysisRecord => ({
+      id: staticId(conflict.id),
+      kind: "conflict",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      address: conflict.address,
+      conflictKind: conflict.kind,
+      message: conflict.message,
+      nodes: conflict.nodes.map((id) => staticId(id)),
+      evidence: evidencePool.sorted([...conflict.evidence, runEvidence]),
+    })),
+    ...result.unresolved.map((flow): AnalysisRecord => ({
+      id: staticId(flow.id),
+      kind: "unresolved",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      address: flow.address,
+      flowKind: flow.kind,
+      indirect: flow.indirect,
+      reason: flow.reason,
+      evidence: evidencePool.sorted([...flow.evidence, runEvidence]),
+    })),
+    {
+      id: "static:65816:summary",
+      kind: "summary",
+      architecture: "snes.65816",
+      status: result.status,
+      coverage: coverageRecord(result.coverage),
+      processedWorkItems: result.processedWorkItems,
+      incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
+      evidence: [runEvidence],
+    },
+  ];
+};
 
 const annotationsFor = (
   result: StaticAnalysisResult<Cpu65816AbstractState>,

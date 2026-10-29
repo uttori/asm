@@ -73,8 +73,10 @@ export interface CliArguments {
   readonly instructionTrace?: string;
   /** Positive integer MiB limit. Undefined delegates to the shared 32 GiB import default. */
   readonly traceMaxMiB?: number;
-  readonly traceIndex?: "full";
+  readonly traceIndex?: "full" | "analysis";
   readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
+  /** Explicitly consolidate SNES register snapshots before physical compaction. */
+  readonly analysisOnly?: boolean;
   /** Repeatable 24-bit SNES CPU bus addresses, not ROM file offsets. */
   readonly entryPoints: readonly number[];
   /** Positive work-item limit. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS}. */
@@ -110,7 +112,7 @@ const commandOptions: Readonly<Record<CliCommand, readonly string[]>> = {
   disassemble: ["--mapper", "--header-size", "--dizraw"],
   analyze: ["--rom", "--entry", "--max-work-items", "--max-call-depth"],
   "project-validate": ["--rom"],
-  "project-compact": [],
+  "project-compact": ["--analysis-only"],
   "project-storage": ["--cache-max-mib", "--storage-max-mib"],
   "evidence-import": [
     "--rom",
@@ -123,7 +125,7 @@ const commandOptions: Readonly<Record<CliCommand, readonly string[]>> = {
   "evidence-report": [],
 };
 const knownOptions = new Set(["--help", ...Object.values(commandOptions).flat()]);
-const booleanOptions = new Set(["--help", "--verbose", "--debug"]);
+const booleanOptions = new Set(["--help", "--verbose", "--debug", "--analysis-only"]);
 const commandsWithOutput = new Set<CliCommand>(["assemble", "disassemble", "evidence-report"]);
 
 /** Installed executable's help text. All flags are long options. -- ends option parsing. */
@@ -134,7 +136,7 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm evidence-import <project-directory> --rom <rom> [evidence-options]
   uttori-asm evidence-report <project-directory> [report.json]
   uttori-asm project-validate <project-directory> [--rom <rom>]
-  uttori-asm project-compact <project-directory>
+  uttori-asm project-compact <project-directory> [--analysis-only]
   uttori-asm project-storage <project-directory> [storage-options]
 
 Creation options (disassemble):
@@ -149,7 +151,7 @@ ROM identity (analyze, evidence-import):
 Evidence options (evidence-import):
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 32768)
-  --trace-index <mode>         full (default; retains all registers)
+  --trace-index <mode>         analysis (default) or full (retains all registers)
 
 Analysis options (analyze):
   --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
@@ -159,6 +161,7 @@ Analysis options (analyze):
 Storage options (project-storage, budget options also accepted by evidence-import):
   --cache-max-mib <count>      Disposable projection budget (default 256)
   --storage-max-mib <count>    Project database publication ceiling (0 disables)
+  --analysis-only             project-compact: keep counted SNES decoder variants and memory evidence
 
 Assemble options:
   --config <uttori-asm.config.json>
@@ -210,12 +213,13 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let instructionTrace: string | undefined;
   let traceMaxMiB: number | undefined;
   const storagePolicy: Partial<Record<keyof AnalysisStoragePolicy, number>> = {};
-  let traceIndex: "full" | undefined;
+  let traceIndex: "full" | "analysis" | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
   let maxCallDepth: number | undefined;
   let verbose = false;
   let help = false;
+  let analysisOnly = false;
   const suppliedOptions = new Set<string>();
 
   const requireValue = (
@@ -267,6 +271,10 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     }
     if (flag === "--debug") {
       debugBuild = true;
+      continue;
+    }
+    if (flag === "--analysis-only") {
+      analysisOnly = true;
       continue;
     }
     const [value, consumedIndex] = requireValue(flag, inlineValue, index);
@@ -344,8 +352,8 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
         break;
       }
       case "--trace-index":
-        if (value !== "full") {
-          throw new Error("--trace-index must be full.");
+        if (value !== "full" && value !== "analysis") {
+          throw new Error("--trace-index must be full or analysis.");
         }
         traceIndex = value;
         break;
@@ -425,6 +433,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     instructionTrace,
     traceMaxMiB,
     traceIndex,
+    ...(analysisOnly ? { analysisOnly: true } : {}),
     ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
@@ -579,7 +588,7 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
       {
         projectRomContentSha256: manifest.rom.contentSha256,
         sourceName: path.basename(filename),
-        indexMode: parsed.traceIndex,
+        indexMode: parsed.traceIndex ?? "analysis",
       },
       {
         maxBytes: (parsed.traceMaxMiB ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES / 1024 ** 2) * 1024 ** 2,
@@ -913,7 +922,10 @@ const runCommand = async (parsed: CliArguments, cwd: string): Promise<number> =>
 
   if (parsed.command === "project-compact") {
     try {
-      const result = compactAnalysisProject(path.resolve(cwd, parsed.input!));
+      const result = compactAnalysisProject(path.resolve(cwd, parsed.input!), {
+        analysisOnly: parsed.analysisOnly,
+        onProgress: (message) => console.error(message),
+      });
       console.log(
         `Success: compacted analysis storage. Freed ${(result.maintenance.removedBytes / 1024 / 1024).toFixed(1)} MiB.`,
       );

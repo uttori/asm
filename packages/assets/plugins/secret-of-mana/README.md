@@ -153,7 +153,16 @@ color-zero word. Five-bit channels expand by bit replication. In the PNG, palett
 group 0 occupies indexes 0–15, group 1 occupies 16–31, and so on. The one guide
 color is index `16 * paletteRefs.length` and is recorded as `guideIndex`.
 `paletteVariants` can name another ROM palette for the same group, such as Watts'
-runtime palette; it does not change the atlas's source colors. Each `segments` key
+runtime palette; it does not change the atlas's source colors. An atlas
+can keep one native tile authority while individual `frames[].paletteGroup` values
+select another `paletteRefs` group for the displayed pose. Omission uses each tile
+segment's palette. This supports shared streams such as Tonpole and Biting Lizard:
+refresh and body edits preserve their different colors without duplicating ROM
+graphics. A display-only group's catalogue user has role `runtime-variant` and
+lists the segments referenced by those poses. A block's `paletteGroup` overrides
+the pose default and becomes part of its derived placements. Fully blank poses
+retain an explicit runtime palette use with an empty segment list.
+Each `segments` key
 is the `segment` option in assembly. Its `palette` selects a group, and its `tiles`
 array is **in native ROM tile order**. Each tile
 entry chooses one authoritative 8×8 source rectangle by its top-left `x,y` pixel;
@@ -456,7 +465,11 @@ does not change those ROM resources. `som-map-piece.ts` is the bounded native
 layout decoder; unchanged compressed streams are preserved. Deferred motifs decode
 in insertion order against the completed parent and earlier motifs. Native pattern
 commands use an eight-bit column and physical 128-cell row stride; a narrow motif
-can read beyond its parent allocation. `decodeMapPiece(bytes, { history, origin })`
+can read beyond its parent allocation. Queued rectangles also write their full
+extent beyond parent edges; escaped columns can alias the next physical row.
+Parent output projects its own cells after all queued writes. Heated-village
+layout 0383 has a captured 7×6 insertion at column 49 of a 50-column parent.
+`decodeMapPiece(bytes, { history, origin })`
 accepts a read-only map of known bank-7F byte offsets and the parent's physical
 origin. Missing external cells fail explicitly rather than becoming zero. Use
 `motifInstances` for each placement's decoded geometry; `motifs` retains the first
@@ -546,3 +559,15 @@ It previews literal/DTE fields; event commands, dynamic substitutions, choices,
 window outlines and headings retain their own contracts. The research tools
 `preview-dialogue-asset.mjs` and `render-som-dialogue-font.py` produce an explicit
 field preview using the verified ROM font rather than a host font.
+
+
+### Room-header motion and item-control byte
+
+The eight-byte `som.room` header array preserves the native byte identities. Byte 4
+supplies the room-motion selector in its low five bits; it is not a palette index.
+The room loader passes that byte to CPU `C2AB03`, which stores the previous item/mode
+control byte at `7E011E` and the incoming byte at `7E011F` with one word write. A change
+in bit `20` saves the current exit index or clears the saved return exit at `7E0108`.
+Exact entrance style `83` skips those paired-byte and return-exit updates while still
+setting the motion selector. Native analysis names the byte
+`RoomHeader.motion_and_item_flags`; the serialized header array and codec are unchanged.

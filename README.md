@@ -6,7 +6,7 @@ Build binaries, inspect evidence, regenerate source, and verify byte-identical R
 ## Requirements
 
 - Node.js 26 or newer for npm packages, standalone tools, and development.
-- VS Code 1.128.0 or newer for the extension. It uses the editor's embedded runtime.
+- VS Code 1.140.0 or newer for the extension. It uses the editor's embedded runtime.
 - Live debugging requires a separately installed, manifest-matched ares runtime.
 
 Support starts at the versions currently declared in the package manifests and moves forward.
@@ -44,7 +44,9 @@ For editor setup, see the [VS Code extension](packages/vscode-extension/README.m
 
 | Package                                                         | Purpose                                                       |
 | --------------------------------------------------------------- | ------------------------------------------------------------- |
-| [asm-cli](packages/cli/README.md)                               | Assembly, analysis, import, export, and verification commands |
+| [asm-cli](packages/cli/README.md)                               | Assembly, evidence, Git source and saved asset workflows      |
+| [asm-workflows](packages/workflows/README.md)                   | Shared source and asset operations for Node hosts             |
+| [asm-capture](packages/capture/README.md)                       | ACT2 archive contracts, readers, recovery and target payloads |
 | [asm-assets](packages/assets/README.md)                         | Standalone PNG, WAVE, data, and native conversion             |
 | [asm-core](packages/core/README.md)                             | Assembly engine, analysis, and plugin contracts               |
 | [asm-disassembler](packages/disassembler/README.md)             | SQLite projects, evidence, transactions, and declarations     |
@@ -56,7 +58,8 @@ For editor setup, see the [VS Code extension](packages/vscode-extension/README.m
 
 The [language server](packages/language-server/README.md),
 [VS Code extension](packages/vscode-extension/README.md), and
-[plugin example](packages/plugin-author/README.md) are private npm workspaces.
+[plugin example](packages/plugin-author/README.md), and
+[Secret of Mana integration](packages/game-secret-of-mana/README.md) are private npm workspaces.
 The extension is distributed separately as a VSIX/Marketplace extension.
 
 ## Documentation

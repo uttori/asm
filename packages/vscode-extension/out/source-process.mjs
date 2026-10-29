@@ -3660,7 +3660,7 @@ var init_capture_file = __esm({
 });
 
 // packages/capture/src/capture-context.ts
-import { createHash as createHash13 } from "node:crypto";
+import { createHash as createHash14 } from "node:crypto";
 import { createReadStream as createReadStream2 } from "node:fs";
 import { lstat as lstat2, readFile } from "node:fs/promises";
 import path27 from "node:path";
@@ -3670,7 +3670,7 @@ var init_capture_context = __esm({
     "use strict";
     isRecord24 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     digestFile = async (file, signal) => {
-      const hash3 = createHash13("sha256");
+      const hash3 = createHash14("sha256");
       for await (const bytes3 of createReadStream2(file, { signal })) {
         if (!Buffer.isBuffer(bytes3)) {
           throw new Error(`Expected binary capture context data in ${path27.basename(file)}.`);
@@ -3692,7 +3692,7 @@ var init_capture_context = __esm({
       }
       const producer = isRecord24(manifest.producer) ? manifest.producer : void 0;
       if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity3.romContentSha256 || !isRecord24(producer) || producer.id !== identity3.producer.id || producer.revision !== identity3.producer.revision || !isRecord24(manifest.files)) {
-        throw new Error("Capture context requires the matching ROM and emulator build.");
+        throw new Error("Capture context does not match the supplied recording identity.");
       }
       const nes = manifest.architecture === "65xx.2a03";
       if (nes && (!identity3.romFileSha256 || identity3.romFileSha256 !== manifest.romFileSha256 || manifest.addressSpace !== "nes.cpu") || !nes && identity3.romFileSha256 !== void 0) {
@@ -3783,7 +3783,7 @@ var init_src = __esm({
 });
 
 // packages/workflows/src/asset-interchange/record-store.ts
-import { createHash as createHash6, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash7, randomUUID as randomUUID7 } from "node:crypto";
 import fs19 from "node:fs";
 import path20 from "node:path";
 
@@ -7490,7 +7490,7 @@ var analysisAddress = (record6) => {
 };
 
 // packages/disassembler/src/storage/sqlite-store.ts
-import { randomUUID as randomUUID6 } from "node:crypto";
+import { createHash as createHash5, randomUUID as randomUUID6 } from "node:crypto";
 import fs12 from "node:fs";
 import path12 from "node:path";
 import { DatabaseSync as DatabaseSync2 } from "node:sqlite";
@@ -7660,6 +7660,42 @@ var TraceCache = class {
     this.#entries.clear();
     this.#keys.length = 0;
     this.#random = 2654435769;
+  }
+};
+
+// packages/disassembler/src/model/evidence-pool.ts
+var EvidencePool = class {
+  #strings = /* @__PURE__ */ new Map();
+  #lists = /* @__PURE__ */ new Map();
+  #characters = 0;
+  /** Preserve exact membership and order, returning a shared readonly list when already seen. */
+  intern(values) {
+    const shared = values.map((value) => {
+      const found2 = this.#strings.get(value);
+      if (found2 !== void 0) {
+        return found2;
+      }
+      if (this.#characters + value.length <= 8 * 1024 * 1024) {
+        this.#strings.set(value, value);
+        this.#characters += value.length;
+      }
+      return value;
+    });
+    const key3 = JSON.stringify(shared);
+    const found = this.#lists.get(key3);
+    if (found !== void 0) {
+      return found;
+    }
+    Object.freeze(shared);
+    if (this.#characters + key3.length <= 8 * 1024 * 1024) {
+      this.#lists.set(key3, shared);
+      this.#characters += key3.length;
+    }
+    return shared;
+  }
+  /** Canonical union for analyzer output; preserves every distinct ID in lexical order. */
+  sorted(values) {
+    return this.intern([...new Set(values)].toSorted());
   }
 };
 
@@ -8141,6 +8177,29 @@ function readResearchInputs(root, roots, identity3, overlays = /* @__PURE__ */ n
   const selected = { project: identity3.project, romSha256: identity3.romSha256 };
   const hash3 = sourceContentHash(canonicalJson({ ...selected, decisions }));
   return { ...selected, files, decisions, hash: hash3 };
+}
+
+// packages/disassembler/src/runtime/runtime-analysis-profile.ts
+var SNES_ANALYSIS_TRACE_PROFILE = "65816-analysis-v3";
+var SNES_ANALYSIS_STATE_FIELDS = ["p", "P", "e", "E", "db", "DB", "d", "D"];
+var SNES_ANALYSIS_STATE_MASKS = {
+  p: { max: 255, mask: 48 },
+  P: { max: 255, mask: 48 }
+};
+function snesAnalysisTraceState(state) {
+  const result = {};
+  for (const field of SNES_ANALYSIS_STATE_FIELDS) {
+    if (!Object.hasOwn(state, field)) {
+      continue;
+    }
+    const value = state[field];
+    if ((field === "p" || field === "P") && typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 255) {
+      result[field] = value & 48;
+    } else {
+      result[field] = value;
+    }
+  }
+  return result;
 }
 
 // packages/disassembler/src/runtime/runtime-evidence.ts
@@ -10262,6 +10321,7 @@ var SqliteRuntimeTraceBatch = class {
   #pending;
   #rows = 0;
   #finished = false;
+  /** An omitted source is reserved for a validated multi-capture retention rebuild. */
   constructor(db, source, intern) {
     this.#db = db;
     this.#source = source;
@@ -10281,7 +10341,9 @@ var SqliteRuntimeTraceBatch = class {
     if (this.#finished || !this.#db.isTransaction) {
       throw new Error("Runtime trace batch is no longer active.");
     }
-    assertTraceRecordNamespace(record6, this.#source);
+    if (this.#source !== void 0) {
+      assertTraceRecordNamespace(record6, this.#source);
+    }
     if (this.#pending) {
       const instruction = this.#pending;
       if (record6.kind !== "runtime-cpu-state" || record6.id !== instruction.id.replace(":code:", ":state:") || record6.architecture !== instruction.architecture || record6.addressSpace !== instruction.addressSpace || record6.address !== instruction.address || record6.count !== instruction.count || !canonicalEquals(record6.state, instruction.state)) {
@@ -11255,7 +11317,9 @@ var sqliteFileIdentity = (file) => {
   const stat2 = fs12.statSync(file, { bigint: true });
   return `${stat2.dev}:${stat2.ino}`;
 };
-var SqliteAnalysisStore = class {
+var SqliteAnalysisStore = class _SqliteAnalysisStore {
+  /** Connection-scoped sharing bounds repeated provenance allocation in metadata query views. */
+  #evidencePool = new EvidencePool();
   #database;
   #fileIdentity;
   /** Block cache is owned by this connection and reset on commit, rollback, and snapshot entry. */
@@ -12142,7 +12206,11 @@ var SqliteAnalysisStore = class {
     }
     const records = [];
     for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`).iterate()) {
-      records.push(requireMetadataRecord(kind, parseRecord(row.payload)));
+      const record6 = requireMetadataRecord(kind, parseRecord(row.payload));
+      if ("evidence" in record6) {
+        Object.assign(record6, { evidence: this.#evidencePool.intern(record6.evidence) });
+      }
+      records.push(record6);
     }
     return records;
   }
@@ -12575,16 +12643,23 @@ var SqliteAnalysisStore = class {
    */
   runtimeExecutionSeeds(architecture, space) {
     const seeds = /* @__PURE__ */ new Map();
+    const evidenceById = /* @__PURE__ */ new Map();
     for (const row of this.#database.prepare(`SELECT r.address,SUM(r.count) AS count,r.evidence_id,e.value AS evidence FROM runtime r JOIN runtime_evidence e ON e.id=r.evidence_id
       WHERE r.kind='runtime-execution' AND r.architecture=? AND r.address_space=? GROUP BY r.address,r.evidence_id`).iterate(architecture, space)) {
       const address3 = Number(row.address);
       const seed = seeds.get(address3) ?? { count: 0, evidence: /* @__PURE__ */ new Set() };
       seed.count += Number(row.count);
-      const parsedEvidence = JSON.parse(String(row.evidence));
-      if (!isStringArray(parsedEvidence)) {
-        throw new Error("Invalid runtime evidence list.");
+      const evidenceId = Number(row.evidence_id);
+      let evidence = evidenceById.get(evidenceId);
+      if (!evidence) {
+        const parsed = JSON.parse(String(row.evidence));
+        if (!isStringArray(parsed)) {
+          throw new Error("Invalid runtime evidence list.");
+        }
+        evidence = this.#evidencePool.intern(parsed);
+        evidenceById.set(evidenceId, evidence);
       }
-      for (const id2 of parsedEvidence) {
+      for (const id2 of evidence) {
         seed.evidence.add(id2);
       }
       seeds.set(address3, seed);
@@ -12596,7 +12671,7 @@ var SqliteAnalysisStore = class {
       addressSpace: space,
       address: address3,
       count: seed.count,
-      evidence: [...seed.evidence].toSorted()
+      evidence: this.#evidencePool.sorted([...seed.evidence])
     }));
   }
   /** Build additive query indexes once, then refresh only rows invalidated by project writes. */
@@ -12952,7 +13027,7 @@ var SqliteAnalysisStore = class {
   /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
   compact() {
     const disk = fs12.statfsSync(path12.dirname(this.file));
-    const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
+    const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count) - Number(this.#database.prepare("PRAGMA freelist_count").get()?.freelist_count);
     const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
     if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
       throw new Error(
@@ -12967,6 +13042,198 @@ var SqliteAnalysisStore = class {
       `);
     });
     this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
+    const checkpoint = this.#database.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get();
+    if (Number(checkpoint?.busy ?? 0) !== 0) {
+      throw new Error(
+        "Compacted pages are committed; active readers delayed reclamation. Close readers and retry compaction."
+      );
+    }
+  }
+  /**
+   * Explicitly consolidate full SNES snapshots into counted decoder variants. A bounded staging
+   * database is verified first; one transaction swaps physical runtime tables, avoiding millions
+   * of deletion triggers and a database-sized WAL. Metadata, memory facts and research shadows
+   * retain their exact payloads. Refresh the portable capture catalog and compact() afterward.
+   */
+  retainSnesAnalysisEvidence(onProgress) {
+    const manifest = this.manifest();
+    if (manifest.target !== "snes.sfc") {
+      throw new Error("Analysis retention currently requires a SNES project.");
+    }
+    const variants = this.runtimeInstructionVariants(
+      "snes.65816",
+      "snes.cpu",
+      SNES_ANALYSIS_STATE_FIELDS,
+      SNES_ANALYSIS_STATE_MASKS,
+      (processed, total) => onProgress?.(`Grouping ${processed}/${total} instruction observations.`)
+    );
+    const staging = path12.join(
+      path12.dirname(this.file),
+      `.analysis-retention-${randomUUID6()}.sqlite`
+    );
+    let target;
+    const lifecycle = { attached: false };
+    const retainedSources = /* @__PURE__ */ new Set();
+    const secureDelete = Number(
+      this.#database.prepare("PRAGMA secure_delete").get()?.secure_delete
+    );
+    try {
+      target = new _SqliteAnalysisStore(staging);
+      const destination = target;
+      this.#database.exec("PRAGMA foreign_keys=OFF; PRAGMA secure_delete=OFF");
+      this.transaction(() => {
+        destination.transaction(() => {
+          destination.publishManifest(manifest);
+          const batch = new SqliteRuntimeTraceBatch(
+            destination.#database,
+            void 0,
+            (table, value) => destination.#intern(table, value)
+          );
+          let count2 = 0;
+          let total = 0;
+          for (const sample of variants) {
+            if (sample.kind !== "runtime-instruction") {
+              throw new Error("Invalid retained instruction representative.");
+            }
+            const match = /^(runtime:instruction-trace:[\da-f]{64}):code:[\da-f]{64}$/.exec(
+              sample.id
+            );
+            if (!match) {
+              throw new Error(
+                "Cannot consolidate instructions outside a canonical capture namespace."
+              );
+            }
+            const state = snesAnalysisTraceState(sample.state);
+            retainedSources.add(match[1].slice("runtime:instruction-trace:".length));
+            const identity3 = createHash5("sha256").update(
+              JSON.stringify(
+                {
+                  address: sample.address,
+                  bytes: sample.bytes,
+                  state
+                },
+                void 0,
+                2
+              ) + "\n"
+            ).digest("hex");
+            batch.add({ ...sample, state, id: `${match[1]}:code:${identity3}` });
+            batch.add({
+              ...sample,
+              state,
+              id: `${match[1]}:state:${identity3}`,
+              kind: "runtime-cpu-state"
+            });
+            total += sample.count;
+            if (++count2 % 1e4 === 0) {
+              onProgress?.(`Retained ${count2} counted instruction variants.`);
+            }
+          }
+          batch.finish();
+          const retained = "(d.kind!='runtime-instruction' OR d.architecture!='snes.65816' OR d.address_space!='snes.cpu')";
+          let copied = 0;
+          for (const [index, stream] of RUNTIME_RECORD_STREAM_SQL.entries()) {
+            const order = index === 0 ? "ORDER BY o.oid DESC" : "ORDER BY o.oid ASC";
+            const condition2 = index === 0 ? `AND ${retained}` : `WHERE ${retained}`;
+            const sql = stream.replace(
+              "FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id",
+              `FROM runtime_descriptors d CROSS JOIN runtime_fact_rows owners ON owners.descriptor_id=d.did
+               CROSS JOIN runtime_facts f ON f.fid=owners.fid
+               CROSS JOIN runtime_observations o ON o.fact_id=f.fid`
+            ).replace(order, condition2);
+            for (const row of this.#database.prepare(sql).iterate()) {
+              destination.#insertRecord("runtime", runtimeFromRow(row));
+              if (++copied % 1e4 === 0) {
+                onProgress?.(
+                  `Preserved ${copied} execution, memory and independent state records.`
+                );
+              }
+            }
+          }
+          const written = destination.#database.prepare(`SELECT SUM(o.count) AS n
+            FROM runtime_descriptors d CROSS JOIN runtime_fact_rows f ON f.descriptor_id=d.did
+            CROSS JOIN runtime_observations o ON o.fact_id=f.fid WHERE d.kind='runtime-instruction'
+            AND d.architecture='snes.65816' AND d.address_space='snes.cpu'`).get();
+          if (Number(written?.n ?? 0) !== total) {
+            throw new Error("Compact instruction observation totals do not match.");
+          }
+        });
+        destination.#database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+        if (destination.#database.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok" || destination.#database.prepare("PRAGMA foreign_key_check").get()) {
+          throw new Error("Retention staging database failed integrity validation.");
+        }
+        destination.close();
+        target = void 0;
+        this.#database.prepare("ATTACH DATABASE ? AS retained").run(staging);
+        lifecycle.attached = true;
+        onProgress?.("Publishing compact runtime tables atomically.");
+        for (const row of this.#database.prepare(`SELECT name FROM sqlite_schema WHERE type='trigger'
+          AND (name GLOB 'cache_*' OR name GLOB 'query_*' OR name GLOB 'summary_*')`).all()) {
+          this.#database.exec(`DROP TRIGGER "${String(row.name).replaceAll('"', '""')}"`);
+        }
+        for (const row of this.#database.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name GLOB 'query_*'").all()) {
+          this.#database.exec(`DROP TABLE "${String(row.name).replaceAll('"', '""')}"`);
+        }
+        for (const row of this.#database.prepare(`SELECT type,name FROM sqlite_schema WHERE
+          (type='view' AND name IN ('runtime','runtime_facts','runtime_fact_locations'))
+          OR (type='trigger' AND name GLOB 'runtime_*')`).all()) {
+          this.#database.exec(
+            `DROP ${String(row.type).toUpperCase()} IF EXISTS "${String(row.name).replaceAll('"', '""')}"`
+          );
+        }
+        const tables = [
+          "runtime_observations",
+          "runtime_fact_rows",
+          "runtime_identities",
+          "runtime_descriptors",
+          "runtime_history",
+          "runtime_prefixes",
+          "runtime_evidence"
+        ];
+        for (const table of tables) {
+          this.#database.exec(`DROP TABLE ${table}`);
+        }
+        this.#database.exec(`CREATE TABLE runtime_prefixes(id INTEGER PRIMARY KEY,value TEXT NOT NULL UNIQUE);
+          CREATE TABLE runtime_evidence(id INTEGER PRIMARY KEY,value TEXT NOT NULL UNIQUE);
+          ${RUNTIME_STORAGE_SCHEMA}`);
+        for (const table of tables.toReversed()) {
+          this.#database.exec(`INSERT INTO ${table} SELECT * FROM retained.${table}`);
+        }
+        for (const sql of SCHEMA_INDEX_STATEMENTS) {
+          this.#database.exec(sql);
+        }
+        this.#database.exec("DELETE FROM meta WHERE k='annotation-query-layout'");
+        const reports = this.loadTable("imports").map((report2) => {
+          if (report2.format !== "uttori-asm-instruction-trace" || !retainedSources.has(report2.sourceSha256)) {
+            return report2;
+          }
+          return Object.assign({}, report2, { indexProfile: SNES_ANALYSIS_TRACE_PROFILE });
+        });
+        this.replaceTables({ imports: reports });
+        this.#database.exec(`UPDATE capture_catalog SET profile='${SNES_ANALYSIS_TRACE_PROFILE}'
+          WHERE sha256 IN (SELECT json_extract(analysis_json(payload),'$.sourceSha256') FROM imports
+          WHERE json_extract(analysis_json(payload),'$.indexProfile')='${SNES_ANALYSIS_TRACE_PROFILE}')`);
+        const current = this.researchInputsAreCurrent(this.researchInputsIdentity() ?? "");
+        const published = this.publishManifest(manifest);
+        if (current) {
+          this.#database.prepare("UPDATE meta SET v=? WHERE k='research-index-revision'").run(String(published.revision));
+        }
+        this.#clearDictionaryCache();
+        if (this.#database.prepare("PRAGMA foreign_key_check").get()) {
+          throw new Error("Retained runtime tables failed foreign-key validation.");
+        }
+        onProgress?.("Validated compact runtime tables; committing retention publication.");
+      });
+    } finally {
+      target?.close();
+      if (lifecycle.attached) {
+        this.#database.exec("DETACH DATABASE retained");
+      }
+      this.#database.exec("PRAGMA foreign_keys=ON");
+      this.#database.exec(`PRAGMA secure_delete=${secureDelete}`);
+      for (const suffix of ["", "-wal", "-shm"]) {
+        fs12.rmSync(`${staging}${suffix}`, { force: true });
+      }
+    }
   }
   /** Current persisted policy. Defaults do not write or change the semantic revision.
    * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
@@ -13258,7 +13525,7 @@ function synchronizeSourceResearch(project) {
 }
 
 // packages/disassembler/src/source-project/captures.ts
-import { createHash as createHash5 } from "node:crypto";
+import { createHash as createHash6 } from "node:crypto";
 import fs15 from "node:fs";
 import path15 from "node:path";
 function errorCode3(error) {
@@ -13387,12 +13654,14 @@ function reconcileSourceCaptureCatalog(catalog, reports, binding) {
       archives: captures.get(report2.sourceSha256)?.archives ?? []
     };
     const previous = captures.get(capture.sha256);
-    if (previous && canonicalJson({ ...previous, sourceName }) !== canonicalJson(capture)) {
+    const migrated = capture.profile === "65816-analysis-v3" && (previous?.profile === "full" || previous?.profile === "65816-analysis-v2");
+    const priorIdentity = migrated ? { ...previous, profile: capture.profile, sourceName } : { ...previous, sourceName };
+    if (previous && canonicalJson(priorIdentity) !== canonicalJson(capture)) {
       throw new Error(
         `Retained capture provenance differs from the Git catalog: ${capture.sha256}`
       );
     }
-    captures.set(capture.sha256, previous ?? capture);
+    captures.set(capture.sha256, migrated ? capture : previous ?? capture);
   }
   if (binding) {
     const capture = captures.get(binding.sourceSha256);
@@ -13461,7 +13730,7 @@ async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_SOURCE_
       `Capture archive '${file}' is ${(Number(before.size) / 1024 ** 3).toFixed(2)} GiB and exceeds the project's byte budget of ${(maxBytes / 1024 ** 3).toFixed(2)} GiB (${maxBytes} bytes). Increase limits.captureBytes in .uttori/project.json to import this archive.`
     );
   }
-  const hash3 = createHash5("sha256");
+  const hash3 = createHash6("sha256");
   let bytes3 = 0;
   for await (const chunk2 of fs15.createReadStream(file, { signal })) {
     if (!Buffer.isBuffer(chunk2)) {
@@ -13761,7 +14030,7 @@ function assetPath(file) {
 
 // packages/workflows/src/asset-interchange/record-store.ts
 function assetHash(bytes3) {
-  return createHash6("sha256").update(bytes3).digest("hex");
+  return createHash7("sha256").update(bytes3).digest("hex");
 }
 var storagePath = assetPath;
 var stagingPattern = /^\.staging-[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
@@ -23601,7 +23870,7 @@ var loadProjectEnvironment = async (options) => {
 };
 
 // packages/plugin-loader-node/src/toolchain.ts
-import { createHash as createHash7 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 import fs21 from "node:fs";
 import { createRequire as createRequire2 } from "node:module";
 import path23 from "node:path";
@@ -23629,7 +23898,7 @@ function packageRoot(file) {
   }
   return fs21.realpathSync(directory);
 }
-var hash = (bytes3) => createHash7("sha256").update(bytes3).digest("hex");
+var hash = (bytes3) => createHash8("sha256").update(bytes3).digest("hex");
 function fingerprintNodeToolchain(moduleFiles, bundles = []) {
   const seen = /* @__PURE__ */ new Set();
   const packages = [];
@@ -36770,11 +37039,11 @@ var Uint8ArrayDecoderSource = class {
 };
 
 // packages/core/src/debug-map.ts
-import { createHash as createHash8 } from "node:crypto";
+import { createHash as createHash9 } from "node:crypto";
 import path25 from "node:path";
 var DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
 var DEBUG_MAP_SCHEMA_VERSION = 1;
-var sha256 = (value) => createHash8("sha256").update(value).digest("hex");
+var sha256 = (value) => createHash9("sha256").update(value).digest("hex");
 var createDebugMap = (options) => {
   const sourceRoot = path25.resolve(options.sourceRoot ?? process.cwd());
   const entries3 = options.mapping.fileList.map((entry, originalId) => {
@@ -36872,9 +37141,9 @@ function runTypedEncoderEntry(context, encoder, instruction, emit) {
 }
 
 // packages/disassembler/src/model/rom-image.ts
-import { createHash as createHash9 } from "node:crypto";
+import { createHash as createHash10 } from "node:crypto";
 import * as fs22 from "node:fs";
-var sha2562 = (bytes3) => createHash9("sha256").update(bytes3).digest("hex");
+var sha2562 = (bytes3) => createHash10("sha256").update(bytes3).digest("hex");
 var detectCopierHeaderSize = (fileSize) => {
   if (fileSize < 0) {
     throw new Error("ROM size cannot be negative.");
@@ -36988,7 +37257,6 @@ var contextKey = (context) => context.map(
   (frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}${frame.executionContext ?? ""}`
 ).join("/");
 var nodeIdFor = (address3, context) => `cfg:${hexAddress(address3)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
-var sortedUnique3 = (values) => [...new Set(values)].toSorted();
 var sortWork = (left, right) => left.address - right.address || contextKey(left.context).localeCompare(contextKey(right.context)) || left.entryPoint.localeCompare(right.entryPoint) || (left.predecessor ?? "").localeCompare(right.predecessor ?? "");
 var StaticWorkQueue = class {
   #values = [];
@@ -37070,6 +37338,8 @@ var overriddenTargetKind = (flow) => {
   return "jump";
 };
 var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
+  const evidencePool = new EvidencePool();
+  const sortedUnique3 = (values) => evidencePool.sorted(values);
   const maxWorkItems = options.maxWorkItems ?? DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS;
   const maxCallDepth = options.maxCallDepth ?? DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH;
   if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
@@ -37456,7 +37726,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
 };
 
 // packages/disassembler/src/runtime/runtime-trace.ts
-import { createHash as createHash10 } from "node:crypto";
+import { createHash as createHash11 } from "node:crypto";
 
 // packages/disassembler/src/runtime/trace-chunk-formatter.ts
 var TraceChunkFormatter = class {
@@ -37534,7 +37804,7 @@ var integer2 = (value, context, minimum = 0) => {
   }
   return value;
 };
-var sha2563 = (value) => createHash10("sha256").update(value).digest("hex");
+var sha2563 = (value) => createHash11("sha256").update(value).digest("hex");
 var sha256Identity = (value, context) => {
   const identity3 = string(value, context);
   if (!/^[\da-f]{64}$/.test(identity3)) {
@@ -37628,8 +37898,8 @@ var createRuntimeTraceChunkValidator = () => {
   };
 };
 var runtimeTraceIndexRecordLimit = (mode3, requested, storage) => {
-  if (mode3 !== "full") {
-    throw new Error("Only full runtime trace indexing is supported.");
+  if (mode3 !== "full" && mode3 !== "analysis") {
+    throw new Error("Only full or analysis runtime trace indexing is supported.");
   }
   let defaultLimit = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
   let maximum = MAX_RUNTIME_TRACE_INDEX_RECORDS;
@@ -37676,7 +37946,7 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
   const maxIndexRecords = runtimeTraceIndexRecordLimit(indexMode, context.maxIndexRecords, storage);
   const envelope = canonicalJson({ ...artifact, chunks: [] });
   const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
-  const hash3 = createHash10("sha256").update(envelope.slice(0, split));
+  const hash3 = createHash11("sha256").update(envelope.slice(0, split));
   const suffix = envelope.slice(split + 2);
   const validateChunk = createRuntimeTraceChunkValidator();
   const index = storage?.index ?? createMemoryFactIndex();
@@ -37751,7 +38021,7 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
       memoryLoss += detail.droppedMemoryAccesses ?? 0;
       const address3 = chunk2.addresses[offset];
       const base = { architecture: artifact.architecture, count: 1, evidence: [] };
-      const state = detail.state;
+      const state = indexMode === "analysis" && artifact.architecture === "snes.65816" ? snesAnalysisTraceState(detail.state) : detail.state;
       const content = JSON.stringify({ address: address3, bytes: detail.bytes, state });
       const cacheable = content.length <= 1024;
       let key3 = cacheable ? instructionIdentities.get(content) : void 0;
@@ -37848,7 +38118,8 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
     const prepared = checkpoint(recovery);
     recovery = prepared.recovery;
     const sourceSha256 = prepared.sourceSha256;
-    storage?.onSource?.(sourceSha256, "full");
+    const profile = indexMode === "analysis" && artifact.architecture === "snes.65816" ? SNES_ANALYSIS_TRACE_PROFILE : "full";
+    storage?.onSource?.(sourceSha256, profile);
     const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
     const evidenceIds = [evidenceId];
     const executions = [];
@@ -37934,6 +38205,7 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
     };
     const report2 = {
       id: `import:instruction-trace:${sourceSha256}`,
+      ...profile === "full" ? {} : { indexProfile: profile },
       format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
       sourceName,
       sourceSha256,
@@ -38234,7 +38506,7 @@ var createRuntimeTraceFileSource = async (file, options = {}) => {
 };
 
 // packages/disassembler/src/runtime/runtime-bus-trace.ts
-import { createHash as createHash11 } from "node:crypto";
+import { createHash as createHash12 } from "node:crypto";
 
 // packages/disassembler/src/runtime/runtime-graphics.ts
 var mapVram = (address3, mapping) => {
@@ -38815,7 +39087,7 @@ var createRuntimeBusTraceImporter = (metadata, context, storage) => {
     values: () => memory.values(),
     clear: () => memory.clear()
   };
-  const hash3 = createHash11("sha256").update(`uttori-bus-index-v1
+  const hash3 = createHash12("sha256").update(`uttori-bus-index-v1
 ${JSON.stringify(meta)}
 `);
   const factKeys = new TraceCache(context.cacheMetrics?.facts);
@@ -38929,7 +39201,7 @@ ${JSON.stringify(meta)}
         const factJson = JSON.stringify(fact);
         let key3 = factKeys.get(factJson);
         if (key3 === void 0) {
-          key3 = createHash11("sha256").update(factJson).digest("hex");
+          key3 = createHash12("sha256").update(factJson).digest("hex");
           factKeys.insert(factJson, key3);
         }
         if (index.add(key3, () => ({
@@ -39136,7 +39408,7 @@ ${JSON.stringify(meta)}
 };
 
 // packages/disassembler/src/project/project-transaction.ts
-import { createHash as createHash12 } from "node:crypto";
+import { createHash as createHash13 } from "node:crypto";
 import * as fs23 from "node:fs";
 import path26 from "node:path";
 var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
@@ -39156,7 +39428,7 @@ var AnalysisProjectStaleError = class extends Error {
 var analysisProjectRevision = (manifest) => ({
   format: ANALYSIS_PROJECT_REVISION_FORMAT,
   version: ANALYSIS_PROJECT_REVISION_VERSION,
-  manifestSha256: createHash12("sha256").update(canonicalJson(manifest)).digest("hex")
+  manifestSha256: createHash13("sha256").update(canonicalJson(manifest)).digest("hex")
 });
 var assertAnalysisProjectRevision = (store, expected) => {
   const actual = analysisProjectRevision(store.manifest());
@@ -39267,7 +39539,7 @@ function withAnalysisReadSession(directory, action) {
 }
 
 // packages/disassembler/src/project/runtime-trace-project.ts
-import { createHash as createHash14 } from "node:crypto";
+import { createHash as createHash15 } from "node:crypto";
 import path30 from "node:path";
 
 // packages/disassembler/src/runtime/capture-instruction-source.ts
@@ -39528,7 +39800,7 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
     let publication2;
     let validate3;
     if (options.validatedIndex && !options.recoverPartial) {
-      const key3 = createHash14("sha256").update(
+      const key3 = createHash15("sha256").update(
         canonicalJson({
           version: 1,
           identity: options.validatedIndex.identity,
@@ -39965,10 +40237,10 @@ function completeCaptureImportNotes(directory, pending, status, addedCode) {
 }
 
 // packages/disassembler/src/source/source-export.ts
-import { createHash as createHash15 } from "node:crypto";
+import { createHash as createHash16 } from "node:crypto";
 var SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
 var SOURCE_EXPORT_SCHEMA_VERSION = 1;
-var sourceExportSha256 = (value) => createHash15("sha256").update(value).digest("hex");
+var sourceExportSha256 = (value) => createHash16("sha256").update(value).digest("hex");
 
 // packages/disassembler/src/research-inputs/symbols.ts
 var isArray3 = (value) => Array.isArray(value);
@@ -52871,7 +53143,7 @@ async function prepareNesGeneration(options) {
 
 // packages/plugin-65xx/src/nes/ppu.ts
 init_src();
-import { createHash as createHash16 } from "node:crypto";
+import { createHash as createHash17 } from "node:crypto";
 import { createReadStream as createReadStream3 } from "node:fs";
 async function summarizeNesPPUCapture(file, options) {
   const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
@@ -52880,7 +53152,7 @@ async function summarizeNesPPUCapture(file, options) {
     throw new Error("NES PPU capture scope or cartridge identity mismatch.");
   }
   const hash3 = async () => {
-    const h = createHash16("sha256");
+    const h = createHash17("sha256");
     for await (const bytes3 of createReadStream3(file, { signal: options.signal })) {
       if (!Buffer.isBuffer(bytes3)) {
         throw new Error("Expected binary PPU capture data.");
@@ -56004,80 +56276,92 @@ var annotationState = (state) => ({
   ...knownNumber(state.d) === void 0 ? {} : { directPage: knownNumber(state.d) },
   ...knownNumber(state.s) === void 0 ? {} : { stackPointer: knownNumber(state.s) }
 });
-var recordsFor = (result, runEvidence) => [
-  ...result.nodes.map((node) => ({
-    id: `static:${node.id}`,
-    kind: "cfg-node",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    address: node.address,
-    fileOffset: node.fileOffset,
-    size: node.size,
-    opcode: node.opcode,
-    specificationId: node.specificationId,
-    mnemonic: node.mnemonic,
-    mode: node.mode,
-    context: node.context,
-    incomingState: cpu65816StateRecord(node.incomingState),
-    outgoingState: cpu65816StateRecord(node.outgoingState),
-    effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
-    entryPoint: node.entryPoint,
-    evidencePath: node.evidencePath.map((id2) => `static:${id2}`),
-    evidence: [.../* @__PURE__ */ new Set([...node.evidence, runEvidence])].toSorted()
-  })),
-  ...result.edges.map((edge) => ({
-    id: `static:${edge.id}`,
-    kind: "cfg-edge",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    from: `static:${edge.from}`,
-    fromAddress: edge.fromAddress,
-    ...edge.to ? { to: `static:${edge.to}` } : {},
-    ...edge.toAddress === void 0 ? {} : { toAddress: edge.toAddress },
-    edgeKind: edge.kind,
-    indirect: edge.indirect,
-    ...edge.override ? { override: edge.override } : {},
-    ...edge.explanation ? { explanation: edge.explanation } : {},
-    evidence: [.../* @__PURE__ */ new Set([...edge.evidence, runEvidence])].toSorted()
-  })),
-  ...result.functions.map((fn) => ({
-    id: `static:${fn.id}`,
-    kind: "function",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    address: fn.address,
-    source: fn.source,
-    evidencePath: fn.evidencePath.map((id2) => `static:${id2}`),
-    evidence: [.../* @__PURE__ */ new Set([...fn.evidence, runEvidence])].toSorted()
-  })),
-  ...result.conflicts.map((conflict) => ({
-    id: `static:${conflict.id}`,
-    kind: "conflict",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    address: conflict.address,
-    conflictKind: conflict.kind,
-    message: conflict.message,
-    nodes: conflict.nodes.map((id2) => `static:${id2}`),
-    evidence: [.../* @__PURE__ */ new Set([...conflict.evidence, runEvidence])].toSorted()
-  })),
-  ...result.unresolved.map((flow) => ({
-    id: `static:${flow.id}`,
-    kind: "unresolved",
-    addressSpace: SNES_CPU_ADDRESS_SPACE,
-    address: flow.address,
-    flowKind: flow.kind,
-    indirect: flow.indirect,
-    reason: flow.reason,
-    evidence: [.../* @__PURE__ */ new Set([...flow.evidence, runEvidence])].toSorted()
-  })),
-  {
-    id: "static:65816:summary",
-    kind: "summary",
-    architecture: "snes.65816",
-    status: result.status,
-    coverage: coverageRecord(result.coverage),
-    processedWorkItems: result.processedWorkItems,
-    incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
-    evidence: [runEvidence]
-  }
-];
+var recordsFor = (result, runEvidence) => {
+  const evidencePool = new EvidencePool();
+  const ids = /* @__PURE__ */ new Map();
+  const staticId = (id2) => {
+    let value = ids.get(id2);
+    if (value === void 0) {
+      value = `static:${id2}`;
+      ids.set(id2, value);
+    }
+    return value;
+  };
+  return [
+    ...result.nodes.map((node) => ({
+      id: staticId(node.id),
+      kind: "cfg-node",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      address: node.address,
+      fileOffset: node.fileOffset,
+      size: node.size,
+      opcode: node.opcode,
+      specificationId: node.specificationId,
+      mnemonic: node.mnemonic,
+      mode: node.mode,
+      context: node.context,
+      incomingState: cpu65816StateRecord(node.incomingState),
+      outgoingState: cpu65816StateRecord(node.outgoingState),
+      effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
+      entryPoint: node.entryPoint,
+      evidencePath: node.evidencePath.map((id2) => staticId(id2)),
+      evidence: evidencePool.sorted([...node.evidence, runEvidence])
+    })),
+    ...result.edges.map((edge) => ({
+      id: staticId(edge.id),
+      kind: "cfg-edge",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      from: staticId(edge.from),
+      fromAddress: edge.fromAddress,
+      ...edge.to ? { to: staticId(edge.to) } : {},
+      ...edge.toAddress === void 0 ? {} : { toAddress: edge.toAddress },
+      edgeKind: edge.kind,
+      indirect: edge.indirect,
+      ...edge.override ? { override: edge.override } : {},
+      ...edge.explanation ? { explanation: edge.explanation } : {},
+      evidence: evidencePool.sorted([...edge.evidence, runEvidence])
+    })),
+    ...result.functions.map((fn) => ({
+      id: staticId(fn.id),
+      kind: "function",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      address: fn.address,
+      source: fn.source,
+      evidencePath: fn.evidencePath.map((id2) => staticId(id2)),
+      evidence: evidencePool.sorted([...fn.evidence, runEvidence])
+    })),
+    ...result.conflicts.map((conflict) => ({
+      id: staticId(conflict.id),
+      kind: "conflict",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      address: conflict.address,
+      conflictKind: conflict.kind,
+      message: conflict.message,
+      nodes: conflict.nodes.map((id2) => staticId(id2)),
+      evidence: evidencePool.sorted([...conflict.evidence, runEvidence])
+    })),
+    ...result.unresolved.map((flow) => ({
+      id: staticId(flow.id),
+      kind: "unresolved",
+      addressSpace: SNES_CPU_ADDRESS_SPACE,
+      address: flow.address,
+      flowKind: flow.kind,
+      indirect: flow.indirect,
+      reason: flow.reason,
+      evidence: evidencePool.sorted([...flow.evidence, runEvidence])
+    })),
+    {
+      id: "static:65816:summary",
+      kind: "summary",
+      architecture: "snes.65816",
+      status: result.status,
+      coverage: coverageRecord(result.coverage),
+      processedWorkItems: result.processedWorkItems,
+      incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
+      evidence: [runEvidence]
+    }
+  ];
+};
 var annotationsFor = (result, runEvidence) => {
   const output = /* @__PURE__ */ new Map();
   const stateByOffset = /* @__PURE__ */ new Map();
@@ -56404,7 +56688,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
 };
 
 // packages/plugin-snes/src/disassembler/dizraw-import.ts
-import { createHash as createHash17 } from "node:crypto";
+import { createHash as createHash18 } from "node:crypto";
 var SUBSTITUTIONS = [
   ["0001E", "ZQ"],
   ["B0001", "Zq"],
@@ -56631,7 +56915,7 @@ var importDizRaw = (xml, options = {}) => {
   if (!mapper) {
     throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
   }
-  const sourceSha256 = createHash17("sha256").update(xml).digest("hex");
+  const sourceSha256 = createHash18("sha256").update(xml).digest("hex");
   const sourceName = options.sourceName ?? "import.dizraw";
   const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
   const labelsElement = element(data.body, "Labels");
@@ -56814,6 +57098,62 @@ var importDizRaw = (xml, options = {}) => {
 // packages/plugin-snes/src/disassembler/source-export.ts
 import * as fs33 from "node:fs";
 import path40 from "node:path";
+
+// packages/plugin-snes/src/disassembler/asset-requirements.ts
+function parseSnesAssetRequirements(value) {
+  if (value === void 0) return [];
+  if (!Array.isArray(value)) throw new Error("Asset requirements must be an array.");
+  const structures = /* @__PURE__ */ new Set();
+  return value.map((row) => {
+    if (typeof row !== "object" || row === null || !("structure" in row) || typeof row.structure !== "string" || !/^[A-Za-z_]\w*$/.test(row.structure) || !("format" in row) || typeof row.format !== "string" || !row.format.trim()) {
+      throw new Error("Asset requirements need a structure name and format.");
+    }
+    if (structures.has(row.structure))
+      throw new Error(`Duplicate asset requirement: ${row.structure}.`);
+    structures.add(row.structure);
+    let options;
+    if ("options" in row) {
+      if (typeof row.options !== "object" || row.options === null || Array.isArray(row.options))
+        throw new Error("Asset requirement options must be literal strings.");
+      options = {};
+      for (const [key3, option] of Object.entries(row.options)) {
+        if (!/^[A-Za-z_]\w*$/.test(key3) || typeof option !== "string")
+          throw new Error("Asset requirement options must be literal strings.");
+        options[key3] = option;
+      }
+    }
+    return { structure: row.structure, format: row.format, ...options ? { options } : {} };
+  });
+}
+function verifySnesAssetRequirements(requirements, entries3, catalog) {
+  if (!requirements.length) return;
+  if (!catalog) throw new Error("Asset requirements need a struct-map.json input.");
+  const calls = entries3.map((entry) => ({ ...entry, call: parseAssetCall(entry.directive) }));
+  const rules = new Map(requirements.map((rule) => [rule.structure, rule]));
+  for (const binding of catalog.bindings) {
+    const rule = rules.get(binding.structure.id);
+    if (!rule || binding.fileOffset === void 0) continue;
+    const end = binding.fileOffset + binding.structure.size * binding.count;
+    let covered = binding.fileOffset;
+    const matching = calls.filter(
+      (entry) => entry.start < end && entry.end > covered && entry.call?.format.value === rule.format && Object.entries(rule.options ?? {}).every(([key3, value]) => {
+        const option = entry.call?.options[key3];
+        return option?.kind === "string" && option.value === value;
+      })
+    ).sort((a, b) => a.start - b.start);
+    for (const entry of matching) {
+      if (entry.start > covered) break;
+      covered = Math.max(covered, entry.end);
+      if (covered >= end) break;
+    }
+    if (covered < end) {
+      const options = JSON.stringify(rule.options ?? {});
+      throw new Error(
+        `Missing required ${rule.format} includeAsset for ${binding.name} (${binding.structure.id}) at ROM $${covered.toString(16).toUpperCase()}; options ${options}.`
+      );
+    }
+  }
+}
 
 // packages/plugin-snes/src/disassembler/ram-map.ts
 import * as fs31 from "node:fs";
@@ -58356,7 +58696,11 @@ var loadAssetIncludeMap = (directory) => {
       throw new Error("asset-includes.json has overlapping ROM spans.");
     }
   }
-  return { sourceBytes, entries: ordered };
+  return {
+    sourceBytes,
+    entries: ordered,
+    requirements: parseSnesAssetRequirements(data.requirements)
+  };
 };
 var applyAssetIncludes = (planned, map, metadata, bankSize) => {
   if (!map) {
@@ -59209,6 +59553,11 @@ var planSnes65816Source = (project, rom, directory, options) => {
   const ramMap = loadSnesRamMap(directory);
   const ramVariables = indexSnesRamMap(ramMap.variables);
   const structMap = loadSnesStructMap(directory);
+  verifySnesAssetRequirements(
+    assetIncludes?.requirements ?? [],
+    assetIncludes?.entries ?? [],
+    structMap
+  );
   const structRomFields = planSnesStructRomFields(
     structMap,
     rom.length,
@@ -62867,7 +63216,7 @@ import * as fs36 from "node:fs";
 import path44 from "node:path";
 
 // packages/plugin-snes/src/disassembler/runtime-code.ts
-import { createHash as createHash18 } from "node:crypto";
+import { createHash as createHash19 } from "node:crypto";
 var runtimeDecodeState = (sample) => {
   const value = (key3, max) => {
     const entry = sample.state[key3] ?? sample.state[key3.toUpperCase()];
@@ -62897,6 +63246,7 @@ var runtimeDecodeState = (sample) => {
 };
 var known3 = (entry) => entry === void 0 || entry === "unknown" ? { kind: "unknown" } : { kind: "known", value: Number(entry) };
 var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onProgress) => {
+  const evidencePool = new EvidencePool();
   const decoder3 = new Cpu65816Decoder();
   const context = createSnesAddressContext(mapper);
   const romBytes = rom.bytes();
@@ -62912,13 +63262,13 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
       continue;
     }
     const state = runtimeDecodeState(sample);
-    const variant = createHash18("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
+    const variant = createHash19("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
     const id2 = `runtime:code:${variant}`;
     const duplicate = nodes.get(id2);
     if (duplicate) {
       nodes.set(id2, {
         ...duplicate,
-        evidence: [.../* @__PURE__ */ new Set([...duplicate.evidence, ...sample.evidence])].toSorted()
+        evidence: evidencePool.sorted([...duplicate.evidence, ...sample.evidence])
       });
       continue;
     }
@@ -62938,7 +63288,7 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
           flowKind: "decode",
           indirect: false,
           reason: "Captured bytes/state do not establish one complete 65816 instruction.",
-          evidence: sample.evidence
+          evidence: evidencePool.intern(sample.evidence)
         });
       }
       continue;
@@ -62972,7 +63322,7 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
       outgoingState: {},
       entryPoint: `captured:${sample.evidence[0]}`,
       evidencePath: [id2],
-      evidence: [.../* @__PURE__ */ new Set([...prior?.evidence ?? [], ...sample.evidence])].toSorted(),
+      evidence: evidencePool.sorted([...prior?.evidence ?? [], ...sample.evidence]),
       effectiveAddresses: instruction.references.filter((ref) => ref.kind === "data" || ref.kind === "pointer").map((ref) => {
         const indexed = instruction.mode.includes("Indexed") || instruction.mode.includes("Indirect") || instruction.mode.startsWith("stackRelative");
         const hardware = ref.address === void 0 ? void 0 : identifySnesHardwareRegister(ref.address);
@@ -74072,7 +74422,7 @@ async function executeSourceOperation(operation2, host = defaultSourceHost) {
       onProgress(`Selected ${selected?.kind ?? "NES graphics"} importer.`);
       if (selected?.kind === "instructions" && !target.companionArchive && !operation2.recoverPartial) {
         const retained = catalogSnapshot.catalog.captures.find(
-          (entry) => entry.profile === "full" && entry.archives.some(
+          (entry) => (entry.profile === "full" || entry.profile === "65816-analysis-v3") && entry.archives.some(
             (prior) => prior.sha256 === archive.sha256 && prior.bytes === archive.bytes && prior.companionSha256 === archive.companionSha256
           )
         );
@@ -74119,7 +74469,7 @@ async function executeSourceOperation(operation2, host = defaultSourceHost) {
         result = await importRuntimeTraceSourceIntoProject(
           selected.source,
           local.evidence,
-          { ...context, indexMode: "full" },
+          { ...context, indexMode: "analysis" },
           {
             ...options,
             storageStatistics: false,
@@ -75517,7 +75867,8 @@ function placementValue(p) {
     p.segment ?? null,
     p.tile ?? null,
     p.external?.romAddress ?? null,
-    p.external?.indexes ?? null
+    p.external?.indexes ?? null,
+    p.paletteGroup ?? null
   ];
 }
 function deriveFramePlacements(layout2, frame) {
@@ -75570,6 +75921,13 @@ function deriveFramePlacements(layout2, frame) {
       throw new Error(`Invalid native block: ${frame.id}/${block.id}.`);
     }
     ids.add(block.id);
+    const display = {};
+    if (block.paletteGroup !== void 0) {
+      if (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+      display.paletteGroup = block.paletteGroup;
+    }
     const references = block.tiles.map(resolve);
     return expandIndexedGrid({
       ...block,
@@ -75589,7 +75947,8 @@ function deriveFramePlacements(layout2, frame) {
           flipX: p.flipX,
           flipY: p.flipY
         },
-        references[index]
+        references[index],
+        display
       )
     );
   });
@@ -75826,6 +76185,16 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   }
   if (!isKnownTileSource(layout2.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
+  }
+  if (Array.isArray(layout2.frames)) for (const frame of layout2.frames) {
+    if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
+      throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
+    }
+    if (Array.isArray(frame.blocks)) for (const block of frame.blocks) {
+      if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+    }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
   for (const name4 of names) {
@@ -77300,10 +77669,22 @@ function inspectSpritePaletteUsers(catalog, atlases) {
       const segments = Object.keys(layout2.segments).filter(
         (name4) => layout2.segments[name4].palette === group
       );
-      if (!segments.length) {
+      const displayed = /* @__PURE__ */ new Set();
+      let displayReferenced = false;
+      for (const frame of layout2.frames ?? []) {
+        for (const placement of validateFrameComposition(layout2, frame) ?? []) {
+          if ((placement.paletteGroup ?? frame.paletteGroup) === group) {
+            displayReferenced = true;
+            if (placement.segment && !segments.includes(placement.segment)) displayed.add(placement.segment);
+          }
+        }
+      }
+      if (!segments.length && !displayReferenced) {
         errors.push(`${id2}: palette group ${group} has no segment.`);
       }
-      actual.add(useKey(palette, id2, "primary", segments));
+      if (segments.length) actual.add(useKey(palette, id2, "primary", segments));
+      if (displayed.size || !segments.length && displayReferenced)
+        actual.add(useKey(palette, id2, "runtime-variant", [...displayed]));
     }
     for (const variant of layout2.paletteVariants ?? []) {
       const segments = Object.keys(layout2.segments).filter(
@@ -77478,7 +77859,8 @@ function renderStableFrameAtlas(tiles, layout2) {
         y: origin[1] + p.y,
         flipX: p.flipX,
         flipY: p.flipY,
-        indexMap: Array.from({ length: 16 }, (_, i) => segment.palette * 16 + i)
+        // Display colors can vary without changing the one native tile source.
+        indexMap: Array.from({ length: 16 }, (_, i) => (p.paletteGroup ?? frame.paletteGroup ?? segment.palette) * 16 + i)
       });
     }
   }
@@ -79265,7 +79647,7 @@ async function executeAssetSourceOperation(value, options = {}) {
 }
 
 // packages/game-secret-of-mana/src/room-adapter.ts
-import { createHash as createHash19 } from "node:crypto";
+import { createHash as createHash20 } from "node:crypto";
 import path58 from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
@@ -79570,11 +79952,9 @@ function decodeMapStream(bytes3, width, height, motifs, memory, origin) {
     commands.push({ offset: start, opcode, destination, count: count2, emitted });
   }
   assert.equal(offset, bytes3.length, "Unconsumed bytes before adjacent piece pointer.");
-  const tiles = [...output];
   for (const insertion of insertions) {
     const motif = motifs[insertion.index], x = insertion.destination % width;
     const y = Math.floor(insertion.destination / width);
-    assert(x + motif.width <= width && y + motif.height <= height, "Motif exceeds parent layout.");
     const motifOrigin = origin + y * 128 + x & 65535;
     const decoded2 = decodeMapStream(
       motif.bytes,
@@ -79588,16 +79968,13 @@ function decodeMapStream(bytes3, width, height, motifs, memory, origin) {
     if (!motif.tiles) {
       Object.assign(motif, decoded2);
     }
-    for (let dy = 0; dy < motif.height; dy++) {
-      for (let dx = 0; dx < motif.width; dx++) {
-        tiles[(y + dy) * width + x + dx] = decoded2.tiles[dy * motif.width + dx];
-      }
-    }
   }
-  assert(
-    tiles.every((value) => value !== null),
-    "Unfilled motif placeholder."
-  );
+  const tiles = output.map((_, index) => {
+    const address3 = origin + Math.floor(index / width) * 128 + index % width & 65535;
+    const value = memory.get(address3);
+    assert(value !== void 0, "Unfilled motif placeholder.");
+    return value;
+  });
   const result = {
     width,
     height,
@@ -80269,7 +80646,7 @@ var somRoomSourceAdapter = {
         const before = current.source(file), original = parseRoomPreview(before);
         preview.provenance = {
           ...object4(preview.provenance),
-          romSha256: createHash19("sha256").update(expected).digest("hex")
+          romSha256: createHash20("sha256").update(expected).digest("hex")
         };
         if (canonicalJson(original) !== canonicalJson(preview)) {
           files.push({ path: file, before, after: json(preview) });
@@ -80527,7 +80904,7 @@ var somSourceConversionAdapter = {
 };
 
 // packages/game-secret-of-mana/src/sprite-adapter.ts
-import { createHash as createHash20 } from "node:crypto";
+import { createHash as createHash21 } from "node:crypto";
 import path60 from "node:path";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 import { gunzipSync } from "node:zlib";
@@ -80986,7 +81363,7 @@ function observedRuns(context, selection, source) {
   const declaration = readSomObservationDeclaration(
     JSON.parse(new TextDecoder().decode(declarationBytes))
   ), bytes3 = context.read(selection.observations.proof), project = object6(JSON.parse(new TextDecoder().decode(context.read(".uttori/project.json"))));
-  if (project.romSha256 !== declaration.romSha256 || createHash20("sha256").update(bytes3).digest("hex") !== declaration.proofSha256) {
+  if (project.romSha256 !== declaration.romSha256 || createHash21("sha256").update(bytes3).digest("hex") !== declaration.proofSha256) {
     throw new Error("Observation proof does not match its declared ROM/source identity.");
   }
   let decoded2 = bytes3;

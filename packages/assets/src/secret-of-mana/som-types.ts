@@ -59,6 +59,8 @@ export interface FrameBlock {
   x: number;
   y: number;
   priority?: boolean;
+  /** Display-only paletteRefs index for this block; overrides the pose and native segment defaults. */
+  paletteGroup?: number;
 }
 
 /** One derived 8×8 occurrence. External blanks stay outside owned storage. */
@@ -73,6 +75,8 @@ export interface FramePlacement {
   segment?: string;
   tile?: number;
   external?: ExternalTileRef;
+  /** Display group derived from its block; never changes the authoritative native tile indexes. */
+  paletteGroup?: number;
 }
 
 /** One pose: editor bounds plus optional retained composition. */
@@ -85,6 +89,8 @@ export interface FrameRecord {
   /** Retained castle-boss record identity; its different encoding is read-only through ordinary body-coordinate edits. */
   bossFrame?: NativeFrameRecord;
   origin?: [number, number];
+  /** Optional paletteRefs index for displayed occurrences; native tile authorities keep their segment palette. */
+  paletteGroup?: number;
 }
 
 /** Version 1 frame-atlas sidecar shared by inspection, encoding, and authoring. */

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
+  EvidencePool,
   type AnalysisRecord,
   type AnalysisControlFlowNodeRecord,
   type AnalysisControlFlowEdgeRecord,
@@ -74,6 +75,7 @@ export const analyzeSnesRuntimeCode = (
   runtime: Iterable<RuntimeEvidenceRecord> = shards.runtime,
   onProgress?: (message: string) => void,
 ): readonly AnalysisRecord[] => {
+  const evidencePool = new EvidencePool();
   const decoder = new Cpu65816Decoder();
   const context = createSnesAddressContext(mapper);
   const romBytes = rom.bytes();
@@ -102,7 +104,7 @@ export const analyzeSnesRuntimeCode = (
     if (duplicate) {
       nodes.set(id, {
         ...duplicate,
-        evidence: [...new Set([...duplicate.evidence, ...sample.evidence])].toSorted(),
+        evidence: evidencePool.sorted([...duplicate.evidence, ...sample.evidence]),
       });
       continue;
     }
@@ -122,7 +124,7 @@ export const analyzeSnesRuntimeCode = (
           flowKind: "decode",
           indirect: false,
           reason: "Captured bytes/state do not establish one complete 65816 instruction.",
-          evidence: sample.evidence,
+          evidence: evidencePool.intern(sample.evidence),
         });
       }
       continue;
@@ -159,7 +161,7 @@ export const analyzeSnesRuntimeCode = (
       outgoingState: {},
       entryPoint: `captured:${sample.evidence[0]}`,
       evidencePath: [id],
-      evidence: [...new Set([...(prior?.evidence ?? []), ...sample.evidence])].toSorted(),
+      evidence: evidencePool.sorted([...(prior?.evidence ?? []), ...sample.evidence]),
       effectiveAddresses: instruction.references
         .filter((ref) => ref.kind === "data" || ref.kind === "pointer")
         .map((ref) => {

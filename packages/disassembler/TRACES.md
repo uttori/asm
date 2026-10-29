@@ -26,7 +26,7 @@ try {
     {
       projectRomContentSha256: manifest.rom.contentSha256,
       sourceName: file,
-      indexMode: "full",
+      indexMode: "analysis",
     },
     {
       signal: controller.signal,
@@ -72,12 +72,25 @@ A custom source must enforce its own input-byte budget. Chunk validation, sequen
 cumulative loss counts, ROM identity, and index limits still apply. Progress callbacks run
 synchronously and should return quickly.
 
-`full` is the only supported index mode and retains every supplied register, instruction byte
-variant, execution count and supported memory observation. It does not replace the original
-chronological capture. Source identity hashes canonical validated metadata and chunks, so
-JSON whitespace does not create a new capture. Reimporting the same source does not double
-counts. Historical reduced-index receipts in existing Secret of Mana projects remain readable;
-reimporting them preserves retained facts with a warning rather than restoring omitted registers.
+The source workflow and CLI default to `analysis`. For SNES this retains joint PC/opcode-byte
+variants with the decoder's P width bits, E, DB and D (including aliases and unknown values),
+exact observation totals and all supported memory facts. It consolidates snapshots that differ
+only in other registers or arithmetic flags. The versioned receipt is `65816-analysis-v3`.
+Other architectures retain full snapshots. The library's omitted `indexMode` remains `full` for
+compatibility; select `analysis` explicitly for compact retention.
+
+`full` retains every supplied register. Both modes hash the complete validated input, including
+omitted registers. JSON whitespace does not create a new capture, and repeating an import does not
+double counts. Capture hashes identify historical input; retained analysis works without the archive.
+
+Use `uttori-asm project-compact <analysis-directory> --analysis-only` to consolidate an existing
+SNES database without its original archives. The operation verifies a staging database, then swaps
+runtime tables in one transaction and VACUUMs live pages. It preserves metadata, research shadows,
+memory evidence and exact counts, while discarding registers outside the analysis profile. It needs
+temporary space for compact runtime tables and twice the remaining live database size. Refresh a Git
+source project's capture catalog afterward with `uttori-asm source catalog <source-project>`.
+An interrupted table publication rolls back; an interrupted post-commit VACUUM can be retried with
+ordinary `project-compact` without repeating retention. Historical receipts remain readable.
 
 Storage policy controls disposable projections and the live SQLite page ceiling independently of
 parser input and index limits. Imports preserve prior evidence. Exact no-op imports do not run VACUUM. See [project storage](API.md).

@@ -11572,7 +11572,8 @@ function placementValue(p) {
     p.segment ?? null,
     p.tile ?? null,
     p.external?.romAddress ?? null,
-    p.external?.indexes ?? null
+    p.external?.indexes ?? null,
+    p.paletteGroup ?? null
   ];
 }
 function deriveFramePlacements(layout2, frame) {
@@ -11625,6 +11626,13 @@ function deriveFramePlacements(layout2, frame) {
       throw new Error(`Invalid native block: ${frame.id}/${block.id}.`);
     }
     ids.add(block.id);
+    const display = {};
+    if (block.paletteGroup !== void 0) {
+      if (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+      display.paletteGroup = block.paletteGroup;
+    }
     const references = block.tiles.map(resolve);
     return expandIndexedGrid({
       ...block,
@@ -11644,7 +11652,8 @@ function deriveFramePlacements(layout2, frame) {
           flipX: p.flipX,
           flipY: p.flipY
         },
-        references[index]
+        references[index],
+        display
       )
     );
   });
@@ -11919,6 +11928,16 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   }
   if (!isKnownTileSource(layout2.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
+  }
+  if (Array.isArray(layout2.frames)) for (const frame of layout2.frames) {
+    if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
+      throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
+    }
+    if (Array.isArray(frame.blocks)) for (const block of frame.blocks) {
+      if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+    }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
   for (const name of names) {
@@ -17018,18 +17037,25 @@ function convertAsset(registry4, request) {
 
 // packages/assets/src/secret-of-mana/som-boss-graphics.ts
 function expandBossGraphics(source, size) {
+  validateSize(source, size);
+  return expandBossMask(source, Math.ceil(size / 8) * 8);
+}
+function validateSize(source, size) {
   if (!(source instanceof Uint8Array) || !Number.isInteger(size) || size <= 0 || size > 65535) {
     throw new Error("Boss graphics need bytes and a positive 16-bit output size.");
   }
-  const length = Math.ceil(size / 8) * 8;
-  const data = new Uint8Array(length);
+}
+function expandBossMask(source, size) {
+  if (size !== 65536) validateSize(source, size);
+  else if (!(source instanceof Uint8Array)) throw new Error("Boss mask source requires bytes.");
+  const data = new Uint8Array(size);
   let cursor = 0;
-  for (let output = 0; output < length; ) {
+  for (let output = 0; output < size; ) {
     if (cursor >= source.length) {
       throw new Error("Truncated boss graphics mask.");
     }
     const mask = source[cursor++];
-    for (let bit = 7; bit >= 0; bit--, output++) {
+    for (let bit = 7; bit >= 0 && output < size; bit--, output++) {
       if (mask & 1 << bit) {
         if (cursor >= source.length) {
           throw new Error("Truncated boss graphics literal.");
@@ -17046,11 +17072,17 @@ function encodeBossGraphics(data) {
   if (!(data instanceof Uint8Array) || !data.length || data.length % 8) {
     throw new Error("Boss graphics need a positive multiple-of-eight byte count.");
   }
+  return encodeBossMask(data);
+}
+function encodeBossMask(data) {
+  if (!(data instanceof Uint8Array) || !data.length || data.length > 65536) {
+    throw new Error("Boss mask needs 1..65536 bytes.");
+  }
   const output = [];
   for (let start = 0; start < data.length; start += 8) {
     let mask = 0;
     const literals = [];
-    for (let bit = 0; bit < 8; bit++) {
+    for (let bit = 0; bit < 8 && start + bit < data.length; bit++) {
       const index = start + bit;
       const previous = index >= 2 ? data[index - 2] : 0;
       if (data[index] !== previous) {
@@ -17061,7 +17093,7 @@ function encodeBossGraphics(data) {
     output.push(mask, ...literals);
   }
   const encoded = Uint8Array.from(output);
-  const decoded2 = expandBossGraphics(encoded, data.length);
+  const decoded2 = expandBossMask(encoded, data.length);
   if (decoded2.consumed !== encoded.length || decoded2.data.some((byte, index) => byte !== data[index])) {
     throw new Error("Boss graphics mask inverse failed.");
   }
@@ -17496,7 +17528,8 @@ function renderStableFrameAtlas(tiles, layout2) {
         y: origin[1] + p.y,
         flipX: p.flipX,
         flipY: p.flipY,
-        indexMap: Array.from({ length: 16 }, (_, i) => segment.palette * 16 + i)
+        // Display colors can vary without changing the one native tile source.
+        indexMap: Array.from({ length: 16 }, (_, i) => (p.paletteGroup ?? frame.paletteGroup ?? segment.palette) * 16 + i)
       });
     }
   }
@@ -19800,6 +19833,36 @@ function definePlugin(plugin2) {
   return plugin2;
 }
 
+// packages/assets/src/secret-of-mana/som-boss-background.ts
+function integer3(value, minimum, maximum) {
+  if (!Number.isInteger(value) || value < minimum || value > maximum) {
+    throw new Error(`Boss background value must be ${minimum}..${maximum}.`);
+  }
+  return value;
+}
+function decodeBossTilemap(source, size) {
+  integer3(size, 2, 65534);
+  if (size % 2) throw new Error("Boss tilemaps require complete two-byte tile words.");
+  if (!source.length) throw new Error("Missing boss tilemap storage tag.");
+  const tag = source[0];
+  if (!tag) {
+    if (source.length < size + 1) throw new Error("Truncated raw boss tilemap.");
+    return { data: source.slice(1, size + 1), consumed: size + 1, tag };
+  }
+  const result = expandBossMask(source.subarray(1), size);
+  return { ...result, consumed: result.consumed + 1, tag };
+}
+function encodeBossTilemap(data, tag = 1) {
+  integer3(data.length, 2, 65534);
+  if (data.length % 2) throw new Error("Boss tilemaps require complete two-byte tile words.");
+  integer3(tag, 0, 255);
+  const body = tag ? encodeBossMask(data) : data;
+  const result = new Uint8Array(body.length + 1);
+  result[0] = tag;
+  result.set(body, 1);
+  return result;
+}
+
 // packages/assets/src/secret-of-mana/som-dialogue-command.ts
 function encodeSomDialogueCommand(token) {
   const names = ["${boy}", "${girl}", "${sprite}"];
@@ -20660,6 +20723,27 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
             primaryOutput: "brr",
             outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } }
           };
+        }
+      });
+      context.registerAssetTransform({
+        id: "som.boss.tilemap",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        optionSchema: {
+          size: { type: "integer", minimum: 2, maximum: 65534 },
+          tag: { type: "integer", minimum: 0, maximum: 255 }
+        },
+        encode: (bytes, options) => {
+          if (bytes.length !== options.size) throw new Error("Boss tilemap size mismatch.");
+          return encodeBossTilemap(bytes, options.tag === void 0 ? 1 : Number(options.tag));
+        },
+        decode: (bytes, options, maxOutputBytes) => {
+          const size = Number(options.size);
+          if (size > maxOutputBytes) throw new Error("Boss tilemap exceeds output limit.");
+          const result = decodeBossTilemap(bytes, size);
+          if (result.consumed !== bytes.length)
+            throw new Error("Trailing bytes after boss tilemap.");
+          return result.data;
         }
       });
       context.registerAssetTransform({
@@ -24776,10 +24860,10 @@ function valueWidth(value) {
   if (!Number.isFinite(value)) {
     return 4;
   }
-  let integer3 = Math.floor(Math.abs(value));
+  let integer4 = Math.floor(Math.abs(value));
   let digits = 1;
-  while (integer3 >= 16) {
-    integer3 = Math.floor(integer3 / 16);
+  while (integer4 >= 16) {
+    integer4 = Math.floor(integer4 / 16);
     digits++;
   }
   if (value < 0) {

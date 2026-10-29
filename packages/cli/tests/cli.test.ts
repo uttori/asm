@@ -320,11 +320,16 @@ test("parseCliArguments: parses evidence and storage flags", (t) => {
     databaseMaxBytes: 8 * 1024 ** 2,
   });
   t.is(parseCliArguments(["evidence-import", "p", "--trace-index=full"]).traceIndex, "full");
+  t.is(
+    parseCliArguments(["evidence-import", "p", "--trace-index=analysis"]).traceIndex,
+    "analysis",
+  );
+  t.true(parseCliArguments(["project-compact", "p", "--analysis-only"]).analysisOnly);
   for (const mode of ["65816-analysis", "65816-disassembly", "sample"]) {
     t.throws(
       () => parseCliArguments(["evidence-import", "game.analysis", `--trace-index=${mode}`]),
       {
-        message: "--trace-index must be full.",
+        message: "--trace-index must be full or analysis.",
       },
     );
   }

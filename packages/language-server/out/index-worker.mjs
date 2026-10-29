@@ -13544,18 +13544,25 @@ function withImageEncoders(native) {
 
 // packages/assets/src/secret-of-mana/som-boss-graphics.ts
 function expandBossGraphics(source, size) {
+  validateSize(source, size);
+  return expandBossMask(source, Math.ceil(size / 8) * 8);
+}
+function validateSize(source, size) {
   if (!(source instanceof Uint8Array) || !Number.isInteger(size) || size <= 0 || size > 65535) {
     throw new Error("Boss graphics need bytes and a positive 16-bit output size.");
   }
-  const length = Math.ceil(size / 8) * 8;
-  const data = new Uint8Array(length);
+}
+function expandBossMask(source, size) {
+  if (size !== 65536) validateSize(source, size);
+  else if (!(source instanceof Uint8Array)) throw new Error("Boss mask source requires bytes.");
+  const data = new Uint8Array(size);
   let cursor = 0;
-  for (let output = 0; output < length; ) {
+  for (let output = 0; output < size; ) {
     if (cursor >= source.length) {
       throw new Error("Truncated boss graphics mask.");
     }
     const mask = source[cursor++];
-    for (let bit2 = 7; bit2 >= 0; bit2--, output++) {
+    for (let bit2 = 7; bit2 >= 0 && output < size; bit2--, output++) {
       if (mask & 1 << bit2) {
         if (cursor >= source.length) {
           throw new Error("Truncated boss graphics literal.");
@@ -13572,11 +13579,17 @@ function encodeBossGraphics(data) {
   if (!(data instanceof Uint8Array) || !data.length || data.length % 8) {
     throw new Error("Boss graphics need a positive multiple-of-eight byte count.");
   }
+  return encodeBossMask(data);
+}
+function encodeBossMask(data) {
+  if (!(data instanceof Uint8Array) || !data.length || data.length > 65536) {
+    throw new Error("Boss mask needs 1..65536 bytes.");
+  }
   const output = [];
   for (let start = 0; start < data.length; start += 8) {
     let mask = 0;
     const literals = [];
-    for (let bit2 = 0; bit2 < 8; bit2++) {
+    for (let bit2 = 0; bit2 < 8 && start + bit2 < data.length; bit2++) {
       const index = start + bit2;
       const previous = index >= 2 ? data[index - 2] : 0;
       if (data[index] !== previous) {
@@ -13587,7 +13600,7 @@ function encodeBossGraphics(data) {
     output.push(mask, ...literals);
   }
   const encoded = Uint8Array.from(output);
-  const decoded2 = expandBossGraphics(encoded, data.length);
+  const decoded2 = expandBossMask(encoded, data.length);
   if (decoded2.consumed !== encoded.length || decoded2.data.some((byte, index) => byte !== data[index])) {
     throw new Error("Boss graphics mask inverse failed.");
   }
@@ -13671,7 +13684,8 @@ function placementValue(p) {
     p.segment ?? null,
     p.tile ?? null,
     p.external?.romAddress ?? null,
-    p.external?.indexes ?? null
+    p.external?.indexes ?? null,
+    p.paletteGroup ?? null
   ];
 }
 function deriveFramePlacements(layout2, frame) {
@@ -13724,6 +13738,13 @@ function deriveFramePlacements(layout2, frame) {
       throw new Error(`Invalid native block: ${frame.id}/${block.id}.`);
     }
     ids.add(block.id);
+    const display = {};
+    if (block.paletteGroup !== void 0) {
+      if (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+      display.paletteGroup = block.paletteGroup;
+    }
     const references = block.tiles.map(resolve);
     return expandIndexedGrid({
       ...block,
@@ -13743,7 +13764,8 @@ function deriveFramePlacements(layout2, frame) {
           flipX: p.flipX,
           flipY: p.flipY
         },
-        references[index]
+        references[index],
+        display
       )
     );
   });
@@ -13980,6 +14002,16 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   }
   if (!isKnownTileSource(layout2.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
+  }
+  if (Array.isArray(layout2.frames)) for (const frame of layout2.frames) {
+    if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
+      throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
+    }
+    if (Array.isArray(frame.blocks)) for (const block of frame.blocks) {
+      if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
+        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+      }
+    }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
   for (const name of names) {
@@ -31559,6 +31591,36 @@ function runTypedEncoderEntry(context, encoder, instruction, emit) {
   }
 }
 
+// packages/assets/src/secret-of-mana/som-boss-background.ts
+function integer2(value, minimum, maximum) {
+  if (!Number.isInteger(value) || value < minimum || value > maximum) {
+    throw new Error(`Boss background value must be ${minimum}..${maximum}.`);
+  }
+  return value;
+}
+function decodeBossTilemap(source, size) {
+  integer2(size, 2, 65534);
+  if (size % 2) throw new Error("Boss tilemaps require complete two-byte tile words.");
+  if (!source.length) throw new Error("Missing boss tilemap storage tag.");
+  const tag = source[0];
+  if (!tag) {
+    if (source.length < size + 1) throw new Error("Truncated raw boss tilemap.");
+    return { data: source.slice(1, size + 1), consumed: size + 1, tag };
+  }
+  const result = expandBossMask(source.subarray(1), size);
+  return { ...result, consumed: result.consumed + 1, tag };
+}
+function encodeBossTilemap(data, tag = 1) {
+  integer2(data.length, 2, 65534);
+  if (data.length % 2) throw new Error("Boss tilemaps require complete two-byte tile words.");
+  integer2(tag, 0, 255);
+  const body = tag ? encodeBossMask(data) : data;
+  const result = new Uint8Array(body.length + 1);
+  result[0] = tag;
+  result.set(body, 1);
+  return result;
+}
+
 // packages/assets/src/secret-of-mana/som-dialogue-command.ts
 function encodeSomDialogueCommand(token) {
   const names = ["${boy}", "${girl}", "${sprite}"];
@@ -32041,7 +32103,7 @@ function isRoomPiece(value) {
 function isRoomAsset(value) {
   return isRecord8(value) && Array.isArray(value.entities) && value.entities.every(isRoomEntity) && Array.isArray(value.pieces) && value.pieces.every(isRoomPiece) && Array.isArray(value.triggers) && value.triggers.every((item) => typeof item === "number");
 }
-function integer2(value, maximum, name) {
+function integer3(value, maximum, name) {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
     fail(`${name} must be 0..${maximum}.`);
   }
@@ -32055,13 +32117,13 @@ function parseRoomAsset(source) {
   }
   equal(parsed.format, "som.room");
   equal(parsed.version, 1);
-  integer2(parsed.id, 510, "room id");
+  integer3(parsed.id, 510, "room id");
   invariant(
     Array.isArray(parsed.header) && parsed.header.length === 8,
     "Room header requires eight bytes."
   );
   for (const byte of parsed.header) {
-    integer2(byte, 255, "header byte");
+    integer3(byte, 255, "header byte");
   }
   for (const key of ["entities", "pieces", "triggers"]) {
     invariant(Array.isArray(parsed[key]), `Missing room ${key}.`);
@@ -32072,8 +32134,8 @@ function parseRoomAsset(source) {
   return parsed;
 }
 function condition(record) {
-  const variable = integer2(record.variable, 255, "story variable");
-  const minimum = integer2(record.minimum, 15, "story minimum"), maximum = integer2(record.maximum, 15, "story maximum");
+  const variable = integer3(record.variable, 255, "story variable");
+  const minimum = integer3(record.minimum, 15, "story minimum"), maximum = integer3(record.maximum, 15, "story maximum");
   invariant(minimum <= maximum, "Story range is reversed.");
   return [variable, minimum << 4 | maximum];
 }
@@ -32086,17 +32148,17 @@ function encodeRoomSection(room, section) {
   if (section === "objects") {
     bytes.push(...room.header);
     for (const entity of room.entities) {
-      const flags = integer2(entity.flags, 255, "entity flags");
+      const flags = integer3(entity.flags, 255, "entity flags");
       equal(flags & 63, 0, "Only packed entity flags 40/80 are defined.");
-      const event = integer2(entity.event, 4095, "entity event");
+      const event = integer3(entity.event, 4095, "entity event");
       bytes.push(
         ...condition(entity),
-        integer2(entity.x, 127, "entity x") | (flags & 64) << 1,
-        integer2(entity.y, 127, "entity y") | flags & 128,
-        integer2(entity.orientationAndLayer, 255, "orientation/layer byte"),
-        integer2(entity.entity, 255, "entity id"),
+        integer3(entity.x, 127, "entity x") | (flags & 64) << 1,
+        integer3(entity.y, 127, "entity y") | flags & 128,
+        integer3(entity.orientationAndLayer, 255, "orientation/layer byte"),
+        integer3(entity.entity, 255, "entity id"),
         event & 255,
-        integer2(entity.interaction, 15, "interaction flags") << 4 | event >>> 8
+        integer3(entity.interaction, 15, "interaction flags") << 4 | event >>> 8
       );
     }
   } else if (section === "assembly") {
@@ -32110,18 +32172,18 @@ function encodeRoomSection(room, section) {
       equal(piece.layer, layer, "A layer change requires an explicit marker.");
       const predicate = condition(piece);
       invariant(predicate[0] < 254, "FE/FF are layer markers, not piece story indexes.");
-      const layout2 = integer2(piece.layout, 1023, "layout id");
+      const layout2 = integer3(piece.layout, 1023, "layout id");
       invariant(layout2 > 0, "Native layout IDs are one-based.");
       bytes.push(
         ...predicate,
         layout2 & 255,
-        integer2(piece.x, 127, "piece x") << 1 | layout2 >>> 8 & 1,
-        integer2(piece.y, 127, "piece y") << 1 | layout2 >>> 9 & 1
+        integer3(piece.x, 127, "piece x") << 1 | layout2 >>> 8 & 1,
+        integer3(piece.y, 127, "piece y") << 1 | layout2 >>> 9 & 1
       );
     }
   } else {
     for (const trigger of room.triggers) {
-      integer2(trigger, 65535, "packed trigger word");
+      integer3(trigger, 65535, "packed trigger word");
       bytes.push(trigger & 255, trigger >>> 8);
     }
   }
@@ -36638,7 +36700,8 @@ function renderStableFrameAtlas(tiles, layout2) {
         y: origin[1] + p.y,
         flipX: p.flipX,
         flipY: p.flipY,
-        indexMap: Array.from({ length: 16 }, (_, i) => segment.palette * 16 + i)
+        // Display colors can vary without changing the one native tile source.
+        indexMap: Array.from({ length: 16 }, (_, i) => (p.paletteGroup ?? frame.paletteGroup ?? segment.palette) * 16 + i)
       });
     }
   }
@@ -37734,6 +37797,27 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
             primaryOutput: "brr",
             outputs: { brr: { ...brr, bytes: sliceBrrSegment(brr.bytes, options) } }
           };
+        }
+      });
+      context.registerAssetTransform({
+        id: "som.boss.tilemap",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        optionSchema: {
+          size: { type: "integer", minimum: 2, maximum: 65534 },
+          tag: { type: "integer", minimum: 0, maximum: 255 }
+        },
+        encode: (bytes, options) => {
+          if (bytes.length !== options.size) throw new Error("Boss tilemap size mismatch.");
+          return encodeBossTilemap(bytes, options.tag === void 0 ? 1 : Number(options.tag));
+        },
+        decode: (bytes, options, maxOutputBytes) => {
+          const size = Number(options.size);
+          if (size > maxOutputBytes) throw new Error("Boss tilemap exceeds output limit.");
+          const result = decodeBossTilemap(bytes, size);
+          if (result.consumed !== bytes.length)
+            throw new Error("Trailing bytes after boss tilemap.");
+          return result.data;
         }
       });
       context.registerAssetTransform({
@@ -41619,10 +41703,10 @@ function valueWidth(value) {
   if (!Number.isFinite(value)) {
     return 4;
   }
-  let integer3 = Math.floor(Math.abs(value));
+  let integer4 = Math.floor(Math.abs(value));
   let digits = 1;
-  while (integer3 >= 16) {
-    integer3 = Math.floor(integer3 / 16);
+  while (integer4 >= 16) {
+    integer4 = Math.floor(integer4 / 16);
     digits++;
   }
   if (value < 0) {
@@ -45084,10 +45168,10 @@ function valueWidth2(value) {
   if (!Number.isFinite(value)) {
     return 4;
   }
-  let integer3 = Math.floor(Math.abs(value));
+  let integer4 = Math.floor(Math.abs(value));
   let digits = 1;
-  while (integer3 >= 16) {
-    integer3 = Math.floor(integer3 / 16);
+  while (integer4 >= 16) {
+    integer4 = Math.floor(integer4 / 16);
     digits++;
   }
   if (value < 0) {

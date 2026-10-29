@@ -49,8 +49,8 @@
     "@uttori/asm-plugin-snes": "1.0.0",
     "@uttori/asm-workflows": "1.0.0",
     "jsonc-parser": "^3.3.1",
-    "vscode-languageclient": "^10.1.2",
-    "vscode-languageserver-types": "^3.18.4"
+    "vscode-languageclient": "^11.0.0",
+    "vscode-languageserver-types": "^3.18.5"
   },
   "devDependencies": {
     "@types/vscode": "1.140.0",

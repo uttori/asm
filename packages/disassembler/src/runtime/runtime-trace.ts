@@ -13,6 +13,7 @@ import {
   validateRuntimeInstructionDetails,
   type RuntimeInstructionDetail,
 } from "../model/trace-detail.js";
+import { snesAnalysisTraceState, SNES_ANALYSIS_TRACE_PROFILE } from "./runtime-analysis-profile.js";
 import type { RuntimeEvidenceBatch } from "./runtime-evidence.js";
 import { TraceChunkFormatter } from "./trace-chunk-formatter.js";
 
@@ -60,7 +61,7 @@ export interface RuntimeInstructionTraceImportContext {
   /** Lowercase SHA-256 of headerless ROM content. A mismatch rejects the import. */
   readonly projectRomContentSha256: string;
   readonly sourceName: string;
-  /** Full indexing retains every supplied register; other modes are rejected. */
+  /** Full retains supplied registers. Analysis retains SNES decoder state and all memory facts. Defaults to full. */
   readonly indexMode?: string;
   /**
    * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
@@ -71,8 +72,8 @@ export interface RuntimeInstructionTraceImportContext {
   readonly maxIndexRecords?: number;
 }
 
-/** Instruction imports retain all supplied registers, bytes, counts and bus observations. */
-export type RuntimeTraceIndexMode = "full";
+/** Full preserves registers; analysis consolidates SNES snapshots by decoder state and opcode bytes. */
+export type RuntimeTraceIndexMode = "full" | "analysis";
 /** Default and maximum distinct-fact budget when counters or output records remain on the heap. */
 export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8_000_000;
 const MAX_RUNTIME_TRACE_INDEX_RECORDS = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
@@ -336,7 +337,7 @@ export interface RuntimeTraceImporterStorage {
 /**
  * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
  * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
- * @param {string} mode Retention profile. Only full indexing is supported.
+ * @param {string} mode Full snapshots or compact analysis state.
  * @param {number} requested Explicit caller budget, if any.
  * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
  * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
@@ -346,8 +347,8 @@ export const runtimeTraceIndexRecordLimit = (
   requested: number | undefined,
   storage?: RuntimeTraceImporterStorage,
 ): number => {
-  if (mode !== "full") {
-    throw new Error("Only full runtime trace indexing is supported.");
+  if (mode !== "full" && mode !== "analysis") {
+    throw new Error("Only full or analysis runtime trace indexing is supported.");
   }
   let defaultLimit = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
   let maximum = MAX_RUNTIME_TRACE_INDEX_RECORDS;
@@ -529,7 +530,10 @@ export const createRuntimeInstructionTraceImporter = (
       const base = { architecture: artifact.architecture, count: 1, evidence: [] };
       // Keep bytes and decoding state together: independent sets could pair self-modified code
       // with register values that were never observed when those bytes executed.
-      const state = detail.state;
+      const state =
+        indexMode === "analysis" && artifact.architecture === "snes.65816"
+          ? snesAnalysisTraceState(detail.state)
+          : detail.state;
       const content = JSON.stringify({ address, bytes: detail.bytes, state });
       // Full snapshots may contain large or mostly unique register objects. Fixed-size keys
       // bound per-variant key allocations without dropping any captured register fields.
@@ -642,7 +646,11 @@ export const createRuntimeInstructionTraceImporter = (
     const prepared = checkpoint(recovery);
     recovery = prepared.recovery;
     const sourceSha256 = prepared.sourceSha256;
-    storage?.onSource?.(sourceSha256, "full");
+    const profile =
+      indexMode === "analysis" && artifact.architecture === "snes.65816"
+        ? SNES_ANALYSIS_TRACE_PROFILE
+        : "full";
+    storage?.onSource?.(sourceSha256, profile);
     const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
     const evidenceIds = [evidenceId];
     const executions: RuntimeEvidenceRecord[] = [];
@@ -739,6 +747,7 @@ export const createRuntimeInstructionTraceImporter = (
     };
     const report: ImportReport = {
       id: `import:instruction-trace:${sourceSha256}`,
+      ...(profile === "full" ? {} : { indexProfile: profile }),
       format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
       sourceName,
       sourceSha256,

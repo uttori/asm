@@ -63,6 +63,24 @@ an exact half-open ROM file-offset span and the bank directive emitted there:
 }
 ```
 
+The optional `requirements` array makes codec admission mandatory for ROM bindings
+of a declared structure. For example:
+
+```json
+"requirements": [
+  { "structure": "BossPaletteWord", "format": "som.palette.bgr555" },
+  { "structure": "RoomTriggerWord", "format": "som.room", "options": { "section": "triggers" } }
+]
+```
+
+Prepare checks the complete physical range of every matching binding before
+emitting source. Missing bytes, a different codec, or a different literal section
+option fail with the owner name and missing ROM offset. Adjacent includes and
+larger shared owners remain valid. RAM bindings are excluded. This validation runs
+in both the CLI and the editor regeneration process; successful ROM equality alone
+does not satisfy the codec requirement.
+
+
 The exporter splits raw spans at these bounds and replaces complete non-code
 spans. It rejects overlaps, code, typed-header splits and interior source labels.
 The asset source path is relative to the generated bank file. Pure generation snapshots

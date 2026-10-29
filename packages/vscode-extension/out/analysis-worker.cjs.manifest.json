@@ -4,7 +4,7 @@
   "source": "packages/vscode-extension/src/analysis/worker.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/analysis-worker.cjs.licenses.txt",
-  "sha256": "30cbafe6d419d8ea6135138395fcac349b219aaa59aba468e160bedcfca5f7bd",
+  "sha256": "aa691b4a242f0ff74ff190bb6701d33507df8edd27f8ab8d221fe8ee5459e755",
   "noticesSha256": "fcfc842aeb2910110fcdc8fb8c1f8378d0d70310445d6ef4cb3104fc0d0a370f",
   "inputs": [
     {
@@ -21,7 +21,7 @@
     },
     {
       "file": "packages/capture/src/capture-context.ts",
-      "sha256": "655acdeb2f90eed72f3e0098ba68b4d662fe42ee9204fd554c18fb5cf2b9ffa1"
+      "sha256": "c780b49a6672e00f288bda6e70c16acac7892cb74761946aac2a9d425b059927"
     },
     {
       "file": "packages/capture/src/capture-file-reader.ts",
@@ -85,11 +85,11 @@
     },
     {
       "file": "packages/disassembler/src/analysis/static-analysis.ts",
-      "sha256": "ea03d07005cffaf48cfde70c1433de06708c21f288f4eaf633cd31e7eb263a81"
+      "sha256": "12be44af58ede9dfff51cbb2aa759bc87a6926acdd3f2b28bb9d4d8011b353b7"
     },
     {
       "file": "packages/disassembler/src/index.ts",
-      "sha256": "c85b3024fc8f25d6d571e7f22b5febc24e630cd19d5c9ac45aed7cdc35812c35"
+      "sha256": "1f742f37c1ddd8488c78d431ff60068b76a9d48882bc496c897ab51f464d79a5"
     },
     {
       "file": "packages/disassembler/src/internal/capture-limits.ts",
@@ -118,6 +118,10 @@
     {
       "file": "packages/disassembler/src/model/analysis-ownership.ts",
       "sha256": "c108554886e61d0f80025494e4acb93f174c6f72cc38f87293720266f96ba0e7"
+    },
+    {
+      "file": "packages/disassembler/src/model/evidence-pool.ts",
+      "sha256": "f7ebf2fbfc0ab6894a06e65f285b5f846e1bf18a8b126ed977bbb52cd4492781"
     },
     {
       "file": "packages/disassembler/src/model/metadata-validation.ts",
@@ -181,7 +185,7 @@
     },
     {
       "file": "packages/disassembler/src/project/project-transaction.ts",
-      "sha256": "4d8a9ad88c2f00a2236fea69f28fe8f701bb689033c1599c4aafc08a940f6bcb"
+      "sha256": "9bc14627c5933895bc2462d97785bac0ca3b3eea56fa7c03050254801b3db643"
     },
     {
       "file": "packages/disassembler/src/project/read-session.ts",
@@ -224,6 +228,10 @@
       "sha256": "64fd198dbd836b0292ed6d0d06859d0a92bf70022a03b149b24f224cbc8a301d"
     },
     {
+      "file": "packages/disassembler/src/runtime/runtime-analysis-profile.ts",
+      "sha256": "86548b0bbc9a122ac3f4280d8cb6adb517e22a6a8970357691a06a4f14f257fa"
+    },
+    {
       "file": "packages/disassembler/src/runtime/runtime-bus-trace.ts",
       "sha256": "ea11d6ec8a30a0de8512d05cea3b4b4e312e3bc47d1ee054675e265d4896eedf"
     },
@@ -245,7 +253,7 @@
     },
     {
       "file": "packages/disassembler/src/runtime/runtime-trace.ts",
-      "sha256": "47806b593562c0b3126af739ac34d0939ef4578647cf54731418c0b0703ce341"
+      "sha256": "ab8d8b4002b036df90b808c6f2524cb1630c2afa43ee3177f26c33b1c4b2d1b6"
     },
     {
       "file": "packages/disassembler/src/runtime/runtime-transfer.ts",
@@ -273,7 +281,7 @@
     },
     {
       "file": "packages/disassembler/src/source-project/captures.ts",
-      "sha256": "d6c96f813c38d108730ad55adf406d92bf9b6863c29f4c94e028e54090512294"
+      "sha256": "cbff409d3b6c26f5a9d3f51b37645ca009826b36de7799a0ef90b96ac3401f6f"
     },
     {
       "file": "packages/disassembler/src/source-project/code-preservation.ts",
@@ -365,7 +373,7 @@
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-runtime-batch.ts",
-      "sha256": "ec26e174fc919bf9877644086fb568ab531aa28ffb1e003ae1d20381ad3d4135"
+      "sha256": "3a2268d550ad13ecbdc2e15fe517261fa10f2effd4385a22d89d6663ce4d3bc4"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-runtime-facts.ts",
@@ -401,7 +409,7 @@
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-store.ts",
-      "sha256": "39a4d3e64ebb3c23789ed49a9f3b1083807b4f45d394b12cb8dd2c13862d704d"
+      "sha256": "8b16b6a257705edd91f6d966f1a0c58d55852d3cbabcf1bb5693a3e55e96e150"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-trace-stage.ts",

@@ -74,14 +74,19 @@ export function assertTraceRecordNamespace(
  */
 export class SqliteRuntimeTraceBatch implements RuntimeTracePublicationSink {
   readonly #db: DatabaseSync;
-  readonly #source: string;
+  readonly #source: string | undefined;
   readonly #intern: (table: string, value: string) => number;
   readonly #stage: StatementSync;
   #pending: RuntimeInstructionRecord | undefined;
   #rows = 0;
   #finished = false;
 
-  constructor(db: DatabaseSync, source: string, intern: (table: string, value: string) => number) {
+  /** An omitted source is reserved for a validated multi-capture retention rebuild. */
+  constructor(
+    db: DatabaseSync,
+    source: string | undefined,
+    intern: (table: string, value: string) => number,
+  ) {
     this.#db = db;
     this.#source = source;
     this.#intern = intern;
@@ -102,7 +107,9 @@ export class SqliteRuntimeTraceBatch implements RuntimeTracePublicationSink {
     if (this.#finished || !this.#db.isTransaction) {
       throw new Error("Runtime trace batch is no longer active.");
     }
-    assertTraceRecordNamespace(record, this.#source);
+    if (this.#source !== undefined) {
+      assertTraceRecordNamespace(record, this.#source);
+    }
     if (this.#pending) {
       const instruction = this.#pending;
       if (

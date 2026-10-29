@@ -62,3 +62,26 @@ test("contextual motif workspace preserves the serialized geometry contract", (t
   t.false("bytes" in serialized.motifs[0]);
   t.false("motifInstances" in serialized.motifs[0]);
 });
+
+test("deferred rectangles spill at the physical row stride, including wrapped origins", (t) => {
+  // At column 127, the second motif column aliases column zero of the next row.
+  const bytes = Uint8Array.from([
+    255, 4, 0x11, 9, 10, 11, 12, 0xff,
+    ...Array.from({ length: 127 }, () => 1), 0xf8,
+    ...Array.from({ length: 256 }, () => 1),
+  ]);
+  for (const origin of [0, 0xfff0]) {
+    const decoded = decodeMapPiece(bytes, { origin });
+    t.is(decoded.tiles.length, 384);
+    t.deepEqual([127, 128, 255, 256].map(index => decoded.tiles[index]), [9, 10, 11, 12]);
+    t.is(decoded.tiles[129], 1);
+    t.deepEqual(decoded.motifInstances![0].tiles, [9, 10, 11, 12]);
+    t.is(decoded.consumed, bytes.length);
+  }
+});
+
+test("motifs retain full geometry while parent output excludes physical padding", (t) => {
+  const decoded = decodeMapPiece(Uint8Array.from([3, 0, 0x11, 9, 10, 11, 12, 0xff, 1, 0xf8]));
+  t.deepEqual(decoded.tiles, [1, 9]);
+  t.deepEqual(decoded.motifInstances![0].tiles, [9, 10, 11, 12]);
+});

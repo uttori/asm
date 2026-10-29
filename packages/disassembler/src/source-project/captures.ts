@@ -239,12 +239,20 @@ export function reconcileSourceCaptureCatalog(
       archives: captures.get(report.sourceSha256)?.archives ?? [],
     };
     const previous = captures.get(capture.sha256);
-    if (previous && canonicalJson({ ...previous, sourceName }) !== canonicalJson(capture)) {
+    // An explicit retention migration changes the projection profile, not capture identity,
+    // event totals or archive bindings. Every other mismatch still requires reconciliation.
+    const migrated =
+      capture.profile === "65816-analysis-v3" &&
+      (previous?.profile === "full" || previous?.profile === "65816-analysis-v2");
+    const priorIdentity = migrated
+      ? { ...previous, profile: capture.profile, sourceName }
+      : { ...previous, sourceName };
+    if (previous && canonicalJson(priorIdentity) !== canonicalJson(capture)) {
       throw new Error(
         `Retained capture provenance differs from the Git catalog: ${capture.sha256}`,
       );
     }
-    captures.set(capture.sha256, previous ?? capture);
+    captures.set(capture.sha256, migrated ? capture : (previous ?? capture));
   }
   if (binding) {
     const capture = captures.get(binding.sourceSha256);

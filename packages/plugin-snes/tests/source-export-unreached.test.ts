@@ -694,3 +694,37 @@ test("unreached override cannot bypass incompatible captured widths or overlappi
   );
   t.false(overlapResult.spans.some((span) => span.role === "code"));
 });
+
+test("asset admission requirements stop source rendering before a raw typed palette can escape", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-required-palette-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture();
+  fs.writeFileSync(
+    path.join(directory, "struct-map.json"),
+    JSON.stringify({
+      format: "uttori-asm-snes-struct-map",
+      schemaVersion: 1,
+      structures: [
+        { id: "PaletteWord", size: 2, fields: [{ name: "color", offset: 0, size: 2, type: "dw" }] },
+      ],
+      bindings: [
+        {
+          name: "NewBossPalette",
+          structure: "PaletteWord",
+          address: 0x808020,
+          fileOffset: 0x20,
+          count: 2,
+        },
+      ],
+    }),
+  );
+  const map = {
+    version: 1,
+    entries: [],
+    requirements: [{ structure: "PaletteWord", format: "palette.codec" }],
+  };
+  fs.writeFileSync(path.join(directory, "asset-includes.json"), JSON.stringify(map));
+  t.throws(() => renderSourceFixture(project, rom, directory, options), {
+    message: /Missing required palette.codec includeAsset for NewBossPalette/,
+  });
+});

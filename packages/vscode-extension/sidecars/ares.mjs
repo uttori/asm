@@ -800,8 +800,8 @@ var require_src = __commonJS({
 
 // packages/debug-sidecar-ares/src/sidecar.ts
 import { createHash as createHash3 } from "node:crypto";
-import { readFile as readFile2 } from "node:fs/promises";
-import path3 from "node:path";
+import { readFile as readFile3 } from "node:fs/promises";
+import path4 from "node:path";
 
 // packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
@@ -1103,7 +1103,7 @@ var verifyCaptureContext = async (directory, identity, signal) => {
   }
   const producer = isRecord(manifest.producer) ? manifest.producer : void 0;
   if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity.romContentSha256 || !isRecord(producer) || producer.id !== identity.producer.id || producer.revision !== identity.producer.revision || !isRecord(manifest.files)) {
-    throw new Error("Capture context requires the matching ROM and emulator build.");
+    throw new Error("Capture context does not match the supplied recording identity.");
   }
   const nes = manifest.architecture === "65xx.2a03";
   if (nes && (!identity.romFileSha256 || identity.romFileSha256 !== manifest.romFileSha256 || manifest.addressSpace !== "nes.cpu") || !nes && identity.romFileSha256 !== void 0) {
@@ -2766,6 +2766,10 @@ var AresProcessHost = class {
     return operation2;
   }
 };
+
+// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
+import { readFile as readFile2 } from "node:fs/promises";
+import path3 from "node:path";
 
 // packages/core/src/source-location.ts
 function createSourceSpan(start, end, line) {
@@ -17913,17 +17917,28 @@ var AresRspDebugBackend = class {
       this.#requireStopped();
       const fields2 = ["qUttoriContext", request.action];
       if ("directory" in request) {
-        if (request.romContentSha256 !== identity.romSha256 || this.#nes && (!request.romFileSha256 || request.romFileSha256 !== identity.romFileSha256) || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision) {
+        const restoringContext = request.action === "replay" || request.action === "restore";
+        const mismatchedRecordingBuild = !restoringContext && request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision;
+        if (request.romContentSha256 !== identity.romSha256 || this.#nes && (!request.romFileSha256 || request.romFileSha256 !== identity.romFileSha256) || request.producer.id !== "ares" || mismatchedRecordingBuild) {
           throw new Error("Capture context ROM/build does not match the verified runtime.");
         }
-        if (request.action === "replay" || request.action === "restore") {
-          await verifyCaptureContext(request.directory, request);
+        let contextProducer = request.producer;
+        if (restoringContext) {
+          const recordedIdentity = (await readFile2(path3.join(request.directory, "identity.txt"), "utf8")).trimEnd().split("\n");
+          const recordedRevision = recordedIdentity[2];
+          if (recordedIdentity.length !== (this.#nes ? 4 : 3) || recordedIdentity[0] !== request.romContentSha256 || recordedIdentity[1] !== request.producer.id || !recordedRevision || this.#nes && recordedIdentity[3] !== request.romFileSha256) {
+            throw new Error(
+              "Capture context identity does not match the requested ROM and emulator."
+            );
+          }
+          contextProducer = { id: request.producer.id, revision: recordedRevision };
+          await verifyCaptureContext(request.directory, { ...request, producer: contextProducer });
         }
         fields2.push(
           encode(request.directory),
           encode(request.romContentSha256),
-          encode(request.producer.id),
-          encode(request.producer.revision)
+          encode(contextProducer.id),
+          encode(contextProducer.revision)
         );
         if (this.#nes) {
           fields2.push(encode(request.romFileSha256));
@@ -18492,7 +18507,7 @@ var parseAresSidecarArguments = (arguments_) => {
     if (!value) {
       throw new Error(`Missing required ares sidecar option '${name}'.`);
     }
-    return path3.resolve(value);
+    return path4.resolve(value);
   };
   const system = values.get("--system");
   const romSha256 = values.get("--rom-sha256");
@@ -18524,7 +18539,7 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
   const session = environment[DEBUG_SIDECAR_SESSION_ENV];
   assertDebugSidecarSessionToken(session);
   const runtimeManifest = parseAresRuntimeManifest(
-    JSON.parse(await readFile2(options.manifest, "utf8"))
+    JSON.parse(await readFile3(options.manifest, "utf8"))
   );
   const manifest = {
     ...runtimeManifest,
@@ -18542,7 +18557,7 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
   let contentSha256 = manifest.romSha256;
   let nesPrgFileOffset;
   if (/^(famicom|nes|fc)$/i.test(options.system ?? "")) {
-    const romBytes = await readFile2(options.rom);
+    const romBytes = await readFile3(options.rom);
     if (!romBytes.subarray(0, 4).equals(Buffer.from([78, 69, 83, 26]))) {
       throw new Error("Famicom launch requires an iNES cartridge.");
     }

@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { sourceExportSha256 } from "@uttori/asm-disassembler";
 import { sourceGit } from "@uttori/asm-disassembler/source-project";
 
 import { test } from "../../../../tests/ava-helper.js";
@@ -68,12 +69,25 @@ test.serial(
         schemaVersion: 1,
         structures: [
           {
+            id: "PaletteWord",
+            size: 2,
+            fields: [{ name: "color", offset: 0, size: 2, type: "dw" }],
+          },
+          {
             id: "Command",
             size: 4,
             fields: [{ name: "target", offset: 2, size: 2, description }],
           },
         ],
-        bindings: [],
+        bindings: [
+          {
+            name: "RequiredPalette",
+            structure: "PaletteWord",
+            address: 0x808020,
+            fileOffset: 0x20,
+            count: 2,
+          },
+        ],
         instructionUses: [
           {
             address: 0x808006,
@@ -97,9 +111,46 @@ test.serial(
       throw new Error("Initialization did not publish a generation recipe list.");
     }
     recipe.recipes.push("struct-map.json");
+    recipe.recipes.push("asset-includes.json");
+    const includeFile = path.join(directory, "source/asset-includes.json");
+    const requirements = [{ structure: "PaletteWord", format: "raw" }];
+    fs.writeFileSync(includeFile, JSON.stringify({ version: 1, entries: [], requirements }));
     fs.writeFileSync(recipeFile, JSON.stringify(recipe));
     await sourceGit(directory, ["add", "--all"]);
     await sourceGit(directory, ["commit", "-m", "Document command operand contracts"]);
+
+    // Exercise the shipped process, not the imported validator: an old worker
+    // would silently keep the palette as dataStructs and incorrectly succeed.
+    await t.throwsAsync(client.run({ action: "prepare", directory }, controls), {
+      message: /Missing required raw includeAsset for RequiredPalette/,
+    });
+    const assetPath = "source/assets/palette.bin",
+      palette = rom.subarray(0x20, 0x24);
+    fs.mkdirSync(path.dirname(path.join(directory, assetPath)), { recursive: true });
+    fs.writeFileSync(path.join(directory, assetPath), palette);
+    const originalBlob = (await sourceGit(directory, ["hash-object", "-w", assetPath])).stdout
+      .toString()
+      .trim();
+    const completedRecipe = JSON.parse(fs.readFileSync(recipeFile, "utf8")) as {
+      pristineAssets: unknown[];
+    };
+    completedRecipe.pristineAssets.push({
+      path: assetPath,
+      sha256: sourceExportSha256(palette),
+      originalBlob,
+    });
+    fs.writeFileSync(recipeFile, JSON.stringify(completedRecipe));
+    const paletteDirective = 'includeAsset("../assets/palette.bin", "raw")';
+    fs.writeFileSync(
+      includeFile,
+      JSON.stringify({
+        version: 1,
+        requirements,
+        entries: [{ start: 0x20, end: 0x24, directive: paletteDirective }],
+      }),
+    );
+    await sourceGit(directory, ["add", "--all"]);
+    await sourceGit(directory, ["commit", "-m", "Admit required palette source"]);
 
     const prepared = await client.run(
       { action: "prepare", directory },
@@ -113,6 +164,8 @@ test.serial(
     const bank = (
       await sourceGit(directory, ["show", `${preview.resultTree}:source/banks/bank-000.asm`])
     ).stdout.toString();
+    t.true(bank.includes(paletteDirective));
+    t.false(bank.includes("dataStructs RequiredPalette"));
     const unwrapped = bank.replaceAll(/^\s*;\s?/gm, "").replaceAll(/\s+/g, " ");
     t.true(unwrapped.includes(explanation), "The explanation survives beyond 240 characters.");
     t.false(bank.includes("Exact scoped field"));

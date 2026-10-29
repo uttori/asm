@@ -4,7 +4,7 @@
   "source": "packages/language-server/src/asset-preview-worker.ts",
   "target": "node26",
   "notices": "packages/language-server/out/asset-preview-worker.mjs.licenses.txt",
-  "sha256": "faa4e59d96e18aca11cf74aa7009bf21e3df280ae8e1a1bf4c90d87ec93359f8",
+  "sha256": "d6364452822b36cb5983cba015061ceae8ba5408af201dc813cce6760ec8e2c9",
   "noticesSha256": "f325c5f66539b503ef71aec95dfe578634512c184168b1f2c6e649fabbf85a9e",
   "inputs": [
     {
@@ -257,7 +257,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "c4089396beda1e528345e4ae526f2b2f16fa0c4145f3551c574d9cba57cf1a58"
+      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",
@@ -364,8 +364,12 @@
       "sha256": "eebd320820c19c2f1f600def3268415c5b66cd9efd3e46c8a364ddc2469f3a44"
     },
     {
+      "file": "packages/assets/src/secret-of-mana/som-boss-background.ts",
+      "sha256": "c0a0cfa81659da9a10b273451e4fe86dda28b14a2df38162f3b01bc479679eb6"
+    },
+    {
       "file": "packages/assets/src/secret-of-mana/som-boss-graphics.ts",
-      "sha256": "178a156484fd4257053f03b015cabe050ff70cfe154ac1f4ccf7b76c0361b4ab"
+      "sha256": "9926d7b9ef4623804ef4c7a181d8e47613c230a66352579f3ebb8060fdd36dd5"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-boss-image.ts",
@@ -381,15 +385,15 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-atlas.ts",
-      "sha256": "97c5c4d943496d97f3b296d0fa7bef16875166e56502e6cbf7cc4c8780b91581"
+      "sha256": "a167db7aafe9e408d2c156597bd24822577aa65e70b7c04a262c30c0082ecbe3"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-composition.ts",
-      "sha256": "34a73703a34ca987721675088b82682d37653f9b150b6c0cdb3b21a5ed4c0377"
+      "sha256": "76266b1a324c87bbca3ad58d8bb32ff2285c0984359e75d8fe0ecf2e47eaa9b7"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-edit.ts",
-      "sha256": "fdf233c984648c792966ee720d860f1adf4658b4ce9102a7884d5998917cc33f"
+      "sha256": "11950974ddf22c3acfcd8583cf32960b8fd3bb24a108458496b6afcef3648abc"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-lz.ts",
@@ -397,7 +401,7 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-palette-edit.ts",
-      "sha256": "fb0ff902d967a42bf4142bb1a4f0b61885540d3e803fe65150fc5bdee9e4b3ab"
+      "sha256": "741ec451e7974eae3612e56c202433bcc3bca8063e544fc6974dd33cc11568b3"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-room-assets.ts",
@@ -777,7 +781,7 @@
     },
     {
       "file": "packages/game-secret-of-mana/src/assembly.ts",
-      "sha256": "5feab9bdb51b054a0a356f9105ec779b0c3b5e4f33d3e2036a770ccff144be8a"
+      "sha256": "f0d0f701c862f12f25fd86242783e20f7df6a61cad495ae1937998159af56ec4"
     },
     {
       "file": "packages/game-secret-of-mana/src/preview.ts",
