@@ -15,6 +15,7 @@ export interface Spc700DecodeState {
   readonly directPage?: number | "unknown";
 }
 
+/** Reads a little-endian integer of `width` bytes from an instruction slice. */
 const readLittleEndian = (bytes: Uint8Array, offset: number, width: number): number => {
   let value = 0;
   for (let index = 0; index < width; index++) {
@@ -28,17 +29,23 @@ function byteAt(bytes: Uint8Array, index: number): number | undefined {
   return index >= 0 && index < bytes.length ? bytes[index] : undefined;
 }
 
+/** Sign-extends an 8-bit displacement or immediate byte. */
 const signedByte = (value: number): number => (value & 0x80 ? value - 0x100 : value);
 
+/** Formats a named SPC register as a decoded operand. */
 const register = (name: string): DecodedOperand => ({ kind: "register", register: name });
+/** Formats a direct or absolute address decoded operand at the given width. */
 const address = (value: number, width: number): DecodedOperand => ({
   kind: "address",
   value,
   width,
 });
+/** Formats an 8-bit immediate decoded operand. */
 const immediate = (value: number): DecodedOperand => ({ kind: "immediate", value, width: 1 });
+/** Formats a memory bit index decoded operand. */
 const bit = (value: number): DecodedOperand => ({ kind: "bit", value, width: 1 });
 
+/** Formats an 8-bit PC-relative displacement with a resolved target address. */
 const relative = (value: number, logicalAddress: number, size: number): DecodedOperand => ({
   kind: "displacement",
   value: signedByte(value),
@@ -47,6 +54,7 @@ const relative = (value: number, logicalAddress: number, size: number): DecodedO
   targetAddress: (logicalAddress + size + signedByte(value)) & 0xffff,
 });
 
+/** Splits a packed 16-bit memory-bit word into address and bit operands. */
 const bitAddress = (bytes: Uint8Array): readonly [DecodedOperand, DecodedOperand] => {
   const encoded = readLittleEndian(bytes, 1, 2);
   return [address(encoded & 0x1fff, 2), bit(encoded >>> 13)];
@@ -72,6 +80,7 @@ const fixedRegisters: Partial<Record<string, readonly string[]>> = {
   indirectXY: ["X", "Y"],
 };
 
+/** Decodes operands for one SPC700 matrix specification and fetched byte span. */
 const operandsFor = (
   specification: Spc700InstructionSpecification,
   bytes: Uint8Array,
@@ -188,6 +197,7 @@ const operandsFor = (
   }
 };
 
+/** Builds data, branch, call, and pointer references from decoded operands and mode. */
 const referencesFor = (
   specification: Spc700InstructionSpecification,
   operands: readonly DecodedOperand[],
@@ -251,6 +261,7 @@ const referencesFor = (
   return references;
 };
 
+/** Assembles a decoded instruction record for one opcode matrix row. */
 const buildInstruction = (
   specification: Spc700InstructionSpecification,
   bytes: Uint8Array,
@@ -276,6 +287,11 @@ const buildInstruction = (
 
 /** Fixed-width, bounds-safe decoder for every SPC700 opcode. */
 export class Spc700Decoder implements ArchitectureDecoder<Spc700DecodeState> {
+  /**
+   * Decodes one SPC700 instruction using the fixed 256-entry opcode matrix.
+   * @param context Byte source, offset, and optional direct-page decode state.
+   * @returns A decoded instruction or a bounds/opcode error.
+   */
   decode(context: ArchitectureDecodeContext<Spc700DecodeState>): ArchitectureDecodeResult {
     const availableBytes =
       Number.isInteger(context.offset) && context.offset >= 0
@@ -323,6 +339,7 @@ export class Spc700Decoder implements ArchitectureDecoder<Spc700DecodeState> {
   }
 }
 
+/** Formats an unsigned value as a `$`-prefixed hex literal with fixed width. */
 const hex = (value: number, width: number): string =>
   `$${(value >>> 0)
     .toString(16)
@@ -330,6 +347,7 @@ const hex = (value: number, width: number): string =>
     .padStart(width * 2, "0")
     .slice(-width * 2)}`;
 
+/** Renders canonical SPC700 operand text for one decoded instruction. */
 const formatOperands = (instruction: DecodedInstruction): string => {
   const values = instruction.operands.map((operand) => operand.value ?? 0);
   const target = instruction.operands.find(
@@ -461,8 +479,8 @@ const formatOperands = (instruction: DecodedInstruction): string => {
 
 /**
  * Formats one decoded instruction in this project's native SPC700 syntax.
- * @param {DecodedInstruction} instruction Decoded SPC700 instruction.
- * @returns {string} Canonical native source text.
+ * @param instruction Decoded SPC700 instruction.
+ * @returns Canonical native source text.
  */
 export function formatSpc700Instruction(instruction: DecodedInstruction): string {
   if (instruction.architecture !== "snes.spc700") {

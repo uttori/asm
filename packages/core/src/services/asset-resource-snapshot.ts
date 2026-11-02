@@ -10,6 +10,7 @@ export interface AssetResourceSnapshotHost {
   resolve(path: string, declaringResource?: string): string | undefined;
   /** Borrow a stable snapshot for this path; the host owns copying, lifetime and read limits. */
   read(path: string): Uint8Array;
+  /** Returns the MIME type used when building asset source metadata for a path. */
   mediaType(path: string): string;
 }
 
@@ -40,10 +41,12 @@ export function assetSourceMediaType(
   return "application/octet-stream";
 }
 
+/** Narrows JSON fields expected to be non-empty strings. */
 function isName(value: unknown): value is string {
   return typeof value === "string" && !!value;
 }
 
+/** Narrows unknown JSON values to arrays for dependency validation. */
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
@@ -62,7 +65,8 @@ function isDependency(value: unknown): value is AssetResourceDependency {
   );
 }
 
-/** A synchronous, bounded closure shared by assembly, dependency discovery and explicit editor previews.
+/**
+ * A synchronous, bounded closure shared by assembly, dependency discovery and explicit editor previews.
  * Each callback gets owned byte/option copies. Paths are read once through the host snapshot; keys
  * can alias bytes but may not change identity or form recursive relative-resource declarations.
  */

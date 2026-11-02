@@ -11,7 +11,8 @@ import {
 } from "@uttori/asm-plugin-65xx/disassembler";
 import { window, ViewColumn, type DebugSession } from "vscode";
 
-/** Read only while halted, save a hash-bound private bundle, and show its offline graphics view.
+/**
+ * Read only while halted, save a hash-bound private bundle, and show its offline graphics view.
  * The adapter rejects running reads; all protocol slices describe the same paused machine state.
  */
 export async function saveNesPPUSnapshot(

@@ -2,9 +2,13 @@ import { isNamespacedId } from "./validation.js";
 
 /** One strictly reversible byte transform, such as a game compressor. */
 export interface ByteTransform {
+  /** Namespaced transform id registered with the host. */
   readonly id: string;
+  /** Transform schema revision for options validation. */
   readonly version: string;
+  /** Apply the forward transform to owned input bytes. */
   encode(bytes: Uint8Array, options: Readonly<Record<string, unknown>>): Uint8Array;
+  /** Invert the transform with an explicit decoded-size ceiling. */
   decode(
     bytes: Uint8Array,
     options: Readonly<Record<string, unknown>>,
@@ -14,10 +18,13 @@ export interface ByteTransform {
 
 /** Ordered transform invocation; decoding runs in reverse order. */
 export interface TransformStep {
+  /** Registered transform id to invoke at this pipeline stage. */
   readonly id: string;
+  /** Optional transform-specific options validated by the transform. */
   readonly options?: Readonly<Record<string, unknown>>;
 }
 
+/** Compare two byte buffers for exact equality. */
 const sameBytes = (left: Uint8Array, right: Uint8Array): boolean =>
   left.length === right.length && left.every((byte, index) => byte === right[index]);
 
@@ -25,6 +32,7 @@ const sameBytes = (left: Uint8Array, right: Uint8Array): boolean =>
 export class TransformRegistry {
   readonly #transforms = new Map<string, ByteTransform>();
 
+  /** Add one transform; duplicate ids reject registration. */
   register(transform: ByteTransform): this {
     if (!isNamespacedId(transform.id) || !transform.version || this.#transforms.has(transform.id)) {
       throw new Error(`Invalid or duplicate byte transform '${transform.id}'.`);
@@ -33,6 +41,7 @@ export class TransformRegistry {
     return this;
   }
 
+  /** Resolve a registered transform by id. */
   get(id: string): ByteTransform {
     const transform = this.#transforms.get(id);
     if (!transform) {
@@ -42,12 +51,13 @@ export class TransformRegistry {
   }
 }
 
-/** Encode a chain and verify that each stage decodes to its exact input.
- * @param {TransformRegistry} registry Registered reversible transforms.
- * @param {Uint8Array} input Borrowed original bytes.
- * @param {TransformStep[]} steps Ordered encode stages.
- * @param {number} maxOutputBytes Maximum bytes allowed after any stage.
- * @returns {Uint8Array} Owned final encoded bytes.
+/**
+ * Encode a chain and verify that each stage decodes to its exact input.
+ * @param registry Registered reversible transforms.
+ * @param input Borrowed original bytes.
+ * @param steps Ordered encode stages.
+ * @param maxOutputBytes Maximum bytes allowed after any stage.
+ * @returns Owned final encoded bytes.
  */
 export function transformBytes(
   registry: TransformRegistry,
@@ -75,12 +85,13 @@ export function transformBytes(
   return bytes;
 }
 
-/** Reverse a transform chain with a caller-defined decoded expansion bound.
- * @param {TransformRegistry} registry Registered reversible transforms.
- * @param {Uint8Array} encoded Borrowed final encoded bytes.
- * @param {TransformStep[]} steps Original encode order.
- * @param {number} maxOutputBytes Maximum bytes allowed after any decode stage.
- * @returns {Uint8Array} Owned reconstructed bytes.
+/**
+ * Reverse a transform chain with a caller-defined decoded expansion bound.
+ * @param registry Registered reversible transforms.
+ * @param encoded Borrowed final encoded bytes.
+ * @param steps Original encode order.
+ * @param maxOutputBytes Maximum bytes allowed after any decode stage.
+ * @returns Owned reconstructed bytes.
  */
 export function reverseTransforms(
   registry: TransformRegistry,

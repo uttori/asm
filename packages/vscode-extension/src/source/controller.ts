@@ -32,6 +32,7 @@ import {
 } from "vscode";
 
 import { BinaryDrafts } from "../assets/binary-drafts.js";
+import type { SourceHomeProjection } from "../project/home-model.js";
 import { onDidChangeRuntimeCapture, runtimeCapturePhase } from "../runtime/capture-state.js";
 import { editAnalysisResearch } from "./analysis-editor.js";
 import { SourceAssetCoordinator } from "./asset-coordinator.js";
@@ -46,12 +47,15 @@ import { editSourceResearch } from "./research-editor.js";
 import { readGraphicsSelection, readSourceStatus } from "./result-readers.js";
 import { SourceProjectSession } from "./session.js";
 import { isSnesMapper, SourceRow } from "./ui-contracts.js";
-import { shouldClearSourceCandidate, sourceWorkflow } from "./workflow.js";
+import { shouldClearSourceCandidate, sourceHealth, sourceWorkflow } from "./workflow.js";
 
 /** A selected ROM project, native Git review, and shared background operations; source edits stay in editors. */
 export class SourceController implements TreeDataProvider<SourceRow>, Disposable {
+  /** Shared Git source session state for tree rows and commands. */
   readonly session = new SourceProjectSession();
+  /** Asset import and conversion flows bound to the active source project. */
   readonly assets = new SourceAssetCoordinator(this.session, this);
+  /** Build, watch, and debug coordination for the selected source project. */
   readonly builds = new SourceBuildCoordinator(this.session, this);
 
   /** All source build entry points publish the same matching map to navigation and inline information. */
@@ -62,6 +66,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
   readonly onDidChangeSavedInput = this.session.savedInput.event;
   /** A target change cancels watch work before another project's artifacts can be launched. */
   readonly onDidSelectProject = this.session.selected.event;
+  /** Fired when workflow tree rows should reload from session state. */
   readonly onDidChangeTreeData = this.session.changed.event;
   readonly #disposables: Disposable[] = [];
 
@@ -92,7 +97,6 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
           ? { root: this.session.root, layout: this.session.configuration.layout }
           : undefined,
       ),
-      window.registerTreeDataProvider("uttori-asm.sourceProject", this),
       workspace.registerFileSystemProvider("uttori-source", this.session.files, {
         isReadonly: true,
         isCaseSensitive: true,
@@ -339,6 +343,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     void this.restore();
   }
 
+  /** Absolute path of the selected source project root, when any. */
   get root(): string | undefined {
     return this.session.root;
   }
@@ -366,9 +371,67 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       }
     });
   }
+  /** Legal Next command, enablement, and incoming review for Home and host smokes. */
+  homeProjection(): SourceHomeProjection {
+    const workflow = sourceWorkflow(this.workflowState());
+    const health = sourceHealth(workflow, {
+      busy: this.session.busy,
+      phase: this.session.status?.phase,
+    });
+    const commands = [
+      ...new Set(
+        workflow
+          .map((step) => step.command)
+          .filter((command): command is string => Boolean(command)),
+      ),
+    ];
+    if (this.session.root) {
+      commands.push("asm.source.build");
+    }
+    const previewed =
+      this.session.preview?.candidate === this.session.candidate &&
+      Boolean(this.session.candidate);
+    return {
+      next: health.next,
+      commands,
+      build: this.session.build
+        ? this.session.buildStale
+          ? "source changed"
+          : "verified"
+        : undefined,
+      candidate: this.session.candidate,
+      incoming: {
+        previewed,
+        total: this.session.incoming.length,
+        collapsed: !previewed,
+      },
+    };
+  }
+
+  /** Cached service/editor flags used by Home and the remaining workflow tree. */
+  workflowState() {
+    const unsaved =
+      this.buffers().length > 0 ||
+      this.binaryBuffers().length > 0 ||
+      this.opaqueBinaryBuffers().length > 0;
+    return {
+      ...this.session.status,
+      busy: this.session.busy,
+      conflicts: this.session.status?.conflicts.length,
+      candidate: Boolean(this.session.candidate),
+      previewed:
+        this.session.preview?.candidate === this.session.candidate &&
+        Boolean(this.session.candidate),
+      dirty: (this.session.status?.dirty ?? false) || unsaved,
+      unsaved,
+    };
+  }
+
+  /** Source rows are tree items; no additional presentation mapping is required. */
   getTreeItem(row: SourceRow): TreeItem {
     return row;
   }
+  /** Return workflow children for one row or the project root menu when unset. */
   getChildren(row?: SourceRow): SourceRow[] {
     if (row) {
       return row.children;
@@ -389,21 +452,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       source.description = this.session.status.dirty ? "uncommitted changes" : "clean";
     }
     source.iconPath = new ThemeIcon("git-branch");
-    const unsaved =
-      this.buffers().length > 0 ||
-      this.binaryBuffers().length > 0 ||
-      this.opaqueBinaryBuffers().length > 0;
-    const workflow = sourceWorkflow({
-      ...this.session.status,
-      busy: this.session.busy,
-      conflicts: this.session.status?.conflicts.length,
-      candidate: Boolean(this.session.candidate),
-      previewed:
-        this.session.preview?.candidate === this.session.candidate &&
-        Boolean(this.session.candidate),
-      dirty: (this.session.status?.dirty ?? false) || unsaved,
-      unsaved,
-    });
+    const workflow = sourceWorkflow(this.workflowState());
     const steps = workflow.map((step) => {
       const item = new SourceRow(step.label, [], step.command);
       item.tooltip = step.description;
@@ -765,6 +814,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     return this.builds.build();
   }
 
+  /** Reload session status and rebuild workflow rows when idle and trusted. */
   async refresh(): Promise<void> {
     if (!this.session.root || this.session.busy || !workspace.isTrusted) {
       return;
@@ -962,6 +1012,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
     return this.builds.buildTask(root, folder);
   }
 
+  /** Map structured build failures onto workspace diagnostics for the source tree. */
   publishDiagnostics(error: unknown): void {
     const message = error instanceof Error ? error.message : String(error);
     const diagnostics = new Map<string, Diagnostic[]>();
@@ -1095,6 +1146,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       return undefined;
     }
   }
+  /** Tear down watchers, timers, and child processes for the controller. */
   dispose(): void {
     this.session.selectionRevision++;
     this.session.root = undefined;

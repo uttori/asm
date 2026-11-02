@@ -24,8 +24,8 @@ const WORKFLOWS = [
 
 /**
  * Discovers the public Markdown surface without pulling in generated or dependency content.
- * @param {string} root Repository root.
- * @returns {string[]} Sorted repository-relative document paths.
+ * @param root Repository root.
+ * @returns Sorted repository-relative document paths.
  */
 const markdownDocuments = (root: string): string[] => {
   const documents: string[] = [...ROOT_DOCUMENTS];
@@ -64,8 +64,8 @@ const markdownDocuments = (root: string): string[] => {
  * A broad nested-quantifier regular expression makes a documentation gate an avoidable denial-of-
  * service surface when a generated document contains an extremely long malformed link. This small
  * scanner intentionally handles the repository's inline-link subset without a nested regex.
- * @param {string} markdown Document text.
- * @returns {string[]} Raw destination tokens.
+ * @param markdown Document text.
+ * @returns Raw destination tokens.
  */
 const markdownTargets = (markdown: string): string[] => {
   const targets: string[] = [];
@@ -98,8 +98,8 @@ const markdownTargets = (markdown: string): string[] => {
 
 /**
  * Extracts destinations declared by Markdown reference-link definitions.
- * @param {string} markdown Document text.
- * @returns {string[]} Raw destination tokens.
+ * @param markdown Document text.
+ * @returns Raw destination tokens.
  */
 const markdownReferenceTargets = (markdown: string): string[] => {
   const targets: string[] = [];
@@ -114,8 +114,8 @@ const markdownReferenceTargets = (markdown: string): string[] => {
 
 /**
  * Removes fenced examples so link-shaped source text is not validated as documentation.
- * @param {string} markdown Document text.
- * @returns {string} Document text without fenced blocks.
+ * @param markdown Document text.
+ * @returns Document text without fenced blocks.
  */
 const withoutFencedCode = (markdown: string): string => {
   const lines: string[] = [];
@@ -139,8 +139,8 @@ const withoutFencedCode = (markdown: string): string => {
 
 /**
  * Tests one ASCII URI-scheme character.
- * @param {string} character Candidate scheme character.
- * @returns {boolean} Whether it is valid.
+ * @param character Candidate scheme character.
+ * @returns Whether it is valid.
  */
 const schemeCharacter = (character: string): boolean => {
   const lower = character.toLowerCase();
@@ -157,9 +157,9 @@ const schemeCharacter = (character: string): boolean => {
  * Converts a Markdown link target into a local file and optional heading fragment.
  * Published READMEs use absolute GitHub links so npm and Marketplace can render them. Links back
  * into this repository still need validation against the candidate checkout before publication.
- * @param {string} document Absolute document path containing the link.
- * @param {string} rawTarget Raw first token inside the Markdown link destination.
- * @returns {{ file: string; anchor?: string } | undefined} Local reference, or undefined for an external target.
+ * @param document Absolute document path containing the link.
+ * @param rawTarget Raw first token inside the Markdown link destination.
+ * @returns Local reference, or undefined for an external target.
  */
 const localTarget = (
   document: string,
@@ -194,8 +194,8 @@ const localTarget = (
 
 /**
  * Approximates GitHub's stable heading ids for the repository's Markdown subset.
- * @param {string} markdown Document text.
- * @returns {Set<string>} Linkable heading fragments.
+ * @param markdown Document text.
+ * @returns Linkable heading fragments.
  */
 const headingAnchors = (markdown: string): Set<string> => {
   const anchors = new Set<string>();
@@ -222,7 +222,6 @@ const headingAnchors = (markdown: string): Set<string> => {
 
 /**
  * Verifies public entry points and links, rejecting dependencies on internal research documents.
- * @returns {void}
  */
 export const checkDocumentation = (): void => {
   const root = process.cwd();

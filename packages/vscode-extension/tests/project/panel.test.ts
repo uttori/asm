@@ -87,6 +87,7 @@ registerHooks({
               host.documents.push(file.fsPath);
             },
             showOpenDialog: async () => host.picked,
+            showQuickPick: async () => undefined,
           };
           export const commands = {
             executeCommand: async (command) => {
@@ -94,6 +95,7 @@ registerHooks({
               await host.execute();
             },
           };
+          export const debug = { activeDebugSession: undefined };
         `,
       };
     }
@@ -102,7 +104,7 @@ registerHooks({
 });
 
 const { IndexDetailsProvider } = await import("../../src/project/index-tree.js");
-const { ProjectPanelProvider } = await import("../../src/project/panel.js");
+const { HomeProvider } = await import("../../src/project/panel.js");
 const extensionRoot = path.resolve("packages/vscode-extension");
 const uri = (file: string) => ({ fsPath: file, toString: () => `file://${file}` });
 const ignoreVisibility = (): void => {};
@@ -111,6 +113,15 @@ const ignorePanelMessage = (_message: { type?: string; value?: unknown }): void 
 const harness = (options?: {
   getClient?: () => { sendRequest: (method: string) => Promise<unknown> } | undefined;
   initConfig?: () => Promise<void>;
+  getSource?: () =>
+    | {
+        root?: string;
+        buffers: () => unknown[];
+        binaryBuffers: () => unknown[];
+        opaqueBinaryBuffers: () => unknown[];
+        session: Record<string, unknown>;
+      }
+    | undefined;
 }) => {
   host.execute = async () => {};
   host.calls = [];
@@ -126,7 +137,14 @@ const harness = (options?: {
     error?: string;
     trusted?: boolean;
     indexReady?: boolean;
+    mode?: string;
+    name?: string;
+    targetLabel?: string;
+    sourcePhase?: string;
+    recovery?: { kind?: string; reason?: string };
+    health?: { coverage?: { remainingPercent?: number }; index?: { files?: number } };
     status?: { fileCount?: number; configFile?: string };
+    next?: { command?: string };
   }> = [];
   let visible = true;
   let onVisibility = ignoreVisibility;
@@ -135,7 +153,7 @@ const harness = (options?: {
   if (!isUri(extensionUri)) {
     throw new Error("extension uri stub");
   }
-  const provider = new ProjectPanelProvider(
+  const provider = new HomeProvider(
     extensionUri,
     () => {
       const client = options?.getClient?.();
@@ -148,6 +166,7 @@ const harness = (options?: {
       return client;
     },
     options?.initConfig ?? (async () => {}),
+    { getSource: options?.getSource as never },
   );
   const webview = {
     html: "",
@@ -228,11 +247,11 @@ test.serial(
         },
       }),
     });
-    t.regex(h.webview.html, /script nonce="[^"]+" src="[^"]+panel.js"/);
-    t.regex(h.webview.html, /href="[^"]+panel.css"/);
+    t.regex(h.webview.html, /script nonce="[^"]+" src="[^"]+home.js"/);
+    t.regex(h.webview.html, /href="[^"]+home.css"/);
     t.false(h.webview.html.includes("{{"));
     t.false(h.webview.html.includes('data-cmd="regenerateDisassembly"'));
-    const js = fs.readFileSync("packages/vscode-extension/media/panel.js", "utf8");
+    const js = fs.readFileSync("packages/vscode-extension/media/home.js", "utf8");
     t.notThrows(() => new vm.Script(js));
     t.false(js.includes("innerHTML"), "project names, paths and status are rendered as text");
     await h.provider.refresh();
@@ -318,7 +337,7 @@ test.serial(
     if (!isUri(idleUri)) {
       throw new Error("extension uri stub");
     }
-    const idle = new ProjectPanelProvider(
+    const idle = new HomeProvider(
       idleUri,
       () => undefined,
       async () => {},
@@ -327,3 +346,74 @@ test.serial(
     await idle.onMessage({ type: "removeEntryPoint", value: 1 });
   },
 );
+
+test.serial("Home hydrates source identity without LSP or asm.target", async (t) => {
+  const h = harness({
+    getClient: () => undefined,
+    getSource: () => ({
+      root: "/games/secret-of-mana",
+      buffers: () => [],
+      binaryBuffers: () => [],
+      opaqueBinaryBuffers: () => [],
+      session: {
+        configuration: { id: "secret-of-mana", target: "snes.sfc" },
+        branch: "main",
+        status: {
+          phase: "verified",
+          dirty: false,
+          analysisReady: true,
+          catalogReady: true,
+          conflicts: [],
+        },
+        candidate: undefined,
+        preview: undefined,
+        incoming: [],
+        build: undefined,
+        buildStale: true,
+        busy: undefined,
+      },
+    }),
+  });
+  await h.provider.refresh();
+  const message = h.sent.find((entry) => entry.type === "snapshot");
+  t.is(message?.mode, "source");
+  t.is(message?.name, "secret-of-mana");
+  t.is(message?.targetLabel, "SNES");
+  t.is(message?.indexReady, false);
+  t.is(message?.next?.command, "asm.source.prepare");
+  t.true(host.calls.includes("setContext"));
+});
+
+test.serial("Home recovery banner uses abort and discard instead of a generic reset", async (t) => {
+  const h = harness({
+    getSource: () => ({
+      root: "/games/secret-of-mana",
+      buffers: () => [],
+      binaryBuffers: () => [],
+      opaqueBinaryBuffers: () => [],
+      session: {
+        configuration: { id: "secret-of-mana", target: "snes.sfc" },
+        branch: "main",
+        status: {
+          phase: "merging",
+          dirty: true,
+          analysisReady: true,
+          catalogReady: true,
+          conflicts: ["bank.asm"],
+          unstaged: true,
+        },
+        candidate: "abc",
+        preview: { candidate: "abc" },
+        incoming: [],
+        build: undefined,
+        buildStale: true,
+        busy: undefined,
+      },
+    }),
+  });
+  await h.provider.refresh();
+  const message = h.sent.find((entry) => entry.type === "snapshot");
+  t.is(message?.sourcePhase, "merging");
+  t.is(message?.recovery?.kind, "merging");
+  t.true(message?.recovery?.reason?.includes("unresolved"));
+});

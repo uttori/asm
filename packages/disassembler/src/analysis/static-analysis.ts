@@ -23,15 +23,19 @@ export type StaticControlTargetKind = "branch" | "call" | "interrupt" | "jump";
 
 /** One outgoing control-flow target from a decoded instruction. */
 export interface StaticControlTarget {
+  /** Control-flow category used when scheduling successors. */
   readonly kind: StaticControlTargetKind;
   /** Absolute CPU address when known statically. */
   readonly address?: number;
+  /** True when the destination requires manual resolution or runtime state. */
   readonly indirect?: boolean;
+  /** Optional note retained on edges and unresolved-flow records. */
   readonly explanation?: string;
 }
 
 /** Memory operand of an instruction, with enough detail to explain ROM vs MMIO vs unresolved. */
 export interface StaticEffectiveAddress {
+  /** Zero-based operand index within the decoded instruction. */
   readonly operandIndex: number;
   /** Final address when it is statically known and not indexed/indirect. */
   readonly address?: number;
@@ -43,6 +47,7 @@ export interface StaticEffectiveAddress {
   readonly volatile: boolean;
   /** Headerless file offset when `address` maps into the loaded ROM. */
   readonly romOffset?: number;
+  /** Human-readable summary of how the effective address was obtained. */
   readonly explanation: string;
 }
 
@@ -66,25 +71,36 @@ export type StaticStateEffect =
 
 /** Normalized instruction information consumed by the generic worklist engine. */
 export interface StaticInstruction {
+  /** Architecture specification id that decoded this instruction. */
   readonly specificationId: string;
   /** CPU-space address of the opcode. */
   readonly address: number;
   /** Headerless ROM file offset of the opcode. */
   readonly fileOffset: number;
+  /** Instruction length in bytes at this address. */
   readonly size: number;
+  /** Primary opcode byte value. */
   readonly opcode: number;
+  /** Decoded mnemonic string for presentation. */
   readonly mnemonic: string;
+  /** Addressing mode name from the specification. */
   readonly mode: string;
+  /** Abstract-state effects applied after decode. */
   readonly effects: readonly StaticStateEffect[];
   /** State, target, or classification evidence consumed while decoding this node. */
   readonly evidence?: readonly string[];
+  /** Decoded control-flow behavior governing fallthrough and successor scheduling. */
   readonly flow: {
+    /** Primary control-flow kind emitted by the adapter for this opcode. */
     readonly kind: StaticControlFlowKind;
     /** When true, the next sequential instruction is also enqueued. */
     readonly fallthrough: boolean;
+    /** True when control flow depends on indirect addressing or runtime state. */
     readonly indirect?: boolean;
   };
+  /** Outgoing control-flow targets scheduled from this instruction. */
   readonly targets: readonly StaticControlTarget[];
+  /** Operand effective-address explanations when supplied by the adapter. */
   readonly effectiveAddresses?: readonly StaticEffectiveAddress[];
 }
 
@@ -104,8 +120,11 @@ export type StaticDecodeResult =
 
 /** Justified worklist entry with its initial abstract state. */
 export interface StaticAnalysisSeed<State> {
+  /** Stable seed identifier used as the initial entryPoint label. */
   readonly id: string;
+  /** CPU-space address where analysis begins for this seed. */
   readonly address: number;
+  /** Provenance channel describing how this seed was introduced. */
   readonly kind:
     | "configured"
     | "imported-label"
@@ -113,17 +132,25 @@ export interface StaticAnalysisSeed<State> {
     | "observation"
     | "target-set"
     | "vector";
+  /** Initial abstract CPU state before the first decode at the seed address. */
   readonly state: State;
+  /** Evidence identifiers justifying exploration from this seed. */
   readonly evidence: readonly string[];
+  /** Optional human-readable note retained for diagnostics. */
   readonly detail?: string;
 }
 
 /** Manual resolution of an indirect site. At most one selector may match an instruction. */
 export interface StaticTargetOverride {
+  /** Optional bank or file selector limiting when this override applies. */
   readonly mapping?: ResearchMapping;
+  /** Stable override identifier referenced by generated edges. */
   readonly id: string;
+  /** Instruction address where indirect targets are replaced. */
   readonly address: number;
+  /** Allowed destination addresses for the indirect site. */
   readonly targets: readonly number[];
+  /** Evidence identifiers justifying this override. */
   readonly evidence: readonly string[];
 }
 
@@ -145,7 +172,8 @@ export interface StaticAnalysisLimits {
   readonly maxWorkItems?: number;
   /** Nonnegative call-context depth. Zero discards call history, and deeper calls report a bound. */
   readonly maxCallDepth?: number;
-  /** Cumulative explored work and remaining queue, reported at bounded intervals and completion.
+  /**
+   * Cumulative explored work and remaining queue, reported at bounded intervals and completion.
    * The queue can grow during discovery; it is not a fixed total. Throwing aborts analysis.
    */
   readonly onProgress?: (progress: {
@@ -180,25 +208,39 @@ export interface StaticAnalysisAdapter<State> {
 
 /** Accepted CFG instruction, keyed by address plus call context. */
 export interface StaticAnalysisNode<State> {
+  /** Stable CFG node identifier including call context when present. */
   readonly id: string;
+  /** CPU-space address of the accepted opcode. */
   readonly address: number;
+  /** Headerless ROM file offset of the opcode. */
   readonly fileOffset: number;
+  /** Instruction length in bytes at this address. */
   readonly size: number;
+  /** Primary opcode byte value. */
   readonly opcode: number;
+  /** Architecture specification id that decoded this instruction. */
   readonly specificationId: string;
+  /** Decoded mnemonic string for presentation. */
   readonly mnemonic: string;
+  /** Addressing mode name from the specification. */
   readonly mode: string;
   /** Call-site addresses from the seed to this node, innermost last. */
   readonly context: readonly number[];
+  /** Abstract CPU state joined immediately before decode. */
   readonly incomingState: State;
+  /** Abstract CPU state after applying instruction effects. */
   readonly outgoingState: State;
+  /** Operand effective-address explanations attached to this node. */
   readonly effectiveAddresses: readonly StaticEffectiveAddress[];
+  /** Seed id labeling the entry point that reached this instruction. */
   readonly entryPoint: string;
+  /** Evidence identifiers consumed while accepting this node. */
   readonly evidence: readonly string[];
   /** Node ids from the seed to this instruction, inclusive; materialized only when read. */
   readonly evidencePath: readonly string[];
 }
 
+/** Serialized control-flow edge kinds emitted by the generic worklist engine. */
 export type StaticAnalysisEdgeKind =
   | "branch"
   | "call"
@@ -210,60 +252,90 @@ export type StaticAnalysisEdgeKind =
 
 /** Directed CFG edge. `to` is omitted for unresolved targets. */
 export interface StaticAnalysisEdge {
+  /** Stable edge identifier derived from endpoints and kind. */
   readonly id: string;
+  /** Source CFG node id. */
   readonly from: string;
+  /** Source instruction address for diagnostics without loading the node. */
   readonly fromAddress: number;
+  /** Destination CFG node id when the target was accepted. */
   readonly to?: string;
+  /** Destination instruction address when known statically. */
   readonly toAddress?: number;
+  /** Serialized control-flow kind for this edge. */
   readonly kind: StaticAnalysisEdgeKind;
+  /** True when the edge depends on indirect addressing or manual overrides. */
   readonly indirect: boolean;
   /** Target-override id when this edge was supplied by the user. */
   readonly override?: string;
+  /** Evidence identifiers justifying this edge. */
   readonly evidence: readonly string[];
+  /** Optional human-readable note explaining an indirect or overridden edge. */
   readonly explanation?: string;
 }
 
 /** Function-entry candidate from a seed, a discovered call, or an interrupt. */
 export interface StaticFunctionCandidate {
+  /** Stable function candidate identifier including mapping suffix when present. */
   readonly id: string;
+  /** Entry instruction address for the function candidate. */
   readonly address: number;
+  /** Origin channel distinguishing seeds, calls, and interrupt vectors. */
   readonly source: "call" | "entry" | "interrupt";
+  /** Evidence identifiers supporting this function candidate. */
   readonly evidence: readonly string[];
   /** Discovery call site, absent for seed functions. Avoids expanding ancestry for publication. */
   readonly evidencePredecessor?: string;
+  /** Lazy discovery path materialized only when read. */
   readonly evidencePath: readonly string[];
 }
 
 /** Site where decode, mapping, or instruction bytes could not be accepted. */
 export interface StaticAnalysisConflict {
+  /** Stable conflict identifier. */
   readonly id: string;
+  /** Conflict category used for filtering and presentation. */
   readonly kind:
     | "blocked"
     | "decode"
     | "instruction-boundary"
     | "invalid-mapping"
     | "state-ambiguity";
+  /** Primary conflict address. */
   readonly address: number;
+  /** Human-readable conflict description. */
   readonly message: string;
+  /** CFG node ids involved in the conflict. */
   readonly nodes: readonly string[];
+  /** Evidence identifiers attached to the conflict report. */
   readonly evidence: readonly string[];
 }
 
 /** Control-flow target that could not be resolved statically. */
 export interface StaticUnresolvedFlow {
+  /** Stable unresolved-flow identifier. */
   readonly id: string;
+  /** Instruction address where flow could not be resolved. */
   readonly address: number;
+  /** Serialized control-flow kind at the unresolved site. */
   readonly kind: StaticAnalysisEdgeKind;
+  /** True when the site depends on indirect addressing or runtime state. */
   readonly indirect: boolean;
+  /** Explanation of why static resolution failed. */
   readonly reason: string;
+  /** Evidence identifiers collected at the unresolved site. */
   readonly evidence: readonly string[];
 }
 
 /** Coverage of accepted instruction bytes against `adapter.backingSize`. */
 export interface StaticCoverageSummary {
+  /** Count of accepted CFG instruction nodes. */
   readonly instructionCount: number;
+  /** Count of discovered function-entry candidates. */
   readonly functionCount: number;
+  /** Distinct ROM byte offsets covered by accepted instructions. */
   readonly reachedBytes: number;
+  /** Backing image size reported by the adapter. */
   readonly totalBytes: number;
   /** `reachedBytes / totalBytes * 100`, or `0` when `totalBytes` is 0. */
   readonly reachedPercent: number;
@@ -271,9 +343,13 @@ export interface StaticCoverageSummary {
 
 /** Why the run stopped before the worklist emptied. */
 export interface StaticAnalysisIncompleteReason {
+  /** Limit category that terminated the traversal. */
   readonly kind: "call-context-limit" | "work-limit";
+  /** Instruction address associated with the limiting event. */
   readonly address: number;
+  /** Configured cap value that was exceeded. */
   readonly limit: number;
+  /** Human-readable explanation retained in the incomplete result. */
   readonly message: string;
 }
 
@@ -281,16 +357,25 @@ export interface StaticAnalysisIncompleteReason {
 export interface StaticAnalysisResult<State> {
   /** `incomplete` when a work or call-depth cap fired. */
   readonly status: "complete" | "incomplete";
+  /** Accepted CFG nodes sorted by address and id. */
   readonly nodes: readonly StaticAnalysisNode<State>[];
+  /** Directed edges between accepted and unresolved sites. */
   readonly edges: readonly StaticAnalysisEdge[];
+  /** Function-entry candidates discovered during traversal. */
   readonly functions: readonly StaticFunctionCandidate[];
+  /** Decode, mapping, and boundary conflicts encountered during traversal. */
   readonly conflicts: readonly StaticAnalysisConflict[];
+  /** Indirect or unknown control-flow sites that could not be scheduled. */
   readonly unresolved: readonly StaticUnresolvedFlow[];
+  /** Byte coverage summary against the adapter backing image. */
   readonly coverage: StaticCoverageSummary;
+  /** Structured reasons when status is incomplete. */
   readonly incompleteReasons: readonly StaticAnalysisIncompleteReason[];
+  /** Work items processed when the pass stopped. */
   readonly processedWorkItems: number;
 }
 
+/** One call-site frame on the simulated call stack. */
 interface CallFrame {
   readonly callSite: number;
   /** The caller mapping distinguishes identical call stacks from different physical banks. */
@@ -331,10 +416,11 @@ const withEvidencePath = <T extends object>(
   evidencePaths.set(record, path);
   Object.defineProperty(record, "evidencePath", { enumerable: true, get: readEvidencePath });
   // Object.defineProperty installs this exact accessor, but its declaration returns only T.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return record as T & { readonly evidencePath: readonly string[] };
 };
 
+/** Pending worklist item carrying decode state and discovery metadata. */
 interface WorkItem<State> {
   readonly address: number;
   readonly state: State;
@@ -349,6 +435,7 @@ interface WorkItem<State> {
   readonly explanation?: string;
 }
 
+/** Formats a CPU address as a fixed-width lowercase hex string. */
 const hexAddress = (address: number): string => address.toString(16).padStart(6, "0");
 /** Immutable call stacks are shared by many instructions and heap comparisons. Cache their views. */
 const callContexts = new WeakMap<
@@ -356,6 +443,7 @@ const callContexts = new WeakMap<
   { readonly key: string; readonly sites: readonly number[] }
 >();
 const emptyCallContext = { key: "", sites: [] as readonly number[] };
+/** Builds a cached string key and call-site list for a call stack. */
 const describeCallContext = (context: readonly CallFrame[]) => {
   if (context.length === 0) {
     return emptyCallContext;
@@ -375,9 +463,10 @@ const describeCallContext = (context: readonly CallFrame[]) => {
   }
   return value;
 };
+/** Returns the cached string identity for a call stack. */
 const contextKey = (context: readonly CallFrame[]): string => describeCallContext(context).key;
 const compactContextKeys = new WeakMap<readonly CallFrame[], string>();
-/** Hash the complete, mapping-qualified context once, without changing work-queue priority. */
+/** Hashes the complete mapping-qualified call context for compact node ids. */
 const compactContextKey = (context: readonly CallFrame[]): string => {
   let key = compactContextKeys.get(context);
   if (key === undefined) {
@@ -386,6 +475,7 @@ const compactContextKey = (context: readonly CallFrame[]): string => {
   }
   return key;
 };
+/** Builds the legacy CFG node id from address and full call context. */
 const nodeIdFor = (address: number, context: readonly CallFrame[]): string =>
   `cfg:${hexAddress(address)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
 
@@ -393,9 +483,9 @@ const nodeIdFor = (address: number, context: readonly CallFrame[]): string =>
  * Semantic priority shared by the work heap and historical deterministic traversal.
  * Do not add insertion order here: the heap supplies it only as a final stability tie-breaker, so
  * addresses, call contexts, entry points, and predecessors retain their documented precedence.
- * @param {WorkItem<State>} left Left queued work item.
- * @param {WorkItem<State>} right Right queued work item.
- * @returns {number} Negative, zero, or positive semantic priority comparison.
+ * @param left Left queued work item.
+ * @param right Right queued work item.
+ * @returns Negative, zero, or positive semantic priority comparison.
  */
 const sortWork = <State>(left: WorkItem<State>, right: WorkItem<State>): number =>
   left.address - right.address ||
@@ -403,6 +493,7 @@ const sortWork = <State>(left: WorkItem<State>, right: WorkItem<State>): number 
   left.entryPoint.localeCompare(right.entryPoint) ||
   (left.predecessor ?? "").localeCompare(right.predecessor ?? "");
 
+/** Heap entry pairing a work item with its stable insertion sequence. */
 type QueuedWork<State> = {
   readonly item: WorkItem<State>;
   /** Monotonic insertion order used only when every semantic sort field ties. */
@@ -428,10 +519,12 @@ class StaticWorkQueue<State> {
     }
   }
 
+  /** Number of work items currently queued for exploration. */
   get length(): number {
     return this.#values.length;
   }
 
+  /** Highest-priority work item without removing it from the queue. */
   peek(): WorkItem<State> | undefined {
     return this.#values[0]?.item;
   }
@@ -441,6 +534,7 @@ class StaticWorkQueue<State> {
     this.#values.length = 0;
   }
 
+  /** Inserts one work item while preserving deterministic heap ordering. */
   push(item: WorkItem<State>): void {
     const queued = { item, sequence: this.#nextSequence++ };
     this.#values.push(queued);
@@ -458,6 +552,7 @@ class StaticWorkQueue<State> {
     this.#values[index] = queued;
   }
 
+  /** Removes and returns the highest-priority work item. */
   shift(): WorkItem<State> | undefined {
     const firstSlot = this.#values.length > 0 ? this.#values[0] : undefined;
     const last = this.#values.pop();
@@ -494,6 +589,7 @@ class StaticWorkQueue<State> {
   }
 }
 
+/** Builds a stable edge id from endpoints, kind, and optional override. */
 const edgeIdFor = (
   from: string,
   kind: StaticAnalysisEdgeKind,
@@ -502,6 +598,7 @@ const edgeIdFor = (
 ): string =>
   `edge:${from}:${kind}:${toAddress === undefined ? "unresolved" : hexAddress(toAddress)}${override ? `:${override}` : ""}`;
 
+/** Maps non-instruction decode outcomes to published conflict categories. */
 const conflictKindFor = (
   decoded: Exclude<StaticDecodeResult, { readonly kind: "instruction" }>,
 ): StaticAnalysisConflict["kind"] => {
@@ -514,6 +611,7 @@ const conflictKindFor = (
   return decoded.reason.includes("map") ? "invalid-mapping" : "decode";
 };
 
+/** Maps instruction flow kinds to override target kinds for manual resolutions. */
 const overriddenTargetKind = (flow: StaticControlFlowKind): StaticControlTargetKind => {
   if (flow === "call") {
     return "call";
@@ -531,10 +629,10 @@ const overriddenTargetKind = (flow: StaticControlFlowKind): StaticControlTargetK
  * Deterministic conservative worklist traversal. Architecture-specific decoding
  * and state transfer stay behind the adapter boundary. Duplicate target overrides
  * at the same address are rejected. Call context is truncated at `maxCallDepth`.
- * @param {StaticAnalysisAdapter<State>} adapter Architecture-specific decode and abstract-state operations.
- * @param {readonly StaticAnalysisSeed<State>[]} seeds Justified entry points with their initial states and evidence.
- * @param {StaticAnalysisLimits & { readonly targetOverrides?: readonly StaticTargetOverride[] }} [options] Work, context, and target-override configuration.
- * @returns {StaticAnalysisResult<State>} Accepted CFG plus conflicts, unresolved flow, coverage, and completion status.
+ * @param adapter Architecture-specific decode and abstract-state operations.
+ * @param seeds Justified entry points with their initial states and evidence.
+ * @param [options] Work, context, and target-override configuration.
+ * @returns Accepted CFG plus conflicts, unresolved flow, coverage, and completion status.
  */
 export const analyzeStaticControlFlow = <State>(
   adapter: StaticAnalysisAdapter<State>,

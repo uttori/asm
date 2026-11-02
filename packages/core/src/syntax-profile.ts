@@ -1,9 +1,14 @@
+/** Source coordinates passed to dialect rewrite hooks before tokenization. */
 export interface SyntaxRewriteContext {
+  /** Absolute or virtual path of the file being rewritten. */
   readonly sourceFile: string;
+  /** Zero-based line number where the command originated. */
   readonly sourceLine: number;
 }
 
+/** Target dialect options controlling tokenization, labels, and optional rewrites. */
 export interface SyntaxProfile {
+  /** Stable profile name referenced by targets and cache keys. */
   readonly id: string;
   /** Bump when a rewrite hook changes grammar; functions themselves never enter cache identities. */
   readonly grammarVersion?: string;
@@ -35,6 +40,7 @@ export interface SyntaxProfile {
   readonly macroParameterPrefix?: string;
 }
 
+/** Default Asar-compatible statement splitting and directive prefix rules. */
 export const ASAR_SYNTAX_PROFILE: SyntaxProfile = Object.freeze({
   id: "asar",
   preserveLeadingWhitespace: false,
@@ -46,6 +52,7 @@ export const ASAR_SYNTAX_PROFILE: SyntaxProfile = Object.freeze({
   fileLocalSymbols: false,
 });
 
+/** Native Uttori syntax preserving leading whitespace and unsplit statements. */
 export const NATIVE_SYNTAX_PROFILE: SyntaxProfile = Object.freeze({
   id: "native",
   preserveLeadingWhitespace: true,
@@ -57,6 +64,7 @@ export const NATIVE_SYNTAX_PROFILE: SyntaxProfile = Object.freeze({
   fileLocalSymbols: false,
 });
 
+/** ca65-style cheap locals, dotted directives, and file-local symbol qualification. */
 export const CA65_SYNTAX_PROFILE: SyntaxProfile = Object.freeze({
   id: "ca65",
   preserveLeadingWhitespace: true,

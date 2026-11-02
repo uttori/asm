@@ -51,9 +51,10 @@ interface PngFixtureOptions {
   pixel: (x: number, y: number) => number[];
 }
 
-/** Emit small deterministic PNGs, retaining palette indexes even for duplicate RGB entries.
- * @param {string} name Output filename in the fixture directory.
- * @param {PngFixtureOptions} options Dimensions, color model, and source pixel callback.
+/**
+ * Emit small deterministic PNGs, retaining palette indexes even for duplicate RGB entries.
+ * @param name Output filename in the fixture directory.
+ * @param options Dimensions, color model, and source pixel callback.
  */
 const png = (name: string, options: PngFixtureOptions): void => {
   const {
@@ -245,11 +246,12 @@ const wavChunk = (name: string, payload: Uint8Array): Buffer =>
     payload,
     Buffer.alloc(payload.length & 1),
   ]);
-/** Emit mono PCM WAVE fixtures with an optional RIFF sampler loop in sample frames.
- * @param {string} name Output filename in the fixture directory.
- * @param {readonly number[]} samples PCM sample values.
- * @param {8 | 16} bits Sample width in bits.
- * @param {{ start: number; endInclusive: number }} loop Optional inclusive loop bounds in sample frames.
+/**
+ * Emit mono PCM WAVE fixtures with an optional RIFF sampler loop in sample frames.
+ * @param name Output filename in the fixture directory.
+ * @param samples PCM sample values.
+ * @param bits Sample width in bits.
+ * @param loop Optional inclusive loop bounds in sample frames.
  */
 const wave = (
   name: string,

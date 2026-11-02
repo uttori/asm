@@ -3,15 +3,19 @@ import path from "node:path";
 
 /** Caller-owned edit of an existing regular file; before bytes protect against stale plans. */
 export interface AssetFileChange {
+  /** Target file path relative to the transaction root. */
   readonly path: string;
+  /** Expected bytes before applying the edit. */
   readonly before: Uint8Array;
+  /** Proposed bytes written when the transaction commits. */
   readonly after: Uint8Array;
 }
 
-/** Compare exact source snapshots without depending on encoding or a hash algorithm.
- * @param {string} file Existing file path; read errors propagate to the transaction.
- * @param {Uint8Array} bytes Expected snapshot bytes.
- * @returns {boolean} Whether every byte still matches.
+/**
+ * Compare exact source snapshots without depending on encoding or a hash algorithm.
+ * @param file Existing file path; read errors propagate to the transaction.
+ * @param bytes Expected snapshot bytes.
+ * @returns Whether every byte still matches.
  */
 function matches(file: string, bytes: Uint8Array): boolean {
   return fs.readFileSync(file).equals(bytes);
@@ -22,7 +26,7 @@ function matches(file: string, bytes: Uint8Array): boolean {
  * Requires existing regular files and directories; creation/deletion is deliberately outside
  * this small authoring operation. This is not atomic to concurrent readers or crash-atomic.
  * On an unrecoverable conflict, backup files are retained and their locations reported.
- * @param {readonly AssetFileChange[]} changes Validated replacements for existing files; no creation or deletion.
+ * @param changes Validated replacements for existing files; no creation or deletion.
  */
 export function applyAssetFileChanges(changes: readonly AssetFileChange[]): void {
   const identities = new Set<string>();

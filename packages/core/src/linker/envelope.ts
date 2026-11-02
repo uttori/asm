@@ -4,6 +4,7 @@ import { stableJson } from "./value.js";
 
 const HEADER_SIZE = 52;
 const MAX_METADATA = 16 * 1024 * 1024;
+/** Hard cap on total encoded artifact size including header and JSON metadata. */
 export const MAX_ARTIFACT_BYTES = 256 * 1024 * 1024;
 
 /** A versioned binary envelope keeps payloads raw and hashes the header and every stored byte. */

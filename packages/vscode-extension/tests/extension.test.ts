@@ -122,6 +122,7 @@ registerHooks({
           export class TabInputCustom {}
           export class Task {}
           export const TaskGroup = { Build: 1 };
+          export const TaskScope = { Global: 1, Workspace: 2 };
           export const tasks = { registerTaskProvider: () => disposable() };
           export const FileType = { File: 1, Directory: 2 };
           export class FileSystemError extends Error { static NoPermissions(message) { return new this(message); } }
@@ -236,6 +237,7 @@ registerHooks({
             executeCommand: async (...args) => { host.executed.push(args); },
           };
           export const debug = {
+            activeDebugSession: undefined,
             onDidStartDebugSession: () => disposable(),
             onDidTerminateDebugSession: () => disposable(),
             registerDebugConfigurationProvider: () => disposable(),
@@ -284,6 +286,7 @@ registerHooks({
           }
           export const TransportKind = { stdio: 0 };
           export const Trace = { Off: 0, Messages: 1, Verbose: 2 };
+          export const State = { Stopped: 1, Starting: 2, Running: 3 };
           export const ExecuteCommandRequest = { type: "workspace/executeCommand" };
         `,
       };
@@ -427,7 +430,7 @@ test.serial(
     t.true(host.shownOutput.includes("Uttori Analysis"));
     await host.commands.get("asm.outline.refresh")?.();
     await host.commands.get("asm.openPanel")?.();
-    t.true(host.executed.some((args) => args[0] === "uttori-asm.projectPanel.focus"));
+    t.true(host.executed.some((args) => args[0] === "uttori-asm.home.focus"));
     await host.commands.get("asm.toggleWatch")?.();
     t.true(
       host.errors.some((message) =>

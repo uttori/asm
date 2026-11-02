@@ -11,8 +11,7 @@ import type { AddressStackDirectiveContext, ArchitectureDirectiveContext } from 
 
 /**
  * Pushes the current target address onto the push base stack.
- * @param {AddressStackDirectiveContext} ctx The directive context.
- * @returns {void}
+ * @param ctx The directive context.
  */
 export const handlePushBase = ({ session }: AddressStackDirectiveContext): void => {
   session.pushBaseStack.push(session.currentTargetAddress);
@@ -20,8 +19,7 @@ export const handlePushBase = ({ session }: AddressStackDirectiveContext): void 
 
 /**
  * Restores the target address saved by {@link handlePushBase}.
- * @param {AddressStackDirectiveContext} ctx The directive context.
- * @returns {void}
+ * @param ctx The directive context.
  * @throws {Error} If the base stack is empty.
  */
 export const handlePullBase = ({ session }: AddressStackDirectiveContext): void => {
@@ -36,9 +34,8 @@ export const handlePullBase = ({ session }: AddressStackDirectiveContext): void 
  * Selects the architecture named by `words[1]`.
  * Prefers {@link DirectiveArchitectureCapability.selectArchitecture} when present.
  * Otherwise writes `session.arch` after checking `availableArchitectures`.
- * @param {ArchitectureDirectiveContext} ctx The architecture-capable session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param ctx The architecture-capable session.
+ * @param words Tokenized line, keyword first.
  * @throws {Error} If the architecture name is missing, unknown, or not allowed on the target.
  */
 export const handleArch = (
@@ -76,12 +73,13 @@ function selectArchitecture({ session }: ArchitectureDirectiveContext, archParam
 
 /**
  * Registers `base`, `org`, `pushbase`/`pullbase`, `pushpc`/`pullpc`, and `arch`.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {DirectiveRegistryContexts["layout"]} context Layout-capable sessions and runtime.
- * @returns {void}
+ * @param registry The directive registry.
+ * @param context Layout-capable sessions and runtime.
  */
+/** No-op metadata hook for directives that only affect layout counters. */
 const empty = () => ({});
 
+/** Registers org, base, and related layout directives shared across targets. */
 export const registerGenericLayoutDirectives = (
   registry: DirectiveRegistry,
   context: DirectiveRegistryContexts["layout"],
@@ -156,9 +154,8 @@ export const registerGenericLayoutDirectives = (
 
 /**
  * Registers the core layout directive group.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {DirectiveRegistryContexts["layout"]} context Layout-capable sessions and runtime.
- * @returns {void}
+ * @param registry The directive registry.
+ * @param context Layout-capable sessions and runtime.
  */
 export const registerLayoutDirectives = (
   registry: DirectiveRegistry,

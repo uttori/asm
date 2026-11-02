@@ -29,15 +29,21 @@ import {
 
 /** In-memory plugin activation. Module text is diagnostic context, never imported by the manager. */
 export interface PluginActivationRequest {
+  /** Plugin instance whose activate hook will run. */
   readonly plugin: AssemblerPlugin;
+  /** Options validated by the plugin before activation. */
   readonly options?: unknown;
+  /** Optional module specifier recorded in activation diagnostics. */
   readonly pluginModule?: string;
 }
 
 /** Already-imported module namespace. Its default export must satisfy AssemblerPlugin. */
 export interface PluginModuleActivationRequest {
+  /** Imported module namespace object containing the default export. */
   readonly module: unknown;
+  /** Options validated by the plugin before activation. */
   readonly options?: unknown;
+  /** Module specifier used for diagnostics and manifest context. */
   readonly pluginModule: string;
 }
 
@@ -47,6 +53,7 @@ export interface PluginManagerOptions {
   readonly logger?: PluginLogger;
 }
 
+/** Contributions registered during one plugin activation attempt before commit. */
 interface PluginTransaction {
   readonly manifest: AssemblerPluginManifest;
   readonly module?: string;
@@ -62,6 +69,7 @@ interface PluginTransaction {
   readonly targets: OwnedContribution<TargetContribution>[];
 }
 
+/** Plugin instance retained after a successful activation. */
 interface ActivatedPlugin {
   readonly manifest: AssemblerPluginManifest;
   readonly module?: string;
@@ -75,9 +83,11 @@ const noopLogger: PluginLogger = {
   error: () => undefined,
 };
 
+/** Returns true when a character is a lowercase letter or digit. */
 const isLowerAlphaNumeric = (character: string): boolean =>
   (character >= "a" && character <= "z") || (character >= "0" && character <= "9");
 
+/** Validates plugin and contribution identifiers using lowercase alphanumeric segments. */
 const isValidId = (value: string, allowLeadingDigit = false): boolean => {
   if (
     value.length === 0 ||
@@ -100,17 +110,22 @@ const isValidId = (value: string, allowLeadingDigit = false): boolean => {
   return !previousWasSeparator;
 };
 
+/** Returns true when a string is a dotted contribution identifier. */
 const isValidContributionId = (value: string): boolean =>
   value.includes(".") && isValidId(value, true);
 
+/** Narrows unknown values to non-null, non-array objects. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Returns true when the value is an array. */
 const isArray = (value: unknown): boolean => Array.isArray(value);
 
+/** Returns true when plugin options are undefined or an empty object. */
 const isEmptyOptions = (value: unknown): boolean =>
   value === undefined || (isRecord(value) && Object.keys(value).length === 0);
 
+/** Recursively freezes objects, arrays, and function property bags for immutable manifests. */
 const deepFreeze = <T>(value: T, seen = new Set<unknown>()): Readonly<T> => {
   if (
     (typeof value !== "object" && typeof value !== "function") ||
@@ -136,6 +151,7 @@ const deepFreeze = <T>(value: T, seen = new Set<unknown>()): Readonly<T> => {
   return Object.freeze(value);
 };
 
+/** Ensures a manifest field is a non-empty string or throws a plugin manifest error. */
 const validateText = (value: unknown, field: string, pluginId?: string): string => {
   if (typeof value !== "string" || value.trim() === "") {
     throw new PluginError(`Plugin field '${field}' must be a non-empty string.`, {
@@ -146,6 +162,7 @@ const validateText = (value: unknown, field: string, pluginId?: string): string 
   return value;
 };
 
+/** Parses and freezes a plugin manifest, validating ids, semver, and dependencies. */
 const validateManifest = (manifest: unknown, pluginModule?: string): AssemblerPluginManifest => {
   if (!isRecord(manifest)) {
     throw new PluginError("Plugin manifest must be an object.", {
@@ -219,14 +236,19 @@ const validateManifest = (manifest: unknown, pluginModule?: string): AssemblerPl
   });
 };
 
+/** Activate hook type extracted from the plugin contract. */
 type PluginActivate = AssemblerPlugin["activate"];
+/** Optional options validator hook type extracted from the plugin contract. */
 type PluginValidateOptions = NonNullable<AssemblerPlugin["validateOptions"]>;
 
+/** Narrows unknown values to plugin activate functions. */
 const isPluginActivate = (value: unknown): value is PluginActivate => typeof value === "function";
 
+/** Narrows unknown values to plugin validateOptions functions. */
 const isPluginValidateOptions = (value: unknown): value is PluginValidateOptions =>
   typeof value === "function";
 
+/** Validates a module export object and binds activate/validateOptions to the export. */
 const validatePlugin = (value: unknown, pluginModule?: string): AssemblerPlugin => {
   if (!isRecord(value) || !isPluginActivate(value.activate)) {
     throw new PluginError(
@@ -255,6 +277,7 @@ const validatePlugin = (value: unknown, pluginModule?: string): AssemblerPlugin 
   };
 };
 
+/** Validates a contribution id string or throws a configuration error. */
 const validateContributionId = (id: unknown, pluginId: string): string => {
   if (typeof id !== "string" || !isValidContributionId(id)) {
     throw new PluginError(
@@ -269,6 +292,7 @@ const validateContributionId = (id: unknown, pluginId: string): string => {
   return id;
 };
 
+/** Ensures contribution aliases, when present, are a non-empty string array. */
 const validateAliases = (aliases: unknown, pluginId: string, contributionId: string): void => {
   if (aliases === undefined) {
     return;
@@ -314,7 +338,7 @@ export class PluginManager implements PluginDisposable {
 
   /**
    * Inspect successfully activated plugins.
-   * @returns {readonly AssemblerPluginManifest[]} A new array of frozen manifests in activation order.
+   * @returns A new array of frozen manifests in activation order.
    */
   get activatedPlugins(): readonly AssemblerPluginManifest[] {
     return this.#activated.map((item) => item.manifest);
@@ -322,7 +346,7 @@ export class PluginManager implements PluginDisposable {
 
   /**
    * Validate module default exports, then activate them with the same rules as activatePlugins.
-   * @param {readonly PluginModuleActivationRequest[]} requests Imported namespaces and the options supplied for each plugin.
+   * @param requests Imported namespaces and the options supplied for each plugin.
    */
   async activateModules(requests: readonly PluginModuleActivationRequest[]): Promise<void> {
     const normalized = requests.map((request) => {
@@ -346,7 +370,7 @@ export class PluginManager implements PluginDisposable {
    * Each plugin commits independently: earlier successes remain active if a later one fails.
    * Throws PluginError for invalid input, dependency conflicts, or activation failure.
    * Activation is unavailable after freeze or disposal. Dispose the manager after a failed batch.
-   * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
+   * @param requests Plugins/options to activate, reordered only as dependencies require.
    */
   async activatePlugins(requests: readonly PluginActivationRequest[]): Promise<void> {
     if (this.#disposed) {
@@ -602,6 +626,7 @@ export class PluginManager implements PluginDisposable {
         "referenceExpressions" in record.value ||
         (record.value.createTypedEncoder !== undefined &&
           typeof record.value.createTypedEncoder !== "function") ||
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
         !record.value.operandGrammar ||
         typeof record.value.operandGrammar.version !== "string" ||
         !record.value.operandGrammar.version ||
@@ -658,8 +683,10 @@ export class PluginManager implements PluginDisposable {
           directive.keywords.some(
             (keyword: unknown) => typeof keyword !== "string" || keyword === "",
           ) ||
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
           directive.phase !== "lowered" ||
           "createHandler" in directive ||
+          // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
           !directive.syntax ||
           typeof directive.syntax.parse !== "function" ||
           typeof directive.syntax.bind !== "function" ||
@@ -875,7 +902,7 @@ export class PluginManager implements PluginDisposable {
   /**
    * Validate target references and aliases, then seal registration. Repeated calls return the
    * same environment. Throws PluginError for invalid graphs or a disposed manager.
-   * @returns {AssemblerEnvironment} The validated, shared contribution graph. Resources remain owned by this manager.
+   * @returns The validated, shared contribution graph. Resources remain owned by this manager.
    */
   freeze(): AssemblerEnvironment {
     if (this.#disposed) {

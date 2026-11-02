@@ -1,7 +1,10 @@
 /** One memory-mapped SPC700 I/O register in direct page zero. */
 export interface Spc700HardwareRegister {
+  /** SPC700 address in `$00F0`–`$00FF`. */
   readonly address: number;
+  /** Assembler symbol emitted for the register. */
   readonly symbol: string;
+  /** Human-readable register purpose. */
   readonly description: string;
 }
 
@@ -36,8 +39,8 @@ const byAddress = new Map(registers.map((register) => [register.address, registe
 
 /**
  * Identifies volatile SPC700 I/O mapped at `$00F0`–`$00FF`.
- * @param {number} address SPC700 memory address.
- * @returns {Spc700HardwareRegister | undefined} Register metadata when matched.
+ * @param address SPC700 memory address.
+ * @returns Register metadata when matched.
  */
 export const identifySpc700HardwareRegister = (
   address: number,

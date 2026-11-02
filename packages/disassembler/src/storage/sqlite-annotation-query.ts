@@ -22,18 +22,27 @@ import { runtimeFromRow } from "./sqlite-records.js";
 
 /** Exact logical/output coordinates from a validated debug map. Ranges are half-open. */
 export interface AnnotationQueryRange {
+  /** Restricts runtime facts to one architecture; undefined matches any architecture. */
   readonly architecture?: string;
+  /** Logical address space of the source span. */
   readonly addressSpace: string;
+  /** Inclusive logical start address. */
   readonly start: number;
+  /** Exclusive logical end address; must exceed `start`. */
   readonly end: number;
+  /** Inclusive output file offset; set together with `outputEnd` or not at all. */
   readonly outputStart?: number;
+  /** Exclusive output file offset; must exceed `outputStart`. */
   readonly outputEnd?: number;
 }
 
 /** A small semantic view plus explicit notice when an editor detail budget was reached. */
 export interface SqliteAnnotationView {
+  /** Bounded analysis and runtime records for the requested ranges. */
   readonly shards: AnalysisProjectShards;
+  /** Exact SQL execution totals keyed by `space:address`, independent of the detail budget. */
   readonly executionCounts: ReadonlyMap<string, number>;
+  /** True when any location or record budget truncated the detail view. */
   readonly limited: boolean;
 }
 
@@ -53,6 +62,11 @@ export type InstructionExportRecord = Pick<
 >;
 const QUERY_LAYOUT = "5";
 
+/**
+ * Accept a sparse instruction payload whose present fields have their persisted types.
+ * @param value Decoded payload of unknown shape.
+ * @returns True when every present field is valid; absent fields are not required.
+ */
 function isPartialInstruction(value: unknown): value is Partial<InstructionExportRecord> {
   if (!isRecord(value)) {
     return false;
@@ -80,6 +94,12 @@ function isPartialInstruction(value: unknown): value is Partial<InstructionExpor
   return value.evidence === undefined || isStringArray(value.evidence);
 }
 
+/**
+ * Decode an indexed instruction payload and validate its present fields.
+ * @param value Raw SQLite payload column.
+ * @returns Sparse instruction record.
+ * @throws When the payload is not a valid partial instruction.
+ */
 function requirePartialInstruction(value: unknown): Partial<InstructionExportRecord> {
   const parsed = parseSqlitePayload(value);
   if (!isPartialInstruction(parsed)) {
@@ -87,11 +107,12 @@ function requirePartialInstruction(value: unknown): Partial<InstructionExportRec
   }
   return parsed;
 }
-/** Reconstruct one physical observation or its paired logical state after filtering shared facts.
+/**
+ * Reconstruct one physical observation or its paired logical state after filtering shared facts.
  * CROSS JOIN keeps the selective fact lookup ahead of capture relationships. The compatibility
  * UNION view cannot push a state-kind constraint into its paired branch and scans the history.
- * @param {boolean} pairedState Select the paired state's identity and virtual row order instead of its instruction.
- * @returns {string} Internal SELECT prefix. Callers supply indexed coordinate predicates and a limit.
+ * @param pairedState Select the paired state's identity and virtual row order instead of its instruction.
+ * @returns Internal SELECT prefix. Callers supply indexed coordinate predicates and a limit.
  */
 const runtimeSelect = (pairedState = false): string => {
   const kind = pairedState ? "'runtime-cpu-state'" : "f.kind";
@@ -117,8 +138,8 @@ const PENDING_EXECUTIONS = `SELECT o.oid AS row_id,
 
 /**
  * Avoid acquiring a writer lock for ordinary viewport reads after indexes are current.
- * @param {DatabaseSync} database Open analysis connection.
- * @returns {boolean} Whether every persisted node/execution offset is indexed.
+ * @param database Open analysis connection.
+ * @returns Whether every persisted node/execution offset is indexed.
  */
 export const annotationQueryIndexesReady = (database: DatabaseSync): boolean =>
   Boolean(
@@ -136,7 +157,7 @@ export const annotationQueryIndexesReady = (database: DatabaseSync): boolean =>
  * Install additive query indexes and incrementally extract explicit output offsets.
  * Triggers invalidate only changed rows, including writes from older clients. Authoritative
  * payloads, storage format version, and publication revision are untouched. The caller owns a writer lock.
- * @param {DatabaseSync} database Existing analysis database in a write transaction.
+ * @param database Existing analysis database in a write transaction.
  */
 export const ensureAnnotationQueryIndexes = (database: DatabaseSync): void => {
   if (
@@ -272,10 +293,10 @@ export const ensureAnnotationQueryIndexes = (database: DatabaseSync): void => {
 /**
  * Read requested instructions and their evidence, never a whole-project annotation projection.
  * Hot PCs have a bounded preview of variants/state/memory facts. Execution totals remain exact.
- * @param {DatabaseSync} database Connection with initialized indexes, inside a read transaction.
- * @param {AnalysisProjectManifest} manifest Authoritative manifest for this read snapshot.
- * @param {readonly AnnotationQueryRange[]} ranges At most 2000 validated source/debugger ranges.
- * @returns {SqliteAnnotationView} Bounded records suitable for the ordinary semantic annotation builder.
+ * @param database Connection with initialized indexes, inside a read transaction.
+ * @param manifest Authoritative manifest for this read snapshot.
+ * @param ranges At most 2000 validated source/debugger ranges.
+ * @returns Bounded records suitable for the ordinary semantic annotation builder.
  */
 export const readSqliteAnnotationView = (
   database: DatabaseSync,
@@ -405,10 +426,11 @@ export const readSqliteAnnotationView = (
     `SELECT COALESCE(SUM(o.count),0) AS n FROM runtime_facts f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
       WHERE f.kind='runtime-execution' AND f.address_space=? AND f.address=?`,
   );
-  /** Preserve virtual-row ordering and one combined preview limit across paired and standalone states.
-   * @param {string} space Qualified logical address space, without inferred mapper aliases.
-   * @param {number} address Exact instruction start within that space.
-   * @param {number} limit Combined row budget, including one overflow sentinel for truncation reporting.
+  /**
+   * Preserve virtual-row ordering and one combined preview limit across paired and standalone states.
+   * @param space Qualified logical address space, without inferred mapper aliases.
+   * @param address Exact instruction start within that space.
+   * @param limit Combined row budget, including one overflow sentinel for truncation reporting.
    * @yields {Record<string, unknown>} One undecoded logical state row in stable virtual-row order.
    */
   function* stateRows(space: string, address: number, limit: number) {
@@ -512,7 +534,7 @@ export const readSqliteAnnotationView = (
 
 /**
  * Validates bounded, half-open coordinates before any editor query.
- * @param {readonly AnnotationQueryRange[]} ranges At most 2000 nonempty ranges; malformed input throws.
+ * @param ranges At most 2000 nonempty ranges; malformed input throws.
  */
 const validateAnnotationRanges = (ranges: readonly AnnotationQueryRange[]): void => {
   if (ranges.length > 2000) {
@@ -538,26 +560,33 @@ const validateAnnotationRanges = (ranges: readonly AnnotationQueryRange[]): void
 
 /** Exact count at a qualified location, with explicit file offsets for mirror attribution. */
 export interface InstructionExecutionSummary {
+  /** Qualified address space of the executed location; mirrors keep their own space. */
   readonly addressSpace: string;
+  /** Instruction start within `addressSpace`. */
   readonly address: number;
+  /** Output file offsets observed for this location; empty when none were recorded. */
   readonly outputOffsets: readonly number[];
+  /** Exact summed observation count at this location. */
   readonly executionCount: number;
 }
 
 /** One requested span; counts are exact even when the number of displayed locations is bounded. */
 export interface InstructionExecutionSummaryRow {
+  /** Index of the originating entry in the requested ranges. */
   readonly rangeIndex: number;
+  /** At most 64 distinct qualified locations. */
   readonly locations: readonly InstructionExecutionSummary[];
+  /** True when more locations existed than were returned. */
   readonly limited: boolean;
 }
 
 /**
  * Read only indexed coordinates and aggregate execution counts. No state, CFG payloads, memory,
  * or evidence records are decoded. Aliases retain separate counts instead of being summed.
- * @param {DatabaseSync} database Prepared project connection in the caller's read transaction.
- * @param {AnalysisProjectManifest} manifest Supplies file identities; no mapper inference is performed.
- * @param {readonly AnnotationQueryRange[]} ranges At most 2000 current source spans.
- * @returns {readonly InstructionExecutionSummaryRow[]} Exact counts with bounded, qualified locations.
+ * @param database Prepared project connection in the caller's read transaction.
+ * @param manifest Supplies file identities; no mapper inference is performed.
+ * @param ranges At most 2000 current source spans.
+ * @returns Exact counts with bounded, qualified locations.
  */
 export const readInstructionExecutionSummary = (
   database: DatabaseSync,

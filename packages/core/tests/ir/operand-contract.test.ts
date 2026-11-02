@@ -89,7 +89,7 @@ test("registered SPC and SuperFX grammars preserve register identity and compoun
       return;
     }
     t.true(increment.postIncrement);
-    t.true("kind" in increment.address && increment.address.kind === "register");
+    t.like(increment.address, { kind: "register" });
   }
   const bit = spc.parse("or1", "c,/$1234.3").operands[1];
   if (bit.kind !== "memory") {
@@ -224,7 +224,9 @@ test("typed dispatch never invokes legacy classifiers, expansion, sizing or enco
   t.true(
     observations.every((entry) => entry.address === 0x808001 && entry.point === "afterOpcode"),
   );
-  t.true(retained.every((frame) => t.throws(() => frame.currentAddress()) !== undefined));
+  for (const frame of retained) {
+    t.throws(() => frame.currentAddress());
+  }
 });
 
 test("portable expression guard rejects hidden raw readers and malformed typed children", (t) => {

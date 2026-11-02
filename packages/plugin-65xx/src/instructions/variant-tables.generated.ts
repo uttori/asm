@@ -3,6 +3,7 @@
 // Commit: e11fb5c39371046ebe25485f984f644c5a0d65d3
 // Source SHA-256: bcd36f022a3534355285346d6a4149563a21f17c72b614d91e381d19d68e5a9d
 
+/** cc65 `instr.c` emitter function that encodes an instruction row. */
 export type Ca65Handler =
   | "PutAll"
   | "PutBitBranch"
@@ -20,6 +21,7 @@ export type Ca65Handler =
   | "PutTMA"
   | "PutTMAn"
   | "PutTST";
+/** One cc65 instruction-table row: mnemonic, addressing-mode bitmask, base opcode, effective-address table index, and emitter. */
 export type Ca65InstructionRow = readonly [
   mnemonic: string,
   modes: number,
@@ -28,6 +30,7 @@ export type Ca65InstructionRow = readonly [
   handler: Ca65Handler,
 ];
 
+/** cc65 effective-address tables; each maps an addressing-mode bit index to the value added to a row's base opcode. */
 export const ca65EaTable: readonly (readonly number[])[] = [
   [
     0, 0, 5, 13, 15, 21, 29, 31, 0, 25, 18, 0, 7, 17, 23, 1, 0, 0, 0, 3, 19, 9, 0, 9, 0, 0, 0, 0, 0,
@@ -95,6 +98,7 @@ export const ca65EaTable: readonly (readonly number[])[] = [
   ],
 ];
 
+/** cc65 instruction rows keyed by ca65 CPU table name. */
 export const ca65VariantTables = {
   "4510": [
     ["ADC", 8431212, 96, 0, "PutAll"],

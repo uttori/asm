@@ -55,29 +55,44 @@ const ARES_NAMED_MEMORY_READ_CHUNK_BYTES = 0x1000;
 
 /** RSP operations consumed by the ares backend, abstracted for deterministic tests. */
 export interface AresGdbRspClient {
+  /** Whether the RSP session can accept further commands. */
   readonly closed: boolean;
+  /** Completes the GDB handshake and enables command traffic. */
   start(): Promise<void>;
+  /** Sends one RSP command and returns its response payload. */
   request(command: string): Promise<string>;
+  /** Sends a command that may resolve as a stop notification instead of OK. */
   requestStop(command: string): Promise<string>;
+  /** Resumes emulated execution until the next stop. */
   continue(): Promise<void>;
+  /** Executes one emulated instruction step. */
   step(): Promise<void>;
+  /** Sends the out-of-band interrupt byte to break into the emulator. */
   interrupt(): Promise<void>;
+  /** Closes the RSP transport and rejects in-flight work. */
   close(): Promise<void>;
+  /** Subscribes to asynchronous stop notifications from the stub. */
   onStop(listener: (event: GdbRspStop) => void): DebugSubscription;
+  /** Subscribes to terminal transport failure. */
   onClose(listener: (error: Error) => void): DebugSubscription;
 }
 
 /** Process/session hooks supplied by the sidecar executable. */
 export interface AresRspBackendOptions {
+  /** Factory that connects an RSP client when connect runs. */
   readonly createClient: (
     options: DebugBackendConnectOptions,
   ) => AresGdbRspClient | GdbRspClient | Promise<AresGdbRspClient | GdbRspClient>;
+  /** Optional hook to tear down the emulator process on disconnect. */
   readonly terminate?: () => Promise<void>;
+  /** Wall-clock bound waiting for ares to acknowledge a stop. */
   readonly stopTimeoutMs?: number;
   /** Full-file start of PRG, including the iNES header and optional trainer; defaults to 16. */
   readonly nesPrgFileOffset?: number;
-  /** Set only by the manifest-verified local process host. Binds file provenance
-   * and prevents native paths from being sent to an arbitrary remote RSP server. */
+  /**
+   * Set only by the manifest-verified local process host. Binds file provenance
+   * and prevents native paths from being sent to an arbitrary remote RSP server.
+   */
   readonly nativeFileIdentity?: {
     readonly romSha256: string;
     readonly romFileSha256?: string;
@@ -86,6 +101,7 @@ export interface AresRspBackendOptions {
   };
 }
 
+/** Parsed 65816 register block from an ares RSP stop packet. */
 interface RegisterSnapshot {
   readonly a: number;
   readonly x: number;
@@ -99,9 +115,11 @@ interface RegisterSnapshot {
   readonly e: number;
 }
 
+/** Normalizes unknown failures into Error instances. */
 const asError = (error: unknown): Error =>
   error instanceof Error ? error : new Error(String(error));
 
+/** Validates a non-negative safe integer within an optional maximum. */
 const checkedInteger = (
   value: number,
   context: string,
@@ -113,6 +131,7 @@ const checkedInteger = (
   return value;
 };
 
+/** Validates a logical 65816 program address from the public backend contract. */
 const checkedAddress = (value: DebugAddress, context: string): DebugAddress => {
   if (value.architecture !== ARES_65816_ARCHITECTURE) {
     throw new Error(`${context} uses unsupported architecture '${value.architecture}'.`);
@@ -124,6 +143,7 @@ const checkedAddress = (value: DebugAddress, context: string): DebugAddress => {
   return { ...value, address: value.address & 0xff_ffff };
 };
 
+/** Validates a 65816 memory read address in WRAM or cartridge ROM space. */
 const checkedMemoryAddress = (value: DebugAddress, context: string): DebugAddress => {
   if (value.architecture !== ARES_65816_ARCHITECTURE) {
     throw new Error(`${context} uses unsupported architecture '${value.architecture}'.`);
@@ -138,6 +158,7 @@ const checkedMemoryAddress = (value: DebugAddress, context: string): DebugAddres
   return { ...value };
 };
 
+/** Returns true when a string contains an even count of hexadecimal digits. */
 const isEvenHex = (value: string): boolean => {
   if (value.length % 2 !== 0) {
     return false;
@@ -157,6 +178,7 @@ const isEvenHex = (value: string): boolean => {
   return true;
 };
 
+/** Decodes a little-endian hex byte string into a number. */
 const littleEndian = (hex: string): number => {
   const bytes = hex.match(/../g);
   if (!bytes || bytes.join("") !== hex) {
@@ -165,14 +187,17 @@ const littleEndian = (hex: string): number => {
   return Number.parseInt(bytes.toReversed().join(""), 16);
 };
 
+/** Formats an integer as uppercase hex padded to the register width. */
 const registerHex = (value: number, bits: number): string =>
   value
     .toString(16)
     .toUpperCase()
     .padStart(Math.ceil(bits / 4), "0");
 
+/** UTF-8 encodes a string into RSP hex payload form. */
 const encode = (value: string): string => Buffer.from(value, "utf8").toString("hex");
 
+/** Parses the fixed-layout 65816 register block from a stop packet. */
 const parseRegisters = (payload: string): RegisterSnapshot => {
   if (!/^[\dA-Fa-f]{32}$/.test(payload)) {
     throw new Error(`Expected 16 bytes of ares 65816 registers, received ${payload.length / 2}.`);
@@ -191,9 +216,11 @@ const parseRegisters = (payload: string): RegisterSnapshot => {
   };
 };
 
+/** Combines program bank and offset into a 24-bit logical PC. */
 const logicalPc = (registers: RegisterSnapshot): number =>
   ((registers.pb << 16) | registers.pc) & 0xff_ffff;
 
+/** Extracts the signal number from an RSP stop packet prefix. */
 const stopSignal = (payload: string): number => {
   if (!/^[ST][\dA-Fa-f]{2}/.test(payload)) {
     throw new Error(`Expected an RSP stop packet, received '${payload}'.`);
@@ -201,12 +228,14 @@ const stopSignal = (payload: string): number => {
   return Number.parseInt(payload.slice(1, 3), 16);
 };
 
+/** Asserts an RSP command returned the OK sentinel. */
 const expectOkay = (payload: string, context: string): void => {
   if (payload !== "OK") {
     throw new Error(`${context} failed with RSP response '${payload}'.`);
   }
 };
 
+/** Parses hexadecimal text into a JavaScript safe integer. */
 const safeHexInteger = (value: string, context: string): number => {
   if (!/^[\dA-Fa-f]+$/.test(value)) {
     throw new Error(`${context} is not hexadecimal.`);
@@ -220,6 +249,7 @@ const safeHexInteger = (value: string, context: string): number => {
 
 /** 65816 `DebugBackend` implemented over the maintained ares fork's private RSP channel. */
 export class AresRspDebugBackend implements DebugBackend {
+  /** Fixed ares RSP backend protocol revision. */
   readonly protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
   #nes = false;
   #richTrace = false;
@@ -231,6 +261,7 @@ export class AresRspDebugBackend implements DebugBackend {
   #busCaptureSupported = false;
   #contextBoundaryHeld = false;
   #contextReplayPending = false;
+  /** Negotiated capabilities including NES mode and rich-trace overrides. */
   get capabilities(): typeof ARES_RSP_CAPABILITIES {
     if (this.#nes) {
       return ARES_NES_CAPABILITIES;
@@ -291,7 +322,10 @@ export class AresRspDebugBackend implements DebugBackend {
       }
     | undefined;
 
-  /** @param {AresRspBackendOptions} options RSP client/process lifecycle hooks. */
+  /**
+   * Wires RSP client creation and optional process termination hooks.
+   * @param options RSP client and process lifecycle hooks.
+   */
   constructor(options: AresRspBackendOptions) {
     this.#nativeFileIdentity = options.nativeFileIdentity;
     this.#nesPrgFileOffset = options.nesPrgFileOffset ?? 16;
@@ -1054,6 +1088,7 @@ export class AresRspDebugBackend implements DebugBackend {
     return position;
   }
 
+  /** @inheritdoc */
   async startTrace(options: DebugTraceStartOptions): Promise<void> {
     if (
       options.architecture !== ARES_65816_ARCHITECTURE ||

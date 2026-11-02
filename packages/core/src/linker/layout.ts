@@ -8,13 +8,18 @@ import type {
 import { LinkError, type LinkAllocation, type LinkRegionReport } from "./types.js";
 import { integer, textValue } from "./value.js";
 
+/** Mutable cursor tracking while placing sections into one memory region. */
 interface RegionState {
   readonly region: LinkMemoryRegion;
   cursor: number;
 }
+/** Final section placements, region usage reports, and contiguous output image. */
 export interface LinkLayout {
+  /** Per-module section run addresses and sizes after layout. */
   readonly allocations: readonly LinkAllocation[];
+  /** Human-readable region fill summaries for diagnostics. */
   readonly regions: readonly LinkRegionReport[];
+  /** Contiguous ROM/RAM image sized to the highest used address. */
   readonly output: Uint8Array;
 }
 
@@ -22,9 +27,11 @@ export interface LinkLayout {
 function aligned(value: number, alignment: number): number {
   return integer(Math.ceil(value / alignment) * alignment, "Aligned address");
 }
+/** Greatest common divisor for combining section alignment requirements. */
 function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
 }
+/** Least common multiple of alignments with overflow-checked integer math. */
 function combine(a: number, b: number): number {
   return integer((a / gcd(a, b)) * b, "Combined alignment", 1, 0x1000000);
 }

@@ -13,8 +13,11 @@ import type { LiveBusStart, LiveBusProfile } from "./live-bus-analysis-process.j
  * difference is current analysis lag.
  */
 export interface LiveBusProgress extends RuntimeBusTraceProgress {
+  /** Bytes consumed from the capture archive so far. */
   readonly readBytes: number;
+  /** Bytes durably recorded by the native capture pipeline. */
   readonly durableBytes: number;
+  /** Marks progress as provisional until the importer commits. */
   readonly provisional: true;
 }
 /**
@@ -22,15 +25,21 @@ export interface LiveBusProgress extends RuntimeBusTraceProgress {
  * bytes, and optional profiling data.
  */
 export interface LiveBusResult extends RuntimeBusProjectImportResult {
+  /** Live-import timing and resource peaks recorded by the child process. */
   readonly live: {
+    /** Wall milliseconds for the committed import. */
     readonly wallMs: number;
+    /** Peak unread archive bytes observed during import. */
     readonly peakLagBytes: number;
+    /** Peak resident set size in bytes during import. */
     readonly peakRssBytes: number;
+    /** Optional coarse stage timings when profiling was enabled. */
     readonly profile?: LiveBusProfile;
   };
 }
 
-/** Isolated single-capture importer with one in-flight and one latest status.
+/**
+ * Isolated single-capture importer with one in-flight and one latest status.
  * No raw events queue in the editor. Failures never abort the native recorder.
  */
 export class LiveBusAnalysis {
@@ -111,8 +120,9 @@ export class LiveBusAnalysis {
       }
     });
   }
-  /** Replace pending progress. Debugger polling never waits for analysis.
-   * @param {NativeCaptureFilePosition} position Latest validated native status, including final publication.
+  /**
+   * Replace pending progress. Debugger polling never waits for analysis.
+   * @param position Latest validated native status, including final publication.
    */
   update(position: NativeCaptureFilePosition): void {
     this.#latest = position;

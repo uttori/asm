@@ -14,22 +14,28 @@ export type SourceSpan = {
   columnEnd?: number;
 };
 
+/** Zero-based line and UTF-16 character position in a source file. */
 export type SourcePosition = {
+  /** Zero-based line index. */
   line: number;
+  /** Zero-based UTF-16 character offset on the line. */
   character: number;
 };
 
+/** Inclusive start and exclusive end positions for editor ranges. */
 export type SourceRange = {
+  /** Inclusive range start in line/character space. */
   start: SourcePosition;
+  /** Exclusive range end in line/character space. */
   end: SourcePosition;
 };
 
 /**
  * Creates a source span.
- * @param {number} start The inclusive starting offset.
- * @param {number} end The exclusive ending offset.
- * @param {number} [line] Optional 0-based line number.
- * @returns {SourceSpan} The source span.
+ * @param start The inclusive starting offset.
+ * @param end The exclusive ending offset.
+ * @param [line] Optional 0-based line number.
+ * @returns The source span.
  */
 export function createSourceSpan(start: number, end: number, line?: number): SourceSpan {
   return {
@@ -44,9 +50,9 @@ export function createSourceSpan(start: number, end: number, line?: number): Sou
 
 /**
  * Returns a span covering an entire single-line string.
- * @param {string} text The source text.
- * @param {number} [line] Optional 0-based line number.
- * @returns {SourceSpan} The full-line span.
+ * @param text The source text.
+ * @param [line] Optional 0-based line number.
+ * @returns The full-line span.
  */
 export function createLineSpan(text: string, line?: number): SourceSpan {
   return createSourceSpan(0, text.length, line);
@@ -85,10 +91,10 @@ export function sourceLineStarts(text: string): number[] {
 
 /**
  * Shifts a span by a column offset.
- * @param {SourceSpan} span The span to shift.
- * @param {number} offset The offset delta.
- * @param {number} [line] Optional line override.
- * @returns {SourceSpan} The shifted span.
+ * @param span The span to shift.
+ * @param offset The offset delta.
+ * @param [line] Optional line override.
+ * @returns The shifted span.
  */
 export function shiftSourceSpan(span: SourceSpan, offset: number, line = span.line): SourceSpan {
   return {
@@ -102,10 +108,10 @@ export function shiftSourceSpan(span: SourceSpan, offset: number, line = span.li
 
 /**
  * Derives token spans by scanning a normalized line from left to right.
- * @param {string} text The source text to scan.
- * @param {string[]} tokens The already-tokenized command words.
- * @param {number} [line] Optional 0-based line number.
- * @returns {SourceSpan[]} The token spans in token order.
+ * @param text The source text to scan.
+ * @param tokens The already-tokenized command words.
+ * @param [line] Optional 0-based line number.
+ * @returns The token spans in token order.
  */
 export function deriveTokenSpans(
   text: string,
@@ -143,9 +149,9 @@ export function deriveTokenSpans(
 /**
  * Converts a span into an explicit line/character range for editor tooling.
  * The current assembler spans are line-local and use zero-based columns.
- * @param {SourceSpan} span The span to convert.
- * @param {number} [fallbackLine] Optional line when the span omits one.
- * @returns {SourceRange} The normalized source range.
+ * @param span The span to convert.
+ * @param [fallbackLine] Optional line when the span omits one.
+ * @returns The normalized source range.
  */
 export function sourceSpanToRange(span: SourceSpan, fallbackLine = span.line ?? 0): SourceRange {
   const line = span.line ?? fallbackLine;

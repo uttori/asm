@@ -9,7 +9,9 @@ import {
 
 /** Saved authoring files for one evidence query. Unsaved edits remain editor documents until saved. */
 export interface AnalysisResearchContext {
+  /** Selected source worktree root for the evidence query. */
   readonly root: string;
+  /** Saved research inputs hash bound to the query generation. */
   readonly snapshot: ResearchSnapshot;
 }
 

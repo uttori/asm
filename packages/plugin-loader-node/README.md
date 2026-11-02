@@ -30,9 +30,13 @@ try {
 ```
 
 Discovery checks the supplied `cwd`. It does not search parent directories. `configFile` selects
-an explicit file. Module and include paths in configuration resolve from that file's directory.
-Overrides take precedence over configuration, then host defaults. Explicit plugin modules append
-in order. The loader has no built-in target default.
+an explicit file. Module and include paths in configuration resolve from that file's directory;
+host-supplied modules, defaults and include overrides resolve from `cwd`. Overrides take precedence
+over configuration, then host defaults; override `includePaths` replace the configured list. Default
+plugins apply only when configuration lists none. Explicit plugin modules append in order, and two
+entries resolving to the same module reject loading. `bundledPlugins` maps exact specifiers to
+in-process plugins before Node resolution. The loader has no built-in target default: it selects a
+sole registered target, and otherwise requires one.
 
 Plugins execute trusted JavaScript with the host's permissions. Validate workspace trust before
 loading them. Invalid configuration, plugin options, or registration conflicts reject loading.

@@ -2,22 +2,47 @@ import { canonicalValue } from "@uttori/asm-core/canonical-json";
 
 import type { RuntimeStateValue } from "./project-types.js";
 
+/**
+ * Accept only non-null, non-array objects.
+ * @param value Candidate value.
+ * @returns Whether value is a plain record.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Narrow to a readonly array of unvalidated elements without widening to Array<any>.
+ * @param value Candidate value.
+ * @returns Whether value is an array.
+ */
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+/**
+ * Accept any integral number, including unsafe magnitudes.
+ * @param value Candidate value.
+ * @returns Whether value is an integer.
+ */
 function isInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value);
 }
 
+/**
+ * Accept integers exactly representable as doubles.
+ * @param value Candidate value.
+ * @returns Whether value is a safe integer.
+ */
 function isSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 
+/**
+ * Accept register values: strings, booleans and finite numbers.
+ * @param value Candidate value.
+ * @returns Whether value is a runtime state value.
+ */
 function isStateValue(value: unknown): value is RuntimeStateValue {
   return (
     typeof value === "string" ||
@@ -26,6 +51,11 @@ function isStateValue(value: unknown): value is RuntimeStateValue {
   );
 }
 
+/**
+ * Validate one bus operation, including actor/channel consistency for DMA and HDMA.
+ * @param entry Untrusted access record.
+ * @returns Whether entry is a valid memory access.
+ */
 function isMemoryAccess(entry: unknown): entry is RuntimeTraceMemoryAccess {
   if (!isRecord(entry)) {
     return false;
@@ -55,20 +85,29 @@ function isMemoryAccess(entry: unknown): entry is RuntimeTraceMemoryAccess {
 
 /** An actual bus operation, captured by the producer without extra debugger reads. */
 export interface RuntimeTraceMemoryAccess {
+  /** Non-empty bus address space name. */
   readonly addressSpace: string;
+  /** Non-negative address within addressSpace. */
   readonly address: number;
+  /** Bus operation kind; fetch is an opcode or operand read. */
   readonly access: "read" | "write" | "fetch";
+  /** Operation width in bytes (1-8). */
   readonly width: number;
+  /** Transferred value when the producer recorded it. */
   readonly value?: number;
   /** DMA observations are contemporaneous with a CPU instruction, not performed by it. */
   readonly actor?: "cpu" | "dma" | "hdma";
+  /** DMA/HDMA channel (0-7); only valid with a dma or hdma actor. */
   readonly channel?: number;
 }
 
 /** Bytes fetched during execution and registers immediately before that instruction. */
 export interface RuntimeInstructionDetail {
+  /** Instruction bytes in fetch order (1-16 values, 0-255). */
   readonly bytes: readonly number[];
+  /** Register values keyed by producer register name, in sorted key order. */
   readonly state: Readonly<Record<string, RuntimeStateValue>>;
+  /** Bus operations attributed to the instruction, at most 256; undefined when not captured. */
   readonly memoryAccesses?: readonly RuntimeTraceMemoryAccess[];
   /** Operations omitted by a bounded per-instruction producer buffer. */
   readonly droppedMemoryAccesses?: number;
@@ -76,9 +115,9 @@ export interface RuntimeInstructionDetail {
 
 /**
  * Validate execution details for persistence.
- * @param {unknown} value Untrusted detail array.
- * @param {number} count Expected instruction count.
- * @returns {readonly RuntimeInstructionDetail[]} Owned details with recursively canonical key order.
+ * @param value Untrusted detail array.
+ * @param count Expected instruction count.
+ * @returns Owned details with recursively canonical key order.
  */
 export const validateRuntimeInstructionDetails = (
   value: unknown,

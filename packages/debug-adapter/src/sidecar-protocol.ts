@@ -71,47 +71,66 @@ export const DEFAULT_DEBUG_SIDECAR_LIMITS: DebugSidecarProtocolLimits = Object.f
 
 /** Common authenticated, ordered envelope fields. */
 export interface DebugSidecarEnvelope {
+  /** Wire protocol identifier shared by every peer. */
   readonly protocol: typeof DEBUG_SIDECAR_PROTOCOL;
+  /** Negotiated revision; mismatches fail fast before command dispatch. */
   readonly version: typeof DEBUG_SIDECAR_PROTOCOL_VERSION;
+  /** One-session authentication token matching the transport setup. */
   readonly session: string;
+  /** Monotonic message sequence used for ordering and response pairing. */
   readonly sequence: number;
 }
 
 /** Request sent by the TypeScript backend client to a native sidecar. */
 export interface DebugSidecarRequest extends DebugSidecarEnvelope {
+  /** Discriminator marking client-to-sidecar commands. */
   readonly type: "request";
+  /** Neutral backend operation requested by the TypeScript client. */
   readonly command: (typeof DEBUG_SIDECAR_COMMANDS)[number];
+  /** Command-specific payload validated against protocol limits. */
   readonly arguments?: Readonly<Record<string, unknown>>;
 }
 
 /** Response paired with one client request sequence. */
 export interface DebugSidecarResponse extends DebugSidecarEnvelope {
+  /** Discriminator marking command responses. */
   readonly type: "response";
+  /** Sequence of the request this response completes. */
   readonly requestSequence: number;
+  /** Whether the command succeeded; failures carry error text. */
   readonly success: boolean;
+  /** Untrusted success payload for the typed adapter to validate. */
   readonly result?: unknown;
+  /** Human-readable failure reason when success is false. */
   readonly error?: string;
 }
 
 /** Asynchronous backend event emitted by a native sidecar. */
 export interface DebugSidecarEvent extends DebugSidecarEnvelope {
+  /** Discriminator marking asynchronous backend events. */
   readonly type: "event";
+  /** Asynchronous backend signal name. */
   readonly event: (typeof DEBUG_SIDECAR_EVENTS)[number];
+  /** Event payload validated before forwarding to listeners. */
   readonly body: Readonly<Record<string, unknown>>;
 }
 
 /** Any framed sidecar message. */
 export type DebugSidecarMessage = DebugSidecarRequest | DebugSidecarResponse | DebugSidecarEvent;
 
+/** Narrows unknown decoded JSON to plain objects. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Checks membership in a readonly string union list. */
 const listed = <Value extends string>(values: readonly Value[], value: unknown): value is Value =>
   typeof value === "string" && values.some((item) => item === value);
 
+/** Narrows to positive safe integers. */
 const positiveInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 
+/** Narrows to non-negative safe integers. */
 const nonNegativeInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 
@@ -119,14 +138,14 @@ const sessionPattern = /^[\w-]{32,128}$/;
 
 /**
  * Creates a 256-bit base64url token intended for a single spawned sidecar session.
- * @returns {string} An unpredictable token safe for environment or inherited-pipe transfer.
+ * @returns An unpredictable token safe for environment or inherited-pipe transfer.
  */
 export const createDebugSidecarSessionToken = (): string => randomBytes(32).toString("base64url");
 
 /**
  * Rejects weak, malformed, or accidentally logged/display-oriented session identifiers.
- * @param {unknown} value Candidate token.
- * @returns {asserts value is string} Assertion for a valid token.
+ * @param value Candidate token.
+ * @returns Assertion for a valid token.
  */
 export function assertDebugSidecarSessionToken(value: unknown): asserts value is string {
   if (typeof value !== "string" || !sessionPattern.test(value)) {
@@ -134,6 +153,7 @@ export function assertDebugSidecarSessionToken(value: unknown): asserts value is
   }
 }
 
+/** Validates command argument sizes before they reach a native backend. */
 const assertRequestBounds = (
   command: DebugSidecarRequest["command"],
   args: unknown,
@@ -173,9 +193,9 @@ const assertRequestBounds = (
 
 /**
  * Validates an untrusted decoded message before it reaches a backend implementation.
- * @param {unknown} value Candidate envelope.
- * @param {DebugSidecarProtocolLimits} limits Request and framing limits.
- * @returns {asserts value is DebugSidecarMessage} Assertion for a valid protocol envelope.
+ * @param value Candidate envelope.
+ * @param limits Request and framing limits.
+ * @returns Assertion for a valid protocol envelope.
  */
 export function assertDebugSidecarMessage(
   value: unknown,
@@ -236,6 +256,7 @@ const LIMIT_NAMES = [
   "maxQueuedBytes",
 ] as const satisfies readonly (keyof DebugSidecarProtocolLimits)[];
 
+/** Ensures limit objects are internally consistent before use. */
 const validateLimits = (limits: DebugSidecarProtocolLimits): void => {
   for (const name of LIMIT_NAMES) {
     if (!positiveInteger(limits[name])) {
@@ -249,9 +270,9 @@ const validateLimits = (limits: DebugSidecarProtocolLimits): void => {
 
 /**
  * Encodes one validated message as a four-byte big-endian length plus UTF-8 JSON.
- * @param {DebugSidecarMessage} message Authenticated protocol message.
- * @param {DebugSidecarProtocolLimits} limits Framing and request bounds.
- * @returns {Uint8Array} Portable binary frame suitable for stdio or a loopback socket.
+ * @param message Authenticated protocol message.
+ * @param limits Framing and request bounds.
+ * @returns Portable binary frame suitable for stdio or a loopback socket.
  */
 export const encodeDebugSidecarMessage = (
   message: DebugSidecarMessage,
@@ -277,7 +298,7 @@ export class DebugSidecarMessageParser {
 
   /**
    * Creates one directional stream parser.
-   * @param {DebugSidecarProtocolLimits} limits Framing and request limits.
+   * @param limits Framing and request limits.
    */
   constructor(limits: DebugSidecarProtocolLimits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
     validateLimits(limits);
@@ -286,8 +307,8 @@ export class DebugSidecarMessageParser {
 
   /**
    * Adds a transport chunk and returns every complete validated message in order.
-   * @param {Uint8Array} chunk Next stdio or socket bytes.
-   * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
+   * @param chunk Next stdio or socket bytes.
+   * @returns Complete messages decoded from the stream.
    */
   push(chunk: Uint8Array): DebugSidecarMessage[] {
     if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
@@ -335,27 +356,32 @@ export class DebugSidecarMessageQueue {
 
   /**
    * Creates a bounded outgoing queue.
-   * @param {DebugSidecarProtocolLimits} limits Framing and queue limits.
+   * @param limits Framing and queue limits.
    */
   constructor(limits: DebugSidecarProtocolLimits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
     validateLimits(limits);
     this.#limits = limits;
   }
 
-  /** @returns {number} Number of queued protocol messages. */
+  /**
+   * Number of queued protocol messages.
+   * @returns Count of frames waiting for transport write.
+   */
   get length(): number {
     return this.#frames.length;
   }
 
-  /** @returns {number} Encoded bytes currently retained for transport backpressure. */
+  /**
+   * Encoded bytes currently retained for transport backpressure.
+   * @returns Sum of queued frame lengths.
+   */
   get bytes(): number {
     return this.#bytes;
   }
 
   /**
    * Encodes and appends one message, failing the connection when bounds would be exceeded.
-   * @param {DebugSidecarMessage} message Next ordered message.
-   * @returns {void}
+   * @param message Next ordered message.
    */
   enqueue(message: DebugSidecarMessage): void {
     const frame = encodeDebugSidecarMessage(message, this.#limits);
@@ -371,7 +397,7 @@ export class DebugSidecarMessageQueue {
 
   /**
    * Removes the oldest encoded frame.
-   * @returns {Uint8Array | undefined} Oldest frame or undefined when empty.
+   * @returns Oldest frame or undefined when empty.
    */
   dequeue(): Uint8Array | undefined {
     const frame = this.#frames.shift();

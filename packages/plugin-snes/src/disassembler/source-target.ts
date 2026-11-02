@@ -54,6 +54,11 @@ interface SourceLayout {
   readonly expansion?: SnesRomExpansionPolicy;
 }
 
+/**
+ * Validate the on-disk SNES layout contract against the configured ROM hash.
+ * @param value Parsed JSON from the layout file.
+ * @param romSha256 Expected content hash of the linked ROM.
+ */
 function assertSourceLayout(value: unknown, romSha256: string): asserts value is SourceLayout {
   if (
     typeof value !== "object" ||
@@ -77,17 +82,22 @@ function assertSourceLayout(value: unknown, romSha256: string): asserts value is
   }
 }
 
+/** Narrow a string to a supported SNES cartridge mapper id. */
 function isSnesMapper(value: string): value is SnesMapper {
   return SNES_MAPPERS.some((mapper) => mapper === value);
 }
 
+/** True for mappers that support the ordinary LoROM/HiROM expansion workflow. */
 function isExpandableMapper(value: string): value is "lorom" | "hirom" {
   return value === "lorom" || value === "hirom";
 }
 
+/** Accept plain JSON objects during contract parsing. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+/** Accept JSON arrays whose element types are validated separately. */
 const isUnknownArray = (value: unknown): value is readonly unknown[] => Array.isArray(value);
+/** Accept JSON arrays containing only strings. */
 const isStringArray = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 /** Read compact contracts with explicit size limits before parsing untrusted workspace JSON. */
@@ -323,6 +333,12 @@ async function inspectBuiltinProject(
   );
 }
 
+/**
+ * Propose source and layout edits that grow ROM capacity under LoROM/HiROM rules.
+ * @param project Open Git source project being expanded.
+ * @param host Workflow host supplying build and inspection services.
+ * @param operation Target operation carrying size, signal and progress hooks.
+ */
 function expandSnesProject(
   project: SourceProject,
   host: SourceWorkflowHost,
@@ -402,6 +418,12 @@ function expandSnesProject(
   });
 }
 
+/**
+ * Plan an object move and emit reviewable source edits plus layout repairs.
+ * @param project Open Git source project being relocated.
+ * @param host Workflow host supplying build and inspection services.
+ * @param operation Target operation naming the object id and cancellation hooks.
+ */
 function relocateSnesProject(
   project: SourceProject,
   host: SourceWorkflowHost,

@@ -31,8 +31,8 @@ import {
 
 /**
  * Join adjacent full-line comments while preserving instruction boundaries.
- * @param {string} source Generated assembly with potentially wrapped annotations.
- * @returns {string} Assembly whose annotation content can be compared independently of wrapping.
+ * @param source Generated assembly with potentially wrapped annotations.
+ * @returns Assembly whose annotation content can be compared independently of wrapping.
  */
 function unfoldComments(source: string): string {
   const lines: string[] = [];

@@ -12,10 +12,11 @@ const registry = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry.registerEncoder(encoder);
 }
-/** Read a private PNG chunk holding the exact native boss stream for one segment.
- * @param {Uint8Array} png PNG bytes.
- * @param {string} [wanted] Four-character chunk type.
- * @returns {Uint8Array | undefined} Chunk payload, excluding its CRC.
+/**
+ * Read a private PNG chunk holding the exact native boss stream for one segment.
+ * @param png PNG bytes.
+ * @param [wanted] Four-character chunk type.
+ * @returns Chunk payload, excluding its CRC.
  */
 function nativeBossChunk(png: Uint8Array, wanted = "soMz") {
   const image = readAssetPng(png);
@@ -32,11 +33,12 @@ function nativeBossChunk(png: Uint8Array, wanted = "soMz") {
   return native;
 }
 
-/** Decode the two graphics stages and reject any unused bytes in a preserved native stream.
- * @param {Uint8Array} native Preserved native chunk.
- * @param {string} storage `lz-rle` or `rle`.
- * @param {number} size Expected expanded size.
- * @returns {{bytes: Uint8Array, mode: number | undefined, unusedHeaderByte: number | undefined}} Expanded tiles and any LZ header fields.
+/**
+ * Decode the two graphics stages and reject any unused bytes in a preserved native stream.
+ * @param native Preserved native chunk.
+ * @param storage `lz-rle` or `rle`.
+ * @param size Expected expanded size.
+ * @returns Expanded tiles and any LZ header fields.
  */
 function decodeBossStream(native: Uint8Array, storage: string, size: number) {
   let intermediate = native;
@@ -62,11 +64,11 @@ function decodeBossStream(native: Uint8Array, storage: string, size: number) {
  * Rebuild native graphics from previewable pixels. An unchanged PNG retains its exact
  * token choices. Fixed sizing pads after the complete stream; encoded sizing exposes
  * growth to the source layout/relocation service instead of truncating or allocating here.
- * @param {AssetInput} source Indexed PNG, optionally carrying a native chunk.
- * @param {Readonly<Record<string, unknown>>} options Storage, original byteLength, optional native resource, sizePolicy (fixed by default or encoded), and atlas resources.
- * @param {Readonly<Record<string, AssetInput>>} [resources] Layout and palette sidecars.
- * @param {{readonly layout: FrameLayout, readonly catalog: SpritePaletteCatalog}} [normalized] Authoritative in-memory mapping and reconciled palette supplied by source normalization.
- * @returns {{primaryOutput: string, outputs: {graphics: {bytes: Uint8Array}}}} Independently decoded native bytes.
+ * @param source Indexed PNG, optionally carrying a native chunk.
+ * @param options Storage, original byteLength, optional native resource, sizePolicy (fixed by default or encoded), and atlas resources.
+ * @param [resources] Layout and palette sidecars.
+ * @param [normalized] Authoritative in-memory mapping and reconciled palette supplied by source normalization.
+ * @returns Independently decoded native bytes.
  */
 export function convertBossImage(
   source: AssetInput,

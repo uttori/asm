@@ -11,13 +11,14 @@ import { allocationKey, LinkSymbols } from "./symbols.js";
 import { LinkError, type LinkOptions, type LinkResult } from "./types.js";
 import { artifactHash, stableJson } from "./value.js";
 
+/** Link-result schema version stamped into emitted artifacts. */
 export const LINKER_VERSION = "1";
 
 /** Resolve libraries, allocate contributions, patch fields, finalize once, and produce matching owned artifacts. */
 export function linkObjects(options: LinkOptions): LinkResult {
   options.signal?.throwIfAborted();
   assertLinkRecipe(options.recipe);
-  if (options.toolchainSha256 !== undefined && !/^[a-f0-9]{64}$/.test(options.toolchainSha256)) {
+  if (options.toolchainSha256 !== undefined && !/^[\da-f]{64}$/.test(options.toolchainSha256)) {
     throw new LinkError("toolchain-identity", "Toolchain identity must be a SHA-256 digest.");
   }
   const recipe = structuredClone(options.recipe);

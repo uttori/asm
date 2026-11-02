@@ -3,9 +3,9 @@
 /**
  * Decode exactly `size` tiles. C0..FF consume a following tile and emit (token & 63)+1
  * copies. Reject a run crossing the row boundary; return the consumed extent separately.
- * @param {Uint8Array} bytes Encoded world-map row.
- * @param {number} [size] Output tile count.
- * @returns {{data: Uint8Array, consumed: number}} Decoded tiles and the consumed input length.
+ * @param bytes Encoded world-map row.
+ * @param [size] Output tile count.
+ * @returns Decoded tiles and the consumed input length.
  */
 export function decodeWorldRow(bytes: Uint8Array, size = 512) {
   if (!Number.isSafeInteger(size) || size < 1 || size > 65536) {
@@ -37,9 +37,10 @@ export function decodeWorldRow(bytes: Uint8Array, size = 512) {
   return { data, consumed: input };
 }
 
-/** Canonical inverse; unchanged native streams should be retained to preserve original token choices.
- * @param {Uint8Array} bytes Decoded row tiles.
- * @returns {Uint8Array} Encoded row.
+/**
+ * Canonical inverse; unchanged native streams should be retained to preserve original token choices.
+ * @param bytes Decoded row tiles.
+ * @returns Encoded row.
  */
 export function encodeWorldRow(bytes: Uint8Array) {
   if (bytes.length < 1 || bytes.length > 65536) {
@@ -65,10 +66,11 @@ export function encodeWorldRow(bytes: Uint8Array) {
   return Uint8Array.from(output);
 }
 
-/** Each row's bank is a bit, least-significant first; there is no pointer-wrap heuristic.
- * @param {Uint8Array} bankBits Sixty-four bank-selection bytes.
- * @param {number} row Row index, 0 through 511.
- * @returns {number} Bank byte `$C6` or `$C7`.
+/**
+ * Each row's bank is a bit, least-significant first; there is no pointer-wrap heuristic.
+ * @param bankBits Sixty-four bank-selection bytes.
+ * @param row Row index, 0 through 511.
+ * @returns Bank byte `$C6` or `$C7`.
  */
 export function worldRowBank(bankBits: Uint8Array, row: number) {
   if (bankBits.length !== 64 || !Number.isInteger(row) || row < 0 || row >= 512) {

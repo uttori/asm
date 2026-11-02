@@ -1,9 +1,12 @@
 /** Minimal validated `[start, end)` interval accepted by the target-neutral index. */
 export interface HalfOpenInterval {
+  /** Inclusive non-negative start offset. */
   readonly start: number;
+  /** Exclusive end offset, strictly greater than start. */
   readonly end: number;
 }
 
+/** Interval paired with its position in the caller's input order. */
 type IndexedInterval<Value extends HalfOpenInterval> = {
   readonly value: Value;
   /** Original position used to restore observable input order after an indexed lookup. */
@@ -27,7 +30,7 @@ export class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {
 
   /**
    * Builds an immutable search index from already-owned interval values.
-   * @param {readonly Value[]} values Non-negative safe half-open intervals in semantic input order.
+   * @param values Non-negative safe half-open intervals in semantic input order.
    * @throws {Error} When an interval is empty, reversed, negative, or outside safe integers.
    */
   constructor(values: readonly Value[]) {
@@ -63,8 +66,8 @@ export class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {
 
   /**
    * Returns every interval containing one safe non-negative point, in input order.
-   * @param {number} point Safe non-negative point to query.
-   * @returns {readonly Value[]} Matching intervals in their original input order.
+   * @param point Safe non-negative point to query.
+   * @returns Matching intervals in their original input order.
    */
   at(point: number): readonly Value[] {
     if (!Number.isSafeInteger(point) || point < 0) {
@@ -75,9 +78,9 @@ export class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {
 
   /**
    * Returns every interval intersecting a valid half-open query, in input order.
-   * @param {number} start Inclusive safe non-negative query start.
-   * @param {number} end Exclusive safe query end greater than `start`.
-   * @returns {readonly Value[]} Matching intervals in their original input order.
+   * @param start Inclusive safe non-negative query start.
+   * @param end Exclusive safe query end greater than `start`.
+   * @returns Matching intervals in their original input order.
    */
   overlapping(start: number, end: number): readonly Value[] {
     if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {

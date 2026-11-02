@@ -54,9 +54,9 @@ export interface SnesAddressIdentity {
 /**
  * Builds the mapper context used by `snesRomAddressSpace`.
  * Default `sa1banks` are 1 MiB slots `$000000`–`$700000` for SA-1 / Super FX.
- * @param {SnesMapper} mapper Detected or user-selected cartridge mapper.
- * @param {readonly number[]} [sa1banks] Optional SA-1 bank bases. Ignored by LoROM/HiROM.
- * @returns {AddressSpaceContext} Context consumed by file↔CPU translation.
+ * @param mapper Detected or user-selected cartridge mapper.
+ * @param [sa1banks] Optional SA-1 bank bases. Ignored by LoROM/HiROM.
+ * @returns Context consumed by file↔CPU translation.
  */
 export const createSnesAddressContext = (
   mapper: SnesMapper,
@@ -65,6 +65,12 @@ export const createSnesAddressContext = (
   ],
 ): AddressSpaceContext => ({ mapper, sa1banks });
 
+/**
+ * List every CPU address that maps to the same headerless ROM offset.
+ * @param fileOffset Byte index in the cartridge image.
+ * @param context Mapper and optional SA-1 bank bases.
+ * @param canonical Preferred address when several mirrors exist.
+ */
 const mirrorsForOffset = (
   fileOffset: number,
   context: AddressSpaceContext,
@@ -90,10 +96,10 @@ const mirrorsForOffset = (
 
 /**
  * Maps a headerless ROM file offset to its CPU identity.
- * @param {number} fileOffset Byte offset into `RomImage` content (no copier header).
- * @param {AddressSpaceContext} context Mapper context from `createSnesAddressContext`.
- * @param {number} romSize Headerless ROM length. Offsets outside it return `undefined`.
- * @returns {SnesAddressIdentity | undefined} Identity, or `undefined` if unmapped.
+ * @param fileOffset Byte offset into `RomImage` content (no copier header).
+ * @param context Mapper context from `createSnesAddressContext`.
+ * @param romSize Headerless ROM length. Offsets outside it return `undefined`.
+ * @returns Identity, or `undefined` if unmapped.
  */
 export const identifySnesFileOffset = (
   fileOffset: number,
@@ -121,10 +127,10 @@ export const identifySnesFileOffset = (
 /**
  * Maps a 24-bit CPU address to a ROM file offset when that address is in the image.
  * WRAM, SRAM, and I/O return `undefined`.
- * @param {number} address 24-bit SNES CPU bus address.
- * @param {AddressSpaceContext} context Mapper context from `createSnesAddressContext`.
- * @param {number} romSize Headerless ROM length.
- * @returns {SnesAddressIdentity | undefined} Identity, or `undefined` if not in the ROM.
+ * @param address 24-bit SNES CPU bus address.
+ * @param context Mapper context from `createSnesAddressContext`.
+ * @param romSize Headerless ROM length.
+ * @returns Identity, or `undefined` if not in the ROM.
  */
 export const identifySnesCpuAddress = (
   address: number,

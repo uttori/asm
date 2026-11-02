@@ -3,6 +3,7 @@ import { validateDebugMap, type DebugMap, type DebugMapRange } from "@uttori/asm
 import type { DebugAddress, DebugInstruction, DebugStackFrame, DebugThread } from "./contracts.js";
 import type { ReplayMemoryRegion, ReplayScript, ReplaySnapshot } from "./replay-backend.js";
 
+/** Maps one debug-map range to a backend address, including optional output offset. */
 const addressFor = (range: DebugMapRange): DebugAddress => ({
   architecture: range.architecture,
   addressSpace: range.addressSpace,
@@ -10,6 +11,7 @@ const addressFor = (range: DebugMapRange): DebugAddress => ({
   ...(range.outputStart === undefined ? {} : { outputOffset: range.outputStart }),
 });
 
+/** Builds one synthetic disassembly row from mapped output bytes. */
 const instructionFor = (range: DebugMapRange, output: Uint8Array): DebugInstruction => {
   const bytes =
     range.outputStart === undefined || range.outputEnd === undefined
@@ -24,9 +26,9 @@ const instructionFor = (range: DebugMapRange, output: Uint8Array): DebugInstruct
 
 /**
  * Creates a deterministic mock timeline directly from a valid debug map.
- * @param {DebugMap} map Fingerprinted debug map.
- * @param {Uint8Array} output Exact mapped binary.
- * @returns {ReplayScript} One snapshot per mapped source range.
+ * @param map Fingerprinted debug map.
+ * @param output Exact mapped binary.
+ * @returns One snapshot per mapped source range.
  */
 export const createDebugMapReplayScript = (map: DebugMap, output: Uint8Array): ReplayScript => {
   const issues = validateDebugMap(map, output);

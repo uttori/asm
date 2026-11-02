@@ -25,9 +25,13 @@ import { PluginError } from "./diagnostics.js";
  * `registrationOrder` is the global sequence used to sort lifecycles and similar lists.
  */
 export interface OwnedContribution<T> {
+  /** Owning plugin manifest identifier. */
   readonly pluginId: string;
+  /** Stable contribution id within the plugin. */
   readonly contributionId: string;
+  /** Global registration sequence used for deterministic ordering. */
   readonly registrationOrder: number;
+  /** Frozen contribution payload after plugin validation. */
   readonly value: Readonly<T>;
 }
 
@@ -36,40 +40,51 @@ export interface OwnedContribution<T> {
  * {@link AssemblerEnvironment} validates targets and builds lookup maps.
  */
 export interface EnvironmentContributions {
+  /** Registered plugin manifests in load order. */
   readonly manifests: readonly AssemblerPluginManifest[];
+  /** Session-state schema contributions keyed during freeze. */
   readonly sessionStates: readonly OwnedContribution<SessionStateContribution<unknown>>[];
+  /** CPU architecture definitions contributed by plugins. */
   readonly architectures: readonly OwnedContribution<ArchitectureContribution>[];
+  /** Address-space layout models referenced by targets. */
   readonly addressSpaces: readonly OwnedContribution<AddressSpaceContribution>[];
+  /** Output encoders selectable per target. */
   readonly outputFormats: readonly OwnedContribution<OutputFormatContribution>[];
+  /** Directive bundles merged into the core registry. */
   readonly directiveSets: readonly OwnedContribution<DirectiveSetContribution>[];
+  /** Optional asset format plugins registered before environment freeze. */
   readonly assetFormats?: readonly OwnedContribution<AssetFormatContribution>[];
+  /** Optional asset transform plugins registered before environment freeze. */
   readonly assetTransforms?: readonly OwnedContribution<AssetTransformContribution>[];
+  /** Expression function libraries exposed to the math evaluator. */
   readonly expressionSets: readonly OwnedContribution<ExpressionSetContribution>[];
+  /** Lifecycle hooks invoked around assembly sessions. */
   readonly lifecycles: readonly OwnedContribution<LifecycleContribution>[];
+  /** Target profiles wiring architectures, outputs, and defaults. */
   readonly targets: readonly OwnedContribution<TargetContribution>[];
 }
 
 /**
  * Case-folds contribution ids and aliases so lookups are case-insensitive.
- * @param {string} value Id or alias.
- * @returns {string} Lowercased key.
+ * @param value Id or alias.
+ * @returns Lowercased key.
  */
 const canonical = (value: string): string => value.toLowerCase();
 
 /**
  * Indexes owned contributions by canonical contribution id.
  * Duplicate ids last-write-win. The manager already rejects duplicates before freeze.
- * @param {readonly OwnedContribution<T>[]} records Contribution records to index.
- * @returns {Map<string, OwnedContribution<T>>} Canonical id → record.
+ * @param records Contribution records to index.
+ * @returns Canonical id → record.
  */
 const toMap = <T>(records: readonly OwnedContribution<T>[]): Map<string, OwnedContribution<T>> =>
   new Map(records.map((record) => [canonical(record.contributionId), record]));
 
 /**
  * Throws a `PLUGIN_TARGET_INVALID` diagnostic for a broken target graph.
- * @param {OwnedContribution<TargetContribution>} target The invalid target record.
- * @param {string} message Human-readable reason appended after the target id.
- * @returns {never} Always throws.
+ * @param target The invalid target record.
+ * @param message Human-readable reason appended after the target id.
+ * @returns Always throws.
  */
 const targetInvalid = (target: OwnedContribution<TargetContribution>, message: string): never => {
   throw new PluginError(`Invalid target '${target.contributionId}': ${message}`, {
@@ -106,8 +121,8 @@ class ResolvedToolingCatalog implements ToolingCatalog {
   /**
    * Instruction catalog for an architecture id or alias on this target.
    * Unknown architectures, or ones not listed on the target, yield an empty list.
-   * @param {string} architecture Architecture contribution id or alias.
-   * @returns {readonly InstructionDescriptor[]} Instruction descriptors, possibly empty.
+   * @param architecture Architecture contribution id or alias.
+   * @returns Instruction descriptors, possibly empty.
    */
   getInstructions(architecture: string): readonly InstructionDescriptor[] {
     const id = this.architectureAliases.get(canonical(architecture)) ?? canonical(architecture);
@@ -120,7 +135,7 @@ class ResolvedToolingCatalog implements ToolingCatalog {
   /**
    * Core directive catalog (filtered by `coreDirectiveGroups`) plus this target's
    * contributed tooling. Later keywords win when a plugin overrides a core name.
-   * @returns {readonly DirectiveDescriptor[]} Deduped directive descriptors.
+   * @returns Deduped directive descriptors.
    */
   getDirectives(): readonly DirectiveDescriptor[] {
     const enabledCoreGroups = new Set<string>(
@@ -140,7 +155,7 @@ class ResolvedToolingCatalog implements ToolingCatalog {
 
   /**
    * Expression functions contributed by this target's expression sets.
-   * @returns {readonly ExpressionFunctionDescriptor[]} Name, aliases, signature, summary.
+   * @returns Name, aliases, signature, summary.
    */
   getExpressionFunctions(): readonly ExpressionFunctionDescriptor[] {
     return this.target.expressionSets.flatMap(
@@ -156,7 +171,7 @@ class ResolvedToolingCatalog implements ToolingCatalog {
 
   /**
    * Architectures listed on this target. Missing contributions are skipped.
-   * @returns {readonly ArchitectureSummary[]} Id, aliases, and display name.
+   * @returns Id, aliases, and display name.
    */
   getArchitectures(): readonly ArchitectureSummary[] {
     return this.target.architectures.flatMap((id) => {
@@ -175,7 +190,7 @@ class ResolvedToolingCatalog implements ToolingCatalog {
 
   /**
    * Every target in the environment, not only the one this catalog was built for.
-   * @returns {readonly TargetSummary[]} Frozen-friendly summaries for UI/LSP.
+   * @returns Frozen-friendly summaries for UI/LSP.
    */
   getTargets(): readonly TargetSummary[] {
     return this.targets.map(({ value }) => ({
@@ -196,7 +211,9 @@ class ResolvedToolingCatalog implements ToolingCatalog {
  * collide, and that `defaultArchitecture` / `defaultOutputExtension` are well-formed.
  */
 export class AssemblerEnvironment {
+  /** Plugin manifests retained for tooling and diagnostics surfacing. */
   readonly manifests: readonly AssemblerPluginManifest[];
+  /** Session-state contributions indexed during environment construction. */
   readonly sessionStates: readonly OwnedContribution<SessionStateContribution<unknown>>[];
 
   readonly #architectures: ReadonlyMap<string, OwnedContribution<ArchitectureContribution>>;
@@ -218,7 +235,7 @@ export class AssemblerEnvironment {
    * Indexes contributions, checks target alias uniqueness, then validates every target.
    * Prefer PluginManager.freeze: this constructor retains input records and assumes they were
    * already validated and deeply frozen by the manager. It does not own plugin resources.
-   * @param {EnvironmentContributions} contributions Manager-collected plugin graph.
+   * @param contributions Manager-collected plugin graph.
    * @throws {PluginError} On alias collisions or an invalid target graph.
    */
   constructor(contributions: EnvironmentContributions) {
@@ -313,10 +330,11 @@ export class AssemblerEnvironment {
     Object.freeze(this);
   }
 
-  /** Resolve a globally named or target-scoped short format ID.
-   * @param {string} id Full ID or short alias.
-   * @param {string} targetId Selected target.
-   * @returns {Readonly<AssetFormatContribution> | undefined} Compatible format.
+  /**
+   * Resolve a globally named or target-scoped short format ID.
+   * @param id Full ID or short alias.
+   * @param targetId Selected target.
+   * @returns Compatible format.
    */
   getAssetFormat(id: string, targetId: string): Readonly<AssetFormatContribution> | undefined {
     const canonicalTarget = this.getTarget(targetId)?.id ?? targetId;
@@ -333,9 +351,10 @@ export class AssemblerEnvironment {
     return value;
   }
 
-  /** List formats compatible with a target for editor completion and discovery.
-   * @param {string} targetId Selected target.
-   * @returns {readonly Readonly<AssetFormatContribution>[]} Canonical registrations.
+  /**
+   * List formats compatible with a target for editor completion and discovery.
+   * @param targetId Selected target.
+   * @returns Canonical registrations.
    */
   getAssetFormats(targetId: string): readonly Readonly<AssetFormatContribution>[] {
     const target = this.getTarget(targetId)?.id ?? targetId;
@@ -348,10 +367,11 @@ export class AssemblerEnvironment {
       );
   }
 
-  /** Resolve a globally named or target-scoped short transform ID.
-   * @param {string} id Full ID or short alias.
-   * @param {string} targetId Selected target.
-   * @returns {Readonly<AssetTransformContribution> | undefined} Compatible transform.
+  /**
+   * Resolve a globally named or target-scoped short transform ID.
+   * @param id Full ID or short alias.
+   * @param targetId Selected target.
+   * @returns Compatible transform.
    */
   getAssetTransform(
     id: string,
@@ -371,9 +391,10 @@ export class AssemblerEnvironment {
     return value;
   }
 
-  /** List reversible transforms compatible with a target for editor completion.
-   * @param {string} targetId Selected target.
-   * @returns {readonly Readonly<AssetTransformContribution>[]} Canonical registrations.
+  /**
+   * List reversible transforms compatible with a target for editor completion.
+   * @param targetId Selected target.
+   * @returns Canonical registrations.
    */
   getAssetTransforms(targetId: string): readonly Readonly<AssetTransformContribution>[] {
     const target = this.getTarget(targetId)?.id ?? targetId;
@@ -389,8 +410,8 @@ export class AssemblerEnvironment {
   /**
    * Ensures a target's referenced contributions exist and that aliases, directive
    * keywords, and expression names are unique within that target.
-   * @param {OwnedContribution<TargetContribution>} targetRecord The target to check.
-   * @returns {ReadonlyMap<string, string>} Canonical architecture alias → contribution id.
+   * @param targetRecord The target to check.
+   * @returns Canonical architecture alias → contribution id.
    * @throws {PluginError} `PLUGIN_TARGET_INVALID` or `PLUGIN_ALIAS_DUPLICATE`.
    */
   #validateTarget(
@@ -495,8 +516,8 @@ export class AssemblerEnvironment {
 
   /**
    * Resolves a target contribution id or alias to the canonical target id.
-   * @param {string} idOrAlias Target id or alias (case-insensitive).
-   * @returns {string | undefined} Canonical target id, or `undefined` if unknown.
+   * @param idOrAlias Target id or alias (case-insensitive).
+   * @returns Canonical target id, or `undefined` if unknown.
    */
   resolveTargetId(idOrAlias: string): string | undefined {
     return this.#targetAliases.get(canonical(idOrAlias));
@@ -504,8 +525,8 @@ export class AssemblerEnvironment {
 
   /**
    * Looks up a target by id or alias.
-   * @param {string} idOrAlias Target id or alias (case-insensitive).
-   * @returns {Readonly<TargetContribution> | undefined} The target, if registered.
+   * @param idOrAlias Target id or alias (case-insensitive).
+   * @returns The target, if registered.
    */
   getTarget(idOrAlias: string): Readonly<TargetContribution> | undefined {
     const id = this.resolveTargetId(idOrAlias);
@@ -514,7 +535,7 @@ export class AssemblerEnvironment {
 
   /**
    * Frozen summaries of every registered target (for LSP/UI pickers).
-   * @returns {readonly TargetSummary[]} Id, aliases, display name, defaults.
+   * @returns Id, aliases, display name, defaults.
    */
   getTargetSummaries(): readonly TargetSummary[] {
     return Object.freeze(
@@ -532,9 +553,9 @@ export class AssemblerEnvironment {
 
   /**
    * Resolves an architecture id or alias in the context of a target.
-   * @param {string} targetId Target id or alias.
-   * @param {string} idOrAlias Architecture contribution id or alias.
-   * @returns {string | undefined} Canonical architecture id, or `undefined`.
+   * @param targetId Target id or alias.
+   * @param idOrAlias Architecture contribution id or alias.
+   * @returns Canonical architecture id, or `undefined`.
    */
   resolveArchitectureId(targetId: string, idOrAlias: string): string | undefined {
     const id = this.resolveTargetId(targetId);
@@ -543,8 +564,8 @@ export class AssemblerEnvironment {
 
   /**
    * Looks up an architecture contribution by canonical id (not alias).
-   * @param {string} id Architecture contribution id.
-   * @returns {Readonly<ArchitectureContribution> | undefined} The architecture, if registered.
+   * @param id Architecture contribution id.
+   * @returns The architecture, if registered.
    */
   getArchitecture(id: string): Readonly<ArchitectureContribution> | undefined {
     return this.#architectures.get(canonical(id))?.value;
@@ -552,8 +573,8 @@ export class AssemblerEnvironment {
 
   /**
    * Looks up an address-space contribution by id.
-   * @param {string} id Address-space contribution id.
-   * @returns {Readonly<AddressSpaceContribution> | undefined} The contribution, if registered.
+   * @param id Address-space contribution id.
+   * @returns The contribution, if registered.
    */
   getAddressSpace(id: string): Readonly<AddressSpaceContribution> | undefined {
     return this.#addressSpaces.get(canonical(id))?.value;
@@ -561,8 +582,8 @@ export class AssemblerEnvironment {
 
   /**
    * Looks up an output-format contribution by id.
-   * @param {string} id Output-format contribution id.
-   * @returns {Readonly<OutputFormatContribution> | undefined} The contribution, if registered.
+   * @param id Output-format contribution id.
+   * @returns The contribution, if registered.
    */
   getOutputFormat(id: string): Readonly<OutputFormatContribution> | undefined {
     return this.#outputFormats.get(canonical(id))?.value;
@@ -570,8 +591,8 @@ export class AssemblerEnvironment {
 
   /**
    * Looks up a directive-set contribution by id.
-   * @param {string} id Directive-set contribution id.
-   * @returns {Readonly<DirectiveSetContribution> | undefined} The contribution, if registered.
+   * @param id Directive-set contribution id.
+   * @returns The contribution, if registered.
    */
   getDirectiveSet(id: string): Readonly<DirectiveSetContribution> | undefined {
     return this.#directiveSets.get(canonical(id))?.value;
@@ -579,8 +600,8 @@ export class AssemblerEnvironment {
 
   /**
    * Looks up an expression-set contribution by id.
-   * @param {string} id Expression-set contribution id.
-   * @returns {Readonly<ExpressionSetContribution> | undefined} The contribution, if registered.
+   * @param id Expression-set contribution id.
+   * @returns The contribution, if registered.
    */
   getExpressionSet(id: string): Readonly<ExpressionSetContribution> | undefined {
     return this.#expressionSets.get(canonical(id))?.value;
@@ -588,8 +609,8 @@ export class AssemblerEnvironment {
 
   /**
    * Looks up a lifecycle contribution by id.
-   * @param {string} id Lifecycle contribution id.
-   * @returns {Readonly<LifecycleContribution> | undefined} The contribution, if registered.
+   * @param id Lifecycle contribution id.
+   * @returns The contribution, if registered.
    */
   getLifecycle(id: string): Readonly<LifecycleContribution> | undefined {
     return this.#lifecycles.get(canonical(id))?.value;
@@ -597,8 +618,8 @@ export class AssemblerEnvironment {
 
   /**
    * Returns the plugin id that registered a contribution (any kind except session state).
-   * @param {string} id Contribution id (case-insensitive).
-   * @returns {string | undefined} Owning plugin id, or `undefined` if unknown.
+   * @param id Contribution id (case-insensitive).
+   * @returns Owning plugin id, or `undefined` if unknown.
    */
   getContributionOwner(id: string): string | undefined {
     const key = canonical(id);
@@ -615,8 +636,8 @@ export class AssemblerEnvironment {
 
   /**
    * Lifecycle contributions wired to a target, sorted by registration order.
-   * @param {string} targetId Target id or alias.
-   * @returns {readonly OwnedContribution<LifecycleContribution>[]} Frozen, ordered records.
+   * @param targetId Target id or alias.
+   * @returns Frozen, ordered records.
    * @throws {PluginError} If `targetId` does not resolve (`PLUGIN_TARGET_INVALID`).
    */
   getTargetLifecycles(targetId: string): readonly OwnedContribution<LifecycleContribution>[] {
@@ -639,8 +660,8 @@ export class AssemblerEnvironment {
 
   /**
    * Builds the LSP/editor catalog for a target (instructions, directives, expressions).
-   * @param {string} targetId Target id or alias.
-   * @returns {ToolingCatalog} Frozen per-target tooling view.
+   * @param targetId Target id or alias.
+   * @returns Frozen per-target tooling view.
    * @throws {PluginError} If `targetId` does not resolve (`PLUGIN_TARGET_INVALID`).
    */
   getToolingCatalog(targetId: string): ToolingCatalog {

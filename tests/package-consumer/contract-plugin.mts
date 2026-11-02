@@ -151,9 +151,7 @@ const plugin: AssemblerPlugin<CounterOptions> = definePlugin({
                   session.write1(Number(payload.literal));
                   // Execution owns its snapshots; mutation must not corrupt the next stage or invocation.
                   Object.assign(payload, { literal: "99" });
-                  if (command) {
-                    command.keyword = "changed";
-                  }
+                  command.keyword = "changed";
                 },
               };
             },
@@ -183,15 +181,12 @@ const plugin: AssemblerPlugin<CounterOptions> = definePlugin({
               return {
                 execute: (_payload, { command }) => {
                   void session.currentLine;
-                  sawMacroOrigin ||= command?.source.origin?.kind === "macro";
-                  if (!command || command.keyword !== "mark") {
+                  sawMacroOrigin ||= command.source.origin?.kind === "macro";
+                  if (command.keyword !== "mark") {
                     throw new Error("Missing directive syntax snapshot");
                   }
                   const parsed = { expression: structuredClone(markerExpression) };
-                  if (
-                    !parsed.expression ||
-                    session.operandResolver.getnum(parsed.expression) !== 14
-                  ) {
+                  if (session.operandResolver.getnum(parsed.expression) !== 14) {
                     throw new Error("Typed directive operand did not evaluate");
                   }
                   // Source metadata and the expression copy belong to this callback.

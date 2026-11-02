@@ -24,6 +24,7 @@ export type {
   IndexedDocument as AsepriteDocument,
 } from "./indexed-document.js";
 
+/** Resolved cel payload after following linked references. */
 type CelPayload = Exclude<AsepriteCel, { kind: "linked" }>;
 
 /** Resolve links once with a bounded iterative walk. Forward links, missing targets and cycles are explicit. */
@@ -309,7 +310,8 @@ interface RasterInflation {
   readonly expected: number;
 }
 
-/** Both decoding APIs walk exactly the same structure and allocation budgets.
+/**
+ * Both decoding APIs walk exactly the same structure and allocation budgets.
  * @yields A bounded compressed raster and exact expected decoded length; the driver returns owned decoded bytes.
  */
 function* parseAsepriteDocument(

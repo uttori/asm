@@ -76,8 +76,8 @@ const addressingModes = {
 
 /**
  * Accepts a classified 65xx addressing mode.
- * @param {string} value Operand mode string.
- * @returns {boolean} True when `value` is a known mode.
+ * @param value Operand mode string.
+ * @returns True when `value` is a known mode.
  */
 function isAddressingMode(value: string): value is AddressingMode {
   for (const mode of Object.keys(addressingModes)) {
@@ -90,9 +90,9 @@ function isAddressingMode(value: string): value is AddressingMode {
 
 /**
  * Looks up a zp/absolute twin. Unknown mode strings have no twin.
- * @param {Readonly<Partial<Record<AddressingMode, AddressingMode>>>} table Width-promotion map.
- * @param {string | undefined} mode Classified mode, which may be outside the mode union.
- * @returns {AddressingMode | undefined} The paired mode, when one exists.
+ * @param table Width-promotion map.
+ * @param mode Classified mode, which may be outside the mode union.
+ * @returns The paired mode, when one exists.
  */
 function mappedAddressingMode(
   table: Readonly<Partial<Record<AddressingMode, AddressingMode>>>,
@@ -111,15 +111,21 @@ for (const form of nmos6502DecodeTable) {
   }
 }
 
+/** Byte length of one instruction form: opcode plus operand widths. */
 const modeSize = (form: InstructionForm): number =>
   form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
 
 /** All shipped 65xx forms use this selector for both layout and emission. */
 export class TypedArch65xx implements TypedArchitectureEncoder {
+  /** 65xx encodings can be emitted into relocatable objects. */
   readonly supportsRelocatable = true;
+  /** Unbound operand templates stay errors at encode time, not parse time. */
   readonly deferOperandBindingErrors = true;
+  /** Assembly forms enabled for this CPU's feature set. */
   readonly forms: readonly InstructionForm[];
+  /** Editor/LSP instruction catalog derived from `forms`. */
   readonly catalog;
+  /** Lookup of enabled forms grouped by canonical mnemonic. */
   readonly formsByMnemonic = new Map<string, readonly InstructionForm[]>();
   constructor(readonly cpu: CpuDefinition) {
     this.forms = getCpuAssemblyForms(cpu).filter((form) =>
@@ -201,6 +207,7 @@ export class TypedArch65xx implements TypedArchitectureEncoder {
     }
     return prepare65xx(this.syntax(frame), frame);
   }
+  /** Return encoded size for the resolved operand frame without emitting bytes. */
   estimate(frame: InstructionResolutionFrame): number {
     const state = this.classification(frame);
     const form = this.resolveForm(frame, this.syntax(frame), state);

@@ -21,8 +21,11 @@ import {
 
 /** A source block retains its original file position so later native merges still see its body. */
 export interface SnesSourceObject extends SnesMovableObject {
+  /** Repository-relative assembly file owning the object body. */
   readonly file: string;
+  /** Label at the object's inclusive source start. */
   readonly startSymbol: string;
+  /** Label at the object's exclusive source end. */
   readonly endSymbol: string;
   /** Optional addressed dataStruct declaration. Its original research map remains unchanged. */
   readonly structure?: { readonly file: string; readonly recordSize: number };
@@ -30,36 +33,52 @@ export interface SnesSourceObject extends SnesMovableObject {
 
 /** A reviewed raw storage pool has explicit source boundaries, never inferred from unused trace coverage. */
 export interface SnesSourceFreeSpace extends SnesFreeSpace {
+  /** Repository-relative file declaring the free region. */
   readonly file: string;
+  /** Label marking the inclusive start of reviewed slack. */
   readonly startSymbol: string;
+  /** Label marking the exclusive end of reviewed slack. */
   readonly endSymbol: string;
 }
 
 /** One exact expression on the emitted field's source line, disambiguated by its declared ROM offset. */
 export interface SnesSourceReference extends SnesRelocationReference {
+  /** Exact source expression on the encoded field's line. */
   readonly expression: string;
 }
 
 /** Reviewable ordinary text edits. The host must check every before hash or document version before applying. */
 export interface SnesSourceRelocation {
+  /** Byte-level move plan including reference repairs. */
   readonly plan: SnesRelocationPlan;
+  /** Source-anchored object metadata paired with the plan. */
   readonly object: SnesSourceObject;
+  /** Reviewed encoded fields tied to source expressions. */
   readonly references: readonly SnesSourceReference[];
   /** The host applies these layout changes with the source edits in the same review. */
   readonly extents: readonly SnesFixedExtent[];
+  /** CPU width contracts that must travel with the moved code. */
   readonly states: readonly SnesInstructionStateContract[];
+  /** Compare-and-swap text edits reviewed before applying the relocation. */
   readonly edits: readonly {
     readonly path: string;
     readonly beforeSha256: string;
     readonly before: string;
     readonly after: string;
   }[];
+  /** SHA-256 of the relocated ROM preview after repairs. */
   readonly outputSha256: string;
 }
 
+/** Format ROM offsets in relocation error messages. */
 const hex = (value: number): string => `$${value.toString(16).toUpperCase()}`;
 
-/** Match a unique explicit global source boundary, including a typed table's opening directive. */
+/**
+ * Match a unique explicit global source boundary, including a typed table's opening directive.
+ * @param lines UTF-8 source lines for one file.
+ * @param symbol Global label or table name to locate.
+ * @param table When true, also accept a `dataStructs` opener.
+ */
 function boundary(lines: readonly string[], symbol: string, table = false): number {
   if (!/^[A-Z_a-z][\w.]*$/.test(symbol)) {
     throw new Error(`Unsupported source boundary: ${symbol}`);
@@ -74,7 +93,10 @@ function boundary(lines: readonly string[], symbol: string, table = false): numb
   return matches[0];
 }
 
-/** Split only UTF-8 source; preserve the original newline convention when producing reviewable edits. */
+/**
+ * Split only UTF-8 source; preserve the original newline convention when producing reviewable edits.
+ * @param bytes Exact on-disk file bytes, including an optional BOM.
+ */
 function sourceLines(bytes: Uint8Array): { lines: string[]; newline: string; text: string } {
   // Preserve a BOM as source content so compare-and-swap hashes still describe the original bytes.
   const text = new TextDecoder("utf8", { fatal: true, ignoreBOM: true }).decode(bytes);

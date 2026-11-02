@@ -26,8 +26,8 @@ const hash = (bytes: Uint8Array): string => createHash("sha256").update(bytes).d
  * Compare the assembler's emitted bytes with one complete golden output.
  * The dummy ROM supplies read directives only. CLI --base-image deliberately preserves an entire
  * patched ROM, which has a different length and checksum contract from these emitted-byte fixtures.
- * @param {string} fixture Discovered top-level .asm filename.
- * @returns {FixtureResult} Byte length, hash, and any assembly error. No output files are written.
+ * @param fixture Discovered top-level .asm filename.
+ * @returns Byte length, hash, and any assembly error. No output files are written.
  */
 function compare(fixture: string): FixtureResult {
   const sourceFile = path.join(tests, fixture);

@@ -25,9 +25,13 @@ import { NesSourceIndex, nesInstructionIntervals } from "./source-index.js";
 
 /** One physical output segment, independent of the runtime mapper selection. */
 export interface NesSourceSegment {
+  /** Exported segment name as it appears in generated source. */
   readonly name: string;
+  /** Byte offset within the parent container. */
   readonly offset: number;
+  /** Span length in bytes. */
   readonly size: number;
+  /** Load address of the exported segment. */
   readonly origin: number;
 }
 

@@ -61,8 +61,8 @@ needs target behavior receives an explicit target/plugin callback or descriptor.
 
 ## Internal module boundaries
 
-`src/index.ts` is the public facade. Implementations import concrete files; they do not import the
-facade or create directory barrels. `npm run check:boundaries` checks area dependencies for runtime
+`src/index.ts`, `src/storage.ts` and `src/source-project.ts` are the public facades. Implementations
+import concrete files; they do not import a facade or create directory barrels. `npm run check:boundaries` checks area dependencies for runtime
 and type imports, in addition to package ownership rules.
 
 | Area              | Owns                                                                                | Allowed lower areas                                                      |
@@ -71,11 +71,11 @@ and type imports, in addition to package ownership rules.
 | `model`           | Record contracts, ROM identity, semantic validation, bus/PPU effect validation      | `internal`                                                               |
 | `analysis`        | Static worklist, coverage, instruction/source/call contracts, evidence explanations | `model`, `internal`                                                      |
 | `research-inputs` | Git declarations, stable identities and overlay precedence                          | `model`, `internal`                                                      |
-| `source-project`  | Git generations, preview, merge, recovery and source snapshots                      | `model`, `internal`, `research-inputs`, `project`                        |
+| `source-project`  | Git generations, preview, merge, recovery and source snapshots                      | `model`, `analysis`, `internal`, `research-inputs`, `project`            |
 | `runtime`         | Trace parsing, evidence reduction, transfer/graphics/PPU accumulation               | `model`, `internal`                                                      |
 | `storage`         | Connection lifecycle, physical codecs, queries, invalidation, retention             | `model`, `analysis`, `runtime`, `research-inputs`, `internal`            |
 | `project`         | Validated snapshots, revision-checked commits, durable trace imports                | `model`, `analysis`, `research-inputs`, `runtime`, `storage`, `internal` |
-| `source`          | Pure render inventories and byte comparisons                                        | `model`                                                                  |
+| `source`          | Pure render inventories and byte comparisons                                        | `model`, `internal`                                                      |
 
 `RecordIdSet` owns a temporary disk-backed SQLite set and its disposal; it never opens the project
 database. `RomImage` performs explicit file I/O. Model contracts retain existing SNES capture

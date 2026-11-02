@@ -8,10 +8,15 @@ import type { DebugMap } from "@uttori/asm-core/debug-map";
  * root wins ties.
  */
 export interface ResolveDebugSourceRootOptions {
+  /** Debug map describing portable source paths and output layout. */
   readonly map: DebugMap;
+  /** User-configured source root candidate. */
   readonly configuredRoot: string;
+  /** Absolute path to the debug map file on disk. */
   readonly debugMapFile: string;
+  /** Absolute path to the built program referenced by the session. */
   readonly programFile: string;
+  /** Owning workspace folder root used to score relative candidates. */
   readonly workspaceRoot?: string;
 }
 
@@ -20,9 +25,9 @@ export interface ResolveDebugSourceRootOptions {
  * recorded byte size.
  * Returns false for absolute paths or filesystem failures; this layout check does not verify
  * content hashes.
- * @param {string} root Candidate absolute source root.
- * @param {DebugMap["sources"][number]} source Portable map path and recorded byte size.
- * @returns {boolean} Whether an in-root file has the expected size; no content hash is checked.
+ * @param root Candidate absolute source root.
+ * @param source Portable map path and recorded byte size.
+ * @returns Whether an in-root file has the expected size; no content hash is checked.
  */
 const sourceMatches = (root: string, source: DebugMap["sources"][number]): boolean => {
   // Absolute map paths already identify their files and cannot help choose a portable root.
@@ -45,8 +50,8 @@ const sourceMatches = (root: string, source: DebugMap["sources"][number]): boole
 /**
  * Chooses the source root whose on-disk files best match the portable debug-map paths.
  * The configured root wins ties. Adjacent artifact parents support projects opened from above.
- * @param {ResolveDebugSourceRootOptions} options Map, artifacts, and candidate roots.
- * @returns {string} Absolute source root with the most matching mapped files.
+ * @param options Map, artifacts, and candidate roots.
+ * @returns Absolute source root with the most matching mapped files.
  */
 export const resolveDebugSourceRoot = (options: ResolveDebugSourceRootOptions): string => {
   const configuredRoot = path.resolve(options.configuredRoot);

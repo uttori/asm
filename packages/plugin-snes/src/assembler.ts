@@ -60,11 +60,14 @@ export const SNES_TARGET_ID = "snes.sfc";
  * Unknown keys are ignored. `checksumMode` is the only enum that throws.
  */
 export interface SnesTargetOptions extends Record<string, unknown> {
+  /** Header checksum algorithm when the ROM size is not a power of two. */
   readonly checksumMode: "asar" | "simple";
+  /** When false, finalization leaves the checksum word untouched. */
   readonly checksumEnabled: boolean;
   /** When true, Super FX auto-MOVE short RAM uses Asar's raw byte, not `addr >> 1`. */
   readonly asarSuperFxMoveShortAddress: boolean;
-  /** Optional diagnostic sink for unpublished layout measurement. Without it, a bank crossing throws.
+  /**
+   * Optional diagnostic sink for unpublished layout measurement. Without it, a bank crossing throws.
    * The caller must reject or reassemble the measured image before publishing; PC wrap rules are unchanged.
    */
   readonly onBankCrossing?: (address: number, width: number) => void;
@@ -72,8 +75,8 @@ export interface SnesTargetOptions extends Record<string, unknown> {
 
 /**
  * Selects catalog entries whose keyword is in `keywords`.
- * @param {readonly string[]} keywords Directive keywords to document.
- * @returns {DirectiveDescriptor[]} Matching catalog descriptors.
+ * @param keywords Directive keywords to document.
+ * @returns Matching catalog descriptors.
  */
 const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
   const wanted = new Set(keywords);
@@ -82,9 +85,9 @@ const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
 
 /**
  * Registers a lowered-phase SNES directive and attaches matching hover/completion copy.
- * @param {string} id The directive id.
- * @param {readonly string[]} keywords The directive keywords.
- * @returns {DirectiveContribution} The directive contribution.
+ * @param id The directive id.
+ * @param keywords The directive keywords.
+ * @returns The directive contribution.
  */
 const directive = (id: string, keywords: readonly string[]): DirectiveContribution => ({
   id,
@@ -96,10 +99,10 @@ const directive = (id: string, keywords: readonly string[]): DirectiveContributi
 
 /**
  * Reads a numeric expression-function argument.
- * @param {string} functionName Built-in name used in the error message.
- * @param {readonly (number | string)[]} args Evaluated arguments.
- * @param {number} index Argument index.
- * @returns {number} The numeric argument.
+ * @param functionName Built-in name used in the error message.
+ * @param args Evaluated arguments.
+ * @param index Argument index.
+ * @returns The numeric argument.
  * @throws {Error} If the argument is not a number.
  */
 const numericArgument = (
@@ -187,33 +190,38 @@ const readExpressions: ExpressionSetContribution = {
 /**
  * Coerces plugin/target options. Missing object → defaults.
  * `checksumEnabled` defaults true. Only an explicit `false` disables it.
- * @param {unknown} configured The configured options.
- * @returns {SnesTargetOptions} The target options.
+ * @param configured The configured options.
+ * @returns The target options.
  */
 /**
  * Accepts a JSON object. Arrays and null are not option maps.
- * @param {unknown} value Candidate target options.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Candidate target options.
+ * @returns True when `value` is a non-array object.
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
  * Accepts the checksum mode enum.
- * @param {unknown} value Candidate mode.
- * @returns {boolean} True for `asar` or `simple`.
+ * @param value Candidate mode.
+ * @returns True for `asar` or `simple`.
  */
 const isChecksumMode = (value: unknown): value is "asar" | "simple" =>
   value === "asar" || value === "simple";
 
 /**
  * Accepts the optional bank-crossing diagnostic. Any function is kept; the caller supplies the signature.
- * @param {unknown} value Candidate callback.
- * @returns {boolean} True when `value` is a function.
+ * @param value Candidate callback.
+ * @returns True when `value` is a function.
  */
 const isBankCrossingHandler = (value: unknown): value is (address: number, width: number) => void =>
   typeof value === "function";
 
+/**
+ * Normalizes target options with Asar-compatible defaults and strict enum checks.
+ * @param configured Raw plugin or CLI options object.
+ * @returns Coerced SNES target options.
+ */
 const targetOptions = (configured: unknown): SnesTargetOptions => {
   const value = isRecord(configured) ? configured : {};
   const checksumMode = value.checksumMode ?? "asar";
@@ -231,9 +239,9 @@ const targetOptions = (configured: unknown): SnesTargetOptions => {
 /**
  * Default session: LoROM, SA-1 banks 0/1/2/3 in slots 0/1/4/5, bankcross full,
  * DP optimize off, checksum from target options.
- * @param {Readonly<Record<string, unknown>>} context The context.
- * @param {Readonly<Record<string, unknown>>} context.targetOptions The target options.
- * @returns {SnesSessionState} The initial state.
+ * @param context The context.
+ * @param context.targetOptions The target options.
+ * @returns The initial state.
  */
 const createInitialState = (context: {
   targetOptions: Readonly<Record<string, unknown>>;
@@ -576,7 +584,7 @@ export default plugin;
 
 /**
  * Activates the SNES plugin and freezes a reusable host environment.
- * @returns {Promise<AssemblerEnvironment>} Frozen SNES environment.
+ * @returns Frozen SNES environment.
  */
 export async function createSnesAssemblerEnvironment(): Promise<AssemblerEnvironment> {
   const manager = new PluginManager();

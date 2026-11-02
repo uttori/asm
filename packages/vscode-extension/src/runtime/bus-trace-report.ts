@@ -20,9 +20,10 @@ function projectionWarning(warning: string): string {
     );
 }
 
-/** Show register-derived byte candidates separately from captured bus facts and native boundaries.
- * @param {RuntimeGraphicsSummary} summary Bounded interpretation of ordered PPU port accesses.
- * @returns {string[]} Markdown with explicit unknown/latch states and physical-memory limitations.
+/**
+ * Show register-derived byte candidates separately from captured bus facts and native boundaries.
+ * @param summary Bounded interpretation of ordered PPU port accesses.
+ * @returns Markdown with explicit unknown/latch states and physical-memory limitations.
  */
 const graphicsReport = (summary: RuntimeGraphicsSummary): string[] => {
   return [
@@ -62,9 +63,10 @@ const graphicsReport = (summary: RuntimeGraphicsSummary): string[] => {
   ];
 };
 
-/** Render explicit boundaries. Bounded examples never substitute for aggregate totals.
- * @param {RuntimeTransferSummary} summary Native-boundary correlation with partial windows preserved.
- * @returns {string[]} Markdown lines including raw starting configuration and completion evidence.
+/**
+ * Render explicit boundaries. Bounded examples never substitute for aggregate totals.
+ * @param summary Native-boundary correlation with partial windows preserved.
+ * @returns Markdown lines including raw starting configuration and completion evidence.
  */
 const transferReport = (summary: RuntimeTransferSummary): string[] => {
   return [
@@ -106,9 +108,10 @@ const transferReport = (summary: RuntimeTransferSummary): string[] => {
   ];
 };
 
-/** Render the bounded channel/phase summary without assigning unsupported transfer or code ownership.
- * @param {RuntimeBusProjectImportResult} result Validated and committed bus capture activity.
- * @returns {string} Markdown report, including the retained aggregate/raw-history distinction.
+/**
+ * Render the bounded channel/phase summary without assigning unsupported transfer or code ownership.
+ * @param result Validated and committed bus capture activity.
+ * @returns Markdown report, including the retained aggregate/raw-history distinction.
  */
 export const renderBusTraceReport = (result: RuntimeBusProjectImportResult): string => {
   const { summary } = result;
@@ -161,9 +164,10 @@ export const renderBusTraceReport = (result: RuntimeBusProjectImportResult): str
   ].join("\n");
 };
 
-/** Render native decisions with ordered byte writes. Examples are bounded while totals are exact.
- * @param {RuntimePPUSummary} summary Validated producer effects.
- * @returns {string[]} Markdown lines explaining physical writes and capture limits.
+/**
+ * Render native decisions with ordered byte writes. Examples are bounded while totals are exact.
+ * @param summary Validated producer effects.
+ * @returns Markdown lines explaining physical writes and capture limits.
  */
 const ppuReport = (summary: RuntimePPUSummary): string[] => {
   return [

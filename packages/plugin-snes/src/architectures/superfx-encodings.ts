@@ -1,8 +1,17 @@
+/**
+ * Type-safe `Object.hasOwn` helper for opcode lookup tables.
+ * @param obj Object to test.
+ * @param key Property key candidate.
+ * @returns True when `key` is an own property of `obj`.
+ */
 export const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
   Object.hasOwn(obj, key);
 
+/** GSU ALT1 prefix opcode byte (`0x3D`). */
 export const ALT1 = 0x3d;
+/** GSU ALT2 prefix opcode byte (`0x3E`). */
 export const ALT2 = 0x3e;
+/** GSU ALT3 prefix opcode byte (`0x3F`). */
 export const ALT3 = 0x3f;
 
 /**
@@ -17,6 +26,7 @@ export const ALT3 = 0x3f;
  * AND R0 / OR R0 are MERGE / HIB, so AND/OR/BIC/XOR require R1-R15.
  * LDB/STB/LDW/STW occupy 30-3B / 40-4B, so pointer registers are R0-R11.
  */
+/** Mnemonics encoded as a single implied opcode byte. */
 export type ImpliedOpcode =
   | "STOP"
   | "NOP"
@@ -42,6 +52,7 @@ export type ImpliedOpcode =
   | "GETC"
   | "GETB";
 
+/** Primary opcode byte for each implied GSU mnemonic. */
 export const IMPLIED_OPCODES: Record<ImpliedOpcode, number> = {
   STOP: 0x00,
   NOP: 0x01,
@@ -68,6 +79,7 @@ export const IMPLIED_OPCODES: Record<ImpliedOpcode, number> = {
   GETB: 0xef,
 };
 
+/** Two-byte GSU forms that share an ALT prefix plus a trailing opcode. */
 export const PREFIXED_OPCODES: Record<string, { prefix: number; opcode: number }> = {
   RPIX: { prefix: ALT1, opcode: 0x4c },
   CMODE: { prefix: ALT1, opcode: 0x4e },
@@ -80,6 +92,7 @@ export const PREFIXED_OPCODES: Record<string, { prefix: number; opcode: number }
   GETBS: { prefix: ALT3, opcode: 0xef },
 };
 
+/** Short conditional branch mnemonics encoded with a signed displacement byte. */
 export type ShortBranchOpcode =
   | "BRA"
   | "BGE"
@@ -93,6 +106,7 @@ export type ShortBranchOpcode =
   | "BVC"
   | "BVS";
 
+/** Branch opcode byte for each short GSU conditional mnemonic. */
 export const SHORT_BRANCH_OPCODES: Record<ShortBranchOpcode, number> = {
   BRA: 0x05,
   BGE: 0x06,
@@ -107,13 +121,19 @@ export const SHORT_BRANCH_OPCODES: Record<ShortBranchOpcode, number> = {
   BVS: 0x0f,
 };
 
+/** Register-indexed opcode layout with optional ALT prefix and inclusive bounds. */
 export type RegisterOpEncoding = {
+  /** Optional ALT prefix emitted before the register-indexed opcode. */
   prefix?: number;
+  /** Opcode base added to the hardware register index. */
   base: number;
+  /** Lowest allowed register index, default 0. */
   min?: number;
+  /** Highest allowed register index, default 15. */
   max?: number;
 };
 
+/** Register-operand GSU mnemonics mapped to their opcode bases and ALT variants. */
 export const REGISTER_OPS: Record<string, RegisterOpEncoding> = {
   TO: { base: 0x10 },
   WITH: { base: 0x20 },
@@ -135,6 +155,7 @@ export const REGISTER_OPS: Record<string, RegisterOpEncoding> = {
   CMP: { prefix: ALT3, base: 0x60 },
 };
 
+/** Immediate-nibble GSU forms under ALT2/ALT3 prefix groups. */
 export const IMMEDIATE_OPS: Record<string, RegisterOpEncoding> = {
   LINK: { base: 0x90, min: 1, max: 4 },
   ADD: { prefix: ALT2, base: 0x50 },
@@ -148,6 +169,7 @@ export const IMMEDIATE_OPS: Record<string, RegisterOpEncoding> = {
   XOR: { prefix: ALT3, base: 0xc0, min: 1, max: 15 },
 };
 
+/** Indirect RAM pointer opcodes limited to registers R0–R11. */
 export const INDIRECT_OPS: Record<string, RegisterOpEncoding> = {
   STW: { base: 0x30, min: 0, max: 11 },
   LDW: { base: 0x40, min: 0, max: 11 },

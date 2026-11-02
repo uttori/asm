@@ -24,7 +24,8 @@ console.log(rom.identity.contentSha256);
 ```
 
 Use `headerSize: 512` for a copier-headered ROM. Omit the option for automatic detection.
-For a complete SNES create/analyze/export workflow, use `@uttori/asm-cli` or the SNES plugin.
+For the complete Git source workflow, use `uttori-asm source` from `@uttori/asm-cli` or
+`executeSourceOperation()` from `@uttori/asm-workflows/source`.
 
 ## Project storage
 
@@ -37,7 +38,8 @@ records and use stable-ID cursors; runtime evidence is an explicit stream. Consu
 inside the synchronous callback. Reopen a session to observe publications from another connection.
 Use revision-checked transaction APIs for edits. `publishAnalysisProject` creates a project when no
 expected revision is supplied; replacing an existing project requires the revision you read.
-`SqliteAnalysisStore` remains the lower-level storage interface for administrative operations.
+`SqliteAnalysisStore` from `@uttori/asm-disassembler/storage` remains the lower-level storage interface
+for administrative operations.
 Full snapshot APIs materialize all requested records. Address spaces are explicit and ranges are
 half-open. Conflicting evidence remains visible. Close stores when finished. Back up through
 SQLite's backup facilities or close every connection before copying project files.
@@ -49,7 +51,8 @@ baseline.
 ## Contributor layout
 
 Source and tests are grouped into `model`, `analysis`, `research-inputs`, `runtime`, `storage`, `project`,
-`source`, `source-project`, and `internal`. The package root exports remain the consumer interface. See
+`source`, `source-project`, and `internal`. The package root, `./storage` and `./source-project` exports
+remain the consumer interface. See
 [internal boundaries](ARCHITECTURE.md#internal-module-boundaries) for dependency and ownership rules.
 Clean generated output before rebuilding file moves; TypeScript emit alone does not remove stale files.
 

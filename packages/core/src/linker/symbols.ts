@@ -20,6 +20,7 @@ export const allocationKey = (module: string, section: string): string =>
 
 /** Placement-dependent arithmetic is evaluated once per symbol, with an explicit cycle stack. */
 export class LinkSymbols {
+  /** Final section placements keyed by module/section allocation identity. */
   readonly allocations: ReadonlyMap<string, LinkAllocation>;
   private readonly modules = new Map<string, ReadonlyMap<string, AssemblyModuleSymbol>>();
   private readonly exports = new Map<string, { module: string; symbol: AssemblyModuleSymbol }>();
@@ -85,6 +86,7 @@ export class LinkSymbols {
     return linkInteger(allocation.runAddress + offset);
   }
 
+  /** Recursively reduces link expressions with cycle detection and depth limits. */
   evaluate(expression: LinkExpression, source?: RelocatableSource, depth = 0): number {
     try {
       if (depth > 128) {

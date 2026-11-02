@@ -7,27 +7,47 @@ import type {
 } from "../plugin/contracts.js";
 import type { ModuleAssembly } from "./module-assembly.js";
 
+/** Assembler state and hooks the output writer reads and mutates. */
 export interface OutputWriterHost {
+  /** Relocatable module sink; when present, writes go to section storage instead of mapped output. */
   readonly moduleAssembly?: ModuleAssembly;
+  /** Attributes the byte just written to the module's current source range. */
   recordModuleWrite?(): void;
+  /** Stage reported in trace write events. */
   traceStage: AssemblyStageName;
+  /** Logical address, offset by `base`; advanced by every step. */
   currentTargetAddress: number;
+  /** Physical write address, unaffected by `base`; bytes are written here. */
   currentTargetBaseAddress: number;
+  /** Active architecture name reported in trace events. */
   arch: string;
+  /** Instruction mode of the active stage. */
   mode: "layout" | "emit";
+  /** Whether the active stage stores bytes; otherwise writes only advance the cursor. */
   canEmitBytes: boolean;
+  /** Whether the active stage may run the target output format's finalizer. */
   canFinalize: boolean;
+  /** Assembled output bytes, indexed by output offset. */
   outputBytes: number[] | Uint8Array;
+  /** Byte used when a write past the end leaves a gap. */
   outputFillByte: number;
+  /** Maps between logical addresses and output offsets and advances addresses. */
   pluginAddressSpace: TargetAddressSpace;
+  /** Target output format whose finalizer runs at the end of a pass. */
   pluginOutputFormat: TargetOutputFormat;
+  /** Target plugin state passed to the output finalizer. */
   pluginState: Parameters<TargetOutputFormat["finalize"]>[0]["state"];
+  /** Fills `length` output bytes starting at offset `start` with `value`. */
   fillOutputBytes(start: number, value: number, length: number): void;
   /** Optional owned-storage path; validation, ownership and trace hooks have already run. */
   writeOutputByte?(offset: number, value: number): void;
+  /** Resets logical, physical and start cursors to `address`. */
   setWritePosition(address: number): void;
+  /** Copies the current logical and physical addresses into the start cursors. */
   syncWriteStarts(): void;
+  /** Adds `num` to the session's emitted-byte counter. */
   incrementBytesWritten(num: number): void;
+  /** Lifecycle validation run before `width` bytes are written at `logicalAddress`; may throw. */
   beforeWrite?(logicalAddress: number, width: number): void;
   /** Records one source-owned emitted byte for debug-map generation. */
   recordSourceWrite?(logicalAddress: number, outputOffset: number): void;
@@ -37,12 +57,13 @@ export interface OutputWriterHost {
   traceWrite?(event: Omit<AssemblerTraceWriteEvent, "type">): void;
 }
 
+/** Writes bytes at the session cursor and maps them to output offsets. */
 export class OutputWriterService {
   constructor(readonly host: OutputWriterHost) {}
 
   /**
    * Advances the logical write position.
-   * @param {number} num The number of bytes to step.
+   * @param num The number of bytes to step.
    */
   step(num: number): void {
     if (num === 0) {
@@ -73,7 +94,7 @@ export class OutputWriterService {
 
   /**
    * Writes a single byte at the current logical position.
-   * @param {number} num The value to write.
+   * @param num The value to write.
    */
   write1(num: number): void {
     if (Number.isNaN(num)) {
@@ -145,7 +166,7 @@ export class OutputWriterService {
 
   /**
    * Writes a 16-bit value to output.
-   * @param {number} num The value to write.
+   * @param num The value to write.
    */
   write2(num: number): void {
     this.validateWrite(2);
@@ -155,7 +176,7 @@ export class OutputWriterService {
 
   /**
    * Writes a 24-bit value to output.
-   * @param {number} num The value to write.
+   * @param num The value to write.
    */
   write3(num: number): void {
     this.validateWrite(3);
@@ -166,7 +187,7 @@ export class OutputWriterService {
 
   /**
    * Writes a 32-bit value to output.
-   * @param {number} num The value to write.
+   * @param num The value to write.
    */
   write4(num: number): void {
     this.validateWrite(4);
@@ -179,9 +200,9 @@ export class OutputWriterService {
   /**
    * Writes the low 1–4 bytes of a safe integer, using two's complement for negatives.
    * Invalid arguments throw before lifecycle hooks, output, or the cursor change.
-   * @param {number} num Safe integer; high bits outside the selected width are discarded.
-   * @param {number} width Integral byte width from 1 through 4; use writeBytes for wider values.
-   * @param {"little" | "big"} endianness Byte order, defaulting to little-endian.
+   * @param num Safe integer; high bits outside the selected width are discarded.
+   * @param width Integral byte width from 1 through 4; use writeBytes for wider values.
+   * @param endianness Byte order, defaulting to little-endian.
    */
   writeValue(num: number, width: number, endianness: "little" | "big" = "little"): void {
     // JavaScript shifts wrap at 32 bits, so accepting a wider number would repeat low bytes.
@@ -203,7 +224,7 @@ export class OutputWriterService {
 
   /**
    * Writes a sequence of already encoded bytes.
-   * @param {readonly number[]} values Bytes to write.
+   * @param values Bytes to write.
    */
   writeBytes(values: readonly number[]): void {
     this.validateWrite(values.length);
@@ -214,7 +235,7 @@ export class OutputWriterService {
 
   /**
    * Runs active address-space and lifecycle validation for a write.
-   * @param {number} length The length of the value to write.
+   * @param length The length of the value to write.
    */
   validateWrite(length: number): void {
     if (this.host.moduleAssembly) {
@@ -237,8 +258,8 @@ export class OutputWriterService {
 
   /**
    * Converts a logical address to an output offset.
-   * @param {number} addr The logical address.
-   * @returns {number} The mapped output offset.
+   * @param addr The logical address.
+   * @returns The mapped output offset.
    */
   toOutputOffset(addr: number): number {
     if (this.host.moduleAssembly) {
@@ -249,8 +270,8 @@ export class OutputWriterService {
 
   /**
    * Converts an output offset to a logical address.
-   * @param {number} addr The output offset.
-   * @returns {number} The mapped logical address.
+   * @param addr The output offset.
+   * @returns The mapped logical address.
    */
   fromOutputOffset(addr: number): number {
     return this.host.pluginAddressSpace.fromOutputOffset(addr);
@@ -267,9 +288,9 @@ export class OutputWriterService {
 
   /**
    * Advances and normalizes a logical position.
-   * @param {number} inaddr The logical address to advance.
-   * @param {number} step The number of bytes to step.
-   * @returns {number} The fixed address.
+   * @param inaddr The logical address to advance.
+   * @param step The number of bytes to step.
+   * @returns The fixed address.
    */
   advanceLogicalAddress(inaddr: number, step = 0): number {
     return this.host.pluginAddressSpace.advance(inaddr, step);

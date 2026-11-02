@@ -11,24 +11,31 @@ function captureCursorComplete(cursor: NativeCaptureFileCursor): boolean {
   return cursor.complete;
 }
 
-/** One capture per process. Positions are coalesced. Event bytes stay in the archive.
+/**
+ * One capture per process. Positions are coalesced. Event bytes stay in the archive.
  * SQLite temp staging survives asynchronous reads without locking the project.
  */
 export interface LiveBusStart {
+  /** Discriminant marking the initial start message for this child process. */
   readonly type: "start";
+  /** Absolute path to the streaming capture archive file. */
   readonly file: string;
+  /** Analysis project directory receiving imported bus evidence. */
   readonly projectDirectory: string;
+  /** Recorder checkpoint describing durable bytes already on disk. */
   readonly position: NativeCaptureFilePosition;
   /** Maximum unread synced archive bytes. Exhaustion cancels analysis, never recording. */
   readonly maxLagBytes: number;
   /** Project import byte budget, including native framing and the terminal record. */
   readonly maxBytes: number;
+  /** Maximum SQLite index records staged during live import. */
   readonly maxIndexRecords: number;
   /** Opt-in coarse stage/scheduling timings. Omitted in normal editor sessions. */
   readonly profile?: boolean;
 }
 
-/** Wall-clock milliseconds and wait counts, collected only when profiling is enabled.
+/**
+ * Wall-clock milliseconds and wait counts, collected only when profiling is enabled.
  * Stage spans include cursor work and scheduling. They are not additive budgets.
  */
 export interface LiveBusProfile {
@@ -36,9 +43,13 @@ export interface LiveBusProfile {
   cursorMs: number;
   /** Outer worker yields only. Cursor checkpoint yields are already inside cursorMs. */
   yields: number;
+  /** Wall milliseconds spent in outer scheduling yields. */
   yieldMs: number;
+  /** Count of idle waits while awaiting new archive bytes. */
   idleWaits: number;
+  /** Wall milliseconds spent waiting for recorder progress. */
   idleMs: number;
+  /** Named stage timings keyed by importer phase. */
   stages: Record<string, number>;
 }
 /**
@@ -78,6 +89,7 @@ const flushPreview = (): void => {
   process.send?.(message);
 };
 
+/** Send the final IPC payload and disconnect this single-capture child process. */
 const settle = (value: unknown): void => {
   process.send?.(value, () => process.disconnect?.());
 };
@@ -86,7 +98,7 @@ const settle = (value: unknown): void => {
  * Start at most one importer, coalesce acknowledged recorder positions, and handle
  * cancellation/preview acknowledgments.
  * Send the final result or error before disconnecting the child IPC channel.
- * @param {object} message Start, latest-position, cancellation, or preview-acknowledgment message from the parent.
+ * @param message Start, latest-position, cancellation, or preview-acknowledgment message from the parent.
  */
 export const handleLiveBusProcessMessage = (
   message:
@@ -126,10 +138,11 @@ if (typeof process.send === "function") {
   process.on("message", handleLiveBusProcessMessage);
 }
 
-/** Catch up using bounded read slices. Aborting or exceeding lag discards the temp index,
+/**
+ * Catch up using bounded read slices. Aborting or exceeding lag discards the temp index,
  * leaving the native recording and completed archive available for an offline retry.
- * @param {LiveBusStart} options Session identity, project and resource budgets fixed at startup.
- * @returns {Promise<object>} Published result and bounded runtime measurements after END2 validation.
+ * @param options Session identity, project and resource budgets fixed at startup.
+ * @returns Published result and bounded runtime measurements after END2 validation.
  */
 export async function runLiveBusAnalysis(options: LiveBusStart) {
   // Time slice/stage boundaries only. Per-event clocks would distort the hot loop.

@@ -12,15 +12,18 @@ import { splitRespectingFunctions } from "../services/command-text-service.js";
 import type { DirectiveRegistry } from "./registry.js";
 import type { DiagnosticDirectiveContext, TableDirectiveContext } from "./types.js";
 
+/** Contexts for table and diagnostic directive families registered together. */
 export type MiscDirectiveContexts = {
+  /** Session hooks for character table push/pull directives. */
   table: TableDirectiveContext;
+  /** Session hooks for warning, error, and assert directives. */
   diagnostic: DiagnosticDirectiveContext;
 };
 
 /**
  * Restores the previously saved character mapping table.
- * @param {TableDirectiveContext} ctx The directive context.
- * @param {DirectiveTableCapability} ctx.session The table-capable assembly session.
+ * @param ctx The directive context.
+ * @param ctx.session The table-capable assembly session.
  * @throws {Error} If `pulltable` is called without `pushtable`.
  */
 export const handlePullTable = ({ session }: TableDirectiveContext): void => {
@@ -32,8 +35,8 @@ export const handlePullTable = ({ session }: TableDirectiveContext): void => {
 
 /**
  * Saves the current character mapping table.
- * @param {TableDirectiveContext} ctx The directive context.
- * @param {DirectiveTableCapability} ctx.session The table-capable assembly session.
+ * @param ctx The directive context.
+ * @param ctx.session The table-capable assembly session.
  */
 export const handlePushTable = ({ session }: TableDirectiveContext): void => {
   session.tableStack.push(new Map(session.characterMappings));
@@ -41,9 +44,9 @@ export const handlePushTable = ({ session }: TableDirectiveContext): void => {
 
 /**
  * Drops a leading `@keyword` / `keyword` from the raw command line.
- * @param {string} raw Full command text.
- * @param {string} keyword Canonical directive name.
- * @returns {string} Operand text after the keyword.
+ * @param raw Full command text.
+ * @param keyword Canonical directive name.
+ * @returns Operand text after the keyword.
  */
 const stripLeadingKeyword = (raw: string, keyword: string): string => {
   const trimmed = raw.trim();
@@ -62,8 +65,8 @@ const stripLeadingKeyword = (raw: string, keyword: string): string => {
 
 /**
  * Strips one matching pair of wrapping quotes. Print functions stay as-is.
- * @param {string} fragment A `print`-style argument.
- * @returns {string} Dequoted text, or the original fragment.
+ * @param fragment A `print`-style argument.
+ * @returns Dequoted text, or the original fragment.
  */
 const unwrapQuoted = (fragment: string): string => {
   const text = fragment.trim();
@@ -80,8 +83,8 @@ const unwrapQuoted = (fragment: string): string => {
 /**
  * Concatenates asar `print` arguments. Quoted strings are dequoted. Math/print
  * functions are left literal until those helpers are wired for diagnostics.
- * @param {readonly string[]} parts Top-level comma-split print arguments.
- * @returns {string} Concatenated message text.
+ * @param parts Top-level comma-split print arguments.
+ * @returns Concatenated message text.
  */
 const formatPrintArgs = (parts: readonly string[]): string => {
   let out = "";
@@ -97,9 +100,9 @@ const formatPrintArgs = (parts: readonly string[]): string => {
  * Failed asserts match asar's `Eassertion_failed`: `"Assertion failed."` or
  * `"Assertion failed: " + message`.
  * State-dependent checks wait for a build when editor analysis has skipped asset bytes.
- * @param {DiagnosticDirectiveContext} ctx Session with `evaluateAssertion`.
- * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
- * @param {string} raw Full command text.
+ * @param ctx Session with `evaluateAssertion`.
+ * @param _words Tokenized command. Unused. Parse from `raw`.
+ * @param raw Full command text.
  * @throws {Error} If the condition is missing or evaluates to zero.
  */
 export const handleAssert = (
@@ -112,9 +115,9 @@ export const handleAssert = (
 
 /**
  * Asar `error [print-args...]`. Always fails the assemble.
- * @param {DiagnosticDirectiveContext} _ctx Unused session.
- * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
- * @param {string} raw Full command text.
+ * @param _ctx Unused session.
+ * @param _words Tokenized command. Unused. Parse from `raw`.
+ * @param raw Full command text.
  * @throws {Error} Always. Message matches asar's `Eerror_command`.
  */
 export const handleError = (
@@ -127,15 +130,15 @@ export const handleError = (
 
 /**
  * Formats a logical address as 6-digit uppercase hex for asar `warnpc` messages.
- * @param {number} value Address.
- * @returns {string} Zero-padded hex without a `$` prefix.
+ * @param value Address.
+ * @returns Zero-padded hex without a `$` prefix.
  */
 const hex6 = (value: number): string => (value >>> 0).toString(16).toUpperCase().padStart(6, "0");
 
 /**
  * Asar-style table parse error for a 1-based source line.
- * @param {number} lineNumber Table file line number.
- * @returns {Error} `Invalid table file: line N`.
+ * @param lineNumber Table file line number.
+ * @returns `Invalid table file: line N`.
  */
 const invalidTableLine = (lineNumber: number): Error =>
   new Error(`Invalid table file: line ${lineNumber}`);
@@ -144,10 +147,10 @@ const invalidTableLine = (lineNumber: number): Error =>
  * Parses one asar `table` file line. LTR is `char=hex` with the mapped character
  * at index 0 - leading space is significant (` =20`). Hex is a single integer,
  * not a byte list. `db` later truncates it to 8 bits.
- * @param {string} line One table line, with trailing CR already stripped.
- * @param {boolean} rtl When true, the line is `hex=char` instead of `char=hex`.
- * @param {number} lineNumber 1-based source line, used in asar-style errors.
- * @returns {{ char: string; value: number } | undefined} Mapping, or undefined for a blank line.
+ * @param line One table line, with trailing CR already stripped.
+ * @param rtl When true, the line is `hex=char` instead of `char=hex`.
+ * @param lineNumber 1-based source line, used in asar-style errors.
+ * @returns Mapping, or undefined for a blank line.
  * @throws {Error} If the line is present but not a valid asar table entry.
  */
 const parseAsarTableLine = (
@@ -189,7 +192,7 @@ const parseAsarTableLine = (
 /**
  * Asar `cleartable`. Restores identity mapping (each code point encodes as itself).
  * An empty Map plus `processStringWithMapping`'s charCode fallback matches that.
- * @param {TableDirectiveContext} ctx The table-capable session.
+ * @param ctx The table-capable session.
  */
 export const handleClearTable = ({ session }: TableDirectiveContext): void => {
   session.characterMappings.clear();
@@ -201,9 +204,9 @@ export const handleClearTable = ({ session }: TableDirectiveContext): void => {
  * mapping table. Unlike asar we leave unmapped characters as identity instead
  * of filling a garbage sentinel - SMRPG dialogue only uses listed glyphs, and
  * remaining bank data is raw `db $xx` after `cleartable`.
- * @param {TableDirectiveContext} ctx Session with `includeSource.readFile`.
- * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
- * @param {string} raw Full command text.
+ * @param ctx Session with `includeSource.readFile`.
+ * @param _words Tokenized command. Unused. Parse from `raw`.
+ * @param raw Full command text.
  * @throws {Error} If the filename is missing or a table line is invalid.
  */
 export const handleTable = (
@@ -245,9 +248,9 @@ function executeTable(
 /**
  * Deprecated asar `warnpc addr`, equivalent to `assert pc() <= addr`.
  * Fails only when the logical program counter is strictly past the bound.
- * @param {DiagnosticDirectiveContext} ctx Session with PC and numeric evaluation.
- * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
- * @param {string} raw Full command text.
+ * @param ctx Session with PC and numeric evaluation.
+ * @param _words Tokenized command. Unused. Parse from `raw`.
+ * @param raw Full command text.
  * @throws {Error} If the address is missing or `pc > addr`.
  */
 export const handleWarnpc = (
@@ -260,13 +263,14 @@ export const handleWarnpc = (
 
 /**
  * Registers table and diagnostic directives when those core groups are enabled.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {MiscDirectiveContexts} context Table and diagnostic sessions.
- * @param {ReadonlySet<CoreDirectiveGroup>} [enabledGroups] Groups to register. Defaults to both.
- * @returns {void}
+ * @param registry The directive registry.
+ * @param context Table and diagnostic sessions.
+ * @param [enabledGroups] Groups to register. Defaults to both.
  */
+/** No-op metadata hook for directives that only invoke session side effects. */
 const empty = () => ({});
 
+/** Registers table and diagnostic directives when their groups are enabled. */
 export const registerMiscDirectives = (
   registry: DirectiveRegistry,
   context: MiscDirectiveContexts,

@@ -226,6 +226,7 @@ export class SourceSnapshotIndex {
     return tree;
   }
 
+  /** Release the private scratch index and any temporary Git state. */
   dispose(): void {
     this.#scratch.dispose();
   }

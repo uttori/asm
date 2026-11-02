@@ -3,8 +3,8 @@ import path from "node:path";
 
 /**
  * Accepts a JSON object. Arrays and null are not build receipts.
- * @param {unknown} value Parsed JSON.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Parsed JSON.
+ * @returns True when `value` is a non-array object.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -12,9 +12,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Reads an optional receipt string. A non-string field is not a receipt this pruner owns.
- * @param {Record<string, unknown>} record Parsed receipt.
- * @param {string} key Field name.
- * @returns {string | undefined} The string field, or undefined when absent.
+ * @param record Parsed receipt.
+ * @param key Field name.
+ * @returns The string field, or undefined when absent.
  */
 function receiptString(record: Record<string, unknown>, key: string): string | undefined {
   const field = record[key];
@@ -27,7 +27,8 @@ function receiptString(record: Record<string, unknown>, key: string): string | u
   return field;
 }
 
-/** Reclaim interrupted attempts before another write, preserving the actual current pair.
+/**
+ * Reclaim interrupted attempts before another write, preserving the actual current pair.
  * Unrecognized current pointers defer cleanup until a successful publication establishes ownership.
  */
 export function prunePriorSourceBuilds(

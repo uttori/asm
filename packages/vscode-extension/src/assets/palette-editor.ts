@@ -14,6 +14,7 @@ import {
 import { renderWebviewTemplate } from "../webview-template.js";
 import { paletteView, paletteWordEdit } from "./palette-model.js";
 
+/** Narrow webview messages to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -57,6 +58,7 @@ export class PaletteEditor implements CustomTextEditorProvider {
     }
   }
 
+  /** Bind the palette webview to document text changes and edit messages. */
   resolveCustomTextEditor(document: TextDocument, panel: WebviewPanel): void {
     panel.webview.options = {
       enableScripts: true,

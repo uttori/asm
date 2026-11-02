@@ -2,11 +2,11 @@ import type { DirectiveDescriptor, DirectiveOperandDescriptor } from "@uttori/as
 
 /**
  * Builds a nested directive-operand descriptor for hover/completion.
- * @param {string} keyword Nested keyword (`title`, `bankcross`, ...).
- * @param {string} summary Hover summary.
- * @param {string} syntax Example syntax.
- * @param {readonly DirectiveOperandDescriptor[]} [operands] Nested operands.
- * @returns {DirectiveOperandDescriptor} Catalog operand entry.
+ * @param keyword Nested keyword (`title`, `bankcross`, ...).
+ * @param summary Hover summary.
+ * @param syntax Example syntax.
+ * @param [operands] Nested operands.
+ * @returns Catalog operand entry.
  */
 const op = (
   keyword: string,
@@ -654,8 +654,8 @@ const directiveByKeyword = new Map<string, DirectiveDescriptor>(
 
 /**
  * Looks up a directive descriptor by keyword (case-insensitive).
- * @param {string} keyword The directive keyword.
- * @returns {DirectiveDescriptor | undefined} The descriptor, if known.
+ * @param keyword The directive keyword.
+ * @returns The descriptor, if known.
  */
 export function findDirective(keyword: string): DirectiveDescriptor | undefined {
   return directiveByKeyword.get(keyword.toLowerCase());

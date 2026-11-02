@@ -26,9 +26,9 @@ const PATTERN_WIDTH: Partial<Record<string, number>> = {
 
 /**
  * Returns the little-endian unit width for a fill* or pad* pattern directive.
- * @param {string} keyword The directive keyword.
- * @param {"fill" | "pad"} kind Pattern family, used in the error message.
- * @returns {number} Width in bytes.
+ * @param keyword The directive keyword.
+ * @param kind Pattern family, used in the error message.
+ * @returns Width in bytes.
  * @throws {Error} If `keyword` is not a recognized pattern directive for `kind`.
  */
 const patternWidth = (keyword: string, kind: "fill" | "pad"): number => {
@@ -44,10 +44,10 @@ const patternWidth = (keyword: string, kind: "fill" | "pad"): number => {
 
 /**
  * Writes `length` little-endian repeats of `value` into `dest`.
- * @param {number} value Source integer.
- * @param {number} width Bytes consumed from `value` per repeat.
- * @param {number[]} dest Destination buffer.
- * @param {number} length Number of bytes to store.
+ * @param value Source integer.
+ * @param width Bytes consumed from `value` per repeat.
+ * @param dest Destination buffer.
+ * @param length Number of bytes to store.
  */
 const writeLittleEndianRepeats = (
   value: number,
@@ -88,8 +88,8 @@ const executePattern = (
 
 /**
  * Sets the 12-byte fill pattern used by later `fill` directives.
- * @param {FillPadDirectiveContext} ctx The directive context.
- * @param {string[]} words `fillbyte` / `fillword` / `filllong` / `filldword` plus value.
+ * @param ctx The directive context.
+ * @param words `fillbyte` / `fillword` / `filllong` / `filldword` plus value.
  * @throws {Error} If the keyword is unknown or exactly one parameter is not supplied.
  */
 export const handleFillPattern = (ctx: FillPadDirectiveContext, words: readonly string[]): void => {
@@ -98,8 +98,8 @@ export const handleFillPattern = (ctx: FillPadDirectiveContext, words: readonly 
 
 /**
  * Emits `count` bytes of the current fill pattern.
- * @param {FillPadDirectiveContext} ctx The directive context.
- * @param {string[]} words `fill` plus the byte count.
+ * @param ctx The directive context.
+ * @param words `fill` plus the byte count.
  * @throws {Error} If exactly one parameter is not supplied.
  */
 export const handleFill = (ctx: FillPadDirectiveContext, words: readonly string[]): void => {
@@ -108,8 +108,8 @@ export const handleFill = (ctx: FillPadDirectiveContext, words: readonly string[
 
 /**
  * Sets the pad unit and little-endian pad bytes used by later `pad` directives.
- * @param {FillPadDirectiveContext} ctx The directive context.
- * @param {string[]} words `padbyte` / `padword` / `padlong` / `paddword` plus value.
+ * @param ctx The directive context.
+ * @param words `padbyte` / `padword` / `padlong` / `paddword` plus value.
  * @throws {Error} If the keyword is unknown or exactly one parameter is not supplied.
  */
 export const handlePadPattern = (ctx: FillPadDirectiveContext, words: readonly string[]): void => {
@@ -121,8 +121,8 @@ export const handlePadPattern = (ctx: FillPadDirectiveContext, words: readonly s
  * With no address, writes until the next 64K bank boundary. With an address, writes
  * until that logical address (mapped through output offsets). A target at or before the
  * current PC is a no-op.
- * @param {FillPadDirectiveContext} ctx The directive context.
- * @param {string[]} words `pad` and an optional logical address.
+ * @param ctx The directive context.
+ * @param words `pad` and an optional logical address.
  * @throws {Error} If more than one parameter is supplied, or the target does not map to output.
  */
 export const handlePad = (ctx: FillPadDirectiveContext, words: readonly string[]): void => {
@@ -131,8 +131,8 @@ export const handlePad = (ctx: FillPadDirectiveContext, words: readonly string[]
 
 /**
  * Registers fill/pad pattern and emit directives.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {FillPadDirectiveContext} context The fill/pad directive context.
+ * @param registry The directive registry.
+ * @param context The fill/pad directive context.
  */
 export const registerFillPadDirectives = (
   registry: DirectiveRegistry,

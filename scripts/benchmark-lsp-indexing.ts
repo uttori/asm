@@ -80,8 +80,8 @@ type IndexingSample = BenchmarkSample & {
 /**
  * Creates a fresh WorkspaceIndex pointed at the Chou project with an isolated
  * cache directory so cold/warm runs are controlled independently.
- * @param {string} cacheDir The cache directory.
- * @returns {Promise<WorkspaceIndex>} The workspace index.
+ * @param cacheDir The cache directory.
+ * @returns The workspace index.
  */
 async function createIndex(cacheDir: string): Promise<WorkspaceIndex> {
   const snesEnvironment = await createSnesAssemblerEnvironment();
@@ -96,8 +96,8 @@ async function createIndex(cacheDir: string): Promise<WorkspaceIndex> {
 
 /**
  * Runs a single timed indexing pass. Returns the sample.
- * @param {WorkspaceIndex} index The workspace index to reindex.
- * @returns {IndexingSample} Timing and status for this run.
+ * @param index The workspace index to reindex.
+ * @returns Timing and status for this run.
  */
 function runIndexingPass(index: WorkspaceIndex): IndexingSample {
   const started = performance.now();
@@ -126,10 +126,10 @@ function runIndexingPass(index: WorkspaceIndex): IndexingSample {
  * - warm: retains the cache dir (should be a cache hit)
  * - warm-validate: creates a fresh index instance over an existing cache (measures
  *   the startup overhead of reading + validating the cache without re-analysing)
- * @param {RunMode} mode The mode to benchmark.
- * @param {string} cacheDir The cache directory.
- * @param {WorkspaceIndex} sharedIndex The shared index.
- * @returns {Promise<IndexingSample>} The sample.
+ * @param mode The mode to benchmark.
+ * @param cacheDir The cache directory.
+ * @param sharedIndex The shared index.
+ * @returns The sample.
  */
 async function runMode(
   mode: RunMode,
@@ -161,11 +161,11 @@ async function runMode(
 
 /**
  * Runs the full benchmark sequence for one mode: warmups then measured reps.
- * @param {RunMode} mode The mode to benchmark.
- * @param {IndexingBenchmarkOptions} options Benchmark options.
- * @param {string} cacheDir The cache directory.
- * @param {WorkspaceIndex} sharedIndex The shared index.
- * @returns {Promise<IndexingSample[]>} The samples.
+ * @param mode The mode to benchmark.
+ * @param options Benchmark options.
+ * @param cacheDir The cache directory.
+ * @param sharedIndex The shared index.
+ * @returns The samples.
  */
 async function benchmarkMode(
   mode: RunMode,
@@ -308,8 +308,8 @@ const CHILD_PHASES = new Set(Object.values(PHASE_CHILDREN).flat());
 /**
  * Prints a phase breakdown table sorted by milliseconds descending.
  * Sub-phases are indented under their parent.
- * @param {string} label Title for the table.
- * @param {Record<string, number>} phasesMs Phase timings from instrumentation.
+ * @param label Title for the table.
+ * @param phasesMs Phase timings from instrumentation.
  */
 function printPhaseTable(label: string, phasesMs: Record<string, number>): void {
   const entries = Object.entries(phasesMs);
@@ -462,8 +462,8 @@ async function main(): Promise<void> {
 /**
  * Internal worker path — used when --isolate is set so each rep runs in a
  * fresh process without heap accumulation from prior reps.
- * @param {string[]} args Command line arguments.
- * @returns {Promise<boolean>} True if the worker was run, false otherwise.
+ * @param args Command line arguments.
+ * @returns True if the worker was run, false otherwise.
  */
 async function runInternalWorker(args: string[]): Promise<boolean> {
   const workerIndex = args.indexOf("--internal-worker");

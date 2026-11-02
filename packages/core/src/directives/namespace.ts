@@ -5,7 +5,7 @@ import type { NamespaceDirectiveContext } from "./types.js";
 
 /**
  * Pushes the current namespace.
- * @param {NamespaceDirectiveContext} ctx The directive context.
+ * @param ctx The directive context.
  */
 export const handlePushNamespace = ({ session }: NamespaceDirectiveContext): void => {
   session.namespaceStack.push(session.currentNamespace);
@@ -17,7 +17,7 @@ export const handlePushNamespace = ({ session }: NamespaceDirectiveContext): voi
 
 /**
  * Restores the previous namespace.
- * @param {NamespaceDirectiveContext} ctx The directive context.
+ * @param ctx The directive context.
  */
 export const handlePullNamespace = ({ session }: NamespaceDirectiveContext): void => {
   if (session.namespaceStack.length === 0) {
@@ -41,8 +41,8 @@ export const handlePullNamespace = ({ session }: NamespaceDirectiveContext): voi
  * @example
  * namespace "identifier"
  * namespace identifier
- * @param {NamespaceDirectiveContext} ctx The directive context.
- * @param {string[]} words The words of the namespace command.
+ * @param ctx The directive context.
+ * @param words The words of the namespace command.
  */
 export const handleNamespace = (ctx: NamespaceDirectiveContext, words: readonly string[]): void => {
   executeNamespace(ctx, parseNamespace({ words }));
@@ -50,8 +50,8 @@ export const handleNamespace = (ctx: NamespaceDirectiveContext, words: readonly 
 
 /**
  * Enters a namespace and records it as an outline container.
- * @param {NamespaceDirectiveContext["session"]} session The namespace session.
- * @param {string} name The namespace identifier being entered.
+ * @param session The namespace session.
+ * @param name The namespace identifier being entered.
  */
 function enterNamespace(session: NamespaceDirectiveContext["session"], name: string): void {
   if (session.namespaceNestingEnabled) {
@@ -70,6 +70,7 @@ function enterNamespace(session: NamespaceDirectiveContext["session"], name: str
   });
 }
 
+/** Registers namespace open, close, and push directives on the shared registry. */
 export const registerNamespaceDirectives = (
   registry: DirectiveRegistry,
   context: NamespaceDirectiveContext,

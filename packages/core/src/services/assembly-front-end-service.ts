@@ -28,17 +28,29 @@ import {
 import { OccurrenceSyntaxCache } from "./occurrence-syntax-cache.js";
 import { ProgramModelBuilder, type IncrementalProgramParseState } from "./program-model-builder.js";
 
+/** Session context for command preprocessing and program model construction. */
 export type AssemblyFrontEndHost = {
+  /** Active source file path for provenance on normalized commands. */
   currentFile: string;
+  /** Zero-based line number advanced as commands are processed. */
   currentLine: number;
+  /** Cached lowered program nodes reused across assembly passes. */
   passProgramCache: Map<string, ExecutableNode[]>;
+  /** Optional hook parsing plugin-owned directive syntax payloads. */
   parsePluginSyntax?(command: NormalizedCommand): ContributionSyntax | undefined;
+  /** Returns a grammar identity string for occurrence syntax caches. */
   grammarIdentity?(): string;
+  /** When true, records spans and provenance on normalized commands. */
   collectSourceMetadata: boolean;
+  /** True while expanding macro-generated source text. */
   inMacroExpansion: boolean;
+  /** True during the definition collection assembly stage. */
   isDefinitionCollectionStage: boolean;
+  /** Active dialect profile controlling tokenization and rewrites. */
   syntaxProfile: SyntaxProfile;
+  /** Expands variadic macro placeholders before tokenization. */
   resolveVariadicPlaceholders(command: string): string;
+  /** Resolves ca65-style endif/while pairing for structured control flow. */
   shouldEndifCloseInnermostWhile(
     loopType?: "for" | "while",
     loopStartLine?: number,
@@ -51,6 +63,7 @@ export type AssemblyFrontEndHost = {
  * the assembler session can focus on execution instead of front-end shaping.
  */
 export class AssemblyFrontEndService {
+  /** Partial command text retained for multiline structured statements. */
   commandBuffer = "";
   /** Source occurrences and grammar identity are part of syntax ownership, never invocation values. */
   private readonly fragmentCommands = new OccurrenceSyntaxCache<NormalizedCommand>();
@@ -58,6 +71,7 @@ export class AssemblyFrontEndService {
   private readonly fragmentExpressions = new OccurrenceSyntaxCache<ExpressionNode>();
   private readonly assemblyExpressions = new Map<string, ExpressionNode>();
 
+  /** Drops occurrence-keyed syntax caches at assembly boundaries. */
   clearFragmentCache(): void {
     this.fragmentCommands.clear();
     this.fragmentExpressions.clear();
@@ -101,6 +115,7 @@ export class AssemblyFrontEndService {
   /** Opening physical line when processCommand receives a structured statement one line at a time. */
   private statementBufferStart?: { file: string; line: number };
 
+  /** Builds executable program trees from normalized commands. */
   readonly programModelBuilder: ProgramModelBuilder;
 
   constructor(readonly host: AssemblyFrontEndHost) {
@@ -132,8 +147,8 @@ export class AssemblyFrontEndService {
 
   /**
    * Preprocesses raw source blocks while preserving continued-line buffering.
-   * @param {string} block The raw source block.
-   * @returns {string[]} The normalized commands.
+   * @param block The raw source block.
+   * @returns The normalized commands.
    */
   preprocessBlockCommands(block: string): string[] {
     return this.preprocessSourcedBlockCommands(block).map((command) => command.text);
@@ -141,8 +156,8 @@ export class AssemblyFrontEndService {
 
   /**
    * Preprocesses raw source blocks, tagging each command with its original line.
-   * @param {string} block The raw source block.
-   * @returns {SourcedCommand[]} The normalized sourced commands.
+   * @param block The raw source block.
+   * @returns The normalized sourced commands.
    */
   preprocessSourcedBlockCommands(block: string): SourcedCommand[] {
     const opening = this.statementBufferStart;
@@ -173,8 +188,8 @@ export class AssemblyFrontEndService {
 
   /**
    * Splits statements according to the active target's source grammar.
-   * @param {string[]} commands Commands to split.
-   * @returns {string[]} Profile-aware command statements.
+   * @param commands Commands to split.
+   * @returns Profile-aware command statements.
    */
   splitInlineCommands(commands: string[]): string[] {
     return splitInlineCommands(commands, this.host.syntaxProfile);
@@ -182,8 +197,8 @@ export class AssemblyFrontEndService {
 
   /**
    * Splits sourced statements according to the active target's source grammar.
-   * @param {SourcedCommand[]} commands Sourced commands to split.
-   * @returns {SourcedCommand[]} Profile-aware sourced command statements.
+   * @param commands Sourced commands to split.
+   * @returns Profile-aware sourced command statements.
    */
   splitSourcedInlineCommands(commands: SourcedCommand[]): SourcedCommand[] {
     return splitSourcedInlineCommands(commands, this.host.syntaxProfile);
@@ -191,11 +206,11 @@ export class AssemblyFrontEndService {
 
   /**
    * Builds a normalized command from raw source text.
-   * @param {string} command The raw command text.
-   * @param {string} sourceFile The command source file.
-   * @param {number} sourceLine The source line number.
-   * @param {boolean} [allowEmpty] When true, empty commands still produce nodes.
-   * @returns {NormalizedCommand | null} The normalized command or null for empty input.
+   * @param command The raw command text.
+   * @param sourceFile The command source file.
+   * @param sourceLine The source line number.
+   * @param [allowEmpty] When true, empty commands still produce nodes.
+   * @returns The normalized command or null for empty input.
    */
   createNormalizedCommandFromRaw(
     command: string,
@@ -350,10 +365,10 @@ export class AssemblyFrontEndService {
 
   /**
    * Creates a loop-aware normalized command node for the typed parser.
-   * @param {string} command The raw command text.
-   * @param {string} [sourceFile] Optional source file.
-   * @param {number} [sourceLine] Optional source line.
-   * @returns {NormalizedCommand} The normalized node.
+   * @param command The raw command text.
+   * @param [sourceFile] Optional source file.
+   * @param [sourceLine] Optional source line.
+   * @returns The normalized node.
    */
   createLoopCommandNode(
     command: string,

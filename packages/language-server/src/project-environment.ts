@@ -83,8 +83,8 @@ export interface ProjectEnvironmentControllerOptions {
 
 /**
  * Normalizes editor shorthand before the loader performs full plugin validation.
- * @param {readonly PluginModuleSetting[] | undefined} plugins Editor entries; omitted means none.
- * @returns {readonly PluginModuleRequest[]} Module requests preserving supplied activation options.
+ * @param plugins Editor entries; omitted means none.
+ * @returns Module requests preserving supplied activation options.
  * @throws {Error} A shorthand string is blank or an object has no string module specifier.
  */
 const configuredPluginModules = (
@@ -117,13 +117,13 @@ export class ProjectEnvironmentController {
 
   /**
    * Retains host configuration without loading plugins; call replace before accessing current.
-   * @param {ProjectEnvironmentControllerOptions} options Host configuration, retained by reference.
+   * @param options Host configuration, retained by reference.
    */
   constructor(private readonly options: ProjectEnvironmentControllerOptions) {}
 
   /**
    * Exposes the live pair without transferring ownership of its plugin lifecycle.
-   * @returns {ProjectEnvironmentState} The most recently committed environment and index.
+   * @returns The most recently committed environment and index.
    * @throws {Error} No environment has been published, or the controller has been disposed.
    */
   get current(): ProjectEnvironmentState {
@@ -137,9 +137,9 @@ export class ProjectEnvironmentController {
    * Loads and indexes a candidate before publishing it, then disposes the previous environment.
    * Callers must serialize replacements and disposal. A failed candidate leaves current intact;
    * failure to dispose the old environment after publication is logged without undoing the swap.
-   * @param {ProjectEnvironmentSettings} settings Configuration for the candidate environment.
-   * @param {ReadonlyMap<string, string>} overlays Absolute source paths to unsaved text, copied into the new index.
-   * @returns {Promise<ProjectEnvironmentState>} The published pair after previous-plugin cleanup.
+   * @param settings Configuration for the candidate environment.
+   * @param overlays Absolute source paths to unsaved text, copied into the new index.
+   * @returns The published pair after previous-plugin cleanup.
    * @throws {Error} Configuration, plugin loading, or initial indexing fails.
    */
   async replace(
@@ -275,8 +275,8 @@ export class ProjectEnvironmentController {
 
   /**
    * Creates a build session using the same plugin environment and target as current analysis.
-   * @param {Omit<AssemblerOptions, "environment" | "target" | "architecture" | "targetOptions">} options Per-build options; environment selection is owned by the controller.
-   * @returns {Assembler} A new session that the caller must dispose before replacing the environment.
+   * @param options Per-build options; environment selection is owned by the controller.
+   * @returns A new session that the caller must dispose before replacing the environment.
    * @throws {Error} There is no current environment or assembler initialization fails.
    */
   createAssembler(
@@ -298,7 +298,7 @@ export class ProjectEnvironmentController {
   /**
    * Clears current before awaiting plugin cleanup; repeated calls with no current state do nothing.
    * Callers must finish active builds and serialize this with replace.
-   * @returns {Promise<void>} Resolves after the active environment is disposed.
+   * @returns Resolves after the active environment is disposed.
    * @throws {Error} Plugin cleanup fails; current remains cleared.
    */
   async dispose(): Promise<void> {

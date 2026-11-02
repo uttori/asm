@@ -30,12 +30,12 @@ function assertRecord(value: unknown, label: string): asserts value is Record<st
  * A separate empty development extension supplies the test runner without replacing the installed
  * package. Reopening the profile checks startup after shutdown. Restricted mode uses a direct
  * launch because the upstream test harness always disables Workspace Trust.
- * @param {string} workspace Temporary synthetic workspace.
- * @param {string} tests Compiled Extension Host assertions.
- * @param {string} executable Editor executable, either cached or explicitly selected.
- * @param {string} editorVersion Actual runtime version read from the editor package.
- * @param {string} vsix Candidate archive to install without rebuilding it.
- * @returns {Promise<void>} Rejects on installation, assertion, or editor shutdown failure.
+ * @param workspace Temporary synthetic workspace.
+ * @param tests Compiled Extension Host assertions.
+ * @param executable Editor executable, either cached or explicitly selected.
+ * @param editorVersion Actual runtime version read from the editor package.
+ * @param vsix Candidate archive to install without rebuilding it.
+ * @returns Rejects on installation, assertion, or editor shutdown failure.
  */
 const testInstalledArchive = async (
   workspace: string,
@@ -230,8 +230,8 @@ const testInstalledArchive = async (
 /**
  * Checks the selected editor's exact API in addition to the development typings.
  * The temporary config never changes the developer's installed type package.
- * @param {string} executable Downloaded VS Code executable.
- * @returns {void} Throws with compiler diagnostics if its shipped API cannot type-check the extension.
+ * @param executable Downloaded VS Code executable.
+ * @returns Throws with compiler diagnostics if its shipped API cannot type-check the extension.
  */
 const checkEditorApi = (executable: string): void => {
   const root = process.cwd();
@@ -277,7 +277,7 @@ const checkEditorApi = (executable: string): void => {
  * The temporary workspace is intentionally outside the repository: the smoke test invokes a real
  * language-server build and must not leave a generated ROM or workspace settings in the checkout.
  * `@vscode/test-electron` retains only its downloadable editor cache under `.vscode-test/`.
- * @returns {Promise<void>} Promise settled after VS Code exits and the temporary workspace is gone.
+ * @returns Promise settled after VS Code exits and the temporary workspace is gone.
  */
 const main = async (): Promise<void> => {
   const root = process.cwd();

@@ -2,6 +2,7 @@ import * as path from "node:path";
 
 import type { EmulatorRuntimeBinding } from "../debug/session.js";
 
+/** Narrow launch configuration JSON to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -9,9 +10,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Reuses an unambiguous explicit live launch for the Run/Debug build commands.
  * Saved picker bindings still take precedence. Runtime verification occurs at launch.
- * @param {readonly unknown[]} configurations Workspace launch configurations.
- * @param {string} root Owning workspace folder.
- * @returns {EmulatorRuntimeBinding | undefined} One complete runtime, or no implicit selection.
+ * @param configurations Workspace launch configurations.
+ * @param root Owning workspace folder.
+ * @returns One complete runtime, or no implicit selection.
  */
 export const runtimeBindingFromLaunch = (
   configurations: readonly unknown[],

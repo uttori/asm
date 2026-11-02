@@ -1,89 +1,96 @@
 import * as path from "node:path";
 
 import {
+  commands,
   ConfigurationTarget,
+  debug,
   Uri,
   window,
   workspace,
   type WebviewView,
   type WebviewViewProvider,
 } from "vscode";
-import type { LanguageClient } from "vscode-languageclient/node";
+import { State, type LanguageClient } from "vscode-languageclient/node";
 
-/**
- * Explorer sidebar panel for Uttori Assembly project settings.
- * @see https://code.visualstudio.com/api/extension-guides/webview
- */
+import {
+  checkBuildCoverageFreshness,
+  readBuildCoverage,
+} from "../analysis/build-coverage.js";
+import { runtimeCapturePhase } from "../runtime/capture-state.js";
+import type { SourceController } from "../source/controller.js";
+import { sourceWorkflow } from "../source/workflow.js";
 import { renderWebviewTemplate } from "../webview-template.js";
+import {
+  buildHomeSnapshot,
+  type CatalogEntry,
+  type HomeIncomingFile,
+  type HomeSnapshot,
+  type HomeSourceInput,
+  type ProjectMetadata,
+  type ProjectStatus,
+} from "./home-model.js";
+
+export type { CatalogEntry, HomeSnapshot, ProjectMetadata, ProjectStatus } from "./home-model.js";
+
+/** Empty index/settings used until the language server is running. */
+export function fallbackProjectStatus(): ProjectStatus {
+  const config = workspace.getConfiguration("asm");
+  return {
+    fileCount: 0,
+    symbolCount: 0,
+    referenceCount: 0,
+    errorCount: 0,
+    lastReindexRootCount: 0,
+    lastReindexCachedRoots: 0,
+    lastReindexAnalyzedRoots: 0,
+    configFile: config.get<string>("configFile", ""),
+    target: config.get<string>("target", ""),
+    architecture: config.get<string>("architecture", ""),
+    buildOutput: config.get<string>("buildOutput", ""),
+    baseImage: config.get<string>("baseImage", ""),
+    entryPoints: config.get<string>("entryPoints", []),
+    includePaths: config.get<string>("includePaths", []),
+  };
+}
+
+/** Language-client stubs without a state still answer requests; Starting/Stopped clients do not. */
+function isLanguageClientReady(client: LanguageClient | undefined): client is LanguageClient {
+  return Boolean(client) && (client.state === undefined || client.state === State.Running);
+}
 
 /**
- * Language-server status snapshot for the settings panel, including index counts, last-reindex
- * milliseconds, and effective project settings.
+ * Sidebar Home webview: project identity, merged health, Next/Build, incoming diffs, recovery.
+ * Source identity hydrates from `.uttori/project.json` and the Git session, never from LSP-only settings.
  */
-export type ProjectStatus = {
-  fileCount: number;
-  symbolCount: number;
-  referenceCount: number;
-  errorCount: number;
-  lastReindexDurationMs?: number;
-  lastReindexRootCount: number;
-  lastReindexCachedRoots: number;
-  lastReindexAnalyzedRoots: number;
-  configFile?: string;
-  target?: string;
-  architecture?: string;
-  buildOutput?: string;
-  baseImage?: string;
-  entryPoints: readonly string[];
-  includePaths: readonly string[];
-};
-
-/**
- * Target or architecture catalog option supplied by the language server; target entries may
- * advertise architecture/output defaults.
- */
-export type CatalogEntry = {
-  id: string;
-  displayName?: string;
-  aliases?: string[];
-  defaultArchitecture?: string;
-  defaultOutputExtension?: string;
-};
-
-/**
- * Available target/architecture catalogs and active IDs used to populate and validate panel
- * selections.
- */
-export type ProjectMetadata = {
-  activeTarget: string;
-  activeArchitecture: string;
-  targets: CatalogEntry[];
-  architectures: CatalogEntry[];
-};
-
-/**
- * Webview view that edits `asm.*` settings. Index facts are displayed by the native Index Details view.
- * @see https://code.visualstudio.com/api/references/vscode-api#WebviewViewProvider
- * @see https://code.visualstudio.com/api/references/vscode-api#WorkspaceConfiguration.update
- * @see https://code.visualstudio.com/api/extension-guides/webview#scripts-and-message-passing
- */
-export class ProjectPanelProvider implements WebviewViewProvider {
-  static readonly viewId = "uttori-asm.projectPanel";
+export class HomeProvider implements WebviewViewProvider {
+  /** View ID contributed in the extension manifest. */
+  static readonly viewId = "uttori-asm.home";
 
   #view?: WebviewView;
   #metadata?: ProjectMetadata;
   #snapshotRequest = 0;
+  #last?: HomeSnapshot;
   readonly #pending = new Set<string>();
 
   constructor(
     private readonly extensionUri: Uri,
     private readonly getClient: () => LanguageClient | undefined,
     private readonly initConfig: () => Promise<void>,
+    private readonly options: {
+      getSource?: () => SourceController | undefined;
+      getWatch?: () => boolean;
+      onSnapshot?: (snapshot: HomeSnapshot) => void;
+    } = {},
   ) {}
+
+  /** Most recently published Home snapshot; used by the status bar and Next command. */
+  get lastSnapshot(): HomeSnapshot | undefined {
+    return this.#last;
+  }
 
   /**
    * Called when the view becomes visible.
-   * @param {WebviewView} webviewView The hosted webview.
+   * @param webviewView The hosted webview.
    */
   resolveWebviewView(webviewView: WebviewView): void {
     this.#view = webviewView;
@@ -94,7 +101,7 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     webviewView.webview.html = renderWebviewTemplate(
       webviewView.webview,
       this.extensionUri,
-      "panel",
+      "home",
     );
     webviewView.webview.onDidReceiveMessage((message: unknown) => {
       void this.onMessage(message);
@@ -108,33 +115,33 @@ export class ProjectPanelProvider implements WebviewViewProvider {
   }
 
   /**
-   * Pushes a fresh status snapshot to the webview.
+   * Pushes a fresh Home snapshot to the webview and context keys.
    */
   async refresh(): Promise<void> {
-    if (!this.#view) {
-      return;
-    }
     const request = ++this.#snapshotRequest;
     const snapshot = await this.snapshot();
     if (request !== this.#snapshotRequest) {
       return;
     }
+    this.#last = snapshot;
     this.#metadata = snapshot.metadata;
+    this.options.onSnapshot?.(snapshot);
+    await publishHomeContext(snapshot);
+    if (!this.#view) {
+      return;
+    }
     void this.#view.webview.postMessage({
       type: "snapshot",
       ...snapshot,
-      trusted: workspace.isTrusted,
     });
   }
 
   /**
    * Handles messages from the webview.
-   * @param {Object} message The message object.
-   * @param {string} message.type The type of message.
-   * @param {unknown} message.value The value of the message.
+   * @param message The message object.
    */
   async onMessage(message: unknown): Promise<void> {
-    if (!isPanelMessage(message) || this.#pending.has(message.type)) {
+    if (!isHomeMessage(message) || this.#pending.has(message.type)) {
       return;
     }
     this.#pending.add(message.type);
@@ -155,14 +162,42 @@ export class ProjectPanelProvider implements WebviewViewProvider {
 
   /**
    * Executes a message.
-   * @param {Object} message The message object.
-   * @param {string} message.type The type of message.
-   * @param {unknown} message.value The value of the message.
+   * @param message The message object.
    */
-  private async executeMessage(message: { type: string; value?: unknown }): Promise<void> {
+  private async executeMessage(message: {
+    type: string;
+    value?: unknown;
+    command?: string;
+    args?: unknown[];
+    left?: string;
+    right?: string;
+    title?: string;
+  }): Promise<void> {
     switch (message.type) {
       case "ready":
         await this.refresh();
+        return;
+      case "command":
+        if (typeof message.command === "string") {
+          await commands.executeCommand(message.command, ...(message.args ?? []));
+        }
+        await this.refresh();
+        return;
+      case "diff":
+        if (typeof message.left === "string" && typeof message.right === "string") {
+          await commands.executeCommand(
+            "asm.source.diff",
+            Uri.parse(message.left),
+            Uri.parse(message.right),
+            typeof message.title === "string" ? message.title : "Incoming",
+          );
+        }
+        return;
+      case "overflow":
+        await this.showOverflow();
+        return;
+      case "openConfig":
+        await this.openConfiguration();
         return;
       case "addEntryPoint":
         await this.addPath("entryPoints", false);
@@ -190,66 +225,141 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     }
   }
 
-  /** Opens the effective project configuration, initializing the default file when none is configured. */
+  /** Opens the project identity file: `.uttori/project.json` or `uttori-asm.config.json`. */
   async openConfiguration(): Promise<void> {
-    const { status } = await this.snapshot();
-    const root = workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (root && status.configFile) {
-      await window.showTextDocument(Uri.file(path.resolve(root, status.configFile)));
+    const snapshot = this.#last ?? (await this.snapshot());
+    const source = this.options.getSource?.();
+    if (snapshot.mode === "source" && source?.root) {
+      await window.showTextDocument(Uri.file(path.join(source.root, ".uttori/project.json")));
       return;
     }
-    // Initialization preserves an existing default file and derives missing settings from the host.
-    if (!status.configFile) {
+    const root = workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (root && snapshot.status.configFile) {
+      await window.showTextDocument(Uri.file(path.resolve(root, snapshot.status.configFile)));
+      return;
+    }
+    if (!snapshot.status.configFile) {
       await this.initConfig();
       await this.refresh();
     }
   }
 
+  /** Run the legal Next command from the last snapshot. */
+  async runNext(): Promise<void> {
+    const next = (this.#last ?? (await this.snapshot())).next;
+    if (!next) {
+      return;
+    }
+    await commands.executeCommand(next.command);
+    await this.refresh();
+  }
+
   /**
-   * Takes a snapshot of the project status and metadata.
-   * @returns {Promise<{ status: ProjectStatus; metadata?: ProjectMetadata; indexReady: boolean }>} A promise that resolves with the snapshot.
+   * Compose Home from the source session, coverage on disk, and optional running language server.
    */
-  async snapshot(): Promise<{
-    status: ProjectStatus;
-    metadata?: ProjectMetadata;
-    indexReady: boolean;
-  }> {
-    const config = workspace.getConfiguration("asm");
-    const fallback: ProjectStatus = {
-      fileCount: 0,
-      symbolCount: 0,
-      referenceCount: 0,
-      errorCount: 0,
-      lastReindexRootCount: 0,
-      lastReindexCachedRoots: 0,
-      lastReindexAnalyzedRoots: 0,
-      configFile: config.get<string>("configFile", ""),
-      target: config.get<string>("target", ""),
-      architecture: config.get<string>("architecture", ""),
-      buildOutput: config.get<string>("buildOutput", ""),
-      baseImage: config.get<string>("baseImage", ""),
-      entryPoints: config.get<string[]>("entryPoints", []),
-      includePaths: config.get<string[]>("includePaths", []),
-    };
+  async snapshot(): Promise<HomeSnapshot> {
+    const fallback = fallbackProjectStatus();
+    let status = fallback;
+    let metadata = this.#metadata;
+    let indexReady = false;
     const client = this.getClient();
-    if (!client) {
-      return { status: fallback, indexReady: false };
+    if (isLanguageClientReady(client)) {
+      try {
+        const [lspStatus, lspMetadata] = await Promise.all([
+          client.sendRequest<ProjectStatus>("asm/status"),
+          client.sendRequest<ProjectMetadata>("asm/projectMetadata"),
+        ]);
+        status = { ...fallback, ...lspStatus };
+        metadata = lspMetadata;
+        indexReady = true;
+      } catch {
+        status = fallback;
+        indexReady = false;
+      }
     }
-    try {
-      const [status, metadata] = await Promise.all([
-        client.sendRequest<ProjectStatus>("asm/status"),
-        client.sendRequest<ProjectMetadata>("asm/projectMetadata"),
-      ]);
-      return { status: { ...fallback, ...status }, metadata, indexReady: true };
-    } catch {
-      return { status: fallback, indexReady: false };
+    const source = this.options.getSource?.();
+    return buildHomeSnapshot({
+      trusted: workspace.isTrusted,
+      watch: this.options.getWatch?.() ?? false,
+      workspaceName: workspace.name,
+      status,
+      metadata,
+      indexReady,
+      source: source ? await this.sourceInput(source) : undefined,
+    });
+  }
+
+  private async sourceInput(source: SourceController): Promise<HomeSourceInput | undefined> {
+    const root = source.root;
+    if (!root) {
+      return undefined;
     }
+    const unsaved =
+      source.buffers().length > 0 ||
+      source.binaryBuffers().length > 0 ||
+      source.opaqueBinaryBuffers().length > 0;
+    const previewed =
+      source.session.preview?.candidate === source.session.candidate &&
+      Boolean(source.session.candidate);
+    const workflow = sourceWorkflow({
+      ...source.session.status,
+      busy: source.session.busy,
+      conflicts: source.session.status?.conflicts.length,
+      candidate: Boolean(source.session.candidate),
+      previewed,
+      dirty: (source.session.status?.dirty ?? false) || unsaved,
+      unsaved,
+    });
+    return {
+      root,
+      name: source.session.configuration?.id || path.basename(root),
+      branch: source.session.branch,
+      dirty: (source.session.status?.dirty ?? false) || unsaved,
+      target: source.session.configuration?.target ?? "",
+      candidate: source.session.candidate,
+      previewed,
+      busy: source.session.busy,
+      phase: source.session.status?.phase,
+      workflow,
+      incoming: incomingFiles(source),
+      capturePhase: runtimeCapturePhase(),
+      debugging: debug.activeDebugSession?.type === "uttori-asm",
+      buildDescription: source.session.build
+        ? source.session.buildStale
+          ? "source changed"
+          : "verified"
+        : undefined,
+      coverage: await sourceCoverage(root, source.session.buildStale),
+    };
+  }
+
+  private async showOverflow(): Promise<void> {
+    const mode = this.#last?.mode ?? "none";
+    const picked = await window.showQuickPick(
+      [
+        { label: "Select source project", command: "asm.source.select" },
+        { label: "Create Git source project", command: "asm.source.init" },
+        {
+          label: mode === "source" ? "Open .uttori/project.json" : "Open project configuration",
+          command: "openConfig",
+        },
+      ],
+      { title: "Uttori Home" },
+    );
+    if (!picked) {
+      return;
+    }
+    if (picked.command === "openConfig") {
+      await this.openConfiguration();
+      return;
+    }
+    await commands.executeCommand(picked.command);
   }
 
   /**
    * Adds a path to the project.
-   * @param {string} key The key of the path to add.
-   * @param {boolean} folders Whether to add folders.
+   * @param key The key of the path to add.
+   * @param folders Whether to add folders.
    */
   async addPath(key: "entryPoints" | "includePaths", folders: boolean): Promise<void> {
     const picked = await window.showOpenDialog({
@@ -266,7 +376,6 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     for (const uri of picked) {
       const folder = workspace.workspaceFolders?.[0];
       const relative = folder ? path.relative(folder.uri.fsPath, uri.fsPath) : undefined;
-      // Keep absolute paths for selections outside the first workspace folder or at its root.
       const value = relative && !relative.startsWith("..") ? relative : uri.fsPath;
       if (!next.includes(value)) {
         next.push(value);
@@ -277,8 +386,8 @@ export class ProjectPanelProvider implements WebviewViewProvider {
 
   /**
    * Removes a path from the project.
-   * @param {string} key The key of the path to remove.
-   * @param {string} value The value of the path to remove.
+   * @param key The key of the path to remove.
+   * @param value The value of the path to remove.
    */
   async removePath(key: "entryPoints" | "includePaths", value: string): Promise<void> {
     const current = workspace.getConfiguration("asm").get<string[]>(key, []);
@@ -291,11 +400,11 @@ export class ProjectPanelProvider implements WebviewViewProvider {
   /**
    * Writes the selected target and resets architecture (and output extension)
    * so the previous target's values cannot fail validation.
-   * @param {string} targetId Canonical target contribution ID.
+   * @param targetId Canonical target contribution ID.
    */
   async setTarget(targetId: string): Promise<void> {
     const config = workspace.getConfiguration("asm");
-    const target = this.#metadata?.targets.find((entry) => entry.id === targetId);
+    const target = this.#metadata?.targets.find((entry: CatalogEntry) => entry.id === targetId);
     await config.update("target", targetId, ConfigurationTarget.Workspace);
     if (target?.defaultArchitecture) {
       await config.update(
@@ -321,8 +430,8 @@ export class ProjectPanelProvider implements WebviewViewProvider {
 
   /**
    * Updates a setting in the project.
-   * @param {string} key The key of the setting to update.
-   * @param {unknown} value The value of the setting to update.
+   * @param key The key of the setting to update.
+   * @param value The value of the setting to update.
    */
   async updateSetting(key: string, value: unknown): Promise<void> {
     await workspace.getConfiguration("asm").update(key, value, ConfigurationTarget.Workspace);
@@ -330,8 +439,82 @@ export class ProjectPanelProvider implements WebviewViewProvider {
   }
 }
 
+/** @deprecated Use HomeProvider; retained for tests that still import the previous name. */
+export { HomeProvider as ProjectPanelProvider };
+
+async function publishHomeContext(snapshot: HomeSnapshot): Promise<void> {
+  await Promise.all([
+    commands.executeCommand("setContext", "uttori.projectMode", snapshot.mode),
+    commands.executeCommand("setContext", "uttori.sourcePhase", snapshot.sourcePhase),
+    commands.executeCommand("setContext", "uttori.nextCommand", snapshot.next?.command ?? ""),
+    commands.executeCommand("setContext", "uttori.canAbort", snapshot.canAbort),
+    commands.executeCommand("setContext", "uttori.canDiscard", snapshot.canDiscard),
+  ]);
+}
+
+function incomingFiles(source: SourceController): HomeIncomingFile[] {
+  return source.session.incoming.flatMap((row) => {
+    const args = row.command?.arguments;
+    if (!Array.isArray(args) || args.length < 2) {
+      return [];
+    }
+    const left = args[0];
+    const right = args[1];
+    const title = typeof args[2] === "string" ? args[2] : String(row.label);
+    return [
+      {
+        path: String(row.label),
+        status: typeof row.description === "string" ? row.description : "M",
+        conflict: row.description === "predicted conflict",
+        additions: row.additions,
+        deletions: row.deletions,
+        left: uriString(left),
+        right: uriString(right),
+        title,
+      },
+    ];
+  });
+}
+
+function uriString(value: unknown): string {
+  if (value instanceof Uri) {
+    return value.toString();
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value && typeof value === "object" && "toString" in value) {
+    return String(value.toString());
+  }
+  return "";
+}
+
+async function sourceCoverage(
+  root: string,
+  staleBuild: boolean,
+): Promise<HomeSourceInput["coverage"]> {
+  try {
+    const snapshot = await readBuildCoverage(root);
+    if (!snapshot) {
+      return undefined;
+    }
+    const freshness = await checkBuildCoverageFreshness(root, snapshot.summary);
+    return { summary: snapshot.summary, freshness, staleBuild };
+  } catch {
+    return undefined;
+  }
+}
+
 /** Webview posts are untrusted. Ignore anything that is not an object with a string type. */
-function isPanelMessage(value: unknown): value is { type: string; value?: unknown } {
+function isHomeMessage(value: unknown): value is {
+  type: string;
+  value?: unknown;
+  command?: string;
+  args?: unknown[];
+  left?: string;
+  right?: string;
+  title?: string;
+} {
   return (
     typeof value === "object" && value !== null && "type" in value && typeof value.type === "string"
   );
@@ -340,8 +523,8 @@ function isPanelMessage(value: unknown): value is { type: string; value?: unknow
 /**
  * Accept string-valued webview fields without coercion, using an empty string for malformed or
  * absent values.
- * @param {unknown} value Untrusted panel field value.
- * @returns {string} Original string or empty text for all other inputs.
+ * @param value Untrusted panel field value.
+ * @returns Original string or empty text for all other inputs.
  */
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";

@@ -38,12 +38,15 @@ export class PngCodec {
       });
     });
   }
+  /** Decode PNG bytes into an indexed image in a short-lived worker. */
   decode(bytes: Uint8Array): Promise<IndexedImage> {
     return this.run(bytes);
   }
+  /** Rewrite palette indexes into PNG bytes in a short-lived worker. */
   encode(bytes: Uint8Array, indexes: Uint8Array): Promise<Uint8Array> {
     return this.run(bytes, indexes);
   }
+  /** Terminate outstanding conversion workers when the editor closes. */
   dispose(): void {
     this.#disposed = true;
     for (const worker of this.#workers) {

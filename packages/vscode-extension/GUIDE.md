@@ -54,17 +54,15 @@ by saving and committing or moving them before Apply. Apply uses a native merge;
 resolve conflicts with Source Control or Merge Editor, stage them, then validate and finish.
 An intentional edited ROM need not equal the original; the incoming pure generation must.
 
-## Analysis Coverage
+## Home health
 
-The **Analysis Coverage** view discovers up to 32 native `analysis.json` projects in the workspace, or reads the project selected by `asm.analysisProject`. Discovery reads only manifests. Expanding a project validates native metadata and builds projections in background Node processes using the project's `asm.analysis.maxMemoryMiB` budget (default 4096 MiB). A fatal heap error is isolated from the extension host. SQLite selects and pages the required records. Summaries and at most 200 rows per page cross back to the UI. Sources are expanded lazily, and inline annotations request only visible source lines. Requests within each process run one at a time. Reads have a 60-second execution timeout, excluding time queued behind another view. A failed process reports the operation and memory budget and can be retried by refreshing the view. Summary groups report exclusive classified/unknown/conflict totals, overlapping opcode / operand / data / asset classifications.
+**Home** merges index readiness with original-ROM conversion progress for the selected Git source project. Conversion totals come from the compact summary written by **Build Current Source**. Home discovers no analysis databases; **Sources** still discovers up to 32 native `analysis.json` projects, or reads the project selected by `asm.analysisProject`. Discovery reads only manifests. Expanding a project validates native metadata and builds projections in background Node processes using the project's `asm.analysis.maxMemoryMiB` budget (default 4096 MiB). A fatal heap error is isolated from the extension host. SQLite selects and pages the required records. Summaries and at most 200 rows per page cross back to the UI. Sources are expanded lazily, and inline annotations request only visible source lines. Requests within each process run one at a time. Reads have a 60-second execution timeout, excluding time queued behind another view. A failed process reports the operation and memory budget and can be retried by refreshing the view.
 
-Expand **Summary → Conflict** to inspect conflicting ROM ranges. Each range provides **Explain conflicting evidence**, **Classify range**, **Set CPU state / entry point**, and **Resolve control-flow target** actions. Conflict pages contain at most 200 ranges; actions retain their exact interval and evidence IDs.
-
-Coverage actions open tracked research declarations for the selected source project. The selected
-project's local evidence binding also drives Coverage and Sources in worktrees. SQLite imports and
+Coverage and research actions open tracked research declarations for the selected source project. The selected
+project's local evidence binding also drives Home conversion totals and Sources in worktrees. SQLite imports and
 research projections remain transactional; authored changes live in Git files, not database undo history.
 
-The native **Index Details** view reports index readiness, files, symbols, references, current errors, reindex time, and root-cache counts. Click **Errors** to open Problems. Counts include assembly and configuration errors and update with language-server notifications.
+Home Health reports index readiness, files, symbols, references, current errors, and last reindex duration. Click errors to open Problems. Counts include assembly and configuration errors and update with language-server notifications. Source identity hydrates from `.uttori/project.json` even when the language server is still starting.
 
 ## Sources navigation
 

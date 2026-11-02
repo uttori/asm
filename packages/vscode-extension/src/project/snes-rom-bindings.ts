@@ -31,9 +31,9 @@ const MAX_ROM_BINDINGS = 32;
 
 /**
  * Keeps `keepKey` and the newest remaining bindings, up to the stored cap.
- * @param {Record<string, RomBinding>} bindings All bindings including the just-written entry.
- * @param {string} keepKey Content identity that must be retained.
- * @returns {Record<string, RomBinding>} Bindings with at most 32 entries.
+ * @param bindings All bindings including the just-written entry.
+ * @param keepKey Content identity that must be retained.
+ * @returns Bindings with at most 32 entries.
  */
 const capRomBindings = (
   bindings: Record<string, RomBinding>,
@@ -54,9 +54,9 @@ const capRomBindings = (
 
 /**
  * Returns the most recently remembered local ROM path for one content identity.
- * @param {ExtensionContext} context Extension machine-local storage.
- * @param {string} contentSha256 Headerless ROM content identity.
- * @returns {string | undefined} Remembered absolute path, when present.
+ * @param context Extension machine-local storage.
+ * @param contentSha256 Headerless ROM content identity.
+ * @returns Remembered absolute path, when present.
  * @see https://code.visualstudio.com/api/references/vscode-api#ExtensionContext.globalState
  * @see https://code.visualstudio.com/api/references/vscode-api#Memento
  */
@@ -68,10 +68,10 @@ export const rememberedSnesRom = (
 
 /**
  * Stores a bounded content-addressed ROM binding for later analysis/regeneration commands.
- * @param {ExtensionContext} context Extension machine-local storage.
- * @param {RomIdentity} identity Validated ROM file/content identity.
- * @param {string} romFile Local ROM path.
- * @returns {Promise<void>} Completion after extension storage is updated.
+ * @param context Extension machine-local storage.
+ * @param identity Validated ROM file/content identity.
+ * @param romFile Local ROM path.
+ * @returns Completion after extension storage is updated.
  * @see https://code.visualstudio.com/api/references/vscode-api#ExtensionContext.globalState
  * @see https://code.visualstudio.com/api/references/vscode-api#Memento
  */

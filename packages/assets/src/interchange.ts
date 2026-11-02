@@ -22,9 +22,13 @@ const VIEW = "uttori-view:",
 
 /** Advertised support is the intersection of codec, adapter and host policy, never imported metadata. */
 export interface InterchangeCapabilities {
+  /** Whether native pixel buffers may change under policy. */
   readonly pixelEdits: boolean;
+  /** Whether editable palette slots may change color in place. */
   readonly paletteEdits: boolean;
+  /** Whether tilemap references are part of the interchange surface. */
   readonly tileReferences: boolean;
+  /** Whether timeline preview metadata is available to the host. */
   readonly previewTimeline: boolean;
 }
 
@@ -45,10 +49,15 @@ export function interchangeCapabilities(
 
 /** Trusted tilemap presentation and logical authority. Imported IDs only resolve into these fixed inventories. */
 export interface TilemapInterchangeBaseline {
+  /** Baseline discriminator for tilemap interchange. */
   readonly kind: "tilemap";
+  /** Decoded editor document trusted by the host baseline. */
   readonly document: AsepriteDocument;
+  /** Fixed native owner and view inventories for reconciliation. */
   readonly ownership: IndexedOwnership;
+  /** Palette slots whose colors edits may apply. */
   readonly editablePaletteSlots: readonly number[];
+  /** Intersected capability profile for this baseline. */
   readonly capabilities: InterchangeCapabilities;
   /** Native cell transform vocabulary, supplied by the game adapter. */
   readonly nativeTransforms: readonly ("flipX" | "flipY" | "diagonal")[];
@@ -56,7 +65,9 @@ export interface TilemapInterchangeBaseline {
 
 /** Pure native deltas. Occurrences, timing and file storage never become source edit authority. */
 export interface InterchangeChanges {
+  /** Reconciled native owner index replacements. */
   readonly pixels: readonly IndexedOwnerChange[];
+  /** Same-slot palette color deltas within editable slots. */
   readonly colors: readonly { readonly index: number; readonly color: IndexedColor }[];
 }
 
@@ -149,6 +160,7 @@ function roles(document: AsepriteDocument): Map<string, number> {
   return result;
 }
 
+/** Resolved cel payload after expanding linked timeline references. */
 type Payload = Exclude<AsepriteCel, { kind: "linked" }>;
 
 /** Cell semantics are view ID plus orientation; numeric storage IDs may be bijectively reordered. */

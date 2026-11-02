@@ -29,9 +29,6 @@ export function assertTypedSnes<T>(assembler: Assembler, run: () => T): T {
       continue;
     }
     const typed = definition.encoder.typed;
-    if (!typed) {
-      throw new Error("SNES registration did not install a typed encoder.");
-    }
     const prepare = typed.prepare;
     const estimate = typed.estimate;
     const encode = typed.encode;

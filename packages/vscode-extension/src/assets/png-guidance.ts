@@ -6,10 +6,15 @@ import { validateFrameLayout } from "@uttori/asm-assets/secret-of-mana/som-frame
 
 /** Canonical pixel rectangle consumed by a native tile recipe; other atlas pixels are presentation. */
 export interface PngEditRegion {
+  /** Left edge of the editable native tile rectangle. */
   readonly x: number;
+  /** Top edge of the editable native tile rectangle. */
   readonly y: number;
+  /** Width of the editable native tile rectangle. */
   readonly width: number;
+  /** Height of the editable native tile rectangle. */
   readonly height: number;
+  /** Human label describing the region purpose. */
   readonly label: string;
   /** First of sixteen native palette slots. Global slot zero also represents transparency. */
   readonly paletteStart: number;
@@ -19,13 +24,18 @@ export interface PngEditRegion {
 
 /** Sidecar identity is pinned for a document lifetime so stale geometry cannot silently redirect paint. */
 export interface PngGuidance {
+  /** Absolute path to the guidance sidecar file. */
   readonly file: string;
+  /** SHA-256 of the guidance JSON bytes pinned for this document. */
   readonly sha256: string;
+  /** Canonical editable regions derived from the sidecar. */
   readonly regions: readonly PngEditRegion[];
 }
 
+/** Hash sidecar bytes to detect external replacement. */
 const hash = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
+/** Extract a Node filesystem error code when present. */
 function errorCode(error: unknown): string | undefined {
   return error instanceof Error && "code" in error && typeof error.code === "string"
     ? error.code

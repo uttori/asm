@@ -245,20 +245,26 @@ export function analyzeNesProject(options: {
   records.push(
     ...result.edges
       .filter((edge) => result.nodes.some((node) => node.id === edge.from))
-      .map((edge): AnalysisRecord => ({
-        id: `nes:${edge.id}`,
-        kind: "cfg-edge",
-        addressSpace: "nes.cpu",
-        from: `nes:${edge.from}`,
-        fromAddress: edge.fromAddress,
-        ...(edge.to && result.nodes.some((node) => node.id === edge.to)
-          ? { to: `nes:${edge.to}` }
-          : {}),
-        toAddress: edge.toAddress,
-        edgeKind: edge.kind,
-        indirect: edge.indirect,
-        evidence: [...new Set([evidence.id, ...edge.evidence])],
-      })),
+      .map((edge): AnalysisRecord =>
+        Object.assign(
+          {
+            id: `nes:${edge.id}`,
+            kind: "cfg-edge" as const,
+            addressSpace: "nes.cpu",
+            from: `nes:${edge.from}`,
+            fromAddress: edge.fromAddress,
+          },
+          edge.to && result.nodes.some((node) => node.id === edge.to)
+            ? { to: `nes:${edge.to}` }
+            : {},
+          {
+            toAddress: edge.toAddress,
+            edgeKind: edge.kind,
+            indirect: edge.indirect,
+            evidence: [...new Set([evidence.id, ...edge.evidence])],
+          },
+        ),
+      ),
   );
   records.push(
     ...result.functions.map((fn): AnalysisRecord => ({
@@ -369,12 +375,11 @@ export function analyzeNesProject(options: {
       (candidate) =>
         candidate.fileOffset <= range.start && candidate.fileOffset + candidate.size > range.start,
     )!;
-    return {
-      ...range,
+    return Object.assign({}, range, {
       addressSpace: "nes.cpu",
       address: node.address,
       recordIds: [`nes:${node.id}`],
-    };
+    });
   });
   return {
     status: result.status,

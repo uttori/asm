@@ -9,9 +9,13 @@ import { type SourceBuildCoverage, type SourceBuildSummary } from "./build-cover
 
 /** Target validation produces this identity before publication; paths name one immutable build pair. */
 export interface SourceBuildReceipt {
+  /** Optional coverage totals, also projected into the advisory `summary.json`. */
   readonly coverage?: SourceBuildCoverage;
+  /** Lowercase SHA-256 of the build inputs; names the content-addressed build directory. */
   readonly inputSha256: string;
+  /** Binary path; must be a plain filename directly inside `<directory>/<inputSha256>/`. */
   readonly outputFile: string;
+  /** Debug map path; must equal `${outputFile}.debug.json`. */
   readonly debugMapFile: string;
 }
 

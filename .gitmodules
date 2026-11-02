@@ -19,3 +19,4 @@
 [submodule "fixtures/external/ares"]
 	path = fixtures/external/ares
 	url = https://github.com/uttori/ares.git
+	branch = ares-integration

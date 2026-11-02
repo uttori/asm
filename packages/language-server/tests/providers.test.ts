@@ -210,15 +210,14 @@ test("typed operand occurrences retain repeated ranges through worker snapshots 
       pathToUri(occurrenceFile)
     ] ?? [];
   t.is(changes.length, 4);
+  const lines = text.split("\n");
   t.true(
     changes.every(
       (change) =>
-        text
-          .split("\n")
-          [change.range.start.line].slice(
-            change.range.start.character,
-            change.range.end.character,
-          ) === "Target",
+        lines[change.range.start.line].slice(
+          change.range.start.character,
+          change.range.end.character,
+        ) === "Target",
     ),
   );
   t.false(

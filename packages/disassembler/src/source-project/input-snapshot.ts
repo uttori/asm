@@ -43,6 +43,7 @@ export function createSourceInputSnapshot(
   };
 }
 
+/** Narrow parsed snapshot JSON to a plain object record. */
 function isSnapshotRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

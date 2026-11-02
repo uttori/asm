@@ -55,8 +55,8 @@ function isFuzzTraceArtifact(
 /**
  * Captures an untrusted-boundary result while enforcing the public rule that rejections are Errors.
  * @template T
- * @param {() => T} operation Boundary invocation.
- * @returns {{ ok: true; value: T } | { ok: false; error: Error }} Accepted result or explicit error.
+ * @param operation Boundary invocation.
+ * @returns Accepted result or explicit error.
  */
 const capture = <T>(operation: () => T): { ok: true; value: T } | { ok: false; error: Error } => {
   try {
@@ -71,9 +71,9 @@ const capture = <T>(operation: () => T): { ok: true; value: T } | { ok: false; e
 
 /**
  * Checks invariants common to all architecture-neutral decoder results.
- * @param {ArchitectureDecodeResult} result Decoder output.
- * @param {Uint8Array} bytes Complete source bytes.
- * @param {number} offset Requested source offset.
+ * @param result Decoder output.
+ * @param bytes Complete source bytes.
+ * @param offset Requested source offset.
  */
 const assertDecodeContract = (
   result: ArchitectureDecodeResult,

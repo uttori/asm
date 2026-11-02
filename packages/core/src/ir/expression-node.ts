@@ -10,12 +10,14 @@ import {
   type ExpressionParseSite,
 } from "./expression-parse-state.js";
 
+/** Fields shared by every expression node variant. */
 type ExpressionNodeBase = {
   span?: SourceSpan;
   /** Explicit grouping is a rounding boundary even when the group has one literal. */
   parenthesized?: boolean;
 };
 
+/** Parsed assembler expression; `type` discriminates every variant. */
 export type ExpressionNode =
   | IdentifierExpressionNode
   | LiteralExpressionNode
@@ -33,11 +35,13 @@ export type ExpressionNode =
   | ErrorExpressionNode
   | RawExpressionNode;
 
+/** Bare or dot-prefixed symbol name, including local `.name` spellings. */
 export type IdentifierExpressionNode = ExpressionNodeBase & {
   type: "identifier";
   name: string;
 };
 
+/** Numeric literal kept in its lexical spelling. */
 export type LiteralExpressionNode = ExpressionNodeBase & {
   type: "literal";
   value: string;
@@ -45,12 +49,14 @@ export type LiteralExpressionNode = ExpressionNodeBase & {
   numericValue?: number;
 };
 
+/** Quoted string literal; `value` excludes the delimiters. */
 export type StringExpressionNode = ExpressionNodeBase & {
   type: "string";
   value: string;
   quote: '"' | "'";
 };
 
+/** `!name` or `!{content}` define reference left unexpanded; `name` is set when unbraced, `content` when braced. */
 export type DefineReferenceExpressionNode = ExpressionNodeBase & {
   type: "defineReference";
   name?: string;
@@ -58,6 +64,7 @@ export type DefineReferenceExpressionNode = ExpressionNodeBase & {
   braced: boolean;
 };
 
+/** Expression forms that name a symbol and can be rendered as a lookup key. */
 export type ReferenceExpressionNode =
   | IdentifierExpressionNode
   | RelativeReferenceExpressionNode
@@ -65,32 +72,38 @@ export type ReferenceExpressionNode =
   | MemberExpressionNode
   | IndexExpressionNode;
 
+/** `object.property` access on a reference. */
 export type MemberExpressionNode = ExpressionNodeBase & {
   type: "member";
   object: ReferenceExpressionNode;
   property: IdentifierExpressionNode;
 };
 
+/** `object[index]` access on a reference; the index is evaluated numerically. */
 export type IndexExpressionNode = ExpressionNodeBase & {
   type: "index";
   object: ReferenceExpressionNode;
   index: ExpressionNode;
 };
 
+/** Function call; only bare identifiers can be called. */
 export type CallExpressionNode = ExpressionNodeBase & {
   type: "call";
   callee: IdentifierExpressionNode;
   arguments: ExpressionNode[];
 };
 
+/** Prefix operators, including byte-select (`<`, `>`, `^`) and `<:` bank forms. */
 export type UnaryOperator = "<:" | "<" | ">" | "^" | "~" | "-" | "+";
 
+/** Prefix operator applied to one operand. */
 export type UnaryExpressionNode = ExpressionNodeBase & {
   type: "unary";
   operator: UnaryOperator;
   argument: ExpressionNode;
 };
 
+/** Infix operators; precedence is defined by `binaryPrecedence`. */
 export type BinaryOperator =
   | "**"
   | "*"
@@ -113,6 +126,7 @@ export type BinaryOperator =
   | "&&"
   | "||";
 
+/** Infix operation; chains are left-associative at equal precedence. */
 export type BinaryExpressionNode = ExpressionNodeBase & {
   type: "binary";
   operator: BinaryOperator;
@@ -120,6 +134,7 @@ export type BinaryExpressionNode = ExpressionNodeBase & {
   right: ExpressionNode;
 };
 
+/** `start..end` range used by `for` headers and `incbin` slices. */
 export type RangeExpressionNode = ExpressionNodeBase & {
   type: "range";
   start: ExpressionNode;
@@ -162,6 +177,7 @@ export type ErrorExpressionNode = ExpressionNodeBase & {
   code?: "MATH_INVALID_INPUT" | "MATH_MISMATCHED_PARENTHESES";
 };
 
+/** Unparsed expression text; must be parsed before evaluation and is never executable. */
 export type RawExpressionNode = ExpressionNodeBase & {
   type: "raw";
   value: string;
@@ -169,9 +185,9 @@ export type RawExpressionNode = ExpressionNodeBase & {
 
 /**
  * Ensures the root expression node keeps at least a coarse span.
- * @param {ExpressionNode} node The parsed expression node.
- * @param {string} text The source text that produced the node.
- * @returns {ExpressionNode} The same node with a root span.
+ * @param node The parsed expression node.
+ * @param text The source text that produced the node.
+ * @returns The same node with a root span.
  */
 function attachRootSpan(
   node: ExpressionNode,
@@ -192,8 +208,8 @@ function attachRootSpan(
 
 /**
  * Parses portable expression syntax without resolving values or activating diagnostics.
- * @param {string} input The expression source text.
- * @returns {ExpressionNode} The parsed expression node.
+ * @param input The expression source text.
+ * @returns The parsed expression node.
  */
 export function parseExpressionNode(input: string, source?: ExpressionSource): ExpressionNode {
   return parseExpressionAtSite(input, "public", source);
@@ -209,7 +225,12 @@ export function parseExpressionAtSite(
 }
 
 /** Internal outcome separates grammar coverage from legacy acceptance and evaluation errors. */
-export type ExpressionParseResult = { node: ExpressionNode; outcome: ExpressionParseOutcome };
+export type ExpressionParseResult = {
+  /** Parsed node, or a diagnostic/template node when the input is not fully native grammar. */
+  node: ExpressionNode;
+  /** Grammar coverage classification for this parse. */
+  outcome: ExpressionParseOutcome;
+};
 
 /**
  * Parse with bounded coverage evidence. Each entry counts once, including recursive
@@ -366,8 +387,8 @@ function parseExpressionInput(
  * Parsed trees retain their explicit rounding boundaries. Constructed trees that
  * require new groups to express precedence must mark those rounding boundaries
  * themselves; keep transformed trees as nodes when evaluating rounded arithmetic.
- * @param {ExpressionNode} node The expression node to render.
- * @returns {string} The rendered expression text.
+ * @param node The expression node to render.
+ * @returns The rendered expression text.
  */
 export function renderExpressionNode(node: ExpressionNode): string {
   const text = renderExpressionBody(node);
@@ -506,8 +527,8 @@ function detachExpressionSpans(node: ExpressionNode): ExpressionNode {
 
 /**
  * Checks whether an expression belongs to the reference-expression subtree.
- * @param {ExpressionNode} node The expression node to inspect.
- * @returns {boolean} `true` when the node is a reference expression.
+ * @param node The expression node to inspect.
+ * @returns `true` when the node is a reference expression.
  */
 export function isReferenceExpressionNode(node: ExpressionNode): node is ReferenceExpressionNode {
   switch (node.type) {
@@ -533,6 +554,7 @@ export function isReferenceExpressionNode(node: ExpressionNode): node is Referen
   return false;
 }
 
+/** Overrides applied while rendering reference lookup keys. */
 type RenderReferenceExpressionOptions = {
   renderIndex?: (node: ExpressionNode) => string;
 };
@@ -541,9 +563,9 @@ type RenderReferenceExpressionOptions = {
  * Renders a canonical lookup key. Root/object grouping is intentionally omitted
  * for symbol lookup; numeric index expressions keep their grouping. Use
  * renderExpressionNode when rendering a reference as a numeric expression.
- * @param {ReferenceExpressionNode} node The reference node to render.
- * @param {RenderReferenceExpressionOptions} [options] Optional rendering overrides.
- * @returns {string} The rendered reference text.
+ * @param node The reference node to render.
+ * @param [options] Optional rendering overrides.
+ * @returns The rendered reference text.
  */
 export function renderReferenceExpressionNode(
   node: ReferenceExpressionNode,
@@ -571,8 +593,8 @@ export function renderReferenceExpressionNode(
 
 /**
  * Parses a leading reference-expression prefix from a larger source string.
- * @param {string} input The source text to scan.
- * @returns {{ node: ReferenceExpressionNode; length: number } | undefined} The parsed node and consumed length.
+ * @param input The source text to scan.
+ * @returns The parsed node and consumed length.
  */
 export function parseLeadingReferenceExpression(
   input: string,
@@ -601,8 +623,8 @@ export function parseLeadingReferenceExpression(
 
 /**
  * Finds a top-level `..` range operator while respecting nested calls and quotes.
- * @param {string} input The expression source text.
- * @returns {number} The index of the operator or `-1`.
+ * @param input The expression source text.
+ * @returns The index of the operator or `-1`.
  */
 function findTopLevelRange(input: string): number {
   let depth = 0;
@@ -646,8 +668,8 @@ function findTopLevelRange(input: string): number {
 
 /**
  * Scans the source text for a leading reference-expression prefix.
- * @param {string} input The source text to inspect.
- * @returns {number} The number of consumed characters.
+ * @param input The source text to inspect.
+ * @returns The number of consumed characters.
  */
 function scanReferenceExpressionPrefix(input: string): number {
   let index = 0;
@@ -690,9 +712,9 @@ function scanReferenceExpressionPrefix(input: string): number {
 
 /**
  * Scans the first segment of a reference expression.
- * @param {string} input The source text to inspect.
- * @param {number} start The starting offset.
- * @returns {number} The offset immediately after the root segment.
+ * @param input The source text to inspect.
+ * @param start The starting offset.
+ * @returns The offset immediately after the root segment.
  */
 function scanReferenceRoot(input: string, start: number): number {
   if (input[start] === "!") {
@@ -707,9 +729,9 @@ function scanReferenceRoot(input: string, start: number): number {
 
 /**
  * Finds the closing bracket for a bracketed source fragment.
- * @param {string} input The source text to inspect.
- * @param {number} start The opening bracket offset.
- * @returns {number} The closing bracket offset or `-1`.
+ * @param input The source text to inspect.
+ * @param start The opening bracket offset.
+ * @returns The closing bracket offset or `-1`.
  */
 function findMatchingBracket(input: string, start: number): number {
   let bracketDepth = 0;
@@ -748,9 +770,9 @@ function findMatchingBracket(input: string, start: number): number {
 
 /**
  * Skips leading whitespace.
- * @param {string} input The source text.
- * @param {number} index The current offset.
- * @returns {number} The next non-whitespace offset.
+ * @param input The source text.
+ * @param index The current offset.
+ * @returns The next non-whitespace offset.
  */
 function skipWhitespace(input: string, index: number): number {
   let current = index;
@@ -772,6 +794,7 @@ export type ExpressionSource = {
   lineStarts?: number[];
 };
 
+/** Lexer token; `expression` tokens carry pre-parsed subtrees spliced into the stream. */
 type Token = { span?: SourceSpan; offset?: number } & (
   | { type: "expression"; node: ExpressionNode }
   | { type: "identifier"; value: string }
@@ -787,6 +810,7 @@ type Token = { span?: SourceSpan; offset?: number } & (
   | { type: "rbracket" }
 );
 
+/** Narrows operator text to a prefix operator. */
 function isUnaryOperator(value: string): value is UnaryOperator {
   return (
     value === "<:" ||
@@ -799,6 +823,7 @@ function isUnaryOperator(value: string): value is UnaryOperator {
   );
 }
 
+/** Narrows a character to a supported string delimiter. */
 function isQuote(value: string | undefined): value is '"' | "'" {
   return value === '"' || value === "'";
 }
@@ -827,8 +852,8 @@ const binaryOperators = [
 
 /**
  * Tokenizes an expression string into a list of tokens.
- * @param {string} input The expression source text.
- * @returns {Token[]} The list of tokens.
+ * @param input The expression source text.
+ * @returns The list of tokens.
  */
 function tokenizeExpression(
   input: string,
@@ -1182,9 +1207,9 @@ function readCallSyntax(
 
 /**
  * Reads a quoted string literal from the source text.
- * @param {string} input The source text.
- * @param {number} start The starting offset.
- * @returns {{ value: string; nextIndex: number; quote: "\"" | "'" }} The quoted string value and next index.
+ * @param input The source text.
+ * @param start The starting offset.
+ * @returns The quoted string value and next index.
  */
 function readQuotedString(
   input: string,
@@ -1209,9 +1234,9 @@ function readQuotedString(
 
 /**
  * Reads an identifier from the source text.
- * @param {string} input The source text.
- * @param {number} start The starting offset.
- * @returns {{ value: string; nextIndex: number }} The identifier value and next index.
+ * @param input The source text.
+ * @param start The starting offset.
+ * @returns The identifier value and next index.
  */
 function readIdentifier(input: string, start: number): { value: string; nextIndex: number } {
   let index = start;
@@ -1235,9 +1260,9 @@ function readIdentifier(input: string, start: number): { value: string; nextInde
 /**
  * Reads a define reference from the source text.
  * Handles braced define references.
- * @param {string} input The source text.
- * @param {number} start The starting offset.
- * @returns {{ token: Extract<Token, { type: "defineReference" }>; nextIndex: number }} The define reference token and next index.
+ * @param input The source text.
+ * @param start The starting offset.
+ * @returns The define reference token and next index.
  */
 function readDefineReference(
   input: string,
@@ -1276,7 +1301,9 @@ function readDefineReference(
   };
 }
 
+/** Precedence-climbing parser over a pre-lexed token stream; throws `ExpressionSyntaxError` on malformed input. */
 class ExpressionParser {
+  /** Position of the next unconsumed token. */
   index = 0;
 
   constructor(
@@ -1284,6 +1311,11 @@ class ExpressionParser {
     readonly sourceText: string,
   ) {}
 
+  /**
+   * Parses a binary expression whose operators bind at least as tightly as `minPrecedence`.
+   * @param minPrecedence Lowest operator precedence this call may consume.
+   * @returns The parsed expression.
+   */
   parseExpression(minPrecedence = 0): ExpressionNode {
     let left = this.parsePrefix();
 
@@ -1317,10 +1349,12 @@ class ExpressionParser {
     return left;
   }
 
+  /** Reports whether every token has been consumed. */
   isAtEnd(): boolean {
     return this.index >= this.tokens.length;
   }
 
+  /** Parses right-nested prefix operators followed by a primary with postfix accessors. */
   parsePrefix(): ExpressionNode {
     const token = this.peek();
     if (!token) {
@@ -1337,6 +1371,7 @@ class ExpressionParser {
     return this.parsePostfix(this.parsePrimary());
   }
 
+  /** Parses one operand: dotted local name, literal, string, define reference, identifier or parenthesized group. */
   parsePrimary(): ExpressionNode {
     if (this.peek()?.type === "dot") {
       const firstSpan = this.peek()?.span;
@@ -1430,6 +1465,7 @@ class ExpressionParser {
     );
   }
 
+  /** Applies call, member and index postfixes; calls require identifiers and accessors require references. */
   parsePostfix(expression: ExpressionNode): ExpressionNode {
     let current = expression;
     while (true) {
@@ -1480,6 +1516,7 @@ class ExpressionParser {
     }
   }
 
+  /** Parses comma-separated arguments after `(` through the closing `)`. */
   parseCallArguments(): ExpressionNode[] {
     const args: ExpressionNode[] = [];
     if (this.match({ type: "rparen" })) {
@@ -1494,7 +1531,7 @@ class ExpressionParser {
 
   /**
    * Expects a value.
-   * @param {Token["type"]} type The type.
+   * @param type The type.
    */
   expect(type: Token["type"]): void {
     const token = this.consume();
@@ -1509,6 +1546,7 @@ class ExpressionParser {
     }
   }
 
+  /** Consumes the next token only when its type matches, reporting whether it did. */
   match(expected: Pick<Token, "type">): boolean {
     const token = this.peek();
     if (token && token.type === expected.type) {
@@ -1518,12 +1556,14 @@ class ExpressionParser {
     return false;
   }
 
+  /** Returns the next token and advances; undefined past the end. */
   consume(): Token | undefined {
     const token = this.tokens[this.index];
     this.index++;
     return token;
   }
 
+  /** Returns the next token without advancing; undefined past the end. */
   peek(): Token | undefined {
     return this.tokens[this.index];
   }
@@ -1531,8 +1571,8 @@ class ExpressionParser {
 
 /**
  * Checks whether an operator is a binary operator.
- * @param {UnaryOperator | BinaryOperator} value The operator to check.
- * @returns {boolean} `true` when the operator is a binary operator.
+ * @param value The operator to check.
+ * @returns `true` when the operator is a binary operator.
  */
 function isBinaryOperator(value: UnaryOperator | BinaryOperator): value is BinaryOperator {
   return value in binaryPrecedence;

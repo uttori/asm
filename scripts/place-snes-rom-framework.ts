@@ -17,8 +17,7 @@ export type PlaceFrameworkOptions = {
  * Copies tracked `Global/*.asm` from the pinned SNES ROM Framework submodule
  * into `destRoot/Global`. Executables, DLLs, Firmware, Extras, and the sample
  * ROM stay in the submodule.
- * @param {PlaceFrameworkOptions} options Destination disassembly root.
- * @returns {void}
+ * @param options Destination disassembly root.
  */
 export function placeSnesRomFramework(options: PlaceFrameworkOptions): void {
   const repoDir = path.resolve(root, SNES_ROM_FRAMEWORK.submodulePath);

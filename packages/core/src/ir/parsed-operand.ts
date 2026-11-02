@@ -9,22 +9,33 @@ import { sourceFragment, fragmentText, type SourceFragment } from "./source-frag
 
 /** Width is lexical intent, separate from the value or addressing form selected in a pass. */
 export type OperandWidthIntent = {
+  /** Explicit byte width chosen by ca65-style prefixes or mnemonic suffixes. */
   readonly forcedBytes?: 1 | 2 | 3;
+  /** Inferred storage width from literal digit count when no prefix applies. */
   readonly literalBytes?: number;
+  /** Lexical atom class used only for diagnostics and width heuristics. */
   readonly spelling: "hex" | "binary" | "decimal" | "symbol" | "expression";
+  /** True when the expression was parenthesized in source. */
   readonly grouped: boolean;
 };
 /** Source spelling is attribution only after parsing; resolution operates on expression and width. */
 export type OperandScalar = {
+  /** Parsed value or reference tree for later evaluation and binding. */
   readonly expression: ExpressionNode;
   /** Unbound reference structure for tooling when textual defines can change execution grammar. */
   readonly referenceExpression?: ExpressionNode;
+  /** Width metadata derived from spelling, never from resolved numeric values. */
   readonly width: OperandWidthIntent;
+  /** Source extent covering the scalar token or subexpression. */
   readonly span: SourceSpan;
 };
+/** Named processor register operand with canonical lowercase spelling. */
 export type OperandRegister = {
+  /** Discriminator fixed to register for narrowing parsed operand unions. */
   readonly kind: "register";
+  /** Register mnemonic after case normalization. */
   readonly name: string;
+  /** Source extent covering the register token. */
   readonly span: SourceSpan;
 };
 /** All processor operand forms are structural; invalid syntax is a diagnostic, never an execution escape hatch. */
@@ -56,7 +67,9 @@ export type ParsedOperand =
 
 /** No operands is an empty sequence. Compound forms preserve source order and component boundaries. */
 export type ParsedInstructionOperands = {
+  /** Operands in source order, including invalid placeholders for recovery. */
   readonly operands: readonly ParsedOperand[];
+  /** Mnemonic suffix width when `.b`, `.w`, or `.l` was present. */
   readonly width?: 1 | 2 | 3;
   /** Numbered SPC bit mnemonics are distinct from a dotted address selector. */
   readonly mnemonicBit?: number;
@@ -66,11 +79,17 @@ export type ParsedInstructionOperands = {
 export type OperandGrammarOptions = {
   /** Defaults to true. False preserves unresolved structure solely for deferred binding diagnostics. */
   readonly templates?: boolean;
+  /** Register names accepted as bare operands or inside addressing parentheses. */
   readonly registers: readonly string[];
+  /** Registers that may appear as index suffixes on memory operands. */
   readonly indexRegisters: readonly string[];
+  /** When true, comma separates base from index; otherwise plus-index rules apply. */
   readonly commaIndex: boolean;
+  /** Enables SPC-style `(reg)+` post-increment on memory forms. */
   readonly plusIndex?: boolean;
+  /** Enables dotted bit selectors and inverted `/` prefixes on memory operands. */
   readonly bitSelectors?: boolean;
+  /** Enables ca65 `z:`/`a:`/`f:` width prefixes on memory scalars. */
   readonly ca65Widths?: boolean;
 };
 
@@ -118,7 +137,7 @@ export function parseInstructionOperands(
     const parts = operandParts(text, ",");
     for (let index = 0; index < parts.length; index++) {
       let part = parts[index];
-      const next = parts[index + 1];
+      const next = parts.at(index + 1);
       if (grammar.commaIndex && next && grammar.indexRegisters.includes(next.text.toLowerCase())) {
         part = { text: text.slice(part.start, next.end), start: part.start, end: next.end };
         index++;
@@ -137,6 +156,7 @@ export function parseInstructionOperands(
   return result;
 }
 
+/** Trimmed operand slice with offsets relative to the enclosing operand text. */
 type OperandPart = { text: string; start: number; end: number };
 /** Delimiter-aware splitting preserves expression grouping, calls, indexes and quoted arguments. */
 function operandParts(text: string, separator: string): OperandPart[] {
@@ -219,6 +239,7 @@ function scalar(text: string, start: number, force?: 1 | 2 | 3): OperandScalar {
   };
 }
 
+/** Classifies one comma-separated operand using the supplied target grammar. */
 function parseOperand(text: string, start: number, grammar: OperandGrammarOptions): ParsedOperand {
   const span = { start, end: start + text.length };
   if (!text) {
@@ -353,6 +374,7 @@ function parseOperand(text: string, start: number, grammar: OperandGrammarOption
 /** A failed generated-operand binding retains a structured reason for target-stage diagnostics. */
 export class OperandTemplateBindingError extends Error {
   constructor(
+    /** Failure category distinguishing cycle, stall, and depth limit cases. */
     readonly reason: "unbound" | "recursive" | "depth",
     message: string,
   ) {

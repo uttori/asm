@@ -11,6 +11,7 @@ import { changedBuildInputs, type SavedBuildInput } from "../source/build-inputs
 
 /** Saved conversion totals can render before the separate dependency check finishes. */
 export interface BuildCoverageSnapshot {
+  /** Saved build coverage totals from the source project metadata. */
   readonly summary: SourceBuildSummary;
   /** Filesystem publication time, in milliseconds since the Unix epoch. */
   readonly builtAt: number;
@@ -18,10 +19,13 @@ export interface BuildCoverageSnapshot {
 
 /** Unknown means verification was unavailable, never an assertion that the source is current. */
 export interface BuildCoverageFreshness {
+  /** Dependency verification phase for saved build coverage. */
   readonly status: "checking" | "current" | "stale" | "unknown";
+  /** Human-readable explanation of the freshness status. */
   readonly reason: string;
 }
 
+/** Narrow JSON metadata to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

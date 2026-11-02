@@ -15,26 +15,39 @@ export type Spc700StackEntry =
 
 /** Conservative known stack prefix. Deeper pre-analysis bytes remain unknown. */
 export interface Spc700AbstractStack {
+  /** Most recently pushed byte first; capped at 16 entries. */
   readonly entries: readonly Spc700StackEntry[];
 }
 
 /** SPC700 state needed for direct-page address resolution. */
 export interface Spc700AbstractState {
+  /** Direct-page base selected by PSW.P. */
   readonly directPage: Spc700DirectPageValue;
+  /** Tracked stack prefix used to restore PSW.P across `PUSH PSW`/`POP PSW`. */
   readonly stack: Spc700AbstractStack;
 }
 
 /** Explicit state overlay accepted on an SPC700 analysis entry point. */
 export interface Spc700StateOverride {
+  /** Known direct-page base; omitted leaves the incoming value. */
   readonly directPage?: 0 | 0x100;
 }
 
+/**
+ * Creates the absorbing unknown direct-page value.
+ * @returns Unknown direct page.
+ */
 const unknown = (): Spc700DirectPageValue => ({ kind: "unknown" });
+/**
+ * Wraps a concrete direct-page base.
+ * @param value `$0000` or `$0100`.
+ * @returns Known direct page.
+ */
 const known = (value: 0 | 0x100): Spc700DirectPageValue => ({ kind: "known", value });
 
 /**
  * Fully unknown reset-independent SPC700 state.
- * @returns {Spc700AbstractState} Unknown direct page with no tracked stack prefix.
+ * @returns Unknown direct page with no tracked stack prefix.
  */
 export const unknownSpc700State = (): Spc700AbstractState => ({
   directPage: unknown(),
@@ -43,9 +56,9 @@ export const unknownSpc700State = (): Spc700AbstractState => ({
 
 /**
  * Applies a manual direct-page overlay without changing the tracked stack prefix.
- * @param {Spc700AbstractState} state Incoming state.
- * @param {Spc700StateOverride} override Known values to overlay.
- * @returns {Spc700AbstractState} Updated state.
+ * @param state Incoming state.
+ * @param override Known values to overlay.
+ * @returns Updated state.
  */
 export const applySpc700StateOverride = (
   state: Spc700AbstractState,
@@ -53,6 +66,13 @@ export const applySpc700StateOverride = (
 ): Spc700AbstractState =>
   override.directPage === undefined ? state : { ...state, directPage: known(override.directPage) };
 
+/**
+ * Joins direct-page values: unknown wins; otherwise the union of candidate bases is
+ * known when it has one member and conflicting, sorted ascending, when it has two.
+ * @param left First incoming value.
+ * @param right Second incoming value.
+ * @returns Joined value.
+ */
 const joinDirectPage = (
   left: Spc700DirectPageValue,
   right: Spc700DirectPageValue,
@@ -70,9 +90,21 @@ const joinDirectPage = (
   return { kind: "conflicting", values: [...values].toSorted((a, b) => a - b) };
 };
 
+/**
+ * Structural equality for stack entries.
+ * @param left First entry.
+ * @param right Second entry.
+ * @returns Whether both entries serialize identically.
+ */
 const sameStackEntry = (left: Spc700StackEntry, right: Spc700StackEntry): boolean =>
   JSON.stringify(left) === JSON.stringify(right);
 
+/**
+ * Keeps only the longest common top-of-stack prefix; deeper bytes become unknown.
+ * @param left First incoming stack.
+ * @param right Second incoming stack.
+ * @returns Joined stack.
+ */
 const joinStack = (left: Spc700AbstractStack, right: Spc700AbstractStack): Spc700AbstractStack => {
   const entries: Spc700StackEntry[] = [];
   const length = Math.min(left.entries.length, right.entries.length);
@@ -87,9 +119,9 @@ const joinStack = (left: Spc700AbstractStack, right: Spc700AbstractStack): Spc70
 
 /**
  * Conservative lattice join at an SPC700 CFG merge.
- * @param {Spc700AbstractState} left First incoming state.
- * @param {Spc700AbstractState} right Second incoming state.
- * @returns {Spc700AbstractState} Joined state.
+ * @param left First incoming state.
+ * @param right Second incoming state.
+ * @returns Joined state.
  */
 export const joinSpc700States = (
   left: Spc700AbstractState,
@@ -101,25 +133,36 @@ export const joinSpc700States = (
 
 /**
  * Stable serialization used by the generic worklist's fixed-point check.
- * @param {Spc700AbstractState} state State to identify.
- * @returns {string} Deterministic state key.
+ * @param state State to identify.
+ * @returns Deterministic state key.
  */
 export const spc700StateKey = (state: Spc700AbstractState): string => JSON.stringify(state);
 
 /**
  * Projects abstract PSW.P knowledge into the decoder's direct-page base.
- * @param {Spc700AbstractState} state Abstract analysis state.
- * @returns {Spc700DecodeState} Decoder input.
+ * @param state Abstract analysis state.
+ * @returns Decoder input.
  */
 export const spc700DecodeState = (state: Spc700AbstractState): Spc700DecodeState => ({
   directPage: state.directPage.kind === "known" ? state.directPage.value : "unknown",
 });
 
+/**
+ * Pushes one tracked byte, discarding entries beyond the 16-entry prefix bound.
+ * @param state Incoming state.
+ * @param entry Pushed byte.
+ * @returns State with the new top entry.
+ */
 const push = (state: Spc700AbstractState, entry: Spc700StackEntry): Spc700AbstractState => ({
   ...state,
   stack: { entries: [entry, ...state.stack.entries].slice(0, 16) },
 });
 
+/**
+ * Pops the top tracked byte.
+ * @param state Incoming state.
+ * @returns Remaining state and the popped entry, `undefined` when the prefix was empty.
+ */
 const pop = (
   state: Spc700AbstractState,
 ): readonly [Spc700AbstractState, Spc700StackEntry | undefined] => [
@@ -129,9 +172,9 @@ const pop = (
 
 /**
  * Applies declarative PSW and explicit PUSH/POP effects to SPC700 state.
- * @param {StaticInstruction} instruction Decoded instruction and declarative effects.
- * @param {Spc700AbstractState} incoming Incoming state.
- * @returns {Spc700AbstractState} Outgoing state.
+ * @param instruction Decoded instruction and declarative effects.
+ * @param incoming Incoming state.
+ * @returns Outgoing state.
  */
 export const transferSpc700State = (
   instruction: StaticInstruction,

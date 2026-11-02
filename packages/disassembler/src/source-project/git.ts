@@ -9,12 +9,16 @@ export { assertSourcePath } from "../internal/source-inputs.js";
 
 /** Repository and per-worktree state directories, resolved by Git rather than assuming .git is a directory. */
 export interface SourceRepository {
+  /** Git worktree root containing editable source files. */
   readonly root: string;
+  /** Resolved `.git` directory for this worktree, including linked worktrees. */
   readonly gitDirectory: string;
+  /** Private per-worktree state directory for leases, journals, and scratch data. */
   readonly stateDirectory: string;
 }
 
-/** Coordinate ordinary source publication with existing native regeneration/merge operations.
+/**
+ * Coordinate ordinary source publication with existing native regeneration/merge operations.
  * The caller owns the lease and must release it in finally; a live process's lease is never stolen.
  */
 export function acquireSourceOperationLease(repository: SourceRepository): FileLease {
@@ -23,8 +27,11 @@ export function acquireSourceOperationLease(repository: SourceRepository): FileL
 
 /** Raw Git output retains NUL delimiters and arbitrary binary blobs. */
 export interface SourceGitResult {
+  /** Process exit code after applying accepted-code filtering. */
   readonly code: number;
+  /** Raw standard output bytes, including embedded NUL delimiters when requested. */
   readonly stdout: Buffer;
+  /** Raw standard error bytes from the Git subprocess. */
   readonly stderr: Buffer;
 }
 

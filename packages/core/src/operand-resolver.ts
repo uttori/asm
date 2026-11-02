@@ -9,9 +9,13 @@ import type { ReferenceResolution } from "./ir/reference-path.js";
 
 /** Borrowed session bindings; parsed syntax never stores resolved addresses or pass-local values. */
 export type OperandResolverDependencies = {
+  /** Resolves chained references without mutating parsed syntax nodes. */
   resolveReference(input: ReferenceExpressionNode): ReferenceResolution;
+  /** Evaluates non-reference expressions to numeric values for operand lowering. */
   evaluateMath(input: ExpressionNode): number;
+  /** Defers evaluation when forward references require a later pass. */
   shouldDeferExpressionEvaluation(): boolean;
+  /** Supplies the program counter used by PC-relative operand forms. */
   getCurrentAddress(): number;
 };
 

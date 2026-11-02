@@ -12,10 +12,12 @@ import type {
   InformationLineRange,
 } from "./provider.js";
 
+/** Narrow worker payloads to plain objects before structural validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Validate one debug-map range record from the worker. */
 function isDebugMapRange(value: unknown): value is DebugMapRange {
   return (
     isRecord(value) &&
@@ -30,6 +32,7 @@ function isDebugMapRange(value: unknown): value is DebugMapRange {
   );
 }
 
+/** Validate a qualified editor location returned for template rendering. */
 function isEditorLocation(value: unknown): value is EditorLocation {
   return (
     isRecord(value) &&
@@ -40,6 +43,7 @@ function isEditorLocation(value: unknown): value is EditorLocation {
   );
 }
 
+/** Validate one debug-map instruction row from the worker. */
 function isDebugMapInstruction(value: unknown): value is DebugMapInstruction {
   return (
     isRecord(value) &&
@@ -60,10 +64,12 @@ function isDebugMapInstruction(value: unknown): value is DebugMapInstruction {
   );
 }
 
+/** Accept annotation rows that carry a persisted analysis id. */
 function isAnnotation(value: unknown): value is InstructionAnalysisAnnotation {
   return isRecord(value) && typeof value.id === "string";
 }
 
+/** Validate one line information snapshot before exposing it to the provider. */
 function isLineInformation(value: unknown): value is LineInformation {
   return (
     isRecord(value) &&
@@ -84,6 +90,7 @@ function isLineInformation(value: unknown): value is LineInformation {
   );
 }
 
+/** Validate the per-line map returned for a viewport query. */
 function isLineMap(value: unknown): value is ReadonlyMap<number, readonly LineInformation[]> {
   if (!(value instanceof Map)) {
     return false;
@@ -96,6 +103,7 @@ function isLineMap(value: unknown): value is ReadonlyMap<number, readonly LineIn
   return true;
 }
 
+/** Validate analysis host requests forwarded through the worker bridge. */
 function isHostRequestArgs(
   args: readonly unknown[],
 ): args is [
@@ -277,18 +285,23 @@ export class EditorInformationWorker implements EditorInformationService {
       }
     }
   }
+  /** Notify the worker that a build finished and a new debug map is available. */
   buildCompleted(map: string, root: string): void {
     this.#notify("buildCompleted", [map, root]);
   }
+  /** Propagate editor information settings changes into the worker cache. */
   configurationChanged(): void {
     this.#notify("configurationChanged");
   }
+  /** Drop worker-side indexes after source or map invalidation. */
   invalidate(): void {
     this.#notify("invalidate");
   }
+  /** Whether the worker maintains facts for the given source path. */
   tracks(file: string): boolean {
     return this.#tracked.has(path.resolve(file)) || file.endsWith(".debug.json");
   }
+  /** Return configuration or dependency diagnostics for one tracked file. */
   async diagnostics(file: string, dirty: ReadonlySet<string>): Promise<readonly string[]> {
     const value = await this.#send("diagnostics", [file, dirty]);
     if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) {
@@ -296,6 +309,7 @@ export class EditorInformationWorker implements EditorInformationService {
     }
     return value;
   }
+  /** Fetch bounded line facts for the visible viewport and requested placeholders. */
   async lines(
     file: string,
     visible: readonly InformationLineRange[],
@@ -308,6 +322,7 @@ export class EditorInformationWorker implements EditorInformationService {
     }
     return value;
   }
+  /** Terminate the worker and fail any in-flight requests. */
   dispose(): void {
     this.#fail(new Error("Source information worker disposed."));
     void this.#worker.terminate();

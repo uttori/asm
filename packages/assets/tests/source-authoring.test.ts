@@ -224,9 +224,7 @@ test("PNG palette-only variant views preserve separate native palette ownership"
   const views = somPngPaletteViews(atlas, fixture.catalog);
   const slot = views.slots.findIndex((item) => item?.palette === "C00120" && item.index === 1);
   t.true(slot > 16);
-  const palette = views.document.palette.map((color): [number, number, number, number] => [
-    ...color,
-  ]);
+  const palette = [...views.document.palette];
   palette[slot] = [16, 0, 0, 255];
   const source = { bytes: extendIndexedPngPalette(fixture.png, palette), mediaType: "image/png" };
   const resources = {

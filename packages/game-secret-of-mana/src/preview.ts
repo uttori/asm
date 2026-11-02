@@ -34,9 +34,10 @@ import {
 
 import { convertBossImage, convertBrrWave, sliceBrrSegment } from "./assembly.js";
 
-/** Preview the authored frame arrangement while validating the same source tiles as assembly.
- * @param {AssetPreviewInput} input Resolved source and sidecars from the editor.
- * @returns {AssetPreviewResult} Display PNG and the validated native byte count.
+/**
+ * Preview the authored frame arrangement while validating the same source tiles as assembly.
+ * @param input Resolved source and sidecars from the editor.
+ * @returns Display PNG and the validated native byte count.
  */
 function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
   let layout = readFrameLayout(input.options, input.resources);
@@ -122,9 +123,10 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
   };
 }
 
-/** Preview one shared ROM palette with native 8×8 swatches and its exact encoded size.
- * @param {AssetPreviewInput} input Catalogue source and selected address.
- * @returns {AssetPreviewResult} BGR555 metadata and a magnifiable swatch PNG.
+/**
+ * Preview one shared ROM palette with native 8×8 swatches and its exact encoded size.
+ * @param input Catalogue source and selected address.
+ * @returns BGR555 metadata and a magnifiable swatch PNG.
  */
 function convertSomPalettePreview(input: AssetPreviewInput): AssetPreviewResult {
   const id = input.options.palette;
@@ -162,8 +164,8 @@ function convertSomPalettePreview(input: AssetPreviewInput): AssetPreviewResult 
 
 /**
  * Render current room placements after checking every encoded section.
- * @param {AssetPreviewInput} input Editable room JSON, selected section and captured preview-resource dependency.
- * @returns {AssetPreviewResult} Native-scale image preview with the selected section's encoded byte count.
+ * @param input Editable room JSON, selected section and captured preview-resource dependency.
+ * @returns Native-scale image preview with the selected section's encoded byte count.
  */
 function convertSomRoomPreview(input: AssetPreviewInput): AssetPreviewResult {
   const converted = convertRoomAsset(input.source, input.options);
@@ -213,8 +215,8 @@ function convertSomRoomPreview(input: AssetPreviewInput): AssetPreviewResult {
 /**
  * Preview the playable source and verified native BRR stream used by the SoM plugin.
  * Segment playback uses the complete stream because a bank split can cut through a BRR block.
- * @param {AssetPreviewInput} input Authored WAVE and literal segment options, when present.
- * @returns {AssetPreviewResult} Full-stream audio with the selected ROM byte count.
+ * @param input Authored WAVE and literal segment options, when present.
+ * @returns Full-stream audio with the selected ROM byte count.
  */
 function convertSomBrrPreview(input: AssetPreviewInput): AssetPreviewResult {
   if (input.output !== undefined && input.output !== "brr") {

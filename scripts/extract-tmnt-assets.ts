@@ -58,8 +58,8 @@ type Options = TmntExtractOptions & {
 
 /**
  * Parses CLI flags.
- * @param {string[]} argv Process arguments after the node/tsx binary.
- * @returns {Options} Parsed options.
+ * @param argv Process arguments after the node/tsx binary.
+ * @returns Parsed options.
  */
 function parseArgs(argv: string[]): Options {
   const options: Options = {
@@ -108,9 +108,9 @@ function parseArgs(argv: string[]): Options {
 
 /**
  * LoROM snestopc used by ExtractAssets.bat (`lorom` + headerless ROM).
- * @param {number} address 24-bit SNES address.
- * @param {number} headerSize Copier header bytes (0 or 512).
- * @returns {number} File offset.
+ * @param address 24-bit SNES address.
+ * @param headerSize Copier header bytes (0 or 512).
+ * @returns File offset.
  */
 function loromFileOffset(address: number, headerSize: number): number {
   return headerSize + (((address & 0x7f0000) >> 1) | (address & 0x7fff));
@@ -118,8 +118,8 @@ function loromFileOffset(address: number, headerSize: number): number {
 
 /**
  * USA ROMBit $0001: every `if !ROMVer&(...) != $00` in this file is false, so keep else.
- * @param {string} source Pointer file text.
- * @returns {string} Source with PAL/AUS branches removed.
+ * @param source Pointer file text.
+ * @returns Source with PAL/AUS branches removed.
  */
 function applyUsaRomVer(source: string): string {
   const lines = source.split(/\r?\n/);
@@ -150,8 +150,8 @@ function applyUsaRomVer(source: string): string {
 
 /**
  * Builds label → quoted `db` filename from AssetPointersAndFiles.asm.
- * @param {string} source Pointer file text.
- * @returns {Map<string, string>} Filename map.
+ * @param source Pointer file text.
+ * @returns Filename map.
  */
 function parseFilenameTable(source: string): Map<string, string> {
   const names = new Map<string, string>();
@@ -166,10 +166,10 @@ function parseFilenameTable(source: string): Map<string, string> {
 
 /**
  * Parses one `dl start,end,name,nameEnd` pointer table.
- * @param {string} source Pointer file text.
- * @param {string} label Section prefix (e.g. UncompressedGFXPointers).
- * @param {Map<string, string>} filenames Label filename map.
- * @returns {AssetEntry[]} Table entries.
+ * @param source Pointer file text.
+ * @param label Section prefix (e.g. UncompressedGFXPointers).
+ * @param filenames Label filename map.
+ * @returns Table entries.
  */
 function parsePointerSection(
   source: string,
@@ -203,11 +203,11 @@ function parsePointerSection(
 
 /**
  * Writes one ROM slice. Returns bytes written.
- * @param {Uint8Array} rom ROM image.
- * @param {number} headerSize Copier header size.
- * @param {AssetEntry} entry Pointer entry.
- * @param {string} destDir Destination directory.
- * @returns {number} Bytes written.
+ * @param rom ROM image.
+ * @param headerSize Copier header size.
+ * @param entry Pointer entry.
+ * @param destDir Destination directory.
+ * @returns Bytes written.
  */
 function extractEntry(
   rom: Uint8Array,
@@ -233,8 +233,7 @@ function extractEntry(
 
 /**
  * ExtractAssets.bat (USA / ROMBit $0001 / TMNTIV_USA.sfc).
- * @param {TmntExtractOptions} options ROM path and destination disassembly root.
- * @returns {void}
+ * @param options ROM path and destination disassembly root.
  */
 export function extractTmntAssets(options: TmntExtractOptions): void {
   const gameDir = path.resolve(options.destRoot, "Teenage_Mutant_Ninja_Turtles_IV");
@@ -291,7 +290,6 @@ export function extractTmntAssets(options: TmntExtractOptions): void {
 
 /**
  * Prints usage.
- * @returns {void}
  */
 function printHelp(): void {
   console.log(`Extract TMNTIV (USA) assets for the integration fixture.
@@ -310,7 +308,6 @@ Default ROM:
 
 /**
  * CLI entry.
- * @returns {void}
  */
 function main(): void {
   const options = parseArgs(process.argv.slice(2));

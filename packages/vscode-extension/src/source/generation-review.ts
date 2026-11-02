@@ -12,6 +12,7 @@ export interface SourceGenerationReview {
   readonly after: string;
   /** A preview compares the captured source with the proposed merge, including conflict markers. */
   readonly previewed: boolean;
+  /** Per-path Git status rows included in the generation review diff. */
   readonly files: readonly {
     readonly path: string;
     /** Git's A/M/D status; renames are represented as a deletion and an addition. */
@@ -69,4 +70,29 @@ export async function readSourceGenerationReview(
     files.push({ path: file, status: parts[index], conflict: conflicts.has(file) });
   }
   return { before, after, previewed, files, localChanges };
+}
+
+/** Line insertion/deletion counts for Home Incoming rows; binary paths omit counts. */
+export async function readGenerationDiffStats(
+  root: string,
+  before: string,
+  after: string,
+): Promise<Map<string, { additions?: number; deletions?: number }>> {
+  const diff = await sourceGit(root, ["diff", "--numstat", "-z", before, after]);
+  const stats = new Map<string, { additions?: number; deletions?: number }>();
+  for (const part of diff.stdout.toString("utf8").split("\0")) {
+    if (!part) {
+      continue;
+    }
+    const [added, deleted, ...pathParts] = part.split("\t");
+    const file = pathParts.join("\t");
+    if (!file) {
+      continue;
+    }
+    stats.set(file, {
+      additions: added === "-" ? undefined : Number(added),
+      deletions: deleted === "-" ? undefined : Number(deleted),
+    });
+  }
+  return stats;
 }

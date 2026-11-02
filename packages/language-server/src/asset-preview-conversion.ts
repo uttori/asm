@@ -23,12 +23,13 @@ for (const encoder of [...withAudioEncoder(withImageEncoders(snesNativeEncoders)
   registry.registerEncoder(encoder);
 }
 
-/** Place each logical tile at its encoded storage index for an honest layout preview.
- * @param {Uint8Array} composed Logical row-major RGBA8 pixels.
- * @param {number} width Preview width in pixels.
- * @param {number} height Preview height in pixels.
- * @param {readonly number[]} indexByCoordinate Encoded tile index for each logical tile.
- * @returns {Uint8Array} Owned RGBA8 pixels in native tile storage order.
+/**
+ * Place each logical tile at its encoded storage index for an honest layout preview.
+ * @param composed Logical row-major RGBA8 pixels.
+ * @param width Preview width in pixels.
+ * @param height Preview height in pixels.
+ * @param indexByCoordinate Encoded tile index for each logical tile.
+ * @returns Owned RGBA8 pixels in native tile storage order.
  */
 function storagePixels(
   composed: Uint8Array,
@@ -55,9 +56,10 @@ function storagePixels(
   return result;
 }
 
-/** Convert one bounded request and prepare display media outside the LSP event loop.
- * @param {AssetPreviewInput} input Resolved, owned source and resource bytes.
- * @returns {AssetPreviewResult} Display metadata and bounded PNG/WAVE media.
+/**
+ * Convert one bounded request and prepare display media outside the LSP event loop.
+ * @param input Resolved, owned source and resource bytes.
+ * @returns Display metadata and bounded PNG/WAVE media.
  */
 export function convertAssetPreview(
   input: AssetPreviewInput,

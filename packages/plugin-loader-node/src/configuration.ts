@@ -21,15 +21,28 @@ const TOP_LEVEL_KEYS = new Set([
 ]);
 const PLUGIN_KEYS = new Set(["module", "options"]);
 
+/** Accepts a plain JSON object; arrays and null are rejected. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/**
+ * Build the error used for every invalid or unreadable configuration.
+ * @param message User-facing description.
+ * @param cause Underlying read or parse failure.
+ * @returns A PluginError coded PLUGIN_CONFIGURATION_INVALID.
+ */
 const configurationError = (message: string, cause?: unknown): PluginError =>
   new PluginError(message, {
     code: "PLUGIN_CONFIGURATION_INVALID",
     cause,
   });
 
+/**
+ * Validate an optional string field. Whitespace-only values are rejected.
+ * @param value Raw field value.
+ * @param field Field name used in the error.
+ * @returns The original string, or undefined when absent.
+ */
 const optionalText = (
   value: unknown,
   field: "target" | "architecture" | "$schema" | "buildOutput" | "baseImage" | "linkProject",
@@ -45,12 +58,18 @@ const optionalText = (
 
 /**
  * Accepts an array of non-empty strings. Whitespace-only entries are rejected.
- * @param {unknown} value Candidate configuration array.
- * @returns {boolean} True when every element is a non-empty string.
+ * @param value Candidate configuration array.
+ * @returns True when every element is a non-empty string.
  */
 const isNonEmptyStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string" && item.trim() !== "");
 
+/**
+ * Validate an optional array of non-empty strings.
+ * @param value Raw field value.
+ * @param field Field name used in the error.
+ * @returns The original array, or undefined when absent.
+ */
 const optionalStringArray = (
   value: unknown,
   field: "includePaths" | "entryPoints",
@@ -64,6 +83,12 @@ const optionalStringArray = (
   return value;
 };
 
+/**
+ * Validate one plugins[] entry. Only module and options are allowed; options must be an object.
+ * @param value Raw entry.
+ * @param index Position used to attribute errors as plugins[index].
+ * @returns A new request retaining the input options reference.
+ */
 const validatePluginEntry = (value: unknown, index: number): PluginModuleRequest => {
   const entry = `plugins[${index}]`;
   if (!isRecord(value)) {
@@ -91,8 +116,8 @@ const validatePluginEntry = (value: unknown, index: number): PluginModuleRequest
  * Validate known JSON fields without reading files, resolving modules, or validating plugin options.
  * Throws PluginError with PLUGIN_CONFIGURATION_INVALID. The new top-level result retains nested
  * arrays/options from the input. Callers must not assume a deep copy or runtime immutability.
- * @param {unknown} value Parsed JSON to validate.
- * @returns {ProjectConfiguration} Known configuration fields, with nested input references retained.
+ * @param value Parsed JSON to validate.
+ * @returns Known configuration fields, with nested input references retained.
  */
 export const validateProjectConfiguration = (value: unknown): ProjectConfiguration => {
   if (!isRecord(value)) {
@@ -134,15 +159,16 @@ export interface LoadedConfigurationFile {
   readonly path?: string;
   /** Absolute configuration directory, or cwd when no file was found. */
   readonly directory: string;
+  /** Validated fields; empty when no file was found. */
   readonly configuration: ProjectConfiguration;
 }
 
 /**
  * Return an explicit nonempty path resolved against cwd, without checking its existence.
  * Otherwise check only cwd/uttori-asm.config.json, returning undefined when absent. No ancestor search.
- * @param {string} cwd Discovery directory and explicit-path base.
- * @param {string} [configuredPath] Optional explicit configuration filename.
- * @returns {string | undefined} An absolute path, or undefined when optional discovery finds nothing.
+ * @param cwd Discovery directory and explicit-path base.
+ * @param [configuredPath] Optional explicit configuration filename.
+ * @returns An absolute path, or undefined when optional discovery finds nothing.
  */
 export const discoverProjectConfigurationPath = (
   cwd: string,
@@ -159,9 +185,9 @@ export const discoverProjectConfigurationPath = (
  * Read UTF-8 JSON and validate its fields. Relative configuredPath is resolved against cwd.
  * A missing discovered file yields empty configuration. A missing explicit file, malformed JSON,
  * or read failure rejects with PLUGIN_CONFIGURATION_INVALID. Does not execute plugins.
- * @param {string} cwd Discovery directory and explicit-path base.
- * @param {string} [configuredPath] Optional explicit configuration filename.
- * @returns {Promise<LoadedConfigurationFile>} Validated settings with their absolute path-resolution directory.
+ * @param cwd Discovery directory and explicit-path base.
+ * @param [configuredPath] Optional explicit configuration filename.
+ * @returns Validated settings with their absolute path-resolution directory.
  */
 export const readProjectConfiguration = async (
   cwd: string,

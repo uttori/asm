@@ -166,8 +166,8 @@ const REQUIRED_COMMANDS = [
 
 /**
  * Opt-in production VS Code launch against locally supplied ares artifacts.
- * @param {vscode.WorkspaceFolder} folder Existing local workspace (never rewritten by the test).
- * @returns {Promise<void>} Launch, stopped frame, and trace capability checks.
+ * @param folder Existing local workspace (never rewritten by the test).
+ * @returns Launch, stopped frame, and trace capability checks.
  */
 async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
   // A fresh Electron test host has not yet installed its deferred debug content provider.
@@ -337,8 +337,8 @@ async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
 
 /**
  * Waits until the language client has registered a document-symbol provider.
- * @param {vscode.Uri} uri Open assembly document URI.
- * @returns {Promise<void>} Promise resolved when the provider answers.
+ * @param uri Open assembly document URI.
+ * @returns Promise resolved when the provider answers.
  */
 async function waitForLanguageServer(uri: vscode.Uri): Promise<void> {
   const deadline = Date.now() + 20_000;
@@ -381,12 +381,12 @@ async function waitForLanguageServer(uri: vscode.Uri): Promise<void> {
  * Checks the packaged language breakpoint contribution and DAP source-line resolution.
  * The headless workbench sometimes ignores the editor toggle despite an active editor;
  * the API fallback still exercises the adapter after verifying the manifest gate.
- * @param {vscode.WorkspaceFolder} folder Temporary smoke-test workspace.
- * @param {vscode.Uri} sourceUri Built assembly source containing an instruction on line 4.
- * @param {vscode.Uri} programUri Binary matching the debug map.
- * @param {vscode.Uri} debugMapUri Source map emitted by the smoke-test build.
- * @param {string} languageId Assembly language whose breakpoint contribution is under test.
- * @returns {Promise<void>} Rejects if editor toggling or DAP verification fails.
+ * @param folder Temporary smoke-test workspace.
+ * @param sourceUri Built assembly source containing an instruction on line 4.
+ * @param programUri Binary matching the debug map.
+ * @param debugMapUri Source map emitted by the smoke-test build.
+ * @param languageId Assembly language whose breakpoint contribution is under test.
+ * @returns Rejects if editor toggling or DAP verification fails.
  */
 async function verifyReplaySourceBreakpoint(
   folder: vscode.WorkspaceFolder,
@@ -485,7 +485,7 @@ async function verifyReplaySourceBreakpoint(
  * The test activates the packaged entry point, opens a language-associated document, observes an
  * LSP response, invokes read-only analysis-tree commands, and assembles through the registered VS
  * Code command. It does not start an emulator or claim native-runtime portability.
- * @returns {Promise<void>} Promise rejected when any editor, LSP, or build assertion fails.
+ * @returns Promise rejected when any editor, LSP, or build assertion fails.
  */
 export async function run(): Promise<void> {
   // npm's Node engine cannot constrain Electron. Verify the actual embedded SQLite operations
@@ -601,7 +601,7 @@ export async function run(): Promise<void> {
   await vscode.window.showTextDocument(document);
 
   // Exercise packaged external HTML/CSS/JS under a real webview CSP, not a DOM mock.
-  for (const name of ["panel"] as const) {
+  for (const name of ["home"] as const) {
     const view = vscode.window.createWebviewPanel(
       "uttori.webviewSmoke",
       "Webview smoke",

@@ -3,6 +3,7 @@ import { decodeEnvelope, encodeEnvelope } from "./envelope.js";
 import { assertAssemblyModule } from "./validation.js";
 import { integer, list, record, restoreValue } from "./value.js";
 
+/** Bumps when on-disk object metadata layout is incompatible with prior readers. */
 export const OBJECT_FORMAT_VERSION = 1;
 const MAGIC = "UASMOBJ\0";
 
@@ -39,7 +40,7 @@ export function decodeObject(bytes: Uint8Array): AssemblyModule {
       throw new Error("Noncanonical or overlapping section payloads.");
     }
     consumed += size;
-    return { ...fields, bytes: payload.slice(start, start + size) };
+    return Object.assign(fields, { bytes: payload.slice(start, start + size) });
   });
   if (consumed !== payload.length) {
     throw new Error("Unowned object payload bytes.");

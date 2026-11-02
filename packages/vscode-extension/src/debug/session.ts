@@ -90,9 +90,13 @@ const IMPORT_CAPTURE_COMMAND = "asm.source.importCapture";
  * detect changes before launch.
  */
 export interface BuiltDebugArtifacts {
+  /** Absolute path of the built ROM. */
   readonly outputPath: string;
+  /** Absolute path of the debug map emitted with the ROM. */
   readonly debugMapPath: string;
+  /** SHA-256 of the built ROM bytes, when the build reported it. */
   readonly outputSha256?: string;
+  /** Fingerprint of the debug map content, when the build reported it. */
   readonly debugMapFingerprint?: string;
 }
 
@@ -100,13 +104,19 @@ export interface BuiltDebugArtifacts {
  * Machine-local live-backend selection and filesystem paths, with optional ares launch settings.
  */
 export interface EmulatorRuntimeBinding {
+  /** Live backend kind; only ares is supported for interactive capture. */
   readonly backend: "ares";
+  /** Absolute path to the runtime manifest describing the installed core. */
   readonly runtimeManifest: string;
+  /** Absolute path to the emulator executable launched for debugging. */
   readonly emulator: string;
+  /** Directory containing runtime assets referenced by the manifest. */
   readonly runtimeDirectory: string;
   /** Persistent SRAM/state root, retained when the selected runtime changes. */
   readonly saveDirectory?: string;
+  /** Optional ares system id override for multi-system manifests. */
   readonly aresSystem?: string;
+  /** Skip ares boot animation when the runtime supports fast boot. */
   readonly fastBoot?: boolean;
 }
 
@@ -122,8 +132,8 @@ type EmulatorRuntimeBindings = Partial<Record<string, EmulatorRuntimeBinding>>;
 /**
  * Prefer the workspace containing the resource, otherwise use the first open folder; return
  * undefined for an empty workspace.
- * @param {Uri} [resource] Resource whose workspace should own the runtime selection.
- * @returns {WorkspaceFolder | undefined} Containing folder, first open folder, or undefined without a workspace.
+ * @param [resource] Resource whose workspace should own the runtime selection.
+ * @returns Containing folder, first open folder, or undefined without a workspace.
  */
 const runtimeWorkspace = (resource?: Uri): WorkspaceFolder | undefined =>
   (resource ? workspace.getWorkspaceFolder(resource) : undefined) ??
@@ -132,8 +142,8 @@ const runtimeWorkspace = (resource?: Uri): WorkspaceFolder | undefined =>
 /**
  * Use the full folder URI as the storage key so bindings distinguish workspace locations and URI
  * schemes.
- * @param {WorkspaceFolder} folder Workspace folder owning the machine-local binding.
- * @returns {string} Complete URI string used as the storage key.
+ * @param folder Workspace folder owning the machine-local binding.
+ * @returns Complete URI string used as the storage key.
  */
 const runtimeWorkspaceKey = (folder: WorkspaceFolder): string => folder.uri.toString();
 
@@ -141,9 +151,9 @@ const runtimeWorkspaceKey = (folder: WorkspaceFolder): string => folder.uri.toSt
  * Return the workspace binding saved in extension storage, falling back to an unambiguous live
  * launch configuration.
  * Returns undefined without a workspace or usable selection; runtime files are validated later.
- * @param {ExtensionContext} context Extension storage containing saved machine-local bindings.
- * @param {Uri} [resource] Resource used to choose the owning workspace.
- * @returns {EmulatorRuntimeBinding | undefined} Saved or unambiguous launch binding, when available.
+ * @param context Extension storage containing saved machine-local bindings.
+ * @param [resource] Resource used to choose the owning workspace.
+ * @returns Saved or unambiguous launch binding, when available.
  * @see https://code.visualstudio.com/api/references/vscode-api#ExtensionContext.globalState
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getConfiguration
  */
@@ -173,9 +183,9 @@ export const configuredEmulatorRuntime = (
 /**
  * Prompt for one file or directory; return undefined on cancellation and throw if the selected
  * URI is not file-backed.
- * @param {string} title Dialog title also used in validation errors.
- * @param {object} options Allowed file/folder selections and optional extension filters.
- * @returns {Promise<string | undefined>} Local filesystem path, or undefined on cancellation.
+ * @param title Dialog title also used in validation errors.
+ * @param options Allowed file/folder selections and optional extension filters.
+ * @returns Local filesystem path, or undefined on cancellation.
  * @see https://code.visualstudio.com/api/references/vscode-api#window.showOpenDialog
  */
 const chooseLocalPath = async (
@@ -205,9 +215,9 @@ const chooseLocalPath = async (
 
 /**
  * Selects and validates the external runtime used by the bundled debug sidecar.
- * @param {ExtensionContext} context Extension storage host.
- * @param {Uri | undefined} resource Resource used to select a workspace binding.
- * @returns {Promise<EmulatorRuntimeBinding | undefined>} Saved binding, or undefined on cancel.
+ * @param context Extension storage host.
+ * @param resource Resource used to select a workspace binding.
+ * @returns Saved binding, or undefined on cancel.
  * @see https://code.visualstudio.com/api/references/vscode-api#ExtensionContext.globalState
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getConfiguration
  */
@@ -287,10 +297,10 @@ export const configureEmulatorRuntime = async (
 
 /**
  * Creates a live launch that names the exact successful build artifact pair.
- * @param {EmulatorRuntimeBinding} binding Machine-local live runtime.
- * @param {BuiltDebugArtifacts} artifacts Exact successful build artifacts.
- * @param {WorkspaceFolder | undefined} folder Workspace owning the build.
- * @returns {DebugConfiguration} Direct live launch configuration.
+ * @param binding Machine-local live runtime.
+ * @param artifacts Exact successful build artifacts.
+ * @param folder Workspace owning the build.
+ * @returns Direct live launch configuration.
  */
 export const liveDebugConfiguration = (
   binding: EmulatorRuntimeBinding,
@@ -390,9 +400,9 @@ const sessionContexts = new Map<string, DebugTraceSessionContext>();
 /**
  * Resolve relative launch paths against the session workspace, falling back to the
  * extension-host working directory.
- * @param {string} value Absolute or workspace-relative launch setting.
- * @param {WorkspaceFolder | undefined} folder Session workspace, if one is associated.
- * @returns {string} Absolute path using the host working directory as fallback.
+ * @param value Absolute or workspace-relative launch setting.
+ * @param folder Session workspace, if one is associated.
+ * @returns Absolute path using the host working directory as fallback.
  */
 const resolvedPath = (value: string, folder: WorkspaceFolder | undefined): string =>
   path.isAbsolute(value) ? value : path.resolve(folder?.uri.fsPath ?? process.cwd(), value);
@@ -400,10 +410,10 @@ const resolvedPath = (value: string, folder: WorkspaceFolder | undefined): strin
 /**
  * Require a nonempty live-runtime path setting and resolve it against the session workspace;
  * throw with the missing setting name.
- * @param {string | undefined} value Required launch setting, possibly absent.
- * @param {string} name Configuration field name used in errors.
- * @param {WorkspaceFolder | undefined} folder Session workspace used for relative resolution.
- * @returns {string} Absolute runtime path; missing values throw.
+ * @param value Required launch setting, possibly absent.
+ * @param name Configuration field name used in errors.
+ * @param folder Session workspace used for relative resolution.
+ * @returns Absolute runtime path; missing values throw.
  */
 const requiredLivePath = (
   value: string | undefined,
@@ -419,9 +429,9 @@ const requiredLivePath = (
 /**
  * Require a nonempty trace-identity string and throw a field-specific error instead of coercing
  * malformed metadata.
- * @param {unknown} value Unvalidated identity field.
- * @param {string} name Field path included in validation errors.
- * @returns {string} Nonempty identity string without coercion.
+ * @param value Unvalidated identity field.
+ * @param name Field path included in validation errors.
+ * @returns Nonempty identity string without coercion.
  */
 const stringField = (value: unknown, name: string): string => {
   if (typeof value !== "string" || value.length === 0) {
@@ -430,14 +440,17 @@ const stringField = (value: unknown, name: string): string => {
   return value;
 };
 
+/** Narrow JSON and launch payloads to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Accept absent optional launch fields without coercing empty strings. */
 function optionalString(value: unknown): boolean {
   return value === undefined || typeof value === "string";
 }
 
+/** Validate optional Uttori launch fields while requiring the ROM/debug-map pair. */
 function isUttoriDebugConfiguration(value: DebugConfiguration): value is UttoriDebugConfiguration {
   return (
     typeof value.program === "string" &&
@@ -474,6 +487,7 @@ function debugConfiguration(session: DebugSession): UttoriDebugConfiguration {
   return configuration;
 }
 
+/** Parse replay JSON and reject scripts that fail structural validation. */
 function parsedReplayScript(text: string): ReplayScript {
   const value: unknown = JSON.parse(text);
   if (!isReplayScript(value)) {
@@ -482,6 +496,7 @@ function parsedReplayScript(text: string): ReplayScript {
   return value;
 }
 
+/** Validate trace capability metadata advertised by the live backend. */
 function isTraceCapability(value: unknown): value is TraceCapability {
   return (
     isRecord(value) &&
@@ -493,6 +508,7 @@ function isTraceCapability(value: unknown): value is TraceCapability {
   );
 }
 
+/** Validate native-side capture file progress reported during streaming. */
 function isNativeFilePosition(value: unknown): value is NativeCaptureFilePosition {
   return (
     isRecord(value) &&
@@ -505,6 +521,7 @@ function isNativeFilePosition(value: unknown): value is NativeCaptureFilePositio
   );
 }
 
+/** Validate one editor trace batch before merging it into capture recorders. */
 function isEditorTraceBatch(value: unknown): value is EditorTraceBatch {
   return (
     isRecord(value) &&
@@ -521,6 +538,7 @@ function isEditorTraceBatch(value: unknown): value is EditorTraceBatch {
   );
 }
 
+/** Shape-check replay scripts before loading snapshots into the debugger. */
 function isReplayScript(value: unknown): value is ReplayScript {
   if (!isRecord(value) || !Array.isArray(value.snapshots)) {
     return false;
@@ -541,9 +559,9 @@ function isReplayScript(value: unknown): value is ReplayScript {
 /**
  * Combine the selected stream with the session ROM hash and producer identity; throw if
  * validated session identity is unavailable or malformed.
- * @param {DebugSession} session Debug session with a retained validated identity.
- * @param {TraceCapability} trace Selected processor stream and negotiated limits.
- * @returns {EditorTraceMetadata} Immutable stream, ROM, and producer metadata for the recorder.
+ * @param session Debug session with a retained validated identity.
+ * @param trace Selected processor stream and negotiated limits.
+ * @returns Immutable stream, ROM, and producer metadata for the recorder.
  */
 const traceMetadata = (session: DebugSession, trace: TraceCapability): EditorTraceMetadata => {
   const loaded = sessionContexts.get(session.id);
@@ -569,9 +587,9 @@ const traceMetadata = (session: DebugSession, trace: TraceCapability): EditorTra
  * Identify replay by the map fingerprint and live runtimes by revision, patch hash, and
  * executable hash read from the manifest.
  * Missing identity fields and unreadable manifests fail capture setup.
- * @param {DebugSession} session Session configuration selecting replay or a live runtime.
- * @param {DebugMap} map Validated debug map supplying replay identity.
- * @returns {EditorTraceMetadata["producer"]} Producer ID and revision derived from persisted build identities.
+ * @param session Session configuration selecting replay or a live runtime.
+ * @param map Validated debug map supplying replay identity.
+ * @returns Producer ID and revision derived from persisted build identities.
  */
 const traceProducer = (session: DebugSession, map: DebugMap): EditorTraceMetadata["producer"] => {
   const configuration = debugConfiguration(session);
@@ -595,8 +613,8 @@ const traceProducer = (session: DebugSession, map: DebugMap): EditorTraceMetadat
 /**
  * Query backend trace capabilities, selecting the sole stream or prompting for a processor.
  * Throws when no stream exists; returns undefined if the picker is cancelled.
- * @param {DebugSession} session Active session queried for trace capabilities.
- * @returns {Promise<TraceCapability | undefined>} Selected stream, or undefined when selection is cancelled.
+ * @param session Active session queried for trace capabilities.
+ * @returns Selected stream, or undefined when selection is cancelled.
  * @see https://code.visualstudio.com/api/references/vscode-api#DebugSession.customRequest
  * @see https://code.visualstudio.com/api/references/vscode-api#window.showQuickPick
  */
@@ -623,10 +641,10 @@ const chooseTrace = async (session: DebugSession): Promise<TraceCapability | und
 /**
  * Suggest a timestamped instruction/bus capture filename under the session workspace, or the
  * first folder; return undefined without either.
- * @param {DebugSession} session Session supplying the preferred workspace folder.
- * @param {"json" | "act2"} extension Capture file format suffix.
- * @param {boolean} bus Whether to use the bus-trace filename prefix.
- * @returns {Uri | undefined} Suggested local destination, or undefined without a workspace.
+ * @param session Session supplying the preferred workspace folder.
+ * @param extension Capture file format suffix.
+ * @param bus Whether to use the bus-trace filename prefix.
+ * @returns Suggested local destination, or undefined without a workspace.
  */
 const defaultTraceUri = (
   session: DebugSession,
@@ -647,7 +665,7 @@ const defaultTraceUri = (
  * the active capture.
  * Picker cancellation exits without recording; startup failures stop any armed recorder before
  * propagating.
- * @returns {Promise<void>} Completion after startup or picker cancellation; the recorder continues asynchronously.
+ * @returns Completion after startup or picker cancellation; the recorder continues asynchronously.
  */
 const startRuntimeTraceWithLease = async (): Promise<void> => {
   if (activeTraceRecording) {
@@ -880,7 +898,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
 /**
  * Hold the global trace lease through interactive setup and recorder completion, releasing it on
  * cancellation or startup failure.
- * @returns {Promise<void>} Completion after setup; the lease remains held until an active recorder settles.
+ * @returns Completion after setup; the lease remains held until an active recorder settles.
  */
 const startRuntimeTrace = async (): Promise<void> => {
   const release = acquireTraceLease();
@@ -901,8 +919,10 @@ const startRuntimeTrace = async (): Promise<void> => {
   setRuntimeCapturePhase("idle");
 };
 
-/** Save a named visual milestone at an acknowledged pause; leave the game paused
- * so users can inspect or step from the same recorded boundary. */
+/**
+ * Save a named visual milestone at an acknowledged pause; leave the game paused
+ * so users can inspect or step from the same recorded boundary.
+ */
 const markRuntimeCapture = async (): Promise<void> => {
   const active = activeTraceRecording;
   if (!active || active.recorder instanceof RuntimeTraceFileRecorder) {
@@ -923,10 +943,11 @@ const markRuntimeCapture = async (): Promise<void> => {
   });
 };
 
-/** Restore a verified bundle into the active matching runtime. Replay supplies
+/**
+ * Restore a verified bundle into the active matching runtime. Replay supplies
  * recorded serial inputs until the saved endpoint; restore leaves controls live
  * for a new branch such as refusing payment or having insufficient money.
- * @param {boolean} replay Whether to supply recorded console inputs after restoring.
+ * @param replay Whether to supply recorded console inputs after restoring.
  */
 const restoreRuntimeCapture = async (replay: boolean): Promise<void> => {
   if (activeTraceRecording) {
@@ -970,8 +991,8 @@ const restoreRuntimeCapture = async (replay: boolean): Promise<void> => {
  * importer or offer an import action.
  * By default import is optional; analyze requests it immediately. Successful live bus analysis
  * already satisfies the import.
- * @param {boolean} [analyze] Import immediately after finalization when true; defaults to false.
- * @returns {Promise<void>} Completion after finalization and any selected import workflow.
+ * @param [analyze] Import immediately after finalization when true; defaults to false.
+ * @returns Completion after finalization and any selected import workflow.
  */
 const stopRuntimeTrace = async (analyze = false): Promise<void> => {
   const active = activeTraceRecording;
@@ -1046,7 +1067,7 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
 /**
  * Start an asynchronous trace command and report rejection through an editor error notification
  * instead of leaving it unhandled.
- * @param {Function} command Trace operation whose failures should be shown in the editor.
+ * @param command Trace operation whose failures should be shown in the editor.
  */
 const runTraceCommand = (command: () => Promise<void>): void => {
   void command().catch((error: unknown) =>
@@ -1059,7 +1080,7 @@ const runTraceCommand = (command: () => Promise<void>): void => {
 /**
  * Forget session identity and asynchronously finalize its active capture as incomplete,
  * preserving recorded evidence and reporting the outcome.
- * @param {DebugSession} session Ended session whose identity and active recording must be released.
+ * @param session Ended session whose identity and active recording must be released.
  * @see https://code.visualstudio.com/api/references/vscode-api#debug.onDidTerminateDebugSession
  */
 const debugSessionTerminated = (session: DebugSession): void => {
@@ -1092,13 +1113,13 @@ const debugSessionTerminated = (session: DebugSession): void => {
  * optional sidecar override.
  * The backend creates its transport on connection; the debug adapter owns termination and
  * disposal.
- * @param {UttoriDebugConfiguration} configuration Live launch settings for ares.
- * @param {WorkspaceFolder | undefined} folder Workspace used to resolve relative runtime paths.
- * @param {string} extensionRoot Installed extension root containing bundled sidecars.
- * @param {string} program Absolute ROM filename to load.
- * @param {string} romSha256 Verified headerless build identity, also used for native capture matching.
- * @param {Function} log Destination for sidecar stderr messages.
- * @returns {DebugBackend} Lazy live backend owned by the inline adapter.
+ * @param configuration Live launch settings for ares.
+ * @param folder Workspace used to resolve relative runtime paths.
+ * @param extensionRoot Installed extension root containing bundled sidecars.
+ * @param program Absolute ROM filename to load.
+ * @param romSha256 Verified headerless build identity, also used for native capture matching.
+ * @param log Destination for sidecar stderr messages.
+ * @returns Lazy live backend owned by the inline adapter.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.isTrusted
  */
 const createLiveBackend = (
@@ -1178,10 +1199,10 @@ const createLiveBackend = (
  * most plausible source root.
  * Missing settings, invalid artifacts, and unsupported live configurations throw before adapter
  * creation.
- * @param {DebugSession} session VS Code session with resolved launch settings.
- * @param {string} extensionRoot Installed extension root containing bundled sidecars.
- * @param {Function} log Destination for source-root and backend diagnostics.
- * @returns {object} Validated ROM/map, selected backend, and resolved source root.
+ * @param session VS Code session with resolved launch settings.
+ * @param extensionRoot Installed extension root containing bundled sidecars.
+ * @param log Destination for source-root and backend diagnostics.
+ * @returns Validated ROM/map, selected backend, and resolved source root.
  */
 const loadConfiguration = (
   session: DebugSession,
@@ -1266,6 +1287,7 @@ class InlineDebugAdapter implements DebugAdapter {
   readonly #emitter = new EventEmitter<DapProtocolMessage>();
   readonly #session: DebugAdapterSession;
   readonly #backend: DebugBackend;
+  /** Outbound DAP messages forwarded to VS Code after session normalization. */
   readonly onDidSendMessage: Event<DapProtocolMessage> = this.#emitter.event;
 
   constructor(
@@ -1302,7 +1324,10 @@ class InlineDebugAdapter implements DebugAdapter {
     });
   }
 
-  /** @param {DapRequest} message DAP request from VS Code. */
+  /**
+   * Dispatch an inbound DAP request to the shared debug adapter session.
+   * @param message DAP request from VS Code.
+   */
   handleMessage(message: DapRequest): void {
     void this.#session.dispatch(message);
   }
@@ -1326,8 +1351,8 @@ class InlineDebugAdapter implements DebugAdapter {
 class UttoriDebugConfigurationProvider implements DebugConfigurationProvider {
   /**
    * Supplies a usable map-backed replay launch when `launch.json` is initially empty.
-   * @param {WorkspaceFolder | undefined} folder Selected workspace folder.
-   * @param {DebugConfiguration} configuration Partial configuration.
+   * @param folder Selected workspace folder.
+   * @param configuration Partial configuration.
    * @returns Completed configuration, or undefined when the source build failed.
    */
   async resolveDebugConfiguration(
@@ -1396,9 +1421,9 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
 
   /**
    * Hosts the adapter inside the extension process.
-   * @param {DebugSession} session VS Code debug session.
-   * @param {DebugAdapterExecutable | undefined} _executable Ignored external adapter descriptor.
-   * @returns {DebugAdapterDescriptor} Inline adapter descriptor.
+   * @param session VS Code debug session.
+   * @param _executable Ignored external adapter descriptor.
+   * @returns Inline adapter descriptor.
    */
   createDebugAdapterDescriptor(
     session: DebugSession,
@@ -1465,8 +1490,8 @@ const updateCaptureContext = () =>
 
 /**
  * Registers the Uttori ASM debug configuration and inline adapter factories.
- * @param {string} extensionRoot Absolute installed extension root containing bundled sidecars.
- * @returns {readonly Disposable[]} Extension subscriptions.
+ * @param extensionRoot Absolute installed extension root containing bundled sidecars.
+ * @returns Extension subscriptions.
  * @see https://code.visualstudio.com/api/references/vscode-api#debug.registerDebugConfigurationProvider
  * @see https://code.visualstudio.com/api/references/vscode-api#debug.registerDebugAdapterDescriptorFactory
  * @see https://code.visualstudio.com/api/extension-guides/debugger-extension

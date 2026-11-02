@@ -70,8 +70,8 @@ export function convertBossImage(
 
 /**
  * Read the native BRR chunk from a playable PCM WAVE and verify every decoded sample.
- * @param {import('@uttori/asm-assets').AssetInput} source Authored WAVE with an sBRR chunk.
- * @returns {Uint8Array} Exact complete BRR stream owned by the caller.
+ * @param source Authored WAVE with an sBRR chunk.
+ * @returns Exact complete BRR stream owned by the caller.
  */
 export function verifiedBrrFromWave(source: AssetInput) {
   const { audio, native } = readBrrWave(source);
@@ -126,7 +126,8 @@ function readBrrWave(source: AssetInput): { audio: PcmAudio; native?: Uint8Array
   return { audio, native };
 }
 
-/** Preserve unchanged BRR exactly; edited PCM uses the shared lossy encoder and review metadata.
+/**
+ * Preserve unchanged BRR exactly; edited PCM uses the shared lossy encoder and review metadata.
  * Re-encoding requires an explicit loop policy because BRR flags do not contain the game's loop pointer.
  * Split streams retain their full byte count so a newly authored tail cannot disappear between bank slices.
  */
@@ -189,9 +190,9 @@ export function convertBrrWave(
 /**
  * Select the ROM-owned part of a verified stream after decoding the complete WAVE.
  * A bank split may occur inside a nine-byte BRR block, so slices are not decoded alone.
- * @param {Uint8Array} brr Complete native BRR stream.
- * @param {Readonly<Record<string, unknown>>} options Half-open byte slice in that stream.
- * @returns {Uint8Array} Owned bytes for the selected ROM bank span.
+ * @param brr Complete native BRR stream.
+ * @param options Half-open byte slice in that stream.
+ * @returns Owned bytes for the selected ROM bank span.
  */
 export function sliceBrrSegment(brr: Uint8Array, options: Readonly<Record<string, unknown>>) {
   const { startByte, byteLength } = options;
@@ -211,9 +212,9 @@ export function sliceBrrSegment(brr: Uint8Array, options: Readonly<Record<string
  * Convert native 4bpp group indexes to the game's 24-byte interleaved rows.
  * Only zero and the five colors of the selected actor group are representable;
  * native source colors 6/7 both render transparent and cannot be reconstructed.
- * @param {Uint8Array} planar Native 4bpp tiles.
- * @param {number} group Actor palette group, 0 through 2.
- * @returns {Uint8Array} Interleaved 3bpp rows.
+ * @param planar Native 4bpp tiles.
+ * @param group Actor palette group, 0 through 2.
+ * @returns Interleaved 3bpp rows.
  */
 export function encodeActor3bpp(planar: Uint8Array, group: number) {
   if (!Number.isInteger(group) || group < 0 || group > 2) {
@@ -235,9 +236,10 @@ export function encodeActor3bpp(planar: Uint8Array, group: number) {
   return encodeActor3bppNative(native);
 }
 
-/** Decode native interleaved rows to source indexes 0..7, retaining 0/6/7 separately.
- * @param {Uint8Array} bytes Interleaved 3bpp tiles.
- * @returns {number[][][]} Tile, row, and pixel indexes.
+/**
+ * Decode native interleaved rows to source indexes 0..7, retaining 0/6/7 separately.
+ * @param bytes Interleaved 3bpp tiles.
+ * @returns Tile, row, and pixel indexes.
  */
 export function decodeActor3bppNative(bytes: Uint8Array) {
   if (!(bytes instanceof Uint8Array) || bytes.length % 24) {
@@ -258,9 +260,10 @@ export function decodeActor3bppNative(bytes: Uint8Array) {
   );
 }
 
-/** Re-encode native source indexes exactly, including transparent aliases 6 and 7.
- * @param {readonly (readonly (readonly number[])[])[]} tiles Native 3bpp indexes.
- * @returns {Uint8Array} Interleaved 3bpp rows.
+/**
+ * Re-encode native source indexes exactly, including transparent aliases 6 and 7.
+ * @param tiles Native 3bpp indexes.
+ * @returns Interleaved 3bpp rows.
  */
 export function encodeActor3bppNative(tiles: readonly (readonly (readonly number[])[])[]) {
   const bytes = new Uint8Array(tiles.length * 24);
@@ -285,10 +288,11 @@ export function encodeActor3bppNative(tiles: readonly (readonly (readonly number
   return bytes;
 }
 
-/** Decode authored tiles to 4bpp group indexes, refusing lossy 6/7 aliases.
- * @param {Uint8Array} bytes Interleaved 3bpp tiles.
- * @param {number} group Actor palette group, 0 through 2.
- * @returns {Uint8Array} Native 4bpp tiles.
+/**
+ * Decode authored tiles to 4bpp group indexes, refusing lossy 6/7 aliases.
+ * @param bytes Interleaved 3bpp tiles.
+ * @param group Actor palette group, 0 through 2.
+ * @returns Native 4bpp tiles.
  */
 export function decodeActor3bpp(bytes: Uint8Array, group: number) {
   if (!Number.isInteger(group) || group < 0 || group > 2) {
@@ -316,9 +320,10 @@ export const somTitleLayout = Object.freeze({
   withinBlock: "tl-bl-br-tr",
 });
 
-/** Group is game metadata; native PNG conversion handles palette and tile layout.
- * @param {Readonly<Record<string, unknown>>} options Actor options, including `group`.
- * @returns {Readonly<Record<string, unknown>>} Options without `group`.
+/**
+ * Group is game metadata; native PNG conversion handles palette and tile layout.
+ * @param options Actor options, including `group`.
+ * @returns Options without `group`.
  */
 const imageOptions = (options: Readonly<Record<string, unknown>>) => {
   const { group, ...rest } = options;

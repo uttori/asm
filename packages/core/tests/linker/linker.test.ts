@@ -330,7 +330,7 @@ test("allocation failures carry completed placement evidence and cancellation st
     () => linkObjects({ objects: [encodeObject(first), encodeObject(second)], recipe }),
     { instanceOf: LinkError },
   );
-  t.is(error?.allocations.length, 1);
+  t.is(error.allocations.length, 1);
   const controller = new AbortController();
   controller.abort();
   t.throws(() => linkObjects({ objects: [], recipe, signal: controller.signal }), {

@@ -15,6 +15,7 @@ import {
 } from "../model/record-shape.js";
 import { parseSqlitePayload } from "./sqlite-payload.js";
 
+/** Decode a stored analysis payload that must be a CFG node. */
 function requireNode(value: unknown) {
   const record = requireAnalysisRecord(parseSqlitePayload(value));
   if (record.kind !== "cfg-node") {
@@ -23,6 +24,7 @@ function requireNode(value: unknown) {
   return record;
 }
 
+/** Decode a stored analysis payload that must be a CFG edge. */
 function requireEdge(value: unknown) {
   const record = requireAnalysisRecord(parseSqlitePayload(value));
   if (record.kind !== "cfg-edge") {
@@ -31,6 +33,7 @@ function requireEdge(value: unknown) {
   return record;
 }
 
+/** Decode a stored analysis payload that must be an unresolved flow record. */
 function requireUnresolved(value: unknown) {
   const record = requireAnalysisRecord(parseSqlitePayload(value));
   if (record.kind !== "unresolved") {
@@ -39,6 +42,7 @@ function requireUnresolved(value: unknown) {
   return record;
 }
 
+/** Decode a stored analysis payload that must be a function record. */
 function requireFunctionRecord(value: unknown) {
   const record = requireAnalysisRecord(parseSqlitePayload(value));
   if (record.kind !== "function") {
@@ -47,6 +51,7 @@ function requireFunctionRecord(value: unknown) {
   return record;
 }
 
+/** Accept an array of `{ id, name }` label references. */
 function isLabelRefList(value: unknown): boolean {
   return (
     Array.isArray(value) &&
@@ -56,10 +61,12 @@ function isLabelRefList(value: unknown): boolean {
   );
 }
 
+/** Accept an array whose every element is a finite number. */
 function isNumberList(value: unknown): boolean {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
 
+/** Structurally validate one cached call graph function. */
 function isCallGraphFunction(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -77,6 +84,7 @@ function isCallGraphFunction(value: unknown): boolean {
   );
 }
 
+/** Structurally validate one cached call or interrupt edge; `toNodeId` is absent when the target is undecoded. */
 function isCallGraphEdge(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -98,6 +106,7 @@ function isCallGraphEdge(value: unknown): boolean {
   );
 }
 
+/** Structurally validate one cached unresolved flow entry. */
 function isCallGraphUnresolved(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -114,6 +123,7 @@ function isCallGraphUnresolved(value: unknown): boolean {
   );
 }
 
+/** Structurally validate a cached call graph payload before it is returned without rebuilding. */
 export function isCallGraph(value: unknown): value is AnalysisCallGraph {
   return (
     isRecord(value) &&
@@ -128,15 +138,19 @@ export function isCallGraph(value: unknown): value is AnalysisCallGraph {
   );
 }
 
+/** Narrow a stored edge kind to the call graph edge kinds. */
 function requireCallKind(value: string): "call" | "interrupt" {
   if (value === "call" || value === "interrupt") {
     return value;
   }
   throw new Error("Invalid call graph edge.");
 }
+/** Deduplicate and sort IDs by locale order for stable output. */
 const unique = (ids: readonly string[]): string[] =>
   [...new Set(ids)].toSorted((a, b) => a.localeCompare(b));
+/** Deduplicate and sort numbers ascending. */
 const numbers = (ids: readonly number[]): number[] => [...new Set(ids)].toSorted((a, b) => a - b);
+/** Push an ID onto the owner's list, creating the list on first use. */
 const append = (map: Map<string, string[]>, owner: string, id: string): void => {
   let ids = map.get(owner);
   if (!ids) {
@@ -145,11 +159,12 @@ const append = (map: Map<string, string[]>, owner: string, id: string): void => 
   }
   ids.push(id);
 };
-/** Index only graph ownership and relevant edges, with bounded payload decoding on rebuild.
+/**
+ * Index only graph ownership and relevant edges, with bounded payload decoding on rebuild.
  * Context/state payloads never remain in memory. Ownership uses the last function entry in each
  * evidence path. Missing owners remain explicit.
- * @param {DatabaseSync} db Connection in a read transaction. Computation writes only temporary tables.
- * @returns {AnalysisCallGraph} Compact call graph backed by indexed node ownership.
+ * @param db Connection in a read transaction. Computation writes only temporary tables.
+ * @returns Compact call graph backed by indexed node ownership.
  */
 export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
   db.exec(`CREATE TEMP TABLE query_graph_nodes(id TEXT PRIMARY KEY,address_space TEXT,address INTEGER,file_offset INTEGER,owner TEXT) WITHOUT ROWID;
@@ -348,8 +363,9 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
   return graph;
 };
 
-/** Publish fully computed SQL ownership under the caller's short writer lock.
- * @param {DatabaseSync} db Connection retaining the temporary graph tables.
+/**
+ * Publish fully computed SQL ownership under the caller's short writer lock.
+ * @param db Connection retaining the temporary graph tables.
  */
 export const publishGraph = (db: DatabaseSync): void => {
   db.exec(`CREATE TABLE IF NOT EXISTS main.query_graph_nodes(id TEXT PRIMARY KEY,address_space TEXT,address INTEGER,file_offset INTEGER,owner TEXT) WITHOUT ROWID;

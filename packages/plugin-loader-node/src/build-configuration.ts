@@ -8,7 +8,9 @@ import { discoverProjectConfigurationPath } from "./configuration.js";
 
 /** Resolve existing target/source layout after module production instead of duplicating it in the host manifest. */
 export interface ModuleRecipeSelection {
+  /** Discriminator selecting a recipe derived from the manifest's source modules. */
   readonly from: "modules";
+  /** Target ID whose layout derives the recipe. */
   readonly target: string;
 }
 
@@ -24,7 +26,9 @@ export function isModuleRecipeSelection(value: unknown): value is ModuleRecipeSe
 
 /** Explicit opt-in build graph. All paths are relative to the manifest, including configuration and output. */
 export interface AssemblyBuildManifest {
+  /** Format discriminator; any other value is rejected. */
   readonly format: "uttori-build";
+  /** Manifest schema version; only 1 is accepted. */
   readonly version: 1;
   /** Optional plugin configuration; absent configuration uses the selected target's bundled defaults. */
   readonly config?: string;
@@ -34,7 +38,9 @@ export interface AssemblyBuildManifest {
     readonly source: string;
     readonly sourceAdapter?: "asar" | "ca65";
   }[];
+  /** Prebuilt serialized object files linked with the assembled modules. */
   readonly objects?: readonly string[];
+  /** Library files passed to the linker. */
   readonly libraries?: readonly string[];
   /** Portable recipe, config-derived module layout, or a recipe JSON path relative to this manifest. */
   readonly recipe: AssemblyLinkRecipe | ModuleRecipeSelection | string;
@@ -46,10 +52,13 @@ export interface AssemblyBuildManifest {
   readonly original?: string;
 }
 
+/** Accepts a plain JSON object; arrays and null are rejected. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+/** Accepts a non-blank string without NUL bytes, usable as a path or identifier. */
 const isText = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0 && !value.includes("\0");
+/** Accepts at most 65536 path strings that each satisfy isText. */
 const isPaths = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.length <= 65536 && value.every(isText);
 

@@ -19,6 +19,7 @@ const assemblyHost = createAssemblyBuildHost([["@uttori/asm-game-secret-of-mana"
 let started = false;
 let publication: { resolve(): void; reject(error: Error): void } | undefined;
 
+/** Send the final IPC response and disconnect the source child process. */
 const finish = (value: unknown): void => {
   process.send?.(value, () => process.disconnect?.());
 };
@@ -48,6 +49,7 @@ const beforePublish = (paths: readonly string[]): Promise<void> =>
     process.send?.({ type: "publish-check", paths });
   });
 
+/** Distinguish asset interchange operations from source and build requests. */
 function isAssetOperation(
   operation: SourceOperation | AssetOperation | AssetSourceOperation,
 ): operation is AssetOperation {

@@ -40,17 +40,24 @@ import type {
   TableDirectiveContext,
   DiagnosticDirectiveContext,
 } from "./types.js";
+/** Imperative directive handler invoked after tokenization with optional normalized command. */
 type BoundDirectiveHandler = (
   words: readonly string[],
   raw: string,
   command?: NormalizedCommand,
 ) => void;
 
+/** Session contexts passed to each directive family during registry construction. */
 export interface DirectiveRegistryContexts {
+  /** Context for numeric and character data directives. */
   data: DataDirectiveContext;
+  /** Context for fill and pad layout directives. */
   fillPad: FillPadDirectiveContext;
+  /** Context for relative branch label directives. */
   flowControl: FlowControlDirectiveContext;
+  /** Context for include and incbin-style source directives. */
   includeSource: IncludeDirectiveContext;
+  /** Nested layout contexts for org, base, and address-stack directives. */
   layout: {
     addressStack: AddressStackDirectiveContext;
     architecture: ArchitectureDirectiveContext;
@@ -58,15 +65,22 @@ export interface DirectiveRegistryContexts {
     org: OrgDirectiveContext;
     runtime: RuntimeDirectiveContext;
   };
+  /** Context for namespace scope directives. */
   namespace: NamespaceDirectiveContext;
+  /** Context for struct and binary layout directives. */
   struct: StructDirectiveContext;
+  /** Context for character table directives. */
   table: TableDirectiveContext;
+  /** Context for warning, error, and assert directives. */
   diagnostic: DiagnosticDirectiveContext;
 }
 
+/** Compact cache key combining grammar version strings without ambiguous concatenation. */
 const packIdentity = (value: string): string => `${value.length.toString(36)}:${value}`;
 
+/** Keyword dispatch table merging imperative handlers and typed syntax grammars. */
 export class DirectiveRegistry {
+  /** Lowercase keyword to bound handler map including prefix-stripped aliases. */
   readonly handlers = new Map<string, BoundDirectiveHandler>();
   /** Grammar versions are immutable; registration is the only ownership transition. */
   private cachedGrammarIdentity?: string;
@@ -265,10 +279,12 @@ export class DirectiveRegistry {
 
   constructor(readonly directivePrefixes: readonly string[] = []) {}
 
+  /** Reports whether a handler exists for the keyword after prefix normalization. */
   has(keyword: string): boolean {
     return this.lookup(keyword) !== undefined;
   }
 
+  /** Invokes a registered handler when present; returns false when the keyword is unknown. */
   dispatch(
     keyword: string,
     words: readonly string[],
@@ -286,8 +302,8 @@ export class DirectiveRegistry {
 
   /**
    * Resolves a directive handler using prefixes supplied by the active syntax profile.
-   * @param {string} keyword The directive keyword.
-   * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
+   * @param keyword The directive keyword.
+   * @returns The handler, if registered.
    */
   lookup(keyword: string): BoundDirectiveHandler | undefined {
     const direct = this.handlers.get(keyword);
@@ -303,6 +319,7 @@ export class DirectiveRegistry {
   }
 }
 
+/** Builds a registry with only the enabled core directive groups and syntax prefixes. */
 export const createDirectiveRegistry = (
   contexts: DirectiveRegistryContexts,
   enabledGroups: readonly CoreDirectiveGroup[] = CORE_DIRECTIVE_GROUPS,

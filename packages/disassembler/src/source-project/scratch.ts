@@ -5,6 +5,7 @@ import path from "node:path";
 import { acquireFileLease, durableReplace, type FileLease } from "../internal/durable-files.js";
 import type { SourceRepository } from "./git.js";
 
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -14,14 +15,17 @@ type ScratchPurpose = "generation" | "preview" | "prepare";
 
 /** Cleanup reports uncertain ownership instead of deleting unrecognized data. */
 export interface SourceScratchCleanup {
+  /** Scratch directories reclaimed after proving an owner record and active lease. */
   readonly removed: string[];
+  /** Paths left intact because ownership, shape, or concurrent use could not be verified. */
   readonly retained: { readonly path: string; readonly reason: string }[];
 }
 
 // oxlint-disable-next-line security/detect-unsafe-regex -- Every repetition has a fixed small bound.
 const uuidPattern = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
 
-/** Keep ownership until every payload is gone, so interruption never strands unidentifiable data.
+/**
+ * Keep ownership until every payload is gone, so interruption never strands unidentifiable data.
  * The caller holds both the maintenance lease and this directory's active lease.
  */
 function removeScratch(directory: string, lease: FileLease): void {

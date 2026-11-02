@@ -123,8 +123,8 @@ const frame = async (session: vscode.DebugSession, location: SourceTarget): Prom
  * Opt-in Secret of Mana proof using the workspace's configured ROM, map and ares runtime.
  * Tests a mirrored reset instruction, an edit while running, and restored breakpoints
  * in a fresh session. No source, ROM, launch configuration or analysis data is rewritten.
- * @param {vscode.WorkspaceFolder} folder Existing Secret of Mana workspace.
- * @returns {Promise<void>} Rejects on any editor, DAP or native stop mismatch.
+ * @param folder Existing Secret of Mana workspace.
+ * @returns Rejects on any editor, DAP or native stop mismatch.
  */
 export async function runLiveBreakpointSmoke(folder: vscode.WorkspaceFolder): Promise<void> {
   const name = process.env.UTTORI_VSCODE_LIVE_LAUNCH ?? "Launch Emulator (ares)";

@@ -368,15 +368,11 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
   t.true(manifest.contributes.viewsContainers.activitybar.some(({ id }) => id === "uttori-asm"));
   const views = manifest.contributes.views["uttori-asm"] ?? [];
   t.deepEqual(Object.fromEntries(views.map(({ id, type }) => [id, type])), {
-    "uttori-asm.projectPanel": "webview",
-    "uttori-asm.indexDetails": "tree",
+    "uttori-asm.home": "webview",
     "uttori-asm.projectOutline": "tree",
-    "uttori-asm.sourceProject": "tree",
     "uttori-asm.sources": "tree",
-    "uttori-asm.analysisCoverage": "tree",
   });
   t.deepEqual(manifest.contributes.viewsWelcome.map(({ view }) => view).toSorted(), [
-    "uttori-asm.analysisCoverage",
     "uttori-asm.projectOutline",
     "uttori-asm.sources",
   ]);
@@ -582,7 +578,7 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
 });
 
 test("project panel CSS uses VS Code workbench tokens", (t) => {
-  const css = fs.readFileSync(path.join(root, "packages/vscode-extension/media/panel.css"), "utf8");
+  const css = fs.readFileSync(path.join(root, "packages/vscode-extension/media/home.css"), "utf8");
   const panel = fs.readFileSync(
     path.join(root, "packages/vscode-extension/src/project/panel.ts"),
     "utf8",
@@ -592,7 +588,11 @@ test("project panel CSS uses VS Code workbench tokens", (t) => {
   t.true(css.includes("--vscode-focusBorder"));
   t.true(css.includes("--vscode-descriptionForeground"));
   t.true(css.includes("--vscode-button-hoverBackground"));
-  t.true(panel.includes("displayName"));
+  const homeModel = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/project/home-model.ts"),
+    "utf8",
+  );
+  t.true(homeModel.includes("displayName"));
   t.true(panel.includes("defaultArchitecture"));
   t.true(panel.includes("renderWebviewTemplate"));
 });

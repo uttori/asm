@@ -1,34 +1,45 @@
-/** Native PPU decision at one completing port write. Physical byte writes retain
+/**
+ * Native PPU decision at one completing port write. Physical byte writes retain
  * order, including repeated destinations. No source instruction or A-bus read is inferred.
  * Raster positions stay in the ordered archive instead of multiplying SQL variants.
  */
 export interface RuntimePPUEffect {
+  /** Destination memory region selected by the completing PPU port write. */
   readonly target: "vram" | "cgram" | "oam";
+  /** Whether bytes landed, were blocked, or only latched a pending transfer. */
   readonly outcome: "written" | "blocked" | "latched";
+  /** True when forced blanking prevented visible updates regardless of port data. */
   readonly forcedBlank: boolean;
+  /** True when active rendering rules restricted the write even without forced blank. */
   readonly renderingRestricted: boolean;
+  /** Emulator fidelity tier that produced the decision flags. */
   readonly implementation: "accurate" | "performance";
   /** Physical capacity for VRAM. Null for CGRAM/OAM. */
   readonly vramBytes: 65536 | 131072 | null;
+  /** Physical byte destinations emitted for a written outcome, in port order. */
   readonly bytes: readonly { readonly address: number; readonly value: number }[];
 }
 
+/** Narrow parsed JSON to a plain object record. */
 function isEffectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Accept only the supported SNES VRAM capacity constants. */
 function isVramBytes(value: unknown): value is 65536 | 131072 {
   return value === 65536 || value === 131072;
 }
 
+/** Accept finite integers for address and byte value fields. */
 function isInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value);
 }
 
-/** Validate a native effect independently of transport framing or stored JSON.
- * @param {unknown} effect Claimed physical writes and decision flags.
- * @param {object} access Completing bus operation.
- * @returns {RuntimePPUEffect} Fresh semantic value with canonical property order, excluding raster.
+/**
+ * Validate a native effect independently of transport framing or stored JSON.
+ * @param effect Claimed physical writes and decision flags.
+ * @param access Completing bus operation.
+ * @returns Fresh semantic value with canonical property order, excluding raster.
  */
 export const normalizeRuntimePPUEffect = (
   effect: unknown,

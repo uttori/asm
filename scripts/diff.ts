@@ -150,9 +150,9 @@ Options:
 `;
 
 /**
- * @param {string} value Hex string, optionally prefixed with $ or 0x.
- * @param {string} option Flag name for error messages.
- * @returns {number} Parsed unsigned integer.
+ * @param value Hex string, optionally prefixed with $ or 0x.
+ * @param option Flag name for error messages.
+ * @returns Parsed unsigned integer.
  */
 function parseHex(value: string | undefined, option: string): number {
   if (!value) {
@@ -172,9 +172,9 @@ function parseHex(value: string | undefined, option: string): number {
 }
 
 /**
- * @param {string | undefined} value Integer string.
- * @param {string} option Flag name for error messages.
- * @returns {number} Parsed non-negative integer.
+ * @param value Integer string.
+ * @param option Flag name for error messages.
+ * @returns Parsed non-negative integer.
  */
 function parseNonNegativeInteger(value: string | undefined, option: string): number {
   const parsed = Number(value);
@@ -185,8 +185,8 @@ function parseNonNegativeInteger(value: string | undefined, option: string): num
 }
 
 /**
- * @param {string[]} args Process argv after the script name.
- * @returns {Options} Parsed CLI options.
+ * @param args Process argv after the script name.
+ * @returns Parsed CLI options.
  */
 function parseOptions(args: string[]): Options {
   const options: Options = {
@@ -321,8 +321,8 @@ function parseOptions(args: string[]): Options {
 }
 
 /**
- * @param {string} relativeOrAbsolute Path from cwd or repo root.
- * @returns {string} Absolute path.
+ * @param relativeOrAbsolute Path from cwd or repo root.
+ * @returns Absolute path.
  */
 function resolvePath(relativeOrAbsolute: string): string {
   if (path.isAbsolute(relativeOrAbsolute)) {
@@ -336,9 +336,9 @@ function resolvePath(relativeOrAbsolute: string): string {
 }
 
 /**
- * @param {Mapper} mapper ROM mapping.
- * @param {number} offset File offset.
- * @returns {number} SNES CPU address.
+ * @param mapper ROM mapping.
+ * @param offset File offset.
+ * @returns SNES CPU address.
  */
 function romToSnes(mapper: Mapper, offset: number): number {
   if (mapper === "hirom") {
@@ -349,9 +349,9 @@ function romToSnes(mapper: Mapper, offset: number): number {
 }
 
 /**
- * @param {Mapper} mapper ROM mapping.
- * @param {number} snes SNES CPU address.
- * @returns {number} File offset.
+ * @param mapper ROM mapping.
+ * @param snes SNES CPU address.
+ * @returns File offset.
  */
 function snesToRom(mapper: Mapper, snes: number): number {
   if (mapper === "hirom") {
@@ -362,17 +362,17 @@ function snesToRom(mapper: Mapper, snes: number): number {
 }
 
 /**
- * @param {number} value Byte or address.
- * @param {number} width Pad width.
- * @returns {string} Lowercase hex.
+ * @param value Byte or address.
+ * @param width Pad width.
+ * @returns Lowercase hex.
  */
 function hexPad(value: number, width: number): string {
   return value.toString(16).padStart(width, "0");
 }
 
 /**
- * @param {Uint8Array} bytes Bytes to hash.
- * @returns {string} SHA-256 hex digest.
+ * @param bytes Bytes to hash.
+ * @returns SHA-256 hex digest.
  */
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -382,8 +382,8 @@ const processedLineCache = new Map<string, number[]>();
 
 /**
  * Maps assembler command indices (blank/comment lines stripped) onto 1-based file lines.
- * @param {string} filePath Source path recorded during emit.
- * @returns {number[]} commandIndex → file line.
+ * @param filePath Source path recorded during emit.
+ * @returns commandIndex → file line.
  */
 function processedIndexToFileLines(filePath: string): number[] {
   const cached = processedLineCache.get(filePath);
@@ -430,10 +430,10 @@ function processedIndexToFileLines(filePath: string): number[] {
 }
 
 /**
- * @param {Uint8Array} bytes ROM slice.
- * @param {number} center Inclusive center offset.
- * @param {number} window Bytes on each side.
- * @returns {string} Hex dump of the window.
+ * @param bytes ROM slice.
+ * @param center Inclusive center offset.
+ * @param window Bytes on each side.
+ * @returns Hex dump of the window.
  */
 function hexWindow(bytes: Uint8Array, center: number, window: number): string {
   const start = Math.max(0, center - window);
@@ -443,11 +443,11 @@ function hexWindow(bytes: Uint8Array, center: number, window: number): string {
 
 /**
  * Assemble `source` with the production SNES host.
- * @param {object} input Assemble parameters.
- * @param {string} input.sourcePath Assembly entry.
- * @param {ChecksumMode} input.checksumMode Checksum mode.
- * @param {boolean} input.sourceMap Whether to record emit hits.
- * @returns {{ bytes: Buffer; hits: EmitHit[] }} Assembled image and emit map.
+ * @param input Assemble parameters.
+ * @param input.sourcePath Assembly entry.
+ * @param input.checksumMode Checksum mode.
+ * @param input.sourceMap Whether to record emit hits.
+ * @returns Assembled image and emit map.
  */
 function assembleSource(input: {
   sourcePath: string;
@@ -501,8 +501,8 @@ function assembleSource(input: {
 }
 
 /**
- * @param {EmitHit[]} hits Emit hits in PC order per bank.
- * @returns {Map<number, EmitHit[]>} Hits grouped by SNES bank.
+ * @param hits Emit hits in PC order per bank.
+ * @returns Hits grouped by SNES bank.
  */
 function indexHitsByBank(hits: EmitHit[]): Map<number, EmitHit[]> {
   const hitsByBank = new Map<number, EmitHit[]>();
@@ -523,9 +523,9 @@ function indexHitsByBank(hits: EmitHit[]): Map<number, EmitHit[]> {
 
 /**
  * Last emit whose PC is at or before `snes`.
- * @param {Map<number, EmitHit[]>} hitsByBank Indexed hits.
- * @param {number} snes SNES address of the mismatch.
- * @returns {EmitHit | undefined} Nearest hit.
+ * @param hitsByBank Indexed hits.
+ * @param snes SNES address of the mismatch.
+ * @returns Nearest hit.
  */
 function nearestHit(hitsByBank: Map<number, EmitHit[]>, snes: number): EmitHit | undefined {
   const list = hitsByBank.get(snes >>> 16);
@@ -549,11 +549,11 @@ function nearestHit(hitsByBank: Map<number, EmitHit[]>, snes: number): EmitHit |
 }
 
 /**
- * @param {Uint8Array} actual Assembled bytes.
- * @param {Uint8Array} official Golden bytes.
- * @param {number} start Inclusive file offset.
- * @param {number} maxDelta Absolute delta to search.
- * @returns {ShiftGuess | undefined} Best non-zero shift, if any beats delta 0.
+ * @param actual Assembled bytes.
+ * @param official Golden bytes.
+ * @param start Inclusive file offset.
+ * @param maxDelta Absolute delta to search.
+ * @returns Best non-zero shift, if any beats delta 0.
  */
 function guessShift(
   actual: Uint8Array,
@@ -603,8 +603,8 @@ function guessShift(
 }
 
 /**
- * @param {object} input Diff inputs.
- * @returns {DiffReport} Structured mismatch report.
+ * @param input Diff inputs.
+ * @returns Structured mismatch report.
  */
 function diffRoms(input: {
   actual: Buffer;
@@ -742,8 +742,8 @@ function diffRoms(input: {
 }
 
 /**
- * @param {EmitHit | undefined} hit Source hit.
- * @returns {string} Trailing attribution, or empty.
+ * @param hit Source hit.
+ * @returns Trailing attribution, or empty.
  */
 function formatHit(hit: EmitHit | undefined): string {
   if (!hit) {
@@ -753,8 +753,8 @@ function formatHit(hit: EmitHit | undefined): string {
 }
 
 /**
- * @param {DiffReport} report Report to print.
- * @param {Options} options CLI options.
+ * @param report Report to print.
+ * @param options CLI options.
  */
 function printReport(report: DiffReport, options: Options): void {
   if (options.json) {

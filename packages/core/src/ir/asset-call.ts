@@ -22,16 +22,21 @@ export type AssetValueNode =
 
 /** One source statement with exactly two string operands and named options. */
 export interface ParsedAssetCall {
+  /** First positional argument: the asset file path as written, with syntax escapes decoded. */
   readonly path: Extract<AssetValueNode, { kind: "string" }>;
+  /** Second positional argument: the asset format identifier. */
   readonly format: Extract<AssetValueNode, { kind: "string" }>;
+  /** Named `key: value` options; keys are unique and empty when none are given. */
   readonly options: Readonly<Record<string, AssetValueNode>>;
+  /** Extent from `includeAsset` through the closing parenthesis, excluding any leading label. */
   readonly span: SourceSpan;
 }
 
-/** Parse only the `includeAsset(...)` form; leave all other commands alone.
- * @param {string} command Normalized source command.
- * @param {number} [line] Zero-based source line for argument spans.
- * @returns {ParsedAssetCall | undefined} Typed call with argument spans, if present.
+/**
+ * Parse only the `includeAsset(...)` form; leave all other commands alone.
+ * @param command Normalized source command.
+ * @param [line] Zero-based source line for argument spans.
+ * @returns Typed call with argument spans, if present.
  */
 export function parseAssetCall(command: string, line?: number): ParsedAssetCall | undefined {
   const leading = command.length - command.trimStart().length;
@@ -262,6 +267,7 @@ export const assetCallGuard: import("./syntax-codec.js").SyntaxGuard<ParsedAsset
   );
 };
 
+/** Accepts a plain non-array object whose every value is a valid asset value node. */
 function assetEntriesGuard(value: unknown): value is Readonly<Record<string, AssetValueNode>> {
   return (
     !!value &&
@@ -270,6 +276,7 @@ function assetEntriesGuard(value: unknown): value is Readonly<Record<string, Ass
     Object.values(value).every(assetValueGuard)
   );
 }
+/** Recursively validates one asset value node, including its span and kind-specific payload. */
 function assetValueGuard(value: unknown): value is AssetValueNode {
   if (!syntaxObject(value)) {
     return false;

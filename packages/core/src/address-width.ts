@@ -1,7 +1,7 @@
 /**
  * Returns the inclusive maximum unsigned address for a target width.
- * @param {number} addressWidth Address width in bits.
- * @returns {number} Inclusive maximum address.
+ * @param addressWidth Address width in bits.
+ * @returns Inclusive maximum address.
  */
 export function maximumAddressForWidth(addressWidth: number): number {
   if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
@@ -12,9 +12,9 @@ export function maximumAddressForWidth(addressWidth: number): number {
 
 /**
  * Normalizes an integer logical address to the active target's unsigned width.
- * @param {number} address Logical address.
- * @param {number} addressWidth Address width in bits.
- * @returns {number} Normalized unsigned address.
+ * @param address Logical address.
+ * @param addressWidth Address width in bits.
+ * @returns Normalized unsigned address.
  */
 export function normalizeAddressForWidth(address: number, addressWidth: number): number {
   const modulus = maximumAddressForWidth(addressWidth) + 1;
@@ -26,9 +26,9 @@ export function normalizeAddressForWidth(address: number, addressWidth: number):
 
 /**
  * Formats a logical address using the hexadecimal digits implied by its width.
- * @param {number} address Logical address.
- * @param {number} addressWidth Address width in bits.
- * @returns {string} Uppercase zero-padded hexadecimal address.
+ * @param address Logical address.
+ * @param addressWidth Address width in bits.
+ * @returns Uppercase zero-padded hexadecimal address.
  */
 export function formatAddressForWidth(address: number, addressWidth: number): string {
   return normalizeAddressForWidth(address, addressWidth)

@@ -19,7 +19,7 @@ export function instructionReferenceExpressions(
   }
   const text = command.parsed.opcodeOperands?.operandText ?? "";
   const physical = command.source.physical?.text ?? command.source.raw;
-  const mnemonic = command.source.tokenSpans[0];
+  const mnemonic = command.source.tokenSpans.at(0);
   const offset = mnemonic?.end ?? physical.indexOf(command.keyword) + command.keyword.length;
   const at = physical.indexOf(text, offset);
   const positions = at < 0 ? locateContinuedExpression(text, physical, offset) : undefined;
@@ -43,13 +43,10 @@ export function instructionReferenceExpressions(
       if (at >= 0) {
         return createTextSpan(physical, at + start, at + end, command.source.line);
       }
-      if (positions?.[start] !== undefined && positions[end - 1] !== undefined) {
-        return createTextSpan(
-          physical,
-          positions[start],
-          positions[end - 1] + 1,
-          command.source.line,
-        );
+      const first = positions?.[start];
+      const last = positions?.[end - 1];
+      if (first !== undefined && last !== undefined) {
+        return createTextSpan(physical, first, last + 1, command.source.line);
       }
       return { start: span.start, end: span.end };
     });

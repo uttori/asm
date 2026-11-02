@@ -34,9 +34,22 @@ supports the requested [capture mode and sink](CAPTURE.md). An unsupported reque
 
 ## Build and stage
 
-The [native source inventory](native/README.md) and [upstream contribution package](native/upstream/README.md)
-identify the patch layers and reproduction commands. Apply only patches matching their recorded
-base revision. The prepared upstream series and downstream capture supplements have distinct bases.
+Build from `fixtures/external/ares`. Configure with `-DARES_BUILD_OPTIONAL_TARGETS=ON`,
+then run that checkout's CTest launchers:
+
+```sh
+fixtures/external/ares/tests/gdb-polling/run-tests.sh /absolute/path/to/build
+fixtures/external/ares/tests/gdb-capture/run-tests.sh /absolute/path/to/build
+fixtures/external/ares/tests/gdb-states/run-tests.sh /absolute/path/to/build
+```
+
+On a Command Line Tools host, the compiler needs the same explicit libc++ header path as
+the desktop CMake build:
+
+```sh
+CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 \
+  fixtures/external/ares/tests/gdb-polling/run-tests.sh /absolute/path/to/build
+```
 
 Stage into a new directory and retain the previous runtime for rollback. Copy the built executable
 and its required resources. On macOS, sign the staged app before hashing it. Update the executable

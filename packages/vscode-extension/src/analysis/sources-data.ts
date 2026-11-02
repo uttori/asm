@@ -10,8 +10,8 @@ export type AnalysisSourceCatalogProjection = ReturnType<
 
 /**
  * Read validated source identities without loading CFG or runtime history.
- * @param {string} directory Native project directory.
- * @returns {AnalysisSourceCatalogProjection} Catalog and authoritative manifest from one read snapshot.
+ * @param directory Native project directory.
+ * @returns Catalog and authoritative manifest from one read snapshot.
  */
 export const readAnalysisSourceCatalog = (directory: string): AnalysisSourceCatalogProjection => {
   const store = openAnalysisProjectStore(directory);

@@ -12,8 +12,19 @@ import type {
 import { getCpuDecodeTable, getOpcodeForm, nmos6502Cpu } from "./instructions/opcodes.js";
 import type { CpuDefinition, InstructionForm } from "./instructions/schema.js";
 
+/**
+ * Formats an unsigned value as uppercase `$`-prefixed hex.
+ * @param value Value to format.
+ * @param width Minimum digit count.
+ * @returns Zero-padded hex text.
+ */
 const hex = (value: number, width = 2): string =>
   `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+/**
+ * Computes total encoded size of a form.
+ * @param form Instruction form.
+ * @returns Prefix/opcode bytes plus operand field widths.
+ */
 const sizeOf = (form: InstructionForm): number =>
   form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
 
@@ -43,6 +54,11 @@ export class Cpu6502Decoder implements ArchitectureDecoder {
     this.#forms = new Map(getCpuDecodeTable(cpu).map((form) => [form.opcode, form]));
   }
 
+  /**
+   * Decodes one instruction at `context.offset`.
+   * @param context Byte source, offset, and 16-bit logical PC.
+   * @returns Decoded instruction, or an error for an invalid PC, missing/truncated bytes, or an opcode absent from this CPU's table.
+   */
   decode(context: ArchitectureDecodeContext): ArchitectureDecodeResult {
     const { source, offset, logicalAddress } = context;
     if (!Number.isInteger(logicalAddress) || logicalAddress < 0 || logicalAddress > 0xffff) {
@@ -83,7 +99,7 @@ export class Cpu6502Decoder implements ArchitectureDecoder {
         message: "Truncated 6502 instruction.",
       };
     }
-    let value = bytes[1] ?? 0;
+    let value = bytes.at(1) ?? 0;
     if (size === 3) {
       value |= bytes[2] << 8;
     }
@@ -168,7 +184,7 @@ export function formatCpu6502Instruction(
   if (!form.canonical) {
     return `.byte ${[...instruction.bytes].map((byte) => hex(byte)).join(", ")} ; ${form.mnemonic}`;
   }
-  const operand = instruction.operands[0];
+  const operand = instruction.operands.at(0);
   const value = operand?.value ?? 0;
   let text = "";
   let suffix = "";
@@ -182,7 +198,7 @@ export function formatCpu6502Instruction(
       text = `#${hex(value)}`;
       break;
     case "relative":
-      text = hex(operand.targetAddress!, 4);
+      text = hex(operand!.targetAddress!, 4);
       break;
     case "zeroPage":
       text = addressExpression ?? hex(value);

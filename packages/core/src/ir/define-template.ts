@@ -17,8 +17,12 @@ export type DefineTemplatePart =
       readonly children: readonly DefineTemplatePart[];
     }
   | { readonly kind: "error"; readonly start: number; readonly end: number };
+
+/** Parsed define template; literal text between parts is not materialized. */
 export type DefineTemplate = {
+  /** Original template text that every part offset indexes into. */
   readonly text: string;
+  /** Escape, define and error sites in ascending offset order; empty when the text has none. */
   readonly parts: readonly DefineTemplatePart[];
 };
 

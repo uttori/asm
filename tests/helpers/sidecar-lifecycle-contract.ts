@@ -59,7 +59,7 @@ function hostManifest(value: unknown): Record<string, unknown> {
 
 /**
  * Exercise stdio ordering and shutdown without starting a native emulator.
- * @param {SidecarLifecycleOptions} options Production entry points and a valid runtime identity.
+ * @param options Production entry points and a valid runtime identity.
  */
 export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
   const entryPoint = path.resolve(options.entryPoint);

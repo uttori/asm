@@ -17,6 +17,7 @@ export type Cpu65816AbstractValue =
  * Emulation (`e`) is included so `XCE` after `PLP` stays conservative.
  */
 export interface Cpu65816StatusStackEntry {
+  /** Discriminator for PHP/PLP status snapshots on the abstract stack. */
   readonly kind: "status";
   /** Emulation flag at the matching `PHP`. */
   readonly e: Cpu65816AbstractValue;
@@ -30,6 +31,7 @@ export interface Cpu65816StatusStackEntry {
 
 /** Register or immediate bytes pushed by `PHA`/`PHX`/`PHY`/`PHB`/`PHD`/`PEA`/`PEI`/`PER`. */
 export interface Cpu65816ValueStackEntry {
+  /** Discriminator for register or immediate bytes pushed onto the stack. */
   readonly kind: "value";
   /** Effect source id (`a`, `x`, `y`, `dbr`, `d`, `pbr`, or an immediate). */
   readonly source: string;
@@ -106,9 +108,16 @@ export interface Cpu65816StateOverride {
   readonly stackPointer?: number;
 }
 
+/** Lattice bottom representing no evidence for a flag or register. */
 const unknown = (): Cpu65816AbstractValue => ({ kind: "unknown" });
+/** Lift a concrete hardware value into the analysis lattice. */
 const known = (value: number): Cpu65816AbstractValue => ({ kind: "known", value });
 
+/**
+ * Join two abstract scalar values at a CFG merge.
+ * @param left State from one predecessor edge.
+ * @param right State from another predecessor edge.
+ */
 const joinValue = (
   left: Cpu65816AbstractValue,
   right: Cpu65816AbstractValue,
@@ -128,9 +137,19 @@ const joinValue = (
   return { kind: "conflicting", values: [...values].toSorted((a, b) => a - b) };
 };
 
+/**
+ * Compare abstract stack entries for equality at a join point.
+ * @param left Entry from one predecessor.
+ * @param right Entry from another predecessor at the same depth.
+ */
 const sameEntry = (left: Cpu65816StackEntry, right: Cpu65816StackEntry): boolean =>
   JSON.stringify(left) === JSON.stringify(right);
 
+/**
+ * Join abstract stack prefixes when both sides are known and equal depth.
+ * @param left Stack snapshot from one predecessor.
+ * @param right Stack snapshot from another predecessor.
+ */
 const joinStack = (
   left: Cpu65816AbstractStack,
   right: Cpu65816AbstractStack,
@@ -149,12 +168,13 @@ const joinStack = (
     : { kind: "conflicting" };
 };
 
+/** Force 8-bit M/X whenever emulation mode is known to be active. */
 const normalize = (state: Cpu65816AbstractState): Cpu65816AbstractState =>
   state.e.kind === "known" && state.e.value === 1 ? { ...state, m: known(1), x: known(1) } : state;
 
 /**
  * Fully unknown state. Used when a seed has no hardware or annotation evidence.
- * @returns {Cpu65816AbstractState} Every register and the stack are `unknown`.
+ * @returns Every register and the stack are `unknown`.
  */
 export const unknownCpu65816State = (): Cpu65816AbstractState => ({
   e: unknown(),
@@ -171,7 +191,7 @@ export const unknownCpu65816State = (): Cpu65816AbstractState => ({
 /**
  * Hardware RESET: emulation, 8-bit A/XY, PBR=DBR=0, D=0, S=$01FF, empty stack.
  * Carry is unknown. Matches the 65816 coming out of `/RESET`.
- * @returns {Cpu65816AbstractState} State for the `$00FFFC` RESET vector target.
+ * @returns State for the `$00FFFC` RESET vector target.
  */
 export const resetCpu65816State = (): Cpu65816AbstractState => ({
   e: known(1),
@@ -187,7 +207,7 @@ export const resetCpu65816State = (): Cpu65816AbstractState => ({
 
 /**
  * Native-mode interrupt entry: E=0 and PBR=0. M/X/C/DBR/D/S/stack stay unknown.
- * @returns {Cpu65816AbstractState} State for native COP/BRK/ABORT/NMI/IRQ.
+ * @returns State for native COP/BRK/ABORT/NMI/IRQ.
  */
 export const nativeVectorCpu65816State = (): Cpu65816AbstractState => ({
   ...unknownCpu65816State(),
@@ -197,7 +217,7 @@ export const nativeVectorCpu65816State = (): Cpu65816AbstractState => ({
 
 /**
  * Emulation-mode interrupt entry: E=M=X=1 and PBR=0. C/DBR/D/S/stack stay unknown.
- * @returns {Cpu65816AbstractState} State for emulation COP/ABORT/NMI/IRQ/BRK.
+ * @returns State for emulation COP/ABORT/NMI/IRQ/BRK.
  */
 export const emulationVectorCpu65816State = (): Cpu65816AbstractState => ({
   ...unknownCpu65816State(),
@@ -210,9 +230,9 @@ export const emulationVectorCpu65816State = (): Cpu65816AbstractState => ({
 /**
  * Lattice join at a CFG merge. `unknown` absorbs. Two distinct known values
  * become `conflicting`. E=1 still forces M=X=1 after the join.
- * @param {Cpu65816AbstractState} left Incoming state from one predecessor.
- * @param {Cpu65816AbstractState} right Incoming state from another predecessor.
- * @returns {Cpu65816AbstractState} The least upper bound of both states.
+ * @param left Incoming state from one predecessor.
+ * @param right Incoming state from another predecessor.
+ * @returns The least upper bound of both states.
  */
 export const joinCpu65816States = (
   left: Cpu65816AbstractState,
@@ -230,15 +250,19 @@ export const joinCpu65816States = (
     stack: joinStack(left.stack, right.stack),
   });
 
+/**
+ * Convert a project boolean override into a known lattice value.
+ * @param value Optional 0/1 or boolean from metadata.
+ */
 const flagOverride = (value: 0 | 1 | boolean | undefined): Cpu65816AbstractValue | undefined =>
   value === undefined ? undefined : known(value === true || value === 1 ? 1 : 0);
 
 /**
  * Overlays known fields from a project annotation or configured entry point.
  * Banks are masked to 8 bits. D and S are masked to 16 bits.
- * @param {Cpu65816AbstractState} state State to update.
- * @param {Cpu65816StateOverride} override Partial known values to apply.
- * @returns {Cpu65816AbstractState} Normalized state with the overlay applied.
+ * @param state State to update.
+ * @param override Partial known values to apply.
+ * @returns Normalized state with the overlay applied.
  */
 export const applyCpu65816StateOverride = (
   state: Cpu65816AbstractState,
@@ -258,23 +282,27 @@ export const applyCpu65816StateOverride = (
 
 /**
  * Sets PBR from bits 23–16 of a 24-bit CPU address before decode at that PC.
- * @param {Cpu65816AbstractState} state Incoming state.
- * @param {number} address 24-bit SNES CPU address being entered.
- * @returns {Cpu65816AbstractState} `state` with PBR replaced.
+ * @param state Incoming state.
+ * @param address 24-bit SNES CPU address being entered.
+ * @returns `state` with PBR replaced.
  */
 export const enterCpu65816Address = (
   state: Cpu65816AbstractState,
   address: number,
 ): Cpu65816AbstractState => ({ ...state, pbr: known((address >>> 16) & 0xff) });
 
+/**
+ * Project a lattice flag onto decoder-compatible 0/1 or unknown.
+ * @param value Abstract E/M/X/carry value at the instruction.
+ */
 const decoderFlag = (value: Cpu65816AbstractValue): 0 | 1 | "unknown" =>
   value.kind === "known" && (value.value === 0 || value.value === 1) ? value.value : "unknown";
 
 /**
  * Projects the analysis lattice onto decoder flags. Known E/M/X become 0/1.
  * Anything else is `"unknown"`. Known PBR/DBR/D are copied when present.
- * @param {Cpu65816AbstractState} state Analysis state at the instruction.
- * @returns {Cpu65816DecodeState} Decoder input. Omitted banks/page stay unset.
+ * @param state Analysis state at the instruction.
+ * @returns Decoder input. Omitted banks/page stay unset.
  */
 export const cpu65816DecodeState = (state: Cpu65816AbstractState): Cpu65816DecodeState => ({
   e: decoderFlag(state.e),
@@ -285,6 +313,11 @@ export const cpu65816DecodeState = (state: Cpu65816AbstractState): Cpu65816Decod
   ...(state.d.kind === "known" ? { directPage: state.d.value } : {}),
 });
 
+/**
+ * Apply a push/pull delta to S when its value is known, honoring emulation stack rules.
+ * @param state Incoming CPU state including S and E.
+ * @param delta Signed byte change from a push or pull.
+ */
 const adjustStackPointer = (state: Cpu65816AbstractState, delta: number): Cpu65816AbstractValue => {
   if (state.s.kind !== "known") {
     return state.s.kind === "conflicting" ? state.s : unknown();
@@ -296,6 +329,11 @@ const adjustStackPointer = (state: Cpu65816AbstractState, delta: number): Cpu658
   return known(value);
 };
 
+/**
+ * Push one abstract stack entry and decrement S by its encoded width.
+ * @param state CPU state before the push.
+ * @param entry Status, value, or unknown hole being pushed.
+ */
 const push = (state: Cpu65816AbstractState, entry: Cpu65816StackEntry): Cpu65816AbstractState => {
   const bytes = entry.kind === "status" ? 1 : entry.bytes;
   const stack =
@@ -305,6 +343,11 @@ const push = (state: Cpu65816AbstractState, entry: Cpu65816StackEntry): Cpu65816
   return { ...state, s: adjustStackPointer(state, -bytes), stack };
 };
 
+/**
+ * Pop the top stack entry when the prefix is known, adjusting S upward.
+ * @param state CPU state before the pull.
+ * @param bytes Width of the value being pulled.
+ */
 const pull = (
   state: Cpu65816AbstractState,
   bytes: 1 | 2,
@@ -323,6 +366,11 @@ const pull = (
   ];
 };
 
+/**
+ * Determine how many bytes a push instruction writes given current M/X flags.
+ * @param mnemonic Push opcode being modeled.
+ * @param state CPU state supplying width flags.
+ */
 const pushedBytes = (mnemonic: string, state: Cpu65816AbstractState): 1 | 2 | undefined => {
   if (mnemonic === "PHA") {
     const flag = decoderFlag(state.m);
@@ -343,6 +391,11 @@ const pushedBytes = (mnemonic: string, state: Cpu65816AbstractState): 1 | 2 | un
     : 1;
 };
 
+/**
+ * Determine pull width for PLA/PLX/PLY and two-byte stack restores.
+ * @param target Register or pseudo-register name being pulled.
+ * @param state CPU state supplying width flags.
+ */
 const pulledBytes = (target: string, state: Cpu65816AbstractState): 1 | 2 | undefined => {
   if (target === "a") {
     const flag = decoderFlag(state.m);
@@ -361,12 +414,18 @@ const pulledBytes = (target: string, state: Cpu65816AbstractState): 1 | 2 | unde
   return target === "d" || target === "pc" ? 2 : 1;
 };
 
+/** Discard tracked stack contents after an unmodeled stack manipulation. */
 const loseStackPrecision = (state: Cpu65816AbstractState): Cpu65816AbstractState => ({
   ...state,
   s: unknown(),
   stack: { kind: "unknown" },
 });
 
+/**
+ * Read an abstract register value referenced by a stack push source id.
+ * @param source Effect source (`pbr`, `dbr`, `d`, …).
+ * @param state CPU state at the push site.
+ */
 const sourceValue = (source: string, state: Cpu65816AbstractState): Cpu65816AbstractValue => {
   if (source === "pbr") {
     return state.pbr;
@@ -396,9 +455,9 @@ const CARRY_UNKNOWN_MNEMONICS = new Set([
  * Applies one instruction's decoded effects conservatively.
  * Tracks SEP/REP, PHP/PLP, PHB/PLB, PHD/PLD, XCE, and TCD/TCS. Loses stack
  * precision on `BRK`/`COP`/`JSR`/`JSL` and when M/X width is unknown at a push/pull.
- * @param {StaticInstruction} instruction Normalized instruction from the worklist.
- * @param {Cpu65816AbstractState} input State immediately before the instruction.
- * @returns {Cpu65816AbstractState} Outgoing state after effects and E=1 forcing.
+ * @param instruction Normalized instruction from the worklist.
+ * @param input State immediately before the instruction.
+ * @returns Outgoing state after effects and E=1 forcing.
  */
 export const transferCpu65816State = (
   instruction: StaticInstruction,
@@ -497,7 +556,7 @@ export const transferCpu65816State = (
 
 /**
  * Stable worklist identity for a state. JSON order matches object insertion.
- * @param {Cpu65816AbstractState} state State to key.
- * @returns {string} Canonical JSON used as a CFG node context key.
+ * @param state State to key.
+ * @returns Canonical JSON used as a CFG node context key.
  */
 export const cpu65816StateKey = (state: Cpu65816AbstractState): string => JSON.stringify(state);

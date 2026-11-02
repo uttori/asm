@@ -4,8 +4,11 @@ import type { NesCartridge } from "./cartridge.js";
 
 /** A qualified declaration projected into the headerless original-image coordinate system. */
 export interface NesSourceDataRange {
+  /** Inclusive interval start address. */
   readonly start: number;
+  /** Exclusive interval end address. */
   readonly end: number;
+  /** Interval annotation applied to the address range. */
   readonly annotation: IntervalAnnotation;
 }
 

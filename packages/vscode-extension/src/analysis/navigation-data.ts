@@ -13,16 +13,18 @@ import type { AnalysisNavigationTarget } from "./navigation-target.js";
  * ROM file-offset mapping.
  */
 export interface AnalysisNavigationProjection {
+  /** Disassembly preview lines for the navigation target. */
   readonly lines: readonly string[];
+  /** Whether preview bytes came from captured RAM without ROM file offsets. */
   readonly capturedRam: boolean;
 }
 
 /**
  * Build a small disassembly window in the analysis process, preserving exact architecture/space.
- * @param {Pick<AnalysisProjectSnapshot, "manifest" | "shards">} project Validated native snapshot.
- * @param {AnalysisNavigationTarget} target Exact navigation identity.
- * @param {ReadonlyMap} [executionCounts] Exact SQL totals for bounded runtime previews.
- * @returns {AnalysisNavigationProjection} At most 32 CFG rows plus 32 saved instruction variants.
+ * @param project Validated native snapshot.
+ * @param target Exact navigation identity.
+ * @param [executionCounts] Exact SQL totals for bounded runtime previews.
+ * @returns At most 32 CFG rows plus 32 saved instruction variants.
  */
 export const projectAnalysisNavigation = (
   project: Pick<AnalysisProjectSnapshot, "manifest" | "shards">,

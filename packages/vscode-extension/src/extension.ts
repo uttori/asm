@@ -55,9 +55,9 @@ import {
   type BuiltDebugArtifacts,
 } from "./debug/session.js";
 import { LinkedBuildController } from "./linked-build.js";
-import { IndexDetailsProvider } from "./project/index-tree.js";
+import type { HomeSnapshot } from "./project/home-model.js";
 import { ProjectOutlineProvider } from "./project/outline-tree.js";
-import { ProjectPanelProvider } from "./project/panel.js";
+import { HomeProvider } from "./project/panel.js";
 import { SourceController } from "./source/controller.js";
 
 /**
@@ -80,6 +80,7 @@ type BuildResult = {
   message?: string;
 };
 
+/** Narrow LSP command payloads to plain objects before validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -178,10 +179,14 @@ let watchTimer: ReturnType<typeof setTimeout> | undefined;
  * @see https://code.visualstudio.com/api/ux-guidelines/status-bar
  */
 let statusItem: StatusBarItem;
+/**
+ * Status bar identity for the selected project and legal Next action; click focuses Home.
+ */
+let projectStatusItem: StatusBarItem;
 
 /**
  * Returns the JSON-safe project settings sent across the LSP boundary.
- * @returns {Record<string, unknown>} The complete language-server initialization settings.
+ * @returns The complete language-server initialization settings.
  */
 function serverInitializationOptions(resource?: Uri): Record<string, unknown> {
   const config = workspace.getConfiguration("asm", resource ?? null);
@@ -216,7 +221,7 @@ const analysisConfigurationIdentity = (): string =>
 
 /**
  * Activates the extension and starts the Uttori Assembly language server.
- * @param {ExtensionContext} context The extension context.
+ * @param context The extension context.
  * @see https://code.visualstudio.com/api/references/vscode-api#ExtensionContext
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.createFileSystemWatcher
  * @see https://code.visualstudio.com/api/references/vscode-api#window.createStatusBarItem
@@ -319,16 +324,22 @@ export function activate(context: ExtensionContext): void {
   statusItem.command = "asm.toggleWatch";
   updateStatusItem();
   statusItem.show();
+  projectStatusItem = window.createStatusBarItem(StatusBarAlignment.Left, 1);
+  projectStatusItem.command = "asm.openPanel";
+  projectStatusItem.show();
 
-  const panelProvider = new ProjectPanelProvider(
+  const panelProvider = new HomeProvider(
     context.extensionUri,
     () => languageClientFor(),
     () => initConfig(),
+    {
+      getSource: () => sourceController,
+      getWatch: () => watchEnabled,
+      onSnapshot: updateProjectStatus,
+    },
   );
-  const indexProvider = new IndexDetailsProvider(() => panelProvider.snapshot());
   const refreshProjectViews = (): void => {
     void panelProvider.refresh();
-    indexProvider.refresh();
   };
   const outlineProvider = new ProjectOutlineProvider(() => languageClientFor());
   const coverageProvider = new AnalysisCoverageProvider((root, inputSha256) => {
@@ -358,8 +369,12 @@ export function activate(context: ExtensionContext): void {
     sourceController.onDidBuild(({ root, build }) => {
       analysisAnnotationController.buildCompleted(build.debugMapFile, root);
       coverageProvider.refresh();
+      void panelProvider.refresh();
     }),
-    sourceController.onDidChangeTreeData(() => coverageProvider.refresh()),
+    sourceController.onDidChangeTreeData(() => {
+      coverageProvider.refresh();
+      void panelProvider.refresh();
+    }),
     sourceController.onDidChangeSavedInput(scheduleWatchBuild),
     linkedBuildController.onDidChangeInput(() => {
       if (!sourceController?.root) {
@@ -400,20 +415,15 @@ export function activate(context: ExtensionContext): void {
     ...registerDebugging(context.extensionPath),
     outputChannel,
     statusItem,
+    projectStatusItem,
     analysisAnnotationController,
     sourcesProvider,
     coverageProvider,
-    indexProvider,
-    window.createTreeView(IndexDetailsProvider.viewId, { treeDataProvider: indexProvider }),
-    window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
+    window.registerWebviewViewProvider(HomeProvider.viewId, panelProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
     window.createTreeView(ProjectOutlineProvider.viewId, {
       treeDataProvider: outlineProvider,
-      showCollapseAll: true,
-    }),
-    window.createTreeView(AnalysisCoverageProvider.viewId, {
-      treeDataProvider: coverageProvider,
       showCollapseAll: true,
     }),
     window.createTreeView(AnalysisSourcesProvider.viewId, {
@@ -484,8 +494,10 @@ export function activate(context: ExtensionContext): void {
     commands.registerCommand("asm.initConfig", () => initConfig()),
     commands.registerCommand("asm.openConfig", () => panelProvider.openConfiguration()),
     commands.registerCommand("asm.openPanel", () =>
-      commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`),
+      commands.executeCommand(`${HomeProvider.viewId}.focus`),
     ),
+    commands.registerCommand("asm.home.next", () => panelProvider.runNext()),
+    commands.registerCommand("asm.home.refresh", () => panelProvider.refresh()),
     commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
     commands.registerCommand("asm.coverage.refresh", () => coverageProvider.refresh()),
     commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
@@ -758,7 +770,7 @@ export function activate(context: ExtensionContext): void {
 
 /**
  * Stops the language server when the extension is deactivated.
- * @returns {Thenable<void> | undefined} A promise that resolves once the client stops.
+ * @returns A promise that resolves once the client stops.
  * @see https://code.visualstudio.com/api/get-started/extension-anatomy#extension-entry-file
  * @see https://code.visualstudio.com/api/references/vscode-api#Disposable.dispose
  */
@@ -823,8 +835,8 @@ function stopWatch(): void {
 /**
  * Return the ROM/debug-map pair only for a successful build that supplied both paths; otherwise
  * return undefined.
- * @param {BuildResult} result Language-server build response.
- * @returns {BuiltDebugArtifacts | undefined} Artifact pair only when the build succeeded and both paths are present.
+ * @param result Language-server build response.
+ * @returns Artifact pair only when the build succeeded and both paths are present.
  */
 const completeArtifacts = (result: BuildResult): BuiltDebugArtifacts | undefined =>
   result.ok && result.outputPath && result.debugMapPath
@@ -841,11 +853,11 @@ const completeArtifacts = (result: BuildResult): BuiltDebugArtifacts | undefined
  * stop the previous watched session.
  * Returns false when artifacts are missing, runtime selection is cancelled, or VS Code declines
  * startup. noDebug selects run-only mode.
- * @param {ExtensionContext} context Active extension storage/lifecycle context.
- * @param {BuildResult} result Successful build response containing exact artifact paths.
- * @param {boolean} noDebug Whether to run without debugger features.
- * @param {boolean} watched Whether to replace and tag the Run and Watch session.
- * @returns {Promise<boolean>} Whether VS Code started the session; false for incomplete/cancelled setup.
+ * @param context Active extension storage/lifecycle context.
+ * @param result Successful build response containing exact artifact paths.
+ * @param noDebug Whether to run without debugger features.
+ * @param watched Whether to replace and tag the Run and Watch session.
+ * @returns Whether VS Code started the session; false for incomplete/cancelled setup.
  * @see https://code.visualstudio.com/api/references/vscode-api#debug.startDebugging
  * @see https://code.visualstudio.com/api/references/vscode-api#debug.stopDebugging
  */
@@ -883,9 +895,9 @@ async function launchLiveBuild(
 /**
  * Build the resolved entry and launch its exact artifacts only after success; noDebug selects
  * running without debugger features.
- * @param {ExtensionContext} context Active extension storage/lifecycle context.
- * @param {boolean} noDebug Whether to run without debugger features.
- * @returns {Promise<void>} Completion after the build and any successful-build launch attempt.
+ * @param context Active extension storage/lifecycle context.
+ * @param noDebug Whether to run without debugger features.
+ * @returns Completion after the build and any successful-build launch attempt.
  */
 async function buildAndLaunch(context: ExtensionContext, noDebug: boolean): Promise<void> {
   const epoch = watchEpoch;
@@ -900,8 +912,8 @@ async function buildAndLaunch(context: ExtensionContext, noDebug: boolean): Prom
  * Enable emulator rebuild-on-save and attempt the first build/launch.
  * Build failure leaves watch active for recovery on save; cancelled or unsuccessful runtime
  * startup disables it.
- * @param {ExtensionContext} context Active extension storage/lifecycle context.
- * @returns {Promise<void>} Completion after watch setup and the initial build/launch attempt.
+ * @param context Active extension storage/lifecycle context.
+ * @returns Completion after watch setup and the initial build/launch attempt.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.onDidSaveTextDocument
  */
 async function runAndWatch(context: ExtensionContext): Promise<void> {
@@ -950,7 +962,7 @@ async function runAndWatch(context: ExtensionContext): Promise<void> {
  * Resolves the document to assemble. Prefers the first configured entry point
  * so Build Binary / watch rebuild the project root instead of the include
  * currently in the editor.
- * @returns {string | undefined} The entry document URI string.
+ * @returns The entry document URI string.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getConfiguration
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.workspaceFolders
@@ -985,7 +997,7 @@ function resolveBuildEntryUri(): string | undefined {
 
 /**
  * Rebuilds the watched entry when a relevant document is saved (debounced).
- * @param {TextDocument} document The saved document.
+ * @param document The saved document.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.onDidSaveTextDocument
  * @see https://code.visualstudio.com/api/references/vscode-api#TextDocument
  */
@@ -1049,8 +1061,8 @@ function scheduleWatchBuild(): void {
 
 /**
  * Determines whether a document is an assembly source file.
- * @param {TextDocument} document The document to test.
- * @returns {boolean} True when the document is an assembly source.
+ * @param document The document to test.
+ * @returns True when the document is an assembly source.
  * @see https://code.visualstudio.com/api/references/vscode-api#TextDocument
  */
 function isAssemblyDocument(document: TextDocument): boolean {
@@ -1063,7 +1075,7 @@ function isAssemblyDocument(document: TextDocument): boolean {
 /**
  * Open the first workspace folder's configuration, creating it from settings and language-server
  * metadata only when absent. Existing configuration is preserved; no workspace reports an error.
- * @returns {Promise<void>} Completion after revealing the configuration or reporting that no workspace exists.
+ * @returns Completion after revealing the configuration or reporting that no workspace exists.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.fs
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getConfiguration
  */
@@ -1148,9 +1160,9 @@ async function initConfig(): Promise<void> {
 
 /**
  * Asks the language server to assemble a document and reports the result.
- * @param {string | undefined} documentUri The entry document URI string.
- * @param {boolean} [transient] When true, report success transiently (watch mode).
- * @returns {Promise<BuildResult | undefined>} The result used to gate emulator launch/reload.
+ * @param documentUri The entry document URI string.
+ * @param [transient] When true, report success transiently (watch mode).
+ * @returns The result used to gate emulator launch/reload.
  * @see https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#language-client
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getConfiguration
  * @see https://code.visualstudio.com/api/references/vscode-api#window.showInformationMessage
@@ -1286,9 +1298,9 @@ async function runBuild(
 /**
  * Resolves a path setting relative to the document's workspace folder. If the
  * document is outside a workspace, its containing directory is used.
- * @param {string} configuredPath The setting value.
- * @param {Uri} document The source document URI.
- * @returns {string | undefined} An absolute path, or undefined when unset.
+ * @param configuredPath The setting value.
+ * @param document The source document URI.
+ * @returns An absolute path, or undefined when unset.
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder
  */
@@ -1320,4 +1332,25 @@ function updateStatusItem(): void {
     statusItem.text = "$(eye) Assembly Watch: On";
     statusItem.tooltip = "Assembly is rebuilding on save. Click to stop.";
   }
+}
+
+/** Compact project identity and Next action; click focuses Home. */
+function updateProjectStatus(snapshot: HomeSnapshot): void {
+  if (!projectStatusItem) {
+    return;
+  }
+  if (snapshot.mode === "source") {
+    const remaining =
+      snapshot.health.coverage && Number.isFinite(snapshot.health.coverage.remainingPercent)
+        ? `${snapshot.health.coverage.remainingPercent.toFixed(0)}% remaining`
+        : undefined;
+    const nextTitle = snapshot.next?.title.replace(/^\d+\.\s*/u, "").split(" · ")[0];
+    projectStatusItem.text = `$(home) ${[snapshot.name, remaining, nextTitle ? `Next: ${nextTitle}` : undefined].filter(Boolean).join(" · ")}`;
+  } else if (snapshot.mode === "assembly") {
+    projectStatusItem.text = `$(home) ${snapshot.name} · index ${snapshot.indexReady ? "ready" : "waiting"}`;
+  } else {
+    projectStatusItem.text = "$(home) Uttori";
+  }
+  projectStatusItem.tooltip = "Open Uttori Home";
+  projectStatusItem.command = "asm.openPanel";
 }

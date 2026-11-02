@@ -4,6 +4,7 @@ import path from "node:path";
 import { verifyCaptureContext, type CaptureRecovery } from "@uttori/asm-capture";
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 
+/** Narrow JSON.parse output to a plain object record. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

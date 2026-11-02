@@ -5,6 +5,12 @@ import { crc32, deflateSync, inflateSync } from "node:zlib";
 /** History preserves SQLite storage types, including JSONB and packed register bytes. */
 export type HistoryValue = string | Uint8Array | null;
 
+/**
+ * Require a value already in one of the SQLite storage types preserved by history blocks.
+ * @param value Column value read from SQLite.
+ * @returns The value unchanged.
+ * @throws When the value is not TEXT, BLOB or NULL.
+ */
 function historyPayload(value: unknown): HistoryValue {
   if (value === null || typeof value === "string" || types.isUint8Array(value)) {
     return value;
@@ -27,11 +33,12 @@ CREATE TRIGGER runtime_history_immutable BEFORE UPDATE ON runtime_history BEGIN
   SELECT RAISE(ABORT,'Runtime history blocks are immutable');
 END;`;
 
-/** Encode bounded records together so repeated register bytes share one compression dictionary.
+/**
+ * Encode bounded records together so repeated register bytes share one compression dictionary.
  * The offset directory preserves empty TEXT/BLOB and NULL independently. CRC covers the directory
  * as well as the record bytes; corrupt lengths are rejected before decompression allocation.
- * @param {readonly HistoryValue[]} values Between 1 and 1024 exact SQLite payloads.
- * @returns {Buffer} Versioned, checksummed DEFLATE block, limited to 32 MiB decoded.
+ * @param values Between 1 and 1024 exact SQLite payloads.
+ * @returns Versioned, checksummed DEFLATE block, limited to 32 MiB decoded.
  */
 export const encodeRuntimeHistory = (values: readonly HistoryValue[]): Buffer => {
   if (!values.length || values.length > MAX_ROWS) {
@@ -71,9 +78,10 @@ interface HistoryBlock {
   readonly count: number;
 }
 
-/** Validate the entire directory without allocating one object for every unrequested record.
- * @param {Uint8Array} encoded Complete persisted block, including its header.
- * @returns {HistoryBlock} Checked bytes and record count; malformed bounds, types, or checksums throw.
+/**
+ * Validate the entire directory without allocating one object for every unrequested record.
+ * @param encoded Complete persisted block, including its header.
+ * @returns Checked bytes and record count; malformed bounds, types, or checksums throw.
  */
 const decodeHistoryBlock = (encoded: Uint8Array): HistoryBlock => {
   const bytes = Buffer.from(encoded.buffer, encoded.byteOffset, encoded.byteLength);
@@ -115,10 +123,11 @@ const decodeHistoryBlock = (encoded: Uint8Array): HistoryBlock => {
   return { body, count };
 };
 
-/** Resolve one checked slot without materializing its neighbors. BLOB slices share block ownership.
- * @param {HistoryBlock} block Validated directory and immutable decompressed bytes.
- * @param {number} slot In-range zero-based position, checked by the caller.
- * @returns {HistoryValue} Exact SQLite storage type; malformed UTF-8 text throws.
+/**
+ * Resolve one checked slot without materializing its neighbors. BLOB slices share block ownership.
+ * @param block Validated directory and immutable decompressed bytes.
+ * @param slot In-range zero-based position, checked by the caller.
+ * @returns Exact SQLite storage type; malformed UTF-8 text throws.
  */
 const historyValue = (block: HistoryBlock, slot: number): HistoryValue => {
   const start = block.body.readUInt32LE(slot * 4);
@@ -131,20 +140,22 @@ const historyValue = (block: HistoryBlock, slot: number): HistoryValue => {
   return type === 1 ? utf8.decode(value) : value;
 };
 
-/** Decode every exact typed payload; BLOB slices share the owned decompressed block.
- * @param {Uint8Array} encoded Complete persisted block, including its header.
- * @returns {HistoryValue[]} Values in slot order; malformed bounds, types, checksums, or text throw.
+/**
+ * Decode every exact typed payload; BLOB slices share the owned decompressed block.
+ * @param encoded Complete persisted block, including its header.
+ * @returns Values in slot order; malformed bounds, types, checksums, or text throw.
  */
 export const decodeRuntimeHistory = (encoded: Uint8Array): HistoryValue[] => {
   const block = decodeHistoryBlock(encoded);
   return Array.from({ length: block.count }, (_, slot) => historyValue(block, slot));
 };
 
-/** Register bounded block reads on every application connection before preparing runtime views.
+/**
+ * Register bounded block reads on every application connection before preparing runtime views.
  * Blocks are immutable and committed IDs never repeat. Clear the cache at transaction boundaries
  * because rolled-back inserts can reuse an ID; no cached value may outlive that rollback.
- * @param {DatabaseSync} db Owned connection; call before preparing queries against runtime views.
- * @returns {Function} Cache reset owned by the connection's transaction lifecycle.
+ * @param db Owned connection; call before preparing queries against runtime views.
+ * @returns Cache reset owned by the connection's transaction lifecycle.
  */
 export const registerRuntimeHistory = (db: DatabaseSync): (() => void) => {
   const cache = new Map<number, HistoryBlock>();
@@ -192,12 +203,13 @@ export const registerRuntimeHistory = (db: DatabaseSync): (() => void) => {
   };
 };
 
-/** Seal newly written payloads inside the owning publication transaction. Existing blocks never
+/**
+ * Seal newly written payloads inside the owning publication transaction. Existing blocks never
  * change, so readers and concurrent snapshots retain exact values. The partial pending index
  * prevents every annotation edit from rescanning the complete retained history.
- * @param {DatabaseSync} db Connection inside the owning writer transaction.
- * @param {Function} [onProgress] Optional cumulative sealed-fact counter; throwing aborts publication.
- * @returns {number} Facts moved from inline payloads to immutable blocks.
+ * @param db Connection inside the owning writer transaction.
+ * @param [onProgress] Optional cumulative sealed-fact counter; throwing aborts publication.
+ * @returns Facts moved from inline payloads to immutable blocks.
  */
 export const packRuntimeHistory = (
   db: DatabaseSync,
@@ -243,10 +255,11 @@ export const packRuntimeHistory = (
   }
 };
 
-/** Reclaim dead blocks/descriptors during explicit maintenance. Block fid bounds let the
+/**
+ * Reclaim dead blocks/descriptors during explicit maintenance. Block fid bounds let the
  * observation lifecycle avoid another per-fact index solely for garbage collection.
  * Partially live blocks are retained: deletion must never remove another fact's payload.
- * @param {DatabaseSync} db Connection inside the explicit maintenance transaction.
+ * @param db Connection inside the explicit maintenance transaction.
  */
 export const collectRuntimeHistory = (db: DatabaseSync): void => {
   db.exec(`DELETE FROM runtime_history WHERE NOT EXISTS(

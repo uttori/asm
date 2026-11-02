@@ -80,7 +80,7 @@ The PNG importer uses `@uttori/data-tools` 5.0.0 `ImagePNG` for validated contai
 parsing and bounded lazy pixel decoding. Supported input is
 indexed 1/2/4/8-bit, grayscale 1/2/4/8-bit, RGB8, grayscale-alpha8, and RGBA8.
 Sixteen-bit PNG and animated PNG are explicitly rejected. Imports are bounded to
-16 MiB of input, one megapixel, 5 MiB of inflated scanlines and 16,384 chunks.
+32 MiB of input, four megapixels (4,194,304 pixels), 20 MiB of inflated scanlines and 16,384 chunks.
 Conversion is synchronous and browser safe; returned pixels own their storage.
 Indexed PNG creation and rewriting also delegate to `ImagePNG`. Preview encoding
 uses `ImagePNG.encodeRGBA` and `RgbaSurface.fitNearest`, preserving the shared-scale
@@ -107,8 +107,8 @@ identity from matching colors or pixels:
   complete replacement index plane. No-op edits preserve every byte.
 
 These helpers do not assume 8×8 tiles, 16-color banks, BGR555, native frame records,
-ROM addresses or a particular game. Indexed extraction/rendering is bounded to one
-megapixel, 65,536 placements and 64 million processed placement pixels. PNG edits
+ROM addresses or a particular game. Indexed extraction/rendering is bounded to four
+megapixels per image, 65,536 placements and 64 Mi (67,108,864) processed placement pixels. PNG edits
 use the existing importer's bounds. PNG safe-to-copy ancillary chunks survive edits;
 unsafe ancillary chunks survive only when named in `preserveChunks` after the caller
 validates their format-specific meaning.
@@ -123,7 +123,7 @@ remain host responsibilities. Game-specific tools must also validate all read
 dependencies before calling it.
 
 `createAssetSourceBaseline(identity, sources)` and `assertAssetSourceBaseline(root,
-baseline, expectedIdentity)` persist relative paths, sizes and SHA-256 fingerprints
+baseline, expectedIdentity)` from `./node` persist relative paths, sizes and SHA-256 fingerprints
 across editing sessions. The host supplies a project/codec identity and validates the
 complete dependency set; fingerprints do not discover missing dependencies themselves.
 Paths cannot escape the source root or traverse symlinks.
@@ -174,6 +174,7 @@ Saved-source host workflows are described in the [asset editing guide](../cli/AS
 `./preview`, `./image`, and `./audio` are browser-safe. `./node` provides optional file
 reads and coordinated file replacement. `./image` exports the PNG importer, layout helpers, and normalized image models;
 `./audio` exports the WAVE importer, BRR PCM codec, WAVE preview writer, and audio model.
-Secret of Mana codecs stay on their own subpaths: `./secret-of-mana/lz`,
-`./secret-of-mana/som-asset-plugin`, `./secret-of-mana/som-frame-atlas`,
-`./secret-of-mana/som-room-assets`, and `./secret-of-mana/som-sprite-palettes`.
+Secret of Mana codecs stay on their own `./secret-of-mana/*` subpaths, such as
+`./secret-of-mana/lz`, `./secret-of-mana/som-frame-atlas`, `./secret-of-mana/som-room-assets`,
+and `./secret-of-mana/som-sprite-palettes`. The assembler plugin that registers them is
+`@uttori/asm-game-secret-of-mana`.

@@ -11,14 +11,17 @@ import type { SnesStructBinding, SnesStructConstant, SnesStructLayout } from "./
 
 /** A curated capture reference, separate from static operand identity and CPU control flow. */
 export interface SnesStructAccessObservation {
+  /** Resolved struct expression naming the observed binding and index. */
   readonly expression: string;
   /** Resolved CPU address. The complete access must remain inside one physical binding. */
   readonly address: number;
   /** Physical owner and exact field/gap coverage of the complete access. */
   readonly binding: string;
+  /** Field-aligned slices covering the full CPU access without gaps or overlap. */
   readonly parts: readonly SnesStructAccessPart[];
   /** Number of bytes in this CPU access, one or two. Independent of the field's declared size. */
   readonly width: number;
+  /** Bus direction inferred from the capture or trace. */
   readonly access: "read" | "write" | "read-write";
   /** A bus observation and an inference from instruction/register traces are different evidence. */
   readonly provenance: "observed" | "trace-derived";
@@ -32,6 +35,7 @@ export interface SnesStructAccessObservation {
 
 /** Validated instruction-specific metadata. Expressions resolve only against this map's declarations. */
 export interface SnesStructInstructionUse {
+  /** CPU address of the instruction opcode byte. */
   readonly address: number;
   /** Complete instruction encoding, including opcode. Stale metadata aborts export before writes. */
   readonly expectedBytes: readonly number[];
@@ -45,23 +49,34 @@ export interface SnesStructInstructionUse {
   readonly memoryOperand?: { readonly expression: string; readonly value: number };
   /** Encoded unsigned stack displacement (0–255), before adding S. Never a WRAM address or access observation. */
   readonly stackOperand?: { readonly expression: string; readonly value: number };
+  /** Curated memory-access evidence; may coexist with encoded operand replacements. */
   readonly observations: readonly SnesStructAccessObservation[];
 }
 
 /**
  * Accepts a JSON object. Arrays and null are not instruction-use records.
- * @param {unknown} value Candidate record.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Candidate record.
+ * @returns True when `value` is a non-array object.
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/**
+ * Require a plain object when parsing JSON instruction-use entries.
+ * @param value Raw JSON fragment.
+ */
 const record = (value: unknown): Record<string, unknown> => {
   if (!isRecord(value)) {
     throw new Error("Struct instruction-use entries must be objects.");
   }
   return value;
 };
+/**
+ * Parse a safe integer within an inclusive bound for metadata fields.
+ * @param value Raw numeric field.
+ * @param min Smallest accepted value.
+ * @param max Largest accepted value.
+ */
 const integer = (value: unknown, min: number, max: number): number => {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) {
     throw new Error(`Invalid struct instruction-use integer '${String(value)}'.`);
@@ -70,8 +85,8 @@ const integer = (value: unknown, min: number, max: number): number => {
 };
 /**
  * Collapse whitespace so provenance remains a comment and cannot inject assembly lines.
- * @param {unknown} value Required user-supplied explanation.
- * @returns {string} Non-empty text restricted to one source line.
+ * @param value Required user-supplied explanation.
+ * @returns Non-empty text restricted to one source line.
  */
 const text = (value: unknown): string => {
   if (typeof value !== "string" || !value.trim()) {
@@ -79,16 +94,17 @@ const text = (value: unknown): string => {
   }
   return value.replaceAll(/\s+/g, " ").trim();
 };
+/** Format a CPU or ROM offset for error messages. */
 const hex = (value: number): string => `$${value.toString(16).toUpperCase()}`;
 
 /**
  * Resolve optional instructionUses against already validated layouts and bindings.
  * Native expressions name exact operands. Observations describe complete spans within a binding.
- * @param {unknown} value Optional instructionUses array from JSON.
- * @param {readonly SnesStructLayout[]} structures Validated zero-based layouts.
- * @param {readonly SnesStructBinding[]} bindings Validated physical record bindings.
- * @param {readonly SnesStructConstant[]} constants Optional declared scalar values, without storage ownership.
- * @returns {readonly SnesStructInstructionUse[]} Resolved uses in CPU-address order.
+ * @param value Optional instructionUses array from JSON.
+ * @param structures Validated zero-based layouts.
+ * @param bindings Validated physical record bindings.
+ * @param constants Optional declared scalar values, without storage ownership.
+ * @returns Resolved uses in CPU-address order.
  */
 export const validateSnesStructInstructionUses = (
   value: unknown,
@@ -243,10 +259,10 @@ export const validateSnesStructInstructionUses = (
  * Index only annotated instructions, O(uses), rather than scanning uses for every CFG variant.
  * Mapper aliases, complete byte encodings and capture ROM identities are checked before export.
  * The callback returns undefined for unmapped addresses. Instruction bytes must map contiguously.
- * @param {readonly SnesStructInstructionUse[] | undefined} uses Validated instruction uses.
- * @param {RomImage} rom Immutable ROM supplying instruction bytes and capture identity.
- * @param {Function} toFileOffset Mapper-specific CPU-to-ROM translation.
- * @returns {ReadonlyMap<number, SnesStructInstructionUse> | undefined} Sparse lookup, absent when unused.
+ * @param uses Validated instruction uses.
+ * @param rom Immutable ROM supplying instruction bytes and capture identity.
+ * @param toFileOffset Mapper-specific CPU-to-ROM translation.
+ * @returns Sparse lookup, absent when unused.
  */
 export const indexSnesStructInstructionUses = (
   uses: readonly SnesStructInstructionUse[] | undefined,
@@ -283,10 +299,10 @@ export const indexSnesStructInstructionUses = (
 /**
  * Replace a proven immediate, memory address, data pointer or stack displacement without changing its mode.
  * This runs for every accepted state variant. A size/value mismatch is an error, never truncation.
- * @param {DecodedInstruction} instruction One accepted decode context.
- * @param {string} source Existing formatted source, including any conservative numeric fallback.
- * @param {SnesStructInstructionUse} use Validated metadata at this ROM instruction.
- * @returns {string} Width-preserving symbolic operand, or the original instruction for observations.
+ * @param instruction One accepted decode context.
+ * @param source Existing formatted source, including any conservative numeric fallback.
+ * @param use Validated metadata at this ROM instruction.
+ * @returns Width-preserving symbolic operand, or the original instruction for observations.
  */
 export const applySnesStructInstructionOperand = (
   instruction: DecodedInstruction,
@@ -395,8 +411,8 @@ export const applySnesStructInstructionOperand = (
  * Emit only explicitly curated instruction context. Justifications, field descriptions
  * and capture observations remain in metadata instead of becoming repetitive source notes.
  * Preserve the entire explanation; the assembly layout pass wraps it without clipping.
- * @param {SnesStructInstructionUse} use Validated instruction metadata.
- * @returns {readonly string[]} Zero or one complete comment body, without a semicolon.
+ * @param use Validated instruction metadata.
+ * @returns Zero or one complete comment body, without a semicolon.
  */
 export const renderSnesStructUseComments = (use: SnesStructInstructionUse): readonly string[] => {
   const comment = omitResearchReferences(use.comment ?? "");

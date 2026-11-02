@@ -39,6 +39,11 @@ import {
  */
 type ImportedResearchCollection = Exclude<ResearchCollection, "evidence">;
 
+/**
+ * Load one research table from the analysis store for Git import.
+ * @param store Open analysis project backing the staged export.
+ * @param collection Table name excluding runtime evidence.
+ */
 function importedResearchRecords(
   store: ReturnType<typeof openAnalysisProjectStore>,
   collection: ImportedResearchCollection,
@@ -61,6 +66,10 @@ function importedResearchRecords(
   }
 }
 
+/**
+ * Bootstrap a SNES Git source tree from a private ROM and optional research import.
+ * @param options Destination path, ROM file, mapper hints and cancellation hook.
+ */
 export async function initializeSnesSourceProject(options: InitializeSourceOptions) {
   const destination = path.resolve(options.directory);
   if (fs.existsSync(destination)) {

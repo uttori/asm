@@ -2,21 +2,32 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { DEBUG_SIDECAR_SESSION_ENV, DebugSidecarServer, assertDebugSidecarSessionToken } from "@uttori/asm-debug-adapter";
+import {
+  DEBUG_SIDECAR_SESSION_ENV,
+  DebugSidecarServer,
+  assertDebugSidecarSessionToken,
+} from "@uttori/asm-debug-adapter";
 
 import { AresProcessHost, parseAresRuntimeManifest } from "./ares-process-host.js";
 import { ARES_RSP_BACKEND_ID, AresRspDebugBackend } from "./ares-rsp-backend.js";
 
+/** Path-resolved launch inputs for the ares production sidecar executable. */
 export interface AresSidecarArguments {
+  /** Absolute path to the versioned ares runtime manifest JSON. */
   readonly manifest: string;
+  /** Absolute path to the separately installed ares executable. */
   readonly executable: string;
+  /** Absolute path to the SNES ROM matching the build or manifest pin. */
   readonly rom: string;
   /** Explicit verified build identity; omitted retains the runtime manifest's original ROM pin. */
   readonly romSha256?: string;
+  /** Portable root containing bin, resources, settings, and default saves. */
   readonly runtimeDirectory: string;
   /** Optional persistent SRAM/state root, resolved independently of the runtime. */
   readonly saveDirectory?: string;
+  /** Ares system name passed through to the frontend, when overridden. */
   readonly system?: string;
+  /** Whether ares fast-boot is enabled for this launch. */
   readonly fastBoot: boolean;
 }
 
@@ -48,8 +59,8 @@ const optionNames = new Set([
 
 /**
  * Strict shell-independent parser for the production sidecar executable.
- * @param {readonly string[]} arguments_ Sidecar command-line arguments.
- * @returns {AresSidecarArguments} Validated and path-resolved launch inputs.
+ * @param arguments_ Sidecar command-line arguments.
+ * @returns Validated and path-resolved launch inputs.
  */
 export const parseAresSidecarArguments = (arguments_: readonly string[]): AresSidecarArguments => {
   const values = new Map<string, string>();
@@ -102,6 +113,7 @@ export const parseAresSidecarArguments = (arguments_: readonly string[]): AresSi
   };
 };
 
+/** Resolves when a writable stream accepts one chunk without error. */
 const write = (stream: NodeJS.WritableStream, data: string | Uint8Array): Promise<void> =>
   new Promise((resolve, reject) => {
     stream.write(data, (error?: Error | null) => {
@@ -115,9 +127,9 @@ const write = (stream: NodeJS.WritableStream, data: string | Uint8Array): Promis
 
 /**
  * Runs one authenticated stdio sidecar until shutdown, EOF, signal, or protocol failure.
- * @param {readonly string[]} arguments_ Sidecar command-line arguments.
- * @param {NodeJS.ProcessEnv} environment Environment containing the one-session token.
- * @returns {Promise<void>} Completion once stdio handlers and backend ownership are installed.
+ * @param arguments_ Sidecar command-line arguments.
+ * @param environment Environment containing the one-session token.
+ * @returns Completion once stdio handlers and backend ownership are installed.
  */
 export const runAresSidecar = async (
   arguments_: readonly string[],

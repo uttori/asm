@@ -57,7 +57,7 @@ const extensionRoot = path.resolve("packages/vscode-extension");
 const uri = (file: string) => ({ fsPath: file, toString: () => `file://${file}` });
 
 const render = (
-  name: "palette" | "panel" | "indexed-png",
+  name: "palette" | "home" | "indexed-png",
   options: {
     root?: string;
     cspSource?: string;
@@ -92,7 +92,7 @@ const nonce = (html: string): string => {
 };
 
 test("packaged templates fill CSP, shared nonce and media URLs", (t) => {
-  for (const name of ["palette", "panel", "indexed-png"] as const) {
+  for (const name of ["palette", "home", "indexed-png"] as const) {
     const { html, assets } = render(name);
     t.false(html.includes("{{"));
     t.true(html.includes("style-src https://webview.example"));
@@ -102,8 +102,8 @@ test("packaged templates fill CSP, shared nonce and media URLs", (t) => {
     t.deepEqual(assets, [`media/${name}.css`, `media/${name}.js`]);
   }
   t.not(
-    nonce(render("panel").html),
-    nonce(render("panel").html),
+    nonce(render("home").html),
+    nonce(render("home").html),
     "cached HTML still gets a fresh nonce",
   );
 });
@@ -125,8 +125,8 @@ test("unknown template fields fail closed", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-webview-template-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(path.join(root, "media"));
-  fs.writeFileSync(path.join(root, "media", "panel.html"), "<html>{{cspSource}} {{bogus}}</html>");
-  const error = t.throws(() => render("panel", { root }));
+  fs.writeFileSync(path.join(root, "media", "home.html"), "<html>{{cspSource}} {{bogus}}</html>");
+  const error = t.throws(() => render("home", { root }));
   t.true(
     error instanceof Error && error.message.includes("Unknown webview template field 'bogus'"),
   );

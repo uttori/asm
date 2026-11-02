@@ -299,14 +299,12 @@ export async function assemblerAstInventory() {
             directive.keywords,
             snes ? "@uttori/asm-plugin-snes" : "@uttori/asm-plugin-65xx",
           );
-          if (directive.syntax) {
-            Object.assign(rows.at(-1)!, {
-              currentRoute: "pure parse -> validated JSON payload -> bound typed execution",
-              fallbackReason:
-                "none; public entries share syntax parsing; registered execution consumes validated payloads",
-              status: "typed execution implemented",
-            });
-          }
+          Object.assign(rows.at(-1)!, {
+            currentRoute: "pure parse -> validated JSON payload -> bound typed execution",
+            fallbackReason:
+              "none; public entries share syntax parsing; registered execution consumes validated payloads",
+            status: "typed execution implemented",
+          });
           if (directive.id === "snes.directive.check") {
             Object.assign(rows.at(-1)!, {
               currentRoute: "pure parse -> validated JSON payload -> bound typed execution",
@@ -503,18 +501,19 @@ export async function assemblerAstInventory() {
           target: "snes.superfx",
           milestone: "B10",
         },
-      ].map((slice) => ({
-        ...slice,
-        dialect: "native and Asar; ca65 65816 state directives",
-        guard: "packages/plugin-snes/tests/helpers/typed-execution.ts",
-        forbidden: [
-          "legacy operand classifier",
-          "operand text expansion",
-          "string numeric evaluation",
-          "string mathematical evaluation",
-          "legacy expression evaluation and semantic rendering",
-        ],
-      })),
+      ].map((slice) =>
+        Object.assign(slice, {
+          dialect: "native and Asar; ca65 65816 state directives",
+          guard: "packages/plugin-snes/tests/helpers/typed-execution.ts",
+          forbidden: [
+            "legacy operand classifier",
+            "operand text expansion",
+            "string numeric evaluation",
+            "string mathematical evaluation",
+            "legacy expression evaluation and semantic rendering",
+          ],
+        }),
+      ),
     ],
     instructionAddressingForms,
     consumers: rows.length,

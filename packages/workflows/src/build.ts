@@ -43,9 +43,19 @@ export * from "./build-contracts.js";
 
 /** Hosts own plugin composition and exact executable identities. No environment survives one operation. */
 export interface AssemblyBuildHost {
+  /**
+   * Load a frozen project environment from disk configuration.
+   * @param options Loader inputs including cwd, config file, and bundled plugins.
+   * @returns Activated environment disposed by the caller after use.
+   */
   readonly loadEnvironment: (
     options: LoadProjectEnvironmentOptions,
   ) => Promise<LoadedProjectEnvironment>;
+  /**
+   * Hash the toolchain identity for linked-build receipts.
+   * @param plugins Resolved plugin module paths for the build.
+   * @returns SHA-256 fingerprint object.
+   */
   readonly fingerprint: (plugins: readonly string[]) => { readonly sha256: string };
 }
 
@@ -67,7 +77,9 @@ const defaultBuildHost = createAssemblyBuildHost();
 
 /** Cancellation and live editor checks stay local instead of crossing IPC as callbacks. */
 export interface AssemblyBuildControls {
+  /** Cooperative cancellation forwarded to assembly and link steps. */
   readonly signal?: AbortSignal;
+  /** Optional human-readable progress hook for long builds. */
   readonly onProgress?: (message: string) => void;
   /** Called after validation and before any artifact is selected. Reject if saved inputs/editor versions changed. */
   readonly beforePublish?: (paths: readonly string[]) => void | Promise<void>;

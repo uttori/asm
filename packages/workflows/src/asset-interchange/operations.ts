@@ -22,7 +22,9 @@ import { readAssetOperation, type AssetFileOperation } from "./operation-records
 
 /** Hosts register factories so each adapter retains its own validated selection and binding types. */
 export interface AssetAdapterRegistration {
+  /** Adapter identifier matched against export manifests. */
   readonly id: string;
+  /** Bind this adapter to a project directory, codec, and source host. */
   create(
     directory: string,
     codec: AssetStructureCodec,
@@ -43,9 +45,13 @@ export function registerAssetAdapter<Selection, Bindings>(
 
 /** Registration is per host, never mutable process-global state. Duplicate IDs are rejected. */
 export interface AssetOperationOptions {
+  /** Optional source host override; defaults to the saved-source host. */
   readonly host?: AssetSourceHost;
+  /** Optional adapter list; defaults to registered game adapters. */
   readonly adapters?: readonly AssetAdapterRegistration[];
+  /** Optional cooperative cancellation. */
   readonly signal?: AbortSignal;
+  /** Optional last-look hook invoked immediately before publication. */
   readonly beforePublish?: AssetSourceHost["beforePublish"];
 }
 

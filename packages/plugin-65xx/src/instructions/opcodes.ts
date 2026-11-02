@@ -101,6 +101,7 @@ if (decoded.length !== 256) {
   throw new Error(`Expected 256 NMOS opcode entries, got ${decoded.length}.`);
 }
 
+/** Decode-table form whose `canonical` flag is assigned after duplicate encodings are grouped. */
 type MutableForm = Omit<InstructionForm, "canonical"> & { canonical: boolean };
 
 const mutableForms: MutableForm[] = decoded.map((entry, opcode) => {
@@ -197,6 +198,7 @@ export const nmos6502xForms = Object.freeze([
   ...brkSignatureForms,
 ]);
 
+/** Documented NMOS 6502 (`65xx.6502`); unofficial opcodes are neither assembled nor decoded. */
 export const nmos6502Cpu: CpuDefinition = Object.freeze({
   id: "65xx.6502",
   displayName: "NMOS 6502",
@@ -204,6 +206,7 @@ export const nmos6502Cpu: CpuDefinition = Object.freeze({
   features: new Set<CpuFeature>(["nmos"]),
 });
 
+/** NMOS 6502 with stable and unstable unofficial opcodes assemblable (`65xx.6502x`). */
 export const nmos6502xCpu: CpuDefinition = Object.freeze({
   id: "65xx.6502x",
   displayName: "NMOS 6502 with undocumented opcodes",
@@ -219,6 +222,11 @@ export const ricoh2a03Cpu: CpuDefinition = Object.freeze({
   features: new Set<CpuFeature>(["nmos", "undocumented"]),
 });
 
+/**
+ * Looks up assemblable forms for a ca65-derived variant CPU.
+ * @param cpuId Architecture id.
+ * @returns Variant forms, or undefined for NMOS/Ricoh CPUs and unknown ids.
+ */
 function cpuVariantForms(cpuId: string): readonly InstructionForm[] | undefined {
   return Object.hasOwn(variantFormsByCpuId, cpuId) ? variantFormsByCpuId[cpuId] : undefined;
 }
@@ -226,8 +234,8 @@ function cpuVariantForms(cpuId: string): readonly InstructionForm[] | undefined 
 /**
  * Looks up the NMOS decode-table form for a byte.
  *
- * @param {number} opcode Opcode 0–255.
- * @returns {InstructionForm} The form at that slot (always defined, unofficial included).
+ * @param opcode Opcode 0–255.
+ * @returns The form at that slot (always defined, unofficial included).
  */
 export function getOpcodeForm(opcode: number): InstructionForm {
   if (!Number.isInteger(opcode) || opcode < 0 || opcode > 0xff) {
@@ -239,8 +247,8 @@ export function getOpcodeForm(opcode: number): InstructionForm {
 /**
  * Full decode table for a CPU: CMOS variants use generated tables.
  * NMOS uses {@link nmos6502DecodeTable} filtered by features.
- * @param {CpuDefinition} cpu The CPU definition.
- * @returns {readonly InstructionForm[]} The decode table.
+ * @param cpu The CPU definition.
+ * @returns The decode table.
  */
 export function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[] {
   const variantForms = cpuVariantForms(cpu.id);
@@ -253,8 +261,8 @@ export function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[
 /**
  * Forms the assembler will encode (canonical only). Decode tables keep
  * duplicate unofficial encodings. Assembly does not.
- * @param {CpuDefinition} cpu The CPU definition.
- * @returns {readonly InstructionForm[]} The assembly forms.
+ * @param cpu The CPU definition.
+ * @returns The assembly forms.
  */
 export function getCpuAssemblyForms(cpu: CpuDefinition): readonly InstructionForm[] {
   const variantForms = cpuVariantForms(cpu.id);

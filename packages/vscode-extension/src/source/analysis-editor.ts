@@ -15,10 +15,12 @@ import type { SourceProcessClient } from "./process-client.js";
 import { editSourceResearch, type ResearchEditorContext } from "./research-editor.js";
 import { readResearchResult } from "./result-readers.js";
 
+/** Analysis research results eligible for palette-driven editing flows. */
 type AnalysisSelection = Extract<SourceResearchResult, { kind: "analysis" }>;
 
 /** Command-palette shortcuts limit the picker to the requested kind of research edit. */
 export interface AnalysisResearchHint {
+  /** Restricts command-palette research edits to one annotation category. */
   readonly action: "classification" | "state" | "targets";
 }
 
@@ -32,6 +34,7 @@ export function parseResearchAddress(text: string): number | undefined {
   return Number.isSafeInteger(number) && number >= 0 ? number : undefined;
 }
 
+/** Format research addresses using assembly-style hexadecimal. */
 const hex = (value: number): string => `$${value.toString(16).toUpperCase()}`;
 
 const CPU_STATE_FIELDS = [
@@ -45,10 +48,12 @@ const CPU_STATE_FIELDS = [
   { label: "Stack pointer", key: "stackPointer" },
 ] as const;
 
+/** Accept CPU flag field names used by the state editor picker. */
 function isFlagKey(key: string): key is "e" | "m" | "x" | "carry" {
   return key === "e" || key === "m" || key === "x" || key === "carry";
 }
 
+/** Accept register field names used by the state editor picker. */
 function isRegisterKey(
   key: string,
 ): key is "programBank" | "dataBank" | "directPage" | "stackPointer" {

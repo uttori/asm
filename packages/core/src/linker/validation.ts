@@ -93,6 +93,7 @@ function syntaxValue(value: unknown, depth = 0): void {
   throw new Error("Invalid syntax metadata.");
 }
 
+/** Validates source-location records embedded in link metadata. */
 function source(value: unknown): void {
   const node = record(value, "Source occurrence");
   textValue(node.file, "Source file");

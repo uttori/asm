@@ -274,7 +274,7 @@ incbin "original.bin":$${graphicsEnd.toString(16)}..$8000
 
 /** Run the ordinary build and validate its receipt before accepting a Git source generation. */
 export async function buildSpriteSource(directory: string): Promise<SourceBuildVerification> {
-  const result = await executeSourceOperation({ action: "build", directory });
+  const result: unknown = await executeSourceOperation({ action: "build", directory });
   assert.ok(result !== null && typeof result === "object" && "verification" in result);
   const receipt = result.verification;
   assert.ok(receipt !== null && typeof receipt === "object");

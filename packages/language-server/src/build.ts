@@ -6,17 +6,17 @@ import path from "node:path";
 export type BuildLogger = {
   /**
    * Records build progress, timings, or artifact paths.
-   * @param {string} message Human-readable log text.
+   * @param message Human-readable log text.
    */
   info(message: string): void;
   /**
    * Reports a condition that permits the build to continue.
-   * @param {string} message Human-readable warning text.
+   * @param message Human-readable warning text.
    */
   warn(message: string): void;
   /**
    * Reports a build failure without prescribing how the sink displays it.
-   * @param {string} message Human-readable failure text.
+   * @param message Human-readable failure text.
    */
   error(message: string): void;
 };
@@ -50,9 +50,9 @@ let temporaryArtifactSequence = 0;
 
 /**
  * Compares bytes without treating an absent destination as an I/O failure.
- * @param {string} file Destination to inspect.
- * @param {Uint8Array} content Proposed contents.
- * @returns {boolean} True only when the destination exists and all bytes match.
+ * @param file Destination to inspect.
+ * @param content Proposed contents.
+ * @returns True only when the destination exists and all bytes match.
  * @throws {Error} Reading fails for a reason other than a missing file.
  */
 const sameFileContent = (file: string, content: Uint8Array): boolean => {
@@ -68,9 +68,9 @@ const sameFileContent = (file: string, content: Uint8Array): boolean => {
 
 /**
  * Writes an exclusive temporary sibling for a later same-filesystem rename.
- * @param {string} file Final destination whose parent directory already exists.
- * @param {Uint8Array} content Complete artifact bytes to stage.
- * @returns {string} Temporary path owned by the caller, which must rename or remove it.
+ * @param file Final destination whose parent directory already exists.
+ * @param content Complete artifact bytes to stage.
+ * @returns Temporary path owned by the caller, which must rename or remove it.
  * @throws {Error} The staging path already exists or the write fails.
  */
 const stageArtifact = (file: string, content: Uint8Array): string => {
@@ -89,10 +89,10 @@ const stageArtifact = (file: string, content: Uint8Array): string => {
  * Each rename is atomic. Readers that race the two renames see either a valid pair or an
  * identity mismatch that the debugger rejects. A failed second rename attempts to restore
  * the prior binary. If both contents match disk, no files are rewritten; otherwise both are staged.
- * @param {string} outputPath Destination binary.
- * @param {Uint8Array} output Exact binary bytes.
- * @param {string} debugMapJson Canonical debug-map JSON fingerprinting `output`.
- * @returns {BuildArtifactPairResult} Paths and content-change state.
+ * @param outputPath Destination binary.
+ * @param output Exact binary bytes.
+ * @param debugMapJson Canonical debug-map JSON fingerprinting `output`.
+ * @returns Paths and content-change state.
  * @throws {Error} Reading, staging, renaming, rollback, or temporary-file cleanup fails.
  */
 export function commitBuildArtifactPair(
@@ -147,10 +147,10 @@ export function commitBuildArtifactPair(
  * Chooses the source file to assemble. Project entry points win over the
  * active editor buffer so building an include does not overwrite the ROM
  * with an empty or partial image.
- * @param {string | undefined} requestedFile Active editor path, if any.
- * @param {readonly string[]} entryPoints Project entry points (absolute or workspace-relative).
- * @param {string} workspaceRoot Workspace folder used to resolve relative entries.
- * @returns {ResolvedBuildEntry} The file to assemble and why it was chosen.
+ * @param requestedFile Active editor path, if any.
+ * @param entryPoints Project entry points (absolute or workspace-relative).
+ * @param workspaceRoot Workspace folder used to resolve relative entries.
+ * @returns The file to assemble and why it was chosen.
  * @throws {Error} Neither an active file nor a configured entry point is available.
  */
 export function resolveBuildEntry(
@@ -202,9 +202,9 @@ export function resolveBuildEntry(
 
 /**
  * Explains a 0-byte assembly result.
- * @param {string} file The file that was assembled.
- * @param {boolean} usedEntryPoint Whether a project entry point was used.
- * @returns {string} Human-readable failure message.
+ * @param file The file that was assembled.
+ * @param usedEntryPoint Whether a project entry point was used.
+ * @returns Human-readable failure message.
  */
 export function emptyOutputMessage(file: string, usedEntryPoint: boolean): string {
   const base = path.basename(file);
@@ -223,8 +223,8 @@ export function emptyOutputMessage(file: string, usedEntryPoint: boolean): strin
 
 /**
  * Formats a duration in milliseconds for build logs.
- * @param {number} startedAt Epoch milliseconds when the step began.
- * @returns {string} Compact duration string.
+ * @param startedAt Epoch milliseconds when the step began.
+ * @returns Compact duration string.
  */
 export function formatElapsed(startedAt: number): string {
   return `${Date.now() - startedAt}ms`;

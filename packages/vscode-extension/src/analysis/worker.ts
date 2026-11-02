@@ -43,18 +43,25 @@ export type AnalysisWorkerOperation =
  * project shards never enter the message.
  */
 export interface AnalysisWorkerRequest {
+  /** Correlation id matching the extension host admission slot. */
   readonly id: number;
+  /** Analysis project directory owning the SQLite store. */
   readonly directory: string;
   /** Selected worktree, needed when a private evidence store lives outside that repository. */
   readonly sourceRoot?: string;
   /** Untrusted IPC may name an operation this process does not implement. */
   readonly operation: string;
+  /** Qualified navigation target for navigation projections. */
   readonly navigationTarget?: AnalysisNavigationTarget;
+  /** Catalog source id for sourceNotes queries. */
   readonly sourceId?: string;
+  /** Evidence shard and record id for explainEvidence queries. */
   readonly evidenceRecord?: { kind: ShardKind; id: string };
+  /** Debug-map ranges selecting annotation projections. */
   readonly ranges?: readonly unknown[];
 }
 
+/** Narrow IPC payloads to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -74,6 +81,7 @@ function isDebugMapRange(value: unknown): value is DebugMapRange {
   );
 }
 
+/** Validate and return debug-map ranges from untrusted IPC arrays. */
 function debugMapRanges(values: readonly unknown[]): readonly DebugMapRange[] {
   if (!values.every(isDebugMapRange)) {
     throw new Error("Invalid debug-map range.");
@@ -88,8 +96,8 @@ let database: { directory: string; identity: string; store: SqliteAnalysisStore 
  * identity match.
  * Close it before switching projects or opening a replaced database; filesystem/open failures
  * propagate.
- * @param {string} directory Absolute native project directory.
- * @returns {SqliteAnalysisStore} Worker-owned connection, reopened if its database identity changes.
+ * @param directory Absolute native project directory.
+ * @returns Worker-owned connection, reopened if its database identity changes.
  */
 const projectDatabase = (directory: string): SqliteAnalysisStore => {
   const stat = fs.statSync(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE), { bigint: true });
@@ -103,8 +111,8 @@ const projectDatabase = (directory: string): SqliteAnalysisStore => {
 
 /**
  * Runs only in a worker: full native shards never cross into the extension UI heap.
- * @param {AnalysisWorkerRequest} message Bounded projection request.
- * @returns {unknown} Compact result without persisted shards.
+ * @param message Bounded projection request.
+ * @returns Compact result without persisted shards.
  */
 const projectRequest = (message: AnalysisWorkerRequest): unknown => {
   if (message.operation === "clear") {
@@ -304,6 +312,7 @@ const request = (message: AnalysisWorkerRequest): unknown => {
   return value;
 };
 
+/** Post one correlated response on the worker or child-process port. */
 const send = (response: unknown): void => {
   if (parentPort) {
     parentPort.postMessage(response);
@@ -315,7 +324,7 @@ const send = (response: unknown): void => {
 /**
  * Execute one projection and send its correlation ID with either the value or serialized error
  * over worker-thread or child-process IPC.
- * @param {AnalysisWorkerRequest} message Projection operation and correlation ID received from the parent.
+ * @param message Projection operation and correlation ID received from the parent.
  */
 const handleMessage = (message: AnalysisWorkerRequest): void => {
   try {

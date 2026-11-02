@@ -42,6 +42,7 @@ import {
   definitionRange,
 } from "./spans.js";
 
+/** Path or palette path under the cursor, excluding the reserved `embedded` and `auto` tokens. */
 export function assetPathAt(call: ParsedAssetCall, character: number): string | undefined {
   if (assetSpanContains(call.path, character)) {
     return call.path.value;
@@ -61,11 +62,11 @@ export function assetPathAt(call: ParsedAssetCall, character: number): string | 
 /**
  * Computes the origin highlight range for an include path on the cursor line,
  * covering the full unquoted filename (including hyphens) or quoted string.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @param {string} target The include target.
- * @returns {Range | undefined} The origin highlight range, or undefined.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @param target The include target.
+ * @returns The origin highlight range, or undefined.
  */
 export function includeOriginRange(
   index: WorkspaceIndex,
@@ -112,10 +113,10 @@ export function includeOriginRange(
  * Resolves the definition locations for the symbol or reference at a position.
  * Returns `LocationLink[]` for include references so VS Code highlights the
  * full filename (including hyphens) rather than just the word at the cursor.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @returns {Location[] | LocationLink[]} The definition locations.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @returns The definition locations.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#go-to-definition-request-leftwards_arrow_with_hook
  */
 export function definitionFor(
@@ -192,11 +193,11 @@ export function definitionFor(
 
 /**
  * Finds all references (and optionally the declaration) for the identifier at a position.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @param {boolean} includeDeclaration Whether to include the declaration.
- * @returns {Location[]} The reference locations.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @param includeDeclaration Whether to include the declaration.
+ * @returns The reference locations.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#find-references-request-leftwards_arrow_with_hook
  */
 export function referencesFor(
@@ -237,10 +238,10 @@ export function referencesFor(
 
 /**
  * Returns the rename range for the identifier at a position.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @returns {Range | null} The identifier range, or null when rename is unavailable.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @returns The identifier range, or null when rename is unavailable.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#prepare-rename-request-leftwards_arrow_with_hook
  */
 export function prepareRenameFor(
@@ -262,11 +263,11 @@ export function prepareRenameFor(
 
 /**
  * Builds a workspace edit renaming the identifier at a position across files.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @param {string} newName Replacement identifier; a leading ! is removed for define renames only.
- * @returns {WorkspaceEdit | null} The workspace edit, or null when nothing to rename.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @param newName Replacement identifier; a leading ! is removed for define renames only.
+ * @returns The workspace edit, or null when nothing to rename.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#rename-request-leftwards_arrow_with_hook
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#workspaceedit
  */
@@ -287,8 +288,8 @@ export function renameEditsFor(
   const editsByUri = new Map<string, TextEdit[]>();
   /**
    * Groups replacements by document for the LSP changes map, using the normalized replacement name.
-   * @param {string} uri Document URI owning the occurrence.
-   * @param {Range} range Bare identifier range that preserves any source sigil.
+   * @param uri Document URI owning the occurrence.
+   * @param range Bare identifier range that preserves any source sigil.
    */
   const pushEdit = (uri: string, range: Range): void => {
     const edits = editsByUri.get(uri) ?? [];
@@ -379,10 +380,10 @@ export type RenameTarget = {
 /**
  * Resolves a renameable definition or reference at the cursor. Instruction,
  * include, and unknown tokens are deliberately excluded.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @returns {RenameTarget | undefined} The selected rename target, if any.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @returns The selected rename target, if any.
  */
 export function renameTargetAt(
   index: WorkspaceIndex,
@@ -404,8 +405,8 @@ export function renameTargetAt(
 
 /**
  * Returns whether an analysis reference represents a user-defined symbol.
- * @param {AssemblySymbolReference} reference The reference to classify.
- * @returns {boolean} Whether the reference can be renamed.
+ * @param reference The reference to classify.
+ * @returns Whether the reference can be renamed.
  */
 export function isRenameableReference(reference: AssemblySymbolReference): boolean {
   return (
@@ -415,9 +416,9 @@ export function isRenameableReference(reference: AssemblySymbolReference): boole
 
 /**
  * Returns whether a definition belongs to the selected rename target.
- * @param {AssemblySymbolDefinition} symbol The definition to compare.
- * @param {RenameTarget} target The selected rename target.
- * @returns {boolean} Whether the definition belongs to the target.
+ * @param symbol The definition to compare.
+ * @param target The selected rename target.
+ * @returns Whether the definition belongs to the target.
  */
 export function symbolMatchesRenameTarget(
   symbol: AssemblySymbolDefinition,
@@ -435,9 +436,9 @@ export function symbolMatchesRenameTarget(
 
 /**
  * Returns whether a reference belongs to the selected rename target.
- * @param {AssemblySymbolReference} reference The reference to compare.
- * @param {RenameTarget} target The selected rename target.
- * @returns {boolean} Whether the reference belongs to the target.
+ * @param reference The reference to compare.
+ * @param target The selected rename target.
+ * @returns Whether the reference belongs to the target.
  */
 export function referenceMatchesRenameTarget(
   reference: AssemblySymbolReference,
@@ -482,9 +483,9 @@ export function referenceMatchesRenameTarget(
 /**
  * Precise range covering only the bare identifier, never the define sigil.
  * Used by rename so `!version` becomes `!newname` rather than replacing `!`.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {AssemblySymbolDefinition} symbol The symbol definition.
- * @returns {Range} The precise range.
+ * @param index The workspace index.
+ * @param symbol The symbol definition.
+ * @returns The precise range.
  */
 export function bareDefinitionRange(
   index: WorkspaceIndex,
@@ -498,9 +499,9 @@ export function bareDefinitionRange(
 
 /**
  * Precise range covering only the bare identifier of a reference.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {AssemblySymbolReference} reference The symbol reference.
- * @returns {Range} The precise range.
+ * @param index The workspace index.
+ * @param reference The symbol reference.
+ * @returns The precise range.
  */
 export function bareReferenceRange(
   index: WorkspaceIndex,
@@ -522,9 +523,9 @@ export function bareReferenceRange(
 
 /**
  * Converts a symbol definition to an LSP location.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {AssemblySymbolDefinition} symbol The symbol definition.
- * @returns {Location} The LSP location.
+ * @param index The workspace index.
+ * @param symbol The symbol definition.
+ * @returns The LSP location.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#location
  */
 export function definitionToLocation(
@@ -537,10 +538,10 @@ export function definitionToLocation(
 /**
  * Returns the identifier at a position, preferring a matched reference or
  * symbol over a raw word extraction, including container scope.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @returns {{ name: string; containerName?: string } | undefined} The identifier.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @returns The identifier.
  */
 export function identifierAt(
   index: WorkspaceIndex,

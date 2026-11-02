@@ -1,13 +1,16 @@
 import type { DebugTraceInstructionDetail } from "./contracts.js";
 
+/** Narrows unknown values to arrays for structural validation. */
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+/** Narrows unknown values to plain objects excluding arrays. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Rejects opcode byte payloads outside the allowed length and range. */
 function assertInstructionBytes(bytes: unknown): void {
   if (!isUnknownArray(bytes) || bytes.length < 1 || bytes.length > 16) {
     throw new Error("Invalid trace instruction bytes.");
@@ -19,6 +22,7 @@ function assertInstructionBytes(bytes: unknown): void {
   }
 }
 
+/** Rejects register or flag maps with unsupported value types. */
 function assertInstructionState(state: unknown): void {
   if (!isRecord(state)) {
     throw new Error("Invalid trace instruction state.");
@@ -34,6 +38,7 @@ function assertInstructionState(state: unknown): void {
   }
 }
 
+/** Rejects bus access records that violate the trace bus contract. */
 function assertBusAccess(access: unknown): void {
   if (!isRecord(access)) {
     throw new Error("Invalid trace bus operation.");
@@ -66,6 +71,7 @@ function assertBusAccess(access: unknown): void {
   }
 }
 
+/** Validates every detail entry in a batch before narrowing the array type. */
 function assertTraceDetails(
   value: readonly unknown[],
 ): asserts value is readonly DebugTraceInstructionDetail[] {
@@ -74,6 +80,7 @@ function assertTraceDetails(
   }
 }
 
+/** Validates one instruction detail object from an untrusted producer. */
 function assertTraceDetail(detail: unknown): asserts detail is DebugTraceInstructionDetail {
   if (!isRecord(detail)) {
     throw new Error("Invalid trace instruction bytes.");
@@ -103,9 +110,9 @@ function assertTraceDetail(detail: unknown): asserts detail is DebugTraceInstruc
 
 /**
  * Validate details before they reach a debugger client.
- * @param {unknown} value Untrusted detail array.
- * @param {number} count Expected instruction count.
- * @returns {readonly DebugTraceInstructionDetail[]} Validated details.
+ * @param value Untrusted detail array.
+ * @param count Expected instruction count.
+ * @returns Validated details.
  */
 export function validateDebugTraceDetails(
   value: unknown,

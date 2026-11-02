@@ -10,6 +10,7 @@ import {
 
 /** Lexical facts retained separately from stage-local values and processor flags. */
 export interface Syntax65816 extends ParsedInstructionOperands {
+  /** Parsed 65816 operand bundle carried through classification and encoding. */
   readonly cpu65816: {
     readonly kind: "cpu65816-v2";
     readonly mnemonic: string;
@@ -46,10 +47,10 @@ export function parse65816Operands(mnemonic: string, text: string): Syntax65816 
     commaIndex: true,
   };
   const common = parseInstructionOperands(mnemonic, text, grammar);
-  const structural =
-    common.operands[0]?.kind === "template" ? common.operands[0].structure : common;
+  const first = common.operands.at(0);
+  const structural = first?.kind === "template" ? first.structure : common;
   const whole = expansionPlan(text, 0),
-    shape = structural.operands[0];
+    shape = structural.operands.at(0);
   let scalar = whole.scalar;
   if (shape?.kind === "immediate") {
     scalar = shape.value;
@@ -64,7 +65,7 @@ export function parse65816Operands(mnemonic: string, text: string): Syntax65816 
     const at = op.indexOf("."),
       suffix = op.slice(at + 1);
     op = op.slice(0, at);
-    width = ({ B: 1, W: 2, L: 3, D: 4 } as Record<string, number>)[suffix];
+    width = ({ B: 1, W: 2, L: 3, D: 4 } as Record<string, number | undefined>)[suffix];
     if (width === undefined) {
       suffixError = `Error: Invalid opcode length in '${mnemonic.toUpperCase()}'.`;
     }

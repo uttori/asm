@@ -2,11 +2,15 @@ import type { DebugTraceBatch } from "./contracts.js";
 
 /** Construction options for one architecture-qualified, fixed-capacity trace ring. */
 export interface DebugTraceBufferOptions {
+  /** Architecture whose PCs are stored in the ring. */
   readonly architecture: string;
+  /** Address space shared by every appended PC. */
   readonly addressSpace: string;
+  /** Maximum retained instruction addresses before oldest-first loss. */
   readonly capacity: number;
 }
 
+/** Validates a positive safe integer or throws with context. */
 const positiveInteger = (value: number, context: string): number => {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new Error(`${context} must be a positive safe integer.`);
@@ -14,6 +18,7 @@ const positiveInteger = (value: number, context: string): number => {
   return value;
 };
 
+/** Validates a non-empty string identifier or throws with context. */
 const identity = (value: string, context: string): string => {
   if (value.length === 0) {
     throw new Error(`${context} must be a non-empty string.`);
@@ -26,8 +31,11 @@ const identity = (value: string, context: string): string => {
  * for native trace producers. Pulling removes events. Stopping never discards unread entries.
  */
 export class DebugTraceBuffer {
+  /** Architecture recorded by every batch from this buffer. */
   readonly architecture: string;
+  /** Address space of every retained PC. */
   readonly addressSpace: string;
+  /** Fixed capacity before oldest-first loss. */
   readonly capacity: number;
 
   readonly #addresses: Array<number | undefined>;
@@ -37,7 +45,10 @@ export class DebugTraceBuffer {
   #droppedEvents = 0;
   #active = false;
 
-  /** @param {DebugTraceBufferOptions} options Trace identity and fixed producer capacity. */
+  /**
+   * Allocates an empty ring with the given identity and capacity.
+   * @param options Trace identity and fixed producer capacity.
+   */
   constructor(options: DebugTraceBufferOptions) {
     this.architecture = identity(options.architecture, "Trace architecture");
     this.addressSpace = identity(options.addressSpace, "Trace address space");
@@ -45,12 +56,18 @@ export class DebugTraceBuffer {
     this.#addresses = Array.from<number | undefined>({ length: this.capacity });
   }
 
-  /** @returns {boolean} Whether new instruction addresses are currently accepted. */
+  /**
+   * Whether new instruction addresses are currently accepted.
+   * @returns True while recording is active.
+   */
   get active(): boolean {
     return this.#active;
   }
 
-  /** @returns {number} Current retained event count, which never exceeds `capacity`. */
+  /**
+   * Current retained event count, which never exceeds capacity.
+   * @returns Number of addresses waiting to be pulled.
+   */
   get bufferedEvents(): number {
     return this.#length;
   }
@@ -71,7 +88,7 @@ export class DebugTraceBuffer {
 
   /**
    * Records one instruction address when active.
-   * @param {number} address Architecture-local logical instruction address.
+   * @param address Architecture-local logical instruction address.
    */
   append(address: number): void {
     if (!this.#active) {
@@ -92,8 +109,8 @@ export class DebugTraceBuffer {
 
   /**
    * Destructively reads the oldest retained addresses.
-   * @param {number} maxEvents Positive consumer batch bound.
-   * @returns {DebugTraceBatch} Ordered addresses plus explicit cumulative loss state.
+   * @param maxEvents Positive consumer batch bound.
+   * @returns Ordered addresses plus explicit cumulative loss state.
    */
   read(maxEvents: number): DebugTraceBatch {
     positiveInteger(maxEvents, "Trace batch size");

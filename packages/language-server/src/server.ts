@@ -205,14 +205,14 @@ let configurationQueue = Promise.resolve();
 
 /**
  * Selects the project base used by discovery and workspace-relative settings.
- * @returns {string} The first workspace folder, or the process cwd for folderless clients.
+ * @returns The first workspace folder, or the process cwd for folderless clients.
  */
 const workspaceRoot = (): string => workspaceRoots[0] ?? process.cwd();
 
 /**
  * Normalizes an absolute path or resolves a relative setting against the project base.
- * @param {string} value Filesystem path from configuration, not a file URI.
- * @returns {string} Absolute normalized path.
+ * @param value Filesystem path from configuration, not a file URI.
+ * @returns Absolute normalized path.
  */
 function resolveAgainstWorkspace(value: string): string {
   return path.isAbsolute(value) ? path.normalize(value) : path.resolve(workspaceRoot(), value);
@@ -220,8 +220,8 @@ function resolveAgainstWorkspace(value: string): string {
 
 /**
  * Detects watched config changes that require a plugin environment reload rather than reindexing.
- * @param {string} file Changed filesystem path.
- * @returns {boolean} Whether it matches the explicit config or the conventional config basename.
+ * @param file Changed filesystem path.
+ * @returns Whether it matches the explicit config or the conventional config basename.
  */
 function isProjectConfigFile(file: string): boolean {
   const resolved = path.resolve(file);
@@ -239,8 +239,8 @@ function isProjectConfigFile(file: string): boolean {
 
 /**
  * Accepts nonblank settings strings without altering their original whitespace.
- * @param {unknown} value Untrusted client configuration value.
- * @returns {string | undefined} The original string, or undefined for blank/non-string input.
+ * @param value Untrusted client configuration value.
+ * @returns The original string, or undefined for blank/non-string input.
  */
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
@@ -248,8 +248,8 @@ function stringValue(value: unknown): string | undefined {
 
 /**
  * Checks a settings list without trimming, filtering, or copying its entries.
- * @param {unknown} value Untrusted client configuration value.
- * @returns {readonly string[] | undefined} The original array when every entry is a string, including an empty array.
+ * @param value Untrusted client configuration value.
+ * @returns The original array when every entry is a string, including an empty array.
  */
 function stringArray(value: unknown): readonly string[] | undefined {
   return Array.isArray(value) && value.every((entry): entry is string => typeof entry === "string")
@@ -257,6 +257,7 @@ function stringArray(value: unknown): readonly string[] | undefined {
     : undefined;
 }
 
+/** True for a plain object that can hold JSON object fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -270,9 +271,9 @@ function isPluginSettingList(value: unknown): value is readonly PluginModuleSett
  * Applies a partial editor update without mutating previous settings. Omitted properties persist;
  * explicitly blank or invalid optional strings clear overrides so file defaults can apply again.
  * Invalid arrays/booleans retain prior values; plugin entries are validated by the loader later.
- * @param {ServerSettings} previous Previously normalized editor settings.
- * @param {unknown} value The asm section from initialization options or a configuration update.
- * @returns {ServerSettings} Merged settings, or previous itself when value is not an object.
+ * @param previous Previously normalized editor settings.
+ * @param value The asm section from initialization options or a configuration update.
+ * @returns Merged settings, or previous itself when value is not an object.
  */
 export function mergeServerSettings(previous: ServerSettings, value: unknown): ServerSettings {
   if (!isRecord(value)) {
@@ -281,8 +282,8 @@ export function mergeServerSettings(previous: ServerSettings, value: unknown): S
   const next = value;
   /**
    * Distinguishes an explicit reset from an omitted editor override.
-   * @param {string} key Optional setting being merged.
-   * @returns {boolean} Whether the update owns the property, even when its value is undefined.
+   * @param key Optional setting being merged.
+   * @returns Whether the update owns the property, even when its value is undefined.
    */
   const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(next, key);
   return {
@@ -306,8 +307,8 @@ export function mergeServerSettings(previous: ServerSettings, value: unknown): S
  * Fills absent scalar settings and empty path lists from discovered JSON configuration.
  * Reads data only; plugin activation and trust enforcement happen in the environment controller.
  * Invalid JSON/config is left for the loader to diagnose while retaining its discovered path.
- * @param {ServerSettings} next Editor settings before project-file defaults are applied.
- * @returns {ServerSettings} Effective settings with file-derived paths resolved beside the config.
+ * @param next Editor settings before project-file defaults are applied.
+ * @returns Effective settings with file-derived paths resolved beside the config.
  */
 function applyConfigFileDefaults(next: ServerSettings): ServerSettings {
   const discovered = discoverProjectConfigurationPath(workspaceRoot(), next.configFile);
@@ -317,8 +318,8 @@ function applyConfigFileDefaults(next: ServerSettings): ServerSettings {
   const relativeConfig = path.relative(workspaceRoot(), discovered) || path.basename(discovered);
   /**
    * Preserves config-relative path semantics when defaults are later passed as host overrides.
-   * @param {string} value Path read from the project file.
-   * @returns {string} Absolute path based on the config's parent directory.
+   * @param value Path read from the project file.
+   * @returns Absolute path based on the config's parent directory.
    */
   const relativeToConfig = (value: string): string => path.resolve(path.dirname(discovered), value);
   let extras: ReturnType<typeof validateProjectConfiguration> = {};
@@ -352,8 +353,8 @@ function applyConfigFileDefaults(next: ServerSettings): ServerSettings {
 
 /**
  * Projects server settings into controller inputs, resolving analysis roots for the index.
- * @param {ServerSettings} next Effective settings after config defaults have been applied.
- * @returns {ProjectEnvironmentSettings} Loader/index settings; empty include lists defer to loader defaults.
+ * @param next Effective settings after config defaults have been applied.
+ * @returns Loader/index settings; empty include lists defer to loader defaults.
  */
 function projectSettings(next: ServerSettings): ProjectEnvironmentSettings {
   return {
@@ -371,7 +372,7 @@ function projectSettings(next: ServerSettings): ProjectEnvironmentSettings {
 
 /**
  * Snapshots open buffers so builds and replacement indexes consume unsaved editor text.
- * @returns {Map<string, string>} A new map of absolute filesystem paths to current document text.
+ * @returns A new map of absolute filesystem paths to current document text.
  */
 function currentOverlays(): Map<string, string> {
   return new Map(documents.all().map((document) => [uriToPath(document.uri), document.getText()]));
@@ -380,9 +381,9 @@ function currentOverlays(): Map<string, string> {
 /**
  * Replaces or clears the configuration diagnostic and clears any previously targeted file URI.
  * The new diagnostic is stored for publishAllDiagnostics rather than sent immediately.
- * @param {ServerSettings} next Settings identifying the config file to annotate.
- * @param {string} message Failure/trust text; omitted or empty to clear the stored diagnostic.
- * @param {DiagnosticSeverity} severity Error by default; trust notices use Warning.
+ * @param next Settings identifying the config file to annotate.
+ * @param message Failure/trust text; omitted or empty to clear the stored diagnostic.
+ * @param severity Error by default; trust notices use Warning.
  */
 function setConfigurationDiagnostic(
   next: ServerSettings,
@@ -411,8 +412,8 @@ function setConfigurationDiagnostic(
 /**
  * Installs a configured environment, then publishes its diagnostics and index status.
  * Failures keep the old index but retain requested settings and publish a configuration error.
- * @param {ServerSettings} next Effective settings to load.
- * @returns {Promise<void>} Resolves after successful replacement and publication requests.
+ * @param next Effective settings to load.
+ * @returns Resolves after successful replacement and publication requests.
  * @throws {Error} The environment cannot be replaced; the failure has already been reported.
  */
 async function replaceProjectEnvironment(next: ServerSettings): Promise<void> {
@@ -444,9 +445,9 @@ async function replaceProjectEnvironment(next: ServerSettings): Promise<void> {
 /**
  * Waits for the prior configuration task before replacing plugins, absorbing reported failures
  * so one bad configuration does not leave all later tasks chained to a rejected promise.
- * @param {Promise<void>} previous Prior queue task, which normally fulfills even after load failure.
- * @param {ServerSettings} next Effective settings captured for this replacement.
- * @returns {Promise<void>} A fulfilled task once replacement or its failure handling finishes.
+ * @param previous Prior queue task, which normally fulfills even after load failure.
+ * @param next Effective settings captured for this replacement.
+ * @returns A fulfilled task once replacement or its failure handling finishes.
  */
 async function applyQueuedEnvironment(
   previous: Promise<void>,
@@ -466,7 +467,7 @@ async function applyQueuedEnvironment(
 
 /**
  * Appends a replacement without blocking the notification handler or coalescing queued settings.
- * @param {ServerSettings} next Effective settings to apply after earlier replacements finish.
+ * @param next Effective settings to apply after earlier replacements finish.
  */
 function enqueueProjectEnvironment(next: ServerSettings): void {
   configurationIndexer.invalidate();
@@ -501,6 +502,7 @@ async function reindexNow(): Promise<void> {
   notifyIndexUpdated();
 }
 
+/** Mark the workspace index stale and debounce a worker rebuild. */
 function scheduleReindex(): void {
   documentRevision++;
   indexStale = true;
@@ -618,7 +620,7 @@ connection.onInitialized(() => {
 
 /**
  * Pulls the client's asm section and queues an environment replacement using current file defaults.
- * @returns {Promise<void>} Resolves once the update is queued, or after a settings-read failure is logged.
+ * @returns Resolves once the update is queued, or after a settings-read failure is logged.
  */
 async function refreshConfiguration(): Promise<void> {
   try {
@@ -649,8 +651,8 @@ connection.onDidChangeConfiguration((params) => {
 
 /**
  * Derives a binary filename beside the selected entry using the active target's output extension.
- * @param {string} file Absolute assembly entry path.
- * @returns {string} Output path with the source extension replaced by the target extension.
+ * @param file Absolute assembly entry path.
+ * @returns Output path with the source extension replaced by the target extension.
  */
 function defaultOutputPath(file: string): string {
   const parsed = path.parse(file);
@@ -664,9 +666,9 @@ function defaultOutputPath(file: string): string {
 
 /**
  * Resolves an output/base-image override against the workspace, or the entry directory without one.
- * @param {string | undefined} configured Filesystem path after any client URI conversion.
- * @param {string} file Absolute selected entry path used for the folderless fallback.
- * @returns {string | undefined} Absolute path, or undefined when the override is absent/empty.
+ * @param configured Filesystem path after any client URI conversion.
+ * @param file Absolute selected entry path used for the folderless fallback.
+ * @returns Absolute path, or undefined when the override is absent/empty.
  */
 function resolveOptionalBuildPath(
   configured: string | undefined,
@@ -684,10 +686,10 @@ function resolveOptionalBuildPath(
  * Synchronously assembles the selected project entry with current editor overlays and commits
  * its binary/debug-map pair. The caller must await configurationQueue before invoking it.
  * Logs progress, disposes the build session, and returns failures as data rather than throwing.
- * @param {string | undefined} requestedFile Active editor path; configured entry points take precedence.
- * @param {string} output Binary destination overriding settings; omitted to use settings/target defaults.
- * @param {string} baseImage Base binary overriding settings; omitted to use the configured base image.
- * @returns {BuildResult} Committed artifact metadata, or a logged failure with a user-facing message.
+ * @param requestedFile Active editor path; configured entry points take precedence.
+ * @param output Binary destination overriding settings; omitted to use settings/target defaults.
+ * @param baseImage Base binary overriding settings; omitted to use the configured base image.
+ * @returns Committed artifact metadata, or a logged failure with a user-facing message.
  */
 function buildBinary(
   requestedFile: string | undefined,
@@ -843,8 +845,8 @@ function executeCommandArguments(source: { readonly arguments?: unknown }): read
 
 /**
  * Converts an executeCommand argument to a filesystem path.
- * @param {string | undefined} value URI or path from the client.
- * @returns {string | undefined} A filesystem path, or undefined when omitted.
+ * @param value URI or path from the client.
+ * @returns A filesystem path, or undefined when omitted.
  */
 function argumentPath(value: string | undefined): string | undefined {
   if (!value) {
@@ -1070,6 +1072,7 @@ connection.onSignatureHelp((params) => {
 });
 /** Concurrent outline/F2 requests share one fresh pass instead of cancelling each other's workers. */
 let freshIndexRequest: Promise<void> | undefined;
+/** Wait until the current index is fresh, sharing one worker among concurrent outline and rename requests. */
 async function flushCurrentIndex(token: CancellationToken): Promise<void> {
   while (true) {
     if (token.isCancellationRequested) {

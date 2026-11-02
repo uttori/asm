@@ -7,18 +7,22 @@ import { validateSnesRamMap, validateSnesStructMap } from "@uttori/asm-plugin-sn
 import { pathToUri } from "./providers.js";
 import type { RenameBuffer } from "./research-rename.js";
 
+/** True for a plain object that can hold JSON object fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** True when the object has a string `name` field. */
 function isNamed(value: unknown): value is { name: string } {
   return isRecord(value) && typeof value.name === "string";
 }
 
+/** True when the payload has a `variables` array of named entries. */
 function isRamMap(value: unknown): value is { variables: { name: string }[] } {
   return isRecord(value) && Array.isArray(value.variables) && value.variables.every(isNamed);
 }
 
+/** True when the payload is a structure with an id and named fields. */
 function isStructure(value: unknown): value is { id: string; fields: { name: string }[] } {
   return (
     isRecord(value) &&
@@ -28,14 +32,17 @@ function isStructure(value: unknown): value is { id: string; fields: { name: str
   );
 }
 
+/** True when the payload binds a named instance to a structure id. */
 function isBinding(value: unknown): value is { name: string; structure: string } {
   return isRecord(value) && typeof value.name === "string" && typeof value.structure === "string";
 }
 
+/** True when the payload names an observation target. */
 function isObservation(value: unknown): value is { target: string } {
   return isRecord(value) && typeof value.target === "string";
 }
 
+/** True when the payload is an instruction-use record with optional operand and observation fields. */
 function isInstructionUse(value: unknown): value is {
   operand?: string;
   memoryOperand?: string;
@@ -56,6 +63,7 @@ function isInstructionUse(value: unknown): value is {
   );
 }
 
+/** True when the payload is a struct map with structures, bindings, and optional constants or uses. */
 function isStructMap(value: unknown): value is {
   structures: { id: string; fields: { name: string }[] }[];
   bindings: { name: string; structure: string }[];
@@ -86,10 +94,15 @@ function isStructMap(value: unknown): value is {
 
 /** A field rename applies to its reusable layout and every addressed instance of that layout. */
 export interface RecipeRename {
+  /** Absolute path of the recipe file being rewritten. */
   readonly path: string;
+  /** Identifier token currently in the file. */
   readonly before: string;
+  /** Replacement identifier token. */
   readonly after: string;
+  /** Buffer version the edit is based on, or null for on-disk files. */
   readonly version: number | null;
+  /** Structure ids whose fields should also be renamed. Absent means rename every matching field. */
   readonly fieldContainers?: readonly string[];
 }
 

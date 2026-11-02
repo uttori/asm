@@ -21,8 +21,11 @@ import { planSpritePaletteWords } from "./som-palette-edit.js";
 import { spritePaletteColors, type SpritePaletteCatalog } from "./som-sprite-palettes.js";
 import type { FrameRecord, SpriteAtlasSource } from "./som-types.js";
 
+/** Stable owner id for one atlas tile sheet image. */
 const tileId = (name: string): string => `tiles:${name}`;
+/** Stable owner id for one pose's composed frame record. */
 const poseId = (frame: FrameRecord): string => `pose:${JSON.stringify(frame.id)}`;
+/** Stable owner id for one block within a pose frame. */
 const blockId = (frame: FrameRecord, block: string): string =>
   `block:${JSON.stringify([frame.id, block])}`;
 const ORIGIN = 128;
@@ -135,8 +138,11 @@ export function createSomSpriteEditorBundle(
 
 /** One whole fixed record; the host turns only changed coordinate scalars into source edits. */
 export interface SomBodySourceChange {
+  /** CPU address of the fixed-length body record. */
   readonly address: number;
+  /** Native bytes before applying editor deltas. */
   readonly before: Uint8Array;
+  /** Native bytes after applying editor deltas. */
   readonly after: Uint8Array;
 }
 

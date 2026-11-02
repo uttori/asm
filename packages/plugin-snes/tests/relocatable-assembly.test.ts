@@ -316,7 +316,7 @@ test("converted assets retain owned payloads, conversion receipts and input hash
   t.true(
     module.dependencies.some(
       (dependency) =>
-        dependency.path.endsWith("art.png") && /^[a-f0-9]{64}$/.test(dependency.sha256),
+        dependency.path.endsWith("art.png") && /^[\da-f]{64}$/.test(dependency.sha256),
     ),
   );
 });

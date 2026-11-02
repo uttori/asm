@@ -29,8 +29,11 @@ import { renameRecipeExpression, sourceRecipeRename } from "./recipe-rename.js";
 
 /** Read-only editor buffer snapshot. Versions allow the client to reject an edit after concurrent typing. */
 export interface RenameBuffer {
+  /** Document URI of the open buffer. */
   readonly uri: string;
+  /** LSP version the client last reported. */
   readonly version: number;
+  /** Full buffer text at that version. */
   readonly text: string;
 }
 
@@ -39,10 +42,12 @@ function isJsonObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** True when the value is an array whose elements still need their own checks. */
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+/** True when the payload is a project label with identity, address and evidence. */
 function isProjectLabel(value: unknown): value is ProjectLabel {
   if (!isJsonObject(value) || !isUnknownArray(value.evidence)) {
     return false;
@@ -58,6 +63,7 @@ function isProjectLabel(value: unknown): value is ProjectLabel {
   );
 }
 
+/** True when the payload is a compact generation symbol with identity, address and evidence. */
 function isCatalogSymbol(value: unknown): value is SymbolCatalog["symbols"][number] {
   if (!isJsonObject(value) || !isUnknownArray(value.evidence)) {
     return false;
@@ -71,6 +77,7 @@ function isCatalogSymbol(value: unknown): value is SymbolCatalog["symbols"][numb
   );
 }
 
+/** True when the payload is a version-1 `uttori-source-symbols` catalog. */
 function isSymbolCatalog(value: unknown): value is SymbolCatalog {
   if (!isJsonObject(value) || !isUnknownArray(value.symbols)) {
     return false;
@@ -85,9 +92,13 @@ function isSymbolCatalog(value: unknown): value is SymbolCatalog {
 
 /** Compact generation output; original addresses remain stable after source movement. */
 interface SymbolCatalog {
+  /** Catalog kind. Only this format is rewritten by rename. */
   readonly format: "uttori-source-symbols";
+  /** Schema version. Rename rejects any other value. */
   readonly version: 1;
+  /** SHA-256 of the original ROM this catalog was generated from. */
   readonly romSha256: string;
+  /** Original-address symbols whose names track source movement. */
   readonly symbols: readonly {
     readonly id: string;
     readonly name: string;

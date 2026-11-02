@@ -20,12 +20,15 @@ import { assertSourcePath } from "./git.js";
 
 /** One generated source unit with independently replaceable placement; ordinary absolute builds omit this contract. */
 export interface SourceLinkBuild {
+  /** Single generated module identity and adapter selection from the portable manifest. */
   readonly module: AssemblyModuleOptions;
+  /** Placement recipe validated before linking against the reviewed source graph. */
   readonly recipe: AssemblyLinkRecipe;
   /** Snapshot these host inputs alongside assembly/includes so watch and debugger freshness cover layout edits. */
   readonly dependencies?: readonly { readonly path: string; readonly sha256: string }[];
 }
 
+/** Narrow parsed JSON to a plain object record. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 

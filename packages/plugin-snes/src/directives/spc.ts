@@ -7,9 +7,9 @@ import type { SnesSessionState } from "../session-state.js";
  * Builds a session-bound SPC-block runtime.
  * A new instance per directive invocation is cheap. It holds no extra state.
  *
- * @param {PluginSessionCapabilities} session Host assembler.
- * @param {SnesSessionState} state Mutable SNES session.
- * @returns {SnesSpcRuntimeService} Runtime used by `spcblock` / `endspcblock` / pass finalization.
+ * @param session Host assembler.
+ * @param state Mutable SNES session.
+ * @returns Runtime used by `spcblock` / `endspcblock` / pass finalization.
  */
 export const createSpcRuntime = (
   session: PluginSessionCapabilities,

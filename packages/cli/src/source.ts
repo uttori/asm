@@ -6,6 +6,7 @@ import { SNES_MAPPERS, type SnesMapper } from "@uttori/asm-plugin-snes/disassemb
 import { readSourceOperation } from "@uttori/asm-workflows/source";
 import { type SourceResearchRequest } from "@uttori/asm-workflows/source";
 
+/** Read a project contract JSON file, rejecting payloads larger than 8 MiB. */
 function readJson(file: string): unknown {
   if (fs.statSync(file).size > 8 * 1024 * 1024) {
     throw new Error(`Project contract is too large: ${file}`);
@@ -13,10 +14,12 @@ function readJson(file: string): unknown {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
+/** True for a plain object that can hold JSON object fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** True when the token is one of the SNES mapper identifiers the source workflow accepts. */
 function isSnesMapper(value: string): value is SnesMapper {
   return SNES_MAPPERS.some((mapper) => mapper === value);
 }
@@ -39,14 +42,18 @@ const DIRECT_SOURCE_ACTIONS = [
   "import",
 ] as const;
 
+/** Source subcommands that take only a project directory, with no extra operands. */
 type DirectSourceAction = (typeof DIRECT_SOURCE_ACTIONS)[number];
 
+/** True when the token is a zero-operand source action. */
 function isDirectSourceAction(value: string): value is DirectSourceAction {
   return DIRECT_SOURCE_ACTIONS.some((action) => action === value);
 }
 
+/** Annotation or indirect-target research payload loaded from a change JSON file. */
 type AnalysisChange = NonNullable<Extract<SourceResearchRequest, { kind: "analysis" }>["change"]>;
 
+/** Parse an optional `--mapper` token, or return undefined when the flag is omitted. */
 function requestedMapper(value: string | undefined): SnesMapper | undefined {
   if (value === undefined) {
     return undefined;
@@ -57,6 +64,7 @@ function requestedMapper(value: string | undefined): SnesMapper | undefined {
   return value;
 }
 
+/** Load a research analysis change from JSON, rejecting unknown collections or kinds. */
 function readAnalysisChange(file: string): AnalysisChange {
   const value = readJson(file);
   if (!isResearchAnalysisChange(value)) {
@@ -65,6 +73,7 @@ function readAnalysisChange(file: string): AnalysisChange {
   return value;
 }
 
+/** True when the payload is a put/remove of annotations or analysis with the required identity fields. */
 function isResearchAnalysisChange(value: unknown): value is AnalysisChange {
   if (!isRecord(value) || typeof value.expectedDocumentSha256 !== "string") {
     return false;
@@ -86,6 +95,7 @@ function isResearchAnalysisChange(value: unknown): value is AnalysisChange {
   );
 }
 
+/** Usage text for `uttori-asm source`, covering Git source, research, graphics and capture import. */
 export const sourceUsage = `uttori-asm source <status|prepare|build|index|analyze|catalog|finish|abort|clean> <project>
 uttori-asm source init <new-folder> <original-rom> [--mapper <mapper>] [--dizraw <research.dizraw>]
 uttori-asm source prepare <project> --linked

@@ -9,24 +9,31 @@ import {
 
 /** Runtime guards validate transported syntax before a session receives it. */
 export type SyntaxGuard<T> = (value: unknown) => value is T;
+/** Accepts any string syntax payload field. */
 export const syntaxString: SyntaxGuard<string> = (value): value is string =>
   typeof value === "string";
+/** Accepts finite numeric syntax payload fields. */
 export const syntaxNumber: SyntaxGuard<number> = (value): value is number =>
   typeof value === "number" && Number.isFinite(value);
+/** Accepts boolean syntax payload fields. */
 export const syntaxBoolean: SyntaxGuard<boolean> = (value): value is boolean =>
   typeof value === "boolean";
 
+/** Builds a guard that accepts only one exact literal value. */
 export function syntaxLiteral<const T extends string | number | boolean>(
   literal: T,
 ): SyntaxGuard<T> {
   return (value): value is T => value === literal;
 }
+/** Builds a guard that validates every array element with an element guard. */
 export function syntaxArray<T>(guard: SyntaxGuard<T>): SyntaxGuard<T[]> {
   return (value): value is T[] => Array.isArray(value) && value.every(guard);
 }
+/** Builds a guard that accepts undefined or a value passing the inner guard. */
 export function syntaxOptional<T>(guard: SyntaxGuard<T>): SyntaxGuard<T | undefined> {
   return (value): value is T | undefined => value === undefined || guard(value);
 }
+/** Extracts the accepted value type from a syntax guard. */
 type Guarded<G> = G extends SyntaxGuard<infer T> ? T : never;
 /** Narrow unknown objects before checking fields; transport validation separately rejects host objects. */
 export function syntaxObject(value: unknown): value is Record<string, unknown> {
@@ -48,6 +55,7 @@ export function syntaxRecord<S extends Record<string, SyntaxGuard<unknown>>>(
     );
   };
 }
+/** Builds a guard that succeeds when any member guard accepts the value. */
 export function syntaxUnion<T extends readonly SyntaxGuard<unknown>[]>(
   ...guards: T
 ): SyntaxGuard<Guarded<T[number]>> {
@@ -62,8 +70,10 @@ export const syntaxSpan = syntaxRecord({
   columnStart: syntaxOptional(syntaxNumber),
   columnEnd: syntaxOptional(syntaxNumber),
 });
+/** True when a syntax value is a bare identifier expression node. */
 const identifier = (value: unknown): boolean =>
   syntaxExpression(value) && value.type === "identifier";
+/** True when a syntax value is any reference-shaped expression node. */
 const reference = (value: unknown): boolean =>
   syntaxExpression(value) &&
   ["identifier", "defineReference", "relativeReference", "member", "index"].includes(value.type);

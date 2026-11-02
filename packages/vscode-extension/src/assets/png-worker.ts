@@ -2,6 +2,7 @@ import { parentPort, workerData } from "node:worker_threads";
 
 import { pngImporter, rewriteIndexedPng } from "@uttori/asm-assets/image";
 
+/** Narrow worker thread data to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

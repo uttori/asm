@@ -14,8 +14,8 @@ import { definitionRange, pathToUri } from "./spans.js";
 
 /**
  * Maps an assembler symbol kind to an LSP symbol kind.
- * @param {AssemblySymbolKind} kind The assembler symbol kind.
- * @returns {SymbolKind} The LSP symbol kind.
+ * @param kind The assembler symbol kind.
+ * @returns The LSP symbol kind.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#document-symbols-request-leftwards_arrow_with_hook
  */
 export function toSymbolKind(kind: AssemblySymbolKind): SymbolKind {
@@ -41,9 +41,9 @@ export function toSymbolKind(kind: AssemblySymbolKind): SymbolKind {
 /**
  * Builds a nested document outline from container names, deduplicating children recorded twice
  * by analysis and expanding parent ranges to include descendants while preserving selection ranges.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @returns {DocumentSymbol[]} The document symbols.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @returns The document symbols.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#document-symbols-request-leftwards_arrow_with_hook
  */
 export function documentSymbolsFor(index: WorkspaceIndex, file: string): DocumentSymbol[] {
@@ -103,8 +103,8 @@ export function documentSymbolsFor(index: WorkspaceIndex, file: string): Documen
 /**
  * Builds the workspace include DAG for the project outline TreeView.
  * File nodes do not embed symbols. The client loads those via documentSymbol.
- * @param {WorkspaceIndex} index The workspace index.
- * @returns {ProjectOutlineNode[]} Root outline nodes (entries, then orphans).
+ * @param index The workspace index.
+ * @returns Root outline nodes (entries, then orphans).
  */
 export function projectOutlineFor(index: WorkspaceIndex): ProjectOutlineNode[] {
   const childrenByParent = new Map<string, string[]>();
@@ -121,8 +121,8 @@ export function projectOutlineFor(index: WorkspaceIndex): ProjectOutlineNode[] {
   const visited = new Set<string>();
   /**
    * Expands each reachable file once; later visits become include leaves to bound cycles and DAG reuse.
-   * @param {string} file Entry or include path, normalized before consulting the shared visited set.
-   * @returns {ProjectOutlineNode} A file subtree, or a non-expanding include link for a repeated file.
+   * @param file Entry or include path, normalized before consulting the shared visited set.
+   * @returns A file subtree, or a non-expanding include link for a repeated file.
    */
   const buildFile = (file: string): ProjectOutlineNode => {
     const resolved = path.resolve(file);
@@ -178,8 +178,8 @@ export function projectOutlineFor(index: WorkspaceIndex): ProjectOutlineNode[] {
 
 /**
  * Display name for an outline node, stripping namespace/parent prefixes.
- * @param {AssemblySymbolDefinition} symbol The symbol.
- * @returns {string} The outline label.
+ * @param symbol The symbol.
+ * @returns The outline label.
  */
 export function outlineDisplayName(symbol: AssemblySymbolDefinition): string {
   const container = symbol.containerName;
@@ -194,8 +194,8 @@ export function outlineDisplayName(symbol: AssemblySymbolDefinition): string {
 
 /**
  * Detail text for an outline node.
- * @param {AssemblySymbolDefinition} symbol The symbol.
- * @returns {string} The detail string.
+ * @param symbol The symbol.
+ * @returns The detail string.
  */
 export function outlineDetail(symbol: AssemblySymbolDefinition): string {
   if (symbol.relocatable) {
@@ -212,8 +212,8 @@ export function outlineDetail(symbol: AssemblySymbolDefinition): string {
 /**
  * Keeps a single outline child per display name and definition line.
  * Prefers the node with more nested children, then a detail containing an address on ties.
- * @param {DocumentSymbol[]} children The child symbols.
- * @returns {DocumentSymbol[]} The deduplicated children.
+ * @param children The child symbols.
+ * @returns The deduplicated children.
  */
 export function dedupeOutlineChildren(children: DocumentSymbol[]): DocumentSymbol[] {
   const seen = new Map<string, DocumentSymbol>();
@@ -240,7 +240,7 @@ export function dedupeOutlineChildren(children: DocumentSymbol[]): DocumentSymbo
 
 /**
  * Mutates outline ranges recursively to cover descendants without changing selection ranges.
- * @param {DocumentSymbol} symbol Root of the freshly built outline subtree to expand.
+ * @param symbol Root of the freshly built outline subtree to expand.
  */
 export function expandRangeToChildren(symbol: DocumentSymbol): void {
   for (const child of symbol.children ?? []) {
@@ -251,9 +251,9 @@ export function expandRangeToChildren(symbol: DocumentSymbol): void {
 
 /**
  * Returns a range covering both inputs.
- * @param {Range} left The first range.
- * @param {Range} right The second range.
- * @returns {Range} The union range.
+ * @param left The first range.
+ * @param right The second range.
+ * @returns The union range.
  */
 export function unionRange(left: Range, right: Range): Range {
   const start =

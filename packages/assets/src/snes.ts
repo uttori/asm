@@ -7,28 +7,43 @@ export type Tile = readonly (readonly number[])[];
 export type PlanarDepth = 2 | 3 | 4 | 8;
 /** A CGRAM word retains bit 15 even though it has no displayed color channel. */
 export interface Bgr555Color {
+  /** Five-bit red channel in CGRAM order. */
   readonly red: number;
+  /** Five-bit green channel in CGRAM order. */
   readonly green: number;
+  /** Five-bit blue channel in CGRAM order. */
   readonly blue: number;
+  /** Hardware bit 15 preserved on round trip. */
   readonly unusedHighBit: number;
 }
 /** One SNES background map word, including attributes that previews may ignore. */
 export interface BgMapEntry {
+  /** Ten-bit tile index into VRAM tile data. */
   readonly tile: number;
+  /** Three-bit palette bank for the cell. */
   readonly palette: number;
+  /** Priority bit selecting between BG layers. */
   readonly priority: number;
+  /** Horizontal flip flag stored in the map word. */
   readonly horizontalFlip: number;
+  /** Vertical flip flag stored in the map word. */
   readonly verticalFlip: number;
 }
 /** A native BRR block; nibbles are signed integers, not decoded PCM samples. */
 export interface BrrBlock {
+  /** Four-bit range field in the block header. */
   readonly range: number;
+  /** Two-bit filter selector in the block header. */
   readonly filter: number;
+  /** Loop flag in the block header. */
   readonly loop: number;
+  /** End-of-stream flag in the block header. */
   readonly end: number;
+  /** Sixteen signed sample nibbles packed in pairs. */
   readonly nibbles: readonly number[];
 }
 
+/** Byte offset of one bit plane row within a native planar tile. */
 const planeOffset = (depth: PlanarDepth, plane: number, row: number): number => {
   // Ordinary 3bpp stores plane 2 after both interleaved lower planes.
   if (depth === 3 && plane === 2) {
@@ -37,6 +52,7 @@ const planeOffset = (depth: PlanarDepth, plane: number, row: number): number => 
   return Math.floor(plane / 2) * 16 + row * 2 + (plane % 2);
 };
 
+/** Enforce 8×8 shape and per-depth index bounds before encoding. */
 const validateTile = (tile: Tile, label: string, maximum: number): void => {
   if (tile.length !== 8) {
     throw new RangeError(`${label} must contain exactly 8 rows.`);
@@ -49,10 +65,11 @@ const validateTile = (tile: Tile, label: string, maximum: number): void => {
   });
 };
 
-/** Decode complete planar tiles; the caller retains ownership of input bytes.
- * @param {Uint8Array} bytes Borrowed complete tile stream.
- * @param {PlanarDepth} depth Native bit planes per pixel.
- * @returns {Tile[]} Display-order tiles with separate pixel arrays.
+/**
+ * Decode complete planar tiles; the caller retains ownership of input bytes.
+ * @param bytes Borrowed complete tile stream.
+ * @param depth Native bit planes per pixel.
+ * @returns Display-order tiles with separate pixel arrays.
  */
 export function decodePlanarTiles(bytes: Uint8Array, depth: PlanarDepth): Tile[] {
   const size = depth * 8;
@@ -71,10 +88,11 @@ export function decodePlanarTiles(bytes: Uint8Array, depth: PlanarDepth): Tile[]
   );
 }
 
-/** Encode new planar tiles without a source ROM or fixed output capacity.
- * @param {Tile[]} tiles Display-order pixels, each exactly 8×8.
- * @param {PlanarDepth} depth Native bit planes per pixel.
- * @returns {Uint8Array} Owned planar tile bytes.
+/**
+ * Encode new planar tiles without a source ROM or fixed output capacity.
+ * @param tiles Display-order pixels, each exactly 8×8.
+ * @param depth Native bit planes per pixel.
+ * @returns Owned planar tile bytes.
  */
 export function encodePlanarTiles(tiles: readonly Tile[], depth: PlanarDepth): Uint8Array {
   const size = depth * 8;
@@ -94,9 +112,10 @@ export function encodePlanarTiles(tiles: readonly Tile[], depth: PlanarDepth): U
   return bytes;
 }
 
-/** Decode Mode 7's chunky tile bytes, which differ from planar 8bpp.
- * @param {Uint8Array} bytes Borrowed complete tile stream.
- * @returns {Tile[]} Display-order tiles with byte indexes.
+/**
+ * Decode Mode 7's chunky tile bytes, which differ from planar 8bpp.
+ * @param bytes Borrowed complete tile stream.
+ * @returns Display-order tiles with byte indexes.
  */
 export function decodeMode7Tiles(bytes: Uint8Array): Tile[] {
   const count = unitCount(bytes, 64, "Mode 7 tile stream");
@@ -107,9 +126,10 @@ export function decodeMode7Tiles(bytes: Uint8Array): Tile[] {
   );
 }
 
-/** Encode Mode 7's row-major byte-per-pixel tiles.
- * @param {Tile[]} tiles Display-order pixels, each exactly 8×8.
- * @returns {Uint8Array} Owned chunky tile bytes.
+/**
+ * Encode Mode 7's row-major byte-per-pixel tiles.
+ * @param tiles Display-order pixels, each exactly 8×8.
+ * @returns Owned chunky tile bytes.
  */
 export function encodeMode7Tiles(tiles: readonly Tile[]): Uint8Array {
   const bytes = new Uint8Array(tiles.length * 64);
@@ -124,9 +144,10 @@ export function encodeMode7Tiles(tiles: readonly Tile[]): Uint8Array {
   return bytes;
 }
 
-/** Decode exact CGRAM words, including the unused high bit.
- * @param {Uint8Array} bytes Borrowed little-endian CGRAM words.
- * @returns {Bgr555Color[]} 5-bit channels and preserved bit 15.
+/**
+ * Decode exact CGRAM words, including the unused high bit.
+ * @param bytes Borrowed little-endian CGRAM words.
+ * @returns 5-bit channels and preserved bit 15.
  */
 export function decodeBgr555(bytes: Uint8Array): Bgr555Color[] {
   const count = unitCount(bytes, 2, "BGR555 palette");
@@ -141,9 +162,10 @@ export function decodeBgr555(bytes: Uint8Array): Bgr555Color[] {
   });
 }
 
-/** Encode fresh CGRAM colors; callers choose any desired palette padding.
- * @param {Bgr555Color[]} colors 5-bit channels and explicit bit 15.
- * @returns {Uint8Array} Owned little-endian CGRAM words.
+/**
+ * Encode fresh CGRAM colors; callers choose any desired palette padding.
+ * @param colors 5-bit channels and explicit bit 15.
+ * @returns Owned little-endian CGRAM words.
  */
 export function encodeBgr555(colors: readonly Bgr555Color[]): Uint8Array {
   const bytes = new Uint8Array(colors.length * 2);
@@ -159,9 +181,10 @@ export function encodeBgr555(colors: readonly Bgr555Color[]): Uint8Array {
   return bytes;
 }
 
-/** Decode packed BG map words in storage order; screen layout is a separate concern.
- * @param {Uint8Array} bytes Borrowed little-endian map words.
- * @returns {BgMapEntry[]} Every tile index and attribute field.
+/**
+ * Decode packed BG map words in storage order; screen layout is a separate concern.
+ * @param bytes Borrowed little-endian map words.
+ * @returns Every tile index and attribute field.
  */
 export function decodeBgMap(bytes: Uint8Array): BgMapEntry[] {
   const count = unitCount(bytes, 2, "BG tilemap");
@@ -177,9 +200,10 @@ export function decodeBgMap(bytes: Uint8Array): BgMapEntry[] {
   });
 }
 
-/** Encode BG map words without assigning physical screen blocks.
- * @param {BgMapEntry[]} entries Map entries already arranged in storage order.
- * @returns {Uint8Array} Owned little-endian map words.
+/**
+ * Encode BG map words without assigning physical screen blocks.
+ * @param entries Map entries already arranged in storage order.
+ * @returns Owned little-endian map words.
  */
 export function encodeBgMap(entries: readonly BgMapEntry[]): Uint8Array {
   const bytes = new Uint8Array(entries.length * 2);
@@ -196,25 +220,28 @@ export function encodeBgMap(entries: readonly BgMapEntry[]): Uint8Array {
   return bytes;
 }
 
-/** Decode byte-indexed Mode 7 maps, retaining index zero as an ordinary value.
- * @param {Uint8Array} bytes Borrowed map index bytes.
- * @returns {number[]} A copied array of tile indexes.
+/**
+ * Decode byte-indexed Mode 7 maps, retaining index zero as an ordinary value.
+ * @param bytes Borrowed map index bytes.
+ * @returns A copied array of tile indexes.
  */
 export function decodeMode7Map(bytes: Uint8Array): number[] {
   return [...bytes];
 }
 
-/** Encode byte-indexed Mode 7 maps.
- * @param {number[]} indexes Tile indexes in native map storage order.
- * @returns {Uint8Array} Owned map bytes.
+/**
+ * Encode byte-indexed Mode 7 maps.
+ * @param indexes Tile indexes in native map storage order.
+ * @returns Owned map bytes.
  */
 export function encodeMode7Map(indexes: readonly number[]): Uint8Array {
   return Uint8Array.from(indexes.map((value, index) => integer(value, `Index ${index}`, 0, 255)));
 }
 
-/** Decode native BRR block fields only; this does not reconstruct PCM.
- * @param {Uint8Array} bytes Borrowed complete nine-byte blocks.
- * @returns {BrrBlock[]} Signed nibbles and exact header fields.
+/**
+ * Decode native BRR block fields only; this does not reconstruct PCM.
+ * @param bytes Borrowed complete nine-byte blocks.
+ * @returns Signed nibbles and exact header fields.
  */
 export function decodeBrrBlocks(bytes: Uint8Array): BrrBlock[] {
   const count = unitCount(bytes, 9, "BRR stream");
@@ -236,9 +263,10 @@ export function decodeBrrBlocks(bytes: Uint8Array): BrrBlock[] {
   });
 }
 
-/** Encode signed BRR nibbles byte-exactly; PCM encoding is a different, lossy operation.
- * @param {BrrBlock[]} blocks Native BRR headers and signed nibbles.
- * @returns {Uint8Array} Owned nine-byte blocks.
+/**
+ * Encode signed BRR nibbles byte-exactly; PCM encoding is a different, lossy operation.
+ * @param blocks Native BRR headers and signed nibbles.
+ * @returns Owned nine-byte blocks.
  */
 export function encodeBrrBlocks(blocks: readonly BrrBlock[]): Uint8Array {
   const bytes = new Uint8Array(blocks.length * 9);
@@ -262,9 +290,11 @@ export function encodeBrrBlocks(blocks: readonly BrrBlock[]): Uint8Array {
   return bytes;
 }
 
+/** Narrow untrusted JSON values to plain objects. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Deep-compare native model trees used for encoder fidelity checks. */
 const sameModelValue = (left: unknown, right: unknown): boolean => {
   if (Object.is(left, right)) {
     return true;
@@ -285,6 +315,7 @@ const sameModelValue = (left: unknown, right: unknown): boolean => {
   );
 };
 
+/** Require a finite number before native model field validation. */
 const readNumber = (value: unknown, label: string): number => {
   if (typeof value !== "number") {
     throw new TypeError(`${label} must be a number.`);
@@ -292,6 +323,7 @@ const readNumber = (value: unknown, label: string): number => {
   return value;
 };
 
+/** Parse nested tile arrays from an untrusted native model field. */
 const readTiles = (value: unknown): Tile[] => {
   if (!Array.isArray(value)) {
     throw new TypeError("Native tile model 'tiles' must be an array.");
@@ -311,6 +343,7 @@ const readTiles = (value: unknown): Tile[] => {
   });
 };
 
+/** Parse CGRAM color objects from an untrusted native model field. */
 const readColors = (value: unknown): Bgr555Color[] => {
   if (!Array.isArray(value)) {
     throw new TypeError("Native palette model 'colors' must be an array.");
@@ -328,6 +361,7 @@ const readColors = (value: unknown): Bgr555Color[] => {
   });
 };
 
+/** Parse BG map entry objects from an untrusted native model field. */
 const readEntries = (value: unknown): BgMapEntry[] => {
   if (!Array.isArray(value)) {
     throw new TypeError("Native tilemap model 'entries' must be an array.");
@@ -346,6 +380,7 @@ const readEntries = (value: unknown): BgMapEntry[] => {
   });
 };
 
+/** Parse Mode 7 index arrays from an untrusted native model field. */
 const readIndexes = (value: unknown): number[] => {
   if (!Array.isArray(value)) {
     throw new TypeError("Native tilemap model 'indexes' must be an array.");
@@ -353,6 +388,7 @@ const readIndexes = (value: unknown): number[] => {
   return value.map((entry, index) => readNumber(entry, `Index ${index}`));
 };
 
+/** Parse BRR block objects from an untrusted native model field. */
 const readBlocks = (value: unknown): BrrBlock[] => {
   if (!Array.isArray(value)) {
     throw new TypeError("Native BRR model 'blocks' must be an array.");
@@ -373,6 +409,7 @@ const readBlocks = (value: unknown): BrrBlock[] => {
   });
 };
 
+/** Build a registry encoder that round-trips one native model field exactly. */
 const nativeEncoder = (
   id: string,
   kind: string,

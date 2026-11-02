@@ -3,15 +3,19 @@ import type { SourceCaptureIdentity } from "@uttori/asm-disassembler/source-proj
 import type { AssetSourceConversionPlan } from "@uttori/asm-workflows/asset-source";
 import type { SourceResearchResult, SourceResultMap } from "@uttori/asm-workflows/source";
 
+/** Narrow worker payloads to plain objects before field validation. */
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Require every list element to be a string. */
 function strings(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
+/** Require every list element to be a plain object record. */
 function records(value: unknown): value is Record<string, unknown>[] {
   return Array.isArray(value) && value.every(record);
 }
+/** Verify named properties are present strings on one object. */
 const textFields = (value: Record<string, unknown>, fields: readonly string[]): boolean =>
   fields.every((field) => typeof value[field] === "string");
 
@@ -83,6 +87,7 @@ function isResearchResult(value: unknown): value is SourceResearchResult {
     })
   );
 }
+/** Parse and validate a source research worker response before UI consumption. */
 export function readResearchResult(value: unknown): SourceResearchResult {
   if (!isResearchResult(value)) {
     throw new Error("Invalid source research response.");
@@ -90,6 +95,7 @@ export function readResearchResult(value: unknown): SourceResearchResult {
   return value;
 }
 
+/** Shape-check the status projection while omitting worker-owned journal bytes. */
 function isStatus(value: unknown): value is SourceResultMap["status"] {
   return (
     record(value) &&
@@ -120,6 +126,7 @@ export function readSourceStatus(value: unknown): SourceResultMap["status"] {
   return projection;
 }
 
+/** Validate one graphics capture identity returned from the worker. */
 function isCapture(value: unknown): value is SourceCaptureIdentity {
   return (
     record(value) &&
@@ -135,6 +142,7 @@ function isCapture(value: unknown): value is SourceCaptureIdentity {
     )
   );
 }
+/** Parse a graphics capture selection list from the worker. */
 export function readGraphicsSelection(value: unknown): {
   captures: readonly SourceCaptureIdentity[];
 } {
@@ -145,11 +153,16 @@ export function readGraphicsSelection(value: unknown): {
 }
 /** Repository-relative physical call interval; line bounds are one-based and inclusive. */
 export interface SourceMenuLocation {
+  /** Repository-relative assembly file hosting the menu call. */
   readonly file: string;
+  /** One-based inclusive start line of the physical call site. */
   readonly line: number;
+  /** One-based inclusive end line of the physical call site. */
   readonly endLine: number;
+  /** Canonical menu representation string for the indexed call. */
   readonly representation: string;
 }
+/** Parse optional representation metadata and validate repository-relative paths. */
 export function readSourceRepresentation(value: unknown):
   | {
       representation: string;
@@ -205,6 +218,7 @@ export function readSourceRepresentation(value: unknown):
   };
 }
 
+/** Validate an asset conversion plan before applying staged binary edits. */
 function isConversionPlan(
   value: unknown,
 ): value is AssetSourceConversionPlan & { transaction?: string } {
@@ -230,6 +244,7 @@ function isConversionPlan(
     strings(value.assemblyInventory)
   );
 }
+/** Parse a validated asset conversion plan from the worker. */
 export function readConversionPlan(
   value: unknown,
 ): AssetSourceConversionPlan & { transaction?: string } {
@@ -264,12 +279,14 @@ export function readGenerationCommit(value: unknown): {
     verification: { outputSha256: value.verification.outputSha256 },
   };
 }
+/** Parse the built artifact path from a source build worker response. */
 export function readBuildOutput(value: unknown): { outputFile: string } {
   if (!record(value) || typeof value.outputFile !== "string") {
     throw new Error("Invalid build output response.");
   }
   return { outputFile: value.outputFile };
 }
+/** Parse merge preview conflicts and rendered tree text from the worker. */
 export function readMergePreview(value: unknown): { conflicts: string[]; resultTree: string } {
   if (!record(value) || !strings(value.conflicts) || typeof value.resultTree !== "string") {
     throw new Error("Invalid merge preview response.");

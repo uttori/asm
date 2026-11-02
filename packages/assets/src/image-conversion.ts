@@ -18,12 +18,18 @@ import {
 } from "./snes.js";
 import { integer } from "./validation.js";
 
+/** Imported PNG pixel models accepted by image encoders. */
 type ImageModel = IndexedImage | RgbaImage;
+/** BGR555 expansion table used when quantizing truecolor sources. */
 type Expansion = "bit-replicate" | "scale-floor";
+/** Opaque RGBA tuple used while resolving external palettes. */
 type PaletteColor = readonly [number, number, number, number];
+/** Tile iteration order when slicing a raster into 8×8 cells. */
 type TileOrder = "row-major" | "column-major" | "blocks";
+/** BG map storage order for emitted tilemap bytes. */
 type MapLayout = "row-major" | "screen-blocks";
 
+/** Validated tile slicing options after defaults are applied. */
 interface NormalizedLayout {
   readonly tileOrder: TileOrder;
   readonly blockSize?: readonly [2, 2];
@@ -32,6 +38,7 @@ interface NormalizedLayout {
   readonly withinBlock?: readonly number[];
 }
 
+/** BG map word fields applied to every emitted cell. */
 interface MapOptions {
   readonly layout: MapLayout;
   readonly startTileIndex: number;
@@ -41,6 +48,7 @@ interface MapOptions {
   readonly verticalFlip: boolean;
 }
 
+/** Normalized encoder options for palette, layout and tilemap emission. */
 interface ImageOptions {
   readonly palette: string;
   readonly paletteExpansion: Expansion;
@@ -48,15 +56,19 @@ interface ImageOptions {
   readonly tilemap: MapOptions;
 }
 
+/** Narrow untrusted option objects before field reads. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
+/** Accept only SNES planar bit depths supported by tile encoders. */
 const isPlanarDepth = (value: number): value is PlanarDepth =>
   value === 2 || value === 3 || value === 4 || value === 8;
 
+/** Accept indexed PNG source bit depths that map to planar depths. */
 const isSourceBitDepth = (value: unknown): value is IndexedImage["sourceBitDepth"] =>
   value === 1 || value === 2 || value === 4 || value === 8;
 
+/** Recognize four-channel RGBA tuples with byte-wide channels. */
 const isRgbaTuple = (value: unknown): value is readonly [number, number, number, number] =>
   Array.isArray(value) &&
   value.length === 4 &&
@@ -65,6 +77,7 @@ const isRgbaTuple = (value: unknown): value is readonly [number, number, number,
       typeof channel === "number" && Number.isInteger(channel) && channel >= 0 && channel <= 255,
   );
 
+/** Read and bound-check one integer option field. */
 const readInteger = (value: unknown, label: string, minimum: number, maximum: number): number => {
   if (typeof value !== "number") {
     throw new RangeError(`${label} must be a number.`);
@@ -72,6 +85,7 @@ const readInteger = (value: unknown, label: string, minimum: number, maximum: nu
   return integer(value, label, minimum, maximum);
 };
 
+/** Require a strict boolean option value. */
 const readBoolean = (value: unknown, name: string): boolean => {
   if (typeof value !== "boolean") {
     throw new Error(`${name} must be boolean.`);
@@ -79,6 +93,7 @@ const readBoolean = (value: unknown, name: string): boolean => {
   return value;
 };
 
+/** Expand one five-bit channel using the selected profile table. */
 const expand = (channel: number, profile: Expansion): number => {
   if (profile === "bit-replicate") {
     return (channel << 3) | (channel >> 2);
@@ -86,11 +101,12 @@ const expand = (channel: number, profile: Expansion): number => {
   return Math.floor((channel * 255) / 31);
 };
 
-/** Invert the selected 5-to-8-bit table exactly; channel rounding is forbidden.
- * @param {number} channel Source RGB8 channel.
- * @param {Expansion} profile Declared expansion table.
- * @param {string} label Diagnostic location.
- * @returns {number} Exact five-bit channel.
+/**
+ * Invert the selected 5-to-8-bit table exactly; channel rounding is forbidden.
+ * @param channel Source RGB8 channel.
+ * @param profile Declared expansion table.
+ * @param label Diagnostic location.
+ * @returns Exact five-bit channel.
  */
 const reduce = (channel: number, profile: Expansion, label: string): number => {
   integer(channel, label, 0, 255);
@@ -102,8 +118,10 @@ const reduce = (channel: number, profile: Expansion, label: string): number => {
   throw new Error(`${label}=${channel} is not representable by ${profile} BGR555.`);
 };
 
+/** Stable string key for deduplicating palette colors during quantization. */
 const colorKey = (color: ArrayLike<number>): string => Array.from(color).join(",");
 
+/** Parse and default tile slicing layout options. */
 const readLayout = (raw: unknown): NormalizedLayout => {
   if (raw === undefined) {
     return { tileOrder: "row-major" };
@@ -165,6 +183,7 @@ const readLayout = (raw: unknown): NormalizedLayout => {
   return { tileOrder, blockSize: [2, 2], blockOrder, blockRows, withinBlock };
 };
 
+/** Normalize palette, layout and tilemap options for one encode pass. */
 const readOptions = (raw: Readonly<Record<string, unknown>>, indexed: boolean): ImageOptions => {
   if (
     Object.keys(raw).some(
@@ -221,6 +240,7 @@ const readOptions = (raw: Readonly<Record<string, unknown>>, indexed: boolean): 
   };
 };
 
+/** Load an external JSON palette resource referenced by encode options. */
 const externalPalette = (
   input: AssetInput,
 ): { colors: PaletteColor[]; transparentIndex: number } => {
@@ -258,12 +278,13 @@ const externalPalette = (
   return { colors, transparentIndex };
 };
 
-/** Choose a bijective indexed mapping or exact truecolor lookup without quantizing.
- * @param {ImageModel} image Imported PNG model.
- * @param {ImageOptions} options Normalized conversion options.
- * @param {Readonly<Record<string, AssetInput>>} resources Declared external palette bytes.
- * @param {number} capacity Number of entries in one native palette bank.
- * @returns {{ colors: PaletteColor[]; indexes: Uint8Array; sourceToNative?: number[] }} Native palette and pixel indexes.
+/**
+ * Choose a bijective indexed mapping or exact truecolor lookup without quantizing.
+ * @param image Imported PNG model.
+ * @param options Normalized conversion options.
+ * @param resources Declared external palette bytes.
+ * @param capacity Number of entries in one native palette bank.
+ * @returns Native palette and pixel indexes.
  */
 function selectPalette(
   image: ImageModel,
@@ -407,11 +428,12 @@ function selectPalette(
   return { colors, indexes, sourceToNative };
 }
 
-/** Enumerate storage tile coordinates while retaining the inverse logical map.
- * @param {number} width Number of tile columns.
- * @param {number} height Number of tile rows.
- * @param {NormalizedLayout} layout Storage traversal.
- * @returns {readonly (readonly [number, number])[]} Tile coordinates in encoded order.
+/**
+ * Enumerate storage tile coordinates while retaining the inverse logical map.
+ * @param width Number of tile columns.
+ * @param height Number of tile rows.
+ * @param layout Storage traversal.
+ * @returns Tile coordinates in encoded order.
  */
 function tileCoordinates(
   width: number,
@@ -460,6 +482,7 @@ function tileCoordinates(
   return result;
 }
 
+/** Compute linear index permutation for the selected BG map layout. */
 function mapOrder(width: number, height: number, layout: MapLayout): number[] {
   if (layout === "row-major") {
     return Array.from({ length: width * height }, (_, index) => index);
@@ -480,11 +503,12 @@ function mapOrder(width: number, height: number, layout: MapLayout): number[] {
   return order;
 }
 
-/** Encode logical BG cells in hardware's 32×32 screen-block storage order.
- * @param {readonly BgMapEntry[]} logical Logical row-major entries; indexes may repeat.
- * @param {number} width Width in map cells, 32 or 64.
- * @param {number} height Height in map cells, 32 or 64.
- * @returns {Uint8Array} Owned native BG map words.
+/**
+ * Encode logical BG cells in hardware's 32×32 screen-block storage order.
+ * @param logical Logical row-major entries; indexes may repeat.
+ * @param width Width in map cells, 32 or 64.
+ * @param height Height in map cells, 32 or 64.
+ * @returns Owned native BG map words.
  */
 export function encodeBgScreenMap(
   logical: readonly BgMapEntry[],
@@ -497,11 +521,12 @@ export function encodeBgScreenMap(
   return encodeBgMap(mapOrder(width, height, "screen-blocks").map((index) => logical[index]));
 }
 
-/** Reverse native screen-block storage into logical row-major BG cells.
- * @param {Uint8Array} bytes Native BG map words.
- * @param {number} width Width in map cells, 32 or 64.
- * @param {number} height Height in map cells, 32 or 64.
- * @returns {BgMapEntry[]} Owned logical entries.
+/**
+ * Reverse native screen-block storage into logical row-major BG cells.
+ * @param bytes Native BG map words.
+ * @param width Width in map cells, 32 or 64.
+ * @param height Height in map cells, 32 or 64.
+ * @returns Owned logical entries.
  */
 export function decodeBgScreenMap(bytes: Uint8Array, width: number, height: number): BgMapEntry[] {
   const order = mapOrder(width, height, "screen-blocks");
@@ -522,12 +547,13 @@ export function decodeBgScreenMap(bytes: Uint8Array, width: number, height: numb
   return logical;
 }
 
-/** Validate a complete 128×128 Mode 7 map or an explicit partial upload rectangle.
- * @param {readonly number[]} indexes Row-major tile indexes.
- * @param {number} width Width in cells.
- * @param {number} height Height in cells.
- * @param {string} layout `"full"` for the hardware map, or `"partial"` for an upload rectangle.
- * @returns {Uint8Array} Owned native map bytes.
+/**
+ * Validate a complete 128×128 Mode 7 map or an explicit partial upload rectangle.
+ * @param indexes Row-major tile indexes.
+ * @param width Width in cells.
+ * @param height Height in cells.
+ * @param layout `"full"` for the hardware map, or `"partial"` for an upload rectangle.
+ * @returns Owned native map bytes.
  */
 export function encodeMode7MapLayout(
   indexes: readonly number[],
@@ -551,6 +577,7 @@ export function encodeMode7MapLayout(
   return encodeMode7Map(indexes);
 }
 
+/** Validate and narrow an imported PNG document to a typed pixel model. */
 function imageModel(document: AssetDocument): ImageModel {
   if (
     (document.kind !== "indexed-image" && document.kind !== "rgba-image") ||
@@ -617,12 +644,13 @@ function imageModel(document: AssetDocument): ImageModel {
   };
 }
 
-/** Build tiles, CGRAM, map, and composed preview from one exact palette/index decision.
- * @param {AssetDocument} document Imported PNG pixels.
- * @param {Readonly<Record<string, unknown>>} rawOptions Requested palette and layout.
- * @param {Readonly<Record<string, AssetInput>>} resources External palette files.
- * @param {string} format Canonical SNES tile ID.
- * @returns {{ outputs: Readonly<Record<string, AssetOutput>>; normalizedOptions: Readonly<Record<string, unknown>> }} Named native outputs.
+/**
+ * Build tiles, CGRAM, map, and composed preview from one exact palette/index decision.
+ * @param document Imported PNG pixels.
+ * @param rawOptions Requested palette and layout.
+ * @param resources External palette files.
+ * @param format Canonical SNES tile ID.
+ * @returns Named native outputs.
  */
 function encodeImage(
   document: AssetDocument,
@@ -776,9 +804,10 @@ function encodeImage(
   };
 }
 
-/** Compose PNG-aware tile encoders with native JSON encoders under the same IDs.
- * @param {readonly AssetEncoder[]} native Existing exact native model encoders.
- * @returns {readonly AssetEncoder[]} Combined format registrations.
+/**
+ * Compose PNG-aware tile encoders with native JSON encoders under the same IDs.
+ * @param native Existing exact native model encoders.
+ * @returns Combined format registrations.
  */
 export function withImageEncoders(native: readonly AssetEncoder[]): readonly AssetEncoder[] {
   return native.map((encoder) => {

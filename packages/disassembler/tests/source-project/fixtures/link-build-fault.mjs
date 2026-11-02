@@ -9,7 +9,7 @@ const rename = fs.renameSync;
 fs.renameSync = (from, to) => {
   rename(from, to);
   const name = path.basename(to);
-  if (name === boundary || (boundary === "directory" && /^[a-f0-9]{64}$/.test(name))) {
+  if (name === boundary || (boundary === "directory" && /^[\da-f]{64}$/.test(name))) {
     process.kill(process.pid, "SIGKILL");
   }
 };

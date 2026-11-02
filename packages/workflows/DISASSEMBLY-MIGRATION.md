@@ -4,7 +4,7 @@ Existing Asar projects retain absolute assembly until an explicit linked generat
 
 ## Prepare and adopt
 
-Save configuration and research changes. Use the usual Analyze Evidence and Refresh Capture Catalog steps when their inputs have changed, and commit the source edits you intend to carry into the merge.
+Save configuration and research changes. Use the usual **Analyze Source Project Evidence** and **Refresh Capture Catalog** steps when their inputs have changed, and commit the source edits you intend to carry into the merge.
 
 ```sh
 uttori-asm source prepare /path/to/project --linked
@@ -14,7 +14,7 @@ uttori-asm source finish /path/to/project
 uttori-asm source build /path/to/project
 ```
 
-In the editor, **Prepare Migration to Linked Sources** prepares the same candidate. Continue with Preview, Apply and Validate/Finish in Source Project. Prepare leaves the working source and index untouched. Native Git handles conflicts, edits and entry-point renames; a failed validation preserves the previous successful build. The normal abort/recovery flow remains available.
+In the editor, **Prepare Migration to Linked Sources** prepares the same candidate. Continue with **Preview Regeneration with Current Edits**, **Apply Previewed Generation** and **Validate and Finish Regeneration**. Prepare leaves the working source and index untouched. Native Git handles conflicts, edits and entry-point renames; a failed validation preserves the previous successful build. The normal abort/recovery flow remains available.
 
 After adoption, ordinary Prepare Regeneration inherits linked mode from the reviewed compiler configuration. The default for projects without that selection remains absolute assembly.
 

@@ -7,7 +7,8 @@ import { DEFAULT_RUNTIME_TRACE_MAX_BYTES, type ResearchSnapshot } from "@uttori/
 import { createNesGraphicsProjection, publishNesGraphicsEvidence } from "./ppu-evidence.js";
 import { summarizeNesPPUCapture } from "./ppu.js";
 
-/** Import a complete PPU archive into a separate, immutable graphics report.
+/**
+ * Import a complete PPU archive into a separate, immutable graphics report.
  * Returns null for other formats/scopes. Graphics observations never seed CPU disassembly.
  * Input deletion belongs to the caller. Reports and SQLite facts remain usable after removal;
  * the archive hash identifies the verified input without requiring its ordered stream to survive.

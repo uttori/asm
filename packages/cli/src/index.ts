@@ -50,31 +50,45 @@ export type CliCommand =
 
 /** Parsed values only: no filesystem access, configuration loading, or path resolution has occurred. */
 export interface CliArguments {
+  /** Subcommand selected from the first positional token. */
   readonly command: CliCommand;
+  /** First positional path: source file, project directory, or capture, depending on command. */
   readonly input?: string;
   /** Optional second positional argument. Its default and meaning depend on command/target. */
   readonly output?: string;
+  /** Path to the JSON config; relative paths resolve from the current working directory. */
   readonly configFile?: string;
+  /** Plugin modules from `--plugin`. An empty list lets the command's default plugins load. */
   readonly plugins: readonly string[];
+  /** Target contribution ID or alias. Undefined uses the config or the SNES default. */
   readonly target?: string;
+  /** Architecture ID or alias within the target. Undefined uses the target default. */
   readonly architecture?: string;
   /** Path to initial patch bytes. Source may extend them and target finalization still applies. */
   readonly baseImage?: string;
   /** Enabled by either --debug or --debug-map. Source metadata is otherwise not collected. */
   readonly debug: boolean;
+  /** Optional debug-map output path. Written only when debug collection is enabled. */
   readonly debugMap?: string;
+  /** Include directories from `--include-path`, replacing any configured list. */
   readonly includePaths: readonly string[];
   /** Values are JSON-decoded when possible. Repeated plugin/key assignments keep the last value. */
   readonly pluginOptions: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+  /** SNES mapper for `source init`. Undefined lets the initializer detect it from the ROM. */
   readonly mapper?: SnesMapper;
   /** Copier-header bytes. Undefined requests automatic detection during creation. */
   readonly headerSize?: 0 | 512;
+  /** Optional DiztinGUIsh research file imported during `source init`. */
   readonly dizraw?: string;
+  /** Original ROM path for capture or source commands that bind one. */
   readonly rom?: string;
+  /** Instruction-trace capture path for evidence-import. */
   readonly instructionTrace?: string;
   /** Positive integer MiB limit. Undefined delegates to the shared 32 GiB import default. */
   readonly traceMaxMiB?: number;
+  /** Trace index density. `full` retains every sample; `analysis` keeps the compact form. */
   readonly traceIndex?: "full" | "analysis";
+  /** Optional storage-policy overrides for project-compact. Unset fields keep the stored policy. */
   readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
   /** Explicitly consolidate SNES register snapshots before physical compaction. */
   readonly analysisOnly?: boolean;
@@ -84,19 +98,26 @@ export interface CliArguments {
   readonly maxWorkItems?: number;
   /** Nonnegative call-context depth. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH}. */
   readonly maxCallDepth?: number;
+  /** When true, progress is written to stderr. */
   readonly verbose: boolean;
+  /** When true, print usage and exit without running a command. */
   readonly help: boolean;
 }
 
+/** True when the token names a supported CLI command. */
 function isCliCommand(value: string): value is CliCommand {
   return Object.hasOwn(commandOptions, value);
 }
 
+/** True when the token is a SNES mapper identifier accepted by source commands. */
 function isSnesMapper(value: string): value is SnesMapper {
   return SNES_MAPPERS.some((mapper) => mapper === value);
 }
 
-/** Flags are command-specific so a misspelled workflow cannot silently ignore a requested policy. */
+/**
+ * Flags accepted by each subcommand. Unknown flags fail parse instead of being ignored.
+ * `--help` is allowed on every command through `knownOptions`.
+ */
 const commandOptions: Readonly<Record<CliCommand, readonly string[]>> = {
   assemble: [
     "--config",
@@ -125,8 +146,11 @@ const commandOptions: Readonly<Record<CliCommand, readonly string[]>> = {
   ],
   "evidence-report": [],
 };
+/** Union of every command flag plus `--help`. Unknown tokens fail parse. */
 const knownOptions = new Set(["--help", ...Object.values(commandOptions).flat()]);
+/** Flags that take no value. Presence sets the corresponding boolean true. */
 const booleanOptions = new Set(["--help", "--verbose", "--debug", "--analysis-only"]);
+/** Commands that accept an optional output path as the second positional. */
 const commandsWithOutput = new Set<CliCommand>(["assemble", "disassemble", "evidence-report"]);
 
 /** Installed executable's help text. All flags are long options. -- ends option parsing. */
@@ -186,8 +210,8 @@ Terminal signals retain Node's default termination behavior. No graceful cancell
  * Parse arguments without reading files or loading plugins. Unknown/inapplicable flags, boolean
  * values, invalid numeric limits, and excess positionals throw Error. Required input/ROM presence
  * is checked by runCli so a bare --help remains valid. -- treats all following strings as paths.
- * @param {readonly string[]} argv Tokens excluding the Node executable and script name. Not mutated.
- * @returns {CliArguments} New parsed object. List fields and the outer option map are shallow-frozen.
+ * @param argv Tokens excluding the Node executable and script name. Not mutated.
+ * @returns New parsed object. List fields and the outer option map are shallow-frozen.
  */
 export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   const positional: string[] = [];
@@ -445,25 +469,25 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
 };
 
 /**
- * Returns the default output path for a given input file and extension.
- * @param {string} inputFile The input file.
- * @param {string} extension The extension.
- * @returns {string} The default output path.
+ * Replace the input file's extension, keeping its directory and stem.
+ * @param inputFile Source path whose directory and stem are reused.
+ * @param extension Replacement extension, including the leading dot.
+ * @returns Path in the same directory as the input.
  */
 const defaultOutputPath = (inputFile: string, extension: string): string => {
   const parsed = path.parse(inputFile);
   return path.join(parsed.dir, `${parsed.name}${extension}`);
 };
 
-/**
- * Formats a failure message for a given error.
- * @param {unknown} error The error.
- * @returns {string} The formatted failure message.
- */
+/** JSON-stringify a thrown value when it is not an Error, returning undefined on circular data. */
 function stringifyCaught(value: unknown): string | undefined {
   return JSON.stringify(value);
 }
 
+/**
+ * Format a caught assemble/plugin failure for stderr.
+ * PluginError includes plugin, module, and target identity when present.
+ */
 const formatFailure = (error: unknown): string => {
   if (error instanceof PluginError) {
     const context = [
@@ -478,9 +502,9 @@ const formatFailure = (error: unknown): string => {
 
 /**
  * Creates an analysis project from a ROM file.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {number} The exit code.
+ * @param parsed The parsed CLI arguments.
+ * @param cwd The current working directory.
+ * @returns The exit code.
  */
 const createAnalysisProject = (parsed: CliArguments, cwd: string): number => {
   const inputFile = path.resolve(cwd, parsed.input!);
@@ -520,9 +544,9 @@ const createAnalysisProject = (parsed: CliArguments, cwd: string): number => {
 
 /**
  * Validates a project's analysis and ROM identity.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {number} The exit code.
+ * @param parsed The parsed CLI arguments.
+ * @param cwd The current working directory.
+ * @returns The exit code.
  */
 const validateProject = (parsed: CliArguments, cwd: string): number => {
   const directory = path.resolve(cwd, parsed.input!);
@@ -552,9 +576,9 @@ const validateProject = (parsed: CliArguments, cwd: string): number => {
 /**
  * Imports a native instruction recording into a verified project.
  * The shared disk importer streams the capture without loading prior runtime history.
- * @param {CliArguments} parsed Parsed command-line arguments.
- * @param {string} cwd Current working directory.
- * @returns {number} Process exit code.
+ * @param parsed Parsed command-line arguments.
+ * @param cwd Current working directory.
+ * @returns Process exit code.
  */
 const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise<number> => {
   const directory = path.resolve(cwd, parsed.input!);
@@ -617,9 +641,9 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
 
 /**
  * Prints or writes deterministic runtime conflict and explanation diagnostics.
- * @param {CliArguments} parsed Parsed command-line arguments.
- * @param {string} cwd Current working directory.
- * @returns {number} Process exit code.
+ * @param parsed Parsed command-line arguments.
+ * @param cwd Current working directory.
+ * @returns Process exit code.
  */
 const reportProjectEvidence = (parsed: CliArguments, cwd: string): number => {
   const directory = path.resolve(cwd, parsed.input!);
@@ -650,9 +674,9 @@ const reportProjectEvidence = (parsed: CliArguments, cwd: string): number => {
 
 /**
  * Analyzes a project's 65816 code.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {number} The exit code.
+ * @param parsed The parsed CLI arguments.
+ * @param cwd The current working directory.
+ * @returns The exit code.
  */
 const analyzeProject = (parsed: CliArguments, cwd: string): number => {
   const directory = path.resolve(cwd, parsed.input!);
@@ -691,9 +715,9 @@ const analyzeProject = (parsed: CliArguments, cwd: string): number => {
 
 /**
  * Assembles a source file into a binary output.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {Promise<number>} The exit code.
+ * @param parsed The parsed CLI arguments.
+ * @param cwd The current working directory.
+ * @returns The exit code.
  */
 const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
   const inputFile = path.resolve(cwd, parsed.input!);
@@ -832,8 +856,8 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
  * No AbortSignal or signal handlers are installed: terminal termination can skip cleanup. Use the
  * underlying libraries for cooperative cancellation or structured results. This function neither
  * calls process.exit nor sets process.exitCode. The executable wrapper sets the returned status.
- * @param {readonly string[]} [argv] Argument tokens, defaulting to process.argv.slice(2). Not mutated.
- * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
+ * @param [argv] Argument tokens, defaulting to process.argv.slice(2). Not mutated.
+ * @returns 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv: readonly string[] = process.argv.slice(2)): Promise<number> => {
   if (["assemble-object", "library", "link", "build"].includes(argv[0])) {
@@ -871,9 +895,9 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
 
 /**
  * Dispatch a validated invocation. Unexpected failures are reported by runCli's outer boundary.
- * @param {CliArguments} parsed Parsed options with a required input already checked.
- * @param {string} cwd Invocation working directory, captured before asynchronous work.
- * @returns {Promise<number>} Command status after its owned resources are released.
+ * @param parsed Parsed options with a required input already checked.
+ * @param cwd Invocation working directory, captured before asynchronous work.
+ * @returns Command status after its owned resources are released.
  */
 const runCommand = async (parsed: CliArguments, cwd: string): Promise<number> => {
   if (parsed.command === "disassemble") {

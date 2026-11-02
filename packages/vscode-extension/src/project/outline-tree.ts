@@ -41,18 +41,22 @@ type OutlineItem = {
  * @see https://code.visualstudio.com/api/extension-guides/tree-view
  */
 export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
+  /** Registered tree view id for the project outline sidebar. */
   static readonly viewId = "uttori-asm.projectOutline";
 
   readonly #onDidChangeTreeData = new EventEmitter<OutlineItem | undefined | null | void>();
+  /** Fired when include graph or symbol caches should reload. */
   readonly onDidChangeTreeData: Event<OutlineItem | undefined | null | void> =
     this.#onDidChangeTreeData.event;
 
   constructor(private readonly getClient: () => LanguageClient | undefined) {}
 
+  /** Invalidate cached roots and notify the tree to reload. */
   refresh(): void {
     this.#onDidChangeTreeData.fire();
   }
 
+  /** Map an outline row into VS Code tree presentation state. */
   getTreeItem(element: OutlineItem): TreeItem {
     const item = new TreeItem(
       element.label,
@@ -87,6 +91,7 @@ export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
     return item;
   }
 
+  /** Resolve include-graph children or lazy document symbols for one row. */
   async getChildren(element?: OutlineItem): Promise<OutlineItem[]> {
     if (!element) {
       return this.loadRoots();
@@ -99,6 +104,7 @@ export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
     return element.children ?? [];
   }
 
+  /** Fetch top-level include graph nodes from the language client. */
   async loadRoots(): Promise<OutlineItem[]> {
     const client = this.getClient();
     if (!client) {
@@ -112,6 +118,7 @@ export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
     }
   }
 
+  /** Convert a tooling outline node into a tree row model. */
   toItem(node: ProjectOutlineNode): OutlineItem {
     const isFile = node.kind === "file";
     return {
@@ -128,6 +135,7 @@ export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
     };
   }
 
+  /** Load document symbols for one file URI under a stable parent id. */
   async loadSymbols(uri: string, parentId: string): Promise<OutlineItem[]> {
     const client = this.getClient();
     if (!client) {
@@ -147,10 +155,10 @@ export class ProjectOutlineProvider implements TreeDataProvider<OutlineItem> {
 /**
  * Recursively convert LSP document symbols to outline rows, preferring the symbol selection
  * range and deriving stable hierarchical IDs.
- * @param {DocumentSymbol} symbol LSP symbol with zero-based source ranges.
- * @param {string} uri Owning document URI string.
- * @param {string} id Hierarchical identity derived from parent and sibling index.
- * @returns {OutlineItem} Outline subtree preserving symbol selection ranges.
+ * @param symbol LSP symbol with zero-based source ranges.
+ * @param uri Owning document URI string.
+ * @param id Hierarchical identity derived from parent and sibling index.
+ * @returns Outline subtree preserving symbol selection ranges.
  */
 function symbolToItem(symbol: DocumentSymbol, uri: string, id: string): OutlineItem {
   const range = symbol.selectionRange;
@@ -172,8 +180,8 @@ function symbolToItem(symbol: DocumentSymbol, uri: string, id: string): OutlineI
 /**
  * Choose a theme-aware built-in icon for each include-graph role, with a file icon as the
  * fallback.
- * @param {ProjectOutlineKind} kind Include-graph node role.
- * @returns {ThemeIcon} Theme icon for the role, falling back to file.
+ * @param kind Include-graph node role.
+ * @returns Theme icon for the role, falling back to file.
  * @see https://code.visualstudio.com/api/references/vscode-api#ThemeIcon
  * @see https://code.visualstudio.com/api/references/icons-in-labels
  */
@@ -193,8 +201,8 @@ function iconForKind(kind: ProjectOutlineKind): ThemeIcon {
 
 /**
  * Map LSP symbol kinds to theme-aware built-in icons, using symbol-misc for unrecognized kinds.
- * @param {number} kind LSP SymbolKind numeric value.
- * @returns {ThemeIcon} Matching symbol icon or symbol-misc for other kinds.
+ * @param kind LSP SymbolKind numeric value.
+ * @returns Matching symbol icon or symbol-misc for other kinds.
  * @see https://code.visualstudio.com/api/references/vscode-api#ThemeIcon
  * @see https://code.visualstudio.com/api/references/icons-in-labels
  */

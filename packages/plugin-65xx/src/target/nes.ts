@@ -21,16 +21,19 @@ import {
 
 /** iNES / NES 2.0 cartridge target (`nes`, `ines`, `6502-nes` aliases). */
 export const NES_65XX_TARGET_ID = "65xx.nes";
+/** Address-space contribution id for iNES CPU/PPU mapping. */
 export const NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
+/** Output-format contribution id for headered iNES images. */
 export const NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
+/** Lifecycle contribution id that prefills NES header and PRG. */
 export const NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
 
 const INES_MAGIC = [0x4e, 0x45, 0x53, 0x1a];
 
 /**
  * Accepts a JSON object. Arrays and null are not option maps.
- * @param {unknown} value Candidate target options.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Candidate target options.
+ * @returns True when `value` is a non-array object.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -43,17 +46,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export interface Nes65xxTargetOptions extends Readonly<Record<string, unknown>> {
   /** Asar uses headerless physical org offsets and logical CPU/PPU base addresses; ca65 retains MEMORY segments. */
   readonly sourceStyle: "asar" | "ca65";
+  /** Parsed or declared header bytes. */
   readonly header: readonly number[];
+  /** ld65 MEMORY/SEGMENTS text used for this cartridge layout. */
   readonly linkerConfig: string;
+  /** Byte used to prefill unused PRG and header gaps. */
   readonly fillByte: number;
+  /** Parsed ld65 configuration driving NES section placement. */
   readonly linker: Ld65Config;
 }
 
 /**
  * Coerces NES target options. Omitted `linkerConfig` uses a 32 KiB `$8000` ROM.
  * Omitted `header` synthesizes a 16-byte iNES header from PRG size.
- * @param {unknown} configured Assembler `targetOptions`.
- * @returns {Nes65xxTargetOptions} Normalized options including a parsed linker.
+ * @param configured Assembler `targetOptions`.
+ * @returns Normalized options including a parsed linker.
  */
 export function createNes65xxTargetOptions(configured: unknown): Nes65xxTargetOptions {
   const value = isRecord(configured) ? configured : {};
@@ -76,9 +83,9 @@ export function createNes65xxTargetOptions(configured: unknown): Nes65xxTargetOp
 
 /**
  * Builds the initial NES session state from target options.
- * @param {object} context Session creation context.
- * @param {Readonly<Record<string, unknown>>} context.targetOptions Normalized NES options.
- * @returns {Nes65xxSessionState} Fresh session state.
+ * @param context Session creation context.
+ * @param context.targetOptions Normalized NES options.
+ * @returns Fresh session state.
  */
 export function createInitialNesState(context: {
   targetOptions: Readonly<Record<string, unknown>>;
@@ -100,8 +107,8 @@ export function createInitialNesState(context: {
 
 /**
  * Rejects addresses outside the unsigned 16-bit NES CPU space.
- * @param {number} address Candidate CPU address.
- * @returns {number} The same address when it is in range.
+ * @param address Candidate CPU address.
+ * @returns The same address when it is in range.
  */
 function validate(address: number): number {
   if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
@@ -113,8 +120,8 @@ function validate(address: number): number {
 /**
  * Maps load addresses into the iNES image using physical Asar offsets or ca65 MEMORY regions.
  * Logical CPU/PPU addresses stay independent of the load cursor through core `base` support.
- * @param {TargetFactoryContext} context Target factory context.
- * @returns {TargetAddressSpace} The NES address space.
+ * @param context Target factory context.
+ * @returns The NES address space.
  */
 export function createNesAddressSpace({
   state,
@@ -196,7 +203,7 @@ export function createNesAddressSpace({
 
 /**
  * Header plus filled PRG image. Checksum is not an iNES concept.
- * @returns {TargetOutputFormat} The NES output format.
+ * @returns The NES output format.
  */
 export function createNesOutputFormat(): TargetOutputFormat {
   return {
@@ -207,8 +214,8 @@ export function createNesOutputFormat(): TargetOutputFormat {
 
 /**
  * Prefills header + `$FF` PRG, reseeds linker symbols, and closes the last segment.
- * @param {TargetFactoryContext} context Target factory context.
- * @returns {SessionLifecycle} NES session lifecycle hooks.
+ * @param context Target factory context.
+ * @returns NES session lifecycle hooks.
  */
 export function createNesLifecycle({ state }: TargetFactoryContext): SessionLifecycle {
   const prefill = (
@@ -254,9 +261,9 @@ export { cloneNes65xxSessionState };
 
 /**
  * Normalizes a caller-supplied header or synthesizes a 16-byte iNES header.
- * @param {unknown} configured Header bytes, if any.
- * @param {number} imageSize Linked PRG size in bytes.
- * @returns {number[]} Header bytes.
+ * @param configured Header bytes, if any.
+ * @param imageSize Linked PRG size in bytes.
+ * @returns Header bytes.
  */
 function normalizeHeader(configured: unknown, imageSize: number): number[] {
   if (configured instanceof Uint8Array || Array.isArray(configured)) {

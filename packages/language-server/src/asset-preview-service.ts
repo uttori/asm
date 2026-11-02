@@ -20,8 +20,8 @@ const MAX_CACHE_ENTRIES = 16;
 
 /**
  * Limit worker previews to formats whose conversion is bundled and bounded here.
- * @param {string} id Registered format identifier from the active project environment.
- * @returns {boolean} Whether the worker has a portable preview path for this format.
+ * @param id Registered format identifier from the active project environment.
+ * @returns Whether the worker has a portable preview path for this format.
  */
 export function supportsPortableAssetPreview(id: string): boolean {
   return (
@@ -34,8 +34,11 @@ export function supportsPortableAssetPreview(id: string): boolean {
 
 /** Wire request identifies the exact open document revision. */
 export interface AssetPreviewRequest {
+  /** Document URI of the open assembly buffer. */
   readonly uri: string;
+  /** LSP version the client last reported for that buffer. */
   readonly version: number;
+  /** Zero-based line containing the asset call. */
   readonly line: number;
 }
 
@@ -44,9 +47,10 @@ export type AssetPreviewResponse =
   | { readonly ok: true; readonly preview: AssetPreviewResult }
   | { readonly ok: false; readonly message: string };
 
-/** Evaluate only literal editor options; the assembler remains authoritative for defines/expressions.
- * @param {AssetValueNode} node Parsed source option.
- * @returns {unknown} JSON-compatible literal value.
+/**
+ * Evaluate only literal editor options; the assembler remains authoritative for defines/expressions.
+ * @param node Parsed source option.
+ * @returns JSON-compatible literal value.
  */
 function literal(node: AssetValueNode): unknown {
   if (node.kind === "string" || node.kind === "boolean") {
@@ -81,12 +85,13 @@ function literal(node: AssetValueNode): unknown {
   );
 }
 
-/** Resolve with the same provider search order as assembly, including unsaved text resources.
- * @param {OverlayFileProvider} provider Current editor overlay and filesystem.
- * @param {string} declaringFile Assembly source path.
- * @param {readonly string[]} includePaths Ordered include search roots.
- * @param {string} name User-spelled asset path.
- * @returns {object} Resolved path, owned bytes, and media type.
+/**
+ * Resolve with the same provider search order as assembly, including unsaved text resources.
+ * @param provider Current editor overlay and filesystem.
+ * @param declaringFile Assembly source path.
+ * @param includePaths Ordered include search roots.
+ * @param name User-spelled asset path.
+ * @returns Resolved path, owned bytes, and media type.
  */
 function readInput(
   provider: OverlayFileProvider,
@@ -112,10 +117,11 @@ function readInput(
   return { path: resolved, bytes, mediaType: assetSourceMediaType(resolved) };
 }
 
-/** Run conversion in a disposable worker so hover never blocks the server event loop.
- * @param {AssetPreviewInput} input Resolved conversion request.
- * @param {AbortSignal} [signal] Cancellation signal.
- * @returns {Promise<AssetPreviewResult>} Generated preview media.
+/**
+ * Run conversion in a disposable worker so hover never blocks the server event loop.
+ * @param input Resolved conversion request.
+ * @param [signal] Cancellation signal.
+ * @returns Generated preview media.
  */
 function inWorker(input: AssetPreviewInput, signal?: AbortSignal): Promise<AssetPreviewResult> {
   return new Promise((resolve, reject) => {
@@ -157,12 +163,13 @@ function inWorker(input: AssetPreviewInput, signal?: AbortSignal): Promise<Asset
 export class AssetPreviewService {
   readonly #cache = new Map<string, AssetPreviewResult>();
 
-  /** Preview one current call. The caller rechecks document version after awaiting this method.
-   * @param {WorkspaceIndex} index Active environment and include paths.
-   * @param {string} text Current open source text.
-   * @param {AssetPreviewRequest} request Position and document version.
-   * @param {AbortSignal} [signal] Request cancellation.
-   * @returns {Promise<AssetPreviewResponse>} Current preview or explanatory error.
+  /**
+   * Preview one current call. The caller rechecks document version after awaiting this method.
+   * @param index Active environment and include paths.
+   * @param text Current open source text.
+   * @param request Position and document version.
+   * @param [signal] Request cancellation.
+   * @returns Current preview or explanatory error.
    */
   async preview(
     index: WorkspaceIndex,

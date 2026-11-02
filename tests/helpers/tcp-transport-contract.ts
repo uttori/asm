@@ -74,7 +74,7 @@ const setup = (t: { teardown(callback: () => void): void }) => {
 
 /**
  * Register serial cases because each test temporarily replaces Node's socket constructor.
- * @param {(options: TcpOptions) => Promise<TcpTransport>} connect Production transport factory.
+ * @param connect Production transport factory.
  */
 export function testTcpTransport(connect: (options: TcpOptions) => Promise<TcpTransport>): void {
   test.serial("TCP validates endpoints and deadlines before allocating a socket", async (t) => {

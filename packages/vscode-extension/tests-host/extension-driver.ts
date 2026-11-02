@@ -103,14 +103,7 @@ export function activate(context: ExtensionContext): void {
         throw new Error("No production source controller selected.");
       }
       await source.refresh();
-      return source.getChildren().flatMap((row) =>
-        [row, ...source.getChildren(row)].map((item) => ({
-          label: item.label,
-          command: item.command?.command,
-          description: item.description,
-          collapsibleState: item.collapsibleState,
-        })),
-      );
+      return source.homeProjection();
     }),
     // Reproduce workspace-state restoration without adding a mutation hook to release code.
     commands.registerCommand("uttori.tests.sourceCandidate", (root: string, candidate?: string) =>

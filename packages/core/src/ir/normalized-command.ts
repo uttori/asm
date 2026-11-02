@@ -12,6 +12,7 @@ import {
 } from "./expression-node.js";
 import type { SourceSyntax } from "./source-syntax.js";
 
+/** High-level syntactic bucket assigned before semantic lowering runs. */
 export type CommandKind =
   | "unknown"
   | "directive"
@@ -25,30 +26,47 @@ export type CommandKind =
   | "structCommand"
   | "commentOrEmpty";
 
+/** Immutable source identity carried with every normalized command occurrence. */
 export type CommandProvenance = {
   /** Generated token runs and all physical contributors; borrowed immutable by execution clones. */
   readonly fragment?: import("./source-fragment.js").SourceFragment;
   /** Invocation/include ownership attached to an execution occurrence, never a cached program. */
   readonly origin?: SourceOrigin;
+  /** Path of the file containing this occurrence. */
   readonly file: string;
+  /** Zero-based source line index for span derivation. */
   readonly line: number;
+  /** Original physical line text before normalization. */
   readonly raw: string;
   /** Exact physical source extent before profile rewriting, comments, or continuations. */
   readonly physical?: { readonly text: string };
+  /** Normalized command text used for classification and parsing. */
   readonly normalized: string;
+  /** Span covering {@link raw} within the source file. */
   readonly span: SourceSpan;
+  /** Span covering {@link normalized} within the source file. */
   readonly normalizedSpan: SourceSpan;
+  /** Per-token spans aligned with the tokenized words array. */
   readonly tokenSpans: readonly SourceSpan[];
 };
 
+/** Front-end command node combining classification, tokens, and parsed semantics. */
 export type NormalizedCommand = {
+  /** Syntactic bucket inferred from normalized text and tokens. */
   kind: CommandKind;
+  /** Source identity and spans for diagnostics and metadata. */
   source: CommandProvenance;
+  /** Trimmed normalized command string. */
   command: string;
+  /** Tokenized words split from the normalized line. */
   words: readonly string[];
+  /** First token, often a directive or mnemonic keyword. */
   keyword: string;
+  /** Extracted label name when the line begins with label syntax. */
   labelName?: string;
+  /** Static assignment target for simple `name = value` forms. */
   assignmentTarget?: string;
+  /** Parsed semantic payloads keyed by construct type. */
   parsed: CommandSemantics;
   /** Pure source AST; semantic rewrites invalidate it and re-enter the parser boundary. */
   syntax?: SourceSyntax;
@@ -59,13 +77,13 @@ const EMPTY_TOKEN_SPANS: readonly SourceSpan[] = Object.freeze([]);
 
 /**
  * Creates immutable provenance metadata for a normalized command.
- * @param {string} raw The original source line.
- * @param {string} normalized The normalized line after pre-dispatch cleanup.
- * @param {string[]} words The tokenized command words.
- * @param {string} file The current source file.
- * @param {number} line The current source line number.
- * @param {boolean} [collectSourceMetadata] Whether to derive precise source spans.
- * @returns {CommandProvenance} The command provenance.
+ * @param raw The original source line.
+ * @param normalized The normalized line after pre-dispatch cleanup.
+ * @param words The tokenized command words.
+ * @param file The current source file.
+ * @param line The current source line number.
+ * @param [collectSourceMetadata] Whether to derive precise source spans.
+ * @returns The command provenance.
  */
 export function createCommandProvenance(
   raw: string,
@@ -97,85 +115,133 @@ export function createCommandProvenance(
   };
 }
 
+/** Conditional directive payload with a parsed test expression. */
 export type ParsedCondition = {
+  /** Boolean test expression for `if`, `elseif`, or `while`. */
   expression: ExpressionNode;
 };
 
+/** Static assignment payload for `name = expr` commands. */
 export type ParsedAssignment = {
+  /** Left-hand symbol receiving the value. */
   target: string;
+  /** Right-hand expression evaluated at assembly time. */
   expression: ExpressionNode;
 };
 
+/** Parsed `for` loop header with an inclusive numeric range. */
 export type ParsedForLoop = {
+  /** Loop variable name introduced by the directive. */
   variable: string;
+  /** Range expression node covering start and end. */
   range: RangeExpressionNode;
+  /** Parsed start bound from the range. */
   start: ExpressionNode;
+  /** Parsed end bound from the range. */
   end: ExpressionNode;
 };
 
+/** Optional byte slice suffix on an `incbin` operand. */
 export type ParsedIncbinRange = {
+  /** Range expression node after the path colon. */
   range: RangeExpressionNode;
+  /** Parsed start bound from the range. */
   start: ExpressionNode;
+  /** Parsed end bound from the range. */
   end: ExpressionNode;
 };
 
+/** Macro invocation name and actual arguments. */
 export type ParsedMacroInvocation = {
+  /** Macro symbol invoked, without the leading `%`. */
   name: string;
+  /** Comma-split actual arguments when parentheses are present. */
   args: string[];
 };
 
+/** Include-family directive with a resolved path operand. */
 export type ParsedIncludeTarget = {
+  /** Which include directive introduced the path. */
   directive: "include" | "incsrc" | "incbin";
+  /** Path token after quote stripping and range removal. */
   target: string;
 };
 
+/** Label prefix split from trailing statement text on the same line. */
 export type ParsedLabelSplit = {
+  /** Label name without the trailing colon. */
   label: string;
+  /** Remaining statement text after the label, when non-empty. */
   trailing?: string;
 };
 
+/** Data emission directive with comma-split operands. */
 export type ParsedDataDirective = {
+  /** Lowercased directive keyword such as `db` or `dw`. */
   directive: string;
+  /** Operand strings following the directive keyword. */
   operands: string[];
 };
 
+/** Generic directive keyword with parsed argument strings. */
 export type ParsedDirectiveArgs = {
+  /** Directive keyword in lower case. */
   name: string;
+  /** Operand strings parsed from the trailing payload. */
   args: string[];
 };
 
+/** Instruction mnemonic with operand text split for encoding. */
 export type ParsedOpcodeOperands = {
+  /** Mnemonic token as authored. */
   mnemonic: string;
+  /** Raw operand text following the mnemonic. */
   operandText: string;
+  /** Comma-split operand strings derived from the payload. */
   operands: string[];
 };
 
+/** Optional semantic payloads attached to one normalized command. */
 export type CommandSemantics = {
+  /** Structured control-flow or declaration operation when recognized. */
   operation?: CommandOperation;
+  /** Bare macro call operation without surrounding syntax sugar. */
   bareInvocation?: Extract<CommandOperation, { kind: "macroCall" }>;
+  /** Declaration AST when the line introduces a definition. */
   declaration?: DeclarationNode;
+  /** Parsed `includeasset` call site when present. */
   includeAsset?: ParsedAssetCall;
+  /** Conditional test for branching directives. */
   condition?: ParsedCondition;
+  /** Static assignment form when parsed. */
   assignment?: ParsedAssignment;
+  /** `for` loop header when parsed. */
   forLoop?: ParsedForLoop;
+  /** `incbin` slice suffix when parsed. */
   incbinRange?: ParsedIncbinRange;
+  /** Macro `%name(args)` invocation when parsed. */
   macroInvocation?: ParsedMacroInvocation;
+  /** Include path target when parsed. */
   includeTarget?: ParsedIncludeTarget;
+  /** Same-line label split when parsed. */
   labelSplit?: ParsedLabelSplit;
+  /** Data directive operands when parsed. */
   dataDirective?: ParsedDataDirective;
+  /** Generic directive arguments when parsed. */
   directiveArgs?: ParsedDirectiveArgs;
+  /** Instruction operand payload when parsed. */
   opcodeOperands?: ParsedOpcodeOperands;
 };
 
 /**
  * Builds the normalized command node used by the command pipeline.
- * @param {string} raw The original source line.
- * @param {string} normalized The normalized line after pre-dispatch cleanup.
- * @param {string[]} words The tokenized command words.
- * @param {string} file The current source file.
- * @param {number} line The current source line number.
- * @param {boolean} [collectSourceMetadata] Whether to derive precise source spans.
- * @returns {NormalizedCommand} The normalized command node.
+ * @param raw The original source line.
+ * @param normalized The normalized line after pre-dispatch cleanup.
+ * @param words The tokenized command words.
+ * @param file The current source file.
+ * @param line The current source line number.
+ * @param [collectSourceMetadata] Whether to derive precise source spans.
+ * @returns The normalized command node.
  */
 export function createNormalizedCommand(
   raw: string,
@@ -202,8 +268,8 @@ export function createNormalizedCommand(
 /**
  * Creates an isolated execution copy so runtime preprocessing can mutate command
  * state without changing cached front-end program nodes.
- * @param {NormalizedCommand} command The command to clone.
- * @returns {NormalizedCommand} The detached execution command.
+ * @param command The command to clone.
+ * @returns The detached execution command.
  */
 export function cloneNormalizedCommand(command: NormalizedCommand): NormalizedCommand {
   incrementInternalCounter("normalizedCommandClones");
@@ -212,10 +278,10 @@ export function cloneNormalizedCommand(command: NormalizedCommand): NormalizedCo
 
 /**
  * Replaces a command node's tokenized words and derived fields.
- * @param {NormalizedCommand} command The command node to update.
- * @param {string[]} words The updated token list.
- * @param {string} [normalized] Optional normalized command text.
- * @returns {NormalizedCommand} The same command node for chaining.
+ * @param command The command node to update.
+ * @param words The updated token list.
+ * @param [normalized] Optional normalized command text.
+ * @returns The same command node for chaining.
  */
 export function setCommandWords(
   command: NormalizedCommand,
@@ -256,9 +322,9 @@ export function setCommandWords(
 
 /**
  * Reclassifies a normalized command without changing any other fields.
- * @param {NormalizedCommand} command The command node to update.
- * @param {CommandKind} kind The new command kind.
- * @returns {NormalizedCommand} The same command node for chaining.
+ * @param command The command node to update.
+ * @param kind The new command kind.
+ * @returns The same command node for chaining.
  */
 export function setCommandKind(command: NormalizedCommand, kind: CommandKind): NormalizedCommand {
   command.kind = kind;
@@ -267,9 +333,9 @@ export function setCommandKind(command: NormalizedCommand, kind: CommandKind): N
 
 /**
  * Applies lightweight heuristics to classify a normalized command.
- * @param {string} command The normalized command text.
- * @param {string[]} words The tokenized command words.
- * @returns {CommandKind} The inferred command kind.
+ * @param command The normalized command text.
+ * @param words The tokenized command words.
+ * @returns The inferred command kind.
  */
 export function classifyCommand(command: string, words: readonly string[]): CommandKind {
   const trimmed = command.trim();
@@ -325,8 +391,8 @@ export function classifyCommand(command: string, words: readonly string[]): Comm
 
 /**
  * Extracts a label name from a potential label token.
- * @param {string} keyword The candidate label token.
- * @returns {string | undefined} The label name when present.
+ * @param keyword The candidate label token.
+ * @returns The label name when present.
  */
 function deriveLabelName(keyword: string): string | undefined {
   if (!keyword) {
@@ -346,8 +412,8 @@ function deriveLabelName(keyword: string): string | undefined {
 
 /**
  * Extracts a static assignment target from a simple `name = value` command.
- * @param {string[]} words The tokenized command words.
- * @returns {string | undefined} The assignment target when present.
+ * @param words The tokenized command words.
+ * @returns The assignment target when present.
  */
 function deriveAssignmentTarget(words: readonly string[]): string | undefined {
   if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
@@ -358,11 +424,11 @@ function deriveAssignmentTarget(words: readonly string[]): string | undefined {
 
 /**
  * Derives semantic payloads from a normalized command's stable syntax.
- * @param {string} command The normalized command text.
- * @param {string[]} words The tokenized command words.
- * @param {number} [line] Source line for argument spans.
- * @param {string} [raw] Original source line for same-line label offsets.
- * @returns {CommandSemantics} Parsed semantic payloads keyed by construct type.
+ * @param command The normalized command text.
+ * @param words The tokenized command words.
+ * @param [line] Source line for argument spans.
+ * @param [raw] Original source line for same-line label offsets.
+ * @returns Parsed semantic payloads keyed by construct type.
  */
 function deriveCommandSemantics(
   command: string,
@@ -493,8 +559,8 @@ function deriveCommandSemantics(
 
 /**
  * Extracts an include/incbin path, stripping quotes and an optional `:range` suffix.
- * @param {string} raw The raw filename operand.
- * @returns {string} The path token.
+ * @param raw The raw filename operand.
+ * @returns The path token.
  */
 function extractIncludePath(raw: string): string {
   const trimmed = raw.trim();
@@ -512,8 +578,8 @@ function extractIncludePath(raw: string): string {
 
 /**
  * Extracts the label split from a command.
- * @param {string} command The command to extract the label split from.
- * @returns {ParsedLabelSplit | undefined} The label split when present.
+ * @param command The command to extract the label split from.
+ * @returns The label split when present.
  */
 function extractLabelSplit(command: string): ParsedLabelSplit | undefined {
   const trimmed = command.trim();
@@ -531,8 +597,8 @@ function extractLabelSplit(command: string): ParsedLabelSplit | undefined {
 /**
  * Splits comma-separated arguments into an array of strings.
  * Handles quoted strings and nested parentheses.
- * @param {string} input The input string to split.
- * @returns {string[]} An array of split values.
+ * @param input The input string to split.
+ * @returns An array of split values.
  */
 function splitCommaArguments(input: string): string[] {
   const values: string[] = [];

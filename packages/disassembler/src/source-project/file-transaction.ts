@@ -8,8 +8,11 @@ import type { SourceRepository } from "./git.js";
 
 /** One ordinary source replacement. Paths are project-relative and before/after buffers are borrowed until staging finishes. */
 export interface SourceFileReplacement {
+  /** Project-relative path guarded against symlink and traversal redirection. */
   readonly path: string;
+  /** Observed bytes before publication, retained only until staging completes. */
   readonly before: Uint8Array;
+  /** Replacement bytes to publish when the transaction commits forward. */
   readonly after: Uint8Array;
 }
 
@@ -29,14 +32,23 @@ function stateHash(bytes: Uint8Array | null): string | null {
 
 /** Durable states survive termination between individual file renames; external readers are not globally atomic. */
 export interface SourceFileTransaction {
+  /** Journal discriminator written before any staged bytes are published. */
   readonly format: "uttori-source-file-transaction";
+  /** Schema version selecting create/remove semantics for null before/after hashes. */
   readonly version: 1 | 2;
+  /** Stable publication identity used for staging directories and recovery. */
   readonly id: string;
+  /** Current durable phase of the multi-file publication workflow. */
   readonly state: "staged" | "publishing" | "completed" | "recovery";
+  /** Which staged hash side publish and recovery should apply next. */
   readonly direction: "after" | "before";
+  /** Per-path content hashes staged for publication and recovery. */
   readonly files: readonly {
+    /** Project-relative path published by this transaction. */
     readonly path: string;
+    /** Content hash observed before publication, or null when the file did not exist. */
     readonly before: string | null;
+    /** Content hash staged for the forward direction, or null when the file should be removed. */
     readonly after: string | null;
   }[];
 }
@@ -76,6 +88,8 @@ function journalFile(repository: SourceRepository): string {
   storageDirectories(repository);
   return path.join(repository.stateDirectory, JOURNAL);
 }
+
+/** Resolve the private staging directory for one publication identity. */
 function stageDirectory(repository: SourceRepository, id: string): string {
   storageDirectories(repository, ["file-transactions", id]);
   return path.join(repository.stateDirectory, "file-transactions", id);
@@ -253,18 +267,16 @@ function publish(
       signal?.throwIfAborted();
       const item = journal.files[i],
         file = sourceFile(repository, item.path),
-        hash = currentHash(file);
-      if (hash !== item.before && hash !== item.after) {
+        observed = currentHash(file);
+      if (observed !== item.before && observed !== item.after) {
         throw new Error(`Source changed during publication: ${item.path}.`);
       }
-      // Public ROM/source hashes establish integrity, not secret credentials; constant-time comparison adds no protection.
-      // oxlint-disable-next-line security/detect-possible-timing-attacks
-      if (hash !== item[journal.direction]) {
+      if (observed !== item[journal.direction]) {
         const bytes = stagedBytes(repository, journal, i, journal.direction);
         if (bytes === null) {
           fs.unlinkSync(file);
           syncDirectory(path.dirname(file));
-        } else if (hash === null) {
+        } else if (observed === null) {
           // Exclusive creation preserves the absence guard if another process races the final publication step.
           const temporary = path.join(path.dirname(file), `.source-create-${randomUUID()}`);
           try {

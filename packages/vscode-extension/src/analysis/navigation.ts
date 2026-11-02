@@ -13,10 +13,12 @@ import type { AnalysisNavigationProjection } from "./navigation-data.js";
 import type { AnalysisNavigationTarget } from "./navigation-target.js";
 import { analysisWorker } from "./worker-client.js";
 
+/** Narrow command payloads to plain objects before validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Validate manifest identity fields required for navigation matching. */
 function isNavigationManifest(value: unknown): value is {
   readonly target: string;
   readonly rom: { readonly contentSha256: string; readonly contentSize: number };
@@ -30,6 +32,7 @@ function isNavigationManifest(value: unknown): value is {
   );
 }
 
+/** Validate disassembly preview text returned by the analysis worker. */
 function isNavigationProjection(value: unknown): value is AnalysisNavigationProjection {
   return (
     isRecord(value) &&
@@ -64,8 +67,8 @@ interface DebugMapSearchResult {
 
 /**
  * Deduplicate architecture candidates and sort them for a stable picker order.
- * @param {readonly string[]} values Candidate identity strings, possibly repeated.
- * @returns {readonly string[]} Unique strings sorted with localeCompare.
+ * @param values Candidate identity strings, possibly repeated.
+ * @returns Unique strings sorted with localeCompare.
  */
 const sortedUnique = (values: readonly string[]): readonly string[] =>
   [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
@@ -73,8 +76,8 @@ const sortedUnique = (values: readonly string[]): readonly string[] =>
 /**
  * Find exact ROM-matched source ranges, exclude missing or changed source files, and retain
  * architecture hints for disassembly fallback.
- * @param {AnalysisNavigationTarget} target Exact analysis location and ROM identity.
- * @returns {Promise<DebugMapSearchResult>} Verified source mappings, architecture hints, and stale-range count.
+ * @param target Exact analysis location and ROM identity.
+ * @returns Verified source mappings, architecture hints, and stale-range count.
  */
 const findDebugMapSources = async (
   target: AnalysisNavigationTarget,
@@ -127,8 +130,8 @@ const findDebugMapSources = async (
  * position.
  * Returns false only when there are no mappings; cancelling the picker returns true to suppress
  * fallback navigation.
- * @param {readonly CurrentSourceLocation[]} locations Verified mappings with one-based source lines.
- * @returns {Promise<boolean>} True after navigation or picker cancellation; false only for no mappings.
+ * @param locations Verified mappings with one-based source lines.
+ * @returns True after navigation or picker cancellation; false only for no mappings.
  * @see https://code.visualstudio.com/api/references/vscode-api#window.showTextDocument
  * @see https://code.visualstudio.com/api/references/vscode-api#Position
  */
@@ -168,8 +171,8 @@ const openSourceLocation = async (
 /**
  * Use the sole persisted architecture or prompt when ambiguous; return undefined when none
  * exists or the picker is cancelled.
- * @param {readonly string[]} architectures Persisted candidates in picker order.
- * @returns {Promise<string | undefined>} Selected architecture, or undefined for no candidates/cancellation.
+ * @param architectures Persisted candidates in picker order.
+ * @returns Selected architecture, or undefined for no candidates/cancellation.
  * @see https://code.visualstudio.com/api/references/vscode-api#window.showQuickPick
  */
 const chooseArchitecture = async (
@@ -191,9 +194,9 @@ const chooseArchitecture = async (
  * Ask the active Uttori debugger for 32 instructions and display them in an untitled preview.
  * Returns false when no compatible session/architecture exists, selection is cancelled, or the
  * request fails or returns no rows.
- * @param {AnalysisNavigationTarget} target Qualified location requested from the debugger.
- * @param {readonly string[]} architectures Persisted architecture candidates for disambiguation.
- * @returns {Promise<boolean>} Whether a nonempty live disassembly preview was opened.
+ * @param target Qualified location requested from the debugger.
+ * @param architectures Persisted architecture candidates for disambiguation.
+ * @returns Whether a nonempty live disassembly preview was opened.
  * @see https://code.visualstudio.com/api/references/vscode-api#DebugSession.customRequest
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.openTextDocument
  */
@@ -247,9 +250,9 @@ const openLiveDisassembly = async (
 /**
  * Display accepted analysis rows in an untitled preview and select the target address when
  * present; missing bytes remain unknown.
- * @param {AnalysisNavigationTarget} target Qualified location to reveal in the preview.
- * @param {AnalysisNavigationProjection} projection Bounded rows prepared by the analysis worker.
- * @returns {Promise<void>} Completion after opening and selecting the persisted view.
+ * @param target Qualified location to reveal in the preview.
+ * @param projection Bounded rows prepared by the analysis worker.
+ * @returns Completion after opening and selecting the persisted view.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.openTextDocument
  */
 const openPersistedDisassembly = async (
@@ -278,8 +281,8 @@ const openPersistedDisassembly = async (
 
 /**
  * Opens an exact current source line, live virtual disassembly, or persisted CFG view in that order.
- * @param {AnalysisNavigationTarget} target Qualified native analysis location.
- * @returns {Promise<void>} Resolves after an editor is opened or navigation is cancelled.
+ * @param target Qualified native analysis location.
+ * @returns Resolves after an editor is opened or navigation is cancelled.
  */
 export const navigateToAnalysisLocation = async (
   target: AnalysisNavigationTarget,

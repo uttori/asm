@@ -17,7 +17,9 @@ import { readResearchResult } from "./result-readers.js";
 
 /** Selected source context is reread before application; unsaved research buffers support repeated edits. */
 export interface ResearchEditorContext {
+  /** Selected source worktree root for the pending research edit. */
   readonly root: string;
+  /** Unsaved research buffers included in the worker request snapshot. */
   readonly buffers: readonly { readonly path: string; readonly bytes: Uint8Array }[];
 }
 

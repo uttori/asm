@@ -8,8 +8,11 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
 /** Exact package contents consumed by a trusted Node host, independent of installation directories. */
 export interface ToolchainFingerprint {
+  /** Hex SHA-256 of the canonical JSON of node and packages. */
   readonly sha256: string;
+  /** Node runtime version string, such as v24.0.0. */
   readonly node: string;
+  /** Packages and bundles in byte order of name, version and content hash. */
   readonly packages: readonly {
     readonly name: string;
     readonly version: string;
@@ -19,8 +22,8 @@ export interface ToolchainFingerprint {
 
 /**
  * Accepts a JSON object. Arrays and null are not package manifests.
- * @param {unknown} value Parsed JSON.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Parsed JSON.
+ * @returns True when `value` is a non-array object.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -28,9 +31,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Reads a package.json dependency map. A missing map contributes no dependencies.
- * @param {unknown} value `dependencies` or `optionalDependencies`.
- * @param {string} root Package directory, used in the error.
- * @returns {Record<string, unknown>} Dependency names. Values are ignored except for object shape.
+ * @param value `dependencies` or `optionalDependencies`.
+ * @param root Package directory, used in the error.
+ * @returns Dependency names. Values are ignored except for object shape.
  */
 function dependencyMap(value: unknown, root: string): Record<string, unknown> {
   if (value === undefined) {
@@ -55,6 +58,7 @@ function packageRoot(file: string): string {
   return fs.realpathSync(directory);
 }
 
+/** Hex SHA-256 digest; strings hash as UTF-8. */
 const hash = (bytes: string | Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex");
 

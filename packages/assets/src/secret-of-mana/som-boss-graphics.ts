@@ -3,9 +3,9 @@
  * Clear bits copy the byte two outputs earlier; both history bytes start at zero.
  * Native callers round requested bytes to eight; the returned source extent excludes
  * any speculative reads or padding after the last group.
- * @param {Uint8Array} source Mask stream.
- * @param {number} size Requested output size before eight-byte rounding.
- * @returns {{data: Uint8Array, consumed: number}} Expanded bytes and the consumed source length.
+ * @param source Mask stream.
+ * @param size Requested output size before eight-byte rounding.
+ * @returns Expanded bytes and the consumed source length.
  */
 export function expandBossGraphics(source: Uint8Array, size: number) {
   validateSize(source, size);
@@ -52,9 +52,10 @@ export function expandBossMask(source: Uint8Array, size: number) {
   return { data, consumed: cursor };
 }
 
-/** Encode each byte as a literal unless the game's two-byte history can reproduce it.
- * @param {Uint8Array} data Expanded bytes, a positive multiple of eight up to 65536 bytes.
- * @returns {Uint8Array} Mask stream that expands back to `data`.
+/**
+ * Encode each byte as a literal unless the game's two-byte history can reproduce it.
+ * @param data Expanded bytes, a positive multiple of eight up to 65536 bytes.
+ * @returns Mask stream that expands back to `data`.
  */
 export function encodeBossGraphics(data: Uint8Array) {
   if (!(data instanceof Uint8Array) || !data.length || data.length % 8) {

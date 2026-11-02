@@ -9,9 +9,13 @@ import {
 } from "./operand-values.js";
 /** Stage-local classification contains no expanded executable text. */
 export interface Resolution65816 extends OperandExpansion {
+  /** Encoder addressing mode token derived from delimiter and index register use. */
   mode: string;
+  /** Lexical hex digit count retained for direct-page width heuristics. */
   hexDigits: number;
+  /** True when a short numeric spelling forces an explicit direct-page width. */
   explicitDp: boolean;
+  /** Scalar syntax tied to the operand occurrence that produced this resolution. */
   scalar: OperandScalar;
 }
 /** Resolve width and bank preference while retaining punctuation from the parsed operand. */

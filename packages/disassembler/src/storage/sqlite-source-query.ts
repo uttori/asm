@@ -9,14 +9,17 @@ import type {
 } from "../analysis/analysis-sources.js";
 import { decodeSqlitePayload } from "./sqlite-payload.js";
 
+/** Narrow to a non-null, non-array object. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Accept an array whose every element is a string. */
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
+/** Read an own string field; undefined only when absent, and throws when present but not a string. */
 function optionalString(record: Record<string, unknown>, key: string): string | undefined {
   if (!Object.hasOwn(record, key)) {
     return undefined;
@@ -28,6 +31,7 @@ function optionalString(record: Record<string, unknown>, key: string): string | 
   return value;
 }
 
+/** Read an own finite-number field; undefined only when absent, and throws when present but invalid. */
 function optionalNumber(record: Record<string, unknown>, key: string): number | undefined {
   if (!Object.hasOwn(record, key)) {
     return undefined;
@@ -51,11 +55,13 @@ const instructionKinds = "f.kind IN ('runtime-execution','runtime-instruction')"
 // CPU states, which can force a scan of the entire captured register history for these projections.
 const observationLocations =
   "runtime_observations o JOIN runtime_fact_locations f ON f.fid=o.fact_id";
+/** Format an address as `$` plus six uppercase hex digits. */
 const hex = (address: number): string => `$${address.toString(16).toUpperCase().padStart(6, "0")}`;
 
-/** Whether source membership indexes exist and have no changed metadata to process.
- * @param {DatabaseSync} db Project connection.
- * @returns {boolean} True when direct source queries can run immediately.
+/**
+ * Whether source membership indexes exist and have no changed metadata to process.
+ * @param db Project connection.
+ * @returns True when direct source queries can run immediately.
  */
 export const sourceQueriesReady = (db: DatabaseSync): boolean =>
   Boolean(db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_source_rows'").get()) &&
@@ -64,7 +70,7 @@ export const sourceQueriesReady = (db: DatabaseSync): boolean =>
 /**
  * Extract metadata evidence membership once, then process only changed rows under a writer transaction.
  * Runtime membership already lives in its evidence dictionary. The covering index avoids payload reads.
- * @param {DatabaseSync} db Connection owned by the caller's write transaction.
+ * @param db Connection owned by the caller's write transaction.
  */
 export const prepareSourceQueries = (db: DatabaseSync): void => {
   if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_source_rows'").get()) {
@@ -113,9 +119,9 @@ export const prepareSourceQueries = (db: DatabaseSync): void => {
 
 /**
  * Count direct observations in SQL without interpreting register or memory payloads.
- * @param {DatabaseSync} db Connection inside a consistent read transaction.
- * @param {AnalysisEvidenceSource} source Catalog identity and immutable evidence membership.
- * @returns {AnalysisSourceSummary} Exact source counts, without baseline subtraction.
+ * @param db Connection inside a consistent read transaction.
+ * @param source Catalog identity and immutable evidence membership.
+ * @returns Exact source counts, without baseline subtraction.
  */
 export const readSourceSummary = (
   db: DatabaseSync,
@@ -147,11 +153,11 @@ export const readSourceSummary = (
 
 /**
  * Decode at most one page after SQL filtering, grouping, ordering and pagination.
- * @param {DatabaseSync} db Read snapshot with prepared source and annotation indexes.
- * @param {AnalysisEvidenceSource} source Validated catalog entry.
- * @param {AnalysisSourceGroup} group Direct observations or attributed metadata.
- * @param {number} offset Nonnegative row offset. Pages contain at most 200 entries.
- * @returns {AnalysisSourceEntry[]} Compact navigable entries, never the complete trace history.
+ * @param db Read snapshot with prepared source and annotation indexes.
+ * @param source Validated catalog entry.
+ * @param group Direct observations or attributed metadata.
+ * @param offset Nonnegative row offset. Pages contain at most 200 entries.
+ * @returns Compact navigable entries, never the complete trace history.
  */
 export const readSourcePage = (
   db: DatabaseSync,

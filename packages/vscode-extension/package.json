@@ -132,7 +132,20 @@
       },
       {
         "command": "asm.openPanel",
-        "title": "Open Project Panel",
+        "title": "Open Home",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.home.next",
+        "title": "Next Source Action",
+        "icon": "$(arrow-right)",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted && uttori.projectMode == source && uttori.nextCommand != \"\""
+      },
+      {
+        "command": "asm.home.refresh",
+        "title": "Refresh Home",
+        "icon": "$(refresh)",
         "category": "Assembly"
       },
       {
@@ -274,7 +287,7 @@
         "command": "asm.source.discard",
         "title": "Discard Generated Candidate",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.canDiscard"
       },
       {
         "command": "asm.source.select",
@@ -316,13 +329,13 @@
         "command": "asm.source.catalog",
         "title": "Refresh Capture Catalog",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.projectMode == source && uttori.nextCommand == asm.source.catalog"
       },
       {
         "command": "asm.source.prepare",
         "title": "Prepare Regeneration",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.projectMode == source && uttori.nextCommand == asm.source.prepare"
       },
       {
         "command": "asm.source.migrate",
@@ -334,25 +347,25 @@
         "command": "asm.source.preview",
         "title": "Preview Regeneration with Current Edits",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.projectMode == source && uttori.nextCommand == asm.source.preview"
       },
       {
         "command": "asm.source.apply",
         "title": "Apply Previewed Generation",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.projectMode == source && uttori.nextCommand == asm.source.apply"
       },
       {
         "command": "asm.source.finish",
         "title": "Validate and Finish Regeneration",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.projectMode == source && uttori.nextCommand == asm.source.finish"
       },
       {
         "command": "asm.source.abort",
         "title": "Abort Regeneration",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.canAbort"
       },
       {
         "command": "asm.source.relocate",
@@ -382,7 +395,7 @@
         "command": "asm.source.analyze",
         "title": "Analyze Source Project Evidence",
         "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
+        "enablement": "isWorkspaceTrusted && uttori.projectMode == source && (uttori.sourcePhase == needs-analysis || uttori.sourcePhase == needs-prepare)"
       },
       {
         "command": "asm.source.editResearch",
@@ -505,19 +518,39 @@
       ],
       "view/title": [
         {
+          "command": "asm.home.next",
+          "when": "view == uttori-asm.home && uttori.projectMode == source && uttori.nextCommand != \"\"",
+          "group": "navigation@1"
+        },
+        {
+          "command": "asm.source.build",
+          "when": "view == uttori-asm.home && uttori.projectMode == source",
+          "group": "navigation@2"
+        },
+        {
+          "command": "asm.build",
+          "when": "view == uttori-asm.home && uttori.projectMode == assembly",
+          "group": "navigation@2"
+        },
+        {
           "command": "asm.openConfig",
-          "when": "view == uttori-asm.projectPanel",
-          "group": "navigation"
+          "when": "view == uttori-asm.home",
+          "group": "navigation@3"
+        },
+        {
+          "command": "asm.home.refresh",
+          "when": "view == uttori-asm.home",
+          "group": "navigation@4"
         },
         {
           "command": "asm.trace.start",
-          "when": "view == uttori-asm.sourceProject && debugType == uttori-asm && uttori.capturePhase == idle",
-          "group": "navigation@1"
+          "when": "view == uttori-asm.home && debugType == uttori-asm && uttori.capturePhase == idle",
+          "group": "navigation@5"
         },
         {
           "command": "asm.trace.stop",
-          "when": "view == uttori-asm.sourceProject && uttori.capturePhase == recording",
-          "group": "navigation@1"
+          "when": "view == uttori-asm.home && uttori.capturePhase == recording",
+          "group": "navigation@5"
         },
         {
           "command": "asm.outline.refresh",
@@ -525,23 +558,8 @@
           "group": "navigation"
         },
         {
-          "command": "asm.coverage.refresh",
-          "when": "view == uttori-asm.analysisCoverage",
-          "group": "navigation"
-        },
-        {
           "command": "asm.sources.refresh",
           "when": "view == uttori-asm.sources",
-          "group": "navigation"
-        },
-        {
-          "command": "asm.source.refresh",
-          "when": "view == uttori-asm.sourceProject",
-          "group": "navigation"
-        },
-        {
-          "command": "asm.source.select",
-          "when": "view == uttori-asm.sourceProject",
           "group": "navigation"
         }
       ],
@@ -813,19 +831,9 @@
     "views": {
       "uttori-asm": [
         {
-          "id": "uttori-asm.sourceProject",
-          "name": "Source Project",
-          "type": "tree"
-        },
-        {
           "type": "webview",
-          "id": "uttori-asm.projectPanel",
-          "name": "Project"
-        },
-        {
-          "type": "tree",
-          "id": "uttori-asm.indexDetails",
-          "name": "Index Details"
+          "id": "uttori-asm.home",
+          "name": "Home"
         },
         {
           "type": "tree",
@@ -835,23 +843,15 @@
         {
           "type": "tree",
           "id": "uttori-asm.sources",
-          "name": "Sources"
-        },
-        {
-          "type": "tree",
-          "id": "uttori-asm.analysisCoverage",
-          "name": "Analysis Coverage"
+          "name": "Sources",
+          "when": "uttori.projectMode == source"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "uttori-asm.projectOutline",
-        "contents": "No analysed assembly files yet.\n[Open project settings](command:asm.openPanel)"
-      },
-      {
-        "view": "uttori-asm.analysisCoverage",
-        "contents": "Select a Git source project and Build Current Source to measure bytes remaining."
+        "contents": "No analysed assembly files yet.\n[Open Home](command:asm.openPanel)"
       },
       {
         "view": "uttori-asm.sources",

@@ -10,24 +10,31 @@ import type {
 
 /** A closed expression over this map. Binding identities are retained for span ownership checks. */
 export interface SnesStructExpression {
+  /** Native assembly text preserving grouping for re-emission. */
   readonly expression: string;
+  /** Exact safe integer after bounded evaluation. */
   readonly value: number;
+  /** Bindings touched by the expression; used for span ownership checks. */
   readonly bindings: readonly SnesStructBinding[];
 }
 
 /** A contiguous part of an observed access. Missing field names deliberately represent opaque bytes. */
 export interface SnesStructAccessPart {
+  /** Operand fragment covering this byte range. */
   readonly expression: string;
+  /** CPU bus address of the first byte in this part. */
   readonly address: number;
+  /** Byte length of this contiguous slice. */
   readonly width: number;
+  /** Named field when the slice lies entirely inside one layout member. */
   readonly field?: string;
 }
 
 /**
  * Reject imprecise intermediates even if later masking would make them fit an operand.
- * @param {number} value Computed intermediate before any truncation.
- * @param {string} expression Parenthesized native source for this subtree.
- * @returns {object} Exact value and source, or throws on lost precision.
+ * @param value Computed intermediate before any truncation.
+ * @param expression Parenthesized native source for this subtree.
+ * @returns Exact value and source, or throws on lost precision.
  */
 const checked = (value: number, expression: string): { value: number; expression: string } => {
   if (!Number.isSafeInteger(value)) {
@@ -67,8 +74,8 @@ export class SnesStructExpressionResolver {
 
   /**
    * Check every intermediate value and preserve explicit grouping in the generated assembly.
-   * @param {unknown} input Single-line expression, at most 1,024 characters and 128 AST nodes.
-   * @returns {SnesStructExpression} Native source and exact integer value with referenced owners.
+   * @param input Single-line expression, at most 1,024 characters and 128 AST nodes.
+   * @returns Native source and exact integer value with referenced owners.
    */
   resolve(input: unknown): SnesStructExpression {
     if (
@@ -88,8 +95,8 @@ export class SnesStructExpressionResolver {
     let nodes = 0;
     /**
      * Resolve only named layouts/bindings. Inherited and arbitrary symbol paths are outside this map.
-     * @param {ExpressionNode} node Optional record index and field under one declared root.
-     * @returns {object} Address or offset and native reference. Records its binding owner.
+     * @param node Optional record index and field under one declared root.
+     * @returns Address or offset and native reference. Records its binding owner.
      */
     const reference = (node: ExpressionNode): { value: number; expression: string } => {
       let root = node;
@@ -146,8 +153,8 @@ export class SnesStructExpressionResolver {
     };
     /**
      * The AST whitelist excludes macros and host-dependent functions.
-     * @param {ExpressionNode} node Subtree counted against the per-expression complexity limit.
-     * @returns {object} Checked integer value and source preserving operator grouping.
+     * @param node Subtree counted against the per-expression complexity limit.
+     * @returns Checked integer value and source preserving operator grouping.
      */
     const visit = (node: ExpressionNode): { value: number; expression: string } => {
       if (++nodes > 128) {
@@ -309,10 +316,10 @@ export class SnesStructExpressionResolver {
 
 /**
  * Split a CPU access across fields, opaque gaps and adjacent records of one physical binding.
- * @param {SnesStructBinding} binding Sole owner referenced by the target expression.
- * @param {number} address Resolved CPU start address. Biased index-zero bases are not physical data.
- * @param {number} width CPU access width in bytes (one or two).
- * @returns {readonly SnesStructAccessPart[]} Ordered parts covering every byte exactly once.
+ * @param binding Sole owner referenced by the target expression.
+ * @param address Resolved CPU start address. Biased index-zero bases are not physical data.
+ * @param width CPU access width in bytes (one or two).
+ * @returns Ordered parts covering every byte exactly once.
  */
 export function describeSnesStructAccess(
   binding: SnesStructBinding,

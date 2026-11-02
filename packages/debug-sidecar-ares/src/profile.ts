@@ -1,13 +1,22 @@
 import type { DebugBackendCapabilities, DebugStepKind } from "@uttori/asm-debug-adapter";
 
+/** Backend identifier advertised by the ares RSP sidecar during negotiation. */
 export const ARES_RSP_BACKEND_ID = "ares-rsp" as const;
+/** Architecture id of the SNES main CPU. */
 export const ARES_65816_ARCHITECTURE = "snes.65816" as const;
+/** 24-bit CPU bus address space, including mapped I/O; reads may have side effects. */
 export const ARES_65816_ADDRESS_SPACE = "snes.cpu" as const;
+/** Side-effect-free view of the 128 KiB work RAM. */
 export const ARES_65816_WRAM_ADDRESS_SPACE = "snes.wram" as const;
+/** Side-effect-free view of cartridge ROM bytes by file-independent ROM offset. */
 export const ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE = "snes.cartridge-rom" as const;
+/** The only thread id exposed for the 65816; RSP has no multi-thread model here. */
 export const ARES_65816_THREAD_ID = 1 as const;
+/** The only stack frame id exposed for the 65816 stopped location. */
 export const ARES_65816_FRAME_ID = 1 as const;
+/** Maximum execution trace events retained by the native ring buffer. */
 export const ARES_TRACE_BUFFER_EVENTS = 65_536;
+/** Maximum execution trace events returned by one native batch request. */
 export const ARES_TRACE_BATCH_EVENTS = 240;
 const ARES_STEP_KINDS = Object.freeze<readonly DebugStepKind[]>(["instruction", "in"]);
 const NO_STEP_KINDS = Object.freeze<readonly DebugStepKind[]>([]);

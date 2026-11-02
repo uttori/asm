@@ -9,6 +9,21 @@ The installed adapters support Secret of Mana sprite atlases and supported USA r
 assets. Other games can inject an adapter into the public `AssetInterchangeService`.
 The service accepts current authored source and preserves unrelated edits.
 
+## Convert an assembly include
+
+To make a converted asset itself the editable source, convert the include on one assembly line:
+
+```sh
+uttori-asm asset convert /path/to/project --file source/sprites.asm --line 42 --to aseprite
+```
+
+`--file` and the optional `--destination` are relative to the project. `--to` is `aseprite` or
+`indexed-png`; the destination defaults to the current source with the new extension and must not
+exist. The installed conversion adapters are `som.sprite.native` and `indexed.raster`. Conversion
+rewrites the include call and publishes through a journaled source transaction only when the
+complete ROM is unchanged. Old sources whose remaining references are uncertain are retained and
+reported. Afterward edit and save the new source and run the normal build.
+
 ## Export, review and apply
 
 Save relevant source and editor drafts first. Export requires a selection JSON file:

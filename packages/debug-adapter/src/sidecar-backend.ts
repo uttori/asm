@@ -31,8 +31,10 @@ export interface SidecarDebugBackendOptions {
   readonly createClient: () => DebugSidecarClient | Promise<DebugSidecarClient>;
 }
 
+/** Untrusted JSON object shape validated before field access. */
 type UnknownRecord = Record<string, unknown>;
 
+/** Narrows stop reason strings from sidecar events. */
 const isStopReason = (
   value: string,
 ): value is "entry" | "pause" | "step" | "breakpoint" | "exception" =>
@@ -44,14 +46,18 @@ const isStopReason = (
 
 const stepKindNames = new Set<string>(["instruction", "over", "in", "out"]);
 
+/** Narrows step kind strings from sidecar command arguments. */
 const isStepKind = (value: string): value is DebugStepKind => stepKindNames.has(value);
 
+/** Narrows output category strings from sidecar events. */
 const isOutputCategory = (value: string): value is "console" | "stdout" | "stderr" =>
   value === "console" || value === "stdout" || value === "stderr";
 
+/** Narrows unknown JSON to plain objects. */
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Validates and returns a JSON object with a contextual error path. */
 const record = (value: unknown, context: string): UnknownRecord => {
   if (!isRecord(value)) {
     throw new Error(`${context} must be an object.`);
@@ -59,6 +65,7 @@ const record = (value: unknown, context: string): UnknownRecord => {
   return value;
 };
 
+/** Validates and returns a JSON array with a contextual error path. */
 const array = (value: unknown, context: string): unknown[] => {
   if (!Array.isArray(value)) {
     throw new Error(`${context} must be an array.`);
@@ -66,6 +73,7 @@ const array = (value: unknown, context: string): unknown[] => {
   return value;
 };
 
+/** Validates and returns a non-empty string with a contextual error path. */
 const string = (value: unknown, context: string): string => {
   if (typeof value !== "string" || value.length === 0) {
     throw new Error(`${context} must be a non-empty string.`);
@@ -73,6 +81,7 @@ const string = (value: unknown, context: string): string => {
   return value;
 };
 
+/** Parses and deduplicates step kind lists from sidecar JSON. */
 const readStepKinds = (value: unknown, context: string): readonly DebugStepKind[] => {
   const values = array(value, context).map((entry, index) => string(entry, `${context}[${index}]`));
   const kinds: DebugStepKind[] = [];
@@ -88,6 +97,7 @@ const readStepKinds = (value: unknown, context: string): readonly DebugStepKind[
   return kinds;
 };
 
+/** Validates and returns a boolean with a contextual error path. */
 const boolean = (value: unknown, context: string): boolean => {
   if (typeof value !== "boolean") {
     throw new Error(`${context} must be boolean.`);
@@ -95,6 +105,7 @@ const boolean = (value: unknown, context: string): boolean => {
   return value;
 };
 
+/** Validates and returns a bounded safe integer with a contextual error path. */
 const integer = (value: unknown, context: string, minimum = 0): number => {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
     throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
@@ -102,8 +113,10 @@ const integer = (value: unknown, context: string, minimum = 0): number => {
   return value;
 };
 
+/** Validates a positive safe integer field. */
 const positiveInteger = (value: unknown, context: string): number => integer(value, context, 1);
 
+/** Parses one architecture-qualified address from sidecar JSON. */
 const address = (value: unknown, context: string): DebugAddress => {
   const candidate = record(value, context);
   const outputOffset =
@@ -118,12 +131,14 @@ const address = (value: unknown, context: string): DebugAddress => {
   };
 };
 
+/** Compares addresses field-wise including optional output offsets. */
 const addressesEqual = (left: DebugAddress, right: DebugAddress): boolean =>
   left.architecture === right.architecture &&
   left.addressSpace === right.addressSpace &&
   left.address === right.address &&
   left.outputOffset === right.outputOffset;
 
+/** Parses one architecture capability object from initialize results. */
 const architectureCapabilities = (
   value: unknown,
   context: string,
@@ -216,6 +231,7 @@ const architectureCapabilities = (
   };
 };
 
+/** Parses the top-level capability object from initialize results. */
 const backendCapabilities = (value: unknown, context: string): DebugBackendCapabilities => {
   const candidate = record(value, context);
   const architectures = array(candidate.architectures, `${context}.architectures`)
@@ -261,9 +277,11 @@ const backendCapabilities = (value: unknown, context: string): DebugBackendCapab
   });
 };
 
+/** Stable JSON identity used to detect capability changes across reconnect. */
 const capabilityIdentity = (capabilities: DebugBackendCapabilities): string =>
   JSON.stringify(capabilities);
 
+/** Parses one thread record from sidecar JSON. */
 const thread = (value: unknown, context: string): DebugThread => {
   const candidate = record(value, context);
   return {
@@ -273,6 +291,7 @@ const thread = (value: unknown, context: string): DebugThread => {
   };
 };
 
+/** Parses one stack frame record from sidecar JSON. */
 const stackFrame = (value: unknown, context: string): DebugStackFrame => {
   const candidate = record(value, context);
   const currentOnly =
@@ -288,6 +307,7 @@ const stackFrame = (value: unknown, context: string): DebugStackFrame => {
   };
 };
 
+/** Parses one register record from sidecar JSON. */
 const register = (value: unknown, context: string): DebugRegister => {
   const candidate = record(value, context);
   const group =
@@ -300,6 +320,7 @@ const register = (value: unknown, context: string): DebugRegister => {
   };
 };
 
+/** Parses one breakpoint record from sidecar JSON. */
 const breakpoint = (value: unknown, context: string): DebugBreakpoint => {
   const candidate = record(value, context);
   const message =
@@ -312,6 +333,7 @@ const breakpoint = (value: unknown, context: string): DebugBreakpoint => {
   };
 };
 
+/** Parses one unsigned byte from sidecar JSON. */
 const byte = (value: unknown, context: string): number => {
   const result = integer(value, context);
   if (result > 0xff) {
@@ -320,6 +342,7 @@ const byte = (value: unknown, context: string): number => {
   return result;
 };
 
+/** Parses one disassembly row from sidecar JSON. */
 const instruction = (value: unknown, context: string): DebugInstruction => {
   const candidate = record(value, context);
   const symbol =
@@ -334,6 +357,7 @@ const instruction = (value: unknown, context: string): DebugInstruction => {
   };
 };
 
+/** Parses one destructive trace pull from sidecar JSON. */
 const traceBatch = (value: unknown, context: string): DebugTraceBatch => {
   const candidate = record(value, context);
   const addresses = array(candidate.addresses, `${context}.addresses`).map((entry, index) =>
@@ -360,6 +384,7 @@ const traceBatch = (value: unknown, context: string): DebugTraceBatch => {
   };
 };
 
+/** Decodes canonical base64 memory payloads from sidecar JSON. */
 const base64Bytes = (value: unknown, context: string): Uint8Array => {
   if (typeof value !== "string") {
     throw new Error(`${context} must be canonical base64.`);
@@ -371,6 +396,7 @@ const base64Bytes = (value: unknown, context: string): Uint8Array => {
   return new Uint8Array(bytes);
 };
 
+/** Ensures id-bearing sidecar arrays do not contain duplicates. */
 const uniqueIds = <Value extends { readonly id: number }>(
   values: Value[],
   context: string,
@@ -381,6 +407,7 @@ const uniqueIds = <Value extends { readonly id: number }>(
   return values;
 };
 
+/** Maps validated sidecar events into neutral backend events. */
 const backendEvent = (message: DebugSidecarEvent): DebugBackendEvent => {
   const body = record(message.body, `Sidecar '${message.event}' event body`);
   if (message.event === "stopped") {
@@ -422,9 +449,11 @@ const backendEvent = (message: DebugSidecarEvent): DebugBackendEvent => {
 
 /** Typed `DebugBackend` implementation over the authenticated sidecar client. */
 export class SidecarDebugBackend implements DebugBackend {
+  /** Fixed sidecar-backed protocol revision. */
   readonly protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
   #capabilities: DebugBackendCapabilities;
   readonly #configuredCapabilities: DebugBackendCapabilities;
+  /** Capabilities verified on initialize, which may refine configured expectations. */
   get capabilities(): DebugBackendCapabilities {
     return this.#capabilities;
   }
@@ -440,7 +469,7 @@ export class SidecarDebugBackend implements DebugBackend {
 
   /**
    * Creates a backend with capabilities declared before DAP initialization and verified on connect.
-   * @param {SidecarDebugBackendOptions} options Sidecar identity, capability manifest, and factory.
+   * @param options Sidecar identity, capability manifest, and factory.
    */
   constructor(options: SidecarDebugBackendOptions) {
     this.#backend = string(options.backend, "Sidecar backend name");
@@ -638,6 +667,7 @@ export class SidecarDebugBackend implements DebugBackend {
     return validateCaptureResult(await this.#requireConnected().request("capture", { ...request }));
   }
 
+  /** @inheritdoc */
   async startTrace(options: DebugTraceStartOptions): Promise<void> {
     const architecture = string(options.architecture, "Trace architecture");
     const addressSpace = string(options.addressSpace, "Trace address space");

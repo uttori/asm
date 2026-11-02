@@ -1,6 +1,7 @@
 import { test } from "../../../../tests/ava-helper.js";
 import {
   shouldClearSourceCandidate,
+  sourceHealth,
   sourceWorkflow,
   type SourceWorkflowState,
 } from "../../src/source/workflow.js";
@@ -68,4 +69,35 @@ test("regeneration offers only the next valid transition across evidence, checkp
       t.false(steps.some((step) => step.command === "asm.source.finish"));
     }
   }
+});
+
+test("source health exposes Next and the legal abort/discard escapes", (t) => {
+  const prepare = sourceHealth(sourceWorkflow({ analysisReady: true }));
+  t.is(prepare.kind, "needs-prepare");
+  t.is(prepare.next?.command, "asm.source.prepare");
+  t.deepEqual(prepare.escapes, []);
+  const preview = sourceHealth(sourceWorkflow({ candidate: true }));
+  t.is(preview.kind, "needs-preview");
+  t.true(preview.escapes.some((escape) => escape.command === "asm.source.discard"));
+  t.false(preview.escapes.some((escape) => escape.command === "asm.source.abort"));
+  const merging = sourceHealth(
+    sourceWorkflow({ phase: "merging", conflicts: 1, unstaged: false }),
+    { phase: "merging" },
+  );
+  t.is(merging.kind, "merging");
+  t.is(merging.next?.command, "workbench.view.scm");
+  t.true(merging.escapes.some((escape) => escape.command === "asm.source.abort"));
+  t.false(merging.escapes.some((escape) => escape.command === "asm.source.discard"));
+  const finish = sourceHealth(
+    sourceWorkflow({ phase: "merging", conflicts: 0, unstaged: false }),
+    { phase: "merging" },
+  );
+  t.is(finish.kind, "finish");
+  t.is(finish.next?.command, "asm.source.finish");
+  const busy = sourceHealth(sourceWorkflow({ busy: "build", candidate: true }), { busy: "build" });
+  t.is(busy.kind, "busy");
+  t.is(busy.next, undefined);
+  const diverged = sourceHealth(sourceWorkflow({ phase: "diverged" }), { phase: "diverged" });
+  t.is(diverged.kind, "diverged");
+  t.is(diverged.next?.command, "workbench.view.scm");
 });

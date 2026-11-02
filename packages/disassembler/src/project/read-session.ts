@@ -9,7 +9,9 @@ import { analysisProjectRevision, type AnalysisProjectRevision } from "./project
 
 /** Bounded queries from one revision. Methods and streams expire when the synchronous callback returns. */
 export interface AnalysisReadSession {
+  /** Project manifest frozen for the duration of this read transaction. */
   readonly manifest: AnalysisProjectManifest;
+  /** Compact revision token derived from the manifest for cache keys and comparisons. */
   readonly revision: AnalysisProjectRevision;
   /** Stable-ID keyset page. Limit defaults to 200 and must be in [1, 200]. */
   metadataPage<Kind extends Exclude<ShardKind, "runtime">>(

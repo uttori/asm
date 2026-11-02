@@ -28,11 +28,17 @@ import { SourceSnapshotIndex } from "./snapshot-index.js";
 
 /** Preview describes saved working files, including unstaged edits, without changing Git's real index. */
 export interface SourceMergePreview {
+  /** Commit at HEAD when the preview was rendered. */
   readonly head: string;
+  /** Git tree of the saved working files plus overlays, written through a private index. */
   readonly sourceTree: string;
+  /** Pure generation commit proposed for merging. */
   readonly candidate: string;
+  /** Accepted generation commit in HEAD's ancestry; the candidate's sole generation parent. */
   readonly base: string;
+  /** Merged tree; equals `sourceTree` when the candidate is already the accepted generation. */
   readonly resultTree: string;
+  /** Repository-relative paths Git reported as conflicted; empty for a clean merge. */
   readonly conflicts: readonly string[];
   /** Git's full diagnostic stream includes nontext conflicts that have no conflict markers. */
   readonly messages: string;
@@ -42,33 +48,56 @@ export interface SourceMergePreview {
 
 /** Verification belongs to an exact staged tree and matching binary/debug-map pair. */
 export interface SourceBuildVerification {
+  /** SHA-256 of the built binary. */
   readonly outputSha256: string;
+  /** SHA-256 of the debug map published with that binary. */
   readonly debugMapSha256: string;
+  /** SHA-256 identity of the plugin toolchain that produced the pair. */
   readonly toolchainSha256: string;
+  /** Human-readable checks performed; must be non-empty to be accepted. */
   readonly checks: readonly string[];
 }
 
 /** Worktree-local recovery hints. Native Git state remains authoritative after terminal operations. */
 export interface SourceMergeJournal {
+  /** Journal format discriminator. */
   readonly format: "uttori-source-merge";
+  /** Random identifier for one merge operation. */
   readonly id: string;
+  /** Whether the operation adopts an existing export or merges a regeneration. */
   readonly kind: "adopt" | "regenerate";
+  /** Checkpoint commit at HEAD before Git started the merge. */
   readonly before: string;
+  /** Pure generation commit being merged. */
   readonly candidate: string;
+  /** Candidate pin under `refs/uttori/candidates/` that retains `candidate`. */
   readonly candidateRef: string;
+  /** Full `refs/heads/` name of the branch the merge started on. */
   readonly branch: string;
+  /** Staged tree that passed build verification; absent until validation succeeds. */
   readonly validatedTree?: string;
+  /** Build verification recorded for `validatedTree`. */
   readonly verification?: SourceBuildVerification;
 }
 
 /** A journal never reports a terminal commit as verified unless its exact tree was checked. */
 export interface SourceMergeStatus {
+  /**
+   * Reconciled state: `idle` without a journal or after completion on another branch, `merging`
+   * while Git's merge of the candidate is pending, `checkpoint` when HEAD is still the pre-merge
+   * commit, `committed`/`verified` once the candidate is in HEAD's ancestry, and `diverged` when
+   * Git state no longer matches the journal.
+   */
   readonly phase: "idle" | "merging" | "checkpoint" | "committed" | "verified" | "diverged";
+  /** Commit at HEAD when the status was read. */
   readonly head: string;
+  /** Paths with unmerged index entries, including binary and delete conflicts. */
   readonly conflicts: readonly string[];
+  /** Recovery journal; omitted whenever the phase is `idle`. */
   readonly journal?: SourceMergeJournal;
 }
 
+/** Worktree-local path of the merge recovery journal. */
 const journalFile = (repository: SourceRepository): string =>
   path.join(repository.stateDirectory, "merge.json");
 
@@ -183,14 +212,29 @@ function readJournal(repository: SourceRepository): SourceMergeJournal | undefin
   return value;
 }
 
+/**
+ * Check that a parsed journal is a plain object before reading its fields.
+ * @param value Parsed JSON value.
+ * @returns True for non-null, non-array objects.
+ */
 function isJournalRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Narrow a journal `kind` field to a known merge operation.
+ * @param value Untrusted journal field.
+ * @returns True for `adopt` or `regenerate`.
+ */
 function isMergeKind(value: unknown): value is SourceMergeJournal["kind"] {
   return value === "adopt" || value === "regenerate";
 }
 
+/**
+ * Validate the journal format, kind, branch and candidate ref; object IDs are checked separately.
+ * @param value Parsed journal JSON.
+ * @returns True when the structural fields match a workflow-written journal.
+ */
 function isMergeJournal(value: unknown): value is SourceMergeJournal {
   if (!isJournalRecord(value)) {
     return false;
@@ -207,6 +251,12 @@ function isMergeJournal(value: unknown): value is SourceMergeJournal {
   );
 }
 
+/**
+ * Require a journal object ID field to be a string before format validation.
+ * @param value Untrusted journal field.
+ * @returns The string value.
+ * @throws Error when the field is not a string.
+ */
 function gitObjectId(value: unknown): string {
   if (typeof value !== "string") {
     throw new Error("Expected a complete Git object ID.");

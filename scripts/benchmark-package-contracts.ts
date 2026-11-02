@@ -63,7 +63,7 @@ for (let sample = 0; sample < 3; sample++) {
     new StreamMessageReader(child.stdout),
     new StreamMessageWriter(child.stdin),
   );
-  let fresh = false,
+  let fresh = false as boolean,
     editing = false,
     staleNotifications = 0;
   let lastDiagnosticsAt: number | undefined;

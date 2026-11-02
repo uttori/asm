@@ -28,7 +28,7 @@ export const selectedAnalysisSourceRoot = (): string | undefined => selectedSour
 
 /**
  * Resolves configured or discovered native analysis-project directories.
- * @returns {Promise<string[]>} Sorted absolute local project directories.
+ * @returns Sorted absolute local project directories.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.findFiles
  */
 export const findAnalysisProjectDirectories = async (): Promise<string[]> => {

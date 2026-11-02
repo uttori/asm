@@ -16,11 +16,15 @@ export type PluginDiagnosticCode =
 
 /** Available attribution for a failure. Fields are absent when the failing entity is not yet known. */
 export interface PluginDiagnosticContext {
+  /** Stable failure category for programmatic handling. */
   code: PluginDiagnosticCode;
+  /** Manifest ID of the plugin responsible for the failure. */
   pluginId?: string;
   /** Configured specifier or resolved module URL supplied by the loading host. */
   pluginModule?: string;
+  /** Contribution ID (or directive ID) involved in the failure. */
   contributionId?: string;
+  /** Canonical or requested target ID involved in the failure. */
   targetId?: string;
   /** Original thrown value, retained for diagnostic chains. */
   cause?: unknown;
@@ -28,11 +32,17 @@ export interface PluginDiagnosticContext {
 
 /** Structured plugin/configuration failure. Cleanup of multiple resources may instead throw AggregateError. */
 export class PluginError extends Error implements PluginDiagnosticContext {
+  /** Stable failure category for programmatic handling. */
   readonly code: PluginDiagnosticCode;
+  /** Manifest ID of the plugin responsible, when known. */
   readonly pluginId?: string;
+  /** Module specifier or URL the plugin was loaded from, when known. */
   readonly pluginModule?: string;
+  /** Contribution ID involved in the failure, when known. */
   readonly contributionId?: string;
+  /** Target ID involved in the failure, when known. */
   readonly targetId?: string;
+  /** Original thrown value, also passed to the native Error cause. */
   override readonly cause?: unknown;
 
   constructor(message: string, context: PluginDiagnosticContext) {

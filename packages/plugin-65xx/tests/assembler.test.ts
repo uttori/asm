@@ -23,24 +23,24 @@ interface DifferentialFixture {
 
 /**
  * Accepts a JSON object. Arrays and null are not fixtures.
- * @param {unknown} value Parsed JSON.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Parsed JSON.
+ * @returns True when `value` is a non-array object.
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
  * Accepts a list of numbers.
- * @param {unknown} value Candidate byte list.
- * @returns {boolean} True when every element is a number.
+ * @param value Candidate byte list.
+ * @returns True when every element is a number.
  */
 const isNumberList = (value: unknown): value is readonly number[] =>
   Array.isArray(value) && value.every((item) => typeof item === "number");
 
 /**
  * Accepts one NMOS differential case.
- * @param {unknown} value Candidate case.
- * @returns {boolean} True when opcode, mnemonic, mode, documented, source, and bytes are present.
+ * @param value Candidate case.
+ * @returns True when opcode, mnemonic, mode, documented, source, and bytes are present.
  */
 const isDifferentialCase = (value: unknown): value is DifferentialFixture["cases"][number] =>
   isRecord(value) &&
@@ -53,8 +53,8 @@ const isDifferentialCase = (value: unknown): value is DifferentialFixture["cases
 
 /**
  * Accepts the NMOS differential fixture document.
- * @param {unknown} value Parsed JSON.
- * @returns {boolean} True when oracle release/commit and cases match the fixture contract.
+ * @param value Parsed JSON.
+ * @returns True when oracle release/commit and cases match the fixture contract.
  */
 const isDifferentialFixture = (value: unknown): value is DifferentialFixture =>
   isRecord(value) &&
@@ -66,8 +66,8 @@ const isDifferentialFixture = (value: unknown): value is DifferentialFixture =>
 
 /**
  * Accepts one CMOS/vendor differential case.
- * @param {unknown} value Candidate case.
- * @returns {boolean} True when mnemonic, mode, source, and bytes are present.
+ * @param value Candidate case.
+ * @returns True when mnemonic, mode, source, and bytes are present.
  */
 const isVariantCase = (
   value: unknown,
@@ -80,8 +80,8 @@ const isVariantCase = (
 
 /**
  * Accepts one CPU variant block.
- * @param {unknown} value Candidate variant.
- * @returns {boolean} True when cpu, sha256, and cases match.
+ * @param value Candidate variant.
+ * @returns True when cpu, sha256, and cases match.
  */
 const isVariant = (value: unknown): value is VariantDifferentialFixture["variants"][number] =>
   isRecord(value) &&
@@ -92,8 +92,8 @@ const isVariant = (value: unknown): value is VariantDifferentialFixture["variant
 
 /**
  * Accepts a CMOS/vendor differential fixture document.
- * @param {unknown} value Parsed JSON.
- * @returns {boolean} True when the oracle and variant list match the fixture contract.
+ * @param value Parsed JSON.
+ * @returns True when the oracle and variant list match the fixture contract.
  */
 const isVariantDifferentialFixture = (value: unknown): value is VariantDifferentialFixture =>
   isRecord(value) &&
@@ -106,9 +106,9 @@ const isVariantDifferentialFixture = (value: unknown): value is VariantDifferent
 
 /**
  * Parses a differential fixture and rejects a document that does not match the expected fields.
- * @param {URL} url Fixture URL.
- * @param {(value: unknown) => value is T} accept Shape check.
- * @returns {T} The fixture.
+ * @param url Fixture URL.
+ * @param accept Shape check.
+ * @returns The fixture.
  */
 function readFixture<T>(url: URL, accept: (value: unknown) => value is T): T {
   const parsed: unknown = JSON.parse(fs.readFileSync(url, "utf8"));

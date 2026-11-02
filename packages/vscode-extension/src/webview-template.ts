@@ -12,8 +12,8 @@ const htmlCache = new Map<string, string>();
 /**
  * Escape ampersands, double quotes, and opening angle brackets for double-quoted HTML attribute
  * values.
- * @param {string} value The value to escape.
- * @returns {string} The escaped value.
+ * @param value The value to escape.
+ * @returns The escaped value.
  */
 const escapeAttribute = (value: string): string =>
   value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
@@ -21,8 +21,8 @@ const escapeAttribute = (value: string): string =>
 /**
  * Read packaged UTF-8 HTML once per filesystem path and retain it for the extension-host
  * lifetime; filesystem failures propagate.
- * @param {Uri} file The URI of the template file.
- * @returns {string} The contents of the template file.
+ * @param file The URI of the template file.
+ * @returns The contents of the template file.
  */
 const readTemplate = (file: Uri): string => {
   const cached = htmlCache.get(file.fsPath);
@@ -36,10 +36,10 @@ const readTemplate = (file: Uri): string => {
 
 /**
  * Load editable, packaged HTML with CSP-scoped URLs for its external assets.
- * @param {Webview} webview Hosted webview.
- * @param {Uri} extensionUri Installed extension root.
+ * @param webview Hosted webview.
+ * @param extensionUri Installed extension root.
  * @param name Packaged template basename, shared by its HTML, stylesheet and script.
- * @returns {string} Complete HTML with escaped resource URLs.
+ * @returns Complete HTML with escaped resource URLs.
  * @see https://code.visualstudio.com/api/references/vscode-api#Webview.asWebviewUri
  * @see https://code.visualstudio.com/api/references/vscode-api#Webview.cspSource
  * @see https://code.visualstudio.com/api/extension-guides/webview#content-security-policy
@@ -47,7 +47,7 @@ const readTemplate = (file: Uri): string => {
 export const renderWebviewTemplate = (
   webview: Webview,
   extensionUri: Uri,
-  name: "panel" | "palette" | "indexed-png",
+  name: "home" | "palette" | "indexed-png",
 ): string => {
   const asset = (file: string): Uri => Uri.joinPath(extensionUri, "media", file);
   const values: Record<string, string> = {

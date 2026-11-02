@@ -4,9 +4,9 @@ import type { RuntimeInstructionDetail } from "@uttori/asm-disassembler";
 
 /**
  * Honor the requested capture detail without silently losing execution evidence.
- * @param {"full" | "pc"} requested User-selected capture mode.
- * @param {boolean | undefined} instructionDetails Negotiated runtime support.
- * @returns {"full" | "pc"} Supported capture mode.
+ * @param requested User-selected capture mode.
+ * @param instructionDetails Negotiated runtime support.
+ * @returns Supported capture mode.
  */
 export const resolveEditorTraceDetail = (
   requested: "full" | "pc",
@@ -24,48 +24,69 @@ export const resolveEditorTraceDetail = (
 
 /** One trace batch returned by the debugger's bounded pull protocol. */
 export interface EditorTraceBatch {
+  /** Architecture ID; must match the recording's metadata. */
   readonly architecture: string;
+  /** Address-space ID; must match the recording's metadata. */
   readonly addressSpace: string;
+  /** 1-based sequence number of the first address; gaps must equal the `droppedEvents` increase. */
   readonly sequenceStart: number;
+  /** Executed 24-bit instruction addresses in order, at most the negotiated batch maximum. */
   readonly addresses: readonly number[];
+  /** Per-address instruction bytes and CPU state; absent for PC-only capture. */
   readonly details?: readonly RuntimeInstructionDetail[];
+  /** Cumulative count of memory accesses not attributed to an instruction; never decreases. */
   readonly unattributedMemoryAccesses?: number;
+  /** Cumulative producer loss counter; never decreases. */
   readonly droppedEvents: number;
+  /** False once the producer has stopped; an inactive empty batch ends the stream. */
   readonly active: boolean;
 }
 
 /** Immutable identity written ahead of streamed trace chunks. */
 export interface EditorTraceMetadata {
+  /** Non-empty architecture ID of the traced CPU. */
   readonly architecture: string;
+  /** Non-empty address-space ID the addresses belong to. */
   readonly addressSpace: string;
+  /** Lowercase SHA-256 of the ROM content. */
   readonly romContentSha256: string;
   /** Complete cartridge identity, including iNES mapper/header bytes. */
   readonly romFileSha256?: string;
+  /** Emulator/runtime that produced the trace; both fields must be non-empty. */
   readonly producer: { readonly id: string; readonly revision: string };
 }
 
 /** Pull/stop functions supplied by one active DAP session. */
 export interface RuntimeTraceFileRecorderOptions extends EditorTraceMetadata {
+  /** Destination path; created or truncated when the recorder opens. */
   readonly file: string;
+  /** Positive safe-integer maximum of events requested per pull. */
   readonly maxBatchEvents: number;
+  /** Pulls the next batch of at most `maxEvents` events from the debugger. */
   readonly readTrace: (maxEvents: number) => Promise<EditorTraceBatch>;
+  /** Asks the producer to stop; remaining events are still drained afterwards. */
   readonly stopTrace: () => Promise<void>;
 }
 
 /** Summary reported after a trace file is completely flushed and closed. */
 export interface RuntimeTraceFileSummary {
+  /** Path of the written artifact. */
   readonly file: string;
+  /** Number of chunks written. */
   readonly chunks: number;
+  /** Total instruction addresses written. */
   readonly observedEvents: number;
+  /** Final producer loss counter. */
   readonly droppedEvents: number;
+  /** True only when a requested stop drained the producer to its end. */
   readonly complete: boolean;
 }
 
 /**
  * Yield the recorder pump for the requested milliseconds between empty trace pulls to avoid busy
  * polling.
- * @param {number} milliseconds Idle interval between empty backend pulls.
- * @returns {Promise<void>} Settlement after the polling delay elapses.
+ * @param milliseconds Idle interval between empty backend pulls.
+ * @returns Settlement after the polling delay elapses.
  */
 const delay = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -73,8 +94,8 @@ const delay = (milliseconds: number): Promise<void> =>
 /**
  * Reject an empty capture-identity field before creating the output file, preserving the field
  * name in the error.
- * @param {string} value Capture identity string validated before file creation.
- * @param {string} name Field label used in an empty-value error.
+ * @param value Capture identity string validated before file creation.
+ * @param name Field label used in an empty-value error.
  */
 const assertIdentity = (value: string, name: string): void => {
   if (!value) {
@@ -105,15 +126,18 @@ export class RuntimeTraceFileRecorder {
     this.#completion = this.#pump();
   }
 
-  /** @returns {Promise<RuntimeTraceFileSummary>} Settlement when the artifact is closed. */
+  /**
+   * Pump result shared by {@link stop} and {@link finishIncomplete}; rejects on invalid batches or I/O failure.
+   * @returns Settlement when the artifact is closed.
+   */
   get completion(): Promise<RuntimeTraceFileSummary> {
     return this.#completion;
   }
 
   /**
    * Opens and initializes a native version-1 instruction-trace artifact.
-   * @param {RuntimeTraceFileRecorderOptions} options Destination, identity, and DAP callbacks.
-   * @returns {Promise<RuntimeTraceFileRecorder>} Active disk-backed recorder.
+   * @param options Destination, identity, and DAP callbacks.
+   * @returns Active disk-backed recorder.
    */
   static async create(options: RuntimeTraceFileRecorderOptions): Promise<RuntimeTraceFileRecorder> {
     assertIdentity(options.architecture, "Trace architecture");
@@ -147,7 +171,7 @@ export class RuntimeTraceFileRecorder {
 
   /**
    * Stops capture, drains the producer, and closes a complete JSON artifact.
-   * @returns {Promise<RuntimeTraceFileSummary>} Final file and loss counters.
+   * @returns Final file and loss counters.
    */
   async stop(): Promise<RuntimeTraceFileSummary> {
     if (!this.#stopRequested) {
@@ -165,7 +189,7 @@ export class RuntimeTraceFileRecorder {
 
   /**
    * Closes a valid but explicitly incomplete artifact after session loss.
-   * @returns {Promise<RuntimeTraceFileSummary>} Final incomplete file and loss counters.
+   * @returns Final incomplete file and loss counters.
    */
   finishIncomplete(): Promise<RuntimeTraceFileSummary> {
     this.#cancelled = true;

@@ -20,8 +20,8 @@ import { toRange, lineFallbackRange } from "./spans.js";
 
 /**
  * Maps an assembler diagnostic severity to an LSP severity.
- * @param {AssemblyDiagnosticSeverity} severity The assembler severity.
- * @returns {DiagnosticSeverity} The LSP severity.
+ * @param severity The assembler severity.
+ * @returns The LSP severity.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#diagnostic
  */
 export function toDiagnosticSeverity(severity: AssemblyDiagnosticSeverity): DiagnosticSeverity {
@@ -38,9 +38,9 @@ export function toDiagnosticSeverity(severity: AssemblyDiagnosticSeverity): Diag
 
 /**
  * Builds LSP diagnostics for a file.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @returns {Diagnostic[]} The LSP diagnostics.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @returns The LSP diagnostics.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#diagnostic
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#publishdiagnostics-notification-arrow_left
  */

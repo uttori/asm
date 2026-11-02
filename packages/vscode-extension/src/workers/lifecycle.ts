@@ -10,6 +10,7 @@ export class WorkerRequestSlots {
     }
   }
 
+  /** Whether the slot owner has been disposed and rejects new admissions. */
   get disposed(): boolean {
     return this.#disposed;
   }
@@ -42,10 +43,15 @@ export class WorkerRequestSlots {
   }
 }
 
+/** Correlated worker IPC response carrying either a value or serialized error metadata. */
 export interface WorkerReply {
+  /** Request id matching the worker admission slot. */
   readonly id: number;
+  /** Successful response payload when no error was reported. */
   readonly value?: unknown;
+  /** Error message string when the worker rejected the request. */
   readonly error?: string;
+  /** Optional stack trace text accompanying a worker error. */
   readonly stack?: string;
 }
 

@@ -34,14 +34,17 @@ import {
   type EditorInformationHost,
 } from "../editor-info/provider.js";
 
+/** Accept only built-in editor information preset names from settings. */
 function isInformationPreset(value: string): value is keyof typeof INFORMATION_PRESETS {
   return value === "compact" || value === "authoring" || value === "disassembly";
 }
 
+/** Narrow host payloads to plain objects before manifest validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Validate one analysis manifest snapshot from the host. */
 function isEditorProjectManifest(value: unknown): value is EditorProjectManifest {
   return (
     isRecord(value) &&
@@ -64,8 +67,8 @@ import {
 } from "../editor-info/format.js";
 import { informationOverlayGap } from "../editor-info/layout.js";
 import { EditorInformationWorker } from "../editor-info/worker-client.js";
-import { findAnalysisProjectDirectories } from "./project-discovery.js";
 import { discoverAnalysisDebugMapFiles } from "./debug-maps.js";
+import { findAnalysisProjectDirectories } from "./project-discovery.js";
 import { analysisWorker } from "./worker-client.js";
 
 /** Host cancellation and dirty state can change during an awaited information query. */
@@ -73,6 +76,7 @@ function cancellationRequested(token: CancellationToken): boolean {
   return token.isCancellationRequested;
 }
 
+/** Whether the editor buffer differs from its last saved revision. */
 function documentDirty(document: TextDocument): boolean {
   return document.isDirty;
 }
@@ -82,8 +86,8 @@ export const TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotatio
 
 /**
  * Use each resource's folder scope, falling back to personal settings outside a workspace.
- * @param {Uri | undefined} uri Active resource, when available.
- * @returns {ConfigurationTarget} Scope for explicit user actions.
+ * @param uri Active resource, when available.
+ * @returns Scope for explicit user actions.
  */
 const configurationTarget = (uri: Uri | undefined): ConfigurationTarget =>
   uri && workspace.getWorkspaceFolder(uri)
@@ -92,6 +96,7 @@ const configurationTarget = (uri: Uri | undefined): ConfigurationTarget =>
 
 /** Independent per-editor generations prevent late viewport work from repainting another editor. */
 export class AnalysisAnnotationController implements Disposable {
+  /** Snapshot-backed information service feeding decorations and hovers. */
   readonly provider: EditorInformationService;
   readonly #decoration: TextEditorDecorationType;
   readonly #disposables: Disposable[] = [];
@@ -185,9 +190,9 @@ export class AnalysisAnnotationController implements Disposable {
 
   /**
    * Publish status only for the active assembly editor; retain reasons for explicit inspection.
-   * @param {TextEditor} editor Editor owning this generation's result.
-   * @param {string} label Brief state shown in the status bar.
-   * @param {string} explanation Full diagnostic retained for the status report.
+   * @param editor Editor owning this generation's result.
+   * @param label Brief state shown in the status bar.
+   * @param explanation Full diagnostic retained for the status report.
    */
   #setStatus(editor: TextEditor, label: string, explanation: string): void {
     this.#explanations.set(editor, explanation);
@@ -245,8 +250,8 @@ export class AnalysisAnnotationController implements Disposable {
 
   /**
    * Remember a successful build even if automatic discovery has reached its map-file limit.
-   * @param {string} debugMapPath Newly published map filename.
-   * @param {string} sourceRoot Owning workspace/include resolution root.
+   * @param debugMapPath Newly published map filename.
+   * @param sourceRoot Owning workspace/include resolution root.
    */
   buildCompleted(debugMapPath: string, sourceRoot: string): void {
     this.provider.buildCompleted(debugMapPath, sourceRoot);
@@ -255,7 +260,7 @@ export class AnalysisAnnotationController implements Disposable {
 
   /**
    * Coalesce scrolling; both disabled surfaces produce no provider work.
-   * @param {TextEditor | undefined} editor Optional editor; omission refreshes all visible editors.
+   * @param editor Optional editor; omission refreshes all visible editors.
    */
   refresh(editor?: TextEditor): void {
     if (this.#disposed) {
@@ -361,7 +366,7 @@ export class AnalysisAnnotationController implements Disposable {
 
   /**
    * Includes can change another open file's layout; clear all affected work immediately.
-   * @param {TextDocument} document Changed document, including unsaved buffers.
+   * @param document Changed document, including unsaved buffers.
    */
   documentChanged(document: TextDocument): void {
     if (document.uri.scheme === "file") {
@@ -445,10 +450,10 @@ export class AnalysisAnnotationController implements Disposable {
 
   /**
    * Append compact analysis independently of the language server's instruction documentation.
-   * @param {TextDocument} document Source snapshot requested by VS Code.
-   * @param {Position} position Hovered zero-based source position.
-   * @param {CancellationToken} token Host cancellation; stale replies are discarded.
-   * @returns {Promise<Hover | undefined>} Compact additional hover, or nothing when unavailable.
+   * @param document Source snapshot requested by VS Code.
+   * @param position Hovered zero-based source position.
+   * @param token Host cancellation; stale replies are discarded.
+   * @returns Compact additional hover, or nothing when unavailable.
    */
   async provideHover(
     document: TextDocument,
@@ -611,6 +616,7 @@ export class AnalysisAnnotationController implements Disposable {
     await window.showTextDocument(document, { preview: true, viewColumn: editor.viewColumn });
   }
 
+  /** Cancel timers, invalidate information caches, and dispose editor subscriptions. */
   dispose(): void {
     this.#disposed = true;
     for (const timer of this.#timers.values()) {

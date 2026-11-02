@@ -739,11 +739,11 @@ function unexpectedBenchmarkOperation(
  * Each returned closure performs exactly the named action and retains its result through the end
  * sample. Do not preload a second project merely to obtain setup metadata: that contaminates the
  * baseline RSS and can turn a single-load/commit measurement into a hidden multi-project test.
- * @param {Fixture} fixture Synthetic or explicitly authorized private fixture description.
- * @param {OperationId} operation Operation whose exclusive boundary is measured.
- * @param {RomImage} rom Loaded immutable ROM for this worker.
- * @param {string} temporary Worker-private directory removed after measurement.
- * @returns {() => OperationValue} Timed closure with a retained result and stable observation.
+ * @param fixture Synthetic or explicitly authorized private fixture description.
+ * @param operation Operation whose exclusive boundary is measured.
+ * @param rom Loaded immutable ROM for this worker.
+ * @param temporary Worker-private directory removed after measurement.
+ * @returns Timed closure with a retained result and stable observation.
  */
 const prepareOperation = (
   fixture: Fixture,
@@ -913,9 +913,9 @@ const prepareOperation = (
  * The operation is synchronous, so these values are operation-boundary observations rather than an
  * in-operation peak. A fresh child process and requested pre-run GC make repetitions comparable.
  * `value.retained` prevents the optimizer/collector from discarding the result before the end sample.
- * @param {Fixture} fixture Fixture executed by this worker.
- * @param {OperationId} operation Single measured operation.
- * @returns {WorkerResult} Timing, boundary memory, and correctness observation.
+ * @param fixture Fixture executed by this worker.
+ * @param operation Single measured operation.
+ * @returns Timing, boundary memory, and correctness observation.
  */
 const runWorker = (fixture: Fixture, operation: OperationId): WorkerResult => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-disassembler-benchmark-"));
@@ -961,9 +961,9 @@ const runWorker = (fixture: Fixture, operation: OperationId): WorkerResult => {
  * Runs one measurement in a fresh Node process with explicit-GC support.
  * Process isolation prevents retained state and allocator high-water behavior from one operation or
  * repetition contaminating another, which is essential for meaningful memory budgets.
- * @param {Fixture} fixture Fixture identifier passed to the worker process.
- * @param {OperationId} operation Operation identifier passed to the worker process.
- * @returns {WorkerResult} Parsed worker result after a successful exit.
+ * @param fixture Fixture identifier passed to the worker process.
+ * @param operation Operation identifier passed to the worker process.
+ * @returns Parsed worker result after a successful exit.
  */
 const runIsolated = (fixture: Fixture, operation: OperationId): WorkerResult => {
   const child = spawnSync(

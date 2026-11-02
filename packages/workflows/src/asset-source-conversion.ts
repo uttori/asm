@@ -22,29 +22,43 @@ import type { SourceProjectInspection } from "./source.js";
 
 /** Cursor coordinates identify one evaluated assembly statement, including continued calls and define-based paths. */
 export interface AssetSourceConversionRequest {
+  /** Project root directory for the operation. */
   readonly directory: string;
+  /** Assembly file containing the includeAsset call under the cursor. */
   readonly file: string;
   /** One-based physical cursor line; the containing emitted statement is resolved from the current build. */
   readonly line: number;
+  /** Requested authoring representation id for the conversion. */
   readonly representation: string;
+  /** Optional replacement source path; omitted keeps the current path. */
   readonly destination?: string;
 }
 
 /** Native adapters supply mapping/resources; representation codecs only encode their shared document contract. */
 export interface AssetConversionContext {
+  /** Current source-project inspection used as the conversion oracle. */
   readonly build: SourceProjectInspection;
+  /** Evaluated includeAsset emission that the conversion will rewrite. */
   readonly selected: AssetEmissionInfo;
+  /** Current native or authoring source path being converted. */
   readonly source: string;
+  /** Optional replacement source path; omitted keeps the current path. */
   readonly destination: string;
+  /** Indexed-document codecs available for the requested representation. */
   readonly codecs: AssetSourceCodecRegistry<IndexedDocument>;
+  /** Requested authoring representation id for the conversion. */
   readonly representation: string;
+  /** Read exact declaration/resource bytes from the inspection snapshot. */
   read(file: string): Uint8Array;
 }
 
 /** Precise option additions keyed by evaluated emission, plus source-sidecar creations/replacements. */
 export interface AssetConversionCandidate {
+  /** Byte length or payload size bound. */
   readonly bytes: Uint8Array;
+  /** Source-file replacements included in the conversion candidate. */
   readonly changes: readonly SourceFileChange[];
+  /** includeAsset option rewrites keyed by evaluated emission. */
   readonly updates: readonly {
     readonly emission: AssetEmissionInfo;
     readonly path?: string;
@@ -56,23 +70,33 @@ export interface AssetConversionCandidate {
 
 /** Extensible game/native adapter seam. Hosts may register new adapters without changing editor publication logic. */
 export interface AssetSourceConversionAdapter {
+  /** Adapter identifier used to select a conversion path. */
   readonly id: string;
+  /** True when this adapter can convert the evaluated emission. */
   supports(emission: AssetEmissionInfo): boolean;
+  /** Plan source replacements for switching this emission to `representation`. */
   prepare(context: AssetConversionContext): Promise<AssetConversionCandidate>;
 }
 
 /** Complete validated source changes are reviewable and can be published through CLI transactions or native editor undo. */
 export interface AssetSourceConversionPlan {
+  /** Current native or authoring source path being converted. */
   readonly source: string;
+  /** Optional replacement source path; omitted keeps the current path. */
   readonly destination: string;
+  /** SHA-256 of the published linked image. */
   readonly outputSha256: string;
+  /** Source-file replacements included in the conversion candidate. */
   readonly changes: readonly SourceFileChange[];
+  /** Content hashes of files that must remain unchanged around publication. */
   readonly snapshots: readonly { readonly path: string; readonly sha256: string }[];
+  /** Assembly statements whose includeAsset options will be rewritten. */
   readonly affected: readonly {
     readonly file: string;
     readonly line: number;
     readonly format: string;
   }[];
+  /** Old authoring sources kept because their reference closure is incomplete. */
   readonly retained: readonly string[];
   /** Unassembled declarations or symlinks make the old source's complete reference set uncertain. */
   readonly unresolvedDeclarations: readonly string[];
@@ -171,6 +195,7 @@ export class AssetSourceConversionService {
     return { build, selected, source, current };
   }
 
+  /** Plan and validate a representation switch for the includeAsset under the cursor. */
   async prepare(
     request: AssetSourceConversionRequest,
     signal?: AbortSignal,

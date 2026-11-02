@@ -3,11 +3,17 @@ import { integer } from "./validation.js";
 
 /** Inventory pages share native tilesets; page/frame boundaries never create native animation or storage owners. */
 export interface IndexedPresentationLayout {
+  /** Presentation frame width in pixels. */
   readonly width: number;
+  /** Presentation frame height in pixels. */
   readonly height: number;
+  /** Tile columns per presentation page. */
   readonly columns: number;
+  /** Tile rows per presentation page. */
   readonly rows: number;
+  /** Tiles shown on one page. */
   readonly capacity: number;
+  /** Pages required to show every view tile. */
   readonly pages: number;
 }
 

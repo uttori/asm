@@ -2,9 +2,13 @@ import { assetPath } from "@uttori/asm-workflows/asset-interchange/paths";
 
 /** Editor state only: opaque tabs expose dirty state, while native text/binary documents expose monotonic versions. */
 export interface AssetEditorVersion {
+  /** Repository-relative asset path under review. */
   readonly path: string;
+  /** Editor or opaque tab version observed for the path. */
   readonly version: number;
+  /** Whether the editor buffer differs from disk. */
   readonly dirty: boolean;
+  /** Whether the tab is an opaque asset editor without direct text access. */
   readonly opaque: boolean;
 }
 

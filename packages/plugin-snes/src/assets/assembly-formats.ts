@@ -43,9 +43,10 @@ const audioOptions = {
   loop: { summary: "Playback loop in sample frames", valueSyntax: "false" },
 };
 
-/** Select only options accepted by this format's importer/encoder path.
- * @param {string} id Canonical encoder ID.
- * @returns {AssetFormatContribution["optionSchema"]} Editor option hints.
+/**
+ * Select only options accepted by this format's importer/encoder path.
+ * @param id Canonical encoder ID.
+ * @returns Editor option hints.
  */
 const optionSchemaFor = (id: string): AssetFormatContribution["optionSchema"] => {
   if (id.startsWith("snes.tile.")) {

@@ -31,15 +31,16 @@ export interface RuntimeTraceFileOptions {
   readonly onProgress?: (readBytes: number, totalBytes: number) => void;
 }
 
+/** One metadata property or trace chunk while streaming the envelope parser. */
 type TraceEntry =
   | { kind: "property"; key: string; value: unknown }
   | { kind: "chunk"; value: unknown };
 
 /**
  * Parse the trace envelope and its chunks without materializing the chunks array.
- * @param {string} file Trace JSON path.
- * @param {RuntimeTraceFileOptions} options File budget and progress.
- * @returns {AsyncGenerator<TraceEntry>} Bounded JSON values in file order.
+ * @param file Trace JSON path.
+ * @param options File budget and progress.
+ * @returns Bounded JSON values in file order.
  * @yields {TraceEntry} One metadata field or trace chunk.
  */
 async function* traceEntries(
@@ -258,9 +259,9 @@ async function* traceEntries(
 
 /**
  * Read identity before selecting a matching project. Normal recorder headers require one block.
- * @param {string} file Trace path.
- * @param {RuntimeTraceFileOptions} options Read budget and cancellation.
- * @returns {Promise<RuntimeInstructionTraceMetadata>} Validated envelope (body checked on import).
+ * @param file Trace path.
+ * @param options Read budget and cancellation.
+ * @returns Validated envelope (body checked on import).
  */
 export const readRuntimeTraceFileMetadata = async (
   file: string,
@@ -296,10 +297,10 @@ export const readRuntimeTraceFileMetadata = async (
 /**
  * Yield parsed chunks and check the complete JSON envelope before successful completion.
  * Consumers validate chunk contents once. This reader owns JSON syntax and envelope integrity.
- * @param {string} file Trace path.
- * @param {RuntimeInstructionTraceMetadata} metadata Expected recording identity.
- * @param {RuntimeTraceFileOptions} options Read limits and cancellation.
- * @returns {AsyncGenerator<unknown>} Parsed values in file order.
+ * @param file Trace path.
+ * @param metadata Expected recording identity.
+ * @param options Read limits and cancellation.
+ * @returns Parsed values in file order.
  * @yields {unknown} One unvalidated trace chunk.
  */
 async function* traceFileChunks(
@@ -326,9 +327,9 @@ async function* traceFileChunks(
 
 /**
  * Read and normalize ordered chunks for callers that need standalone validated data.
- * @param {string} file Trace JSON path.
- * @param {RuntimeInstructionTraceMetadata} metadata Expected envelope identity.
- * @param {RuntimeTraceFileOptions} options Input limits, cancellation and progress.
+ * @param file Trace JSON path.
+ * @param metadata Expected envelope identity.
+ * @param options Input limits, cancellation and progress.
  * @yields {RuntimeInstructionTraceChunk} One normalized chunk. The tail is checked on exhaustion.
  */
 export async function* readRuntimeTraceFileChunks(
@@ -345,9 +346,9 @@ export async function* readRuntimeTraceFileChunks(
 /**
  * Open a bounded JSON source for an importer that already validates every chunk. Keeping validation
  * at the consumer avoids cloning all addresses, bytes, registers and bus accesses twice per read.
- * @param {string} file Trace JSON path.
- * @param {RuntimeTraceFileOptions} options Input limits, cancellation and progress.
- * @returns {Promise<RuntimeTraceSource>} Metadata plus a reader that checks the complete envelope.
+ * @param file Trace JSON path.
+ * @param options Input limits, cancellation and progress.
+ * @returns Metadata plus a reader that checks the complete envelope.
  */
 export const createRuntimeTraceFileSource = async (
   file: string,
@@ -366,10 +367,10 @@ export const createRuntimeTraceFileSource = async (
 
 /**
  * Import a native trace without allocating a file-sized string or retaining earlier chunks.
- * @param {string} file Trace path.
- * @param {RuntimeInstructionTraceImportContext} context Selected project identity.
- * @param {RuntimeTraceFileOptions} options Read budget and progress.
- * @returns {Promise<RuntimeInstructionTraceImportResult>} Merge-ready facts after full validation.
+ * @param file Trace path.
+ * @param context Selected project identity.
+ * @param options Read budget and progress.
+ * @returns Merge-ready facts after full validation.
  */
 export const importRuntimeInstructionTraceFile = async (
   file: string,

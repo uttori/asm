@@ -6,6 +6,8 @@ export type SourceFailureCode =
   | "cancelled"
   | "committed-with-warning"
   | "failed";
+
+/** Typed source workflow failure that preserves a stable code across IPC and worker boundaries. */
 export class SourceOperationError extends Error {
   constructor(
     readonly code: SourceFailureCode,

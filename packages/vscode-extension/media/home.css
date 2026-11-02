@@ -1,0 +1,383 @@
+html {
+  font-size: 62.5%;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  padding: 0.8rem 1rem 1.6rem;
+  color: var(--vscode-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  background: var(--vscode-sideBar-background);
+}
+
+.home-status {
+  margin: 0 0 0.8rem;
+  font-size: 1.2rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.home-status.error {
+  color: var(--vscode-errorForeground);
+}
+
+.home-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.home-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+  color: var(--vscode-descriptionForeground);
+  font-size: 1.2rem;
+}
+
+.home-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  border-radius: 0.3rem;
+  background: color-mix(in lab, var(--vscode-badge-background) 80%, transparent);
+  color: var(--vscode-badge-foreground);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-section {
+  margin: 1.4rem 0 0;
+}
+
+.home-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.6rem;
+  color: var(--vscode-descriptionForeground);
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-card {
+  position: relative;
+  margin: 0 0 0.6rem;
+  padding: 0.8rem 1.2rem;
+  overflow: hidden;
+  border-radius: 0.4rem;
+  background: color-mix(in lab, var(--vscode-sideBar-background) 100%, #fff 4%);
+}
+
+.home-card::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0.3rem;
+  content: "";
+  background: transparent;
+}
+
+.home-card--active::before {
+  background: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.home-card--info::before {
+  background: var(--vscode-charts-blue);
+}
+
+.home-card--blocked::before {
+  background: var(--vscode-errorForeground);
+}
+
+.home-card--merging::before {
+  background: var(--vscode-gitDecoration-modifiedResourceForeground);
+}
+
+.home-card:hover {
+  background: color-mix(in lab, var(--vscode-sideBar-background) 100%, #fff 7%);
+}
+
+.home-card-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-card-meta {
+  margin: 0.2rem 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 1.2rem;
+}
+
+.home-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.home-pill {
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.3rem;
+  background: color-mix(in lab, var(--vscode-badge-background) 55%, transparent);
+  color: var(--vscode-descriptionForeground);
+  font-size: 1.1rem;
+}
+
+.home-pill--warn {
+  color: var(--vscode-errorForeground);
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.home-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.3rem;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.home-btn:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.home-btn:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+.home-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.home-btn--primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.home-btn--primary:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.home-btn--toolbar {
+  padding: 0.3rem 0.5rem;
+  background: transparent;
+  color: var(--vscode-icon-foreground);
+}
+
+.home-btn--toolbar:hover:not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.home-btn--link {
+  padding: 0;
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+}
+
+.home-btn--link:hover:not(:disabled) {
+  background: transparent;
+  color: var(--vscode-textLink-activeForeground);
+}
+
+.home-btn--full {
+  width: 100%;
+}
+
+.home-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.8rem 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 1.1rem;
+}
+
+.home-step {
+  white-space: nowrap;
+}
+
+.home-step--current {
+  color: var(--vscode-foreground);
+  font-weight: 600;
+}
+
+.home-step--done {
+  color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.home-file {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 0.5rem 0.4rem;
+  border: none;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-file:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.home-file-status {
+  flex: 0 0 1.6rem;
+  font-weight: 600;
+}
+
+.home-file-status.A {
+  color: var(--vscode-gitDecoration-addedResourceForeground);
+}
+
+.home-file-status.M {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground);
+}
+
+.home-file-status.D {
+  color: var(--vscode-gitDecoration-deletedResourceForeground);
+}
+
+.home-file-path {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-file-stats {
+  flex: 0 0 auto;
+  color: var(--vscode-descriptionForeground);
+  font-size: 1.1rem;
+}
+
+.home-meter {
+  height: 0.4rem;
+  margin-top: 0.6rem;
+  overflow: hidden;
+  border-radius: 0.2rem;
+  background: color-mix(in lab, var(--vscode-foreground) 18%, transparent);
+}
+
+.home-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--vscode-progressBar-background);
+}
+
+.home-health-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin: 0.3rem 0;
+  font-size: 1.2rem;
+}
+
+.home-health-row button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.home-settings {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.home-settings label {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--vscode-descriptionForeground);
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.home-settings input,
+.home-settings select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  border-radius: 0.3rem;
+  background: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  font: inherit;
+}
+
+.home-settings input:focus,
+.home-settings select:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+}
+
+.home-list {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.home-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 1.2rem;
+}
+
+.muted {
+  color: var(--vscode-descriptionForeground);
+}
+
+.home-more {
+  display: grid;
+  gap: 0.2rem;
+}
+
+@media (max-width: 250px) {
+  body {
+    padding: 0.6rem;
+  }
+
+  .home-header {
+    flex-direction: column;
+  }
+
+  .home-btn--full {
+    width: 100%;
+  }
+}

@@ -3,22 +3,27 @@ import type { MetadataShard } from "./project-types.js";
 import { isResearchMapping } from "./research-mapping.js";
 import { readAnalysisTargetState } from "./target-state.js";
 
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Accept only arrays whose elements are strings. */
 function isStringList(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
+/** Accept finite integers without requiring safe-integer range. */
 function isInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value);
 }
 
+/** Accept JavaScript safe integers only. */
 function isSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 
+/** Accept any non-null object, including arrays, for state field enumeration. */
 function isStateRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -64,8 +69,8 @@ const CLASSIFICATIONS = [
 /**
  * Require the editable record shape before accessing it. General project validation supplements
  * these checks with address-space bounds, codec constraints, and evidence-reference validation.
- * @param {MetadataShard} shard Collection selected by the caller.
- * @param {unknown} record Candidate native record.
+ * @param shard Collection selected by the caller.
+ * @param record Candidate native record.
  */
 export const validateEditableMetadataRecord = (shard: MetadataShard, record: unknown): void => {
   if (

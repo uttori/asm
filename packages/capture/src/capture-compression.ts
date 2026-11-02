@@ -9,8 +9,8 @@ const chunkBytes = 262144;
  * Require one dictionary-free, single-segment Zstandard frame with the declared size.
  * Checking the frame before decoding bounds its window and rejects trailing/concatenated
  * frames that some decompressors would otherwise accept as additional evidence.
- * @param {Buffer} frame Stored payload, already protected by the ACT2 checksum.
- * @param {number} decodedBytes Required output bytes, at most 262080.
+ * @param frame Stored payload, already protected by the ACT2 checksum.
+ * @param decodedBytes Required output bytes, at most 262080.
  */
 function validateFrame(frame: Buffer, decodedBytes: number): void {
   if (frame.length < 6 || frame.readUInt32LE(0) !== 0xfd2fb528) {
@@ -68,8 +68,8 @@ function validateFrame(frame: Buffer, decodedBytes: number): void {
  * Validate physical framing/CRC and restore a canonical raw ACT2 chunk. Raw input is
  * returned as a borrowed view; compressed input owns a new bounded buffer. CRC covers
  * stored bytes, including flags and both lengths; semantic record checks follow decoding.
- * @param {Uint8Array} bytes One complete stored chunk.
- * @returns {Buffer} Original event bytes with the canonical raw envelope/checksum.
+ * @param bytes One complete stored chunk.
+ * @returns Original event bytes with the canonical raw envelope/checksum.
  */
 export function decodeCaptureChunkBytes(bytes: Uint8Array): Buffer {
   if (bytes.length < 64 || bytes.length > chunkBytes) {
@@ -119,8 +119,8 @@ export function decodeCaptureChunkBytes(bytes: Uint8Array): Buffer {
 /**
  * Store a validated raw chunk as an independent level-3 Zstandard frame. Incompressible
  * data borrows the raw input unchanged, so encoded chunks never exceed the old bound.
- * @param {Uint8Array} bytes Raw ACT2 envelope and records; never modified.
- * @returns {Buffer} Encoded chunk, or a borrowed raw view when compression would expand it.
+ * @param bytes Raw ACT2 envelope and records; never modified.
+ * @returns Encoded chunk, or a borrowed raw view when compression would expand it.
  */
 export function compressCaptureChunk(bytes: Uint8Array): Buffer {
   const raw = decodeCaptureChunkBytes(bytes);

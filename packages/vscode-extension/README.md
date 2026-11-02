@@ -42,7 +42,7 @@ This example demonstrates assembly. It is not a bootable game. For NES / 6502 pr
 - `includeAsset` format/option completion, path navigation, image thumbnails, and WAVE/BRR comparison previews.
 
 Run **Assembly Source: Create Git Source Project** (or **Create Git Source Project from Diz Research**).
-The **Source Project** tree shows a **Next** action and an ordered **Update Source from Evidence** flow:
+**Home** shows a **Next** action and an ordered **Update Source from Evidence** flow:
 
 1. **Analyze Evidence** after importing captures or changing analysis research.
 2. **Prepare Regeneration** to generate an incoming candidate.
@@ -59,12 +59,13 @@ It requires no Git commit and does not incorporate new evidence. If an input cha
 the error names the affected files, offers **Save All and Rebuild**, and links to **Uttori Analysis**
 output for details. Unchanged save notifications and unrelated evidence/output files do not reject a build.
 
-**Analysis Coverage** shows the original ROM bytes still consumed from raw blocks and their percentage,
-using a compact summary from the last successful build. It counts only included slices, including
+**Home → Health** shows the original ROM bytes still consumed from raw blocks and their percentage,
+using a compact summary from the last successful build, alongside index readiness and error counts.
+It counts only included slices, including
 repeated or relocated slices once; retaining a whole raw block file does not make the whole block
 unconverted. Instructions, typed data, headers and converted assets account for the remaining bytes.
 Added ROM capacity does not change the original-ROM denominator. Build Current Source updates the
-summary. The view checks saved input hashes in the background and marks source or asset drafts as
+summary. Home checks saved input hashes in the background and marks source or asset drafts as
 stale; unavailable verification is labeled explicitly. Older builds need one rebuild to record totals.
 Runtime annotations, **Sources**, and the command-palette **Explain Analysis Evidence** action remain
 independent of build conversion progress.
@@ -79,12 +80,12 @@ backend/runtime. The extension builds that workspace and supplies the verified R
 fixed `program`/`debugMap` paths are unnecessary. A failed build cancels launch. Build & Run,
 Build & Debug and Watch use the same selected source workflow.
 
-The **Capture** group in Source Project exposes **Start Capture**, **Stop Capture**, and **Stop
-Capture and Import Evidence**. Launch either an ares golden-ROM or Git source debug session,
+**Home → Capture** exposes **Start Capture**, **Stop Capture**, and **Stop
+Capture and Import Evidence** while a debug session exists or a recording is active. Launch either an ares golden-ROM or Git source debug session,
 choose the recording file, then Continue (F5) to record execution. Stop finalizes the archive and
 offers import; Stop and Import also imports it into the selected source project. Recording and
 finalization state stays visible, including recordings started from the command palette. The
-Source Project title also has Record/Stop buttons during an ares debug session.
+Home title also has Record/Stop buttons during an ares debug session.
 
 **Import Captures** accepts multiple ACT2 or JSON archives. Files import sequentially, with the
 filename and queue position in the notification and **Uttori Analysis** Output log. Merge updates

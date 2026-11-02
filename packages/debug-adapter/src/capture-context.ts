@@ -3,11 +3,18 @@ import { createReadStream } from "node:fs";
 import { lstat, open, readdir, readFile, link, unlink } from "node:fs/promises";
 import path from "node:path";
 
-import type { CaptureFileMetadata, CaptureFileSummary,CaptureRequestV2,CaptureTransportV2 } from "@uttori/asm-capture";
+import type {
+  CaptureFileMetadata,
+  CaptureFileSummary,
+  CaptureRequestV2,
+  CaptureTransportV2,
+} from "@uttori/asm-capture";
 
+/** Narrows unknown JSON values to plain objects. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Computes SHA-256 of a file using streaming reads. */
 const digestFile = async (file: string, signal?: AbortSignal): Promise<string> => {
   const hash = createHash("sha256");
   for await (const bytes of createReadStream(file, { signal })) {
@@ -19,17 +26,24 @@ const digestFile = async (file: string, signal?: AbortSignal): Promise<string> =
   return hash.digest("hex");
 };
 
-/** Context is enabled by default. The explicit false option is for trace-only
- * benchmarks and producers without the local context protocol. */
+/**
+ * Context is enabled by default. The explicit false option is for trace-only
+ * benchmarks and producers without the local context protocol.
+ */
 export interface CaptureContextOptions {
+  /** When false, skips companion context recording for trace-only producers. */
   readonly context?: boolean;
 }
 
-/** Coordinates paused context boundaries with either ACT2 sink. The native
+/**
+ * Coordinates paused context boundaries with either ACT2 sink. The native
  * companion writes into a newly reserved directory; manifest.json is published
- * only after the ACT2 archive and every companion file are complete and synced. */
+ * only after the ACT2 archive and every companion file are complete and synced.
+ */
 export class CaptureContextRecorder {
+  /** Reserved directory receiving companion context artifacts. */
   readonly directory: string;
+  /** Capture transport wrapping native calls with context prepare/start/stop. */
   readonly transport: CaptureTransportV2;
   readonly #metadata: CaptureFileMetadata;
   readonly #native: CaptureTransportV2;
@@ -111,9 +125,10 @@ export class CaptureContextRecorder {
     };
   }
 
-  /** Publish integrity hashes and trace-relative boundaries after primary publication.
+  /**
+   * Publish integrity hashes and trace-relative boundaries after primary publication.
    * Failures retain all files without claiming a complete context bundle.
-   * @param {CaptureFileSummary} summary Completed primary archive whose session/counters must match.
+   * @param summary Completed primary archive whose session/counters must match.
    */
   async finish(summary: CaptureFileSummary): Promise<void> {
     const boundaries: unknown = JSON.parse(

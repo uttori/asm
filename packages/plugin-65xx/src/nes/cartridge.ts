@@ -1,22 +1,35 @@
 /** A byte range in the complete cartridge file. End is exclusive. */
 export interface NesSection {
+  /** Byte offset from the start of the cartridge image. */
   readonly offset: number;
+  /** Section length in bytes; the end offset is exclusive. */
   readonly size: number;
 }
 
 /** Parsed legacy iNES cartridge. Byte access returns copies, preserving the original input identity. */
 export class NesCartridge {
   readonly #bytes: Uint8Array;
+  /** iNES mapper number derived from the header. */
   readonly mapper: number;
+  /** Whether the header advertises battery-backed PRG RAM. */
   readonly battery: boolean;
+  /** Nametable mirroring mode declared in the header. */
   readonly mirroring: "horizontal" | "vertical" | "four-screen";
+  /** Optional 512-byte trainer section immediately after the header. */
   readonly trainer: NesSection;
+  /** PRG ROM section layout within the image. */
   readonly prg: NesSection;
+  /** CHR ROM section layout within the image. */
   readonly chr: NesSection;
+  /** Bytes after PRG and CHR, when present in the supplied image. */
   readonly trailing: NesSection;
   /** Legacy zero means unspecified; mapper-specific defaults belong to the machine profile. */
   readonly declaredPrgRamSize: number | undefined;
 
+  /**
+   * Parse a complete iNES image and freeze section layout derived from the header.
+   * @param input Full cartridge bytes including the 16-byte header.
+   */
   constructor(input: Uint8Array) {
     this.#bytes = Uint8Array.from(input);
     const bytes = this.#bytes;
@@ -53,15 +66,29 @@ export class NesCartridge {
     this.trailing = Object.freeze({ offset: end, size: bytes.length - end });
   }
 
+  /** Total byte length of the parsed cartridge image. */
   get size(): number {
     return this.#bytes.length;
   }
+  /**
+   * Copy the full cartridge image so callers cannot mutate the parsed original.
+   * @returns Defensive copy of all cartridge bytes.
+   */
   bytes(): Uint8Array {
     return this.#bytes.slice();
   }
+  /**
+   * Copy the 16-byte iNES header prefix.
+   * @returns Header bytes independent of the internal buffer.
+   */
   header(): Uint8Array {
     return this.#bytes.slice(0, 16);
   }
+  /**
+   * Copy one parsed section range from the cartridge image.
+   * @param section Offset and size describing a contiguous cartridge range.
+   * @returns Bytes for the requested section only.
+   */
   section(section: NesSection): Uint8Array {
     return this.#bytes.slice(section.offset, section.offset + section.size);
   }

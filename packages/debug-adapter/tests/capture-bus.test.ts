@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, writeFile, rm, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -384,34 +383,4 @@ test("recovery rejects cross-chunk clock regressions and terminal scope changes"
   const recovered = await recoverCaptureFile(file);
   t.false(recovered.complete);
   t.regex(recovered.reason!, /scope changed/);
-});
-
-test("native bus producer and TypeScript decoder agree on full chunks and partial-instruction stop", (t) => {
-  const lines = execFileSync(
-    "sh",
-    ["packages/debug-sidecar-ares/native/capture-bus/check-wire.sh"],
-    { encoding: "utf8", maxBuffer: 2 * 1024 * 1024 },
-  )
-    .trim()
-    .split("\n");
-  validateCaptureCapabilities(JSON.parse(lines[0]), busScope);
-  const start = validateCapturePosition(JSON.parse(lines[1]), undefined, busScope);
-  const first = decodeCaptureChunk(Buffer.from(lines[2], "hex"), start.session, busScope);
-  const last = decodeCaptureChunk(Buffer.from(lines[3], "hex"), start.session, busScope);
-  t.is(first.accesses.length, 4095);
-  t.is(last.first, "4096");
-  t.is(last.accesses.length, 5);
-  t.true(
-    first.accesses.every(
-      (a) => a.ordinal === "1" && a.context === "instruction" && a.pc === 0x808000,
-    ),
-  );
-  t.deepEqual(
-    first.accesses.slice(0, 5).map((a) => a.phase),
-    ["cpu", "dma", "hdma-table", "hdma-indirect", "hdma-transfer"],
-  );
-  t.is(
-    validateCapturePosition(JSON.parse(lines[4]), start.session, busScope).producedThrough,
-    "4100",
-  );
 });

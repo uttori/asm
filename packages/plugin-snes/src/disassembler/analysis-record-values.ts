@@ -10,9 +10,9 @@ import type { SuperFxAbstractState } from "./superfx-state.js";
 
 /**
  * Confirms `key` is an own field so a mapped key object can be read without an assertion.
- * @param {T} value Object whose keys are exactly the fields to copy.
- * @param {string} key Candidate field name from `Object.keys`.
- * @returns {boolean} True when `key` is an own property of `value`.
+ * @param value Object whose keys are exactly the fields to copy.
+ * @param key Candidate field name from `Object.keys`.
+ * @returns True when `key` is an own property of `value`.
  */
 function isOwnKey<T extends object>(value: T, key: string): key is Extract<keyof T, string> {
   return Object.hasOwn(value, key);
@@ -21,8 +21,8 @@ function isOwnKey<T extends object>(value: T, key: string): key is Extract<keyof
 /**
  * Lists every field of `T`. The argument's keys and values must both be those field names,
  * so a missing or extra analyzer field fails typechecking instead of being dropped from a record.
- * @param {{ readonly [K in keyof T]: K }} keys Field-name identity.
- * @returns {readonly (keyof T)[]} Field names in source order.
+ * @param keys Field-name identity.
+ * @returns Field names in source order.
  */
 function completeKeys<T extends object>(keys: {
   readonly [K in keyof T]: K;
@@ -38,9 +38,9 @@ function completeKeys<T extends object>(keys: {
 
 /**
  * Copies named fields into a plain record. Nested values keep their runtime identity.
- * @param {T} value Source object.
- * @param {readonly (keyof T)[]} keys Fields to copy, in record order.
- * @returns {Readonly<Record<string, unknown>>} A shallow field copy.
+ * @param value Source object.
+ * @param keys Fields to copy, in record order.
+ * @returns A shallow field copy.
  */
 function knownFieldRecord<T extends object>(
   value: T,
@@ -81,8 +81,8 @@ const superFxStateFields = completeKeys<SuperFxAbstractState>({
 
 /**
  * Copies 65816 abstract state into an analysis-record field.
- * @param {Cpu65816AbstractState} state Incoming or outgoing analyzer state.
- * @returns {Readonly<Record<string, unknown>>} Plain record of the tracked fields.
+ * @param state Incoming or outgoing analyzer state.
+ * @returns Plain record of the tracked fields.
  */
 export function cpu65816StateRecord(
   state: Cpu65816AbstractState,
@@ -92,8 +92,8 @@ export function cpu65816StateRecord(
 
 /**
  * Copies SPC700 abstract state into an analysis-record field.
- * @param {Spc700AbstractState} state Incoming or outgoing analyzer state.
- * @returns {Readonly<Record<string, unknown>>} Plain record of the tracked fields.
+ * @param state Incoming or outgoing analyzer state.
+ * @returns Plain record of the tracked fields.
  */
 export function spc700StateRecord(state: Spc700AbstractState): Readonly<Record<string, unknown>> {
   return knownFieldRecord(state, spc700StateFields);
@@ -101,8 +101,8 @@ export function spc700StateRecord(state: Spc700AbstractState): Readonly<Record<s
 
 /**
  * Copies SuperFX abstract state into an analysis-record field.
- * @param {SuperFxAbstractState} state Incoming or outgoing analyzer state.
- * @returns {Readonly<Record<string, unknown>>} Plain record of the tracked fields.
+ * @param state Incoming or outgoing analyzer state.
+ * @returns Plain record of the tracked fields.
  */
 export function superFxStateRecord(state: SuperFxAbstractState): Readonly<Record<string, unknown>> {
   return knownFieldRecord(state, superFxStateFields);
@@ -110,8 +110,8 @@ export function superFxStateRecord(state: SuperFxAbstractState): Readonly<Record
 
 /**
  * Copies coverage counters into the summary record.
- * @param {StaticCoverageSummary} coverage Worklist coverage.
- * @returns {Readonly<Record<string, number>>} Plain numeric record.
+ * @param coverage Worklist coverage.
+ * @returns Plain numeric record.
  */
 export function coverageRecord(coverage: StaticCoverageSummary): Readonly<Record<string, number>> {
   return {
@@ -125,8 +125,8 @@ export function coverageRecord(coverage: StaticCoverageSummary): Readonly<Record
 
 /**
  * Copies one effective address, omitting fields the analyzer left unset.
- * @param {StaticEffectiveAddress} address Memory operand description.
- * @returns {Readonly<Record<string, unknown>>} Plain record.
+ * @param address Memory operand description.
+ * @returns Plain record.
  */
 function effectiveAddressRecord(
   address: StaticEffectiveAddress,
@@ -144,8 +144,8 @@ function effectiveAddressRecord(
 
 /**
  * Copies effective addresses into analysis-record fields.
- * @param {readonly StaticEffectiveAddress[]} addresses Memory operands for one instruction.
- * @returns {readonly Readonly<Record<string, unknown>>[]} Plain records in the same order.
+ * @param addresses Memory operands for one instruction.
+ * @returns Plain records in the same order.
  */
 export function effectiveAddressRecords(
   addresses: readonly StaticEffectiveAddress[],
@@ -155,8 +155,8 @@ export function effectiveAddressRecords(
 
 /**
  * Copies an incomplete-reason object into the summary record.
- * @param {StaticAnalysisIncompleteReason} reason Why the worklist stopped.
- * @returns {Readonly<Record<string, unknown>>} Plain record.
+ * @param reason Why the worklist stopped.
+ * @returns Plain record.
  */
 function incompleteReasonRecord(
   reason: StaticAnalysisIncompleteReason,
@@ -171,8 +171,8 @@ function incompleteReasonRecord(
 
 /**
  * Copies incomplete reasons into the summary record.
- * @param {readonly StaticAnalysisIncompleteReason[]} reasons Worklist stop reasons.
- * @returns {readonly Readonly<Record<string, unknown>>[]} Plain records in the same order.
+ * @param reasons Worklist stop reasons.
+ * @returns Plain records in the same order.
  */
 export function incompleteReasonRecords(
   reasons: readonly StaticAnalysisIncompleteReason[],

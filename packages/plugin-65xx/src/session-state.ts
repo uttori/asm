@@ -11,22 +11,29 @@ export const NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
  * cannot inherit an open overlay.
  */
 export interface Nes65xxSessionState {
+  /** Parsed or declared header bytes. */
   readonly header: readonly number[];
+  /** Byte used to prefill unused PRG and header gaps. */
   readonly fillByte: number;
+  /** Parsed ld65 configuration driving NES section placement. */
   readonly linker: Ld65Config;
   /** Next load address per MEMORY region, keyed by region name. */
   memoryCursors: Record<string, number>;
+  /** Active ca65 segment name while emitting object bytes. */
   currentSegment: string | null;
+  /** MEMORY region receiving the active segment load address. */
   currentLoadMemory: string | null;
+  /** Load address where the current segment began. */
   segmentLoadStart: number;
+  /** Run address where the current segment began. */
   segmentRunStart: number;
 }
 
 /**
  * Attaches the compile-time session-state brand. The brand is not a runtime property;
  * a non-empty id is the only value `SessionStateStore` reads.
- * @param {{ readonly id: string }} value Key candidate.
- * @returns {boolean} True when the id can identify a session slot.
+ * @param value Key candidate.
+ * @returns True when the id can identify a session slot.
  */
 function isSessionStateKey<T>(value: { readonly id: string }): value is SessionStateKey<T> {
   return value.id.length > 0;
@@ -34,8 +41,8 @@ function isSessionStateKey<T>(value: { readonly id: string }): value is SessionS
 
 /**
  * Builds the branded NES session slot key.
- * @param {string} id Plugin-owned slot id.
- * @returns {SessionStateKey<T>} Key for `SessionStateStore.get`.
+ * @param id Plugin-owned slot id.
+ * @returns Key for `SessionStateStore.get`.
  */
 function createSessionStateKey<T>(id: string): SessionStateKey<T> {
   const key = { id };
@@ -51,8 +58,8 @@ export const nes65xxSessionStateKey =
 
 /**
  * Deep-clones mutable nested fields so pass clones cannot share cursors.
- * @param {Nes65xxSessionState} value The session state to clone.
- * @returns {Nes65xxSessionState} A deep-cloned session state.
+ * @param value The session state to clone.
+ * @returns A deep-cloned session state.
  */
 export function cloneNes65xxSessionState(value: Nes65xxSessionState): Nes65xxSessionState {
   return {
@@ -64,8 +71,7 @@ export function cloneNes65xxSessionState(value: Nes65xxSessionState): Nes65xxSes
 
 /**
  * Resets per-stage allocation so `.segment` walks MEMORY from the start again.
- * @param {Nes65xxSessionState} state Mutable NES session state.
- * @returns {void}
+ * @param state Mutable NES session state.
  */
 export function resetNes65xxStageState(state: Nes65xxSessionState): void {
   state.memoryCursors = {};

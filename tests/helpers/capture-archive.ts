@@ -34,11 +34,11 @@ const jsonFrame = (magic: string, value: unknown): Buffer => {
 
 /**
  * Write deterministic instruction frames and durable checkpoints for benchmarks and integration tests.
- * @param {string} file New temporary archive; an existing file is never overwritten.
- * @param {number} events Non-negative event count. Instructions loop over 256 PCs and 1024 A values.
- * @param {number} chunkEvents Events per frame, from 1 through the ACT2 bound of 3854.
- * @param {string} romContentSha256 Optional test-project ROM identity; no ROM bytes enter the archive.
- * @returns {Promise<void>} Complete archive, closed before readers run.
+ * @param file New temporary archive; an existing file is never overwritten.
+ * @param events Non-negative event count. Instructions loop over 256 PCs and 1024 A values.
+ * @param chunkEvents Events per frame, from 1 through the ACT2 bound of 3854.
+ * @param romContentSha256 Optional test-project ROM identity; no ROM bytes enter the archive.
+ * @returns Complete archive, closed before readers run.
  */
 export const writeCaptureFixture = async (
   file: string,

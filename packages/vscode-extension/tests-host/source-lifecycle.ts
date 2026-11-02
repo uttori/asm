@@ -7,14 +7,19 @@ import { sourceGit, sourceRepository, sourceContentHash } from "@uttori/asm-disa
 import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes/disassembler";
 import * as vscode from "vscode";
 
-/** Inspect the production tree through the disposable test entry, never a shipped command. */
+import type { SourceHomeProjection } from "../src/project/home-model.js";
+
+/** Inspect the production Home snapshot through the disposable test entry, never a shipped command. */
+async function sourceProjection(): Promise<SourceHomeProjection> {
+  const projection = await vscode.commands.executeCommand<SourceHomeProjection>(
+    "uttori.tests.sourceTree",
+  );
+  assert.ok(projection);
+  return projection;
+}
+
 async function treeCommands(): Promise<string[]> {
-  const rows =
-    await vscode.commands.executeCommand<{ label: string; command?: string }[]>(
-      "uttori.tests.sourceTree",
-    );
-  assert.ok(rows);
-  return rows.flatMap((row) => (row.command ? [row.command] : []));
+  return (await sourceProjection()).commands;
 }
 
 /** Real-host prepare/preview/apply/finish with the full edited game and repeated/stale commands. */
@@ -70,13 +75,8 @@ export async function runSourceLifecycleSmoke(folder: vscode.WorkspaceFolder): P
     const savedBytes = fs.readFileSync(file);
     await vscode.commands.executeCommand("uttori.tests.buildMutation", relative);
     assert.ok(await vscode.commands.executeCommand("asm.source.build"));
-    const builtRows = await vscode.commands.executeCommand<
-      { command?: string; description?: string }[] | undefined
-    >("uttori.tests.sourceTree");
-    assert.equal(
-      builtRows?.find((row) => row.command === "asm.source.build")?.description,
-      "verified",
-    );
+    const built = await sourceProjection();
+    assert.equal(built.build, "verified");
     checks.push(
       "Unchanged saved-file notification during build is accepted by consumed-byte hashes",
     );
@@ -117,13 +117,10 @@ export async function runSourceLifecycleSmoke(folder: vscode.WorkspaceFolder): P
       "4c15013131351e694e05f22e38bb1b3e4031dedac77ec75abecebe8520d82d5f",
     );
     assert.ok(!(await treeCommands()).includes("asm.source.apply"));
-    const preparedRows = await vscode.commands.executeCommand<
-      { label: string; collapsibleState?: vscode.TreeItemCollapsibleState }[] | undefined
-    >("uttori.tests.sourceTree");
-    assert.equal(
-      preparedRows?.find((row) => row.label.startsWith("Incoming Generation"))?.collapsibleState,
-      vscode.TreeItemCollapsibleState.Collapsed,
-    );
+    const preparedHome = await sourceProjection();
+    assert.equal(preparedHome.incoming.previewed, false);
+    assert.ok(preparedHome.incoming.collapsed);
+    assert.ok(preparedHome.candidate);
     checks.push("Apply is hidden until a preview exists; pure generation matches the original ROM");
     const checkpoint = (await sourceGit(root, ["rev-parse", "HEAD"])).stdout.toString();
     console.log("Source lifecycle: preview and rejected Apply without a checkpoint");

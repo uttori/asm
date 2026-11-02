@@ -2,11 +2,13 @@ import type { DebugRegister } from "./contracts.js";
 
 /** Result of evaluating one stopped-frame debugger expression. */
 export interface DebugExpressionResult {
+  /** Evaluated integer magnitude. */
   readonly value: bigint;
   /** Preserved only when the complete expression is a register reference. */
   readonly bits?: number;
 }
 
+/** Lexeme produced while scanning a debugger expression. */
 type Token =
   | { readonly type: "number"; readonly value: bigint }
   | { readonly type: "identifier"; readonly value: string }
@@ -42,6 +44,7 @@ const binaryPrecedence: Readonly<Partial<Record<string, number>>> = Object.freez
   "**": 6,
 });
 
+/** Rejects results outside the supported 256-bit magnitude window. */
 const checked = (value: bigint): bigint => {
   if (value > MAX_MAGNITUDE || value < -MAX_MAGNITUDE) {
     throw new Error("Debugger expression result exceeds 256 bits.");
@@ -49,6 +52,7 @@ const checked = (value: bigint): bigint => {
   return value;
 };
 
+/** Parses digit text for the given radix into a bigint. */
 const parseDigits = (digits: string, radix: 2 | 10 | 16): bigint => {
   if (digits.length === 0) {
     throw new Error("Debugger expression contains an empty number.");
@@ -62,6 +66,7 @@ const parseDigits = (digits: string, radix: 2 | 10 | 16): bigint => {
   return BigInt(digits);
 };
 
+/** Returns the per-radix digit class used while tokenizing numbers. */
 const digitPattern = (radix: 2 | 10 | 16): RegExp => {
   if (radix === 16) {
     return /[\dA-Fa-f]/;
@@ -72,6 +77,7 @@ const digitPattern = (radix: 2 | 10 | 16): RegExp => {
   return /\d/;
 };
 
+/** Scans one expression string into postfix-ready tokens with bounds checks. */
 const tokenize = (expression: string): readonly Token[] => {
   if (expression.length === 0) {
     throw new Error("Debugger expression cannot be empty.");
@@ -158,6 +164,7 @@ const tokenize = (expression: string): readonly Token[] => {
   return tokens;
 };
 
+/** Recursive-descent parser over tokenized register expressions. */
 class DebugExpressionParser {
   readonly #tokens: readonly Token[];
   readonly #registers: readonly DebugRegister[];
@@ -168,6 +175,7 @@ class DebugExpressionParser {
     this.#registers = registers;
   }
 
+  /** Parses the full token stream into one evaluated result. */
   parse(): DebugExpressionResult {
     const result = this.#expression(0, 0);
     if (this.#peek().type !== "end") {
@@ -323,9 +331,9 @@ class DebugExpressionParser {
 
 /**
  * Evaluates a bounded, side-effect-free native integer expression against stopped registers.
- * @param {string} expression Native expression using register names and integer operators.
- * @param {readonly DebugRegister[]} registers Registers from the selected stopped frame.
- * @returns {DebugExpressionResult} Exact integer result and direct-register width, when applicable.
+ * @param expression Native expression using register names and integer operators.
+ * @param registers Registers from the selected stopped frame.
+ * @returns Exact integer result and direct-register width, when applicable.
  */
 export const evaluateDebugExpression = (
   expression: string,
@@ -335,8 +343,8 @@ export const evaluateDebugExpression = (
 
 /**
  * Formats a debugger integer without losing values above JavaScript's safe-number range.
- * @param {bigint} value Evaluated integer.
- * @returns {string} Signed hexadecimal display string.
+ * @param value Evaluated integer.
+ * @returns Signed hexadecimal display string.
  */
 export const formatDebugExpressionValue = (value: bigint): string =>
   value < 0n ? `-0x${(-value).toString(16)}` : `0x${value.toString(16)}`;

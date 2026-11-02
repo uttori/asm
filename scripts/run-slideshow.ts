@@ -24,8 +24,8 @@ const checksumMode = "simple";
 /**
  * Helper: Get file stats (size and checksum). If the file doesn't exist,
  * assume size is 0 and checksum is that of a 0-byte file.
- * @param {string} filePath The path to the file to get the stats of.
- * @returns {{ size: number; checksum: string }} The size and checksum of the file.
+ * @param filePath The path to the file to get the stats of.
+ * @returns The size and checksum of the file.
  */
 function getFileStats(filePath: string): { size: number; checksum: string } {
   if (!fs.existsSync(filePath)) {
@@ -41,8 +41,8 @@ function getFileStats(filePath: string): { size: number; checksum: string } {
 
 // Run CLI command for a given base filename (without extension)
 /**
- * @param {string} baseName The base name of the file to run the test on.
- * @returns {TestResult} The result of the test.
+ * @param baseName The base name of the file to run the test on.
+ * @returns The result of the test.
  */
 function runTest(baseName: string): TestResult {
   const asmFile = path.join(testsDir, `${baseName}.SRC`);

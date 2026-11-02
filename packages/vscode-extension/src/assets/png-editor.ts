@@ -19,6 +19,7 @@ import type { BinaryDrafts } from "./binary-drafts.js";
 import { PngCodec } from "./png-codec.js";
 import { PngDocument, type PixelStroke } from "./png-document.js";
 
+/** Narrow webview messages to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -43,6 +44,7 @@ function cancellationRequested(token: CancellationToken): boolean {
 /** Native binary-document lifecycle around a bounded indexed PNG canvas. */
 export class PngEditor implements CustomEditorProvider<PngDocument> {
   readonly #edited = new EventEmitter<CustomDocumentEditEvent<PngDocument>>();
+  /** Fired when a paint stroke creates a new custom-document undo element. */
   readonly onDidChangeCustomDocument = this.#edited.event;
   constructor(
     readonly extensionUri: Uri,
@@ -50,6 +52,7 @@ export class PngEditor implements CustomEditorProvider<PngDocument> {
     readonly drafts: BinaryDrafts,
   ) {}
 
+  /** Open or restore a PNG custom document and wire filesystem watchers. */
   async openCustomDocument(
     uri: Uri,
     context: CustomDocumentOpenContext,
@@ -95,6 +98,7 @@ export class PngEditor implements CustomEditorProvider<PngDocument> {
     return document;
   }
 
+  /** Bind the indexed canvas webview to document paint and refresh events. */
   resolveCustomEditor(document: PngDocument, panel: WebviewPanel): void {
     panel.webview.options = {
       enableScripts: true,
@@ -135,12 +139,14 @@ export class PngEditor implements CustomEditorProvider<PngDocument> {
     });
     panel.webview.html = renderWebviewTemplate(panel.webview, this.extensionUri, "indexed-png");
   }
+  /** Persist in-memory indexes to the document URI unless cancelled. */
   async saveCustomDocument(document: PngDocument, token: CancellationToken): Promise<void> {
     if (token.isCancellationRequested) {
       throw new Error("PNG save cancelled.");
     }
     await document.save(document.uri, () => token.isCancellationRequested);
   }
+  /** Write encoded PNG bytes to a new local destination. */
   async saveCustomDocumentAs(
     document: PngDocument,
     destination: Uri,
@@ -151,9 +157,11 @@ export class PngEditor implements CustomEditorProvider<PngDocument> {
     }
     await document.save(destination, () => token.isCancellationRequested);
   }
+  /** Reload indexes from disk, discarding unsaved pixel edits. */
   async revertCustomDocument(document: PngDocument): Promise<void> {
     await document.revert();
   }
+  /** Write VS Code backup JSON for an open PNG draft. */
   async backupCustomDocument(
     document: PngDocument,
     context: CustomDocumentBackupContext,
@@ -174,6 +182,7 @@ export class PngEditor implements CustomEditorProvider<PngDocument> {
       },
     };
   }
+  /** Release custom-document change events when the provider is torn down. */
   dispose(): void {
     this.#edited.dispose();
   }

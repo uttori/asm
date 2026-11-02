@@ -10,29 +10,45 @@ import type {
 
 /** Qualified location; an absent count means observations were not requested or unavailable. */
 export interface EditorLocation {
+  /** Address space id from the debug map. */
   readonly addressSpace: string;
+  /** Offset within the address space. */
   readonly address: number;
+  /** Whether the location refers to file output rather than CPU space. */
   readonly file: boolean;
+  /** Observed execution total when counts were requested. */
   readonly executionCount?: number;
 }
 
 /** Facts for one source line in one artifact/project context. Never merge counts across groups. */
 export interface LineInformation {
+  /** Stable artifact key used when multiple contexts share one line. */
   readonly identity: string;
+  /** Human label prefixed when several contexts are shown together. */
   readonly label: string;
+  /** Debug-map ranges backing this line. */
   readonly ranges: readonly DebugMapRange[];
+  /** Qualified output/CPU locations for template fields. */
   readonly locations: readonly EditorLocation[];
+  /** Instructions contributing operand and execution facts. */
   readonly instructions: readonly DebugMapInstruction[];
+  /** Emitted ROM bytes when byte placeholders are enabled. */
   readonly bytes?: readonly number[];
+  /** Total emitted size when it differs from the byte preview. */
   readonly outputSize?: number;
+  /** Analysis annotations supplying state and runtime evidence. */
   readonly annotations?: readonly InstructionAnalysisAnnotation[];
+  /** Whether detail queries were truncated for this snapshot. */
   readonly limited?: boolean;
 }
 
 /** Provider requirements compiled from selected placeholders, independent of presentation order. */
 export interface InformationRequirements {
+  /** Execution-count placeholders appear in the selected templates. */
   readonly counts: boolean;
+  /** Output-byte placeholders appear in the selected templates. */
   readonly bytes: boolean;
+  /** Project or runtime state placeholders appear in the selected templates. */
   readonly state: boolean;
 }
 
@@ -56,14 +72,15 @@ export type InformationTemplate = readonly (
   | { readonly field: string }
 )[];
 
+/** Accept built-in placeholders and explicit project/runtime state field paths. */
 const isField = (field: string): boolean =>
   Object.hasOwn(INFORMATION_FIELDS, field) ||
   /^(project_state|runtime_state)\.[A-Za-z]\w*$/.test(field);
 
 /**
  * Parse placeholders once per settings revision. `$${` escapes a literal `${`.
- * @param {string} text Template of at most 2048 characters; invalid fields throw.
- * @returns {InformationTemplate} Literal/field tokens with no executable expressions.
+ * @param text Template of at most 2048 characters; invalid fields throw.
+ * @returns Literal/field tokens with no executable expressions.
  */
 export const compileTemplate = (text: string): InformationTemplate => {
   if (text.length > 2048) {
@@ -102,8 +119,8 @@ export const compileTemplate = (text: string): InformationTemplate => {
 
 /**
  * Avoid database/detail/byte work unless the selected surface requires those facts.
- * @param {readonly InformationTemplate[]} templates Compiled fields for one surface.
- * @returns {InformationRequirements} Minimum provider work needed to render those templates.
+ * @param templates Compiled fields for one surface.
+ * @returns Minimum provider work needed to render those templates.
  */
 export const templateRequirements = (
   templates: readonly InformationTemplate[],
@@ -122,9 +139,9 @@ export const templateRequirements = (
 
 /**
  * Assembly notation; large and negative values are preserved rather than bitwise truncated.
- * @param {number} value Numeric operand/address in its original domain.
- * @param {number} digits Minimum hexadecimal digit count, default four.
- * @returns {string} Signed assembly hexadecimal without width truncation.
+ * @param value Numeric operand/address in its original domain.
+ * @param digits Minimum hexadecimal digit count, default four.
+ * @returns Signed assembly hexadecimal without width truncation.
  */
 export const informationHex = (value: number, digits = 4): string => {
   const sign = value < 0 ? "-" : "";
@@ -133,17 +150,17 @@ export const informationHex = (value: number, digits = 4): string => {
 
 /**
  * Reserve the final character for an ellipsis when a complete surface exceeds its budget.
- * @param {string} value Fully joined text.
- * @param {number} maximum Positive character budget including the ellipsis.
- * @returns {string} Text bounded once after composition.
+ * @param value Fully joined text.
+ * @param maximum Positive character budget including the ellipsis.
+ * @returns Text bounded once after composition.
  */
 const clip = (value: string, maximum: number): string =>
   value.length <= maximum ? value : `${value.slice(0, maximum - 1)}…`;
 
 /**
  * Stable order is shared by offsets and compact counts; unknown counts never become zero.
- * @param {LineInformation} info One qualified artifact/project context.
- * @returns {readonly EditorLocation[]} File locations followed by sorted logical locations.
+ * @param info One qualified artifact/project context.
+ * @returns File locations followed by sorted logical locations.
  */
 export const orderedLocations = (info: LineInformation): readonly EditorLocation[] =>
   [...info.locations].toSorted(
@@ -153,6 +170,7 @@ export const orderedLocations = (info: LineInformation): readonly EditorLocation
       a.address - b.address,
   );
 
+/** Disambiguate address spaces when file and CPU rows share one template line. */
 const locationLabel = (location: EditorLocation, locations: readonly EditorLocation[]): string => {
   const spaces = new Set(
     locations.filter((entry) => entry.file === location.file).map((entry) => entry.addressSpace),
@@ -161,6 +179,7 @@ const locationLabel = (location: EditorLocation, locations: readonly EditorLocat
   return spaces.size > 1 ? `${location.addressSpace}:${address}` : address;
 };
 
+/** Narrow structured state values before reading known/unknown envelopes. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -177,10 +196,10 @@ function jsonText(value: unknown): string | undefined {
  * Render analysis values for overlays, preserving the distinction between absent (∅) and unknown
  * (?) state.
  * Compact fields omit structured values; detailed evidence can retain canonical JSON capped at 60 characters.
- * @param {unknown} value State value or canonicalizable fallback data.
- * @param {boolean} [present] Whether the field exists; defaults to true.
- * @param {boolean} [includeStructures] Retain structured fallback data for detailed evidence; defaults to false.
- * @returns {string | undefined} Present scalar text, or an optional bounded structured value.
+ * @param value State value or canonicalizable fallback data.
+ * @param [present] Whether the field exists; defaults to true.
+ * @param [includeStructures] Retain structured fallback data for detailed evidence; defaults to false.
+ * @returns Present scalar text, or an optional bounded structured value.
  */
 const stateValue = (
   value: unknown,
@@ -216,9 +235,9 @@ const stateValue = (
 
 /**
  * Resolve a registered field conservatively; scalar shortcuts disappear for ambiguous emissions.
- * @param {string} field Validated placeholder name.
- * @param {LineInformation} info Facts for one artifact/project context.
- * @returns {string | undefined} Formatted field; undefined suppresses its whole template fragment.
+ * @param field Validated placeholder name.
+ * @param info Facts for one artifact/project context.
+ * @returns Formatted field; undefined suppresses its whole template fragment.
  */
 export const informationField = (field: string, info: LineInformation): string | undefined => {
   const locations = orderedLocations(info);
@@ -304,9 +323,9 @@ export const informationField = (field: string, info: LineInformation): string |
 
 /**
  * Missing fields suppress their complete fragment, including literal labels and punctuation.
- * @param {InformationTemplate} template Validated literal/field tokens.
- * @param {LineInformation} info Facts from one current snapshot.
- * @returns {string | undefined} Interpolated text, or undefined when a required field is missing.
+ * @param template Validated literal/field tokens.
+ * @param info Facts from one current snapshot.
+ * @returns Interpolated text, or undefined when a required field is missing.
  */
 export const renderTemplate = (
   template: InformationTemplate,
@@ -329,11 +348,11 @@ export const renderTemplate = (
 
 /**
  * Apply one total display budget after grouping, so duplicate records cannot multiply the limit.
- * @param {readonly LineInformation[]} infos Distinct artifact/project contexts for one line.
- * @param {readonly InformationTemplate[]} templates Selected fragments in display order.
- * @param {string} separator Inserted only between surviving fragments.
- * @param {number} maximum Total positive character budget, including the ellipsis.
- * @returns {string} Bounded presentation with context labels when required.
+ * @param infos Distinct artifact/project contexts for one line.
+ * @param templates Selected fragments in display order.
+ * @param separator Inserted only between surviving fragments.
+ * @param maximum Total positive character budget, including the ellipsis.
+ * @returns Bounded presentation with context labels when required.
  */
 export const renderInformation = (
   infos: readonly LineInformation[],
@@ -358,10 +377,10 @@ export const renderInformation = (
 
 /**
  * Join surviving fragments and bound the whole surface, including multi-record debugger results.
- * @param {readonly string[]} parts Already formatted fragments; empty entries are omitted.
- * @param {string} separator Delimiter between nonempty fragments.
- * @param {number} maximum Positive total character budget, including an ellipsis.
- * @returns {string} Bounded display text, or empty text when no fragments survive.
+ * @param parts Already formatted fragments; empty entries are omitted.
+ * @param separator Delimiter between nonempty fragments.
+ * @param maximum Positive total character budget, including an ellipsis.
+ * @returns Bounded display text, or empty text when no fragments survive.
  */
 export const joinInformation = (
   parts: readonly string[],
@@ -372,8 +391,8 @@ export const joinInformation = (
 /**
  * Describe an operand address with its symbol, unresolved base, and volatility so a base is
  * never presented as a resolved access.
- * @param {InstructionEffectiveAddressAnnotation} address Persisted operand address and resolution evidence.
- * @returns {string} Operand identity with base/volatile qualifiers when applicable.
+ * @param address Persisted operand address and resolution evidence.
+ * @returns Operand identity with base/volatile qualifiers when applicable.
  */
 const effectiveAddressText = (address: InstructionEffectiveAddressAnnotation): string => {
   const resolved = address.address ?? address.baseAddress;
@@ -385,8 +404,8 @@ const effectiveAddressText = (address: InstructionEffectiveAddressAnnotation): s
 
 /**
  * Format a state change with separate absent-value markers for missing before/after fields.
- * @param {InstructionStateTransitionAnnotation} transition Before/after state evidence for one processor field.
- * @returns {string} Field transition with explicit missing-value markers.
+ * @param transition Before/after state evidence for one processor field.
+ * @returns Field transition with explicit missing-value markers.
  */
 const transitionText = (transition: InstructionStateTransitionAnnotation): string =>
   `Δ${transition.field} ${stateValue(transition.before, "before" in transition, true)}→${stateValue(transition.after, "after" in transition, true)}`;
@@ -394,8 +413,8 @@ const transitionText = (transition: InstructionStateTransitionAnnotation): strin
 /**
  * Render an observed state in stable field order with its evidence source and optional
  * observation count.
- * @param {InstructionStateObservationAnnotation} observation State fields, evidence source, and optional occurrence count.
- * @returns {string} Stable field listing with provenance and count.
+ * @param observation State fields, evidence source, and optional occurrence count.
+ * @returns Stable field listing with provenance and count.
  */
 const stateText = (observation: InstructionStateObservationAnnotation): string => {
   const fields = Object.entries(observation.state)
@@ -408,8 +427,8 @@ const stateText = (observation: InstructionStateObservationAnnotation): string =
 /**
  * Describe a memory access with actor/channel, qualified address, byte width, and count; unknown
  * access modes remain visible as ?.
- * @param {InstructionMemoryAccessAnnotation} access Qualified access evidence with byte width and observation count.
- * @returns {string} Compact actor, access mode, address, value, width, and count.
+ * @param access Qualified access evidence with byte width and observation count.
+ * @returns Compact actor, access mode, address, value, width, and count.
  */
 const accessText = (access: InstructionMemoryAccessAnnotation): string => {
   let mode = "?";
@@ -435,9 +454,9 @@ const accessText = (access: InstructionMemoryAccessAnnotation): string => {
 /**
  * Fixed debugger/navigation evidence presentation, independent of resource-scoped editor templates.
  * Empty means the instruction has no user-facing evidence; full details remain available to the inspector.
- * @param {InstructionAnalysisAnnotation} annotation Projected instruction analysis.
- * @param {number} maximumLength Maximum returned character count.
- * @returns {string} Compact target-neutral annotation text.
+ * @param annotation Projected instruction analysis.
+ * @param maximumLength Maximum returned character count.
+ * @returns Compact target-neutral annotation text.
  */
 export const formatInstructionAnnotationSummary = (
   annotation: InstructionAnalysisAnnotation,
@@ -466,8 +485,8 @@ export const formatInstructionAnnotationSummary = (
 
 /**
  * Plain-text inspector detail retaining supplied identities and provenance, including preview limits.
- * @param {InstructionAnalysisAnnotation} annotation Projected instruction analysis.
- * @returns {string} Multiline target-neutral annotation detail.
+ * @param annotation Projected instruction analysis.
+ * @returns Multiline target-neutral annotation detail.
  */
 export const formatInstructionAnnotationDetails = (
   annotation: InstructionAnalysisAnnotation,
@@ -544,9 +563,9 @@ export type InformationSection = (typeof INFORMATION_SECTIONS)[number];
 
 /**
  * Render one inspector section without mutating its cached facts or exposing unrelated histories.
- * @param {LineInformation} info One qualified artifact/project context.
- * @param {InformationSection} section Selected detail category; Summary uses only shallow fields.
- * @returns {string} Plain text ready for the controller's pagination and document display.
+ * @param info One qualified artifact/project context.
+ * @param section Selected detail category; Summary uses only shallow fields.
+ * @returns Plain text ready for the controller's pagination and document display.
  */
 export const renderInformationSection = (
   info: LineInformation,

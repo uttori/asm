@@ -200,6 +200,7 @@ export class SqliteRuntimeTraceBatch implements RuntimeTracePublicationSink {
     this.#rows = 0;
   }
 
+  /** Flush pending rows and drop the staging table; throws if a paired state is still missing or the transaction ended. */
   finish(): void {
     if (this.#finished || !this.#db.isTransaction) {
       throw new Error("Runtime trace batch is no longer active.");

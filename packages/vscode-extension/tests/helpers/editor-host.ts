@@ -132,6 +132,7 @@ registerHooks({
         changes=[];replace(uri,range,newText){this.changes.push([uri,{range,newText}]);}
         get size(){return this.changes.length;}entries(){return this.changes.map(([uri,edit])=>[uri,[edit]]);}
       }
+      export const EndOfLine={LF:1,CRLF:2};
       export const TreeItemCollapsibleState={None:0,Collapsed:1,Expanded:2};
       export class TreeItem {constructor(label,collapsibleState){Object.assign(this,{label,collapsibleState});}}
       export const FileType={File:1,Directory:2};
@@ -171,7 +172,7 @@ registerHooks({
   },
 });
 
-const { Uri: NativeUri, Position, Range } = await import("vscode");
+const { Uri: NativeUri, Position, Range, EndOfLine } = await import("vscode");
 
 /** A minimal real text-document contract, with mutable version/text to model an edit during a worker reply. */
 export function document(
@@ -187,7 +188,7 @@ export function document(
     isUntitled: false,
     isDirty: false,
     isClosed: false,
-    eol: 1,
+    eol: EndOfLine.LF,
     encoding: "utf8",
     text,
     get lineCount() {

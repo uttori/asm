@@ -199,6 +199,7 @@ function assumptionFor(
   }
   return result;
 }
+/** Enforces fixup range and alignment after the symbol value is known. */
 function checkValue(
   value: number,
   bounds: { readonly minimum?: number; readonly maximum?: number; readonly alignment?: number },

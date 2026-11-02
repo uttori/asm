@@ -25,8 +25,8 @@ export const IDENTIFIER_CHAR = /[\w!]/;
 
 /**
  * Converts an absolute file path to a file URI string.
- * @param {string} filePath The absolute path.
- * @returns {DocumentUri} The file URI.
+ * @param filePath The absolute path.
+ * @returns The file URI.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#uri
  */
 export function pathToUri(filePath: string): DocumentUri {
@@ -35,18 +35,19 @@ export function pathToUri(filePath: string): DocumentUri {
 
 /**
  * Converts a file URI string to an absolute file path.
- * @param {DocumentUri} uri The file URI.
- * @returns {string} The absolute path.
+ * @param uri The file URI.
+ * @returns The absolute path.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#uri
  */
 export function uriToPath(uri: DocumentUri): string {
   return fileURLToPath(uri);
 }
 
-/** Find the typed asset call on a protocol line without opening its binary input.
- * @param {string} text Open document text.
- * @param {Position} position Cursor position.
- * @returns {ParsedAssetCall | undefined} Complete call when parseable.
+/**
+ * Find the typed asset call on a protocol line without opening its binary input.
+ * @param text Open document text.
+ * @param position Cursor position.
+ * @returns Complete call when parseable.
  */
 export function assetCallAt(text: string, position: Position): ParsedAssetCall | undefined {
   const line = assetLineAt(text, position.line);
@@ -56,19 +57,21 @@ export function assetCallAt(text: string, position: Position): ParsedAssetCall |
   return assetCallOnLine(line, position.line);
 }
 
-/** An argument span includes its closing quote for cursor navigation.
- * @param {AssetValueNode} node Parsed asset value.
- * @param {number} character Zero-based cursor column.
- * @returns {boolean} Whether the cursor is on the value.
+/**
+ * An argument span includes its closing quote for cursor navigation.
+ * @param node Parsed asset value.
+ * @param character Zero-based cursor column.
+ * @returns Whether the cursor is on the value.
  */
 export function assetSpanContains(node: AssetValueNode, character: number): boolean {
   return character >= node.span.start && character <= node.span.end;
 }
 
-/** Find a primary or declared resource path under the cursor.
- * @param {ParsedAssetCall} call Parsed statement.
- * @param {number} character Zero-based cursor column.
- * @returns {string | undefined} User-spelled path when selected.
+/**
+ * Find a primary or declared resource path under the cursor.
+ * @param call Parsed statement.
+ * @param character Zero-based cursor column.
+ * @returns User-spelled path when selected.
  */
 /** Option names that the statement did not write are absent. */
 export function assetOption(
@@ -80,8 +83,8 @@ export function assetOption(
 
 /**
  * Converts a core source range to an LSP range.
- * @param {SourceRange} range The core range.
- * @returns {Range} The LSP range.
+ * @param range The core range.
+ * @returns The LSP range.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#range
  */
 export function toRange(range: SourceRange): Range {
@@ -90,8 +93,8 @@ export function toRange(range: SourceRange): Range {
 
 /**
  * Returns a fallback range for an artifact lacking precise geometry.
- * @param {number} line The zero-based line number.
- * @returns {Range} An empty range at the line start, using line zero for invalid line numbers.
+ * @param line The zero-based line number.
+ * @returns An empty range at the line start, using line zero for invalid line numbers.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#range
  */
 export function lineFallbackRange(line: number): Range {
@@ -134,12 +137,12 @@ export function lineAt(lines: readonly string[], line: number): string | undefin
  * Recomputes a token's range in the raw document so it does not inherit the
  * column offset introduced by command normalization (which strips leading
  * whitespace and comments).
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path containing the token.
- * @param {number} line The zero-based line number.
- * @param {string} name The token text to locate.
- * @param {Range} fallback The range to use when the token cannot be located.
- * @returns {Range} A new raw range on a match; otherwise the original fallback object by identity.
+ * @param index The workspace index.
+ * @param file The absolute file path containing the token.
+ * @param line The zero-based line number.
+ * @param name The token text to locate.
+ * @param fallback The range to use when the token cannot be located.
+ * @returns A new raw range on a match; otherwise the original fallback object by identity.
  */
 export function preciseRange(
   index: WorkspaceIndex,
@@ -187,12 +190,12 @@ export function preciseRange(
  * Like {@link preciseRange}, but prefers a define-sigil match (`!name`) so
  * hover, find-references, and semantic tokens highlight the full `!version`
  * token. Falls back to the bare name when the sigil is absent.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path containing the token.
- * @param {number} line The zero-based line number.
- * @param {string} name The token text to locate.
- * @param {Range} fallback The range to use when the token cannot be located.
- * @returns {Range} The precise range.
+ * @param index The workspace index.
+ * @param file The absolute file path containing the token.
+ * @param line The zero-based line number.
+ * @param name The token text to locate.
+ * @param fallback The range to use when the token cannot be located.
+ * @returns The precise range.
  */
 export function preciseRangeWithSigil(
   index: WorkspaceIndex,
@@ -220,8 +223,8 @@ export function preciseRangeWithSigil(
 /**
  * Strips a leading define sigil so `!version` lookups match stored `version`,
  * and leading dots so `.timer` matches stored `timer`.
- * @param {string} word The word to lookup.
- * @returns {string} The word without the sigil or leading dots.
+ * @param word The word to lookup.
+ * @returns The word without the sigil or leading dots.
  */
 export function lookupNameFor(word: string): string {
   const withoutSigil = word.startsWith("!") ? word.slice(1) : word;
@@ -231,9 +234,9 @@ export function lookupNameFor(word: string): string {
 /**
  * Returns whether a stored symbol/reference name matches a cursor word,
  * accepting both `version` and `!version` for define tokens.
- * @param {string} stored The stored symbol/reference name.
- * @param {string} word The cursor word.
- * @returns {boolean} Whether the names match.
+ * @param stored The stored symbol/reference name.
+ * @param word The cursor word.
+ * @returns Whether the names match.
  */
 export function namesMatch(stored: string, word: string): boolean {
   return lookupNameFor(stored) === lookupNameFor(word) || stored === word;
@@ -244,11 +247,11 @@ export function namesMatch(stored: string, word: string): boolean {
  * left by an in-flight rename, such as `unk1E` becoming `unk1E__WE`.
  * A single underscore ends the extension to preserve compound-label segments;
  * a suffix starting with a double underscore is kept as part of the token.
- * @param {string} rawLine The raw source line.
- * @param {string} name The stored token text to locate.
- * @param {number} line The zero-based line number.
- * @param {Range} fallback The range to use when the token cannot be located.
- * @returns {Range} A new range extended through identifier characters, or the original fallback object.
+ * @param rawLine The raw source line.
+ * @param name The stored token text to locate.
+ * @param line The zero-based line number.
+ * @param fallback The range to use when the token cannot be located.
+ * @returns A new range extended through identifier characters, or the original fallback object.
  */
 export function rangeForTokenOnLine(
   rawLine: string,
@@ -281,9 +284,9 @@ export function rangeForTokenOnLine(
 /**
  * Finds the column of a token on a line, preferring whole-token matches that
  * are not inside a line comment.
- * @param {string} lineText The raw line text.
- * @param {string} name The token to locate.
- * @returns {number} Whole-token column, otherwise the first non-comment substring match, or -1.
+ * @param lineText The raw line text.
+ * @param name The token to locate.
+ * @returns Whole-token column, otherwise the first non-comment substring match, or -1.
  */
 export function findTokenColumn(lineText: string, name: string): number {
   if (!name) {
@@ -316,9 +319,9 @@ export function findTokenColumn(lineText: string, name: string): number {
 /**
  * Finds a compound-label suffix (`8053` in `_018049_8053`) so dotted
  * references can highlight the undotted use-site segment.
- * @param {string} lineText The raw line text.
- * @param {string} segment The suffix without a leading dot or underscore.
- * @returns {number} The zero-based column of the suffix, or -1.
+ * @param lineText The raw line text.
+ * @param segment The suffix without a leading dot or underscore.
+ * @returns The zero-based column of the suffix, or -1.
  */
 export function findCompoundSuffixColumn(lineText: string, segment: string): number {
   if (!segment) {
@@ -345,9 +348,9 @@ export function findCompoundSuffixColumn(lineText: string, segment: string): num
 /**
  * Extracts a quoted string, unquoted include path, or identifier-like word at a position.
  * Token ends are accepted so a cursor immediately after a token can still resolve it.
- * @param {string} text The document text.
- * @param {Position} position The cursor position.
- * @returns {string | undefined} The word, or undefined when none is present.
+ * @param text The document text.
+ * @param position The cursor position.
+ * @returns The word, or undefined when none is present.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#position
  */
 export function wordAt(text: string, position: Position): string | undefined {
@@ -380,9 +383,9 @@ export function wordAt(text: string, position: Position): string | undefined {
  * Returns the unquoted path argument of an include-like directive when the
  * cursor falls within it. This handles filenames containing hyphens and other
  * characters that the standard word-boundary pattern would break on.
- * @param {string} line The line text.
- * @param {number} character The 0-based column.
- * @returns {string | undefined} The full path token, or undefined.
+ * @param line The line text.
+ * @param character The 0-based column.
+ * @returns The full path token, or undefined.
  */
 export function unquotedIncludePathAt(line: string, character: number): string | undefined {
   const match = /^\s*(?:incsrc|incbin|include)\s+(\S+)/i.exec(line);
@@ -398,9 +401,9 @@ export function unquotedIncludePathAt(line: string, character: number): string |
 
 /**
  * Returns the contents of a quoted string if the cursor is inside it.
- * @param {string} line The line text.
- * @param {number} character The 0-based column.
- * @returns {string | undefined} The unquoted string, or undefined.
+ * @param line The line text.
+ * @param character The 0-based column.
+ * @returns The unquoted string, or undefined.
  */
 export function quotedStringAt(line: string, character: number): string | undefined {
   for (const quote of ['"', "'", "`"]) {
@@ -425,10 +428,10 @@ export function quotedStringAt(line: string, character: number): string | undefi
 
 /**
  * Returns the identifier word under the cursor using the file's current text.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @returns {string | undefined} The word, or undefined.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @returns The word, or undefined.
  */
 export function cursorWord(
   index: WorkspaceIndex,
@@ -446,8 +449,8 @@ export function cursorWord(
 /**
  * Splits a compound identifier on `_`, keeping a leading `.` / `_` on the first
  * part. `.idx_beginner` → `[".idx", "beginner"]`. `_018049_8053` → `["_018049", "8053"]`.
- * @param {string} word The identifier text.
- * @returns {string[]} The source segments.
+ * @param word The identifier text.
+ * @returns The source segments.
  */
 export function splitHierarchicalSource(word: string): string[] {
   const prefixMatch = /^[._]+/.exec(word);
@@ -468,10 +471,10 @@ export function splitHierarchicalSource(word: string): string[] {
  * Finds symbols that could be the leaf of a compound identifier. Dotted locals
  * like `.idx_beginner` are stored as `Parent_idx_beginner`, not under the source
  * spelling, so we also accept an FQ name that ends with `_${lookup}`.
- * @param {AssemblySymbolDefinition[]} symbols Every known symbol.
- * @param {string} word The compound identifier.
- * @param {string} file The file containing the cursor.
- * @returns {AssemblySymbolDefinition[]} Candidate leaves ranked by same-file preference and name length.
+ * @param symbols Every known symbol.
+ * @param word The compound identifier.
+ * @param file The file containing the cursor.
+ * @returns Candidate leaves ranked by same-file preference and name length.
  */
 export function compoundLeafCandidates(
   symbols: AssemblySymbolDefinition[],
@@ -488,8 +491,8 @@ export function compoundLeafCandidates(
     : [];
   /**
    * Biases matching locals toward the cursor's file, then toward more specific qualified names.
-   * @param {AssemblySymbolDefinition} symbol Candidate compound-label leaf.
-   * @returns {number} Descending sort score; same-file candidates receive a large fixed bonus.
+   * @param symbol Candidate compound-label leaf.
+   * @returns Descending sort score; same-file candidates receive a large fixed bonus.
    */
   const rank = (symbol: AssemblySymbolDefinition): number => {
     const inFile = symbol.location.file === file ? 1 : 0;
@@ -500,9 +503,9 @@ export function compoundLeafCandidates(
 
 /**
  * Walks `containerName` from a leaf toward the root, stopping at a missing parent or repeated name.
- * @param {AssemblySymbolDefinition[]} symbols Every known symbol.
- * @param {AssemblySymbolDefinition} leaf The leaf symbol.
- * @returns {string[]} Names from root to leaf.
+ * @param symbols Every known symbol.
+ * @param leaf The leaf symbol.
+ * @returns Names from root to leaf.
  */
 export function hierarchyChainForSymbol(
   symbols: AssemblySymbolDefinition[],
@@ -523,10 +526,10 @@ export function hierarchyChainForSymbol(
  * Returns whether `parts` match the tail of an FQ hierarchy. This rejects
  * underscore-in-name labels such as `.difficulty_offset` that are not nested
  * `..offset` children of `.difficulty`.
- * @param {string[]} chain Root-to-leaf FQ names.
- * @param {string[]} parts Source segments from {@link splitHierarchicalSource}.
- * @param {number} chainOffset Index in `chain` aligned with `parts[0]`.
- * @returns {boolean} Whether each source part is a real hierarchy step.
+ * @param chain Root-to-leaf FQ names.
+ * @param parts Source segments from {@link splitHierarchicalSource}.
+ * @param chainOffset Index in `chain` aligned with `parts[0]`.
+ * @returns Whether each source part is a real hierarchy step.
  */
 export function hierarchyAligns(chain: string[], parts: string[], chainOffset: number): boolean {
   if (chainOffset < 0 || chainOffset + parts.length > chain.length) {
@@ -557,11 +560,10 @@ export function hierarchyAligns(chain: string[], parts: string[], chainOffset: n
 /**
  * Resolves a compound identifier to its source parts and aligned FQ chain, or
  * undefined when the underscores are just part of a single label name.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The file containing the identifier.
- * @param {string | undefined} word The identifier text.
- * @returns {{ parts: string[]; chain: string[]; chainOffset: number } | undefined}
- *   The alignment, if this is a real hierarchy.
+ * @param index The workspace index.
+ * @param file The file containing the identifier.
+ * @param word The identifier text.
+ * @returns The alignment, if this is a real hierarchy.
  */
 export function alignedHierarchy(
   index: WorkspaceIndex,
@@ -598,11 +600,11 @@ export function alignedHierarchy(
 /**
  * When the cursor is inside a compound label (`_018049_8053` or `.idx_beginner`),
  * returns the parent or `.sublabel` segment under the cursor.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @param {string | undefined} word The full identifier under the cursor.
- * @returns {string | undefined} The segment, or undefined when not compound.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @param word The full identifier under the cursor.
+ * @returns The segment, or undefined when not compound.
  */
 export function hierarchicalSegmentAt(
   index: WorkspaceIndex,
@@ -648,11 +650,11 @@ export function hierarchicalSegmentAt(
  * Resolves the reference under the cursor, preferring exact range containment
  * and falling back to a line-and-name match (normalized spans can be column
  * shifted relative to the raw document).
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @param {string | undefined} word The identifier word under the cursor.
- * @returns {AssemblySymbolReference | undefined} The reference, if any.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @param word The identifier word under the cursor.
+ * @returns The reference, if any.
  */
 export function cursorReference(
   index: WorkspaceIndex,
@@ -687,11 +689,11 @@ export function cursorReference(
 /**
  * Resolves the definition under the cursor, with the same fallback strategy as
  * {@link cursorReference}.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @param {string | undefined} word The identifier word under the cursor.
- * @returns {AssemblySymbolDefinition | undefined} The symbol, if any.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @param word The identifier word under the cursor.
+ * @returns The symbol, if any.
  */
 export function cursorSymbol(
   index: WorkspaceIndex,
@@ -723,9 +725,9 @@ export function cursorSymbol(
 
 /**
  * Computes the precise raw range for a symbol definition.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {AssemblySymbolDefinition} symbol The symbol definition.
- * @returns {Range} The precise range.
+ * @param index The workspace index.
+ * @param symbol The symbol definition.
+ * @returns The precise range.
  */
 export function definitionRange(index: WorkspaceIndex, symbol: AssemblySymbolDefinition): Range {
   const fallbackRange = locationRange(symbol.location);
@@ -746,9 +748,9 @@ export function definitionRange(index: WorkspaceIndex, symbol: AssemblySymbolDef
 
 /**
  * Computes the precise raw range for a symbol reference.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {AssemblySymbolReference} reference The symbol reference.
- * @returns {Range} The precise range.
+ * @param index The workspace index.
+ * @param reference The symbol reference.
+ * @returns The precise range.
  */
 export function referenceRange(index: WorkspaceIndex, reference: AssemblySymbolReference): Range {
   const fallbackRange = locationRange(reference.location);
@@ -765,10 +767,10 @@ export function referenceRange(index: WorkspaceIndex, reference: AssemblySymbolR
 /**
  * Resolves an include using this file's graph edges, then probes disk beside the source and in
  * include paths. Graph matches accept a basename fallback for analysis-normalized target names.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The file issuing the include.
- * @param {string} target The include target token.
- * @returns {string | undefined} The first matching graph path or existing disk candidate, if any.
+ * @param index The workspace index.
+ * @param file The file issuing the include.
+ * @param target The include target token.
+ * @returns The first matching graph path or existing disk candidate, if any.
  */
 export function resolveIncludeTarget(
   index: WorkspaceIndex,

@@ -11,10 +11,12 @@ const SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   PRIMARY KEY(collection,id)
 ) WITHOUT ROWID;`;
 
+/** Narrow to a non-null, non-array object. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Allowlist of research collections whose names may be used as SQL identifiers. */
 function isResearchCollection(value: string): value is ResearchCollection {
   return (
     value === "labels" ||

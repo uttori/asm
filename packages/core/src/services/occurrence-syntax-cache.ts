@@ -21,10 +21,12 @@ export class OccurrenceSyntaxCache<T> {
     return `${this.atom(grammar)}:${this.atom(file)}:${line}:${this.atom(family)}`;
   }
 
+  /** Looks up parsed syntax cached for one physical occurrence and exact source text. */
   get(grammar: string, file: string, line: number, family: string, text: string): T | undefined {
     return this.scopes.get(this.scope(grammar, file, line, family))?.get(text);
   }
 
+  /** Stores parsed syntax under the occurrence scope and original text key. */
   set(grammar: string, file: string, line: number, family: string, text: string, value: T): void {
     const key = this.scope(grammar, file, line, family);
     let entries = this.scopes.get(key);

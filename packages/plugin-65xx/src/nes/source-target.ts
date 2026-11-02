@@ -38,6 +38,7 @@ interface SourceLayout {
   readonly extents: readonly unknown[];
 }
 
+/** Require a layout object whose ROM hash matches the opened project. */
 function assertSourceLayout(value: unknown, romSha256: string): asserts value is SourceLayout {
   if (
     typeof value !== "object" ||
@@ -61,9 +62,12 @@ function assertSourceLayout(value: unknown, romSha256: string): asserts value is
   }
 }
 
+/** True for a plain object that can hold JSON object fields. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+/** True when the value is an array whose elements still need their own checks. */
 const isUnknownArray = (value: unknown): value is readonly unknown[] => Array.isArray(value);
+/** True when every element is a string. */
 const isStringArray = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
 /** Read compact contracts with explicit size limits before parsing untrusted workspace JSON. */
@@ -256,6 +260,7 @@ async function inspectBuiltinProject(
   });
 }
 
+/** Run a NES graphics query against the project's imported captures. */
 function graphicsNesProject(project: SourceProject, operation: SourceTargetOperation) {
   const repository = project.repository;
   if (project.configuration.target !== "65xx.nes") {

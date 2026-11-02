@@ -2,9 +2,10 @@
 import { parseAssetCall, type ParsedAssetCall } from "@uttori/asm-core";
 import { preprocessBlockCommands } from "@uttori/asm-core/frontend";
 
-/** Strip an assembly comment without cutting semicolons inside quoted paths.
- * @param {string} line Source line.
- * @returns {string} Statement text without its comment.
+/**
+ * Strip an assembly comment without cutting semicolons inside quoted paths.
+ * @param line Source line.
+ * @returns Statement text without its comment.
  */
 export function assetStatementLine(line: string): string {
   let quote: string | undefined;
@@ -26,10 +27,11 @@ export function assetStatementLine(line: string): string {
   return line.trimEnd();
 }
 
-/** Parse a complete one-line asset statement for hover, navigation and preview requests.
- * @param {string} line Source line.
- * @param {number} lineNumber Zero-based source line.
- * @returns {ParsedAssetCall | undefined} Parsed call, or undefined while incomplete.
+/**
+ * Parse a complete one-line asset statement for hover, navigation and preview requests.
+ * @param line Source line.
+ * @param lineNumber Zero-based source line.
+ * @returns Parsed call, or undefined while incomplete.
  */
 export function assetCallOnLine(line: string, lineNumber: number): ParsedAssetCall | undefined {
   try {
@@ -57,10 +59,11 @@ export function assetCallContainingLine(
   return undefined;
 }
 
-/** Read a line from a protocol position without treating a binary dependency as source text.
- * @param {string} text Open document text.
- * @param {number} lineNumber Zero-based source line.
- * @returns {string | undefined} Selected line when in bounds.
+/**
+ * Read a line from a protocol position without treating a binary dependency as source text.
+ * @param text Open document text.
+ * @param lineNumber Zero-based source line.
+ * @returns Selected line when in bounds.
  */
 export function assetLineAt(text: string, lineNumber: number): string | undefined {
   if (!Number.isSafeInteger(lineNumber) || lineNumber < 0) {

@@ -15,47 +15,73 @@ import {
 
 /** Shard records produced by one offline runtime-evidence import. */
 export interface RuntimeEvidenceBatch {
+  /** Analysis shard records produced by the import. */
   readonly analysis?: readonly AnalysisRecord[];
+  /** Annotation shard records produced by the import. */
   readonly annotations?: readonly IntervalAnnotation[];
+  /** Label shard records produced by the import. */
   readonly labels?: readonly ProjectLabel[];
+  /** Comment shard records produced by the import. */
   readonly comments?: readonly ProjectComment[];
+  /** Region shard records produced by the import. */
   readonly regions?: readonly ProjectRegion[];
+  /** Runtime evidence records produced by the import. */
   readonly runtime?: readonly RuntimeEvidenceRecord[];
+  /** Evidence provenance records produced by the import. */
   readonly evidence?: readonly EvidenceRecord[];
+  /** Import reports describing the captured artifact. */
   readonly imports?: readonly ImportReport[];
 }
 
 /** One differing value observed at the same runtime fact location. */
 export interface RuntimeConflictValue {
+  /** Observed runtime state or opcode value at the conflict site. */
   readonly value: RuntimeStateValue;
+  /** Runtime record ids that reported this value. */
   readonly records: readonly string[];
+  /** Evidence ids supporting those runtime records. */
   readonly evidence: readonly string[];
 }
 
 /** Deterministic, non-destructive report of mutually different observations. */
 export interface RuntimeEvidenceConflict {
+  /** Stable conflict id derived from the conflicting observations. */
   readonly id: string;
+  /** Whether the conflict compares CPU state, instruction size, or opcode bytes. */
   readonly kind: "cpu-state" | "instruction-size" | "opcode";
+  /** Architecture tag shared by the conflicting runtime records. */
   readonly architecture: string;
+  /** Address space containing the conflict site. */
   readonly addressSpace: string;
+  /** Instruction address where the conflicting values were observed. */
   readonly address: number;
+  /** Register or synthetic field name under comparison. */
   readonly field: string;
+  /** Distinct values observed at the site with their supporting records. */
   readonly values: readonly RuntimeConflictValue[];
 }
 
 /** Human-readable link between imported evidence and a derived project fact. */
 export interface RuntimeEvidenceExplanation {
+  /** Project record id receiving the derived fact. */
   readonly recordId: string;
+  /** Plain-language explanation of the runtime contribution. */
   readonly detail: string;
+  /** Runtime evidence ids justifying the explanation. */
   readonly evidence: readonly string[];
 }
 
 /** Result of an idempotent merge. The original project object is not mutated. */
 export interface RuntimeEvidenceMergeResult {
+  /** Merged shard collections after applying the runtime batch. */
   readonly shards: AnalysisProjectShards;
+  /** True when any shard changed during the merge. */
   readonly changed: boolean;
+  /** Per-shard counts of newly inserted records. */
   readonly added: Readonly<Record<keyof AnalysisProjectShards, number>>;
+  /** Per-shard counts of updated existing records. */
   readonly updated: Readonly<Record<keyof AnalysisProjectShards, number>>;
+  /** Per-shard counts of incoming records that matched existing ids. */
   readonly existing: Readonly<Record<keyof AnalysisProjectShards, number>>;
   /** Computed and cached on first access. May expand millions of per-register observations. */
   readonly conflicts: readonly RuntimeEvidenceConflict[];
@@ -63,6 +89,7 @@ export interface RuntimeEvidenceMergeResult {
   readonly explanations: readonly RuntimeEvidenceExplanation[];
 }
 
+/** Initialize per-shard merge counters to zero. */
 const emptyCounts = (): Record<keyof AnalysisProjectShards, number> => ({
   analysis: 0,
   annotations: 0,
@@ -74,11 +101,14 @@ const emptyCounts = (): Record<keyof AnalysisProjectShards, number> => ({
   imports: 0,
 });
 
+/** Sort and deduplicate stable string ids for deterministic merge output. */
 const sortedUnique = (values: readonly string[]): readonly string[] =>
   [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 
+/** Build a deterministic comparison key for runtime state values. */
 const stateValueKey = (value: RuntimeStateValue): string => `${typeof value}:${String(value)}`;
 
+/** One runtime observation participating in conflict detection. */
 interface ConflictObservation {
   readonly architecture: string;
   readonly addressSpace: string;
@@ -89,6 +119,7 @@ interface ConflictObservation {
   readonly evidence: readonly string[];
 }
 
+/** Derive deterministic CPU-state and execution conflicts from runtime records. */
 const conflictReport = (
   runtime: readonly RuntimeEvidenceRecord[],
 ): readonly RuntimeEvidenceConflict[] => {
@@ -186,6 +217,7 @@ const conflictReport = (
   return conflicts.toSorted((left, right) => left.id.localeCompare(right.id));
 };
 
+/** Link runtime evidence to derived annotations and target overrides. */
 const explanationReport = (
   shards: AnalysisProjectShards,
 ): readonly RuntimeEvidenceExplanation[] => {
@@ -227,6 +259,7 @@ const explanationReport = (
   return explanations.toSorted((left, right) => left.recordId.localeCompare(right.recordId));
 };
 
+/** Merge one shard by stable id, counting adds, updates, and unchanged records. */
 const mergeRecords = <T extends { readonly id: string }>(
   kind: keyof AnalysisProjectShards,
   prior: readonly T[],
@@ -277,9 +310,9 @@ const mergeRecords = <T extends { readonly id: string }>(
  * and are surfaced through `conflicts`. Diagnostic getters are lazy. Reading or serializing
  * them can require substantially more memory than merging the facts alone.
  * Collections without incoming records retain their input arrays. Treat all shared records as readonly.
- * @param {AnalysisProjectShards} shards Valid native project shards with unique IDs in each collection.
- * @param {RuntimeEvidenceBatch} batch Normalized imported and derived records.
- * @returns {RuntimeEvidenceMergeResult} New shards plus deterministic merge diagnostics.
+ * @param shards Valid native project shards with unique IDs in each collection.
+ * @param batch Normalized imported and derived records.
+ * @returns New shards plus deterministic merge diagnostics.
  */
 export const mergeRuntimeEvidence = (
   shards: AnalysisProjectShards,
@@ -386,8 +419,8 @@ export const mergeRuntimeEvidence = (
 
 /**
  * Recomputes conflict and provenance explanations for a previously merged project.
- * @param {AnalysisProjectShards} shards Native project shards to inspect.
- * @returns {Pick<RuntimeEvidenceMergeResult, "conflicts" | "explanations">} Stable diagnostics.
+ * @param shards Native project shards to inspect.
+ * @returns Stable diagnostics.
  */
 export const inspectRuntimeEvidence = (
   shards: AnalysisProjectShards,

@@ -23,8 +23,10 @@ import { editAssetCall, locateAssetCall } from "@uttori/asm-workflows/asset-sour
 
 import { readBossNativeReference } from "./assembly.js";
 
+/** Encode a JSON record as UTF-8 bytes with a trailing newline. */
 const json = (value: unknown): Uint8Array =>
   new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
+/** Path of `to` relative to the directory containing `from`, always using `/`. */
 const relative = (from: string, to: string): string =>
   path.relative(path.dirname(from), to).split(path.sep).join("/");
 
@@ -33,6 +35,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+/** True when the value is an array whose elements still need their own checks. */
 function isUnknownArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
 }

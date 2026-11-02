@@ -13,10 +13,12 @@ if (!parentPort) {
 const port = parentPort;
 let sequence = 0;
 const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
+/** Narrow IPC payloads to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Validate dirty-file sets forwarded from the extension host. */
 function isStringSet(value: unknown): value is ReadonlySet<string> {
   if (!(value instanceof Set)) {
     return false;
@@ -29,10 +31,12 @@ function isStringSet(value: unknown): value is ReadonlySet<string> {
   return true;
 }
 
+/** Validate one-based inclusive viewport ranges from IPC. */
 function isLineRange(value: unknown): value is InformationLineRange {
   return isRecord(value) && typeof value.start === "number" && typeof value.end === "number";
 }
 
+/** Validate placeholder requirement flags from IPC. */
 function isRequirements(value: unknown): value is InformationRequirements {
   return (
     isRecord(value) &&
@@ -42,6 +46,7 @@ function isRequirements(value: unknown): value is InformationRequirements {
   );
 }
 
+/** Validate debug-map discovery results forwarded by the host. */
 function isDiscoverMaps(
   value: unknown,
 ): value is readonly { file: string; sourceRoots: readonly string[] }[] {
@@ -57,6 +62,7 @@ function isDiscoverMaps(
   );
 }
 
+/** Validate one analysis manifest snapshot from the host. */
 function isEditorProjectManifest(value: unknown): value is EditorProjectManifest {
   return (
     isRecord(value) &&
@@ -71,6 +77,7 @@ function isEditorProjectManifest(value: unknown): value is EditorProjectManifest
   );
 }
 
+/** Validate the project list forwarded for annotation queries. */
 function isProjects(
   value: unknown,
 ): value is readonly { directory: string; manifest: EditorProjectManifest }[] {

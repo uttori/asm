@@ -29,9 +29,6 @@ export function assertTyped65xx<T>(assembler: Assembler, run: () => T): T {
       continue;
     }
     const typed = definition.encoder.typed;
-    if (!typed) {
-      throw new Error("65xx registration did not install a typed encoder.");
-    }
     const prepare = typed.prepare;
     const estimate = typed.estimate;
     const encode = typed.encode;

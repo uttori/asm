@@ -12,8 +12,10 @@ export class IndexWorkerClient {
   #revision = 0;
   #disposed = false;
   #active?: { readonly worker: Worker; readonly reject: (error: Error) => void };
+  /** Create a client that launches `index-worker.mjs` unless another worker URL is supplied. */
   constructor(readonly file = new URL("./index-worker.mjs", import.meta.url)) {}
 
+  /** Cancel the in-flight worker and bump the revision so its result is ignored. */
   invalidate(): void {
     this.#revision++;
     const active = this.#active;
@@ -24,6 +26,11 @@ export class IndexWorkerClient {
     }
   }
 
+  /**
+   * Run workspace analysis in a worker. A later call supersedes any in-flight result.
+   * @param settings Project environment used to configure the worker.
+   * @param overlays Open-buffer text keyed by absolute path.
+   */
   async analyze(
     settings: ProjectEnvironmentSettings,
     overlays: ReadonlyMap<string, string>,
@@ -63,7 +70,12 @@ export class IndexWorkerClient {
       this.#active = { worker, reject: (error) => finish(error) };
       worker.on(
         "message",
-        (message: { id?: unknown; error?: unknown; snapshot?: WorkspaceAnalysisSnapshot }) => {
+        (
+          message:
+            | { id?: unknown; error?: unknown; snapshot?: WorkspaceAnalysisSnapshot }
+            | null
+            | undefined,
+        ) => {
           if (id !== this.#revision || this.#disposed) {
             return;
           }
@@ -76,6 +88,7 @@ export class IndexWorkerClient {
           const snapshot = message.snapshot;
           if (
             !snapshot ||
+            // oxlint-disable-next-line typescript/no-unnecessary-condition -- Worker messages are structured-clone data validated before publication.
             snapshot.version !== WORKSPACE_ANALYSIS_SNAPSHOT_VERSION ||
             !Array.isArray(snapshot.roots) ||
             !Array.isArray(snapshot.files) ||
@@ -101,6 +114,7 @@ export class IndexWorkerClient {
     });
   }
 
+  /** Stop accepting analysis and terminate any in-flight worker. */
   dispose(): void {
     this.#disposed = true;
     this.invalidate();

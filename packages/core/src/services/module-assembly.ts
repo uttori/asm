@@ -20,12 +20,19 @@ interface SectionState extends Required<AssemblySectionOptions> {
 
 /** Owns in-memory section/symbol/fixup production; it performs no placement or object-file serialization. */
 export class ModuleAssembly {
+  /** Mutable section byte cursors keyed by section name. */
   readonly sections = new Map<string, SectionState>();
+  /** Module symbol table including imports, exports, and locals. */
   readonly symbols = new Map<string, AssemblyModuleSymbol>();
+  /** Pending relocation sites recorded during emission. */
   readonly fixups: AssemblyFixup[] = [];
+  /** Source ranges mapped to section offsets for debug metadata. */
   readonly ranges: AssemblyModuleRange[] = [];
+  /** Typed field metadata attached to emitted data. */
   readonly fields: import("../relocatable.js").AssemblyModuleField[] = [];
+  /** Asset emission records linked to module output. */
   readonly assets: import("../relocatable.js").AssemblyModuleAsset[] = [];
+  /** Instruction metadata captured for link-time validation. */
   readonly instructions: import("../relocatable.js").AssemblyModuleInstruction[] = [];
   private readonly definitions = new Map<string, RelocatableSource>();
   private readonly exports = new Set<string>();
@@ -116,6 +123,7 @@ export class ModuleAssembly {
     return { section: this.sectionName, offset };
   }
 
+  /** Kind of the currently selected section. */
   get sectionKind(): AssemblySectionOptions["kind"] {
     return this.current.kind;
   }
@@ -137,6 +145,7 @@ export class ModuleAssembly {
     return (alignment - (this.current.cursor % alignment)) % alignment;
   }
 
+  /** Builds a link expression pointing at the current module section offset. */
   location(offset = this.position().offset): LinkExpression {
     return { kind: "section", module: this.id, ...this.position(offset) };
   }
@@ -208,6 +217,7 @@ export class ModuleAssembly {
     });
   }
 
+  /** True when the symbol received a definition during the active stage. */
   isDefinedThisStage(name: string): boolean {
     return this.definitions.has(name);
   }
@@ -430,13 +440,14 @@ export class ModuleAssembly {
       instructions: this.instructions,
       sections: [...this.sections.values()]
         .filter((section) => section.size || section.name !== ".text")
-        .map(({ cursor: _cursor, bytes, ...section }) => ({
-          ...section,
-          bytes:
-            section.kind === "bss"
-              ? new Uint8Array()
-              : Uint8Array.from({ length: section.size }, (_, index) => bytes[index] ?? 0),
-        })),
+        .map(({ cursor: _cursor, bytes, ...section }) =>
+          Object.assign(section, {
+            bytes:
+              section.kind === "bss"
+                ? new Uint8Array()
+                : Uint8Array.from({ length: section.size }, (_, index) => bytes[index] ?? 0),
+          }),
+        ),
     });
   }
 }

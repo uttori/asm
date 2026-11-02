@@ -19,14 +19,17 @@ import {
 } from "@uttori/asm-disassembler/source-project";
 import { loadNesRom, nesResearchInputs } from "@uttori/asm-plugin-65xx/disassembler";
 
+/** True for a plain object that can hold JSON object fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** True when every element is a string. */
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((item): item is string => typeof item === "string");
 }
 
+/** True when the payload is a project label with identity, address, and evidence. */
 function isProjectLabel(value: unknown): value is ProjectLabel {
   if (
     !isRecord(value) ||
@@ -46,6 +49,7 @@ function isProjectLabel(value: unknown): value is ProjectLabel {
   );
 }
 
+/** True when the payload is a put/remove analysis or annotation record. */
 function isResearchAnalysisRecord(value: unknown): value is ResearchAnalysisRecord {
   if (
     !isRecord(value) ||
@@ -82,13 +86,21 @@ export type SourceResearchRequest =
 
 /** Compact picker/navigation data; original addresses remain valid after source relocation. */
 export interface SourceResearchSymbol {
+  /** Stable symbol identity that survives source relocation. */
   readonly id: string;
+  /** Primary symbol name written into research catalogs. */
   readonly name: string;
+  /** Source-relative or absolute file path. */
   readonly path: string;
+  /** Named address space the symbol occupies. */
   readonly addressSpace: string;
+  /** Logical bus or device address for the observation. */
   readonly address: number;
+  /** Additional names that resolve to the same symbol. */
   readonly aliases: readonly string[];
+  /** True when the symbol is hidden from generated source. */
   readonly suppressed: boolean;
+  /** True when static analysis should treat the address as an entry. */
   readonly entryPoint: boolean;
 }
 

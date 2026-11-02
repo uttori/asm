@@ -11,6 +11,7 @@
 - NES PPU bus/fetch/IRQ timelines, physical graphics reports and paused pattern/nametable/OAM inspection.
 - NES mapper-qualified research and indirect targets, direction-sensitive hardware names, and portable graphics selection with physical CPU evidence joins.
 - Famicom full machine contexts, controller input/screenshot companions and verified deterministic replay.
+- Relocatable objects, libraries and linked builds with Asar/ca65 source adapters and opt-in linked source generation.
 
 Requires VS Code 1.140.0 or newer. Bundled tools use the editor's runtime. Standalone npm tools
 require Node.js 26 or newer. Live emulator support depends on a compatible external ares runtime.

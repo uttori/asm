@@ -2,17 +2,23 @@ import { integer } from "./validation.js";
 
 /** Single-byte translation table; unmapped bytes use literal `\\xHH` escapes. */
 export interface SingleByteTextOptions {
+  /** Include common ASCII controls and printable bytes when true. */
   readonly ascii?: boolean;
+  /** Additional byte-to-token mappings keyed by hex or decimal literals. */
   readonly table?: Readonly<Record<string, string>>;
+  /** Optional trailing byte marking end-of-string in ROM. */
   readonly terminator?: number;
 }
 
 /** Termination is distinct from the visible text to preserve its native byte. */
 export interface SingleByteText {
+  /** Decoded visible text without the terminator byte. */
   readonly text: string;
+  /** Whether the source ended with the configured terminator. */
   readonly terminated: boolean;
 }
 
+/** Parse table keys written as decimal, `$hex`, or `0xhex`. */
 const parseByteKey = (key: string): number => {
   let value: number;
   if (/^\$[\da-f]+$/i.test(key)) {
@@ -27,6 +33,7 @@ const parseByteKey = (key: string): number => {
   return integer(value, `Text table byte '${key}'`, 0, 255);
 };
 
+/** Build prefix-free encode/decode tables from options. */
 const translation = (
   options: SingleByteTextOptions,
 ): { byteToToken: Map<number, string>; tokenToByte: readonly (readonly [string, number])[] } => {
@@ -63,10 +70,11 @@ const translation = (
   };
 };
 
-/** Decode native single-byte text without replacing unknown values.
- * @param {Uint8Array} bytes Borrowed source bytes.
- * @param {SingleByteTextOptions} options Translation table and optional terminator.
- * @returns {SingleByteText} Visible text plus whether the final byte was a terminator.
+/**
+ * Decode native single-byte text without replacing unknown values.
+ * @param bytes Borrowed source bytes.
+ * @param options Translation table and optional terminator.
+ * @returns Visible text plus whether the final byte was a terminator.
  */
 export function decodeSingleByteText(
   bytes: Uint8Array,
@@ -87,10 +95,11 @@ export function decodeSingleByteText(
   return { text, terminated };
 }
 
-/** Encode translated text, including explicit escapes and optional terminator.
- * @param {SingleByteText} value Visible text and termination state.
- * @param {SingleByteTextOptions} options Translation table and optional terminator.
- * @returns {Uint8Array} Owned native bytes.
+/**
+ * Encode translated text, including explicit escapes and optional terminator.
+ * @param value Visible text and termination state.
+ * @param options Translation table and optional terminator.
+ * @returns Owned native bytes.
  */
 export function encodeSingleByteText(
   value: SingleByteText,

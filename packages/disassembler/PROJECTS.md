@@ -1,7 +1,7 @@
 # Create, edit, back up, and verify a Git source project
 
 Requires Node.js 26+, Git with a configured author, and a SNES LoROM image you can use.
-Install `@uttori/asm-cli`, `@uttori/asm-disassembler`, and `@uttori/asm-plugin-snes`.
+Install `@uttori/asm-workflows` and `@uttori/asm-disassembler`.
 Save the example as `analysis-workflow.mjs`, then run `node analysis-workflow.mjs game.sfc ./review`
 with a new working directory. Change `mapper` for another supported mapping; copier headers are detected.
 

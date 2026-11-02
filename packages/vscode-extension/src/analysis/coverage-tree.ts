@@ -35,28 +35,28 @@ type CoverageTreeNode = {
 
 /**
  * Format an exact byte count with stable English grouping and singular/plural units.
- * @param {number} bytes Exact ROM-content byte count.
- * @returns {string} Grouped decimal count with the correct byte unit.
+ * @param bytes Exact ROM-content byte count.
+ * @returns Grouped decimal count with the correct byte unit.
  */
 const formatBytes = (bytes: number): string =>
   `${bytes.toLocaleString("en-US")} byte${bytes === 1 ? "" : "s"}`;
 
 /**
  * Format a coverage ratio to two decimal places; an empty ROM reports 0.00%.
- * @param {number} bytes Bytes in the reported category.
- * @param {number} total Total ROM-content bytes.
- * @returns {string} Percentage to two decimals, or 0.00% for an empty total.
+ * @param bytes Bytes in the reported category.
+ * @param total Total ROM-content bytes.
+ * @returns Percentage to two decimals, or 0.00% for an empty total.
  */
 const percentage = (bytes: number, total: number): string =>
   total === 0 ? "0.00%" : `${((bytes / total) * 100).toFixed(2)}%`;
 
 /**
  * Create a non-expandable build-summary row with a stable identity.
- * @param {string} id Stable tree-row identity.
- * @param {string} label Primary tree text.
- * @param {string} description Secondary count or status text.
- * @param {string} icon Product icon ID.
- * @returns {CoverageTreeNode} Non-expandable coverage row.
+ * @param id Stable tree-row identity.
+ * @param label Primary tree text.
+ * @param description Secondary count or status text.
+ * @param icon Product icon ID.
+ * @returns Non-expandable coverage row.
  */
 const leaf = (id: string, label: string, description: string, icon: string): CoverageTreeNode => ({
   id,
@@ -68,12 +68,12 @@ const leaf = (id: string, label: string, description: string, icon: string): Cov
 
 /**
  * Create a coverage leaf showing both the exact byte count and its share of ROM content.
- * @param {string} projectId Project-specific row ID prefix.
- * @param {string} label Coverage category.
- * @param {number} bytes Bytes in this category.
- * @param {number} total ROM-content byte count used as denominator.
- * @param {string} icon Product icon ID for the category.
- * @returns {CoverageTreeNode} Summary leaf containing byte and percentage totals.
+ * @param projectId Project-specific row ID prefix.
+ * @param label Coverage category.
+ * @param bytes Bytes in this category.
+ * @param total ROM-content byte count used as denominator.
+ * @param icon Product icon ID for the category.
+ * @returns Summary leaf containing byte and percentage totals.
  */
 const summaryNode = (
   projectId: string,
@@ -100,6 +100,7 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
   readonly #sourceRoots = new Set<string>();
   #inputTimer?: ReturnType<typeof setTimeout>;
 
+  /** Stop timers and dispose change events when the provider is torn down. */
   dispose(): void {
     this.#disposed = true;
     clearTimeout(this.#inputTimer);
@@ -107,9 +108,11 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
     this.#freshness.clear();
     this.#onDidChangeTreeData.dispose();
   }
+  /** Registered tree view id for build coverage summaries. */
   static readonly viewId = "uttori-asm.analysisCoverage";
 
   readonly #onDidChangeTreeData = new EventEmitter<CoverageTreeNode | undefined | null | void>();
+  /** Fired when coverage freshness maps are cleared after refresh. */
   readonly onDidChangeTreeData: Event<CoverageTreeNode | undefined | null | void> =
     this.#onDidChangeTreeData.event;
 
@@ -135,12 +138,14 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
     }
   }
 
+  /** Bump revision and drop cached freshness before reloading projects. */
   refresh(): void {
     this.#revision++;
     this.#freshness.clear();
     this.#onDidChangeTreeData.fire();
   }
 
+  /** Map a coverage node into VS Code tree presentation state. */
   getTreeItem(element: CoverageTreeNode): TreeItem {
     const item = new TreeItem(element.label, element.state);
     item.id = element.id;
@@ -151,6 +156,7 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
     return item;
   }
 
+  /** Return project roots or the static children attached to one node. */
   async getChildren(element?: CoverageTreeNode): Promise<CoverageTreeNode[]> {
     if (!element) {
       return this.loadProjects();

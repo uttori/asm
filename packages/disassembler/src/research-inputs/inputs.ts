@@ -13,22 +13,27 @@ import { isResearchMapping } from "../model/research-mapping.js";
 /** Check runtime shape without widening typed readonly arrays to any[]. */
 const isArray = (value: unknown): boolean => Array.isArray(value);
 
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Accept any array without narrowing element types. */
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+/** Test membership in the supported research authoring collections. */
 function isResearchCollection(value: unknown): value is ResearchCollection {
   return RESEARCH_COLLECTIONS.some((collection) => collection === value);
 }
 
+/** Accept JavaScript safe integers only. */
 function isSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 
+/** Accept only persisted manual-evidence confidence labels. */
 function isConfidence(value: unknown): value is EvidenceRecord["confidence"] {
   return (
     value === "certain" ||
@@ -48,22 +53,34 @@ export const RESEARCH_COLLECTIONS = [
   "analysis",
   "evidence",
 ] as const;
+
+/** One editable research shard kind that may appear in authoring documents. */
 export type ResearchCollection = (typeof RESEARCH_COLLECTIONS)[number];
+
+/** Native record shape stored in the selected research collection. */
 export type ResearchRecord = AnalysisProjectShards[ResearchCollection][number];
 
 /** Null suppresses an imported record. Removing the decision restores the imported observation. */
 export interface ResearchDecision {
+  /** Shard that owns the decision's stable record id. */
   readonly collection: ResearchCollection;
+  /** Stable record id the decision overrides or suppresses. */
   readonly id: string;
+  /** Replacement record, or null to suppress an imported observation. */
   readonly value: ResearchRecord | null;
 }
 
 /** A reviewable subject/bank document. Identity is tied to original ROM content, never relocation. */
 export interface ResearchDocument {
+  /** Authoring document discriminator. */
   readonly format: "uttori-research";
+  /** Schema version for research JSON on disk. */
   readonly version: 1;
+  /** Project slug the decisions belong to. */
   readonly project: string;
+  /** Original ROM content hash the decisions are bound to. */
   readonly romSha256: string;
+  /** Explicit human decisions authored in this file. */
   readonly decisions: readonly ResearchDecision[];
 }
 
@@ -86,14 +103,22 @@ export const RESEARCH_INPUT_LIMIT_NAMES = [
 
 /** A validated, deterministic selection of Git inputs; the hash is independent of JSON whitespace. */
 export interface ResearchSnapshot {
+  /** Project slug shared by every selected authoring document. */
   readonly project: string;
+  /** Original ROM content hash shared by every selected authoring document. */
   readonly romSha256: string;
+  /** Canonical identity hash over project, ROM, and sorted decisions. */
   readonly hash: string;
+  /** Selected authoring files with parsed documents and content hashes. */
   readonly files: readonly {
+    /** Repository-relative path of one selected JSON authoring file. */
     readonly path: string;
+    /** Content hash of the exact bytes read for that file. */
     readonly sha256: string;
+    /** Parsed document whose decisions participate in the snapshot. */
     readonly document: ResearchDocument;
   }[];
+  /** Flattened, deduplicated decisions sorted for stable hashing. */
   readonly decisions: readonly ResearchDecision[];
 }
 
@@ -129,7 +154,7 @@ export function validateResearchSnapshot(snapshot: ResearchSnapshot | null | und
   }
 }
 
-/** Byte ordering is stable across hosts and independent of the process's locale. */
+/** Compare collection/id pairs with byte ordering stable across hosts and locales. */
 const compareDecisions = (a: ResearchDecision, b: ResearchDecision): number =>
   Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
 

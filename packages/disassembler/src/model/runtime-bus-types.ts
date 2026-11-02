@@ -7,25 +7,35 @@ export type RuntimeBusContext = "unattributed" | "instruction" | "interrupt" | "
 export interface RuntimeBusFact {
   /** Physical PPU writes/outcomes, only when explicitly supplied by the producer. */
   readonly ppu?: RuntimePPUEffect;
+  /** Only the SNES CPU bus is captured. */
   readonly addressSpace: "snes.cpu";
+  /** 24-bit CPU bus address. */
   readonly address: number;
   /** Instruction start only in instruction context. Otherwise the observed CPU program counter. */
   readonly pc: number;
+  /** Byte transferred on the bus (0-255). */
   readonly value: number;
+  /** Bus direction; HDMA table and indirect phases are always reads. */
   readonly direction: "read" | "write";
+  /** Bus master that performed the access. */
   readonly actor: "cpu" | "dma" | "hdma";
   /** CPU accesses have no channel. DMA and HDMA use channels 0–7. */
   readonly channel: number | null;
+  /** Transfer phase; must agree with actor (cpu, dma, or one of the hdma phases). */
   readonly phase: "cpu" | "dma" | "hdma-table" | "hdma-indirect" | "hdma-transfer";
+  /** CPU execution state that owned the bus when the access occurred. */
   readonly context: RuntimeBusContext;
 }
 
 /** Ordered producer event. Decimal strings preserve the full unsigned 64-bit wire values. */
 export interface RuntimeBusAccess extends Omit<RuntimeBusFact, "addressSpace" | "ppu"> {
+  /** PPU effect with the raster position at which it was applied. */
   readonly ppu?: RuntimePPUEffect & { readonly hcounter: number; readonly vcounter: number };
+  /** Producer event sequence number, unsigned 64-bit decimal. */
   readonly sequence: string;
   /** Zero means no owning instruction is available. */
   readonly ordinal: string;
+  /** Producer clock cycle of the access, unsigned 64-bit decimal. */
   readonly cycle: string;
   /** Master-clock position within the scanline, in [0, 1368). */
   readonly hcounter: number;
@@ -33,16 +43,22 @@ export interface RuntimeBusAccess extends Omit<RuntimeBusFact, "addressSpace" | 
   readonly vcounter: number;
 }
 
+/**
+ * Accept any integral number.
+ * @param value Candidate value.
+ * @returns Whether value is an integer.
+ */
 function isInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value);
 }
 
-/** Validate semantic facts independently of their transport or storage representation.
+/**
+ * Validate semantic facts independently of their transport or storage representation.
  * Return the normalization result so importers need not normalize twice. This
  * still checks untrusted PPU fields. The bus importer uses the returned canonical
  * effect for fact identity, keeping transport-only raster fields on the raw event.
- * @param {RuntimeBusFact} fact Byte-access coordinates and attribution.
- * @returns {RuntimePPUEffect | undefined} Canonical PPU effect when present, for reuse by the importer.
+ * @param fact Byte-access coordinates and attribution.
+ * @returns Canonical PPU effect when present, for reuse by the importer.
  * Throws on inconsistent actor, channel, phase, effect or out-of-range values. Never mutates the input.
  */
 export const validateRuntimeBusFact = (fact: {

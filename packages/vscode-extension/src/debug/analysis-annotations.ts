@@ -20,16 +20,18 @@ interface DebugAnnotation {
 /**
  * Join address space and decimal address for lookup buckets; architecture and output-offset
  * checks are applied within each bucket.
- * @param {string} addressSpace Native address-space identifier.
- * @param {number} address Decimal address within that space.
- * @returns {string} Bucket key used before architecture/output-offset filtering.
+ * @param addressSpace Native address-space identifier.
+ * @param address Decimal address within that space.
+ * @returns Bucket key used before architecture/output-offset filtering.
  */
 const locationKey = (addressSpace: string, address: number): string => `${addressSpace}:${address}`;
 
+/** Narrow worker payloads to plain objects before validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Validate manifest identity fields required for debug annotation lookup. */
 function isDebugManifest(value: unknown): value is {
   readonly target: string;
   readonly rom: { readonly contentSha256: string; readonly contentSize: number };
@@ -43,6 +45,7 @@ function isDebugManifest(value: unknown): value is {
   );
 }
 
+/** Validate one compact annotation row returned by the analysis worker. */
 function isDebugAnnotation(value: unknown): value is DebugAnnotation {
   return (
     isRecord(value) &&
@@ -58,9 +61,9 @@ function isDebugAnnotation(value: unknown): value is DebugAnnotation {
 
 /**
  * Append to a location bucket while preserving all matching records; mutates the supplied map.
- * @param {Map<Key, Value[]>} map Mutable buckets retaining insertion order.
- * @param {Key} key Bucket identity.
- * @param {Value} value Entry appended without replacing existing values.
+ * @param map Mutable buckets retaining insertion order.
+ * @param key Bucket identity.
+ * @param value Entry appended without replacing existing values.
  */
 const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
   const entries = map.get(key);
@@ -75,8 +78,8 @@ const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): voi
  * Creates a lazy DAP annotation lookup from exact ROM-matched native projects.
  * Requests for one disassembly page are batched. Startup never projects the entire runtime history.
  * Invalid, foreign, and nonmatching projects contribute nothing to debugger presentation.
- * @param {object} map Loaded debug-map target and ROM output identity.
- * @returns {Promise<Function | undefined>} Optional asynchronous address-to-annotation renderer.
+ * @param map Loaded debug-map target and ROM output identity.
+ * @returns Optional asynchronous address-to-annotation renderer.
  */
 export const createDebugInstructionAnnotation = async (map: {
   readonly target: string;

@@ -34,23 +34,33 @@ import {
   type RuntimeTransferSummary,
 } from "./runtime-transfer.js";
 
+/** Distinguish plain object rows from arrays during bus trace validation. */
 function isRowRecord(value: object): value is Record<string, unknown> {
   return !Array.isArray(value);
 }
 
+/** On-disk bus trace artifact discriminator. */
 export const RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace" as const;
 /** Aggregates byte-access variants; ordered timing and raster history are outside this projection. */
 export const RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1" as const;
 
 /** Identity of a complete lossless SNES bus stream, independent of its file or transport framing. */
 export interface RuntimeBusTraceMetadata {
+  /** Bus trace artifact discriminator. */
   readonly format: typeof RUNTIME_BUS_TRACE_FORMAT;
+  /** Schema version accepted for bus trace metadata. */
   readonly schemaVersion: 1;
+  /** Capture scope selecting bus, transfer, or PPU-enriched streams. */
   readonly scope: "snes.cpu-bus" | "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu";
+  /** Recorded CPU architecture tag for every event. */
   readonly architecture: "snes.65816";
+  /** Address space tag for CPU bus events in the capture. */
   readonly addressSpace: "snes.cpu";
+  /** Headerless ROM content hash binding the capture to one cartridge image. */
   readonly romContentSha256: string;
+  /** Recorder identity that produced the bus stream. */
   readonly producer: { readonly id: string; readonly revision: string };
+  /** Capture session id distinguishing concurrent recordings. */
   readonly session: string;
   /** Master clocks per second as an exact positive rational. */
   readonly clock: {
@@ -62,9 +72,12 @@ export interface RuntimeBusTraceMetadata {
 
 /** Reader callbacks are provisional: a torn tail or changed identity must reject read() before publication. */
 export interface RuntimeBusTraceSource {
+  /** Validated bus trace envelope identity. */
   readonly metadata: RuntimeBusTraceMetadata;
+  /** Stream bus events to the importer after validating metadata integrity. */
   readonly read: (accept: (chunk: unknown) => void) => Promise<void>;
-  /** Optional native output whose final path/inode read() validates before resolving.
+  /**
+   * Optional native output whose final path/inode read() validates before resolving.
    * Its identity is rechecked before publication to reject replacement of a completed capture.
    */
   readonly completedFile?: string;
@@ -72,8 +85,11 @@ export interface RuntimeBusTraceSource {
 
 /** ROM guard and distinct-fact limit. The default is two million variants, with an eight-million hard cap. */
 export interface RuntimeBusTraceImportContext {
+  /** Expected headerless ROM content hash for the destination project. */
   readonly projectRomContentSha256: string;
+  /** User-visible source name stored on the import report. */
   readonly sourceName: string;
+  /** Optional cap on distinct indexed bus facts during import. */
   readonly maxIndexRecords?: number;
   /** Chunk-level provisional progress. Never evidence of a complete or published capture. */
   readonly onProgress?: (progress: RuntimeBusTraceProgress) => void;
@@ -86,57 +102,88 @@ export interface RuntimeBusTraceImportContext {
 
 /** Bounded live discovery counters. Raw events and fact payloads never cross the UI channel. */
 export interface RuntimeBusTraceProgress {
+  /** Raw transport events consumed from the bus trace source. */
   readonly streamEvents: number;
+  /** Validated CPU bus access events observed so far. */
   readonly busEvents: number;
+  /** Distinct indexed facts retained by the importer. */
   readonly distinctFacts: number;
+  /** DMA/HDMA transfer boundary markers observed so far. */
   readonly transferMarkers: number;
+  /** First master-cycle counter seen in the capture, if any. */
   readonly firstCycle: string | null;
+  /** Last master-cycle counter seen in the capture, if any. */
   readonly lastCycle: string | null;
+  /** Aggregate PPU counters excluding the bounded example write list. */
   readonly ppu?: Omit<RuntimePPUSummary, "writes">;
+  /** Bounded activity rows for live UI discovery. */
   readonly activity: readonly RuntimeBusActivity[];
 }
 
 /** Bounded activity grouping (at most 33 rows), without inferred transfer boundaries or register setup. */
 export interface RuntimeBusActivity {
+  /** Bus actor aggregated in this activity row. */
   readonly actor: RuntimeBusAccess["actor"];
+  /** DMA channel when applicable; otherwise null. */
   readonly channel: number | null;
+  /** Bus phase label grouping reads and writes in the row. */
   readonly phase: RuntimeBusAccess["phase"];
+  /** Read accesses counted for the group. */
   reads: number;
+  /** Write accesses counted for the group. */
   writes: number;
+  /** Accesses lacking an owning instruction context in the row. */
   unowned: number;
+  /** Sequence id of the first access in the group. */
   readonly firstSequence: string;
+  /** Sequence id of the most recent access in the group. */
   lastSequence: string;
+  /** Master-cycle counter at the first access in the group. */
   readonly firstCycle: string;
+  /** Master-cycle counter at the most recent access in the group. */
   lastCycle: string;
 }
 
 /** Event totals stay exact. The capture clock is retained for interpreting elapsed master clocks. */
 export interface RuntimeBusTraceSummary {
+  /** Master clock rational copied from the capture metadata. */
   readonly clock: RuntimeBusTraceMetadata["clock"];
+  /** DMA/HDMA transfer window summary when transfer markers were present. */
   readonly transfers?: RuntimeTransferSummary;
   /** Recomputed from ordered accesses. Deliberately excluded from stable bus facts and provenance. */
   readonly graphics?: RuntimeGraphicsSummary;
   /** Native outcomes, independent of the candidate port reconstruction. */
   readonly ppu?: RuntimePPUSummary;
+  /** First master-cycle counter in the validated capture. */
   readonly firstCycle: string | null;
+  /** Last master-cycle counter in the validated capture. */
   readonly lastCycle: string | null;
+  /** Counts of bus events by attribution context. */
   readonly contexts: Readonly<Record<RuntimeBusContext, number>>;
+  /** Aggregated activity rows for the completed import. */
   readonly activity: readonly RuntimeBusActivity[];
 }
 
 /** Provenance plus a bounded report. Runtime records can be emitted directly to the working store. */
 export interface RuntimeBusTraceImportResult {
+  /** Shard batch ready to merge into the analysis project. */
   readonly batch: RuntimeEvidenceBatch;
+  /** Import report describing the validated bus capture. */
   readonly report: ImportReport;
+  /** Canonical identity hash over validated bus trace input. */
   readonly sourceSha256: string;
+  /** Count of bus events indexed during the import. */
   readonly observedEvents: number;
+  /** Bus trace imports treat producer loss as zero for this format. */
   readonly droppedEvents: 0;
+  /** Bounded summary recomputed from the validated ordered stream. */
   readonly summary: RuntimeBusTraceSummary;
 }
 
-/** Parse a canonical unsigned wire integer without rounding through JavaScript numbers.
- * @param {unknown} value Decimal string, with no sign or leading zeroes.
- * @returns {number | bigint} Exact u64. Common small values avoid BigInt allocation. Invalid input throws.
+/**
+ * Parse a canonical unsigned wire integer without rounding through JavaScript numbers.
+ * @param value Decimal string, with no sign or leading zeroes.
+ * @returns Exact u64. Common small values avoid BigInt allocation. Invalid input throws.
  */
 const unsigned = (value: unknown): number | bigint => {
   if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value)) {
@@ -160,16 +207,19 @@ const unsigned = (value: unknown): number | bigint => {
   return number;
 };
 
+/** Narrow parsed JSON to a plain object record. */
 function isMetadataRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Accept only supported SNES bus trace capture scopes. */
 function isBusScope(value: unknown): value is RuntimeBusTraceMetadata["scope"] {
   return (
     value === "snes.cpu-bus" || value === "snes.cpu-bus-transfers" || value === "snes.cpu-bus-ppu"
   );
 }
 
+/** Require a positive canonical unsigned decimal string for clock rationals. */
 function positiveDecimal(value: unknown): string {
   if (typeof value !== "string" || unsigned(value) === 0) {
     if (typeof value !== "string") {
@@ -180,9 +230,10 @@ function positiveDecimal(value: unknown): string {
   return value;
 }
 
-/** Normalize only semantic metadata, excluding archive allocation and file framing.
- * @param {unknown} value Producer metadata, possibly with transport-specific fields.
- * @returns {RuntimeBusTraceMetadata} Fresh canonical identity. Invalid metadata throws.
+/**
+ * Normalize only semantic metadata, excluding archive allocation and file framing.
+ * @param value Producer metadata, possibly with transport-specific fields.
+ * @returns Fresh canonical identity. Invalid metadata throws.
  */
 export const validateRuntimeBusTraceMetadata = (value: unknown): RuntimeBusTraceMetadata => {
   if (!isMetadataRecord(value)) {
@@ -231,6 +282,7 @@ export const validateRuntimeBusTraceMetadata = (value: unknown): RuntimeBusTrace
   };
 };
 
+/** Narrow unknown values to bus access or transfer boundary events. */
 function isBusTraceEvent(
   value: unknown,
 ): value is
@@ -239,11 +291,12 @@ function isBusTraceEvent(
   return typeof value === "object" && value !== null;
 }
 
-/** Validate and aggregate a stream with bounded chunks and a caller-owned, optionally disk-backed index.
- * @param {unknown} metadata Producer identity and clock.
- * @param {RuntimeBusTraceImportContext} context Expected ROM and distinct-fact budget.
- * @param {RuntimeTraceImporterStorage} storage Optional SQLite counters and transactional record sink.
- * @returns {object} Single-use push/finish importer. Any failed push permanently prevents publication.
+/**
+ * Validate and aggregate a stream with bounded chunks and a caller-owned, optionally disk-backed index.
+ * @param metadata Producer identity and clock.
+ * @param context Expected ROM and distinct-fact budget.
+ * @param storage Optional SQLite counters and transactional record sink.
+ * @returns Single-use push/finish importer. Any failed push permanently prevents publication.
  */
 export const createRuntimeBusTraceImporter = (
   metadata: unknown,
@@ -302,9 +355,10 @@ export const createRuntimeBusTraceImporter = (
   let finished = false;
   let failed = false;
 
-  /** Index one bounded chunk. Counters remain provisional until the source confirms a complete tail.
-   * @param {unknown} chunk Object containing 1–4095 ordered accesses.
-   * @returns {void} Throws and discards the index on any invalid event or exhausted fact budget.
+  /**
+   * Index one bounded chunk. Counters remain provisional until the source confirms a complete tail.
+   * @param chunk Object containing 1–4095 ordered accesses.
+   * @returns Throws and discards the index on any invalid event or exhausted fact budget.
    */
   const push = (chunk: unknown): void => {
     if (finished || failed) {
@@ -520,8 +574,9 @@ export const createRuntimeBusTraceImporter = (
       throw error;
     }
   };
-  /** Assign stable source identities and emit records once, inside the caller's publication transaction.
-   * @returns {RuntimeBusTraceImportResult} Aggregates and provenance. Releases the temporary index even if the sink fails.
+  /**
+   * Assign stable source identities and emit records once, inside the caller's publication transaction.
+   * @returns Aggregates and provenance. Releases the temporary index even if the sink fails.
    */
   const finish = (): RuntimeBusTraceImportResult => {
     if (finished || failed) {

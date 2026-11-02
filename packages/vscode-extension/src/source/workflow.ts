@@ -15,28 +15,157 @@ export function shouldClearSourceCandidate(status: {
 
 /** Cached service/editor state used to render the next action without performing work in the tree. */
 export interface SourceWorkflowState {
+  /** Current native Git merge phase when known. */
   readonly phase?: SourceMergeStatus["phase"];
+  /** Working tree differs from the last validated checkout state. */
   readonly dirty?: boolean;
+  /** Analysis artifacts are ready for regeneration preview. */
   readonly analysisReady?: boolean;
+  /** Human-readable blocker when analysis is not ready. */
   readonly analysisReason?: string;
+  /** Catalog metadata is ready for regeneration preview. */
   readonly catalogReady?: boolean;
+  /** Human-readable blocker when the catalog is not ready. */
   readonly catalogReason?: string;
+  /** Unstaged edits remain outside the staged merge candidate. */
   readonly unstaged?: boolean;
   /** Drafts must be saved before validating Git's staged merge. */
   readonly unsaved?: boolean;
+  /** A regeneration candidate exists in the worktree. */
   readonly candidate?: boolean;
+  /** The latest candidate was previewed successfully. */
   readonly previewed?: boolean;
+  /** Count of merge conflicts blocking integration. */
   readonly conflicts?: number;
+  /** Active long-running operation label, when busy. */
   readonly busy?: string;
 }
 
 /** A step without a command explains a prerequisite; it cannot accidentally launch out-of-order work. */
 export interface SourceWorkflowStep {
+  /** Primary step title shown in the workflow tree. */
   readonly label: string;
+  /** Supporting detail explaining prerequisites or outcomes. */
   readonly description: string;
+  /** VS Code command id launched when the step is activated. */
   readonly command?: string;
   /** Exactly one step is the recommended next action, including a busy/recovery explanation. */
   readonly current?: boolean;
+}
+
+/** Published Home / status-bar / command-enablement projection of the legal workflow. */
+export type SourceHealthKind =
+  | "idle"
+  | "needs-catalog"
+  | "needs-analysis"
+  | "needs-prepare"
+  | "needs-preview"
+  | "ready-to-apply"
+  | "merging"
+  | "finish"
+  | "diverged"
+  | "busy";
+
+/** A recovery command that remains legal for the current source phase. */
+export type SourceEscape = {
+  command: "asm.source.abort" | "asm.source.discard" | "asm.source.clean" | "workbench.view.scm";
+  label: string;
+};
+
+/** Compact health for Home, the status bar, and palette enablement. */
+export type SourceHealth = {
+  kind: SourceHealthKind;
+  label: string;
+  reason: string;
+  next?: { command: string; title: string };
+  escapes: SourceEscape[];
+};
+
+const HEALTH_BY_COMMAND: Record<string, SourceHealthKind> = {
+  "asm.source.catalog": "needs-catalog",
+  "asm.source.analyze": "needs-analysis",
+  "asm.source.prepare": "needs-prepare",
+  "asm.source.preview": "needs-preview",
+  "asm.source.apply": "ready-to-apply",
+  "asm.source.finish": "finish",
+  "workbench.view.scm": "merging",
+};
+
+function workflowEscapes(workflow: readonly SourceWorkflowStep[]): SourceEscape[] {
+  const commands = new Set(
+    workflow.map((step) => step.command).filter((command): command is string => Boolean(command)),
+  );
+  const escapes: SourceEscape[] = [];
+  if (commands.has("asm.source.abort")) {
+    escapes.push({ command: "asm.source.abort", label: "Abort merge" });
+  }
+  if (commands.has("asm.source.discard")) {
+    escapes.push({ command: "asm.source.discard", label: "Discard candidate" });
+  }
+  if (commands.has("asm.source.clean")) {
+    escapes.push({ command: "asm.source.clean", label: "Clean leftover files" });
+  }
+  if (commands.has("workbench.view.scm")) {
+    escapes.push({ command: "workbench.view.scm", label: "Open Source Control" });
+  }
+  return escapes;
+}
+
+/**
+ * Projects legal workflow steps into a single health record.
+ * Busy work hides Next so a second mutation cannot start while one is running.
+ */
+export function sourceHealth(
+  workflow: readonly SourceWorkflowStep[],
+  options: { busy?: string; phase?: SourceMergeStatus["phase"] } = {},
+): SourceHealth {
+  const next = workflow.find((step) => step.current);
+  const escapes = workflowEscapes(workflow);
+  if (options.busy) {
+    return {
+      kind: "busy",
+      label: "Working",
+      reason: options.busy,
+      escapes: escapes.filter((escape) => escape.command === "asm.source.abort"),
+    };
+  }
+  if (options.phase === "diverged") {
+    return {
+      kind: "diverged",
+      label: next?.label ?? "Diverged",
+      reason: next?.description ?? "HEAD moved during merge. Abort or finish in Source Control.",
+      next: next?.command ? { command: next.command, title: next.label } : undefined,
+      escapes,
+    };
+  }
+  if (options.phase === "merging") {
+    if (next?.command === "asm.source.finish") {
+      return {
+        kind: "finish",
+        label: next.label,
+        reason: next.description,
+        next: { command: next.command, title: next.label },
+        escapes,
+      };
+    }
+    return {
+      kind: "merging",
+      label: next?.label ?? "Merge in progress",
+      reason: next?.description ?? "Resolve conflicts, then finish.",
+      next: next?.command ? { command: next.command, title: next.label } : undefined,
+      escapes,
+    };
+  }
+  if (!next) {
+    return { kind: "idle", label: "Idle", reason: "Select a Git source project.", escapes };
+  }
+  return {
+    kind: HEALTH_BY_COMMAND[next.command ?? ""] ?? "idle",
+    label: next.label,
+    reason: next.description,
+    next: next.command ? { command: next.command, title: next.label } : undefined,
+    escapes,
+  };
 }
 
 /** Native Git remains authoritative. Building edited source is independent of this regeneration sequence. */

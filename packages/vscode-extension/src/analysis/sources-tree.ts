@@ -11,22 +11,26 @@ import {
   type Command,
 } from "vscode";
 
-import { findAnalysisProjectDirectories } from "./project-discovery.js";
 import type { AnalysisNavigationTarget } from "./navigation-target.js";
+import { findAnalysisProjectDirectories } from "./project-discovery.js";
 import { analysisWorker } from "./worker-client.js";
 
+/** Narrow worker payloads to plain objects before reading catalog fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Require every catalog list entry to be a string before it reaches tree labels. */
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
+/** Validate string-keyed numeric maps emitted by import reports. */
 function isNumberRecord(value: unknown): value is Readonly<Record<string, number>> {
   return isRecord(value) && Object.values(value).every((entry) => typeof entry === "number");
 }
 
+/** Accept only evidence kinds persisted in the analysis catalog schema. */
 function isEvidenceKind(value: unknown): value is AnalysisEvidenceSource["kinds"][number] {
   return (
     value === "manual" ||
@@ -37,6 +41,7 @@ function isEvidenceKind(value: unknown): value is AnalysisEvidenceSource["kinds"
   );
 }
 
+/** Shape-check one import report before surfacing capture warnings in the tree. */
 function isImportReport(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -57,6 +62,7 @@ function isImportReport(value: unknown): boolean {
   );
 }
 
+/** Validate a single catalog source record returned by the analysis worker. */
 function isEvidenceSource(value: unknown): value is AnalysisEvidenceSource {
   return (
     isRecord(value) &&
@@ -74,6 +80,7 @@ function isEvidenceSource(value: unknown): value is AnalysisEvidenceSource {
   );
 }
 
+/** Require sources plus ROM manifest metadata before building project roots. */
 function isSourceCatalog(value: unknown): value is {
   readonly sources: readonly AnalysisEvidenceSource[];
   readonly manifest: {
@@ -96,8 +103,8 @@ function isSourceCatalog(value: unknown): value is {
 /**
  * Format source/evidence totals with English digit grouping so tree labels remain consistent
  * across host locales.
- * @param {number} value Source or evidence record total.
- * @returns {string} English-grouped decimal count for tree text.
+ * @param value Source or evidence record total.
+ * @returns English-grouped decimal count for tree text.
  */
 const count = (value: number): string => value.toLocaleString("en-US");
 /** Maximum evidence entries requested for one source-tree page. */
@@ -113,13 +120,21 @@ interface SourceTarget {
  * context-menu actions.
  */
 export interface AnalysisSourcesTreeNode {
+  /** Stable tree identity used for lazy child caching. */
   readonly id: string;
+  /** Primary row text shown in the Sources view. */
   readonly label: string;
+  /** Secondary metadata rendered beside the label. */
   readonly description?: string;
+  /** Hover detail; defaults to the label when omitted. */
   readonly tooltip?: string;
+  /** Theme icon id for the row. */
   readonly icon: string;
+  /** Deferred children fetched on first expansion. */
   readonly load?: () => Promise<AnalysisSourcesTreeNode[]> | AnalysisSourcesTreeNode[];
+  /** Optional VS Code command bound to activation. */
   readonly command?: Command;
+  /** Source identity carried for context-menu actions. */
   readonly sourceTarget?: SourceTarget;
 }
 
@@ -128,22 +143,27 @@ export interface AnalysisSourcesTreeNode {
  * @see https://code.visualstudio.com/api/references/vscode-api#TreeDataProvider
  */
 export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSourcesTreeNode> {
+  /** Registered tree view id for the Sources sidebar. */
   static readonly viewId = "uttori-asm.sources";
   readonly #changed = new EventEmitter<AnalysisSourcesTreeNode | undefined | void>();
+  /** Fired when cached source pages are invalidated after refresh. */
   readonly onDidChangeTreeData = this.#changed.event;
   readonly #children = new Map<string, Promise<AnalysisSourcesTreeNode[]>>();
   #epoch = 0;
 
+  /** Release the change emitter when the provider is torn down. */
   dispose(): void {
     this.#changed.dispose();
   }
 
+  /** Drop cached pages and notify the tree to reload from the worker. */
   refresh(): void {
     this.#epoch++;
     this.#children.clear();
     this.#changed.fire();
   }
 
+  /** Map an internal node into VS Code tree presentation state. */
   getTreeItem(element: AnalysisSourcesTreeNode): TreeItem {
     const item = new TreeItem(
       element.label,
@@ -158,6 +178,7 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
     return item;
   }
 
+  /** Resolve lazy children once per node id until refresh bumps the epoch. */
   async getChildren(element?: AnalysisSourcesTreeNode): Promise<AnalysisSourcesTreeNode[]> {
     const id = element?.id ?? "root";
     let pending = this.#children.get(id);

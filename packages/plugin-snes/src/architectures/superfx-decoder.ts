@@ -19,27 +19,36 @@ import {
 
 /** Decode-time GSU selector state. Unknown fields produce explicit ambiguity. */
 export interface SuperFxDecodeState {
+  /** Current GSU ALT selector, or unknown when disassembly cannot prove it. */
   readonly alt?: SuperFxAltState | "unknown";
+  /** TO/WITH-selected destination register, if tracked. */
   readonly destinationRegister?: number | "unknown";
+  /** FROM/WITH-selected source register, if tracked. */
   readonly sourceRegister?: number | "unknown";
+  /** Program bank assumed when resolving R15 jump targets. */
   readonly programBank?: number | "unknown";
 }
 
+/** Reads a little-endian 16-bit word from an instruction byte slice. */
 const word = (bytes: Uint8Array, offset: number): number =>
   (bytes[offset] ?? 0) | ((bytes[offset + 1] ?? 0) << 8);
+/** Formats a hardware register index as an Rn decoded operand. */
 const register = (value: number): DecodedOperand => ({ kind: "register", register: `R${value}` });
+/** Formats a numeric immediate decoded operand with optional signed semantics. */
 const immediate = (value: number, width: number, signed = false): DecodedOperand => ({
   kind: "immediate",
   value,
   width,
   ...(signed ? { signed: true } : {}),
 });
+/** Formats a RAM or absolute address decoded operand at the given width. */
 const address = (value: number, width: number): DecodedOperand => ({
   kind: "address",
   value,
   width,
 });
 
+/** Decodes operands for one effective GSU specification and fetched byte span. */
 const operandsFor = (
   specification: SuperFxInstructionSpecification,
   bytes: Uint8Array,
@@ -87,6 +96,7 @@ const operandsFor = (
   throw new Error("Unsupported SuperFX operand encoding.");
 };
 
+/** Resolves an R15 program-counter target as an absolute address or indirect jump. */
 const r15Target = (
   specification: SuperFxInstructionSpecification,
   operands: readonly DecodedOperand[],
@@ -122,6 +132,7 @@ const r15Target = (
   return undefined;
 };
 
+/** Derives flow kind and cross-reference list for one decoded GSU instruction. */
 const controlsFor = (
   specification: SuperFxInstructionSpecification,
   operands: readonly DecodedOperand[],
@@ -191,6 +202,7 @@ const controlsFor = (
   return { flow: specification.flow, references: [] };
 };
 
+/** Assembles a decoded instruction record for one matrix specification row. */
 const buildInstruction = (
   specification: SuperFxInstructionSpecification,
   bytes: Uint8Array,
@@ -217,6 +229,7 @@ const buildInstruction = (
   };
 };
 
+/** Assembles a decoded instruction record for a canonical fused MOVE selector sequence. */
 const buildFusedInstruction = (
   specification: SuperFxFusedInstructionSpecification,
   bytes: Uint8Array,
@@ -256,6 +269,7 @@ const buildFusedInstruction = (
   };
 };
 
+/** Finds a fused specification whose opcode bytes match the stream at the current offset. */
 const matchFused = (
   context: ArchitectureDecodeContext<SuperFxDecodeState>,
 ): SuperFxFusedInstructionSpecification | undefined =>
@@ -263,11 +277,13 @@ const matchFused = (
     entry.opcode.every((value, index) => context.source.readByte(context.offset + index) === value),
   );
 
+/** Returns how many bytes remain readable from the current decode offset. */
 const availableAt = (context: ArchitectureDecodeContext<SuperFxDecodeState>): number =>
   Number.isInteger(context.offset) && context.offset >= 0
     ? Math.max(0, context.source.length - context.offset)
     : 0;
 
+/** Standard truncated-instruction error result when the fetch window is too short. */
 const truncated = (
   context: ArchitectureDecodeContext<SuperFxDecodeState>,
   requiredBytes: number,
@@ -280,6 +296,7 @@ const truncated = (
   availableBytes: availableAt(context),
 });
 
+/** Maps ALT1–ALT3 prefix opcode bytes to their ALT state, if any. */
 const prefixAlt = (opcode: number): SuperFxAltState | undefined => {
   const alt = opcode - 0x3c;
   return opcode >= 0x3d && opcode <= 0x3f && isSuperFxAltState(alt) ? alt : undefined;
@@ -287,6 +304,11 @@ const prefixAlt = (opcode: number): SuperFxAltState | undefined => {
 
 /** Bounds-safe SuperFX decoder with canonical ALT-prefix fusion. */
 export class SuperFxDecoder implements ArchitectureDecoder<SuperFxDecodeState> {
+  /**
+   * Decodes one GSU instruction, fusing ALT prefixes and macro selector sequences when present.
+   * @param context Byte source, offset, and optional GSU decode state.
+   * @returns A decoded instruction or a bounds/state error.
+   */
   decode(context: ArchitectureDecodeContext<SuperFxDecodeState>): ArchitectureDecodeResult {
     const opcode = context.source.readByte(context.offset);
     if (opcode === undefined) {
@@ -401,6 +423,7 @@ export class SuperFxDecoder implements ArchitectureDecoder<SuperFxDecodeState> {
   }
 }
 
+/** Formats an unsigned value as a `$`-prefixed hex literal with fixed width. */
 const hex = (value: number, width: number): string =>
   `$${value
     .toString(16)
@@ -409,8 +432,8 @@ const hex = (value: number, width: number): string =>
 
 /**
  * Formats one decoded instruction in the project's native SuperFX syntax.
- * @param {DecodedInstruction} instruction Instruction to format.
- * @returns {string} Native SuperFX source text.
+ * @param instruction Instruction to format.
+ * @returns Native SuperFX source text.
  */
 export function formatSuperFxInstruction(instruction: DecodedInstruction): string {
   if (instruction.architecture !== "snes.superfx") {

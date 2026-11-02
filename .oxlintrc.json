@@ -261,7 +261,7 @@
       // B1 pins this exact harness hash before B2. Keep cosmetic edits out of the
       // comparison; all other lint rules still apply to the frozen measurement code.
       "files": ["scripts/benchmark-assembler-ast.ts"],
-      "rules": { "curly": "off", "unicorn/no-array-sort": "off" }
+      "rules": { "curly": "off", "oxc/no-map-spread": "off", "unicorn/no-array-sort": "off" }
     },
     {
       "files": ["**/*.{js,mjs,cjs,ts,mts,jsx,tsx}"],
@@ -387,6 +387,73 @@
         "jsdoc/require-returns-type": "off",
         "jsdoc/require-throws-type": "off",
         "jsdoc/require-yields-type": "off"
+      }
+    },
+    {
+      // TypeScript signatures own the types. Blocks start their description below the opener.
+      "files": ["**/*.ts", "**/*.mts", "**/*.tsx"],
+      "jsPlugins": [{ "name": "jsdoc-ext", "specifier": "eslint-plugin-jsdoc" }],
+      "rules": {
+        "jsdoc-ext/check-alignment": "error",
+        "jsdoc-ext/multiline-blocks": [
+          "error",
+          { "noMultilineBlocks": false, "noZeroLineText": true }
+        ],
+        "jsdoc-ext/no-blank-block-descriptions": "error",
+        "jsdoc-ext/no-types": "error"
+      }
+    },
+    {
+      // Package sources document every top-level declaration, public class member, and direct
+      // field of an exported type. Private members and fields of internal types are exempt.
+      "files": ["packages/*/src/**/*.ts", "packages/*/src/**/*.mts"],
+      "jsPlugins": [{ "name": "jsdoc-ext", "specifier": "eslint-plugin-jsdoc" }],
+      "rules": {
+        "jsdoc-ext/require-description": "error",
+        "jsdoc-ext/require-jsdoc": [
+          "error",
+          {
+            "require": {
+              "ArrowFunctionExpression": false,
+              "ClassDeclaration": false,
+              "ClassExpression": false,
+              "FunctionDeclaration": false,
+              "FunctionExpression": false,
+              "MethodDefinition": false
+            },
+            "contexts": [
+              "Program > FunctionDeclaration",
+              "Program > ClassDeclaration",
+              "Program > TSInterfaceDeclaration",
+              "Program > TSTypeAliasDeclaration",
+              "Program > TSEnumDeclaration",
+              "Program > VariableDeclaration > VariableDeclarator > ArrowFunctionExpression",
+              "Program > VariableDeclaration > VariableDeclarator > FunctionExpression",
+              "ExportNamedDeclaration > FunctionDeclaration",
+              "ExportNamedDeclaration > ClassDeclaration",
+              "ExportNamedDeclaration > TSInterfaceDeclaration",
+              "ExportNamedDeclaration > TSTypeAliasDeclaration",
+              "ExportNamedDeclaration > TSEnumDeclaration",
+              "ExportNamedDeclaration[declaration.type='VariableDeclaration']",
+              "ExportDefaultDeclaration > :matches(FunctionDeclaration, ClassDeclaration)",
+              "MethodDefinition:not([accessibility='private']):not([kind='constructor']):not(:has(> PrivateIdentifier.key))",
+              "TSAbstractMethodDefinition:not([accessibility='private'])",
+              "PropertyDefinition:not([accessibility='private']):not(:has(> PrivateIdentifier.key))",
+              "ExportNamedDeclaration > TSInterfaceDeclaration > TSInterfaceBody > :matches(TSPropertySignature, TSMethodSignature)",
+              "ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeLiteral > :matches(TSPropertySignature, TSMethodSignature)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // The frozen benchmark harness keeps its pinned comment layout.
+      "files": ["scripts/benchmark-assembler-ast.ts"],
+      "rules": {
+        "jsdoc-ext/check-alignment": "off",
+        "jsdoc-ext/multiline-blocks": "off",
+        "jsdoc-ext/no-blank-block-descriptions": "off",
+        "jsdoc-ext/no-types": "off"
       }
     },
     {

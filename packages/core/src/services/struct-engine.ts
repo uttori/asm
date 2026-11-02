@@ -11,15 +11,21 @@ import { DataStructEngine, type DataStructHost } from "./data-struct-engine.js";
 
 /** Encoding information is separate from Asar's address-only member labels. */
 export interface StructField {
+  /** Member label without the leading dot. */
   name: string;
+  /** Byte offset from the struct base address. */
   offset: number;
+  /** Storage width of one element in bytes. */
   width: number;
+  /** Element count; one for scalars and skip blobs. */
   count: number;
   /** Even db[1] is an array. Skip members are opaque byte arrays. */
   array: boolean;
 }
 
+/** Mutable struct layout state accumulated while parsing struct members. */
 export interface StructDefinition {
+  /** Struct symbol name in the current namespace. */
   name: string;
   /** The logical start address for the struct. */
   base: number;
@@ -41,6 +47,7 @@ export interface StructDefinition {
   indexRange?: { first: number; count: number };
 }
 
+/** Session services shared by struct layout and data struct emission. */
 export type StructHost = DataStructHost & {
   readonly addressWidth: number;
   currentStruct: StructDefinition | null;
@@ -55,7 +62,9 @@ export type StructHost = DataStructHost & {
   ): void;
 };
 
+/** Parses struct declarations and delegates indexed rows to the data struct engine. */
 export class StructEngine {
+  /** Engine emitting indexed data struct tables for defined layouts. */
   readonly data: DataStructEngine;
 
   constructor(readonly host: StructHost) {
@@ -64,8 +73,8 @@ export class StructEngine {
 
   /**
    * Handles a struct mode command.
-   * @param {NormalizedCommand} command The command to handle.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   * @param command The command to handle.
+   * @returns `true` if the command was handled, `false` otherwise.
    */
   handleStructMode(command: NormalizedCommand): boolean {
     const currentStruct = this.host.currentStruct;
@@ -139,7 +148,7 @@ export class StructEngine {
 
   /**
    * Handles a struct command.
-   * @param {string[]} words The words of the command.
+   * @param words The words of the command.
    */
   handleStruct(words: readonly string[]): void {
     const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
@@ -183,7 +192,7 @@ export class StructEngine {
 
   /**
    * Handles an endstruct command.
-   * @param {string[]} words The words of the command.
+   * @param words The words of the command.
    */
   handleEndStruct(words: readonly string[]): void {
     const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
@@ -258,8 +267,8 @@ export class StructEngine {
 
   /**
    * Checks whether a reference starts with a known struct name.
-   * @param {string} labelRef The reference to inspect.
-   * @returns {boolean} Whether the reference belongs to a known struct.
+   * @param labelRef The reference to inspect.
+   * @returns Whether the reference belongs to a known struct.
    */
   hasStructReference(labelRef: string): boolean {
     // Indices may be decimal (`obj[2]`) or asar hex (`DMA[$00].Parameters`).
@@ -369,8 +378,8 @@ export class StructEngine {
 
   /**
    * Resolves a struct label.
-   * @param {string} labelRef The label to resolve.
-   * @returns {number} The resolved address.
+   * @param labelRef The label to resolve.
+   * @returns The resolved address.
    */
   resolveStructLabel(labelRef: string): number {
     const refParts = labelRef.split(".");

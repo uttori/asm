@@ -31,28 +31,39 @@ import {
   type LinkExpressionContext,
 } from "./ir/link-expression.js";
 
+/** User-defined expression function body captured from source declarations. */
 type UserFunction = {
+  /** Formal parameter names accepted by the function. */
   readonly args: readonly string[];
+  /** Unexpanded function body text evaluated on invocation. */
   readonly content: string;
 };
 
+/** Target-registered callable exposed to expression evaluation. */
 export type RegisteredExpressionFunction = {
+  /** Minimum arity accepted by the evaluator. */
   readonly minimumArguments: number;
+  /** Maximum arity accepted by the evaluator. */
   readonly maximumArguments: number;
+  /** Evaluator invoked with already-coerced math values. */
   readonly evaluate: (args: readonly MathValue[]) => MathValue;
 };
 
+/** Precedence and implementation for one binary math operator. */
 type BinaryOperatorSpec = {
+  /** Relative binding priority; larger numbers bind tighter. */
   readonly priority: number;
+  /** Numeric kernel implementing the operator semantics. */
   readonly operation: (left: number, right: number) => number;
 };
 
+/** Complete binary operator table keyed by token spelling. */
 type OperatorTable = { readonly [K in BinaryOperator]: BinaryOperatorSpec };
 
 /**
  * Throws a math evaluation error.
- * @param {string} message The message to throw.
- * @returns {never} Never returns.
+ * @param message The message to throw.
+ * @returns Never returns.
  */
 function throwMathError(message: string): never {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
@@ -109,6 +120,7 @@ const NUMERIC_UNARY_ALIASES: Readonly<Record<string, string>> = {
   arctan: "atan",
 };
 
+/** Expression parser and evaluator shared by directives, macros, and encoders. */
 export class MathCore {
   /** Object assembly supplies pure name binding; numeric layout/preprocessing reads must remain constant. */
   linkContext?: () => LinkExpressionContext;
@@ -117,19 +129,31 @@ export class MathCore {
   /** Parsed syntax is reused only within an assembly snapshot; state-dependent values are never cached. */
   readonly parsedStringExpressions = new Map<string, ExpressionNode>();
 
+  /** Memoized numeric results for pure string expressions. */
   readonly pureStringExpressionCache = new Map<string, number>();
+  /** Memoized rounded results for pure string expressions when math_round is enabled. */
   readonly roundedPureStringExpressionCache = new Map<string, number>();
+  /** Records whether a source string expression is independent of assembly state. */
   readonly pureStringClassification = new Map<string, boolean>();
+  /** Source strings already traced by internal instrumentation. */
   readonly instrumentedExpressionStrings = new Set<string>();
+  /** Pure source strings already traced by internal instrumentation. */
   readonly instrumentedPureExpressionStrings = new Set<string>();
+  /** Parsed expression nodes already traced by internal instrumentation. */
   instrumentedExpressionNodes = new WeakSet<object>();
+  /** Pure parsed expression nodes already traced by internal instrumentation. */
   instrumentedPureExpressionNodes = new WeakSet<object>();
 
+  /** Optional expression host supplying reference resolution and side effects. */
   host?: ExpressionHost;
+  /** When true, numeric results round toward nearest integer where applicable. */
   math_round = false;
 
+  /** User-defined functions parsed from assembly source. */
   readonly userFunctions = new Map<string, UserFunction>();
+  /** Target-provided expression functions registered for this session. */
   readonly expressionFunctions = new Map<string, RegisteredExpressionFunction>();
+  /** Binary operator table used for precedence parsing and evaluation. */
   readonly operators = OPERATORS;
 
   /**
@@ -143,8 +167,8 @@ export class MathCore {
 
   /**
    * Installs a target-provided expression function for this session.
-   * @param {string | readonly string[]} names The canonical name and aliases.
-   * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
+   * @param names The canonical name and aliases.
+   * @param expressionFunction The function descriptor and evaluator.
    */
   registerExpressionFunction(
     names: string | readonly string[],
@@ -187,8 +211,8 @@ export class MathCore {
   /**
    * Evaluates an expression.
    * This is a direct conversion of `math` in `asar_math.cpp`.
-   * @param {string} expression The expression to evaluate.
-   * @returns {number} The result of the expression.
+   * @param expression The expression to evaluate.
+   * @returns The result of the expression.
    */
   math = (expression: string | ExpressionNode): number => {
     if (isInternalInstrumentationActive()) {
@@ -202,8 +226,8 @@ export class MathCore {
 
   /**
    * Evaluates a string or typed expression without instrumentation dispatch.
-   * @param {string | ExpressionNode} expression The expression to evaluate.
-   * @returns {number} The expression result.
+   * @param expression The expression to evaluate.
+   * @returns The expression result.
    */
   evaluateMathInput(expression: string | ExpressionNode): number {
     if (this.linkContext) {
@@ -224,8 +248,8 @@ export class MathCore {
 
   /**
    * Reuses successful results only for strings proven to contain literal operators.
-   * @param {string} expression The legacy expression source.
-   * @returns {number} The expression result.
+   * @param expression The legacy expression source.
+   * @returns The expression result.
    */
   evaluateCachedStringExpression(expression: string): number {
     let parsed = this.parsedStringExpressions.get(expression);
@@ -263,7 +287,7 @@ export class MathCore {
 
   /**
    * Records the shape and reuse of a top-level expression evaluation.
-   * @param {string | ExpressionNode} expression The evaluated expression.
+   * @param expression The evaluated expression.
    */
   recordExpressionEvaluation(expression: string | ExpressionNode): void {
     incrementInternalCounter("expressionEvaluations");
@@ -300,8 +324,8 @@ export class MathCore {
 
   /**
    * Determines whether an expression depends only on literal operators.
-   * @param {ExpressionNode} expression The expression to classify.
-   * @returns {boolean} Whether the result is independent of assembler state.
+   * @param expression The expression to classify.
+   * @returns Whether the result is independent of assembler state.
    */
   isPureExpressionNode(expression: ExpressionNode): boolean {
     switch (expression.type) {
@@ -337,8 +361,8 @@ export class MathCore {
 
   /**
    * Evaluates syntax directly; parser diagnostics are raised only when their occurrence is selected.
-   * @param {ExpressionNode} expression The expression node to evaluate.
-   * @returns {number} The numeric result.
+   * @param expression The expression node to evaluate.
+   * @returns The numeric result.
    */
   evaluateExpressionNode(expression: ExpressionNode, round = true): number {
     const result = this.evaluateNodeValue(expression);
@@ -407,6 +431,7 @@ export class MathCore {
     throw new Error("Unsupported expression node.");
   }
 
+  /** Evaluates one call argument, preserving string slots and deferring failed identifier lookups. */
   evaluateCallArgument(
     functionName: string,
     argumentIndex: number,
@@ -480,6 +505,7 @@ export class MathCore {
     return this.evaluateExpressionNode(argument);
   }
 
+  /** Applies a unary operator to an evaluated operand node. */
   evaluateUnaryExpressionNode(operator: UnaryOperator, argument: ExpressionNode): number {
     const value = this.evaluateExpressionNode(argument, false);
     switch (operator) {
@@ -501,6 +527,7 @@ export class MathCore {
     }
   }
 
+  /** Applies a binary operator to two evaluated operand nodes. */
   evaluateBinaryExpressionNode(
     operator: BinaryOperator,
     left: ExpressionNode,
@@ -538,6 +565,7 @@ export class MathCore {
     throw new Error(`Error: Label '${result.name}' not found.`);
   }
 
+  /** Reports whether a builtin call slot expects source text instead of a numeric value. */
   isStringArgument(functionName: string, argumentIndex: number): boolean {
     return isSourceTextArgument(functionName, argumentIndex);
   }
@@ -549,9 +577,9 @@ export class MathCore {
 
   /**
    * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callFunction = (name: string, args: (number | string)[]): number => {
     // 1) Check user-defined
@@ -583,9 +611,9 @@ export class MathCore {
 
   /**
    * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callUserFunction = (name: string, args: (number | string)[]): number => {
     // Get the function definition
@@ -657,9 +685,9 @@ export class MathCore {
 
   /**
    * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callBuiltInFunction = (name: string, args: (number | string)[]): number => {
     switch (name) {
@@ -949,9 +977,9 @@ export class MathCore {
 
   /**
    * Validates an argument as a number.
-   * @param {string} funcName The name of the function.
-   * @param {number | string} arg The argument to validate.
-   * @returns {number} The validated number.
+   * @param funcName The name of the function.
+   * @param arg The argument to validate.
+   * @returns The validated number.
    */
   numArg = (funcName: string, arg: number | string): number => {
     if (typeof arg === "string") {
@@ -964,9 +992,9 @@ export class MathCore {
 
   /**
    * Validates an argument as a string.
-   * @param {string} funcName The name of the function.
-   * @param {number | string} arg The argument to validate.
-   * @returns {string} The validated string.
+   * @param funcName The name of the function.
+   * @param arg The argument to validate.
+   * @returns The validated string.
    */
   strArg = (funcName: string, arg: number | string): string => {
     if (typeof arg === "number") {
@@ -992,6 +1020,7 @@ export class MathCore {
     this.functionTemplates.set(definition, template);
   }
 
+  /** Returns the configured expression host or throws when evaluation is attempted too early. */
   getHost(): ExpressionHost {
     if (!this.host) {
       throw new Error("ExpressionHost not set.");

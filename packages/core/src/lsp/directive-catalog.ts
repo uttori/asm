@@ -1,7 +1,10 @@
 /** Target-neutral directive metadata used by tooling contributions. */
 export type DirectiveDocs = {
+  /** Canonical directive keyword as typed in source. */
   keyword: string;
+  /** Short human-readable description for completion hovers. */
   summary: string;
+  /** Example syntax string shown in documentation. */
   syntax: string;
 };
 
@@ -10,11 +13,14 @@ export type DirectiveOperandDescriptor = DirectiveDocs & {
   operands?: readonly DirectiveOperandDescriptor[];
 };
 
+/** Directive documentation entry with group and nested operand forms. */
 export type DirectiveDescriptor = DirectiveDocs & {
+  /** Core directive family used for grouping in tooling UI. */
   group: string;
   operands?: readonly DirectiveOperandDescriptor[];
 };
 
+/** Builds one catalog entry with optional nested operand descriptors. */
 const descriptor = (
   keyword: string,
   summary: string,
@@ -201,6 +207,7 @@ const directiveCatalogMap = new Map<string, DirectiveDescriptor>(
   directiveCatalog.map((entry) => [entry.keyword.toLowerCase(), entry]),
 );
 
+/** Looks up built-in directive documentation, stripping a leading `@` prefix. */
 export function findDirective(keyword: string): DirectiveDescriptor | undefined {
   const normalized = keyword.toLowerCase().replace(/^@/, "");
   return directiveCatalogMap.get(normalized);

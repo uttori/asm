@@ -76,14 +76,14 @@ test("include and incbin metadata survives the direct lowering boundary", (t) =>
   if (include?.kind === "pluginSyntax") {
     t.is(include.command.keyword, "include");
     t.deepEqual(include.command.words, ["include", '"shared file.asm"']);
-    t.is(include.command?.parsed.includeTarget?.target, '"shared file.asm"');
+    t.is(include.command.parsed.includeTarget?.target, '"shared file.asm"');
   }
 
   t.is(incbin?.kind, "pluginSyntax");
   if (incbin?.kind === "pluginSyntax") {
     t.is(incbin.command.keyword, "incbin");
-    t.truthy(incbin.command?.parsed.incbinRange);
-    t.deepEqual(incbin.command?.parsed.directiveArgs?.args, ['"data.bin":(1 * 2)..(4 * 2)']);
+    t.truthy(incbin.command.parsed.incbinRange);
+    t.deepEqual(incbin.command.parsed.directiveArgs?.args, ['"data.bin":(1 * 2)..(4 * 2)']);
   }
 });
 

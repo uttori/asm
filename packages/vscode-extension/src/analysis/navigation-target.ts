@@ -1,21 +1,30 @@
 /** Exact identity required to navigate without collapsing CPU, RAM, or mirrored ROM spaces. */
 export interface AnalysisNavigationTarget {
+  /** Analysis project directory owning the navigation context. */
   readonly projectDirectory: string;
+  /** Analysis target id bound to the manifest. */
   readonly target: string;
+  /** Expected ROM content hash for identity matching. */
   readonly romContentSha256: string;
+  /** Expected ROM byte length for identity matching. */
   readonly romContentSize: number;
+  /** Address space containing the navigation address. */
   readonly addressSpace: string;
+  /** Address within the space to open. */
   readonly address: number;
+  /** Explicit mirrored ROM offsets when known. */
   readonly outputOffsets: readonly number[];
+  /** Architecture hints narrowing disassembly selection. */
   readonly architectureHints: readonly string[];
+  /** Evidence record ids associated with the navigation row. */
   readonly recordIds: readonly string[];
 }
 
 /**
  * Validate string-array fields on externally supplied navigation arguments without coercing
  * their contents.
- * @param {unknown} value Untrusted navigation field.
- * @returns {boolean} Whether every array member is a string.
+ * @param value Untrusted navigation field.
+ * @returns Whether every array member is a string.
  */
 const isStringArray = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
@@ -23,8 +32,8 @@ const isStringArray = (value: unknown): value is readonly string[] =>
 /**
  * Validate the complete command payload before navigation, including ROM hash, safe nonnegative
  * addresses, and explicit output offsets.
- * @param {unknown} value Untrusted command argument.
- * @returns {boolean} Whether the complete qualified navigation shape is valid.
+ * @param value Untrusted command argument.
+ * @returns Whether the complete qualified navigation shape is valid.
  */
 export const isAnalysisNavigationTarget = (value: unknown): value is AnalysisNavigationTarget => {
   if (!value || typeof value !== "object") {
@@ -53,8 +62,8 @@ export const isAnalysisNavigationTarget = (value: unknown): value is AnalysisNav
 
 /**
  * Accept a qualified command payload or a tree row carrying one.
- * @param {unknown} value Raw command argument or containing tree row.
- * @returns {AnalysisNavigationTarget | undefined} Validated target, or undefined for invalid arguments.
+ * @param value Raw command argument or containing tree row.
+ * @returns Validated target, or undefined for invalid arguments.
  */
 export const parseAnalysisNavigationTarget = (
   value: unknown,

@@ -16,8 +16,8 @@ export class RecordIdSet {
 
   /**
    * Claim an ID while keeping the in-memory prefix small.
-   * @param {string} id Complete record identity.
-   * @returns {boolean} False only for an exact duplicate.
+   * @param id Complete record identity.
+   * @returns False only for an exact duplicate.
    */
   add(id: string): boolean {
     if (this.#insert) {

@@ -6,25 +6,48 @@ import type {
   InstructionStateEffect,
 } from "@uttori/asm-core";
 
+/** Processor flag consulted when an addressing mode depends on accumulator or index width. */
 export type Cpu65816WidthFlag = "m" | "x";
 
+/** One 65816 addressing mode entry in the shared opcode matrix. */
 export interface Cpu65816ModeDefinition {
+  /** Stable mode id referenced by opcode rows and encoders. */
   readonly id: string;
+  /** Canonical operand placeholder spelling for tooling and decode. */
   readonly syntax: string;
+  /** Smallest encoded instruction size for this mode in bytes. */
   readonly minimumSize: number;
+  /** Largest encoded instruction size for this mode in bytes. */
   readonly maximumSize: number;
+  /** M or X flag affecting immediate width when this mode is immediate. */
   readonly widthFlag?: Cpu65816WidthFlag;
 }
 
+/** Declarative specification for one 65816 opcode byte and addressing mode. */
 export interface Cpu65816InstructionSpecification extends ArchitectureInstructionSpecification {
+  /** Primary opcode byte selecting this matrix row. */
   readonly opcode: readonly [number];
+  /** M or X flag affecting immediate forms of this mnemonic. */
   readonly widthFlag?: Cpu65816WidthFlag;
+  /** Canonical operand placeholder spelling shown in disassembly tooling. */
   readonly syntax: string;
+  /** Control-flow kind used by analysis and the linear decoder. */
   readonly flow: InstructionFlow;
+  /** PSW or register effects attributed to this instruction form. */
   readonly effects: readonly InstructionStateEffect[];
+  /** REP/SEP style status bit mutation when this opcode embeds a mask byte. */
   readonly operandStatusEffect?: "clearBits" | "setBits";
 }
 
+/**
+ * Builds a frozen mode definition with optional width-flag metadata.
+ * @param id Stable addressing mode id.
+ * @param syntax Operand placeholder spelling.
+ * @param minimumSize Minimum encoded size in bytes.
+ * @param maximumSize Maximum encoded size in bytes; defaults to minimumSize.
+ * @param widthFlag Optional M/X width flag for immediates.
+ * @returns Mode definition consumed by the opcode matrix.
+ */
 const mode = (
   id: string,
   syntax: string,
@@ -39,6 +62,7 @@ const mode = (
   ...(widthFlag ? { widthFlag } : {}),
 });
 
+/** Frozen 65816 addressing mode catalog keyed by encoder-internal mode ids. */
 export const cpu65816Modes = Object.freeze({
   imp: mode("implied", "", 1),
   acc: mode("accumulator", "", 1),
@@ -69,15 +93,19 @@ export const cpu65816Modes = Object.freeze({
   block: mode("blockMove", "srcBank,destBank", 3),
 });
 
+/** keyof the frozen 65816 mode table. */
 type Cpu65816ModeKey = keyof typeof cpu65816Modes;
 
+/**
+ * Narrows a string to a known 65816 mode table key.
+ * @param value Candidate mode key from an opcode row cell.
+ * @returns True when `value` names a mode in cpu65816Modes.
+ */
 function isCpu65816ModeKey(value: string): value is Cpu65816ModeKey {
   return Object.hasOwn(cpu65816Modes, value);
 }
 
-/**
- * The opcode rows for the 65816.
- */
+/** Opcode matrix rows transcribed from the 65816 instruction set layout. */
 const opcodeRows = [
   "BRK:sig ORA:dix COP:sig ORA:sr TSB:dp ORA:dp ASL:dp ORA:dil PHP:imp ORA:immM ASL:acc PHD:imp TSB:abs ORA:abs ASL:abs ORA:long",
   "BPL:rel8 ORA:diy ORA:dpi ORA:sriy TRB:dp ORA:dpx ASL:dpx ORA:dily CLC:imp ORA:aby INC:acc TCS:imp TRB:abs ORA:abx ASL:abx ORA:longx",
@@ -211,9 +239,9 @@ export const conditionalBranches: ReadonlySet<string> = new Set([
 
 /**
  * The flow for a 65816 instruction.
- * @param {string} mnemonic The mnemonic of the instruction.
- * @param {string} addressingMode The addressing mode of the instruction.
- * @returns {InstructionFlow} The flow for the instruction.
+ * @param mnemonic The mnemonic of the instruction.
+ * @param addressingMode The addressing mode of the instruction.
+ * @returns The flow for the instruction.
  */
 const flowFor = (mnemonic: string, addressingMode: string): InstructionFlow => {
   if (conditionalBranches.has(mnemonic)) {
@@ -348,7 +376,7 @@ export const cpu65816Specifications: readonly Cpu65816InstructionSpecification[]
 
 /**
  * Generates editor hover/completion data from the same 256-entry table used to decode.
- * @returns {InstructionDescriptor[]} Generated editor instruction descriptors.
+ * @returns Generated editor instruction descriptors.
  */
 export function buildCpu65816Catalog(): InstructionDescriptor[] {
   const grouped = new Map<string, InstructionDescriptor>();

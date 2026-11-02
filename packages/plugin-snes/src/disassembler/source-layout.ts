@@ -3,10 +3,10 @@
  * Width applies to numeric array continuations; indivisible identifiers stay intact.
  * The prefix includes indentation and ends before the initializer's opening brace.
  * Callers validate width as an integer of at least 40 columns.
- * @param {string} prefix Declaration text before the opening brace.
- * @param {readonly {assignment: string; description?: string}[]} fields Ordered field initializers and optional prose.
- * @param {number} width Preferred columns for numeric array continuations.
- * @returns {string[]} Complete declaration lines, including braces.
+ * @param prefix Declaration text before the opening brace.
+ * @param fields Ordered field initializers and optional prose.
+ * @param width Preferred columns for numeric array continuations.
+ * @returns Complete declaration lines, including braces.
  */
 export const formatStructDeclaration = (
   prefix: string,
@@ -38,9 +38,10 @@ export const formatStructDeclaration = (
   return lines;
 };
 
-/** Find a real assembly comment, leaving semicolons inside quoted text untouched.
- * @param {string} line One assembly source line.
- * @returns {number} Semicolon index, or -1 when there is no comment.
+/**
+ * Find a real assembly comment, leaving semicolons inside quoted text untouched.
+ * @param line One assembly source line.
+ * @returns Semicolon index, or -1 when there is no comment.
  */
 const commentOffset = (line: string): number => {
   let quote = "";
@@ -65,9 +66,9 @@ const commentOffset = (line: string): number => {
  * Transform prose comments while retaining standalone Markdown code fences verbatim.
  * Fences cannot cross an assembly instruction or a non-comment line; malformed metadata
  * therefore cannot suppress formatting in the next code block.
- * @param {string} source Assembly with semicolon-prefixed comment lines.
- * @param {(line: string, offset: number) => string[]} transform Prose transform; offset is -1 without a real comment.
- * @returns {string} Source with fenced comment whitespace and contents unchanged.
+ * @param source Assembly with semicolon-prefixed comment lines.
+ * @param transform Prose transform; offset is -1 without a real comment.
+ * @returns Source with fenced comment whitespace and contents unchanged.
  */
 const mapAssemblyCommentProse = (
   source: string,
@@ -114,8 +115,8 @@ const mapAssemblyCommentProse = (
  * Remove local research citations from display prose while retaining the explanation.
  * Curated metadata keeps the complete evidence. Only the conventional research/ paths
  * are recognized; ordinary links, file names and assembly text are not rewritten.
- * @param {string} text Unwrapped, single-line comment body.
- * @returns {string} Display prose with local research citations removed.
+ * @param text Unwrapped, single-line comment body.
+ * @returns Display prose with local research citations removed.
  */
 export const omitResearchReferences = (text: string): string =>
   text
@@ -135,9 +136,10 @@ export const omitResearchReferences = (text: string): string =>
     .replaceAll(/^[,.;]\s*|\s*[,;]$/g, "")
     .trim();
 
-/** Clean only actual assembly comments; quoted semicolons and source paths remain byte-exact.
- * @param {string} source Assembly before comment wrapping.
- * @returns {string} Assembly with evidence-only comment lines removed.
+/**
+ * Clean only actual assembly comments; quoted semicolons and source paths remain byte-exact.
+ * @param source Assembly before comment wrapping.
+ * @returns Assembly with evidence-only comment lines removed.
  */
 export const omitAssemblyResearchReferences = (source: string): string =>
   mapAssemblyCommentProse(source, (line, offset) => {
@@ -162,9 +164,9 @@ export const omitAssemblyResearchReferences = (source: string): string =>
  * existing line/paragraph boundaries and code indentation are retained. Fenced comment code
  * is verbatim, even beyond width; long prose words may also exceed width.
  * Callers validate width as an integer of at least 20 columns.
- * @param {string} source Assembly with original comment paragraph boundaries.
- * @param {number} width Preferred line width including indentation and comment marker.
- * @returns {string} Equivalent assembly with bounded comment lines.
+ * @param source Assembly with original comment paragraph boundaries.
+ * @param width Preferred line width including indentation and comment marker.
+ * @returns Equivalent assembly with bounded comment lines.
  */
 export const wrapAssemblyComments = (source: string, width: number): string =>
   mapAssemblyCommentProse(source, (line, offset) => {

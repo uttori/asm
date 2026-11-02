@@ -45,28 +45,33 @@ An omitted output path uses the target's extension. `--debug` also writes `<outp
 Assembly creates output directories and replaces the chosen output. Use a separate output path to preserve a base ROM.
 Binary and debug-map destinations must be distinct from each other and the source / config.
 
-`uttori-asm.config.json` selects plugins, target, architecture, and include paths. `--config` chooses
-a file. `--plugin`, `--target`, `--architecture`, and `--include-path` override project choices.
+`uttori-asm.config.json` in the current directory selects plugins, target, architecture, and include paths. `--config` chooses
+a file. `--plugin` appends a plugin; `--target`, `--architecture`, `--include-path`, and `--plugin-option` override project choices.
+The entry source's directory is always searched first for includes.
 Use `--help` for the full command and option list.
 
 Project configuration takes precedence over host defaults. Command-line overrides take precedence
-over project configuration. See [configuration and path resolution](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md) and the [SNES defaults](#default-behavior).
+over project configuration. A configuration file replaces the CLI's SNES default, so list its plugins.
+See [configuration and path resolution](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md) and the [SNES defaults](#default-behavior).
+
+Explicit `assemble-object`, `library`, `link`, and `build` commands produce relocatable objects,
+libraries, and linked builds with JSON receipts; see the [linked build guide](../workflows/LINKED-BUILDS.md).
 
 ## Assemble Options
 
-| Option                             | Meaning                                                           |
-| ---------------------------------- | ----------------------------------------------------------------- |
-| `--config path`                    | Load a particular `uttori-asm.config.json`                        |
-| `--plugin module`                  | Append a plugin module. Repeatable                                |
-| `--target id`                      | Override the configured target                                    |
-| `--architecture id`                | Override the initial architecture                                 |
-| `--base-image path`                | Read and patch an existing binary image                           |
-| `--debug`                          | Collect source metadata and write `<output>.debug.json`           |
-| `--debug-map path`                 | Collect source metadata and write the debug map at `path`         |
-| `--include-path path`              | Add a source or binary lookup directory. Repeatable               |
-| `--plugin-option plugin:key=value` | Override one plugin option. Values are JSON-decoded when possible |
-| `--verbose`                        | Print the resolved plugins, target, and architecture              |
-| `--help`                           | Print usage                                                       |
+| Option                             | Meaning                                                                                                              |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `--config path`                    | Load a particular `uttori-asm.config.json`                                                                           |
+| `--plugin module`                  | Append a plugin module after configured plugins. Repeatable                                                          |
+| `--target id`                      | Override the configured target                                                                                       |
+| `--architecture id`                | Override the initial architecture                                                                                    |
+| `--base-image path`                | Read and patch an existing binary image                                                                              |
+| `--debug`                          | Collect source metadata and write `<output>.debug.json`                                                              |
+| `--debug-map path`                 | Collect source metadata and write the debug map at `path`                                                            |
+| `--include-path path`              | Source or binary lookup directory, relative to the current directory. Repeatable. Replaces configured `includePaths` |
+| `--plugin-option plugin:key=value` | Override one option of a loaded plugin, named by module or plugin ID. Values are JSON-decoded when possible          |
+| `--verbose`                        | Print the resolved plugins, target, and architecture                                                                 |
+| `--help`                           | Print usage for every command                                                                                        |
 
 Examples:
 
@@ -80,25 +85,33 @@ uttori-asm main.asm --plugin ./plugin.js --target custom.raw \
   --plugin-option custom.plugin:mode='"strict"' --verbose
 ```
 
+A `--plugin-option` that matches no loaded plugin fails. Plugin option values merge in order:
+configuration, module-name override, then plugin-ID override.
+
 ## Arguments, Paths, and Errors
 
 Valued options accept `--flag value` or `--flag=value`.
-Boolean flags take no value: omit them to disable them, so `--force=false` throws an error.
+Boolean flags take no value: omit them to disable them, so `--debug=false` throws an error.
 Repeat `--plugin`, `--include-path`, `--plugin-option`, and `--entry` as needed, other repeated valued options use the last value.
+The `source init`, `asset`, and `assemble-object` parsers reject repeated options instead.
 Unknown flags, flags for another command, missing values, invalid limits, and excess positional arguments fail before work.
 Use an explicit `assemble` if a source filename matches a command name.
 
-Paths use the host OS's syntax. CLI input/output/config/base/ROM paths are relative to the current
-working directory. Plugin and include paths follow the [configuration resolution rules](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md).
+Paths use the host OS's syntax. CLI input/output/config/base/ROM/project paths are relative to the current
+working directory. Build-manifest paths resolve beside the manifest, and `asset convert` file and destination paths are project-relative.
+Plugin and include paths follow the [configuration resolution rules](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md).
 Quote paths containing spaces. Use `--` to stop option parsing, for example
 `uttori-asm assemble -- --source.asm output.bin`. A valued option whose value begins with `--` needs
-the equals form.
+the equals form; `assemble-object` rejects such values.
 
 Normal success and `--help` return **0**. Argument, input, configuration, compilation, verification,
 and cleanup failures return **1**, with diagnostics on stderr. An analysis that records an explicit
 incomplete result returns 0. Inspect its status and reasons before treating discovery as complete.
-Help, progress, verbose details, and success messages use stdout. Warnings use stderr. Output is
-human-readable and has no uniform machine-readable schema. Use the exit status rather than matching
+`project-compact` returns 1 when storage maintenance reports a warning, after printing its result.
+Help, results, verbose details, and success messages use stdout. Warnings, errors, and progress from source,
+linked-build, and compaction commands use stderr. `evidence-import` stage messages use stdout.
+Assembly, analysis, import, and compaction output is human-readable. `evidence-report`, `project-storage`,
+`source`, `asset`, and linked-build commands print JSON results. Use the exit status rather than matching
 a success line, since a later step or cleanup can fail.
 
 Assembly replaces the chosen binary and optional debug map. Parent directories are created, both
@@ -116,7 +129,7 @@ cooperative cancellation should use the underlying project APIs.
 
 ## Programmatic Use
 
-The package exports `parseCliArguments()`, `runCli()`, the `CliArguments` interface, and the generated usage text:
+The package exports `parseCliArguments()`, `runCli()`, the `CliArguments` and `CliCommand` types, and the generated `usage` text:
 
 ```ts
 import { runCli } from "@uttori/asm-cli";
@@ -124,7 +137,8 @@ import { runCli } from "@uttori/asm-cli";
 process.exitCode = await runCli(["main.asm", "output.bin"]);
 ```
 
-`parseCliArguments(argv)` parses tokens without file I/O or plugin loading and throws `Error` for invalid arguments.
+`parseCliArguments(argv)` parses assembly and analysis tokens without file I/O or plugin loading and throws `Error` for invalid arguments.
+It does not parse the `source`, `asset`, or linked-build commands; `runCli` dispatches those directly.
 Paths remain unresolved, list fields and the outer plugin-option map are shallow-frozen.
 Required input / ROM presence is checked during execution so `--help` can stand alone.
 
@@ -139,10 +153,11 @@ Use `@uttori/asm-core` directly when the host needs structured results and owns 
 
 ## SNES
 
-The bundled `@uttori/asm-plugin-snes` provides the default assembly target. The CLI's ROM analysis,
-native instruction-trace import, and native source-export commands below currently operate on SNES projects.
-Installing another architecture plugin changes assembly choices. It does not add these SNES analysis
-workflows to that architecture. See the [SNES manual](https://github.com/uttori/asm/blob/master/packages/plugin-snes/MANUAL.md)
+The bundled `@uttori/asm-plugin-snes` provides the default assembly target. The CLI's standalone ROM analysis
+and native instruction-trace import commands below currently operate on SNES projects. Git source
+commands support SNES and iNES ROMs; `source relocate` and `source expand` are SNES-only, and
+`source graphics` queries NES graphics evidence. Installing another architecture plugin changes
+assembly choices. It does not add these analysis workflows to that architecture. See the [SNES manual](https://github.com/uttori/asm/blob/master/packages/plugin-snes/MANUAL.md)
 for mapper, instruction, and hardware details.
 
 ### Default Behavior

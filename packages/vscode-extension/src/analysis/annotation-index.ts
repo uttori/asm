@@ -3,17 +3,25 @@ import type { InstructionAnalysisAnnotation } from "@uttori/asm-disassembler";
 
 /** Debug-map fields required for an exact logical/output range join. */
 export interface InstructionAnnotationRange {
+  /** Architecture id for the indexed span. */
   readonly architecture: string;
+  /** Address space containing the logical span. */
   readonly addressSpace: string;
+  /** Inclusive logical range start. */
   readonly start: number;
+  /** Exclusive logical range end. */
   readonly end: number;
+  /** Inclusive mirrored ROM start when known. */
   readonly outputStart?: number;
+  /** Exclusive mirrored ROM end when known. */
   readonly outputEnd?: number;
 }
 
 /** Immutable query surface built once per validated native project. */
 export interface InstructionAnnotationIndex {
+  /** Annotations grouped by address space id in stable insertion order. */
   readonly byAddressSpace: ReadonlyMap<string, readonly InstructionAnalysisAnnotation[]>;
+  /** Annotations sorted by mirrored ROM offset for output joins. */
   readonly byOutputOffset: readonly {
     readonly offset: number;
     readonly annotation: InstructionAnalysisAnnotation;
@@ -23,9 +31,9 @@ export interface InstructionAnnotationIndex {
 /**
  * Append an annotation to its per-key bucket without replacing earlier entries; mutates the
  * supplied map.
- * @param {Map<Key, Value[]>} map Mutable buckets retaining insertion order.
- * @param {Key} key Bucket identity.
- * @param {Value} value Entry appended without replacing existing values.
+ * @param map Mutable buckets retaining insertion order.
+ * @param key Bucket identity.
+ * @param value Entry appended without replacing existing values.
  */
 const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
   const entries = map.get(key);
@@ -40,10 +48,10 @@ const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): voi
  * Find the first index whose projected address is at least target, or the array length if none
  * exists.
  * The input must already be sorted in ascending projected-address order.
- * @param {readonly Value[]} values Entries sorted by ascending projected address.
- * @param {number} target Inclusive lower address threshold.
- * @param {Function} at Projection returning the address used by the sort.
- * @returns {number} First qualifying index, or values.length when none qualifies.
+ * @param values Entries sorted by ascending projected address.
+ * @param target Inclusive lower address threshold.
+ * @param at Projection returning the address used by the sort.
+ * @returns First qualifying index, or values.length when none qualifies.
  */
 const lowerBound = <Value>(
   values: readonly Value[],
@@ -66,11 +74,11 @@ const lowerBound = <Value>(
 /**
  * Select entries in the half-open address interval [start, end) from an array sorted by the
  * supplied address projection.
- * @param {readonly Value[]} values Entries sorted by ascending projected address.
- * @param {number} start Inclusive lower address bound.
- * @param {number} end Exclusive upper address bound.
- * @param {Function} at Projection returning each entry’s address.
- * @returns {readonly Value[]} Matching entries in their original sorted order.
+ * @param values Entries sorted by ascending projected address.
+ * @param start Inclusive lower address bound.
+ * @param end Exclusive upper address bound.
+ * @param at Projection returning each entry’s address.
+ * @returns Matching entries in their original sorted order.
  */
 const valuesInRange = <Value>(
   values: readonly Value[],
@@ -91,8 +99,8 @@ const valuesInRange = <Value>(
 
 /**
  * Builds deterministic logical-address and explicit-output indexes.
- * @param {readonly InstructionAnalysisAnnotation[]} instructions Projected native instructions.
- * @returns {InstructionAnnotationIndex} Reusable immutable lookup indexes.
+ * @param instructions Projected native instructions.
+ * @returns Reusable immutable lookup indexes.
  */
 export const createInstructionAnnotationIndex = (
   instructions: readonly InstructionAnalysisAnnotation[],
@@ -122,9 +130,9 @@ export const createInstructionAnnotationIndex = (
 
 /**
  * Returns every architecture-compatible instruction explicitly contained by a debug-map span.
- * @param {InstructionAnnotationIndex} index Native instruction indexes.
- * @param {InstructionAnnotationRange} range Validated debug-map span.
- * @returns {readonly InstructionAnalysisAnnotation[]} Stable deduplicated annotations.
+ * @param index Native instruction indexes.
+ * @param range Validated debug-map span.
+ * @returns Stable deduplicated annotations.
  */
 export const instructionAnnotationsForDebugRange = (
   index: InstructionAnnotationIndex,

@@ -32,15 +32,18 @@ export class AsarModuleLayout {
     return this.module.selectSection({ name: section });
   }
 
+  /** Opens a section with identical load and run addresses. */
   org(address: number): number {
     return this.open(address, address);
   }
 
+  /** Opens a section keeping the current load address and optional run address. */
   base(address?: number): number {
     const loadAddress = this.currentAddress("load");
     return this.open(loadAddress, address ?? loadAddress);
   }
 
+  /** Saves the current section cursor on the PC stack. */
   pushPc(): void {
     if (this.pcStack.length >= 256) {
       throw new Error("PushPC stack overflow.");
@@ -49,6 +52,7 @@ export class AsarModuleLayout {
     this.pcStack.push(this.module.position());
   }
 
+  /** Restores the most recently pushed section cursor. */
   pullPc(): number {
     const saved = this.pcStack.pop();
     if (!saved) {
@@ -58,10 +62,12 @@ export class AsarModuleLayout {
     return this.module.seek(saved.offset);
   }
 
+  /** Saves the current run address on the base stack. */
   pushBase(): void {
     this.baseStack.push(this.currentAddress("run"));
   }
 
+  /** Reopens a section using the saved run address as the new base. */
   pullBase(): number {
     const address = this.baseStack.pop();
     if (address === undefined) {

@@ -36,6 +36,11 @@ import {
   parameterList,
 } from "./ca65.js";
 
+/**
+ * Builds the literal schema for one directive operation tag.
+ * @param name Operation tag.
+ * @returns Literal-match schema preserving the tag's string type.
+ */
 const operation = <const T extends string>(name: T) => syntaxLiteral(name);
 const schema = syntaxUnion(
   syntaxRecord({ operation: operation("segment"), name: syntaxString }),
@@ -83,7 +88,9 @@ const schema = syntaxUnion(
   }),
   syntaxRecord({ operation: operation("error"), message: syntaxString }),
 );
+/** Validated directive payload produced by the parser and consumed by the dispatcher. */
 type Payload = ExtractGuard<typeof schema>;
+/** Extracts the guarded type from a type-guard function. */
 type ExtractGuard<G> = G extends ((value: unknown) => value is infer T) ? T : never;
 
 /** Parsing depends only on the selected contribution and lexical source, never on CPU/segment state. */

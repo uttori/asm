@@ -15,7 +15,9 @@ import {
 import { parseSpcBlock, parseEndSpcBlock } from "../services/spc-runtime.js";
 import { resolveSnesCpuName } from "./cpu-name.js";
 
+/** Builds a syntax literal guard for a fixed directive operation keyword. */
 const op = <const T extends string>(name: T) => syntaxLiteral(name);
+/** Typed union of every lowered SNES directive payload shape. */
 export const snesDirectiveSchema = syntaxUnion(
   syntaxRecord({
     operation: op("mapper"),
@@ -57,7 +59,9 @@ export const snesDirectiveSchema = syntaxUnion(
     error: syntaxOptional(syntaxString),
   }),
 );
+/** Infers the validated payload type from a syntax guard union. */
 type ExtractGuard<G> = G extends ((value: unknown) => value is infer T) ? T : never;
+/** Parsed SNES directive payload accepted by the execution handlers. */
 type Payload = ExtractGuard<typeof snesDirectiveSchema>;
 
 /** Select a target operation without invoking mapping, CPU changes, file reads or expression functions. */
@@ -109,7 +113,7 @@ export function parseSnesDirective(
       return { operation: "width", register: "index", wide: true };
     case "ca65.accu":
     case "ca65.index": {
-      const width = words[1]?.trim();
+      const width = words.at(1)?.trim();
       if (width !== "8" && width !== "16") {
         throw new Error(`${keyword} requires an argument of 8 or 16, got: ${width ?? "<none>"}`);
       }

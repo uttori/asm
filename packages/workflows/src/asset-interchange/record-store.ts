@@ -28,8 +28,11 @@ export function readAssetStagingId(value: unknown): string {
 
 /** Exact sorted regular-file inventory; the hash pins names, byte sizes and content hashes for retirement. */
 export interface AssetStagingInventory {
+  /** Staging inventory identity used to retire leftover directories. */
   readonly id: string;
+  /** SHA-256 of the interchange document or review payload. */
   readonly hash: string;
+  /** Per-file before/after digests recorded with the review. */
   readonly files: readonly {
     readonly name: string;
     /** File length in bytes, including partially written durable-replacement temporaries. */
@@ -119,6 +122,7 @@ export function readAssetFile(file: string, limit: number): Uint8Array {
   }
 }
 
+/** One persisted interchange atom: export, review, or maintenance record. */
 type Atom =
   | null
   | boolean
@@ -130,6 +134,7 @@ type Atom =
       readonly type: "u8" | "u32";
       readonly length: number;
     };
+/** On-disk journal entry wrapping an interchange atom. */
 type Entry =
   | { readonly kind: "array"; readonly values: readonly Atom[] }
   | {
@@ -143,6 +148,7 @@ interface PackedRecord {
   readonly blobs: ReadonlyMap<string, Uint8Array>;
 }
 
+/** Reject interchange keys that contain path separators or NUL. */
 function safeKey(key: string): void {
   if (key === "__proto__" || key === "constructor" || key === "prototype") {
     throw new Error("Unsafe asset metadata key.");
@@ -277,6 +283,7 @@ function pack(value: unknown, signal?: AbortSignal): PackedRecord {
   return { metadata, blobs };
 }
 
+/** True for a plain object that can hold JSON object fields. */
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }

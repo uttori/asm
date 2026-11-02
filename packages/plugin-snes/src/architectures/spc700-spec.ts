@@ -8,19 +8,33 @@ import type {
 
 /** One fixed-width SPC700 addressing form. */
 export interface Spc700ModeDefinition {
+  /** Stable mode id referenced by opcode rows and encoders. */
   readonly id: string;
+  /** Canonical operand placeholder spelling for tooling and decode. */
   readonly syntax: string;
+  /** Fixed encoded instruction size for this mode in bytes. */
   readonly size: 1 | 2 | 3;
 }
 
 /** Declarative specification for one of the SPC700's 256 opcode bytes. */
 export interface Spc700InstructionSpecification extends ArchitectureInstructionSpecification {
+  /** Primary opcode byte indexing the 256-entry matrix. */
   readonly opcode: readonly [number];
+  /** Canonical operand placeholder spelling shown in disassembly tooling. */
   readonly syntax: string;
+  /** Control-flow kind used by analysis and the linear decoder. */
   readonly flow: InstructionFlow;
+  /** PSW or register effects attributed to this instruction form. */
   readonly effects: readonly InstructionStateEffect[];
 }
 
+/**
+ * Builds a fixed-size SPC700 mode definition.
+ * @param id Stable addressing mode id.
+ * @param syntax Operand placeholder spelling.
+ * @param size Encoded instruction size in bytes.
+ * @returns Mode definition consumed by the opcode matrix.
+ */
 const mode = (id: string, syntax: string, size: 1 | 2 | 3): Spc700ModeDefinition => ({
   id,
   syntax,
@@ -105,17 +119,19 @@ export const spc700Modes = Object.freeze({
   absY: mode("absoluteRegisterY", "addr,Y", 3),
 });
 
+/** keyof the frozen SPC700 mode table. */
 type Spc700ModeKey = keyof typeof spc700Modes;
 
+/**
+ * Narrows a string to a known SPC700 mode table key.
+ * @param value Candidate mode key from an opcode row cell.
+ * @returns True when `value` names a mode in spc700Modes.
+ */
 function isSpc700ModeKey(value: string): value is Spc700ModeKey {
   return Object.hasOwn(spc700Modes, value);
 }
 
-/*
- * Independently transcribed from Nintendo's SNES Development Manual, Book I,
- * Appendix C. The GPL Framework disassembler is an optional oracle only and
- * is not a source for this table or its implementation.
- */
+/** Opcode matrix rows transcribed from the SPC700 appendix table. */
 const opcodeRows = [
   "NOP:imp TCALL:tc SET0:dpBit BBS0:dpBitRel OR:aDp OR:aAbs OR:aIndX OR:aDpxi OR:aImm OR:dpDp OR1:cBit ASL:dp ASL:abs PUSH:regP TSET:absA BRK:imp",
   "BPL:rel TCALL:tc CLR0:dpBit BBC0:dpBitRel OR:aDpx OR:aAbx OR:aAby OR:aDpiy OR:dpImm OR:xy DECW:dpWord ASL:dpx ASL:regA DEC:regX CMP:xAbs JMP:jmpAbx",
@@ -210,6 +226,12 @@ export const spc700ConditionalBranches: ReadonlySet<string> = new Set([
   "DBNZ",
 ]);
 
+/**
+ * Derives control-flow metadata from mnemonic and addressing mode ids.
+ * @param mnemonic Uppercased instruction mnemonic.
+ * @param addressingMode Stable mode id from the opcode matrix.
+ * @returns Flow descriptor for decode and analysis consumers.
+ */
 const flowFor = (mnemonic: string, addressingMode: string): InstructionFlow => {
   if (
     spc700ConditionalBranches.has(mnemonic) ||
@@ -300,7 +322,7 @@ export const spc700Specifications: readonly Spc700InstructionSpecification[] = O
 
 /**
  * Generates editor hover/completion data from the decoder's opcode authority.
- * @returns {InstructionDescriptor[]} Alphabetized SPC700 instruction descriptors.
+ * @returns Alphabetized SPC700 instruction descriptors.
  */
 export function buildSpc700Catalog(): InstructionDescriptor[] {
   const grouped = new Map<string, InstructionDescriptor>();

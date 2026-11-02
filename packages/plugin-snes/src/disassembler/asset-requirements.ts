@@ -4,7 +4,9 @@ import type { LoadedSnesStructMap } from "./struct-map.js";
 
 /** Exact source codec required for every ROM binding of one project-defined layout. */
 export interface SnesAssetRequirement {
+  /** Struct-map structure id whose bindings must be covered; unique across requirements. */
   readonly structure: string;
+  /** Asset codec name that every covering `includeAsset` call must use. */
   readonly format: string;
   /** Required literal string options, such as the room section. Other options remain unrestricted. */
   readonly options?: Readonly<Record<string, string>>;
@@ -12,8 +14,11 @@ export interface SnesAssetRequirement {
 
 /** Headerless ROM interval replaced by a single asset directive. */
 export interface SnesAssetIncludeEntry {
+  /** Inclusive headerless ROM file offset. */
   readonly start: number;
+  /** Exclusive headerless ROM file offset. */
   readonly end: number;
+  /** Emitted asset directive source, parsed to recover its codec and options. */
   readonly directive: string;
 }
 
@@ -96,7 +101,7 @@ export function verifySnesAssetRequirements(
             return option?.kind === "string" && option.value === value;
           }),
       )
-      .sort((a, b) => a.start - b.start);
+      .toSorted((a, b) => a.start - b.start);
     // Coverage is a union, not a requirement for one particular palette slice or
     // room filename. Aliases retain their existing physical owner and source identity.
     for (const entry of matching) {

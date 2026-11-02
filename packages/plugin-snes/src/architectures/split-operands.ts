@@ -9,8 +9,8 @@ import { parseExpressionNode } from "@uttori/asm-core";
 /**
  * 65816 keeps the rest of the line as a single operand (`LDA $12,x` is one form,
  * not two arguments). Splitting on commas would break indexed modes.
- * @param {string} text Rest-of-line operand text.
- * @returns {string[]} One entry, or an empty list when `text` is empty.
+ * @param text Rest-of-line operand text.
+ * @returns One entry, or an empty list when `text` is empty.
  */
 export const splitSingleOperand = (text: string): string[] => (text ? [text] : []);
 
@@ -72,8 +72,8 @@ export function referenceExpressions65816(operand: string, depth = 0): string[] 
 
 /**
  * Super FX `MOVE Rn, Rm` style: commas are always operand separators.
- * @param {string} text Rest-of-line operand text.
- * @returns {string[]} Trimmed operands. Empty input yields `[]`.
+ * @param text Rest-of-line operand text.
+ * @returns Trimmed operands. Empty input yields `[]`.
  */
 export const splitCommaOperands = (text: string): string[] =>
   text ? text.split(",").map((operand) => operand.trim()) : [];
@@ -81,8 +81,8 @@ export const splitCommaOperands = (text: string): string[] =>
 /**
  * SPC700 `MOV A,($12+X)` - commas inside parentheses are addressing syntax,
  * not argument splits. Bracket forms are rare here. Only `()` depth is tracked.
- * @param {string} text Rest-of-line operand text.
- * @returns {string[]} Top-level comma-separated operands.
+ * @param text Rest-of-line operand text.
+ * @returns Top-level comma-separated operands.
  */
 export const splitTopLevelCommaOperands = (text: string): string[] => {
   const operands: string[] = [];

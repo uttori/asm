@@ -84,9 +84,9 @@ const roundUp = (value: number, quantum: number): number => Math.ceil(value / qu
 
 /**
  * Derives deterministic budgets from a retained report and a documented variance formula.
- * @param {DisassemblerBenchmarkBudgetReport} report Stable measured report.
- * @param {{ readonly path: string; readonly sha256: string }} sourceReport Report provenance.
- * @returns {DisassemblerBenchmarkBudgets} Host-scoped time and memory policy.
+ * @param report Stable measured report.
+ * @param sourceReport Report provenance.
+ * @returns Host-scoped time and memory policy.
  */
 export const deriveDisassemblerBenchmarkBudgets = (
   report: DisassemblerBenchmarkBudgetReport,
@@ -151,8 +151,8 @@ export const deriveDisassemblerBenchmarkBudgets = (
 
 /**
  * Refuses to apply host-specific budgets to a different runtime class.
- * @param {DisassemblerBenchmarkBudgetReport} report Measured report environment.
- * @param {DisassemblerBenchmarkBudgets} budgets Host-scoped policy.
+ * @param report Measured report environment.
+ * @param budgets Host-scoped policy.
  */
 export const assertDisassemblerBudgetEnvironment = (
   report: DisassemblerBenchmarkBudgetReport,
@@ -182,9 +182,9 @@ export const assertDisassemblerBudgetEnvironment = (
 
 /**
  * Evaluates only fixture/operation pairs present in a measured report.
- * @param {DisassemblerBenchmarkBudgetReport} report Measured aggregates.
- * @param {DisassemblerBenchmarkBudgets} budgets Limits derived from a retained baseline.
- * @returns {readonly DisassemblerBenchmarkBudgetViolation[]} Deterministically ordered failures.
+ * @param report Measured aggregates.
+ * @param budgets Limits derived from a retained baseline.
+ * @returns Deterministically ordered failures.
  */
 export const evaluateDisassemblerBenchmarkBudgets = (
   report: DisassemblerBenchmarkBudgetReport,

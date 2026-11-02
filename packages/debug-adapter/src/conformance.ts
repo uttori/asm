@@ -24,50 +24,77 @@ export const DEBUG_BACKEND_CONFORMANCE_SCENARIOS = Object.freeze([
 
 /** One architecture expected from capability negotiation. */
 export interface DebugBackendConformanceArchitecture {
+  /** Architecture identifier under test. */
   readonly architecture: string;
+  /** Address spaces that must be advertised for this architecture. */
   readonly addressSpaces: readonly string[];
+  /** Readable memory spaces and side-effect guarantees. */
   readonly memorySpaces: readonly DebugMemorySpaceCapabilities[];
+  /** Execution features that must match exactly when present. */
   readonly capabilities: Partial<DebugExecutionCapabilities>;
 }
 
 /** Known program state used by every backend conformance run. */
 export interface DebugBackendConformanceFixture {
+  /** Expected capability entries for every emulated architecture. */
   readonly architectures: readonly DebugBackendConformanceArchitecture[];
+  /** Architecture used for primary-thread scenarios. */
   readonly primaryArchitecture: string;
+  /** Address space paired with the primary architecture. */
   readonly primaryAddressSpace: string;
+  /** PC after connect with reset enabled. */
   readonly initialAddress: DebugAddress;
+  /** PC after one instruction step on the primary thread. */
   readonly steppedAddress: DebugAddress;
+  /** PC where an execute breakpoint must stop. */
   readonly breakpointAddress: DebugAddress;
+  /** Address for the bounded memory read check. */
   readonly memoryAddress: DebugAddress;
+  /** Expected bytes returned by the memory read check. */
   readonly memoryBytes: readonly number[];
+  /** Register names that must exist on the initial frame. */
   readonly requiredRegisters: readonly string[];
+  /** Address disassembled for text verification. */
   readonly disassemblyAddress: DebugAddress;
+  /** Expected mnemonic text for disassemblyAddress. */
   readonly disassemblyText: string;
 }
 
 /** Inputs for one reusable conformance run. */
 export interface DebugBackendConformanceOptions {
+  /** Backend identifier recorded in the conformance report. */
   readonly backend: string;
+  /** Factory that returns a fresh backend instance per scenario. */
   readonly createBackend: () => DebugBackend | Promise<DebugBackend>;
+  /** Frozen addresses and bytes every scenario assumes. */
   readonly fixture: DebugBackendConformanceFixture;
+  /** Per-operation timeout in milliseconds. */
   readonly timeoutMs?: number;
 }
 
 /** Deterministic result for one conformance scenario. */
 export interface DebugBackendConformanceScenarioResult {
+  /** Stable scenario identifier from DEBUG_BACKEND_CONFORMANCE_SCENARIOS. */
   readonly id: (typeof DEBUG_BACKEND_CONFORMANCE_SCENARIOS)[number];
+  /** Pass or fail for this scenario only. */
   readonly status: "pass" | "fail";
+  /** Failure message when status is fail. */
   readonly error?: string;
 }
 
 /** Machine-readable result suitable for a backend revision manifest. */
 export interface DebugBackendConformanceReport {
+  /** Conformance schema revision. */
   readonly version: typeof DEBUG_BACKEND_CONFORMANCE_VERSION;
+  /** Backend identifier under test. */
   readonly backend: string;
+  /** True only when every scenario passed. */
   readonly passed: boolean;
+  /** Ordered scenario outcomes. */
   readonly scenarios: readonly DebugBackendConformanceScenarioResult[];
 }
 
+/** Throws an Error to abort a scenario with a readable message. */
 const fail = (message: string): never => {
   throw new Error(message);
 };
@@ -80,12 +107,14 @@ const requireValue = <Value>(value: Value | undefined, message: string): Value =
   return value;
 };
 
+/** Compares qualified addresses including optional output-offset equality. */
 const addressesMatch = (left: DebugAddress, right: DebugAddress): boolean =>
   left.architecture === right.architecture &&
   left.addressSpace === right.addressSpace &&
   (left.address === right.address ||
     (left.outputOffset !== undefined && left.outputOffset === right.outputOffset));
 
+/** Asserts two addresses match or fails the scenario with context. */
 const assertAddress = (actual: DebugAddress, expected: DebugAddress, context: string): void => {
   if (!addressesMatch(actual, expected)) {
     fail(
@@ -105,6 +134,7 @@ const CAPABILITY_KEYS = [
   "disassemble",
 ] as const satisfies readonly (keyof DebugExecutionCapabilities)[];
 
+/** Compares negotiated architecture capabilities against fixture expectations. */
 const assertCapability = (
   actual: DebugArchitectureCapabilities,
   expected: DebugBackendConformanceArchitecture,
@@ -139,18 +169,23 @@ const assertCapability = (
   }
 };
 
+/** Records backend events for deterministic scenario assertions. */
 class EventLog {
+  /** Events appended in delivery order since construction. */
   readonly events: DebugBackendEvent[] = [];
   readonly #subscription: DebugSubscription;
 
+  /** Subscribes to backend events until dispose is called. */
   constructor(backend: DebugBackend) {
     this.#subscription = backend.onEvent((event) => this.events.push(event));
   }
 
+  /** Stops recording backend events. */
   dispose(): void {
     this.#subscription.dispose();
   }
 
+  /** Polls recorded events until predicate matches or timeout elapses. */
   async waitFor(
     predicate: (event: DebugBackendEvent) => boolean,
     start: number,
@@ -176,6 +211,7 @@ class EventLog {
   }
 }
 
+/** Wraps an async operation with a bounded wall-clock timeout. */
 const withTimeout = async <Value>(
   operation: Promise<Value>,
   timeoutMs: number,
@@ -200,6 +236,7 @@ const withTimeout = async <Value>(
     );
   });
 
+/** Runs one scenario with a fresh backend and guaranteed disconnect cleanup. */
 const withBackend = async (
   options: DebugBackendConformanceOptions,
   action: (backend: DebugBackend, events: EventLog, timeoutMs: number) => void | Promise<void>,
@@ -227,13 +264,16 @@ const withBackend = async (
   }
 };
 
+/** Maps backend events to their type names for order assertions. */
 const eventTypes = (events: readonly DebugBackendEvent[]): string[] =>
   events.map((event) => event.type);
 
+/** Returns the protocol version reported by a backend for comparison. */
 function reportedProtocol(version: number): number {
   return version;
 }
 
+/** Frozen scenario implementations keyed by DEBUG_BACKEND_CONFORMANCE_SCENARIOS id. */
 const scenarios: Readonly<
   Record<
     (typeof DEBUG_BACKEND_CONFORMANCE_SCENARIOS)[number],
@@ -413,8 +453,8 @@ const scenarios: Readonly<
 
 /**
  * Runs the frozen backend contract with fresh instances so scenarios cannot leak emulator state.
- * @param {DebugBackendConformanceOptions} options Backend factory and known fixture state.
- * @returns {Promise<DebugBackendConformanceReport>} Deterministic pass/fail report.
+ * @param options Backend factory and known fixture state.
+ * @returns Deterministic pass/fail report.
  */
 export const runDebugBackendConformance = async (
   options: DebugBackendConformanceOptions,

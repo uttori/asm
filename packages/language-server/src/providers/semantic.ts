@@ -63,11 +63,11 @@ export const definitionTokenModifier =
 /**
  * Source ranges for each segment of a compound identifier on a line.
  * `.idx_beginner` → `.idx` and `beginner`. `_018049_8053` → `_018049` and `8053`.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {number} line The zero-based line number.
- * @param {string} word The compound identifier.
- * @returns {Range[] | undefined} Per-segment ranges, or undefined when not compound.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param line The zero-based line number.
+ * @param word The compound identifier.
+ * @returns Per-segment ranges, or undefined when not compound.
  */
 export function compoundSegmentRanges(
   index: WorkspaceIndex,
@@ -102,9 +102,9 @@ export function compoundSegmentRanges(
 
 /**
  * Builds semantic tokens for a file from its symbols and references.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @returns {SemanticTokens} The semantic tokens.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @returns The semantic tokens.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook
  */
 export function semanticTokensFor(index: WorkspaceIndex, file: string): SemanticTokens {
@@ -125,9 +125,9 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
 
   /**
    * Collects only nonempty single-line spans accepted by this server's semantic-token encoder.
-   * @param {Range} range Raw source geometry for one token.
-   * @param {number} type Index in the advertised token-type legend.
-   * @param {number} modifiers Legend-indexed flags; defaults to zero for references.
+   * @param range Raw source geometry for one token.
+   * @param type Index in the advertised token-type legend.
+   * @param modifiers Legend-indexed flags; defaults to zero for references.
    */
   const push = (range: Range, type: number, modifiers = 0): void => {
     if (range.start.line !== range.end.line) {
@@ -213,8 +213,8 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
 
 /**
  * Maps a symbol kind to a semantic token type index.
- * @param {AssemblySymbolKind} kind The symbol kind.
- * @returns {number} The token type index.
+ * @param kind The symbol kind.
+ * @returns The token type index.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook
  */
 export function symbolTokenType(kind: AssemblySymbolKind): number {
@@ -241,9 +241,9 @@ export function symbolTokenType(kind: AssemblySymbolKind): number {
 /**
  * Resolves a reference to the most specific definition kind so `obj.timer`
  * colors the root as a struct and the field as a property.
- * @param {AssemblySymbolDefinition[]} candidates Definitions sharing the reference spelling.
- * @param {AssemblySymbolReference} reference The reference to classify.
- * @returns {number} The token type index.
+ * @param candidates Definitions sharing the reference spelling.
+ * @param reference The reference to classify.
+ * @returns The token type index.
  */
 export function resolvedReferenceTokenType(
   candidates: AssemblySymbolDefinition[],
@@ -272,8 +272,8 @@ export function resolvedReferenceTokenType(
 
 /**
  * Maps a reference kind to a semantic token type index.
- * @param {AssemblySymbolReference["kind"]} kind The reference kind.
- * @returns {number} The token type index.
+ * @param kind The reference kind.
+ * @returns The token type index.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook
  */
 export function referenceTokenType(kind: AssemblySymbolReference["kind"]): number {

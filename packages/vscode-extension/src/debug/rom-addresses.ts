@@ -18,9 +18,9 @@ type AddressResolvers = Pick<
  * Resolves static cartridge mappings confirmed by the loaded ROM header.
  * RAM, coprocessors, ambiguous headers and dynamic bank registers retain exact addressing.
  * Output offsets include a copier header because maps fingerprint the complete file.
- * @param {DebugMap} map Validated map paired with this exact binary.
- * @param {Uint8Array} output Loaded binary bytes. Never modified.
- * @returns {AddressResolvers} Optional source alias and runtime-PC mapping hooks.
+ * @param map Validated map paired with this exact binary.
+ * @param output Loaded binary bytes. Never modified.
+ * @returns Optional source alias and runtime-PC mapping hooks.
  */
 export const createSnesDebugAddressResolvers = (
   map: DebugMap,
@@ -45,12 +45,16 @@ export const createSnesDebugAddressResolvers = (
           }
         }
         // A source bank can execute in several windows; native stops still require the exact physical byte.
-        return windows.map((pc) => ({
-          ...address,
-          architecture: "65xx.2a03",
-          addressSpace: "nes.cpu",
-          address: pc,
-        }));
+        const breakpoints: DebugAddress[] = [];
+        for (const pc of windows) {
+          breakpoints.push({
+            ...address,
+            architecture: "65xx.2a03",
+            addressSpace: "nes.cpu",
+            address: pc,
+          });
+        }
+        return breakpoints;
       },
       // A live mapper observation is required; a CPU address alone cannot select a PRG bank.
       sourceOutputOffset: (address) =>

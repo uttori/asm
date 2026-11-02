@@ -45,8 +45,16 @@ export type DeclarationNode =
   | { kind: "endDataStructs"; argumentCount: number };
 
 /** The index is evaluated in the current pass, independently of the declaration's physical spelling. */
-export type RecordReference = { name: string; index?: ExpressionNode; text: string };
+export type RecordReference = {
+  /** Previously declared dataStruct record name. */
+  name: string;
+  /** Unevaluated logical record index; undefined addresses record 0. */
+  index?: ExpressionNode;
+  /** Reference spelling used in diagnostics. */
+  text: string;
+};
 
+/** Parses declaration operand text as a directive expression. */
 const expression = (text: string): ExpressionNode => parseDirectiveExpression(text);
 
 /** Parse candidates only. Diagnostics are inert until the declaration is selected for execution. */
@@ -100,7 +108,7 @@ function parseDeclaration(text: string, words: readonly string[]): DeclarationNo
     if (!match) {
       throw new Error("Invalid function definition syntax.");
     }
-    const parameters = (match[2] ?? "")
+    const parameters = (match.at(2) ?? "")
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean);
@@ -133,7 +141,7 @@ function parseDeclaration(text: string, words: readonly string[]): DeclarationNo
       if (
         (name !== "align" && name !== "count" && name !== "firstindex") ||
         seen.has(name) ||
-        words[index + 1] === undefined
+        index + 1 >= words.length
       ) {
         if (words[1]?.toLowerCase() === "align") {
           throw new Error("endstruct align requires a single alignment parameter.");
@@ -151,9 +159,10 @@ function parseDeclaration(text: string, words: readonly string[]): DeclarationNo
     // eslint-disable-next-line security/detect-unsafe-regex -- Repeated fields are separated by mandatory delimiters.
     const typed = /^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i.exec(declaration);
     if (typed) {
+      const count = typed.at(2);
       const storage = {
         width: ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1,
-        ...(typed[2] === undefined ? {} : { count: expression(typed[2]) }),
+        ...(count === undefined ? {} : { count: expression(count) }),
       };
       return { kind: "structField", name, storage };
     }
@@ -187,12 +196,13 @@ function parseDeclaration(text: string, words: readonly string[]): DeclarationNo
     if (!reference) {
       throw new Error(`Unknown dataStruct record '${args[0]}'.`);
     }
+    const index = reference.at(2);
     return {
       kind: "dataStruct",
       reference: {
         name: reference[1],
         text: args[0],
-        ...(reference[2] === undefined ? {} : { index: expression(reference[2]) }),
+        ...(index === undefined ? {} : { index: expression(index) }),
       },
       fields: parseStructInitializerEntries(args[1]),
     };

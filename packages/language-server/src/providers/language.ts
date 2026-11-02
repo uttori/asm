@@ -46,11 +46,11 @@ import {
 
 /**
  * Builds hover documentation for the token at a position.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {string} file The absolute file path.
- * @param {Position} position The cursor position.
- * @param {string} text The full document text.
- * @returns {Hover | null} The hover, or null when nothing is documented.
+ * @param index The workspace index.
+ * @param file The absolute file path.
+ * @param position The cursor position.
+ * @param text The full document text.
+ * @returns The hover, or null when nothing is documented.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#hover-request-leftwards_arrow_with_hook
  */
 export function hoverFor(
@@ -174,8 +174,8 @@ export function hoverFor(
 /**
  * Builds completion items from active tooling and all indexed workspace symbols.
  * Symbol entries are deduplicated by kind/name; this provider does not filter by cursor scope.
- * @param {WorkspaceIndex} index The workspace index.
- * @returns {CompletionItem[]} The completion items.
+ * @param index The workspace index.
+ * @returns The completion items.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook
  */
 export function completionsFor(index: WorkspaceIndex): CompletionItem[] {
@@ -207,11 +207,12 @@ export function completionsFor(index: WorkspaceIndex): CompletionItem[] {
   return items;
 }
 
-/** Complete format IDs, transform IDs, and schema-backed asset option names in a call.
- * @param {WorkspaceIndex} index Active project index.
- * @param {string} text Open document text.
- * @param {Position} position Cursor position.
- * @returns {CompletionItem[] | null} Asset candidates, or null outside a call.
+/**
+ * Complete format IDs, transform IDs, and schema-backed asset option names in a call.
+ * @param index Active project index.
+ * @param text Open document text.
+ * @param position Cursor position.
+ * @returns Asset candidates, or null outside a call.
  */
 export function assetCompletionsFor(
   index: WorkspaceIndex,
@@ -263,9 +264,9 @@ export function assetCompletionsFor(
 
 /**
  * Builds signature help for the instruction or directive starting the line.
- * @param {string} lineText The current line text up to the cursor.
- * @param {WorkspaceIndex} index Active target tooling metadata.
- * @returns {SignatureHelp | null} The signature help, or null.
+ * @param lineText The current line text up to the cursor.
+ * @param index Active target tooling metadata.
+ * @returns The signature help, or null.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#signature-help-request-leftwards_arrow_with_hook
  */
 export function signatureHelpFor(lineText: string, index: WorkspaceIndex): SignatureHelp | null {
@@ -315,9 +316,9 @@ export function signatureHelpFor(lineText: string, index: WorkspaceIndex): Signa
 /**
  * Renders Markdown documentation for a symbol definition, including comment
  * annotations captured from the source.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {AssemblySymbolDefinition} symbol The symbol definition.
- * @returns {string} The Markdown documentation.
+ * @param index The workspace index.
+ * @param symbol The symbol definition.
+ * @returns The Markdown documentation.
  */
 export function renderSymbolDocs(index: WorkspaceIndex, symbol: AssemblySymbolDefinition): string {
   const lines = [`**${symbol.name}** - ${symbol.kind}`];
@@ -348,9 +349,9 @@ export function renderSymbolDocs(index: WorkspaceIndex, symbol: AssemblySymbolDe
 /**
  * Collects leading full-line comments and a trailing same-line comment for a
  * symbol definition, JSDoc-style.
- * @param {WorkspaceIndex} index The workspace index.
- * @param {AssemblySymbolDefinition} symbol The symbol definition.
- * @returns {string | undefined} The combined annotation, if any.
+ * @param index The workspace index.
+ * @param symbol The symbol definition.
+ * @returns The combined annotation, if any.
  */
 export function symbolAnnotation(
   index: WorkspaceIndex,
@@ -384,8 +385,8 @@ export function symbolAnnotation(
 
 /**
  * Returns the trailing `;` comment on a source line, ignoring `;` inside quotes.
- * @param {string} line The source line.
- * @returns {string | undefined} The trimmed comment text.
+ * @param line The source line.
+ * @returns The trimmed comment text.
  */
 export function lineCommentText(line: string): string | undefined {
   let quote = "";
@@ -405,8 +406,8 @@ export function lineCommentText(line: string): string | undefined {
 
 /**
  * Wraps Markdown text in an LSP hover.
- * @param {string} value The Markdown content.
- * @returns {Hover} The hover.
+ * @param value The Markdown content.
+ * @returns The hover.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#hover-request-leftwards_arrow_with_hook
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#markupcontent
  */
@@ -416,8 +417,8 @@ export function markdownHover(value: string): Hover {
 
 /**
  * Maps a symbol kind to a completion item kind.
- * @param {AssemblySymbolKind} kind The symbol kind.
- * @returns {CompletionItemKind} The completion item kind.
+ * @param kind The symbol kind.
+ * @returns The completion item kind.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook
  */
 export function symbolCompletionKind(kind: AssemblySymbolKind): CompletionItemKind {

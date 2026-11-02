@@ -12,21 +12,24 @@ import { validateRuntimeBusFact } from "./runtime-bus-types.js";
 import { isRuntimeGraphicsFact } from "./runtime-graphics-fact.js";
 import { validateRuntimeInstructionDetails } from "./trace-detail.js";
 
+/** Narrow unknown values to non-null object records. */
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** Distinguish plain object rows from arrays when walking JSON trees. */
 function isRowRecord(value: object): value is Record<string, unknown> {
   return !Array.isArray(value);
 }
 
+/** Accept JavaScript safe integers only. */
 function isSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 
 /**
  * Validate the semantic manifest and reject obsolete storage descriptors.
- * @param {object} manifest Semantic identity and current storage descriptors.
+ * @param manifest Semantic identity and current storage descriptors.
  */
 export function validateAnalysisProjectManifest(
   manifest: unknown,
@@ -86,9 +89,9 @@ const FORBIDDEN_ROM_PAYLOAD_KEYS = new Set(["romBytes", "fileBytes", "contentByt
 
 /**
  * Reject embedded ROM payload fields at any depth, preserving the offending property's path.
- * @param {unknown} value JSON-compatible record or collection to inspect.
- * @param {string} location Path included in a rejected property's diagnostic.
- * @returns {void} Throws on the first forbidden payload field.
+ * @param value JSON-compatible record or collection to inspect.
+ * @param location Path included in a rejected property's diagnostic.
+ * @returns Throws on the first forbidden payload field.
  */
 const assertNoRomPayload = (value: unknown, location: string): void => {
   if (Array.isArray(value)) {
@@ -120,6 +123,7 @@ const assertNoRomPayload = (value: unknown, location: string): void => {
   }
 };
 
+/** Test ASCII letters and digits for stable identifier validation. */
 const isAlphaNumeric = (character: string): boolean => {
   const code = character.charCodeAt(0);
   return (
@@ -129,6 +133,7 @@ const isAlphaNumeric = (character: string): boolean => {
   );
 };
 
+/** Enforce stable record and codec identifiers used across analysis projects. */
 const isStableId = (id: string): boolean => {
   if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1)!)) {
     return false;
@@ -141,6 +146,7 @@ const isStableId = (id: string): boolean => {
   return true;
 };
 
+/** Walk codec option JSON and reject non-JSON-safe prototype objects. */
 const visitJson = (value: unknown, current: string): void => {
   if (
     value === null ||
@@ -161,6 +167,7 @@ const visitJson = (value: unknown, current: string): void => {
   throw new Error(`${current} is not a JSON-safe codec option.`);
 };
 
+/** Validate codec identity, optional provider metadata, and JSON-safe options. */
 const assertCodecReference = (
   reference: {
     readonly codecId: string;
@@ -198,10 +205,10 @@ const assertCodecReference = (
 /**
  * Validate runtime facts in one pass, spilling large duplicate-ID indexes to temporary disk storage.
  * Stored SQLite rows skip the duplicate index because their primary key already enforces uniqueness.
- * @param {object} project ROM bounds and named address spaces.
- * @param {Array} evidence Evidence available to every retained runtime fact.
- * @param {boolean} [checkDuplicateIds] False only for rows from a primary-key constrained table.
- * @returns {Function} Stateful validator. Close it after success or failure to release its temporary index.
+ * @param project ROM bounds and named address spaces.
+ * @param evidence Evidence available to every retained runtime fact.
+ * @param [checkDuplicateIds] False only for rows from a primary-key constrained table.
+ * @returns Stateful validator. Close it after success or failure to release its temporary index.
  */
 export const createRuntimeRecordValidator = (
   project: Pick<AnalysisProjectManifest, "addressSpaces" | "mapping" | "rom">,
@@ -354,10 +361,9 @@ export const createRuntimeRecordValidator = (
 
 /**
  * Validate an iterable without copying its records into intermediate arrays.
- * @param {Iterable} records Complete runtime history.
- * @param {object} project ROM identity and address-space bounds.
- * @param {Array} evidence Valid referenced evidence.
- * @returns {void}
+ * @param records Complete runtime history.
+ * @param project ROM identity and address-space bounds.
+ * @param evidence Valid referenced evidence.
  */
 export const validateRuntimeRecords = (
   records: Iterable<RuntimeEvidenceRecord>,
@@ -374,14 +380,15 @@ export const validateRuntimeRecords = (
   }
 };
 
+/** Test whether an address falls outside a half-open address-space bound. */
 const outsideSpace = (address: number, exclusiveMaximum: number): boolean =>
   !Number.isSafeInteger(address) || address < 0 || address >= exclusiveMaximum;
 
 /**
  * Validate metadata, runtime values, address bounds and provenance before publication.
- * @param {AnalysisProjectShards} shards Complete record collections, or metadata with empty runtime.
- * @param {object} project ROM identity, mapper and address-space bounds.
- * @param {string} analysisScope Complete ownership at publication; partial only for bounded persisted views.
+ * @param shards Complete record collections, or metadata with empty runtime.
+ * @param project ROM identity, mapper and address-space bounds.
+ * @param analysisScope Complete ownership at publication; partial only for bounded persisted views.
  */
 export const validateLoadedShards = (
   shards: AnalysisProjectShards,

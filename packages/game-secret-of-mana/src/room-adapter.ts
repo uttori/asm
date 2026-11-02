@@ -34,12 +34,18 @@ import type {
 
 /** Complete declared room consumer closure. Native initial-state data is read from the normal 2 MiB USA build. */
 export interface SomRoomSelection {
+  /** Edited room asset path; must appear in rooms. */
   readonly room: string;
+  /** Every declared som.room asset path, unique and complete; at most 511 entries. */
   readonly rooms: readonly string[];
+  /** Story flag index (0-255) to state (0-255) used for composition; absent uses initial state. */
   readonly story?: Readonly<Record<string, number>>;
 }
+/** Private export state that pins tile ownership and the palette source to the exported baseline. */
 interface SomRoomBindings {
+  /** Interchange tile owner IDs in baseline order. */
   readonly owners: readonly string[];
+  /** CPU address of the selected room's palette words. */
   readonly paletteAddress: number;
 }
 /** Exact normal incbin attribution, separate from the loader's CPU address and physical destination. */
@@ -49,15 +55,26 @@ interface RawBinding {
   readonly size: number;
 }
 
+/** Accepts a plain object; arrays and null are rejected. */
 function isObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
+/**
+ * Require a plain object declaration.
+ * @param value Untrusted declaration value.
+ * @returns The value as a record.
+ */
 function object(value: unknown): Record<string, unknown> {
   if (!isObject(value)) {
     throw new Error("Invalid room declaration.");
   }
   return value;
 }
+/**
+ * Require a portable project-relative source path of at most 1024 UTF-16 units.
+ * @param value Untrusted path value.
+ * @returns The validated path.
+ */
 function name(value: unknown): string {
   if (typeof value !== "string" || value.length > 1024) {
     throw new Error("Invalid room source name.");
@@ -65,12 +82,24 @@ function name(value: unknown): string {
   assertSourcePath(value);
   return value;
 }
+/** Byte-exact equality of two buffers. */
 function equal(a: Uint8Array, b: Uint8Array): boolean {
   return Buffer.from(a).equals(b);
 }
+/**
+ * Serialize as two-space-indented JSON with a trailing newline, matching source formatting.
+ * @param value JSON-compatible value.
+ * @returns UTF-8 bytes.
+ */
 function json(value: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
 }
+/**
+ * Convert an absolute build path into a validated project-relative path with forward slashes.
+ * @param context Adapter context supplying the build root.
+ * @param absolute Absolute path inside the build root.
+ * @returns The portable relative path.
+ */
 function relative(context: AssetAdapterContext, absolute: string): string {
   return name(path.relative(context.build.root, absolute).split(path.sep).join("/"));
 }
@@ -87,6 +116,7 @@ function romOffset(address: number): number {
 const identify = (tile: SomRoomNativeTile): string =>
   JSON.stringify([romOffset(tile.address), tile.depth]);
 
+/** Load native room tiles and declared sources for one SoM room selection. */
 function inspect(context: AssetAdapterContext, selection: SomRoomSelection) {
   if (context.build.output.length !== 0x200000) {
     throw new Error("Room native loader requires a headerless 2 MiB USA source build.");

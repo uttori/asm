@@ -42,32 +42,57 @@ export type MacroDefinition = {
   source?: CommandProvenance;
 };
 
+/** One frame on the macro control-flow stack tracking active branches and loops. */
 export type MacroExpansionControlEntry = {
+  /** Control construct represented by this stack frame. */
   type: "if" | "while" | "for";
+  /** Whether commands on this frame should execute in the current expansion path. */
   active: boolean;
+  /** For if frames, records whether a true branch already executed. */
   branchTaken?: boolean;
 };
 
+/** Assembler surface required to define, invoke, and expand macros. */
 export interface MacroEngineHost {
+  /** Current source file path during macro capture or expansion. */
   currentFile: string;
+  /** Logical address active while macro lines execute. */
   currentTargetAddress: number;
+  /** Define name to expansion text map for macro parameter binding. */
   defines: Map<string, string>;
+  /** Label table consulted when macro lines resolve symbols. */
   labelTable: Map<string, LabelEntry>;
+  /** Name of the macro currently being expanded, if any. */
   currentMacroName: string;
+  /** Variadic argument count for the active macro invocation. */
   currentVariadicCount: number | undefined;
+  /** Variadic argument strings for the active macro invocation. */
   currentVariadicArgs: string[];
+  /** Math evaluator used for macro control-flow conditions. */
   mathCore: MathCore;
+  /** Captured macro definitions keyed by qualified name. */
   macros: Map<string, MacroDefinition>;
+  /** Monotonic instance id assigned to macro-local labels. */
   macroLabelInstance: number;
+  /** Whether the assembler is inside a macro expansion pass. */
   inMacroExpansion: boolean;
+  /** Innermost parent label used for cheap-local and sublabel resolution. */
   currentParentLabel: string;
+  /** Whether the current parent label is a global root label. */
   currentParentIsGlobal: boolean;
+  /** Whether the pass collects definitions without emitting bytes. */
   isDefinitionCollectionStage: boolean;
+  /** Active syntax profile controlling macro argument parsing. */
   syntaxProfile: SyntaxProfile;
+  /** Symbol scope service shared with the hosting assembler. */
   symbolScope: SymbolScopeService;
+  /** Evaluate a boolean expression for macro if/while conditions. */
   evaluateExpression(input: string): boolean;
+  /** Expand define references in macro text before dispatch. */
   resolvedefines(input: string): string;
+  /** Optional hook to rewrite define fragments during macro binding. */
   resolveDefineFragment?(fragment: SourceFragment): SourceFragment;
+  /** Dispatch one normalized command line during macro expansion. */
   processCommand(command: string, preprocessed?: boolean, template?: NormalizedCommand): void;
   /** Core hosts accept attributed fragments; older hosts use the explicit public adapter. */
   processSourceFragment(
@@ -77,7 +102,9 @@ export interface MacroEngineHost {
   ): void;
   /** Optional for older hosts; scopes provenance without changing expansion semantics. */
   withSourceOrigin?(origin: SourceOrigin, execute: () => void): void;
+  /** Apply a define assignment line encountered inside a macro body. */
   applyDefineAssignment(command: string): boolean;
+  /** Record a macro symbol definition for analysis and cross-reference indexing. */
   recordSymbolDefinition(
     kind: "macro",
     name: string,
@@ -85,8 +112,11 @@ export interface MacroEngineHost {
   ): void;
 }
 
+/** Expands macro invocations and tracks nested macro control flow. */
 export class MacroEngine {
+  /** Hosting assembler state mutated during macro capture and expansion. */
   host: MacroEngineHost;
+  /** Stack of active if/while/for frames during expansion. */
   macroExpansionControlStack: MacroExpansionControlEntry[] = [];
   /** Weak ownership releases definitions when an assembly snapshot is discarded. */
   private readonly templates = new WeakMap<MacroDefinition, readonly MacroLineTemplate[]>();
@@ -97,7 +127,7 @@ export class MacroEngine {
 
   /**
    * Checks whether the current macro expansion line is in an active branch.
-   * @returns {boolean} `true` when the current expansion path is active.
+   * @returns `true` when the current expansion path is active.
    */
   isMacroExpansionActive(): boolean {
     return this.macroExpansionControlStack.every((entry) => entry.active);
@@ -105,7 +135,7 @@ export class MacroEngine {
 
   /**
    * Checks whether the current macro expansion line is inside a deferred loop body.
-   * @returns {boolean} `true` when loop-body commands should defer placeholder resolution.
+   * @returns `true` when loop-body commands should defer placeholder resolution.
    */
   isMacroExpansionLoopActive(): boolean {
     return this.macroExpansionControlStack.some(
@@ -115,8 +145,8 @@ export class MacroEngine {
 
   /**
    * Evaluates a macro control-flow condition using the assembler expression engine.
-   * @param {string} expression The expression text to evaluate.
-   * @returns {boolean} The boolean result.
+   * @param expression The expression text to evaluate.
+   * @returns The boolean result.
    */
   evaluateMacroControlExpression(expression: string): boolean {
     const trimmed = removeInlineComment(expression).trim();
@@ -128,7 +158,7 @@ export class MacroEngine {
 
   /**
    * Updates macro expansion control state after dispatching a control-flow line.
-   * @param {string} line The fully expanded line text.
+   * @param line The fully expanded line text.
    */
   updateMacroExpansionControlState(line: string): void {
     const trimmed = removeInlineComment(line).trim();
@@ -247,7 +277,7 @@ export class MacroEngine {
 
   /**
    * Calls a macro.
-   * @param {string} invocation The invocation to call.
+   * @param invocation The invocation to call.
    */
   callMacro(invocation: string, source?: CommandProvenance): void {
     const operation = parseCommandOperation(
@@ -439,11 +469,11 @@ export class MacroEngine {
 
   /**
    * Expands a macro line.
-   * @param {string} line The line to expand.
-   * @param {Map<string, string>} fixedArgs The fixed arguments.
-   * @param {string[]} variadicArgs The variadic arguments.
-   * @param {number} variadicCount The variadic count.
-   * @returns {string} The expanded line.
+   * @param line The line to expand.
+   * @param fixedArgs The fixed arguments.
+   * @param variadicArgs The variadic arguments.
+   * @param variadicCount The variadic count.
+   * @returns The expanded line.
    */
   expandMacroLine(
     line: string,
@@ -659,16 +689,16 @@ export class MacroEngine {
     );
     return bindMacroFragment(undefined, fragment, "variadic", (part) => {
       const binding = this.resolveVariadicBinding(part.payload, args);
-      const argument = argumentsOrigin.filter((origin) => origin.parameter === undefined)[
-        binding.index
-      ];
+      const argument = argumentsOrigin
+        .filter((origin) => origin.parameter === undefined)
+        .at(binding.index);
       return sourceFragment(binding.value, argument ? [argument.location] : []);
     });
   }
 
   /**
    * Processes a macro line.
-   * @param {string} line The line to process.
+   * @param line The line to process.
    */
   processMacroLine(line: string, template?: NormalizedCommand): void {
     this.processMacroFragment(

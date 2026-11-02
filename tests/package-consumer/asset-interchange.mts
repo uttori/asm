@@ -180,7 +180,7 @@ try {
   await finishSourceGeneration(repository, {
     message: "Adopt installed fixture",
     validate: async () => {
-      const result = await executeSourceOperation({ action: "build", directory });
+      const result: unknown = await executeSourceOperation({ action: "build", directory });
       if (!result || typeof result !== "object" || !("verification" in result)) {
         throw new Error("Missing normal build receipt.");
       }

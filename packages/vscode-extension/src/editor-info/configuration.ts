@@ -2,6 +2,7 @@ import type { WorkspaceConfiguration } from "vscode";
 
 import { compileTemplate, type InformationTemplate } from "./format.js";
 
+/** Built-in editor information template bundles keyed by preset name. */
 export const INFORMATION_PRESETS = {
   compact: {
     parts: ["${output_offsets}", "exec ${execution_counts}"],
@@ -45,24 +46,33 @@ function informationPreset(
 
 /** Resolved resource settings; templates are validated before entering the render path. */
 export interface EditorInformationConfiguration {
+  /** Whether inline after-line overlays are enabled. */
   readonly inlineEnabled: boolean;
+  /** Whether hover detail rows are enabled. */
   readonly hoverEnabled: boolean;
+  /** Compact inline template fragments rendered beside source lines. */
   readonly parts: readonly InformationTemplate[];
+  /** Multiline hover templates rendered on demand. */
   readonly rows: readonly InformationTemplate[];
+  /** Delimiter inserted between surviving inline fragments. */
   readonly separator: string;
+  /** Total positive character budget for inline presentation. */
   readonly maximum: number;
+  /** Zero-based column where aligned overlays anchor. */
   readonly column: number;
+  /** Whether overlays follow the line or align to a fixed column. */
   readonly placement: "afterLine" | "aligned";
   /** Whole-overlay color: a hex literal or VS Code theme color identifier. */
   readonly color: string;
+  /** Configuration validation issues blocking template compilation. */
   readonly issues: readonly string[];
 }
 
 /**
  * Ignore contributed defaults when detecting explicit legacy settings or preset overrides.
- * @param {WorkspaceConfiguration} configuration Resource-scoped VS Code settings.
- * @param {string} key Relative key under asm.
- * @returns {T | undefined} Effective explicit value, preserving VS Code's language/scope precedence.
+ * @param configuration Resource-scoped VS Code settings.
+ * @param key Relative key under asm.
+ * @returns Effective explicit value, preserving VS Code's language/scope precedence.
  */
 // The caller selects VS Code's setting contract, matching inspect<T> and get<T>.
 // oxlint-disable-next-line typescript/no-unnecessary-type-parameters
@@ -87,8 +97,8 @@ export const explicitSetting = <T>(
 
 /**
  * Read display-only settings with preset defaults and compatibility for the original eye toggle.
- * @param {WorkspaceConfiguration} configuration Resource-scoped settings under asm.
- * @returns {EditorInformationConfiguration} Validated templates and non-fatal configuration issues.
+ * @param configuration Resource-scoped settings under asm.
+ * @returns Validated templates and non-fatal configuration issues.
  */
 export const readEditorInformationConfiguration = (
   configuration: WorkspaceConfiguration,

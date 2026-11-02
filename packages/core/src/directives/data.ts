@@ -39,8 +39,8 @@ export function inheritCoreDataHandler(
 
 /**
  * Routes byte/word/long data directives through the runtime data handler.
- * @param {DataDirectiveContext} ctx The ROM-capable directive context.
- * @param {string[]} words The directive words.
+ * @param ctx The ROM-capable directive context.
+ * @param words The directive words.
  */
 export const handleDataDirective = (
   { runtime }: DataDirectiveContext,
@@ -49,6 +49,7 @@ export const handleDataDirective = (
   runtime.handleDataDirective(words[0], words.slice(1));
 };
 
+/** Registers numeric and character data directives that delegate to the data runtime. */
 export const registerDataDirectives = (
   registry: DirectiveRegistry,
   context: DataDirectiveContext,

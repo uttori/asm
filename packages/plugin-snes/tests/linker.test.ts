@@ -92,7 +92,9 @@ dataStruct Record,{pointer=Data}
       ...recipe,
       regions: [{ ...recipe.regions[0], size: 0x20020 }],
       placements: recipe.placements.map((placement) =>
-        placement.section === "Data" ? { ...placement, start: 0xc20000 } : placement,
+        placement.section === "Data"
+          ? Object.assign({}, placement, { start: 0xc20000 })
+          : placement,
       ),
       assumptions: [{ section: "Code", dataBank: 0xc2 }],
     },

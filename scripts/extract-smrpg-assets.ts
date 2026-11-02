@@ -67,8 +67,8 @@ type Options = SmrpgExtractOptions & {
 
 /**
  * Parses CLI flags.
- * @param {string[]} argv Process arguments after the node/tsx binary.
- * @returns {Options} Parsed options.
+ * @param argv Process arguments after the node/tsx binary.
+ * @returns Parsed options.
  */
 function parseArgs(argv: string[]): Options {
   const options: Options = {
@@ -122,9 +122,9 @@ function parseArgs(argv: string[]): Options {
 
 /**
  * HiROM snestopc used by ExtractAssets.bat (`hirom` + headerless ROM).
- * @param {number} address 24-bit SNES address.
- * @param {number} headerSize Copier header bytes (0 or 512).
- * @returns {number} File offset.
+ * @param address 24-bit SNES address.
+ * @param headerSize Copier header bytes (0 or 512).
+ * @returns File offset.
  */
 function hiromFileOffset(address: number, headerSize: number): number {
   return headerSize + (address & 0x3fffff);
@@ -132,8 +132,8 @@ function hiromFileOffset(address: number, headerSize: number): number {
 
 /**
  * Builds label → quoted `db` filename from AssetPointersAndFiles.asm.
- * @param {string} source Pointer file text.
- * @returns {Map<string, string>} Filename map.
+ * @param source Pointer file text.
+ * @returns Filename map.
  */
 function parseFilenameTable(source: string): Map<string, string> {
   const names = new Map<string, string>();
@@ -148,10 +148,10 @@ function parseFilenameTable(source: string): Map<string, string> {
 
 /**
  * Parses one `dl start,end,name,nameEnd` pointer table.
- * @param {string} source Pointer file text.
- * @param {string} label Section prefix (e.g. UncompressedGFXPointers).
- * @param {Map<string, string>} filenames Label filename map.
- * @returns {AssetEntry[]} Table entries.
+ * @param source Pointer file text.
+ * @param label Section prefix (e.g. UncompressedGFXPointers).
+ * @param filenames Label filename map.
+ * @returns Table entries.
  */
 function parsePointerSection(
   source: string,
@@ -185,11 +185,11 @@ function parsePointerSection(
 
 /**
  * Writes one ROM slice. Returns bytes written.
- * @param {Uint8Array} rom ROM image.
- * @param {number} headerSize Copier header size.
- * @param {AssetEntry} entry Pointer entry.
- * @param {string} destDir Destination directory.
- * @returns {number} Bytes written.
+ * @param rom ROM image.
+ * @param headerSize Copier header size.
+ * @param entry Pointer entry.
+ * @param destDir Destination directory.
+ * @returns Bytes written.
  */
 function extractEntry(
   rom: Uint8Array,
@@ -215,8 +215,7 @@ function extractEntry(
 
 /**
  * ExtractAssets.bat (USA / ROMBit $0001).
- * @param {SmrpgExtractOptions} options ROM path and destination disassembly root.
- * @returns {void}
+ * @param options ROM path and destination disassembly root.
  */
 export function extractSmrpgAssets(options: SmrpgExtractOptions): void {
   const gameDir = path.resolve(options.destRoot, "SMRPG");
@@ -264,8 +263,8 @@ export function extractSmrpgAssets(options: SmrpgExtractOptions): void {
 
 /**
  * True when `bin` looks like Alcaro asar, not electron-asar.
- * @param {string} bin Executable path or name.
- * @returns {boolean} Whether --fix-checksum is accepted.
+ * @param bin Executable path or name.
+ * @returns Whether --fix-checksum is accepted.
  */
 function isAlcaroAsar(bin: string): boolean {
   try {
@@ -281,7 +280,7 @@ function isAlcaroAsar(bin: string): boolean {
 
 /**
  * Resolves Alcaro asar for Generate*.bat dumps.
- * @returns {string | undefined} Executable path.
+ * @returns Executable path.
  */
 function findAlcaroAsar(): string | undefined {
   const envBin = process.env.ASAR;
@@ -296,9 +295,8 @@ function findAlcaroAsar(): string | undefined {
 
 /**
  * GenerateBattle/Event/AnimationScript.bat via Alcaro asar `print` dumps.
- * @param {string} romPath SMRPG (USA) ROM.
- * @param {string} destRoot Copied disassembly root.
- * @returns {void}
+ * @param romPath SMRPG (USA) ROM.
+ * @param destRoot Copied disassembly root.
  */
 function dumpScripts(romPath: string, destRoot: string): void {
   const asarScriptsDir = path.resolve(destRoot, "SMRPG/AsarScripts");
@@ -336,7 +334,6 @@ function dumpScripts(romPath: string, destRoot: string): void {
 
 /**
  * Prints usage.
- * @returns {void}
  */
 function printHelp(): void {
   console.log(`Extract SMRPG (USA) assets for the integration fixture.
@@ -357,7 +354,6 @@ Default ROM:
 
 /**
  * CLI entry.
- * @returns {void}
  */
 function main(): void {
   const options = parseArgs(process.argv.slice(2));

@@ -13,9 +13,13 @@ import {
 
 /** A function keeps syntax and lexical substitution sites; invocation values never enter this cache. */
 export type FunctionTemplate = {
+  /** Function body expression text as defined. */
   readonly text: string;
+  /** Body parsed once without binding parameters or resolving symbols. */
   readonly syntax: ExpressionNode;
+  /** Parameter names in declaration order. */
   readonly parameters: readonly string[];
+  /** Whole-word half-open UTF-16 occurrences in `text`, indexed parallel to `parameters`. */
   readonly sites: readonly (readonly { start: number; end: number }[])[];
 };
 

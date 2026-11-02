@@ -33,18 +33,25 @@ export type LabelStatement =
       trailing?: NormalizedCommand;
     };
 
+/** Symbol assignment from a parsed expression on one source line. */
 export type AssignmentStatement = {
+  /** Destination symbol name before namespace qualification. */
   target: string;
+  /** Parsed right-hand expression evaluated during assembly. */
   expression: ExpressionNode;
   /** Original spelling for attribution and diagnostics; execution uses the expression node. */
   text: string;
+  /** Source extent covering the assignment line. */
   span: SourceSpan;
 };
 
+/** Numeric or character data directive operands after width normalization. */
 export type NumericDataStatement = {
+  /** Storage width in bytes selected by the directive mnemonic. */
   width: 1 | 2 | 3 | 4;
   /** Only invalid empty statements retain their alias for the established diagnostic. */
   emptyDirective?: string;
+  /** Per-operand source text paired with its parsed expression tree. */
   operands: readonly { text: string; expression: ExpressionNode }[];
   /**
    * Dense constant rows use six scalars per item: operand text, literal spelling, numeric value

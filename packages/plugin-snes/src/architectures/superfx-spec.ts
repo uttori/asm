@@ -11,8 +11,8 @@ export type SuperFxAltState = 0 | 1 | 2 | 3;
 
 /**
  * Accepts a GSU ALT value. Hardware ALT is a 2-bit field.
- * @param {number} value Candidate ALT state.
- * @returns {boolean} True when `value` is 0, 1, 2, or 3.
+ * @param value Candidate ALT state.
+ * @returns True when `value` is 0, 1, 2, or 3.
  */
 export function isSuperFxAltState(value: number): value is SuperFxAltState {
   return value === 0 || value === 1 || value === 2 || value === 3;
@@ -34,12 +34,19 @@ export type SuperFxOperandEncoding =
 
 /** One effective opcode under one of the four ALT states. */
 export interface SuperFxInstructionSpecification extends ArchitectureInstructionSpecification {
+  /** Trailing opcode byte after any ALT prefix bytes. */
   readonly opcode: readonly [number];
+  /** GSU ALT selector state under which this row is valid. */
   readonly alt: SuperFxAltState;
+  /** Canonical operand placeholder spelling for tooling. */
   readonly syntax: string;
+  /** Operand layout id shared with the decoder and encoder. */
   readonly operandEncoding: SuperFxOperandEncoding;
+  /** Embedded hardware register index when the encoding names Rn. */
   readonly register?: number;
+  /** Control-flow kind used by analysis and the linear decoder. */
   readonly flow: InstructionFlow;
+  /** Custom GSU state effects such as ALT or register selection. */
   readonly effects: readonly InstructionStateEffect[];
   /** The implicit destination register receives a result from this instruction. */
   readonly writesDestination?: boolean;
@@ -49,23 +56,41 @@ export interface SuperFxInstructionSpecification extends ArchitectureInstruction
 
 /** Native macro form represented by two or three hardware selector/opcode bytes. */
 export interface SuperFxFusedInstructionSpecification extends ArchitectureInstructionSpecification {
+  /** Selector and opcode bytes emitted in order for this fused form. */
   readonly opcode: readonly number[];
+  /** Canonical operand placeholder spelling for tooling. */
   readonly syntax: string;
+  /** Destination register index encoded in the selector bytes. */
   readonly destinationRegister: number;
+  /** Source register for register-register fused MOVE forms. */
   readonly sourceRegister?: number;
+  /** Pointer register for indirect fused MOVE forms. */
   readonly pointerRegister?: number;
+  /** Control-flow kind when the destination is the program counter register. */
   readonly flow: InstructionFlow;
+  /** Reserved for future GSU side effects on fused forms. */
   readonly effects: readonly InstructionStateEffect[];
 }
 
+/** Internal row shape before expanding into a full architecture specification. */
 interface Definition {
+  /** Effective mnemonic under the current ALT state. */
   readonly mnemonic: string;
+  /** Operand layout id selecting decode and encode paths. */
   readonly encoding: SuperFxOperandEncoding;
+  /** Encoded instruction size in bytes for this row. */
   readonly size: 1 | 2 | 3;
+  /** Embedded register index when the encoding names Rn. */
   readonly register?: number;
+  /** True when the implicit destination register receives a computed result. */
   readonly writesDestination?: boolean;
 }
 
+/**
+ * Maps an operand encoding id to its canonical placeholder syntax string.
+ * @param encoding Operand layout id for one GSU effective opcode.
+ * @returns Placeholder spelling used in specification summaries.
+ */
 const syntaxFor = (encoding: SuperFxOperandEncoding): string => {
   switch (encoding) {
     case "implied":
@@ -93,12 +118,14 @@ const syntaxFor = (encoding: SuperFxOperandEncoding): string => {
   throw new Error("Unsupported SuperFX operand encoding.");
 };
 
+/** Builds a one-byte implied GSU definition row. */
 const implied = (mnemonic: string, writesDestination = false): Definition => ({
   mnemonic,
   encoding: "implied",
   size: 1,
   ...(writesDestination ? { writesDestination: true } : {}),
 });
+/** Builds a register-indexed one-byte GSU definition row. */
 const register = (mnemonic: string, value: number, writesDestination = false): Definition => ({
   mnemonic,
   encoding: "register",
@@ -106,6 +133,7 @@ const register = (mnemonic: string, value: number, writesDestination = false): D
   register: value,
   ...(writesDestination ? { writesDestination: true } : {}),
 });
+/** Builds a register-indirect one-byte GSU definition row. */
 const registerIndirect = (
   mnemonic: string,
   value: number,
@@ -117,6 +145,7 @@ const registerIndirect = (
   register: value,
   ...(writesDestination ? { writesDestination: true } : {}),
 });
+/** Builds an immediate-nibble one-byte GSU definition row. */
 const nibble = (mnemonic: string, value: number, writesDestination = false): Definition => ({
   mnemonic,
   encoding: "immediateNibble",
@@ -125,6 +154,7 @@ const nibble = (mnemonic: string, value: number, writesDestination = false): Def
   ...(writesDestination ? { writesDestination: true } : {}),
 });
 
+/** Resolves the unprefixed GSU mnemonic and operand layout for one opcode byte. */
 const baseDefinition = (opcode: number): Definition => {
   if (opcode === 0x00) {
     return implied("STOP");
@@ -257,6 +287,7 @@ const baseDefinition = (opcode: number): Definition => {
   };
 };
 
+/** Applies ALT1–ALT3 remapping on top of the unprefixed opcode interpretation. */
 const altDefinition = (alt: SuperFxAltState, opcode: number): Definition => {
   if (alt === 0) {
     return baseDefinition(opcode);
@@ -384,6 +415,7 @@ const altDefinition = (alt: SuperFxAltState, opcode: number): Definition => {
   return baseDefinition(opcode);
 };
 
+/** Derives control-flow metadata from a resolved GSU definition row. */
 const flowFor = (definition: Definition, opcode: number): InstructionFlow => {
   if (definition.mnemonic === "STOP") {
     return { kind: "stop", fallthrough: false };
@@ -403,6 +435,7 @@ const flowFor = (definition: Definition, opcode: number): InstructionFlow => {
   return { kind: "fallthrough", fallthrough: true };
 };
 
+/** Lists custom GSU state transitions such as ALT selection and register binding. */
 const effectsFor = (definition: Definition): readonly InstructionStateEffect[] => {
   if (
     definition.mnemonic === "ALT1" ||
@@ -443,6 +476,7 @@ const effectsFor = (definition: Definition): readonly InstructionStateEffect[] =
   return [];
 };
 
+/** Human-readable summary line for hover and catalog tooling. */
 const summaryFor = (mnemonic: string): string => {
   const summaries: Readonly<Record<string, string>> = {
     STOP: "Stop the GSU.",
@@ -471,6 +505,7 @@ const summaryFor = (mnemonic: string): string => {
   return summaries[mnemonic] ?? `${mnemonic} instruction.`;
 };
 
+/** Materializes one frozen architecture specification for an ALT state and opcode byte. */
 const specification = (alt: SuperFxAltState, opcode: number): SuperFxInstructionSpecification => {
   const definition = altDefinition(alt, opcode);
   const base = baseDefinition(opcode);
@@ -513,11 +548,13 @@ export const superFxSpecifications: readonly SuperFxInstructionSpecification[] =
   ...superFxOpcodeMatrix.slice(1).flatMap((row) => row.filter((entry) => entry.alteredByAlt)),
 ]);
 
+/** Control flow when a fused MOVE targets the program counter register R15. */
 const fusedFlow = (destinationRegister: number): InstructionFlow =>
   destinationRegister === 15
     ? { kind: "jump", fallthrough: false, indirect: true }
     : { kind: "fallthrough", fallthrough: true };
 
+/** Placeholder operand spelling for a fused MOVE addressing mode. */
 const fusedSyntax = (
   mode: "registerRegister" | "registerRegisterIndirect" | "registerIndirectRegister",
 ): string => {
@@ -530,6 +567,7 @@ const fusedSyntax = (
   return "(Rn),Rm";
 };
 
+/** Builds one frozen fused-instruction specification for the opcode matrix export. */
 const fused = (
   mnemonic: "MOVE" | "MOVES" | "MOVEB" | "MOVEW",
   opcode: readonly number[],
@@ -618,7 +656,7 @@ export const superFxFusedSpecifications: readonly SuperFxFusedInstructionSpecifi
 
 /**
  * Generates the editor catalog from the effective opcode matrix.
- * @returns {InstructionDescriptor[]} Native SuperFX instruction descriptors.
+ * @returns Native SuperFX instruction descriptors.
  */
 export function buildSuperFxCatalog(): InstructionDescriptor[] {
   const grouped = new Map<string, InstructionDescriptor>();

@@ -256,10 +256,10 @@ consumerEnvironment.npm_config_cache = path.join(scratch, "cache");
 
 /**
  * Runs a bounded child without a shell, retaining diagnostics on failure.
- * @param {string} executable Program to launch.
- * @param {string[]} args Literal argument vector.
- * @param {string} cwd Working directory.
- * @returns {string} Successful UTF-8 stdout.
+ * @param executable Program to launch.
+ * @param args Literal argument vector.
+ * @param cwd Working directory.
+ * @returns Successful UTF-8 stdout.
  */
 const run = (executable: string, args: string[], cwd: string): string => {
   const result = spawnSync(executable, args, {
@@ -286,9 +286,9 @@ function assertDistExport(
 
 /**
  * Uses npm's JS entry point so Windows does not need a shell to execute npm.cmd.
- * @param {string[]} args npm arguments.
- * @param {string} cwd Working directory.
- * @returns {string} npm stdout.
+ * @param args npm arguments.
+ * @param cwd Working directory.
+ * @returns npm stdout.
  */
 const npm = (args: string[], cwd: string): string => {
   const executable = process.env.npm_execpath;
@@ -296,10 +296,11 @@ const npm = (args: string[], cwd: string): string => {
   return run(process.execPath, [executable, ...args], cwd);
 };
 
-/** Resolve from the declaring package so nested dependency versions match the installed tree.
- * @param {string} dependency External package name.
- * @param {string} from Directory of the declaring package.
- * @returns {string} Absolute manifest path for the resolved package.
+/**
+ * Resolve from the declaring package so nested dependency versions match the installed tree.
+ * @param dependency External package name.
+ * @param from Directory of the declaring package.
+ * @returns Absolute manifest path for the resolved package.
  */
 const dependencyManifest = (dependency: string, from: string): string => {
   let directory = from;
@@ -322,9 +323,9 @@ const dependencyManifest = (dependency: string, from: string): string => {
 
 /**
  * Packs a directory and validates npm's generated archive name and inventory.
- * @param {string} directory Package root.
- * @param {boolean} lifecycle Whether to run this package's build hooks.
- * @returns {PackedArchive} Inventory of the archive written into the temporary directory.
+ * @param directory Package root.
+ * @param lifecycle Whether to run this package's build hooks.
+ * @returns Inventory of the archive written into the temporary directory.
  */
 const pack = (directory: string, lifecycle: boolean): PackedArchive => {
   const args = ["pack", "--json", "--pack-destination", scratch];

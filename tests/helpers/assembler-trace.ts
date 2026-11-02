@@ -27,10 +27,10 @@ const toHex = (value: number, width: number): string =>
  * Returns `true` when an event overlaps the requested inclusive logical address range.
  * Command-end events use their full start/end span so range filters can catch
  * commands that write through the target window instead of only landing exactly on it.
- * @param {AssemblerTraceEvent} event The trace event to test.
- * @param {number} [startAddress] The inclusive range start.
- * @param {number} [endAddress] The inclusive range end.
- * @returns {boolean} `true` when the event touches the requested range.
+ * @param event The trace event to test.
+ * @param [startAddress] The inclusive range start.
+ * @param [endAddress] The inclusive range end.
+ * @returns `true` when the event touches the requested range.
  */
 function eventTouchesRange(
   event: AssemblerTraceEvent,
@@ -53,9 +53,9 @@ function eventTouchesRange(
 
 /**
  * Applies all collector filters to a trace event.
- * @param {AssemblerTraceEvent} event The trace event to test.
- * @param {TraceCollectorOptions} options The collector filter options.
- * @returns {boolean} `true` when the event matches every configured filter.
+ * @param event The trace event to test.
+ * @param options The collector filter options.
+ * @returns `true` when the event matches every configured filter.
  */
 function matchesCollectorOptions(
   event: AssemblerTraceEvent,
@@ -86,8 +86,8 @@ function matchesCollectorOptions(
 /**
  * Creates an in-memory listener that can be attached with
  * `assembler.setTraceListener(...)` in tests.
- * @param {TraceCollectorOptions} options - The options for the trace collector.
- * @returns {{ events: AssemblerTraceEvent[]; listener: AssemblerTraceListener; clear(): void }} The trace collector.
+ * @param options The options for the trace collector.
+ * @returns The trace collector.
  * @example
  * const collector = createTraceCollector({
  *   startAddress: 0x808000,
@@ -117,8 +117,8 @@ export function createTraceCollector(options: TraceCollectorOptions = {}): {
 
 /**
  * Formats a trace event as a single log-friendly line for ad-hoc debugging.
- * @param {AssemblerTraceEvent} event - The trace event to format.
- * @returns {string} The formatted trace event.
+ * @param event The trace event to format.
+ * @returns The formatted trace event.
  */
 export function formatTraceEvent(event: AssemblerTraceEvent): string {
   const addressWidth = event.addressWidth ?? 24;

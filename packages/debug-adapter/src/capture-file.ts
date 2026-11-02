@@ -1,7 +1,31 @@
 import { open, link, unlink, lstat, type FileHandle } from "node:fs/promises";
-import { compressCaptureChunk, captureU64, captureScope, captureChunkRecords, decodeCaptureChunk, captureCrc32c, validateCaptureCapabilities, validateCapturePosition, validateCaptureMetadata, nativePosition, exportCaptureJson, type CapturePositionV2, type CaptureTransportV2, type CaptureScopeV2, type CaptureFileMetadata, type CaptureFileHeader, type CaptureFileTimingStage, type CaptureFileSummary, type NativeCaptureFilePosition } from "@uttori/asm-capture";
+
+import {
+  compressCaptureChunk,
+  captureU64,
+  captureScope,
+  captureChunkRecords,
+  decodeCaptureChunk,
+  captureCrc32c,
+  validateCaptureCapabilities,
+  validateCapturePosition,
+  validateCaptureMetadata,
+  nativePosition,
+  exportCaptureJson,
+  type CapturePositionV2,
+  type CaptureTransportV2,
+  type CaptureScopeV2,
+  type CaptureFileMetadata,
+  type CaptureFileHeader,
+  type CaptureFileTimingStage,
+  type CaptureFileSummary,
+  type NativeCaptureFilePosition,
+} from "@uttori/asm-capture";
+
 import { CaptureContextRecorder, type CaptureContextOptions } from "./capture-context.js";
+/** Yields briefly so native capture pumps can make progress between chunks. */
 const pause = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 10));
+/** Normalizes capture output format with json as the default. */
 function captureOutputFormat(value: unknown): "json" | "act2" {
   const format = value ?? "json";
   if (format !== "json" && format !== "act2") {
@@ -9,6 +33,7 @@ function captureOutputFormat(value: unknown): "json" | "act2" {
   }
   return format;
 }
+/** Wraps JSON metadata in a magic-prefixed, CRC-protected binary frame. */
 const jsonFrame = (magic: string, value: unknown): Buffer => {
   const body = Buffer.from(JSON.stringify(value));
   if (body.length > 65536) {
@@ -21,6 +46,7 @@ const jsonFrame = (magic: string, value: unknown): Buffer => {
   return Buffer.concat([header, body]);
 };
 
+/** Returns zeroed timing counters for one capture stage. */
 const emptyStageTiming = (): { calls: number; totalMs: number; maxMs: number } => ({
   calls: 0,
   totalMs: 0,
@@ -29,6 +55,7 @@ const emptyStageTiming = (): { calls: number; totalMs: number; maxMs: number } =
 
 /** One bounded chunk at a time. Acceptance follows data sync AND checkpoint sync. */
 export class LosslessCaptureFileRecorder {
+  /** Resolves when the archive is finalized or the recorder is torn down. */
   readonly completion: Promise<CaptureFileSummary>;
   readonly #file: string;
   readonly #partial: string;
@@ -103,8 +130,8 @@ export class LosslessCaptureFileRecorder {
   /**
    * Reserve a new output and start lossless recording. ACT2 output publishes only the archive.
    * Legacy JSON output additionally exports a compatible trace after draining the producer.
-   * @param {object} options Output format, identity and serialized producer transport.
-   * @returns {Promise<LosslessCaptureFileRecorder>} Active recorder. Stop() drains and syncs it.
+   * @param options Output format, identity and serialized producer transport.
+   * @returns Active recorder. Stop() drains and syncs it.
    */
   static async create(
     options: CaptureFileMetadata &
@@ -224,13 +251,18 @@ export class LosslessCaptureFileRecorder {
     }
   }
 
-  /** Current producer session, for a paused user milestone.
-   * @returns {CapturePositionV2} Latest verified position; querying does not drain the archive.
+  /**
+   * Current producer session, for a paused user milestone.
+   * @returns Latest verified position; querying does not drain the archive.
    */
   get position(): CapturePositionV2 {
     return this.#position;
   }
 
+  /**
+   * Requests a graceful stop and waits for archive finalization.
+   * @returns Summary after the completion promise settles.
+   */
   async stop(): Promise<CaptureFileSummary> {
     if (!this.#stopRequested) {
       this.#stopRequested = true;
@@ -248,15 +280,20 @@ export class LosslessCaptureFileRecorder {
     }
     return this.completion;
   }
+  /**
+   * Marks the recording cancelled and still waits for teardown to finish.
+   * @returns Summary from the completion promise after abort paths run.
+   */
   finishIncomplete(): Promise<CaptureFileSummary> {
     this.#cancelled = true;
     return this.completion;
   }
 
-  /** Account one completed stage without retaining per-chunk samples.
-   * @param {CaptureFileTimingStage} stage Work completed since the previous boundary.
-   * @param {number} start Monotonic start in milliseconds, or zero with profiling disabled.
-   * @returns {number} Next boundary. Disabled profiling never reads the clock.
+  /**
+   * Account one completed stage without retaining per-chunk samples.
+   * @param stage Work completed since the previous boundary.
+   * @param start Monotonic start in milliseconds, or zero with profiling disabled.
+   * @returns Next boundary. Disabled profiling never reads the clock.
    */
   #mark(stage: CaptureFileTimingStage, start: number): number {
     if (!this.#timings) {
@@ -417,11 +454,12 @@ export class LosslessCaptureFileRecorder {
   }
 }
 
-
-/** Controls a local native ACT2 writer. No event bytes cross RSP/DAP and no live
+/**
+ * Controls a local native ACT2 writer. No event bytes cross RSP/DAP and no live
  * decoding occurs here. The existing bounded archive reader validates on import.
  */
 export class NativeCaptureFileRecorder {
+  /** Resolves when the native writer finishes or the recorder is cancelled. */
   readonly completion: Promise<CaptureFileSummary>;
   readonly #file: string;
   readonly #scope: CaptureScopeV2;
@@ -431,8 +469,9 @@ export class NativeCaptureFileRecorder {
   #stopRequested = false;
   #cancelled = false;
 
-  /** Latest validated durable position. Observing it never reads or drains event bytes.
-   * @returns {NativeCaptureFilePosition} Read-only status snapshot from the control pump.
+  /**
+   * Latest validated durable position. Observing it never reads or drains event bytes.
+   * @returns Read-only status snapshot from the control pump.
    */
   get position(): NativeCaptureFilePosition {
     return this.#position;
@@ -462,10 +501,11 @@ export class NativeCaptureFileRecorder {
     this.completion = this.#pump();
   }
 
-  /** Arm while the debugger is stopped, then await the durable session header.
+  /**
+   * Arm while the debugger is stopped, then await the durable session header.
    * The supplied path belongs to the native host, which must share this filesystem.
-   * @param {object} options Destination, scope, verified identity and control transport.
-   * @returns {Promise<NativeCaptureFileRecorder>} Armed recorder with a durable session header.
+   * @param options Destination, scope, verified identity and control transport.
+   * @returns Armed recorder with a durable session header.
    */
   static async create(
     options: CaptureFileMetadata &
@@ -530,8 +570,9 @@ export class NativeCaptureFileRecorder {
     }
   }
 
-  /** Fix the capture boundary, then wait for synced END2 and no-clobber publication.
-   * @returns {Promise<CaptureFileSummary>} Published complete archive, or a writer failure.
+  /**
+   * Fix the capture boundary, then wait for synced END2 and no-clobber publication.
+   * @returns Published complete archive, or a writer failure.
    */
   async stop(): Promise<CaptureFileSummary> {
     if (!this.#stopRequested) {
@@ -550,8 +591,9 @@ export class NativeCaptureFileRecorder {
     }
     return this.completion;
   }
-  /** Leave a recoverable partial artifact. Never publish an interrupted session.
-   * @returns {Promise<CaptureFileSummary>} Existing completion. Rejects on cancellation.
+  /**
+   * Leave a recoverable partial artifact. Never publish an interrupted session.
+   * @returns Existing completion. Rejects on cancellation.
    */
   finishIncomplete(): Promise<CaptureFileSummary> {
     this.#cancelled = true;

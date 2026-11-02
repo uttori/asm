@@ -16,15 +16,25 @@ import {
 import type { MathCore } from "../mathcore.js";
 import type { SourceOccurrence } from "../source-provenance.js";
 
+/** Session callbacks used while expanding and declaring textual defines. */
 export type DefineHost = {
+  /** Live define value map for the current assembly session. */
   defines: Map<string, string>;
+  /** Resolves define references in plain command text. */
   resolvedefines(input: string): string;
+  /** Evaluates pure numeric define values without full command parsing. */
   mathCore: MathCore;
+  /** Executes a generated command after define binding. */
   processCommand(command: string): void;
+  /** Executes a generated source fragment after define binding. */
   processSourceFragment(fragment: SourceFragment): void;
+  /** Optional fragment-aware define name resolution for braced references. */
   resolveDefineFragment?(fragment: SourceFragment): SourceFragment;
+  /** Optional namespace-aware define lookup overriding the flat map. */
   lookupDefineValue?(name: string): string | undefined;
+  /** Active namespace prefix for recorded define symbols. */
   currentNamespace: string;
+  /** Records define symbols for navigation and cross-pass lookup. */
   recordSymbolDefinition(
     kind: "define",
     name: string,
@@ -32,6 +42,7 @@ export type DefineHost = {
   ): void;
 };
 
+/** Parses, caches, and expands define templates during assembly. */
 export class DefineEngine {
   /** Value identity remains in defines; metadata is refreshed when a declaration executes. */
   private readonly origins = new Map<string, SourceOccurrence>();
@@ -85,6 +96,7 @@ export class DefineEngine {
 
   constructor(readonly host: DefineHost) {}
 
+  /** True when a define value contains only literal numbers and math operators. */
   isPureMathExpression(value: string): boolean {
     // oxlint-disable-next-line security/detect-unsafe-regex -- Anchors bound the complete token grammar.
     return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|-]|\s)+$/.test(value);
@@ -92,8 +104,8 @@ export class DefineEngine {
 
   /**
    * Handles a define command.
-   * @param {NormalizedCommand} commandNode The command node to handle.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   * @param commandNode The command node to handle.
+   * @returns `true` if the command was handled, `false` otherwise.
    */
   handleCommand(commandNode: NormalizedCommand): boolean {
     const operation = commandNode.parsed.operation;
@@ -118,7 +130,7 @@ export class DefineEngine {
 
   /**
    * Handles a define command.
-   * @param {string} command The command to handle.
+   * @param command The command to handle.
    * @example
    * !identifier = value // Basic assignment
    * !identifier += value // Append to existing value
@@ -182,8 +194,8 @@ export class DefineEngine {
 
   /**
    * Resolves nested defines in a string.
-   * @param {string} content The content to process.
-   * @returns {string} The processed content with nested defines resolved.
+   * @param content The content to process.
+   * @returns The processed content with nested defines resolved.
    */
   processNestedDefines(content: string): string {
     if (!content.includes("!")) {
@@ -206,8 +218,8 @@ export class DefineEngine {
 
   /**
    * Resolves one level of defines in a string.
-   * @param {string} content The content to process.
-   * @returns {string} The processed content with one level of defines resolved.
+   * @param content The content to process.
+   * @returns The processed content with one level of defines resolved.
    */
   resolveOneLevelOfDefines(content: string): string {
     const template = this.template(content, "none");
@@ -237,8 +249,8 @@ export class DefineEngine {
 
   /**
    * Resolves regular defines in a string.
-   * @param {string} content The content to process.
-   * @returns {string} The processed content with regular defines resolved.
+   * @param content The content to process.
+   * @returns The processed content with regular defines resolved.
    */
   resolveRegularDefines(content: string): string {
     return fragmentText(this.resolveRegularFragment(sourceFragment(content)));
@@ -263,8 +275,8 @@ export class DefineEngine {
 
   /**
    * Resolves defines in a string literal.
-   * @param {string} content The content to process.
-   * @returns {string} The processed content with defines in string literal resolved.
+   * @param content The content to process.
+   * @returns The processed content with defines in string literal resolved.
    */
   resolveDefinesInStringLiteral(content: string): string {
     const template = this.template(content, "string");
@@ -288,8 +300,8 @@ export class DefineEngine {
 
   /**
    * Processes a value with braced defines.
-   * @param {string} value The value to process.
-   * @returns {string} The processed value with braced defines resolved.
+   * @param value The value to process.
+   * @returns The processed value with braced defines resolved.
    */
   processValueWithBracedDefines(value: string): string {
     const template = this.template(value, "none");
@@ -311,9 +323,9 @@ export class DefineEngine {
 
   /**
    * Applies a define operation.
-   * @param {string} identifier The identifier to apply the operation to.
-   * @param {string} operator The operator to apply.
-   * @param {string} initialValue The initial value to apply the operation to.
+   * @param identifier The identifier to apply the operation to.
+   * @param operator The operator to apply.
+   * @param initialValue The initial value to apply the operation to.
    */
   applyDefineOperation(
     identifier: string,
@@ -399,7 +411,7 @@ export class DefineEngine {
 
   /**
    * Applies an `undef` operation.
-   * @param {string} command The normalized undef command.
+   * @param command The normalized undef command.
    */
   applyUndefOperation(command: string): void {
     this.handleDefineCommand(command);

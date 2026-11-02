@@ -19,52 +19,86 @@ function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+/**
+ * Narrow untrusted project JSON to a plain object.
+ * @param value Parsed JSON value.
+ * @returns True for non-null, non-array objects.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Narrow a limit value to a safe integer; sign is checked by the caller.
+ * @param value Untrusted limit value.
+ * @returns True for a number that is a safe integer.
+ */
 function isSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 
 /** Portable project contract. Machine-specific input locations belong to ignored local settings. */
 export interface SourceProjectConfiguration {
+  /** Configuration format discriminator. */
   readonly format: "uttori-source-project";
+  /** Configuration schema version. */
   readonly version: 1;
+  /** Project identity of word characters, dots and hyphens; scopes research and generation inputs. */
   readonly id: string;
+  /** Non-empty source target descriptor ID that owns build, generation and capture policy. */
   readonly target: string;
   /** Headerless original ROM identity; a modified ROM starts a separate evidence lineage. */
   readonly romSha256: string;
+  /** Non-empty repository-relative source directories. */
   readonly sourceRoots: readonly string[];
+  /** Non-empty repository-relative directories holding Git-tracked research declarations. */
   readonly researchRoots: readonly string[];
+  /** Repository-relative build configuration file. */
   readonly buildConfig: string;
+  /** Repository-relative layout file. */
   readonly layout: string;
+  /** Repository-relative capture catalog file. */
   readonly captures: string;
   /** Shared resource policy. Capture/analysis values use target defaults; research ceilings are opt-in. */
   readonly limits?: ResearchInputLimits & {
     /** Optional byte ceiling per archive, including each graphics companion; omitted limits allow streamed inputs of any safely counted size. */
     readonly captureBytes?: number;
+    /** Positive static-analysis work-item budget; omitted uses the target default. */
     readonly analysisWorkItems?: number;
+    /** Non-negative static-analysis call depth; omitted uses the target default. */
     readonly analysisCallDepth?: number;
   };
 }
 
 /** Local locations may be absolute for private input bundles. They never enter generated history. */
 export interface SourceProjectLocalInputs {
+  /** Local settings format discriminator. */
   readonly format: "uttori-source-local";
+  /** Local settings schema version. */
   readonly version: 1;
+  /** Original ROM path; resolved against the repository root when read. */
   readonly rom: string;
+  /** Analysis evidence project directory; resolved against the repository root when read. */
   readonly evidence: string;
 }
 
 /** Selected repository plus validated, branch-specific tracked configuration and research. */
 export interface SourceProject {
+  /** Git repository and worktree state directories that own this project. */
   readonly repository: SourceRepository;
+  /** Validated `.uttori/project.json`. */
   readonly configuration: SourceProjectConfiguration;
+  /** Content hash of the canonical JSON configuration. */
   readonly configurationSha256: string;
+  /** Research declarations read from `researchRoots` under the configured limits. */
   readonly research: ResearchSnapshot;
 }
 
+/**
+ * Validate configuration identity, portable paths and work limits.
+ * @param value Parsed `.uttori/project.json`.
+ * @throws Error when any field is missing, malformed or outside its allowed range.
+ */
 function assertSourceProjectConfiguration(
   value: unknown,
 ): asserts value is SourceProjectConfiguration {
@@ -157,6 +191,11 @@ export function sourceProjectLocalInputs(project: SourceProject): SourceProjectL
   return readSourceProjectLocalInputs(project.repository.root);
 }
 
+/**
+ * Validate local bindings before resolving their paths.
+ * @param value Parsed `.uttori-local/project.json`.
+ * @throws Error asking the user to configure the ROM and evidence paths when invalid.
+ */
 function assertSourceProjectLocalInputs(value: unknown): asserts value is SourceProjectLocalInputs {
   if (
     !isRecord(value) ||

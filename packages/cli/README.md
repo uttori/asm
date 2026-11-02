@@ -1,10 +1,11 @@
 # @uttori/asm-cli
 
-For saved Aseprite/PNG export, review, application and recovery, see the
+For Aseprite/PNG source conversion and saved-file export, review, application and recovery, see the
 [asset editing guide](ASSET_INTERCHANGE.md).
 
 Command-line assembly, ROM analysis, evidence import, and Git source editing for Uttori ASM.
-Includes the SNES plugin. Other targets use installed plugins and project configuration.
+Includes the SNES plugin. Other targets use installed plugins and project configuration. Git source
+projects support SNES and iNES ROMs; standalone analysis projects are SNES-only.
 
 Native `assemble-object`, `library`, `link`, and `build` commands are also available. See the shared
 [linked build guide](../workflows/LINKED-BUILDS.md) for manifests, atomic artifact receipts and editor opt-in.
@@ -29,7 +30,8 @@ npx uttori-asm patch.asm patched.sfc --base-image original.sfc
 An omitted output path uses the target's extension. `--debug` adds `<output>.debug.json`.
 A base-image build preserves bytes the patch does not replace. Output paths cannot overwrite inputs.
 Use `uttori-asm.config.json` for plugins, target, architecture, and include paths. Command-line options
-override configuration. Workspace plugins execute code, so load only plugins you trust.
+override configuration; a configuration file replaces the default SNES plugin, so list its plugins.
+Workspace plugins execute code, so load only plugins you trust.
 
 Create a Git source project, then edit assembly, assets, and research as ordinary files:
 

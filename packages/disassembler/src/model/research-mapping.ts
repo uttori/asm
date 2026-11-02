@@ -1,12 +1,20 @@
-/** A bank-qualified location in the original image. Omitted fields are unconstrained.
+/**
+ * A bank-qualified location in the original image. Omitted fields are unconstrained.
  * fileOffset is headerless and anchors the record's address/start, not a live source location.
  * State keys are target-defined mapper registers; unknown runtime values never match a constraint.
  */
 export interface ResearchMapping {
+  /** Headerless original-image byte offset of the record anchor; undefined matches any offset. */
   readonly fileOffset?: number;
+  /** Mapper register constraints (1-64 keys, non-negative integers or flags); undefined matches any state. */
   readonly state?: Readonly<Record<string, number | boolean>>;
 }
 
+/**
+ * Accept only non-null, non-array objects.
+ * @param value Candidate value.
+ * @returns Whether value is a plain record.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

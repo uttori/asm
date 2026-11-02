@@ -23,9 +23,12 @@ export type AnalysisTargetState =
       readonly state: Readonly<{ carry?: boolean }>;
     };
 
+/** Narrow parsed JSON to a plain object record. */
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+/** Accept only boolean flags and bounded register widths for 65816 assumptions. */
 function is65816(
   value: Record<string, unknown>,
 ): value is Record<string, unknown> & Cpu65816Assumptions {

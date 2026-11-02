@@ -18,12 +18,15 @@ const EVIDENCE_SHARDS = [
   "imports",
 ] as const;
 
+/** One persisted evidence shard kind exposed to the inspector picker. */
 type EvidenceShard = (typeof EVIDENCE_SHARDS)[number];
 
+/** Worker snapshot listing selectable record ids grouped by shard. */
 interface EvidenceChoiceSnapshot {
   readonly shards: { readonly [K in EvidenceShard]: readonly { readonly id: string }[] };
 }
 
+/** Expanded explanation payload for one selected evidence record. */
 interface EvidenceExplanationView {
   readonly shard: string;
   readonly record: object;
@@ -33,14 +36,17 @@ interface EvidenceExplanationView {
   readonly conflicts: readonly unknown[];
 }
 
+/** Narrow worker payloads to plain objects before validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Require a persisted string id on one catalog row. */
 function isIdRecord(value: unknown): value is { readonly id: string } {
   return isRecord(value) && typeof value.id === "string";
 }
 
+/** Validate the evidence choice snapshot returned by the analysis worker. */
 function isEvidenceChoices(value: unknown): value is EvidenceChoiceSnapshot {
   if (!isRecord(value) || !isRecord(value.shards)) {
     return false;
@@ -51,6 +57,7 @@ function isEvidenceChoices(value: unknown): value is EvidenceChoiceSnapshot {
   );
 }
 
+/** Validate one explainEvidence response before rendering the document. */
 function isEvidenceExplanation(value: unknown): value is EvidenceExplanationView {
   return (
     isRecord(value) &&
@@ -65,6 +72,7 @@ function isEvidenceExplanation(value: unknown): value is EvidenceExplanationView
   );
 }
 
+/** Render canonical JSON indented for read-only inspection documents. */
 const indentedJson = (value: unknown): string =>
   canonicalJson(value)
     .trimEnd()
@@ -74,6 +82,7 @@ const indentedJson = (value: unknown): string =>
 
 /** Bounded evidence queries rendered as ordinary read-only inspection documents. */
 export class AnalysisEvidenceInspector {
+  /** Prompt for a record and open a read-only explanation document. */
   async explainEvidence(): Promise<void> {
     try {
       const projectDirectory = await this.chooseProject("Explain Analysis Evidence");

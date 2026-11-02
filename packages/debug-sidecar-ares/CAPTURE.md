@@ -3,7 +3,7 @@
 Capture requires a manifest-matched downstream ares runtime and matching sidecar/editor builds.
 Select it through the [runtime setup](RUNTIME.md). Capabilities are negotiated before recording.
 Unsupported scopes or sinks fail instead of silently dropping requested evidence. Native candidates
-and prepared upstream contributions are separate. These features are not stock ares APIs.
+are separate from stock ares. These features are not stock ares APIs.
 
 ## Default research bundle
 
@@ -186,15 +186,12 @@ and configured heap limits. Native recording remains available for later offline
 Dense captures can outpace analysis indefinitely, so the backlog limit stops analysis instead of
 allowing unbounded growth. Native allocation and filesystem buffers are outside the JavaScript heap.
 
-## Native development
+## Native tests
 
-Source pins, patches, and reproduction commands are retained with the
-[instruction](native/capture-v2/README.md), [bus](native/capture-bus/README.md),
-[transfer](native/capture-transfer/README.md), [PPU](native/capture-ppu/README.md),
-[file sink](native/capture-file/README.md), and [realtime](native/capture-realtime/README.md)
-packages. The [benchmark audit](native/capture-benchmark-audit/README.md) describes reproducible
-coverage. Local measurements do not establish realtime behavior for every game, storage device,
-PPU implementation, or platform.
+Native capture producers live in `fixtures/external/ares`. Run `gdb-capture`, `gdb-polling`,
+`gdb-states`, and `gdb-famicom` CTest from that checkout after configuring with
+`-DARES_BUILD_OPTIONAL_TARGETS=ON`. Local measurements do not establish realtime behavior for
+every game, storage device, PPU implementation, or platform.
 
 ## Famicom PPU scope
 

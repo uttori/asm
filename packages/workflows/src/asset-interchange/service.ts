@@ -86,11 +86,13 @@ export const savedAssetSourceHost: AssetSourceHost = {
   inspect: inspectSourceProject,
 };
 
+/** Path and SHA-256 of one file in a review or publication set. */
 type FileHash = { readonly path: string; readonly sha256: string };
 /** Private container bytes are always structural Aseprite, independently of the exported presentation format. */
 type StoredPresentation =
   | (Omit<TilemapInterchangeBaseline, "document"> & { readonly documentBytes: Uint8Array })
   | (Omit<RasterInterchangeBaseline, "document"> & { readonly documentBytes: Uint8Array });
+/** Adapter export plus hashes captured before planning an import. */
 interface Baseline<Selection, Bindings> {
   readonly format: "uttori-asset-baseline";
   readonly version: 2;
@@ -111,6 +113,7 @@ function inspectPresentation(baseline: AssetInterchangeBaseline, after = baselin
   }
   return inspectTilemapInterchange(baseline, after);
 }
+/** Validated plan, review identity, and hashes ready for publication. */
 interface ReviewedPlan {
   readonly format: "uttori-asset-reviewed-plan";
   readonly version: 2;
@@ -141,6 +144,7 @@ function sourceFile(root: string, name: string): string {
   });
   return file;
 }
+/** Parse a JSON array of path/hash pairs, rejecting malformed entries. */
 function fileHashes(value: unknown): FileHash[] {
   if (!Array.isArray(value) || value.length > 65536) {
     throw new Error("Invalid asset dependency inventory.");
@@ -157,6 +161,7 @@ function fileHashes(value: unknown): FileHash[] {
     return { path: name, sha256: digest(item.sha256) };
   });
 }
+/** Parse planned source-file replacements from untrusted review JSON. */
 function replacements(value: unknown): SourceFileReplacement[] {
   if (!Array.isArray(value) || value.length > 65536) {
     throw new Error("Invalid asset replacement inventory.");
@@ -182,6 +187,7 @@ function replacements(value: unknown): SourceFileReplacement[] {
     return { path: name, before, after };
   });
 }
+/** Parse planned native effects from untrusted review JSON. */
 function effects(value: unknown): AssetNativeEffect[] {
   if (!Array.isArray(value) || value.length > 65536) {
     throw new Error("Invalid native effect inventory.");
@@ -210,11 +216,13 @@ function effects(value: unknown): AssetNativeEffect[] {
   });
 }
 
+/** Require a diagnostic-free inspection before interchange publication. */
 function cleanBuild(build: SourceProjectInspection): void {
   if (build.diagnostics.length) {
     throw new Error(build.diagnostics.map((item) => item.message).join("\n"));
   }
 }
+/** Constant-time length-checked byte equality for review hashes. */
 function equal(a: Uint8Array, b: Uint8Array): boolean {
   return Buffer.from(a).equals(b);
 }
@@ -260,6 +268,7 @@ function snapshots(build: SourceProjectInspection, dependencies: readonly FileHa
     .toSorted(([a], [b]) => a.localeCompare(b))
     .map(([name, sha256]) => ({ path: name, sha256 }));
 }
+/** Require each hashed file still matches on disk under `root`. */
 function assertFiles(root: string, files: readonly FileHash[]): void {
   for (const file of files) {
     if (assetHash(readAssetFile(sourceFile(root, file.path), 256 * 1024 * 1024)) !== file.sha256) {
@@ -267,6 +276,7 @@ function assertFiles(root: string, files: readonly FileHash[]): void {
     }
   }
 }
+/** Canonical identity string for an import review payload. */
 function reviewIdentity(
   value: Omit<ReviewedPlan, "summary">,
   summary: Omit<AssetImportReview, "id">,

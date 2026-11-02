@@ -204,7 +204,7 @@ for (const headerSize of [0, 512] as const) {
       const modified = {
         ...changed,
         regions: changed.regions.map((region) =>
-          region === prefix ? { ...region, initialBytes } : region,
+          region === prefix ? Object.assign({}, region, { initialBytes }) : region,
         ),
       };
       const pointer = fs.readFileSync(path.join(buildOptions.outputDirectory, "current.json"));

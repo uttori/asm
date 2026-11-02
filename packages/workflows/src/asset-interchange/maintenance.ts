@@ -21,7 +21,9 @@ import { assetHash, AssetRecordStore, readAssetStagingId } from "./record-store.
 
 /** Explicit retirement list. Retained reviews continue to pin their export; no age-based or automatic pruning occurs. */
 export interface AssetRetentionPolicy {
+  /** Export locators explicitly selected to survive cleanup. */
   readonly exports: readonly string[];
+  /** Review digests explicitly selected to survive cleanup. */
   readonly reviews: readonly string[];
   /** Optional explicit crash leftovers, named with their full `.staging-<uuid>` directory basenames in each store. */
   readonly staging?: {

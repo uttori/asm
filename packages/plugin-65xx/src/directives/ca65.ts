@@ -20,8 +20,8 @@ import type { Nes65xxSessionState } from "../session-state.js";
 
 /**
  * Strips one layer of matching quotes from a token.
- * @param {string} token Raw token, possibly quoted.
- * @returns {string} Unquoted token.
+ * @param token Raw token, possibly quoted.
+ * @returns Unquoted token.
  */
 function unquote(token: string): string {
   if (token.length >= 2) {
@@ -35,8 +35,8 @@ function unquote(token: string): string {
 
 /**
  * Splits remaining directive words on commas.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {string[]} Parameter expressions.
+ * @param words Tokenized line, keyword first.
+ * @returns Parameter expressions.
  */
 export function parameterList(words: readonly string[]): string[] {
   const joined = words.slice(1).join(" ");
@@ -82,9 +82,8 @@ export function parameterList(words: readonly string[]): string[] {
 /**
  * Promotes a name to session-global and copies any already-defined file-local
  * value onto the unqualified key.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {string} name Exported/imported identifier.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param name Exported/imported identifier.
  */
 export function markGlobalSymbol(session: PluginSessionCapabilities, name: string): void {
   if (!name) {
@@ -103,9 +102,8 @@ export function markGlobalSymbol(session: PluginSessionCapabilities, name: strin
 /**
  * Closes the active ld65 segment: records the next load cursor and emits
  * `__NAME_LOAD__` / `__NAME_RUN__` / `__NAME_SIZE__` / `__NAME_RUN_END__`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Nes65xxSessionState} state Mutable NES session state.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param state Mutable NES session state.
  */
 export function closeActiveSegment(
   session: PluginSessionCapabilities,
@@ -151,9 +149,8 @@ export function closeActiveSegment(
 
 /**
  * Evaluates SYMBOLS block expressions after the last segment closes.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Nes65xxSessionState} state Mutable NES session state.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param state Mutable NES session state.
  */
 export function applyLinkerSymbols(
   session: PluginSessionCapabilities,
@@ -173,10 +170,9 @@ export function applyLinkerSymbols(
 /**
  * Opens an ld65 segment: `org` to the load address, `base` to the run address
  * when they differ (overlay copy-to-RAM).
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Nes65xxSessionState} state Mutable NES session state.
- * @param {Ld65Segment} segment Segment to activate.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param state Mutable NES session state.
+ * @param segment Segment to activate.
  */
 export function openSegment(
   session: PluginSessionCapabilities,
@@ -213,10 +209,9 @@ export function openSegment(
 
 /**
  * Handles `.segment "NAME"`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Nes65xxSessionState} state Mutable NES session state.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param state Mutable NES session state.
+ * @param words Tokenized line, keyword first.
  */
 export function handleSegment(
   session: PluginSessionCapabilities,
@@ -235,6 +230,12 @@ export function handleSegment(
   openSegment(session, state, segment);
 }
 
+/**
+ * Applies `.export` or `.import` to each named symbol; object-module sessions record it on the module, flat sessions mark the symbol global.
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
+ * @param keyword `.export` or `.import`; also used in diagnostics.
+ */
 function markGlobalSymbols(
   session: PluginSessionCapabilities,
   words: readonly string[],
@@ -261,9 +262,8 @@ function markGlobalSymbols(
 
 /**
  * Handles `.export ident[, ident...]`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleExport(session: PluginSessionCapabilities, words: readonly string[]): void {
   markGlobalSymbols(session, words, ".export");
@@ -271,9 +271,8 @@ export function handleExport(session: PluginSessionCapabilities, words: readonly
 
 /**
  * Handles `.import ident[, ident...]`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleImport(session: PluginSessionCapabilities, words: readonly string[]): void {
   markGlobalSymbols(session, words, ".import");
@@ -281,9 +280,8 @@ export function handleImport(session: PluginSessionCapabilities, words: readonly
 
 /**
  * Handles `.byte` / `.byt`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleByte(session: PluginSessionCapabilities, words: readonly string[]): void {
   session.directiveRuntime.handleDataDirective("db", words.slice(1));
@@ -291,9 +289,8 @@ export function handleByte(session: PluginSessionCapabilities, words: readonly s
 
 /**
  * Handles `.addr` / `.word` (16-bit little-endian).
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleAddr(session: PluginSessionCapabilities, words: readonly string[]): void {
   session.directiveRuntime.handleDataDirective("dw", words.slice(1));
@@ -301,11 +298,10 @@ export function handleAddr(session: PluginSessionCapabilities, words: readonly s
 
 /**
  * Emits one transformed byte per expression, or estimates during collection.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @param {(value: number) => void} write Called once per evaluated value.
- * @param {number} width Bytes consumed per value when estimating.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
+ * @param write Called once per evaluated value.
+ * @param width Bytes consumed per value when estimating.
  */
 function emitMappedBytes(
   session: PluginSessionCapabilities,
@@ -343,9 +339,8 @@ function emitMappedBytes(
 
 /**
  * Handles `.lobytes expr[, expr...]`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleLobytes(session: PluginSessionCapabilities, words: readonly string[]): void {
   emitMappedBytes(session, words, (value) => session.write1(value & 0xff), 1, "low");
@@ -353,9 +348,8 @@ export function handleLobytes(session: PluginSessionCapabilities, words: readonl
 
 /**
  * Handles `.hibytes expr[, expr...]`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleHibytes(session: PluginSessionCapabilities, words: readonly string[]): void {
   emitMappedBytes(session, words, (value) => session.write1((value >> 8) & 0xff), 1, "high");
@@ -363,9 +357,8 @@ export function handleHibytes(session: PluginSessionCapabilities, words: readonl
 
 /**
  * Handles `.dbyt expr[, expr...]` (16-bit big-endian).
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleDbyt(session: PluginSessionCapabilities, words: readonly string[]): void {
   emitMappedBytes(
@@ -382,9 +375,9 @@ export function handleDbyt(session: PluginSessionCapabilities, words: readonly s
 
 /**
  * Handles `.dword` / `.faraddr` (32-bit or 24-bit little-endian).
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @param {3 | 4} width Emitted value width.
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
+ * @param width Emitted value width.
  */
 export function handleDword(
   session: PluginSessionCapabilities,
@@ -396,9 +389,9 @@ export function handleDword(
 
 /**
  * Selects one of the 65xx-owned ca65 CPUs.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Ca65SessionState} state ca65 session state.
- * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param session Host assembler session.
+ * @param state ca65 session state.
+ * @param words Tokenized line, keyword first.
  */
 export function handleSetcpu(
   session: PluginSessionCapabilities,
@@ -421,8 +414,8 @@ export function handleSetcpu(
 
 /**
  * Saves the current CPU for `.popcpu`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Ca65SessionState} state ca65 session state.
+ * @param session Host assembler session.
+ * @param state ca65 session state.
  */
 export function handlePushcpu(session: PluginSessionCapabilities, state: Ca65SessionState): void {
   state.cpuStack.push(session.resolveActiveArchitecture().name);
@@ -430,8 +423,8 @@ export function handlePushcpu(session: PluginSessionCapabilities, state: Ca65Ses
 
 /**
  * Restores the most recently pushed CPU.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Ca65SessionState} state ca65 session state.
+ * @param session Host assembler session.
+ * @param state ca65 session state.
  */
 export function handlePopcpu(session: PluginSessionCapabilities, state: Ca65SessionState): void {
   const architecture = state.cpuStack.pop();
@@ -444,9 +437,9 @@ export function handlePopcpu(session: PluginSessionCapabilities, state: Ca65Sess
 
 /**
  * Handles `.p02`, `.p6280`, and the other ca65 CPU shorthand directives.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Ca65SessionState} state ca65 session state.
- * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param session Host assembler session.
+ * @param state ca65 session state.
+ * @param words Tokenized line, keyword first.
  */
 export function handleCpuShorthand(
   session: PluginSessionCapabilities,
@@ -463,8 +456,8 @@ export function handleCpuShorthand(
 
 /**
  * Emits `.res count[, fill]`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleRes(session: PluginSessionCapabilities, words: readonly string[]): void {
   const params = parameterList(words);
@@ -491,8 +484,8 @@ export function handleRes(session: PluginSessionCapabilities, words: readonly st
 
 /**
  * Pads to the next `.align boundary[, fill]`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleAlign(session: PluginSessionCapabilities, words: readonly string[]): void {
   const params = parameterList(words);
@@ -520,8 +513,8 @@ export function handleAlign(session: PluginSessionCapabilities, words: readonly 
 
 /**
  * Includes `.incbin "file"[, offset[, size]]` using ca65's offset/length convention.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleCa65Incbin(
   session: PluginSessionCapabilities,
@@ -560,8 +553,8 @@ export function handleCa65Incbin(
 
 /**
  * Implements the flat-image subset of ca65 `.assert`, deferring provisional asset layouts in tooling.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param session Host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleCa65Assert(
   session: PluginSessionCapabilities,
@@ -580,10 +573,10 @@ export function handleCa65Assert(
 
 /**
  * Enters a ca65 `.scope` or `.proc` using the core namespace mechanism.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Ca65SessionState} state ca65 session state.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @param {boolean} procedure Whether the scope declares a procedure label.
+ * @param session Host assembler session.
+ * @param state ca65 session state.
+ * @param words Tokenized line, keyword first.
+ * @param procedure Whether the scope declares a procedure label.
  */
 export function handleScope(
   session: PluginSessionCapabilities,
@@ -603,8 +596,8 @@ export function handleScope(
 
 /**
  * Leaves the most recent ca65 `.scope` or `.proc`.
- * @param {PluginSessionCapabilities} session Host assembler session.
- * @param {Ca65SessionState} state ca65 session state.
+ * @param session Host assembler session.
+ * @param state ca65 session state.
  */
 export function handleEndScope(session: PluginSessionCapabilities, state: Ca65SessionState): void {
   const previous = state.scopeStack.pop();
@@ -616,8 +609,8 @@ export function handleEndScope(session: PluginSessionCapabilities, state: Ca65Se
 
 /**
  * Records flat-image `.segment` intent without pretending to create an object segment.
- * @param {Ca65SessionState} state ca65 session state.
- * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param state ca65 session state.
+ * @param words Tokenized line, keyword first.
  */
 export function handleFlatSegment(state: Ca65SessionState, words: readonly string[]): void {
   const name = unquote(words[1] ?? "").trim();
@@ -627,12 +620,18 @@ export function handleFlatSegment(state: Ca65SessionState, words: readonly strin
   state.currentFlatSegment = name;
 }
 
-/** @param {Ca65SessionState} state ca65 session state. */
+/**
+ * Saves the active flat segment for a later `.popseg`.
+ * @param state ca65 session state.
+ */
 export function handlePushseg(state: Ca65SessionState): void {
   state.segmentStack.push(state.currentFlatSegment);
 }
 
-/** @param {Ca65SessionState} state ca65 session state. */
+/**
+ * Restores the flat segment saved by the matching `.pushseg`; throws when the stack is empty.
+ * @param state ca65 session state.
+ */
 export function handlePopseg(state: Ca65SessionState): void {
   const segment = state.segmentStack.pop();
   if (segment === undefined) {
@@ -643,8 +642,8 @@ export function handlePopseg(state: Ca65SessionState): void {
 
 /**
  * Rejects directives that require ca65 object/linker semantics.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {never} This handler always throws.
+ * @param words Tokenized line, keyword first.
+ * @returns This handler always throws.
  */
 export function handleUnsupportedCa65(words: readonly string[]): never {
   const keyword = words[0] ?? "<unknown>";

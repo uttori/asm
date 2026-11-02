@@ -126,6 +126,10 @@ export interface Snes65816AnalysisResult extends StaticAnalysisResult<Cpu65816Ab
   readonly evidenceRecords: readonly EvidenceRecord[];
 }
 
+/**
+ * Select the hardware reset or interrupt entry state for a vector definition.
+ * @param kind Vector state tag from the ROM header table.
+ */
 const vectorState = (
   kind: NonNullable<SnesCpuVectorDefinition["state"]>,
 ): Cpu65816AbstractState => {
@@ -135,6 +139,12 @@ const vectorState = (
   return kind === "native" ? nativeVectorCpu65816State() : emulationVectorCpu65816State();
 };
 
+/**
+ * Read a little-endian bank-zero vector word from the mapped ROM image.
+ * @param rom Headerless ROM view.
+ * @param mapper Cartridge mapper for file-offset translation.
+ * @param pointer 24-bit CPU address of the vector word.
+ */
 const readVector = (rom: RomImage, mapper: SnesMapper, pointer: number): number | undefined => {
   const identity = identifySnesCpuAddress(pointer, createSnesAddressContext(mapper), rom.length);
   if (!identity) {
@@ -149,11 +159,16 @@ const readVector = (rom: RomImage, mapper: SnesMapper, pointer: number): number 
   return target === 0 || target === 0xffff ? undefined : target;
 };
 
+/** Extract a 65816 state overlay stored on a project annotation. */
 const stateOverrideFor = (annotation: IntervalAnnotation): Cpu65816StateOverride | undefined => {
   const payload = readAnalysisTargetState(annotation.architecture, annotation.state);
   return payload?.codec === "snes.65816" ? payload.state : undefined;
 };
 
+/**
+ * Map decoder reference kinds onto static CFG edge kinds.
+ * @param kind Operand reference classification from the decoder.
+ */
 const controlTargetKind = (
   kind: DecodedInstruction["references"][number]["kind"],
 ): "branch" | "call" | "jump" => {
@@ -166,6 +181,11 @@ const controlTargetKind = (
   return "jump";
 };
 
+/**
+ * Build static control targets, expanding interrupt instructions to vector targets.
+ * @param instruction Decoded 65816 instruction at the current PC.
+ * @param interruptTargets Resolved vector destinations for interrupt opcodes.
+ */
 const controlsFor = (
   instruction: DecodedInstruction,
   interruptTargets: readonly number[],
@@ -199,9 +219,14 @@ const controlsFor = (
   }));
 };
 
+/** True when effective addresses depend on index registers or stack-relative forms. */
 const isIndexedOrIndirect = (mode: string): boolean =>
   mode.includes("Indexed") || mode.includes("Indirect") || mode.startsWith("stackRelative");
 
+/**
+ * Explain why a data effective address could not be resolved statically.
+ * @param mode Instruction addressing mode string from the decoder.
+ */
 const unresolvedAddressExplanation = (mode: string): string => {
   if (mode.startsWith("direct")) {
     return "Effective address is unresolved because direct page D is unknown.";
@@ -212,6 +237,11 @@ const unresolvedAddressExplanation = (mode: string): string => {
   return "Effective address is unresolved.";
 };
 
+/**
+ * Explain whether a mapped ROM offset or indexed base was recorded for an operand.
+ * @param indexed True when the mode prevents a single effective address.
+ * @param identity Canonical ROM mapping when the address is direct and in-ROM.
+ */
 const mappedAddressExplanation = (
   indexed: boolean,
   identity: { readonly fileOffset: number } | undefined,
@@ -232,10 +262,10 @@ const mappedAddressExplanation = (
  * by the richer address-identity helper. Using the target address-space conversion here avoids
  * allocating up to 256 mirror records for every decoded instruction. The reverse check preserves
  * the former guarantee that the candidate offset is representable for the selected mapper.
- * @param {number} address Logical 65816 address to map.
- * @param {AddressSpaceContext} context Precomputed mapper context shared by the analysis run.
- * @param {number} romSize Headerless ROM size used to reject out-of-bounds offsets.
- * @returns {{ readonly fileOffset: number } | undefined} Canonical in-ROM file identity, if mapped.
+ * @param address Logical 65816 address to map.
+ * @param context Precomputed mapper context shared by the analysis run.
+ * @param romSize Headerless ROM size used to reject out-of-bounds offsets.
+ * @returns Canonical in-ROM file identity, if mapped.
  */
 const mappedRomOffset = (
   address: number,
@@ -251,6 +281,12 @@ const mappedRomOffset = (
   return snesRomAddressSpace.fromOutputOffset(fileOffset, context) < 0 ? undefined : { fileOffset };
 };
 
+/**
+ * Summarize data and pointer operands with ROM mapping and hardware classification.
+ * @param instruction Decoded instruction whose references are exported.
+ * @param context Mapper context shared by the analysis run.
+ * @param romSize Headerless ROM size used to reject out-of-range offsets.
+ */
 const effectiveAddressesFor = (
   instruction: DecodedInstruction,
   context: AddressSpaceContext,
@@ -294,14 +330,17 @@ const effectiveAddressesFor = (
       );
     });
 
+/** Project a lattice flag onto true/false when exactly 0 or 1 is known. */
 const knownBoolean = (value: Cpu65816AbstractState["m"]): boolean | undefined =>
   value.kind === "known" && (value.value === 0 || value.value === 1)
     ? value.value === 1
     : undefined;
 
+/** Extract a concrete integer when the lattice value is known. */
 const knownNumber = (value: Cpu65816AbstractState["d"]): number | undefined =>
   value.kind === "known" ? value.value : undefined;
 
+/** Serialize known CPU state fields onto interval annotation payloads. */
 const annotationState = (
   state: Cpu65816AbstractState,
 ): NonNullable<IntervalAnnotation["state"]> => ({
@@ -315,6 +354,12 @@ const annotationState = (
   ...(knownNumber(state.s) === undefined ? {} : { stackPointer: knownNumber(state.s)! }),
 });
 
+/**
+ * Convert a static CFG result into publication-ready analysis records.
+ * @param result Completed 65816 control-flow analysis.
+ * @param runEvidence Evidence id identifying this analysis run.
+ * @param retainGraph When false, omit redundant graph path records.
+ */
 const recordsFor = (
   result: StaticAnalysisResult<Cpu65816AbstractState>,
   runEvidence: string,
@@ -435,6 +480,11 @@ const recordsFor = (
   return withCompactAnalysisOwnership(records, entries);
 };
 
+/**
+ * Regenerate opcode/operand interval annotations from decoded CFG nodes.
+ * @param result Completed 65816 control-flow analysis.
+ * @param runEvidence Evidence id identifying this analysis run.
+ */
 const annotationsFor = (
   result: StaticAnalysisResult<Cpu65816AbstractState>,
   runEvidence: string,
@@ -487,10 +537,10 @@ const annotationsFor = (
  * Seeds from RESET/interrupt vectors, labels, `points: ["in"]` annotations,
  * configured entry points, and target sets. Data-classified intervals block
  * decode. Hardware I/O is never treated as ROM.
- * @param {RomImage} rom Immutable ROM content and identity.
- * @param {SnesMapper} mapper Explicitly detected or user-selected SNES mapper.
- * @param {Snes65816AnalysisOptions} [options] Project annotations, seeds, overrides, and deterministic limits.
- * @returns {Snes65816AnalysisResult} Static CFG, abstract states, project records, annotations, and evidence.
+ * @param rom Immutable ROM content and identity.
+ * @param mapper Explicitly detected or user-selected SNES mapper.
+ * @param [options] Project annotations, seeds, overrides, and deterministic limits.
+ * @returns Static CFG, abstract states, project records, annotations, and evidence.
  */
 export const analyzeSnes65816 = (
   rom: RomImage,

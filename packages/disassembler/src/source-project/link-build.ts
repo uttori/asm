@@ -17,14 +17,21 @@ import { acquireFileLease, durableReplace, syncDirectory } from "../internal/dur
 
 /** Paths select one immutable artifact set. Consumers open current.json once and use only these paths. */
 export interface LinkedBuildReceipt {
+  /** Receipt format discriminator. */
   readonly format: "uttori-linked-build-v1";
+  /** Lowercase SHA-256 link input identity; names the immutable build directory. */
   readonly inputSha256: string;
+  /** Linked binary inside the build directory. */
   readonly outputFile: string;
+  /** Validated debug map for `outputFile` (`<output>.debug.json`). */
   readonly debugMapFile: string;
+  /** Exported linker symbols (`<output>.symbols.json`). */
   readonly symbolsFile: string;
+  /** Allocations, regions, selected members and dependencies (`<output>.link.json`). */
   readonly allocationFile: string;
   /** Present when the publishing host supplies the resolved recipe for source-free relinking. */
   readonly recipeFile?: string;
+  /** Artifact hash keyed by file name within the build directory, covering every listed artifact. */
   readonly hashes: Readonly<Record<string, string>>;
 }
 

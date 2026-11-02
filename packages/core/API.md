@@ -11,13 +11,17 @@ bundled runtime. Published entry points contain JavaScript and TypeScript declar
 | `@uttori/asm-core/canonical-json`                       | Canonical JSON values, compact equality, and pretty durable/review text                                 |
 | `@uttori/asm-core/plugin`                               | Plugin definitions, contribution contracts, `PluginManager`, environments, state, and structured errors |
 | `@uttori/asm-core/debug-map`                            | Debug-map serialization, validation, source mapping, and binary identity                                |
+| `@uttori/asm-core/frontend`                             | Source analysis and lowering services, `ProgramModelBuilder`, and program-model contracts for hosts     |
+| `@uttori/asm-core/tooling`                              | Node workspace indexing, symbol navigation, and directive/instruction catalogs                          |
+| `@uttori/asm-core/linker`                               | Node object/library codecs and the deterministic section linker                                         |
 | `@uttori/asm-plugin-loader-node`                        | Configuration validation/discovery and trusted Node plugin loading                                      |
 | `@uttori/asm-plugin-loader-node/asm-config.schema.json` | Editor JSON schema                                                                                      |
+| `@uttori/asm-plugin-loader-node/build-configuration`    | `uttori-build` manifest parsing and module-derived recipe selection                                     |
 
-The core root also exposes `pluginApi` and the main plugin runtime classes/functions. Import
-plugin types from `/plugin`. Front-end/lowering services, `ProgramModelBuilder`, IR types, LSP
-helpers, `OwnedContribution`, and `PluginSessionStateStore` remain available for advanced hosts.
-They require the same stage, target, and ownership invariants as `Assembler`. Most integrations
+The core root also exposes `pluginApi` (the `/plugin` namespace) and the main plugin runtime
+classes/functions. Import plugin types, `OwnedContribution`, and `PluginSessionStateStore` from
+`/plugin`. Front-end/lowering services and `ProgramModelBuilder` are in `/frontend`, LSP helpers
+are in `/tooling`, and IR types remain on the root for advanced hosts. They require the same stage, target, and ownership invariants as `Assembler`. Most integrations
 should use the assembler and manager. Package-internal `src/` and `dist/` paths are not entry points.
 
 ## Host lifecycle

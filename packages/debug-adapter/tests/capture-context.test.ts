@@ -41,8 +41,10 @@ const position = (state: CapturePositionV2["state"]): CapturePositionV2 => ({
   error: "",
 });
 
-/** Simulate native artifact writes while retaining the actual recorder's ordering,
- * no-clobber publication, hashing, and recovery checks. */
+/**
+ * Simulate native artifact writes while retaining the actual recorder's ordering,
+ * no-clobber publication, hashing, and recovery checks.
+ */
 const fixture = (mismatch = false, graphicsWindowFrames: number | null = null) => {
   const calls: string[] = [];
   let directory = "",

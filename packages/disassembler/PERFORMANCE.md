@@ -8,16 +8,17 @@ npm run benchmark:disassembler -- --fast
 npm run benchmark:disassembler -- --json /tmp/disassembler-local.json
 ```
 
-The full suite defaults to one warmup and five measured repetitions. Use `--warmups`,
+The full suite defaults to one warmup and five measured repetitions. `--fast` selects only the
+512 KiB fixture with no warmup and one repetition. Use `--warmups`,
 `--repetitions`, `--fixture`, and `--operation` to isolate a comparison. Fixture and operation
 lists are comma-separated.
 
 ## Measured operations
 
 - Conservative 65816 analysis and native-source export.
-- Canonical project serialization and hash-validated loading.
-- Coverage and instruction-annotation projection.
-- Transaction preparation, atomic commit, and exact edit undo.
+- SQLite project publication and validated loading.
+- Instruction-annotation projection.
+- Transaction preparation and revision-checked commit.
 - Instruction-trace validation, aggregation, and evidence merge.
 - Backend-event translation through the Debug Adapter Protocol session.
 

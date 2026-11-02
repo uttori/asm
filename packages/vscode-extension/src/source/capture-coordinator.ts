@@ -5,6 +5,7 @@ import type { SourceProjectSession } from "./session.js";
 /** Capture selection owns no archive data; the worker imports bounded evidence under the shared project identity. */
 export class SourceCaptureCoordinator {
   constructor(readonly session: SourceProjectSession) {}
+  /** Prompt for capture archives and return paths chosen for worker import. */
   async select(
     captureUri?: Uri | readonly Uri[],
   ): Promise<

@@ -12,10 +12,15 @@ import { incrementInternalCounter, measureInternalPhase } from "../internal-inst
 
 /** Serialized per-root analysis artifacts persisted between sessions. */
 export type CachedRootAnalysis = {
+  /** Whether include directives were expanded when this snapshot was produced. */
   followedIncludes: boolean;
+  /** Diagnostics emitted during the cached full pass. */
   diagnostics: AssemblyDiagnostic[];
+  /** Symbol definitions discovered in the cached graph. */
   symbols: AssemblySymbolDefinition[];
+  /** Symbol references collected for navigation and rename. */
   references: AssemblySymbolReference[];
+  /** Include edges linking roots to transitive assembly files. */
   includeEdges: AssemblyIncludeEdge[];
   /** Binary and resource inputs are dependencies, never assembly source files. */
   assetDependencies: Readonly<Record<string, "binary" | "resource">>;
@@ -23,8 +28,11 @@ export type CachedRootAnalysis = {
 
 /** Assembler settings that must match for a cache entry to be reused. */
 export type RootAnalysisCacheIdentity = {
+  /** Active assembly target identifier. */
   target: string;
+  /** CPU architecture string paired with the target. */
   architecture: string;
+  /** Include search paths that affect which files enter the graph. */
   includePaths: readonly string[];
   /** Converter IDs and versions invalidate cached analysis even when files are unchanged. */
   converterIdentity: string;
@@ -36,15 +44,18 @@ export type RootAnalysisCacheIdentity = {
 // Typed operand occurrences change references and rename ranges in persisted analysis.
 const CACHE_VERSION = 8;
 
+/** On-disk JSON envelope wrapping versioned cache metadata and analysis. */
 type CachePayload = {
   version: number;
   root: string;
   fingerprint: string;
   identity: RootAnalysisCacheIdentity;
   fileHashes: Record<string, string>;
-  /** Per-file mtime (ms since epoch) recorded when the cache was written. Used
+  /**
+   * Per-file mtime (ms since epoch) recorded when the cache was written. Used
    * as a cheap first-pass check before SHA-256 re-hashing on cache reads.
-   * Absent on entries written before mtimes were stored. */
+   * Absent on entries written before mtimes were stored.
+   */
   fileMtimes?: Partial<Record<string, number>>;
   analysis: CachedRootAnalysis;
 };
@@ -56,10 +67,12 @@ type CachePayload = {
  * fingerprint and assembler identity (target/arch/include paths) to match.
  */
 export class RootAnalysisCache {
+  /** Resolved absolute directory holding one JSON file per cached root. */
   readonly cacheDir: string;
 
   /**
-   * @param {string} cacheDir Absolute directory used to store cache JSON files.
+   * Creates a cache rooted at the given storage directory.
+   * @param cacheDir Absolute directory used to store cache JSON files.
    */
   constructor(cacheDir: string) {
     this.cacheDir = path.resolve(cacheDir);
@@ -77,11 +90,11 @@ export class RootAnalysisCache {
    * This avoids reading and hashing every include file on every startup when
    * the project has not changed — the common case for warm LSP restarts.
    *
-   * @param {string} root Absolute root source path.
-   * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
-   * @param {(file: string) => string | undefined} hashFile Content hasher.
-   * @param {(file: string) => boolean} allowMtime False for live overlays whose disk timestamp cannot establish freshness.
-   * @returns {CachedRootAnalysis | undefined} The cached artifacts, or undefined on miss.
+   * @param root Absolute root source path.
+   * @param identity Current assembler identity.
+   * @param hashFile Content hasher.
+   * @param allowMtime False for live overlays whose disk timestamp cannot establish freshness.
+   * @returns The cached artifacts, or undefined on miss.
    */
   read(
     root: string,
@@ -151,11 +164,11 @@ export class RootAnalysisCache {
   /**
    * Persists a full-pass analysis. Failures are ignored so a cache write can
    * never block or break the language server.
-   * @param {string} root Absolute root source path.
-   * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
-   * @param {Record<string, string>} fileHashes Sorted path-to-hash map.
-   * @param {Record<string, number>} fileMtimes Sorted path-to-mtime map.
-   * @param {CachedRootAnalysis} analysis Artifacts to store.
+   * @param root Absolute root source path.
+   * @param identity Current assembler identity.
+   * @param fileHashes Sorted path-to-hash map.
+   * @param fileMtimes Sorted path-to-mtime map.
+   * @param analysis Artifacts to store.
    */
   write(
     root: string,
@@ -191,7 +204,7 @@ export class RootAnalysisCache {
 
   /**
    * Deletes the cache entry for a root, if present.
-   * @param {string} root Absolute root source path.
+   * @param root Absolute root source path.
    */
   invalidate(root: string): void {
     try {
@@ -202,8 +215,9 @@ export class RootAnalysisCache {
   }
 
   /**
-   * @param {string} root Absolute root source path.
-   * @returns {string} Cache JSON path for the root.
+   * Derives the stable on-disk filename for a root path.
+   * @param root Absolute root source path.
+   * @returns Cache JSON path for the root.
    */
   entryPath(root: string): string {
     const id = createHash("sha256").update(path.resolve(root)).digest("hex").slice(0, 32);
@@ -213,8 +227,8 @@ export class RootAnalysisCache {
 
 /**
  * SHA-256 of the sorted `path:hash` pairs. Used as the cache-entry fingerprint.
- * @param {Record<string, string>} fileHashes Path-to-content-hash map.
- * @returns {string} Hex digest.
+ * @param fileHashes Path-to-content-hash map.
+ * @returns Hex digest.
  */
 export function fingerprintFor(fileHashes: Record<string, string>): string {
   const material = Object.entries(fileHashes)
@@ -227,8 +241,8 @@ export function fingerprintFor(fileHashes: Record<string, string>): string {
 /**
  * SHA-256 of already-sorted `path:hash` pairs. Skips the sort for callers
  * that guarantee the input is already in ascending key order.
- * @param {Record<string, string>} sortedFileHashes Sorted path-to-hash map.
- * @returns {string} Hex digest.
+ * @param sortedFileHashes Sorted path-to-hash map.
+ * @returns Hex digest.
  */
 function fingerprintForSorted(sortedFileHashes: Record<string, string>): string {
   const material = Object.entries(sortedFileHashes)
@@ -239,17 +253,19 @@ function fingerprintForSorted(sortedFileHashes: Record<string, string>): string 
 
 /**
  * SHA-256 of file bytes.
- * @param {Uint8Array} bytes File contents.
- * @returns {string} Hex digest.
+ * @param bytes File contents.
+ * @returns Hex digest.
  */
 export function hashBytes(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+/** Narrows unknown JSON values to arrays for payload validation. */
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+/** Narrows unknown JSON objects to string-valued records. */
 function isStringRecord(value: unknown): value is Record<string, string> {
   return (
     typeof value === "object" &&
@@ -259,6 +275,7 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   );
 }
 
+/** Narrows unknown JSON objects to optional numeric fields keyed by path. */
 function isNumberRecord(value: unknown): value is Partial<Record<string, number>> {
   return (
     typeof value === "object" &&
@@ -268,6 +285,7 @@ function isNumberRecord(value: unknown): value is Partial<Record<string, number>
   );
 }
 
+/** Validates deserialized identity objects before trusting cache entries. */
 function isCacheIdentity(value: unknown): value is RootAnalysisCacheIdentity {
   return (
     typeof value === "object" &&
@@ -286,6 +304,7 @@ function isCacheIdentity(value: unknown): value is RootAnalysisCacheIdentity {
   );
 }
 
+/** Validates analysis blobs embedded in cache payloads. */
 function isCachedAnalysis(value: unknown): value is CachedRootAnalysis {
   return (
     typeof value === "object" &&
@@ -307,6 +326,7 @@ function isCachedAnalysis(value: unknown): value is CachedRootAnalysis {
   );
 }
 
+/** Validates the full cache envelope after JSON parse. */
 function isCachePayload(value: unknown): value is CachePayload {
   return (
     typeof value === "object" &&
@@ -327,6 +347,7 @@ function isCachePayload(value: unknown): value is CachePayload {
   );
 }
 
+/** Compares stored and live identity tuples field-wise, including sorted include paths. */
 function identitiesMatch(
   stored: RootAnalysisCacheIdentity,
   current: RootAnalysisCacheIdentity,

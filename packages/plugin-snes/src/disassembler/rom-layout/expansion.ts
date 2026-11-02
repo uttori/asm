@@ -3,11 +3,13 @@ import type { SnesMovableObject } from "./relocate.js";
 
 /** Explicit same-mapper capacity increase. All offsets and sizes are headerless ROM bytes. */
 export interface SnesRomExpansionPolicy {
+  /** Cartridge map that must stay unchanged across growth. */
   readonly mapper: "hirom" | "lorom";
   /** Power-of-two ceiling, at most 4 MiB. Mapper transitions require a different contract. */
   readonly maximumSize: number;
   /** Pristine value of every newly available byte, before declared object placement. */
   readonly fillByte: number;
+  /** Checksum pair must be recomputed over the full expanded image. */
   readonly checksum: "recalculate";
 }
 
@@ -15,6 +17,10 @@ export interface SnesRomExpansionPolicy {
 export const expansionHeaderOffset = (policy: SnesRomExpansionPolicy): number =>
   policy.mapper === "lorom" ? 0x7fc0 : 0xffc0;
 
+/**
+ * Reject non-positive capacities that are not exact powers of two.
+ * @param value Candidate byte size.
+ */
 const powerOfTwo = (value: number) =>
   Number.isSafeInteger(value) && value > 0 && Number.isInteger(Math.log2(value));
 

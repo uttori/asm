@@ -20,8 +20,8 @@ export type SnesMapper = (typeof SNES_MAPPERS)[number];
 
 /**
  * Accepts a supported cartridge mapper id.
- * @param {string} value Candidate mapper name.
- * @returns {boolean} True when `value` is one of `SNES_MAPPERS`.
+ * @param value Candidate mapper name.
+ * @returns True when `value` is one of `SNES_MAPPERS`.
  */
 export function isSnesMapper(value: string): value is SnesMapper {
   return SNES_MAPPERS.some((mapper) => mapper === value);
@@ -175,45 +175,77 @@ export const SNES_CPU_VECTOR_DEFINITIONS: readonly SnesCpuVectorDefinition[] = [
 
 /** Parsed optional 16-byte expanded cartridge header at `$FFB0–$FFBF`. */
 export interface SnesExpandedRomHeader {
+  /** Headerless ROM offset of the 16-byte expansion block. */
   readonly offset: number;
+  /** Two-character maker id when developer id is `$33`. */
   readonly makerCode: string;
+  /** Four-character product code from the expansion header. */
   readonly gameCode: string;
+  /** Six reserved bytes preserved verbatim from the cartridge. */
   readonly reserved: Uint8Array;
+  /** Expansion flash size exponent code from `$FFB0+$0C`. */
   readonly expansionFlashSizeCode: number;
+  /** Expansion RAM size exponent code from `$FFB0+$0D`. */
   readonly expansionRamSizeCode: number;
+  /** Special-version byte from the expansion header. */
   readonly specialVersion: number;
+  /** Coprocessor subtype when the standard chipset byte is insufficient. */
   readonly chipsetSubtype: number;
 }
 
 /** One parsed vector word and its optional executable target in bank `$00`. */
 export interface SnesCpuVector extends SnesCpuVectorDefinition {
+  /** Headerless ROM offset of the little-endian vector word. */
   readonly fileOffset: number;
+  /** Raw 16-bit vector word read from the cartridge. */
   readonly value: number;
+  /** Bank-zero target when the vector is non-sentinel and the definition expects a target. */
   readonly targetAddress?: number;
 }
 
 /** Fully decoded SNES internal cartridge header and vector table. */
 export interface SnesInternalRomHeader {
+  /** Headerless ROM offset of the 64-byte internal header. */
   readonly offset: number;
+  /** Printable title with non-ASCII bytes escaped. */
   readonly title: string;
+  /** Raw 21-byte title field including padding. */
   readonly titleBytes: Uint8Array;
+  /** Map-mode byte at `$FFC5` / `$7FC5`. */
   readonly mapMode: number;
+  /** Human-readable map mode derived from the low nibble. */
   readonly mapModeName: string;
+  /** FastROM vs SlowROM from bit 4 of the map-mode byte. */
   readonly speed: "slow" | "fast";
+  /** Raw chipset byte describing RAM and coprocessor presence. */
   readonly chipset: number;
+  /** Decoded chipset contents and coprocessor name. */
   readonly chipsetDescription: string;
+  /** ROM size exponent code from the header. */
   readonly romSizeCode: number;
+  /** Decoded ROM byte capacity when the code is in range. */
   readonly romSizeBytes?: number;
+  /** RAM size exponent code from the header. */
   readonly ramSizeCode: number;
+  /** Decoded save RAM bytes; zero code means none. */
   readonly ramSizeBytes?: number;
+  /** Region code byte from the header. */
   readonly regionCode: number;
+  /** Marketing region name for the region code. */
   readonly region: string;
+  /** Developer/manufacturer id byte. `$33` selects the expanded header. */
   readonly developerId: number;
+  /** Sub-version byte following the developer id. */
   readonly version: number;
+  /** Checksum complement word stored in the header. */
   readonly checksumComplement: number;
+  /** Checksum word stored in the header. */
   readonly checksum: number;
+  /** True when complement/checksum pair validates over the full ROM. */
   readonly checksumValid: boolean;
+  /** Optional 16-byte expansion header when developer id is `$33`. */
   readonly expanded?: SnesExpandedRomHeader;
+  /** Parsed native and emulation vector table entries. */
   readonly vectors: readonly SnesCpuVector[];
 }
 
@@ -229,12 +261,16 @@ const HEADER_OFFSETS: Readonly<Partial<Record<SnesMapper, number>>> = {
 
 /**
  * Returns the standard headerless-ROM offset for one mapper.
- * @param {SnesMapper} mapper Cartridge mapping family.
- * @returns {number | undefined} Header offset, or undefined for an unmapped image.
+ * @param mapper Cartridge mapping family.
+ * @returns Header offset, or undefined for an unmapped image.
  */
 export const snesInternalHeaderOffset = (mapper: SnesMapper): number | undefined =>
   HEADER_OFFSETS[mapper];
 
+/**
+ * Render header text fields with non-printable bytes escaped.
+ * @param bytes Raw title or code bytes from the cartridge.
+ */
 const asciiField = (bytes: Uint8Array): string =>
   [...bytes]
     .map((byte) =>
@@ -245,6 +281,11 @@ const asciiField = (bytes: Uint8Array): string =>
     .join("")
     .replaceAll(/(?: |\\x00)+$/g, "");
 
+/**
+ * Decode SNES header size exponent codes into byte counts.
+ * @param code Size field from the internal header.
+ * @param zeroMeansNone When true, code zero denotes no RAM rather than 1 KiB.
+ */
 const sizeBytes = (code: number, zeroMeansNone: boolean): number | undefined => {
   if (zeroMeansNone && code === 0) {
     return 0;
@@ -252,11 +293,13 @@ const sizeBytes = (code: number, zeroMeansNone: boolean): number | undefined => 
   return code < 0x20 ? 1024 * 2 ** code : undefined;
 };
 
+/** Map the low nibble of the map-mode byte to a cartridge family name. */
 const mapModeName = (value: number): string =>
   ({ 0x0: "LoROM", 0x1: "HiROM", 0x2: "S-DD1", 0x3: "SA-1", 0x5: "ExHiROM", 0xa: "SPC7110" })[
     value & 0x0f
   ] ?? "Unknown";
 
+/** Translate the header region code into a marketing region label. */
 const regionName = (code: number): string =>
   ({
     0x00: "Japan",
@@ -282,6 +325,10 @@ const regionName = (code: number): string =>
     0x14: "Other variation Z",
   })[code] ?? "Unknown";
 
+/**
+ * Describe cartridge RAM presence and coprocessor type from the chipset byte.
+ * @param value Raw chipset byte from the internal header.
+ */
 const chipsetDescription = (value: number): string => {
   const contents =
     {
@@ -313,9 +360,9 @@ const chipsetDescription = (value: number): string => {
 /**
  * Parses the mapper-selected internal header, optional expanded header, and all
  * 16 vector words. The ROM view must already exclude a 512-byte copier header.
- * @param {RomImage} rom Immutable headerless ROM view.
- * @param {SnesMapper} mapper Selected cartridge mapping family.
- * @returns {SnesInternalRomHeader | undefined} Parsed structure when in range.
+ * @param rom Immutable headerless ROM view.
+ * @param mapper Selected cartridge mapping family.
+ * @returns Parsed structure when in range.
  */
 export const parseSnesInternalRomHeader = (
   rom: RomImage,
@@ -424,11 +471,20 @@ const HEADER_SPECS: ReadonlyArray<{
   { mapper: "sa1rom", offset: 0x7fc0, mode: 0x3 },
 ];
 
+/**
+ * Build the default SA-1 bank list for a detected mapper.
+ * @param mapper Cartridge mapping family selected by detection.
+ */
 const defaultAddressContext = (mapper: SnesMapper): AddressSpaceContext => ({
   mapper,
   sa1banks: [0x000000, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000],
 });
 
+/**
+ * Score one header candidate against checksum, map mode, and size fields.
+ * @param rom Headerless ROM view used for evidence gathering.
+ * @param spec Mapper, file offset, and expected map-mode nibble.
+ */
 const scoreCandidate = (
   rom: RomImage,
   spec: (typeof HEADER_SPECS)[number],
@@ -527,9 +583,9 @@ const scoreCandidate = (
  * for an override. Map-mode nibble, checksum complement, printable title, and
  * RESET vector plausibility are the main signals. `bigsa1rom` and `norom` are
  * never auto-detected.
- * @param {RomImage} rom Headerless immutable ROM view.
- * @param {SnesRomDetectionOptions} [options] Explicit mapper and header-size check.
- * @returns {SnesRomDetection} `detected`, `override`, or `ambiguous` with candidates.
+ * @param rom Headerless immutable ROM view.
+ * @param [options] Explicit mapper and header-size check.
+ * @returns `detected`, `override`, or `ambiguous` with candidates.
  */
 export const detectSnesRom = (
   rom: RomImage,

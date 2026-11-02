@@ -24,12 +24,17 @@ import { matchesNesResearch, nesResearchState } from "./research.js";
 
 /** Constant propagation deliberately forgets values after unsupported arithmetic or memory reads. */
 export interface NesAnalysisState {
+  /** Mapper number or register snapshot. */
   readonly mapper: NesMapperState;
+  /** Accumulator at the observation boundary. */
   readonly a: number | null;
+  /** Index X at the observation boundary. */
   readonly x: number | null;
+  /** Index Y at the observation boundary. */
   readonly y: number | null;
 }
 
+/** Empty NES analysis seed: unknown mapper, no banks, no PPU clock. */
 export const initialNesAnalysisState = (): NesAnalysisState => ({
   mapper: initialNesMapperState(),
   a: null,

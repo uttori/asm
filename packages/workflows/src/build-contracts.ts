@@ -28,9 +28,13 @@ export type AssemblyBuildOperation = {
 
 /** Small artifact receipt; the output itself is serialized and can be consumed in a different process. */
 export interface AssemblyArtifactResult {
+  /** Record or result kind discriminator. */
   readonly kind: "object" | "library";
+  /** Published binary path for this receipt. */
   readonly outputFile: string;
+  /** Lowercase hex SHA-256 digest. */
   readonly sha256: string;
+  /** Byte length or payload size bound. */
   readonly bytes: number;
   /** Replaceable source/target layout suggested by this module; payload ownership remains in the object. */
   readonly linkRecipe?: import("@uttori/asm-core").AssemblyLinkRecipe;
@@ -38,24 +42,39 @@ export interface AssemblyArtifactResult {
 
 /** Editor-compatible artifact pair plus retained linker reports. Every path belongs to one immutable set. */
 export interface AssemblyLinkedResult {
+  /** Record or result kind discriminator. */
   readonly kind: "linked";
+  /** Published binary path for this receipt. */
   readonly outputFile: string;
+  /** Published debug-map path paired with the binary. */
   readonly debugMapFile: string;
+  /** Published linker symbols path for the linked image. */
   readonly symbolsFile: string;
+  /** Published allocation map path for the linked image. */
   readonly allocationFile: string;
+  /** Optional link-recipe path retained with the receipt. */
   readonly recipeFile?: string;
+  /** SHA-256 of the exact saved inputs that produced the binary. */
   readonly inputSha256: string;
+  /** SHA-256 of the published linked image. */
   readonly outputSha256: string;
+  /** Canonical fingerprint of the published debug map. */
   readonly debugMapFingerprint: string;
+  /** Published binary size in bytes. */
   readonly outputSize: number;
+  /** Selected build or link target identifier. */
   readonly target: string;
+  /** CPU architecture identifier for the session. */
   readonly architecture: string;
+  /** True when the published image differs from the previous output. */
   readonly outputChanged: boolean;
+  /** True when the published debug map differs from the previous map. */
   readonly debugMapChanged: boolean;
   /** Exact saved inputs used by the host, including manifest, recipe, configuration and serialized inputs. */
   readonly inputs: readonly { readonly path: string; readonly sha256: string }[];
 }
 
+/** Receipt from assemble-object, library, or a linked build. */
 export type AssemblyBuildResult = AssemblyArtifactResult | AssemblyLinkedResult;
 
 /** Authenticate the small worker receipt before an editor can launch the returned ROM. */
@@ -104,12 +123,16 @@ export function readAssemblyBuildResult(value: unknown): AssemblyBuildResult {
   return structuredClone(value);
 }
 
+/** True for a plain object that can hold JSON object fields. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+/** True for a nonempty string that contains no NUL. */
 const isText = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0 && !value.includes("\0");
+/** True for a 64-character lowercase hex SHA-256 digest. */
 const isHash = (value: unknown): value is string =>
   typeof value === "string" && /^[\da-f]{64}$/.test(value);
+/** True for an array of nonempty path strings, capped at 65,536 entries. */
 const isPaths = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.length <= 65536 && value.every(isText);
 

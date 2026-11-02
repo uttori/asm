@@ -52,48 +52,83 @@ import { convertBossImage } from "./assembly.js";
 
 /** Explicit complete catalogue consumer closure. Paths are portable relative to the selected source project. */
 export interface SomSpriteSelection {
+  /** Edited atlas ID; must match one atlases entry with the same image and layout. */
   readonly atlasId: string;
+  /** Edited atlas PNG path. */
   readonly image: string;
+  /** Edited atlas frame layout JSON path. */
   readonly layout: string;
+  /** Shared sprite palette catalogue JSON path. */
   readonly catalog: string;
   /** Optional source-owned observation selection and retained proof; container codecs never resolve capture paths. */
   readonly observations?: { readonly declaration: string; readonly proof: string };
+  /** Every atlas sharing the catalogue, with unique IDs; palette edits are audited against all of them. */
   readonly atlases: readonly {
     readonly id: string;
     readonly image: string;
     readonly layout: string;
   }[];
 }
+/** Private export state that maps interchange palette indexes back to catalogue palette words. */
 interface SomSpriteBindings {
+  /** Interchange palette index to catalogue palette and 0-15 color index; at most 256 entries. */
   readonly paletteSlots: readonly SomInterchangePaletteSlot[];
 }
 
+/** Accepts a plain object; arrays and null are rejected. */
 function isObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
+/**
+ * Require a plain object declaration.
+ * @param value Untrusted declaration value.
+ * @returns The value as a record.
+ */
 function object(value: unknown): Record<string, unknown> {
   if (!isObject(value)) {
     throw new Error("Invalid SoM interchange declaration.");
   }
   return value;
 }
+/**
+ * Require a nonempty identity string of at most 1024 UTF-16 units.
+ * @param value Untrusted identity value.
+ * @returns The validated string.
+ */
 function text(value: unknown): string {
   if (typeof value !== "string" || !value.length || value.length > 1024) {
     throw new Error("Invalid SoM interchange identity.");
   }
   return value;
 }
+/**
+ * Require a portable project-relative source path.
+ * @param value Untrusted path value.
+ * @returns The validated path.
+ */
 function name(value: unknown): string {
   const result = text(value);
   assertSourcePath(result);
   return result;
 }
+/**
+ * Serialize as two-space-indented JSON with a trailing newline, matching source formatting.
+ * @param value JSON-compatible value.
+ * @returns UTF-8 bytes.
+ */
 function json(value: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
 }
+/** Byte-exact equality of two buffers. */
 function equal(a: Uint8Array, b: Uint8Array): boolean {
   return Buffer.from(a).equals(b);
 }
+/**
+ * Convert an absolute build path into a validated project-relative path with forward slashes.
+ * @param context Adapter context supplying the build root.
+ * @param absolute Absolute path inside the build root.
+ * @returns The portable relative path.
+ */
 function relative(context: AssetAdapterContext, absolute: string): string {
   const result = path.relative(context.build.root, absolute).split(path.sep).join("/");
   assertSourcePath(result);
@@ -139,6 +174,12 @@ function graphics(
   return result;
 }
 
+/**
+ * Read every declared conversion resource of an emission from current source.
+ * @param context Adapter context used to read source files.
+ * @param emission Emission whose conversion resources are read.
+ * @returns Inputs keyed by declared resource name; JSON media type is inferred from a .json suffix.
+ */
 function resourceInputs(
   context: AssetAdapterContext,
   emission: AssetEmissionInfo,
@@ -256,6 +297,13 @@ function assertEffect(
   }
 }
 
+/**
+ * Decode the complete consumer closure and prove the selected atlas's emissions own exactly its declared segments
+ * and re-encode to the current output.
+ * @param context Adapter context for the current build.
+ * @param selection Validated sprite selection.
+ * @returns The selected and all decoded atlases, the catalogue, the selected emissions, and sorted source dependencies.
+ */
 function inspect(context: AssetAdapterContext, selection: SomSpriteSelection) {
   const emitted = graphics(context, selection),
     catalog = parseSpritePaletteCatalog(context.read(selection.catalog));

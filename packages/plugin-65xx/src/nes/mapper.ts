@@ -2,14 +2,23 @@ import type { NesCartridge } from "./cartridge.js";
 
 /** Unknown register values are null. Mapper context is separate from CPU register state. */
 export interface NesMapperState {
+  /** MMC3 address-select latch; null when the register has not been observed. */
   readonly select: number | null;
+  /** MMC3 PRG banking mode bit; null when unknown. */
   readonly prgMode: number | null;
+  /** MMC3 CHR banking mode bit; null when unknown. */
   readonly chrMode: number | null;
+  /** MMC3 bank data registers r0..r7; null entries are unknown. */
   readonly banks: readonly (number | null)[];
+  /** MMC3 WRAM enable flag; null when unknown. */
   readonly ramEnabled: boolean | null;
+  /** MMC3 WRAM write-protect flag; null when unknown. */
   readonly ramWritable: boolean | null;
+  /** Nametable mirroring selector; null when unknown. */
   readonly mirroring: number | null;
+  /** MMC3 IRQ reload latch; null when unknown. */
   readonly irqLatch: number | null;
+  /** MMC3 IRQ enable flag; null when unknown. */
   readonly irqEnabled: boolean | null;
 }
 
@@ -61,14 +70,14 @@ export function nesPrgOffset(
   }
   const count = rom.prg.size / 8192;
   const window = (address >>> 13) & 3;
-  let bank: number | null = null;
+  let bank: number | null | undefined = null;
   if (window === 3) {
     bank = count - 1;
   } else if (window === 1) {
-    bank = state.banks[7];
+    bank = state.banks.at(7);
   } else if (state.prgMode !== null) {
     const fixed = (window === 2 && state.prgMode === 0) || (window === 0 && state.prgMode === 1);
-    bank = fixed ? count - 2 : state.banks[6];
+    bank = fixed ? count - 2 : state.banks.at(6);
   }
   if (bank === null || bank === undefined) {
     return undefined;

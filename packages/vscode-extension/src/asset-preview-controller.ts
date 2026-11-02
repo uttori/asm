@@ -35,13 +35,15 @@ interface AssetPreviewResult {
   readonly decodedWavBase64?: string;
 }
 
+/** Discriminated language-server response for one asset preview query. */
 type AssetPreviewResponse =
   | { readonly ok: true; readonly preview: AssetPreviewResult }
   | { readonly ok: false; readonly message: string };
 
-/** Escape metadata before inserting it into a script-free webview.
- * @param {string} value Untrusted display text.
- * @returns {string} HTML-safe text.
+/**
+ * Escape metadata before inserting it into a script-free webview.
+ * @param value Untrusted display text.
+ * @returns HTML-safe text.
  */
 function escapeHtml(value: string): string {
   return value.replace(/["&'<>]/g, (character) => {
@@ -56,13 +58,15 @@ function escapeHtml(value: string): string {
   });
 }
 
+/** Narrow preview payloads to plain objects before field validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Accept only plain catalogue use labels before rendering plugin metadata as HTML.
- * @param {unknown} value Untrusted preview metadata entry.
- * @returns {boolean} Whether the entry has displayable atlas and segment labels.
+/**
+ * Accept only plain catalogue use labels before rendering plugin metadata as HTML.
+ * @param value Untrusted preview metadata entry.
+ * @returns Whether the entry has displayable atlas and segment labels.
  */
 function isPaletteUser(
   value: unknown,
@@ -86,17 +90,19 @@ function isAssetPreviewRequest(value: unknown): value is AssetPreviewRequest {
   );
 }
 
-/** Keep command arguments local to the current source revision, with no asset URI in Markdown.
- * @param {AssetPreviewRequest} request Current source identity.
- * @returns {string} Restricted VS Code command URI.
+/**
+ * Keep command arguments local to the current source revision, with no asset URI in Markdown.
+ * @param request Current source identity.
+ * @returns Restricted VS Code command URI.
  */
 function openLink(request: AssetPreviewRequest): string {
   return `command:asm.assetPreview.open?${encodeURIComponent(JSON.stringify([request]))}`;
 }
 
-/** Show only validated numeric encoder facts in Markdown; metadata can come from a plugin.
- * @param {Readonly<Record<string, unknown>> | undefined} metadata Encoder output metadata.
- * @returns {string} Compact audio details or an empty string.
+/**
+ * Show only validated numeric encoder facts in Markdown; metadata can come from a plugin.
+ * @param metadata Encoder output metadata.
+ * @returns Compact audio details or an empty string.
  */
 function audioDetails(metadata: Readonly<Record<string, unknown>> | undefined): string {
   if (!metadata) {
@@ -132,11 +138,12 @@ export class AssetPreviewController implements Disposable {
 
   constructor(readonly client: (uri: TextDocument["uri"]) => LanguageClient | undefined) {}
 
-  /** Return media only while the same text revision remains open.
-   * @param {TextDocument} document Open assembly source.
-   * @param {number} line Zero-based statement line.
-   * @param {CancellationToken} [token] Hover cancellation.
-   * @returns {Promise<AssetPreviewResponse | undefined>} Current preview response.
+  /**
+   * Return media only while the same text revision remains open.
+   * @param document Open assembly source.
+   * @param line Zero-based statement line.
+   * @param [token] Hover cancellation.
+   * @returns Current preview response.
    */
   async request(
     document: TextDocument,
@@ -169,11 +176,12 @@ export class AssetPreviewController implements Disposable {
     }
   }
 
-  /** Append a compact image or waveform preview to an asset-call hover.
-   * @param {TextDocument} document Open assembly source.
-   * @param {Position} position Hover cursor.
-   * @param {CancellationToken} token Hover cancellation.
-   * @returns {Promise<Hover | undefined>} Current preview hover.
+  /**
+   * Append a compact image or waveform preview to an asset-call hover.
+   * @param document Open assembly source.
+   * @param position Hover cursor.
+   * @param token Hover cancellation.
+   * @returns Current preview hover.
    */
   async provideHover(
     document: TextDocument,
@@ -224,9 +232,10 @@ export class AssetPreviewController implements Disposable {
     return new Hover(markdown);
   }
 
-  /** Open media only from a fresh trusted command, never from arbitrary command URI payloads.
-   * @param {unknown} argument Parsed command URI argument.
-   * @returns {Promise<void>} Completes after panel content is ready.
+  /**
+   * Open media only from a fresh trusted command, never from arbitrary command URI payloads.
+   * @param argument Parsed command URI argument.
+   * @returns Completes after panel content is ready.
    */
   async open(argument: unknown): Promise<void> {
     if (!isAssetPreviewRequest(argument)) {

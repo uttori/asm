@@ -4,9 +4,20 @@ import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { CaptureFileMetadata } from "./capture-file.js";
+/**
+ * Narrow companion JSON to a plain object before reading manifest fields.
+ * @param value Parsed JSON root.
+ * @returns Whether keyed fields can be read safely.
+ */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/**
+ * Stream a companion artifact through SHA-256 without loading oversized files whole.
+ * @param file Absolute path to the artifact.
+ * @param signal Optional cooperative cancellation.
+ * @returns Lowercase hex digest of the file bytes.
+ */
 const digestFile = async (file: string, signal?: AbortSignal): Promise<string> => {
   const hash = createHash("sha256");
   for await (const bytes of createReadStream(file, { signal })) {
@@ -18,11 +29,12 @@ const digestFile = async (file: string, signal?: AbortSignal): Promise<string> =
   return hash.digest("hex");
 };
 
-/** Verify the entire companion before feeding a save state to native code. Every
+/**
+ * Verify the entire companion before feeding a save state to native code. Every
  * path is a flat, regular artifact, and every byte is bound to the recording's identity.
  * Producer revisions authenticate the companion, not the build currently loading it.
- * @param {string} directory Companion directory selected by the user.
- * @param {Pick<CaptureFileMetadata, "romContentSha256" | "romFileSha256" | "producer">} identity Required ROM and recorded producer identity; the running build may differ.
+ * @param directory Companion directory selected by the user.
+ * @param identity Required ROM and recorded producer identity; the running build may differ.
  */
 export const verifyCaptureContext = async (
   directory: string,

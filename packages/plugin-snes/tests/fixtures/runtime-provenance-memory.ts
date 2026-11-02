@@ -11,7 +11,8 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
-/** Mimic independent SQLite JSON rows: each observation owns freshly parsed provenance strings.
+/**
+ * Mimic independent SQLite JSON rows: each observation owns freshly parsed provenance strings.
  * @yields {RuntimeEvidenceRecord} An independent row with identical provenance membership.
  */
 function* observations(): IterableIterator<RuntimeEvidenceRecord> {

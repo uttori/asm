@@ -34,6 +34,10 @@ import {
   type FunctionTemplate,
 } from "../../src/ir/function-template.js";
 
+/** Older third-party hosts predate typed reference resolution and only provide `resolveLabel`. */
+type OracleExpressionHost = Omit<ExpressionHost, "resolveReference"> &
+  Partial<Pick<ExpressionHost, "resolveReference">>;
+
 type UserFunction = {
   readonly args: readonly string[];
   readonly content: string;
@@ -54,8 +58,8 @@ type OperatorTable = { readonly [K in BinaryOperator]: BinaryOperatorSpec };
 
 /**
  * Throws a math evaluation error.
- * @param {string} message The message to throw.
- * @returns {never} Never returns.
+ * @param message The message to throw.
+ * @returns Never returns.
  */
 function throwMathError(message: string): never {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
@@ -63,9 +67,9 @@ function throwMathError(message: string): never {
 
 /**
  * Looks up a binary operator spec without falling through to a prefix token.
- * @param {OperatorTable} operators The operator table.
- * @param {string} token The candidate operator token.
- * @returns {BinaryOperatorSpec | undefined} The matching spec, if any.
+ * @param operators The operator table.
+ * @param token The candidate operator token.
+ * @returns The matching spec, if any.
  */
 function isBinaryOperatorToken(value: string): value is BinaryOperator {
   switch (value) {
@@ -159,8 +163,8 @@ const NUMERIC_UNARY_ALIASES: Readonly<Record<string, string>> = {
 
 /**
  * Returns whether a character code is whitespace matching String#trim.
- * @param {number} code The character code.
- * @returns {boolean} Whether the character is trim whitespace.
+ * @param code The character code.
+ * @returns Whether the character is trim whitespace.
  */
 function isScanWhitespace(code: number): boolean {
   // Space, tab, LF, CR - the common ASCII trim set.
@@ -176,8 +180,8 @@ function isScanWhitespace(code: number): boolean {
 
 /**
  * Returns whether a character code matches `\w`.
- * @param {number} code The character code.
- * @returns {boolean} Whether the character is a word character.
+ * @param code The character code.
+ * @returns Whether the character is a word character.
  */
 function isWordChar(code: number): boolean {
   if (code >= 48 && code <= 57) {
@@ -206,7 +210,7 @@ export class B11MathOracle {
   instrumentedExpressionNodes = new WeakSet();
   instrumentedPureExpressionNodes = new WeakSet();
 
-  host?: ExpressionHost;
+  host?: OracleExpressionHost;
   math_round = false;
 
   readonly userFunctions = new Map<string, UserFunction>();
@@ -220,7 +224,7 @@ export class B11MathOracle {
 
   /**
    * Remaining unconsumed expression text.
-   * @returns {string} The unconsumed source from the scan cursor.
+   * @returns The unconsumed source from the scan cursor.
    */
   get str(): string {
     return this.scanSource.slice(this.scanIndex);
@@ -228,7 +232,7 @@ export class B11MathOracle {
 
   /**
    * Replaces the expression being scanned.
-   * @param {string} value The new expression source.
+   * @param value The new expression source.
    */
   set str(value: string) {
     this.scanSource = value;
@@ -249,8 +253,8 @@ export class B11MathOracle {
 
   /**
    * Returns whether the remaining source starts with a literal.
-   * @param {string} text The literal to match.
-   * @returns {boolean} Whether the literal is present at the cursor.
+   * @param text The literal to match.
+   * @returns Whether the literal is present at the cursor.
    */
   remainingStartsWith(text: string): boolean {
     return this.scanSource.startsWith(text, this.scanIndex);
@@ -258,7 +262,7 @@ export class B11MathOracle {
 
   /**
    * Consumes a fixed number of characters from the scan cursor.
-   * @param {number} count The number of characters to consume.
+   * @param count The number of characters to consume.
    */
   advance(count: number): void {
     this.scanIndex += count;
@@ -275,8 +279,8 @@ export class B11MathOracle {
 
   /**
    * Installs a target-provided expression function for this session.
-   * @param {string | readonly string[]} names The canonical name and aliases.
-   * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
+   * @param names The canonical name and aliases.
+   * @param expressionFunction The function descriptor and evaluator.
    */
   registerExpressionFunction(
     names: string | readonly string[],
@@ -319,8 +323,8 @@ export class B11MathOracle {
   /**
    * Evaluates an expression.
    * This is a direct conversion of `math` in `asar_math.cpp`.
-   * @param {string} expression The expression to evaluate.
-   * @returns {number} The result of the expression.
+   * @param expression The expression to evaluate.
+   * @returns The result of the expression.
    */
   math = (expression: string | ExpressionNode): number => {
     if (isInternalInstrumentationActive()) {
@@ -334,8 +338,8 @@ export class B11MathOracle {
 
   /**
    * Evaluates a string or typed expression without instrumentation dispatch.
-   * @param {string | ExpressionNode} expression The expression to evaluate.
-   * @returns {number} The expression result.
+   * @param expression The expression to evaluate.
+   * @returns The expression result.
    */
   evaluateMathInput(expression: string | ExpressionNode): number {
     if (typeof expression !== "string") {
@@ -346,8 +350,8 @@ export class B11MathOracle {
 
   /**
    * Reuses successful results only for strings proven to contain literal operators.
-   * @param {string} expression The legacy expression source.
-   * @returns {number} The expression result.
+   * @param expression The legacy expression source.
+   * @returns The expression result.
    */
   evaluateCachedStringExpression(expression: string): number {
     let parsed = this.parsedStringExpressions.get(expression);
@@ -385,7 +389,7 @@ export class B11MathOracle {
 
   /**
    * Records the shape and reuse of a top-level expression evaluation.
-   * @param {string | ExpressionNode} expression The evaluated expression.
+   * @param expression The evaluated expression.
    */
   recordExpressionEvaluation(expression: string | ExpressionNode): void {
     incrementInternalCounter("expressionEvaluations");
@@ -422,8 +426,8 @@ export class B11MathOracle {
 
   /**
    * Determines whether an expression depends only on literal operators.
-   * @param {ExpressionNode} expression The expression to classify.
-   * @returns {boolean} Whether the result is independent of assembler state.
+   * @param expression The expression to classify.
+   * @returns Whether the result is independent of assembler state.
    */
   isPureExpressionNode(expression: ExpressionNode): boolean {
     switch (expression.type) {
@@ -454,8 +458,8 @@ export class B11MathOracle {
 
   /**
    * Evaluates a string expression using the legacy parser.
-   * @param {string} expression The expression to evaluate.
-   * @returns {number} The result of the expression.
+   * @param expression The expression to evaluate.
+   * @returns The result of the expression.
    */
   evaluateStringExpression(expression: string): number {
     recordSyntaxBoundary("legacy-evaluation");
@@ -482,8 +486,8 @@ export class B11MathOracle {
 
   /**
    * Evaluates syntax directly; parser diagnostics are raised only when their occurrence is selected.
-   * @param {ExpressionNode} expression The expression node to evaluate.
-   * @returns {number} The numeric result.
+   * @param expression The expression node to evaluate.
+   * @returns The numeric result.
    */
   evaluateExpressionNode(expression: ExpressionNode, round = true): number {
     const result = this.evaluateNodeValue(expression);
@@ -722,9 +726,9 @@ export class B11MathOracle {
   /**
    * Evaluates a mathematical expression.
    * This replaces the C++ `eval` function.
-   * @param {number} depth The current depth of nested expressions.
-   * @param {string} [stopChar] The character to stop the evaluation at.
-   * @returns {number | undefined} The result of the evaluated expression, or
+   * @param depth The current depth of nested expressions.
+   * @param [stopChar] The character to stop the evaluation at.
+   * @returns The result of the evaluated expression, or
    * `undefined` when an inline function definition consumes the expression.
    */
   evalMath(depth: number = 0, stopChar?: string): number | undefined {
@@ -800,9 +804,9 @@ export class B11MathOracle {
 
   /**
    * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
-   * @param {OperatorTable} operators The operators to check.
-   * @param {number} depth The current depth of nested expressions.
-   * @returns {BinaryOperator | null} The matching operator or null if no match.
+   * @param operators The operators to check.
+   * @param depth The current depth of nested expressions.
+   * @returns The matching operator or null if no match.
    */
   peekNextOperator(operators: OperatorTable, depth: number): BinaryOperator | null {
     // Skip whitespace so operator matching is not confused by padding.
@@ -841,8 +845,8 @@ export class B11MathOracle {
 
   /**
    * Parses numbers from a string while consuming valid characters.
-   * @param {RegExp} regex The regular expression to test against the string.
-   * @returns {string} The substring of the string that matches the regular expression.
+   * @param regex The regular expression to test against the string.
+   * @returns The substring of the string that matches the regular expression.
    */
   consumeWhile(regex: RegExp): string {
     const source = this.scanSource;
@@ -859,7 +863,7 @@ export class B11MathOracle {
   /**
    * Retrieves a number from the string.
    * This implements `getnumcore` and `getnum`.
-   * @returns {number} The number from the string.
+   * @returns The number from the string.
    */
   getnum = (): number => {
     recordSyntaxBoundary("legacy-scanner");
@@ -1093,7 +1097,7 @@ export class B11MathOracle {
   /**
    * Scans a function-call name if the next token is `name(`.
    * Leaves the cursor on `(`.
-   * @returns {string | undefined} The function name, if a call starts here.
+   * @returns The function name, if a call starts here.
    */
   scanFunctionCallName(): string | undefined {
     const source = this.scanSource;
@@ -1121,7 +1125,7 @@ export class B11MathOracle {
 
   /**
    * Parses a string literal from the current string with support for quotes.
-   * @returns {string} The parsed string literal.
+   * @returns The parsed string literal.
    */
   parseStringLiteral = (): string => {
     // We know the cursor is on a double-quote. No escape sequences.
@@ -1143,8 +1147,8 @@ export class B11MathOracle {
   /**
    * Parses an unquoted string function argument up to a top-level comma or closing parenthesis.
    * Depth tracks nested `()` / `[]` so `Foo[1].bar` and `data/64kb.bin` stay one argument.
-   * @param {string} functionName The function being called.
-   * @returns {string} The raw argument text.
+   * @param functionName The function being called.
+   * @returns The raw argument text.
    */
   parseUnquotedStringArgument(functionName: string): string {
     this.skipWhitespace();
@@ -1176,9 +1180,9 @@ export class B11MathOracle {
 
   /**
    * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callFunction = (name: string, args: (number | string)[]): number => {
     // 1) Check user-defined
@@ -1210,9 +1214,9 @@ export class B11MathOracle {
 
   /**
    * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callUserFunction = (name: string, args: (number | string)[]): number => {
     // Get the function definition
@@ -1236,9 +1240,9 @@ export class B11MathOracle {
 
   /**
    * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callBuiltInFunction = (name: string, args: (number | string)[]): number => {
     switch (name) {
@@ -1528,9 +1532,9 @@ export class B11MathOracle {
 
   /**
    * Validates an argument as a number.
-   * @param {string} funcName The name of the function.
-   * @param {number | string} arg The argument to validate.
-   * @returns {number} The validated number.
+   * @param funcName The name of the function.
+   * @param arg The argument to validate.
+   * @returns The validated number.
    */
   numArg = (funcName: string, arg: number | string): number => {
     if (typeof arg === "string") {
@@ -1543,9 +1547,9 @@ export class B11MathOracle {
 
   /**
    * Validates an argument as a string.
-   * @param {string} funcName The name of the function.
-   * @param {number | string} arg The argument to validate.
-   * @returns {string} The validated string.
+   * @param funcName The name of the function.
+   * @param arg The argument to validate.
+   * @returns The validated string.
    */
   strArg = (funcName: string, arg: number | string): string => {
     if (typeof arg === "number") {
@@ -1593,7 +1597,7 @@ export class B11MathOracle {
     this.functionTemplates.set(definition, template);
   }
 
-  getHost(): ExpressionHost {
+  getHost(): OracleExpressionHost {
     if (!this.host) {
       throw new Error("ExpressionHost not set.");
     }

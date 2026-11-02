@@ -1,8 +1,10 @@
+/** Decode one seven-bit signed field from a packed body byte. */
 const signed7 = (byte: number): number => (byte & 63) - (byte & 64);
 
-/** Decode pointer-bounded SoM body records; no ROM reads or capture-tool dependencies.
- * @param {Uint8Array | readonly number[]} input Pointer-bounded body bytes.
- * @returns {{header: number, groups: number, tileOffsets: number[], blocks: object[], coordinateOffsets: {x: number, y: number}[], collisionBytes: Uint8Array}} Parsed body record.
+/**
+ * Decode pointer-bounded SoM body records; no ROM reads or capture-tool dependencies.
+ * @param input Pointer-bounded body bytes.
+ * @returns Parsed body record.
  */
 export function decodeBodyFrame(input: Uint8Array | readonly number[]) {
   if (
@@ -61,9 +63,9 @@ export function decodeBodyFrame(input: Uint8Array | readonly number[]) {
 /**
  * Patch only signed-seven-bit block coordinates; preserve every flag, run token and tail byte.
  * Edits name a native block index, never a visual occurrence or an atlas coordinate.
- * @param {Uint8Array | readonly number[]} input Original body bytes.
- * @param {readonly {block: number, x?: number, y?: number}[]} edits Coordinate replacements.
- * @returns {Uint8Array} Body bytes with only the named coordinates changed.
+ * @param input Original body bytes.
+ * @param edits Coordinate replacements.
+ * @returns Body bytes with only the named coordinates changed.
  */
 export function patchBodyFrameCoordinates(
   input: Uint8Array | readonly number[],

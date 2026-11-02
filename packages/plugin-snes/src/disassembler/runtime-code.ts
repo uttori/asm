@@ -21,8 +21,8 @@ import type { SnesMapper } from "./rom-header.js";
 
 /**
  * Extract only state used by the decoder. Aliases, unknowns and emulation widths match analysis.
- * @param {RuntimeInstructionRecord} sample Execution-time instruction and paired registers.
- * @returns {Cpu65816DecodeState} Width and bank state actually consumed by decoding.
+ * @param sample Execution-time instruction and paired registers.
+ * @returns Width and bank state actually consumed by decoding.
  */
 const runtimeDecodeState = (sample: RuntimeInstructionRecord): Cpu65816DecodeState => {
   const value = (key: string, max: number): number | undefined => {
@@ -55,6 +55,10 @@ const runtimeDecodeState = (sample: RuntimeInstructionRecord): Cpu65816DecodeSta
 };
 
 // Preserve bank/width conventions shared by the static CFG consumers.
+/**
+ * Serialize a register width or flag for analysis records.
+ * @param entry Captured scalar, boolean, or unknown marker.
+ */
 const known = (entry: number | boolean | "unknown" | undefined): Record<string, unknown> =>
   entry === undefined || entry === "unknown"
     ? { kind: "unknown" }
@@ -62,11 +66,11 @@ const known = (entry: number | boolean | "unknown" | undefined): Record<string, 
 
 /**
  * Decode captured code from any CPU bus location, including WRAM and cartridge RAM.
- * @param {AnalysisProjectShards} shards Captured instructions and evidence.
- * @param {RomImage} rom Verified cartridge image.
- * @param {SnesMapper} mapper Address mapper for checking ROM provenance.
- * @param {Iterable<RuntimeEvidenceRecord>} [runtime] SQL instruction-variant cursor, consumed within its read snapshot.
- * @returns {readonly AnalysisRecord[]} Captured CFG variants and explicit conflicts.
+ * @param shards Captured instructions and evidence.
+ * @param rom Verified cartridge image.
+ * @param mapper Address mapper for checking ROM provenance.
+ * @param [runtime] SQL instruction-variant cursor, consumed within its read snapshot.
+ * @returns Captured CFG variants and explicit conflicts.
  */
 export const analyzeSnesRuntimeCode = (
   shards: AnalysisProjectShards,

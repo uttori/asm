@@ -1,9 +1,0 @@
-{
-  "directory": "Local Only/ares-capture-v2-desktop-runtime",
-  "executableSha256": "b7016a4c989ade7a3484b15cfe830492d9a4a448e09adf276f318d0c95418985",
-  "manifestSha256": "1bda198af2dba5aaa4f1b764befebbc2fad1f00f096661176162ca7ae65b55fd",
-  "resourceCount": 111,
-  "patchSha256": "e104c0b125e918ad320d50a308b6c8ca2806a2b042beac5de26480f1ad210f19",
-  "sourceBase": "be548251b537334f4f2054c7d86171da22fdc6ca",
-  "platform": "darwin-arm64"
-}

@@ -11,6 +11,11 @@ import type {
 type WidthState = { readonly e: boolean; readonly m: boolean; readonly x: boolean };
 /** Stack depth is relative to entry; negative depth would consume a caller's saved frame. */
 type FlowState = WidthState & { readonly stackBytes: number };
+/**
+ * Compare propagated width flags at a control-flow join.
+ * @param a First E/M/X snapshot.
+ * @param b Second E/M/X snapshot.
+ */
 const sameState = (a: WidthState, b: WidthState): boolean =>
   a.e === b.e && a.m === b.m && a.x === b.x;
 

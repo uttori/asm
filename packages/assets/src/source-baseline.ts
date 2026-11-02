@@ -4,6 +4,7 @@ import path from "node:path";
 
 /** Portable file fingerprint; paths are relative to a caller-selected project root. */
 export interface AssetSourceFingerprint {
+  /** Project-relative path to one snapshotted source file. */
   readonly path: string;
   /** Exact byte count, independent of text encoding or filesystem allocation. */
   readonly size: number;
@@ -13,14 +14,18 @@ export interface AssetSourceFingerprint {
 
 /** Persistent editing-session baseline. Identity includes the host's project/codec revision. */
 export interface AssetSourceBaseline {
+  /** Baseline envelope schema revision. */
   readonly version: 1;
+  /** Host project and adapter revision identity at export time. */
   readonly identity: string;
+  /** Fingerprints for every editable source file in the snapshot. */
   readonly files: readonly AssetSourceFingerprint[];
 }
 
-/** Reject platform-dependent aliases and paths that escape a selected source root.
- * @param {unknown} name Portable project-relative path.
- * @returns {string} Validated path, unchanged.
+/**
+ * Reject platform-dependent aliases and paths that escape a selected source root.
+ * @param name Portable project-relative path.
+ * @returns Validated path, unchanged.
  */
 export function assetRelativePath(name: unknown): string {
   if (
@@ -35,10 +40,11 @@ export function assetRelativePath(name: unknown): string {
   return name;
 }
 
-/** Reject symlinks in every path component, including the selected root.
- * @param {string} root Existing source directory.
- * @param {string} name Project-relative path to an existing regular file.
- * @returns {string} Host absolute path whose components were checked.
+/**
+ * Reject symlinks in every path component, including the selected root.
+ * @param root Existing source directory.
+ * @param name Project-relative path to an existing regular file.
+ * @returns Host absolute path whose components were checked.
  */
 export function assetSourcePath(root: string, name: string): string {
   assetRelativePath(name);
@@ -60,10 +66,11 @@ export function assetSourcePath(root: string, name: string): string {
   return current;
 }
 
-/** Fingerprint supplied source bytes; no root or machine-specific path is persisted.
- * @param {string} identity Host-selected project and adapter revision identity.
- * @param {ReadonlyMap<string, Uint8Array>} sources Exact bytes captured at export time.
- * @returns {AssetSourceBaseline} JSON-serializable snapshot, independent of subsequent buffer edits.
+/**
+ * Fingerprint supplied source bytes; no root or machine-specific path is persisted.
+ * @param identity Host-selected project and adapter revision identity.
+ * @param sources Exact bytes captured at export time.
+ * @returns JSON-serializable snapshot, independent of subsequent buffer edits.
  */
 export function createAssetSourceBaseline(
   identity: string,
@@ -85,9 +92,10 @@ export function createAssetSourceBaseline(
   };
 }
 
-/** Version, identity, and a file list are present; each fingerprint is checked separately.
- * @param {unknown} value Untrusted parsed JSON.
- * @returns {boolean} Whether the envelope can be read as a version-one baseline.
+/**
+ * Version, identity, and a file list are present; each fingerprint is checked separately.
+ * @param value Untrusted parsed JSON.
+ * @returns Whether the envelope can be read as a version-one baseline.
  */
 function isBaselineEnvelope(
   value: unknown,
@@ -107,9 +115,10 @@ function isBaselineEnvelope(
   );
 }
 
-/** Validate a persisted baseline before reading any of its paths.
- * @param {unknown} value Untrusted parsed JSON.
- * @returns {AssetSourceBaseline} Validated version-one baseline.
+/**
+ * Validate a persisted baseline before reading any of its paths.
+ * @param value Untrusted parsed JSON.
+ * @returns Validated version-one baseline.
  */
 export function parseAssetSourceBaseline(value: unknown): AssetSourceBaseline {
   if (!isBaselineEnvelope(value)) {
@@ -143,11 +152,12 @@ export function parseAssetSourceBaseline(value: unknown): AssetSourceBaseline {
   return { version: value.version, identity: value.identity, files };
 }
 
-/** Detect edits made since export, not merely since the current import command started.
- * @param {string} root Current source directory or an unchanged relocated copy.
- * @param {AssetSourceBaseline} input Persisted baseline, revalidated before use.
- * @param {string} identity Expected project/adapter identity supplied independently by the host.
- * @returns {void} Throws with every stale or missing dependency before publication.
+/**
+ * Detect edits made since export, not merely since the current import command started.
+ * @param root Current source directory or an unchanged relocated copy.
+ * @param input Persisted baseline, revalidated before use.
+ * @param identity Expected project/adapter identity supplied independently by the host.
+ * @returns Throws with every stale or missing dependency before publication.
  */
 export function assertAssetSourceBaseline(
   root: string,

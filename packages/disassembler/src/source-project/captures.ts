@@ -9,6 +9,11 @@ import type { ImportReport } from "../model/project-types.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath } from "./git.js";
 
+/**
+ * Read a Node.js system error code without assuming the thrown value's shape.
+ * @param error Caught value.
+ * @returns The string `code` property, or undefined when absent.
+ */
 function errorCode(error: unknown): string | undefined {
   if (
     typeof error === "object" &&
@@ -23,8 +28,11 @@ function errorCode(error: unknown): string | undefined {
 
 /** Historical input identity. Its filename and hashes do not imply the archive is still available. */
 export interface SourceCaptureArchive {
+  /** Portable archive basename; a discovery hint only, not part of the binding identity. */
   readonly name: string;
+  /** Lowercase SHA-256 of the archive bytes. */
   readonly sha256: string;
+  /** Archive length in bytes; always positive. */
   readonly bytes: number;
   /** Hash of the verified manifest, which binds every companion artifact by its own content hash. */
   readonly companionSha256?: string;
@@ -32,10 +40,15 @@ export interface SourceCaptureArchive {
 
 /** Canonical importer identity survives archive re-encoding and differs from the archive byte hash. */
 export interface SourceCaptureIdentity {
+  /** Canonical importer source hash; unique within a catalog. */
   readonly sha256: string;
+  /** Portable basename of the imported source; absolute report paths are reduced to it. */
   readonly sourceName: string;
+  /** Retention/index profile used for the import, such as `full` or `65816-analysis-v3`. */
   readonly profile: string;
+  /** Graphics, bus or execution events observed by the importer, in that precedence. */
   readonly observedEvents: number;
+  /** Events the producer reported dropped for instruction addresses. */
   readonly droppedEvents: number;
   /** Verified input fingerprints only. Imported evidence must remain available independently of these files. */
   readonly archives: readonly SourceCaptureArchive[];
@@ -43,27 +56,45 @@ export interface SourceCaptureIdentity {
 
 /** Git-tracked import provenance contains identities only, never capture contents or required host paths. */
 export interface SourceCaptureCatalog {
+  /** Catalog format discriminator. */
   readonly format: "uttori-capture-catalog";
+  /** Catalog schema version. */
   readonly version: 1;
+  /** Original ROM identity; a catalog for another ROM is rejected. */
   readonly romSha256: string;
+  /** Capture identities sorted by `sha256`; at most 10,000 entries. */
   readonly captures: readonly SourceCaptureIdentity[];
 }
 
+/** Lowercase hexadecimal SHA-256 digest. */
 const hashPattern = /^[\da-f]{64}$/;
 /** Runtime array check without widening the validated readonly contract to any[]. */
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+/**
+ * Narrow untrusted catalog JSON to a plain object.
+ * @param value Parsed JSON value.
+ * @returns True for non-null, non-array objects.
+ */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Read an import count only when the report recorded that key itself.
+ * @param counts Imported record counts from an import report.
+ * @param key Count name.
+ * @returns The own count, or undefined so callers can fall back to another key.
+ */
 function observedCount(counts: Readonly<Record<string, number>>, key: string): number | undefined {
   return Object.hasOwn(counts, key) ? counts[key] : undefined;
 }
+/** True for a lowercase hexadecimal SHA-256 string. */
 const validHash = (value: unknown): value is string =>
   typeof value === "string" && hashPattern.test(value);
+/** True for a non-negative safe integer count. */
 const validCount = (value: unknown): value is number =>
   Number.isSafeInteger(value) && Number(value) >= 0;
 
@@ -98,6 +129,13 @@ function catalogPath(root: string, name: string): string {
   return current;
 }
 
+/**
+ * Validate catalog structure, ROM identity, budgets and uniqueness of capture and archive bindings.
+ * @param value Untrusted catalog JSON.
+ * @param romSha256 Expected original ROM identity.
+ * @throws Error when the catalog is malformed, oversized, for another ROM, or binds one archive to
+ * conflicting capture identities.
+ */
 function assertSourceCaptureCatalog(
   value: unknown,
   romSha256: string,

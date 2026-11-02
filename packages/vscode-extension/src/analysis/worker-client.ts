@@ -29,7 +29,9 @@ export interface AnalysisWorkerOptions {
   readonly log?: (level: "debug" | "error", message: string) => void;
   /** Evaluated per request so selecting a source worktree changes external evidence query context. */
   readonly sourceRoot?: () => string | undefined;
+  /** Optional per-directory heap ceiling for child worker processes. */
   readonly maxMemoryMiB?: (directory: string) => number;
+  /** Optional request timeout override in milliseconds. */
   readonly timeoutMs?: number;
   /** Active plus queued distinct reads per lane. Identical requests share one slot; default 32. */
   readonly maxPending?: number;
@@ -72,10 +74,12 @@ export class AnalysisWorkerClient {
     this.#timeoutMs = workerTimeout(options.timeoutMs, 60_000);
   }
 
+  /** Whether this client has been disposed and rejects new requests. */
   get disposed(): boolean {
     return this.#slots.disposed;
   }
 
+  /** Queue a projection read against the analysis worker for one project directory. */
   request(
     directory: string,
     operation: AnalysisWorkerOperation,
@@ -266,6 +270,7 @@ export class AnalysisWorkerClient {
     });
   }
 
+  /** Terminate in-flight work after project or evidence invalidation. */
   invalidate(): void {
     this.#manifests?.invalidate();
     this.#previews?.invalidate();
@@ -273,6 +278,7 @@ export class AnalysisWorkerClient {
     // projections would let stale results publish after a project switch.
     this.#fail(new AnalysisRequestCancelled("Analysis project invalidated."));
   }
+  /** Dispose slot tracking and terminate owned worker processes. */
   dispose(): void {
     this.#slots.dispose();
     this.#manifests?.dispose();
@@ -306,9 +312,9 @@ let client: AnalysisWorkerClient | undefined;
  * Create the shared worker client on first use, enabling separate edit and preview processes.
  * Later calls reuse it and ignore new options; the activation owner must dispose the returned
  * client.
- * @param {string} extensionRoot Installed extension directory containing the bundled worker.
- * @param {AnalysisWorkerOptions} [options] First-initialization resource settings; later calls reuse the singleton.
- * @returns {AnalysisWorkerClient} Shared client whose lifecycle belongs to the activation owner.
+ * @param extensionRoot Installed extension directory containing the bundled worker.
+ * @param [options] First-initialization resource settings; later calls reuse the singleton.
+ * @returns Shared client whose lifecycle belongs to the activation owner.
  * @see https://code.visualstudio.com/api/references/vscode-api#ExtensionContext.subscriptions
  */
 export const initializeAnalysisWorker = (
@@ -328,7 +334,7 @@ export const initializeAnalysisWorker = (
 };
 /**
  * Return the initialized shared projection client; throw if activation has not created it yet.
- * @returns {AnalysisWorkerClient} Shared client; throws before initialization.
+ * @returns Shared client; throws before initialization.
  */
 export const analysisWorker = (): AnalysisWorkerClient => {
   if (!client) {

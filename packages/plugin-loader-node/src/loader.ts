@@ -21,30 +21,52 @@ import type {
   PluginModuleRequest,
 } from "./types.js";
 
+/** Plugin request annotated with its resolution base and attribution before import. */
 interface RequestedModule extends PluginModuleRequest {
+  /** Absolute directory that relative specifiers and package lookup resolve from. */
   readonly baseDirectory: string;
+  /** Origin of the request in precedence order. */
   readonly source: NormalizedPluginModuleRequest["source"];
+  /** Human-readable attribution, such as plugins[0]. */
   readonly configEntry: string;
 }
 
+/** Imported request with its canonical identity and merged options, ready for activation. */
 interface ResolvedModule extends RequestedModule {
+  /** Canonical file URL, or bundled:<specifier> for host-bundled plugins. */
   readonly resolvedModule: string;
+  /** True when the module came from the host's bundled plugin map. */
   readonly bundled: boolean;
+  /** Imported module namespace; bundled plugins are wrapped as { default }. */
   readonly namespace: unknown;
+  /** Manifest ID from the default export, or empty when unavailable. */
   readonly pluginId: string;
+  /** Frozen shallow merge of configured, module-override and ID-override options. */
   readonly normalizedOptions: Readonly<Record<string, unknown>>;
 }
 
+/** Active environment owned by a loader, keyed by its preliminary snapshot for reuse. */
 interface CurrentEnvironment {
+  /** Stable JSON of the normalized inputs; equal snapshots reuse the environment. */
   readonly snapshot: string;
+  /** Manager owning the activated plugins. */
   readonly manager: PluginManager;
+  /** Frozen handle returned to callers. */
   readonly loaded: LoadedProjectEnvironment;
+  /** Set once the manager has been disposed; disposal is not repeated. */
   disposed: boolean;
 }
 
+/** Accepts a plain JSON object; arrays and null are rejected. */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/**
+ * Copy configured plugin options into a mutable record.
+ * @param value Configured options; undefined yields an empty record.
+ * @param entry Attribution used in the error.
+ * @returns A shallow copy of the options.
+ */
 const toOptionsRecord = (value: unknown, entry: string): Record<string, unknown> => {
   if (value === undefined) {
     return {};
@@ -57,6 +79,11 @@ const toOptionsRecord = (value: unknown, entry: string): Record<string, unknown>
   return { ...value };
 };
 
+/**
+ * Read default.manifest.id from an imported namespace without validating the plugin.
+ * @param namespace Imported module namespace.
+ * @returns The manifest ID, or undefined when the shape does not match.
+ */
 const pluginIdFromNamespace = (namespace: unknown): string | undefined => {
   if (
     !isRecord(namespace) ||
@@ -70,6 +97,11 @@ const pluginIdFromNamespace = (namespace: unknown): string | undefined => {
     : undefined;
 };
 
+/**
+ * Recursively sort object keys so equal values serialize identically. Array order is kept.
+ * @param value JSON-compatible value.
+ * @returns A key-sorted copy of objects and arrays; other values unchanged.
+ */
 const stableValue = (value: unknown): unknown => {
   if (Array.isArray(value)) {
     return value.map(stableValue);
@@ -84,12 +116,18 @@ const stableValue = (value: unknown): unknown => {
   return value;
 };
 
+/** Syntactic test for absolute paths, ./, ../, and file: specifiers. Performs no existence check. */
 const isPathSpecifier = (specifier: string): boolean =>
   path.isAbsolute(specifier) ||
   specifier.startsWith("./") ||
   specifier.startsWith("../") ||
   specifier.startsWith("file:");
 
+/**
+ * Canonicalize a file URL through realpath so symlinked paths share one identity.
+ * @param url File URL to canonicalize.
+ * @returns The realpath URL, or the input href when the file cannot be resolved.
+ */
 const normalizeFileUrl = async (url: URL): Promise<string> => {
   try {
     return pathToFileURL(await realpath(fileURLToPath(url))).href;
@@ -98,6 +136,14 @@ const normalizeFileUrl = async (url: URL): Promise<string> => {
   }
 };
 
+/**
+ * Build a PLUGIN_MODULE_NOT_FOUND error attributed to the configuration entry.
+ * @param request Failing request.
+ * @param message Failure description appended to the attribution.
+ * @param resolvedModule Resolved identity, when resolution succeeded.
+ * @param cause Underlying resolution or import failure.
+ * @returns The attributed PluginError.
+ */
 const moduleLoadError = (
   request: RequestedModule,
   message: string,
@@ -115,7 +161,8 @@ const moduleLoadError = (
     },
   );
 
-/** Resolve a trusted plugin from its configuration directory to a canonical file URL.
+/**
+ * Resolve a trusted plugin from its configuration directory to a canonical file URL.
  * Package resolution retains host export conditions with import semantics in ESM and CJS hosts.
  * Resolution failures reject with a PluginError naming the configuration entry and its cause.
  */
@@ -165,6 +212,12 @@ const resolveExternalModule = async (request: RequestedModule): Promise<string> 
   }
 };
 
+/**
+ * Attribute an activation failure to the configuration entry of the plugin that raised it.
+ * @param error Failure thrown during activation.
+ * @param modules Resolved modules that were being activated.
+ * @returns A PluginError; non-PluginError failures become PLUGIN_ACTIVATION_FAILED.
+ */
 const wrapActivationError = (error: unknown, modules: readonly ResolvedModule[]): PluginError => {
   if (!(error instanceof PluginError)) {
     return new PluginError("Plugin activation failed.", {
@@ -206,8 +259,8 @@ export class NodePluginLoader {
    * disposes the old environment before activation. Activation failure leaves no replacement.
    * Module contents, logger identity, and bundled plugin object identity are not cache keys.
    * Node's module cache is retained. Failures reject with PluginError or cleanup AggregateError.
-   * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
-   * @returns {Promise<LoadedProjectEnvironment>} A borrowed handle owned by this loader until disposal or replacement.
+   * @param options Project location, trusted plugins, and host precedence settings.
+   * @returns A borrowed handle owned by this loader until disposal or replacement.
    */
   async loadProjectEnvironment(
     options: LoadProjectEnvironmentOptions,
@@ -495,8 +548,8 @@ const defaultEnvironments = new Map<string, LoadedProjectEnvironment>();
  * Convenience loader shared by absolute cwd. Calls for that cwd share ownership, not references:
  * disposing any current handle disposes its environment for all callers. Reconfiguration replaces it.
  * Use separate NodePluginLoader instances for independent lifetimes. Serialize calls for each cwd.
- * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
- * @returns {Promise<LoadedProjectEnvironment>} A handle to the environment shared by this absolute cwd.
+ * @param options Project location, trusted plugins, and host precedence settings.
+ * @returns A handle to the environment shared by this absolute cwd.
  */
 export const loadProjectEnvironment = async (
   options: LoadProjectEnvironmentOptions,

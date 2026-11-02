@@ -18,7 +18,7 @@ The extension builds a separate bundle for VS Code's embedded runtime.
 
 ## Configuration
 
-The client supplies workspace roots and initialization options, then updates the `asm` configuration. Settings include `configFile`, `plugins`, `target`, `architecture`, `entryPoints`, `includePaths`, `buildOutput`, `baseImage`, and `workspaceTrusted`. The server uses the shared project loader and bundled SNES/65xx plugins. Workspace configuration and external plugins are disabled without trust. Builds with the bundled SNES target remain available.
+The client supplies workspace roots and initialization options, then updates the `asm` configuration. Settings include `configFile`, `plugins`, `target`, `architecture`, `entryPoints`, `includePaths`, `buildOutput`, `baseImage`, `linkProject`, and `workspaceTrusted`. The server uses the shared project loader and bundled SNES/65xx plugins. Workspace configuration and external plugins are disabled without trust. Builds with the bundled SNES target remain available. A selected link manifest routes builds through the native composed build instead of absolute assembly.
 
 A connection owns its project environment and index, using the first workspace root for configuration. Send `shutdown`, then `exit`, to release it. Cancellation cannot preempt synchronous assembly/indexing. Asset path analysis is lightweight; `asm/assetPreview` runs bounded conversion in a cancellable worker and returns a result only for the current document version. Use a separate connection per project root when independent configurations are needed. This server uses Node filesystem access and does not provide a browser or virtual-filesystem host.
 

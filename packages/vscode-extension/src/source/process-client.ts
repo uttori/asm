@@ -9,15 +9,20 @@ import { WorkerRequestSlots, workerTimeout } from "../workers/lifecycle.js";
 
 /** Serializable request: buffers use advanced IPC serialization, while cancellation stays process-local. */
 type WorkerRequest<T> = T extends unknown ? Omit<T, "signal" | "onProgress"> : never;
+/** Serializable worker operation union forwarded to the source child process. */
 export type SourceProcessOperation =
   | WorkerRequest<SourceOperation>
   | AssetOperation
   | AssemblyBuildOperation
   | AssetSourceOperation;
 
+/** Child-process limits and callbacks for one source worker operation. */
 export interface SourceProcessOptions {
+  /** Memory ceiling enforced for the child process lifetime. */
   readonly maxMemoryMiB: number;
+  /** Optional abort signal terminating an in-flight operation. */
   readonly signal?: AbortSignal;
+  /** Optional progress callback receiving worker status text. */
   readonly onProgress?: (message: string) => void;
   /** Live source/editor version check; returning rejects or acknowledges the worker's final publication gate. */
   readonly onBeforePublish?: (paths: readonly string[]) => void | Promise<void>;
@@ -310,6 +315,7 @@ export class SourceProcessClient {
     });
   }
 
+  /** Terminate owned child processes and reject new operations. */
   dispose(): void {
     this.#disposed = true;
     this.#slots.dispose();

@@ -1,9 +1,10 @@
-/** Reject values before allocation or bit packing; all native encoders use this bound.
- * @param {number} value Candidate integer.
- * @param {string} label Diagnostic field name.
- * @param {number} minimum Inclusive lower bound.
- * @param {number} maximum Inclusive upper bound.
- * @returns {number} The validated integer.
+/**
+ * Reject values before allocation or bit packing; all native encoders use this bound.
+ * @param value Candidate integer.
+ * @param label Diagnostic field name.
+ * @param minimum Inclusive lower bound.
+ * @param maximum Inclusive upper bound.
+ * @returns The validated integer.
  */
 export function integer(value: number, label: string, minimum: number, maximum: number): number {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
@@ -12,11 +13,12 @@ export function integer(value: number, label: string, minimum: number, maximum: 
   return value;
 }
 
-/** Validate a complete native byte stream, including its final partial unit.
- * @param {Uint8Array} bytes Input stream.
- * @param {number} size Number of bytes per native unit.
- * @param {string} label Diagnostic format name.
- * @returns {number} The number of complete units.
+/**
+ * Validate a complete native byte stream, including its final partial unit.
+ * @param bytes Input stream.
+ * @param size Number of bytes per native unit.
+ * @param label Diagnostic format name.
+ * @returns The number of complete units.
  */
 export function unitCount(bytes: Uint8Array, size: number, label: string): number {
   if (bytes.length % size !== 0) {
@@ -25,9 +27,10 @@ export function unitCount(bytes: Uint8Array, size: number, label: string): numbe
   return bytes.length / size;
 }
 
-/** Require a dotted, lowercase provider ID without regex backtracking.
- * @param {string} id Candidate provider ID.
- * @returns {boolean} Whether every namespace segment is valid.
+/**
+ * Require a dotted, lowercase provider ID without regex backtracking.
+ * @param id Candidate provider ID.
+ * @returns Whether every namespace segment is valid.
  */
 export function isNamespacedId(id: string): boolean {
   const parts = id.split(".");

@@ -8,13 +8,20 @@ import { operandScalar, type ExpansionPlan, type Syntax65xx } from "./syntax.js"
 
 /** Per-occurrence values are never retained in a parsed operand or reused across passes. */
 export interface Classification65xx {
+  /** Resolved addressing-mode token used for encoding. */
   mode: string;
+  /** Encoded operand length in bytes. */
   length: number;
+  /** True when the operand value was synthesized rather than taken from source. */
   generated: boolean;
+  /** Data byte or register value observed on the bus. */
   value: number;
+  /** True when the value is a pure expression re-read at encode time. */
   native: boolean;
+  /** True when the operand targets the 6502 special-page wrap range. */
   specialPage: boolean;
 }
+/** Width-expansion result for one operand occurrence; not retained across passes. */
 interface Expansion {
   length: number;
   generated: boolean;

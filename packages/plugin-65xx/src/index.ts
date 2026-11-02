@@ -62,6 +62,7 @@ import { TypedArch65xx } from "./typed-architecture.js";
 export const RAW_65XX_TARGET_ID = "65xx.raw";
 /** Identity map: logical address − origin = file offset. */
 export const FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
+/** Output format that writes the raw image with no header. */
 export const RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
 /** Resets PC to `origin` at the start of each assembly stage. */
 export const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
@@ -69,7 +70,9 @@ export const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
 export const CA65_RAW_65XX_TARGET_ID = "65xx.ca65-raw";
 /** ca65 directive set used by ca65-profile targets. */
 export const CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
+/** ca65 expression functions used by ca65-profile targets. */
 export const CA65_65XX_EXPRESSION_SET_ID = "65xx.ca65-expressions";
+/** Resets ca65 CPU, scope, and segment state at the start of each assembly stage. */
 export const CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
 
 /**
@@ -77,14 +80,15 @@ export const CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
  * (`{ origin: 32768 }` → `org $8000` with no 32 KiB prefix).
  */
 export interface Raw65xxTargetOptions extends Readonly<Record<string, unknown>> {
+  /** Initial PC and the logical address of file offset 0; integer in 0–65535. */
   readonly origin: number;
 }
 
 /**
  * Validates target options. Unknown keys throw. Omitted object → `{ origin: 0 }`.
  *
- * @param {unknown} configured Plugin/target options object.
- * @returns {Raw65xxTargetOptions} Normalized options.
+ * @param configured Plugin/target options object.
+ * @returns Normalized options.
  */
 export function createRaw65xxTargetOptions(configured: unknown): Raw65xxTargetOptions {
   if (configured === undefined) {
@@ -105,6 +109,14 @@ export function createRaw65xxTargetOptions(configured: unknown): Raw65xxTargetOp
   return { origin: value };
 }
 
+/**
+ * Builds one directive descriptor for ca65 tooling metadata.
+ * @param keyword Directive keyword without the leading dot.
+ * @param summary One-line description.
+ * @param syntax Usage form shown in completions.
+ * @param group Tooling group name.
+ * @returns Directive descriptor.
+ */
 const descriptor = (
   keyword: string,
   summary: string,
@@ -176,9 +188,9 @@ const ca65ExpressionFunctions: readonly [string, string, (value: number) => numb
 
 /**
  * Registers a lowered-phase 65xx directive and attaches hover/completion copy.
- * @param {string} id The directive id.
- * @param {readonly string[]} keywords The directive keywords.
- * @returns {DirectiveContribution} The directive contribution.
+ * @param id The directive id.
+ * @param keywords The directive keywords.
+ * @returns The directive contribution.
  */
 const directive = (id: string, keywords: readonly string[]): DirectiveContribution => {
   const wanted = new Set(keywords);
@@ -193,8 +205,8 @@ const directive = (id: string, keywords: readonly string[]): DirectiveContributi
 
 /**
  * Rejects addresses outside the unsigned 16-bit flat space.
- * @param {number} address Candidate CPU address.
- * @returns {number} The same address when it is in range.
+ * @param address Candidate CPU address.
+ * @returns The same address when it is in range.
  */
 function validate(address: number): number {
   if (!Number.isInteger(address) || address < 0 || address > 0xffff) {
@@ -205,8 +217,8 @@ function validate(address: number): number {
 
 /**
  * 16-bit address space with no bank wrap. Writes below `origin` are rejected.
- * @param {TargetFactoryContext} options The target factory context.
- * @returns {TargetAddressSpace} The address space.
+ * @param options The target factory context.
+ * @returns The address space.
  */
 function createFlat65xxAddressSpace({ options }: TargetFactoryContext): TargetAddressSpace {
   const { origin } = createRaw65xxTargetOptions(options);
@@ -240,8 +252,8 @@ function createFlat65xxAddressSpace({ options }: TargetFactoryContext): TargetAd
 
 /**
  * Sets ca65 CPU predicate symbols for the selected architecture.
- * @param {import("@uttori/asm-core/plugin").PluginSessionCapabilities} session Active assembler session.
- * @param {string} architecture Architecture id being selected.
+ * @param session Active assembler session.
+ * @param architecture Architecture id being selected.
  */
 function updatePredicates(
   session: import("@uttori/asm-core/plugin").PluginSessionCapabilities,
@@ -262,7 +274,7 @@ function updatePredicates(
  * Used by the plugin `activate` hook and by tests that want contributions
  * without constructing a full plugin object.
  *
- * @param {PluginActivationContext} context Plugin activation context.
+ * @param context Plugin activation context.
  */
 export function register65xxContributions(context: PluginActivationContext): void {
   for (const format of nesAssetFormats) {
@@ -507,15 +519,18 @@ export function register65xxContributions(context: PluginActivationContext): voi
           },
           // The flat NES lifecycle fills the complete cartridge with the target byte, including MEMORY gaps.
           // Keep its established output here; ld65LinkRecipe remains available for explicit per-region policies.
-          ...recipe.regions.map((region) => ({
-            ...region,
-            ...(region.outputOffset !== undefined
-              ? {
-                  outputOffset: region.outputOffset + nes.header.length,
-                  fillByte: nes.fillByte,
-                }
-              : {}),
-          })),
+          ...recipe.regions.map((region) =>
+            Object.assign(
+              {},
+              region,
+              region.outputOffset !== undefined
+                ? {
+                    outputOffset: region.outputOffset + nes.header.length,
+                    fillByte: nes.fillByte,
+                  }
+                : {},
+            ),
+          ),
         ],
       };
     },
@@ -563,8 +578,8 @@ const plugin: AssemblerPlugin<Readonly<Record<string, unknown>>> = definePlugin<
 /**
  * Activates this plugin and freezes a reusable host environment.
  *
- * @param {unknown} options Raw-target options (`origin`, ...).
- * @returns {Promise<AssemblerEnvironment>} Frozen assembler environment.
+ * @param options Raw-target options (`origin`, ...).
+ * @returns Frozen assembler environment.
  */
 export async function create65xxAssemblerEnvironment(options: unknown = {}) {
   const manager = new PluginManager();

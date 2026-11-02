@@ -12,36 +12,56 @@ import {
   type LinkRecipeSymbol,
 } from "@uttori/asm-core";
 
+/** One ld65 MEMORY area. */
 export type Ld65MemoryRegion = {
+  /** MEMORY area name referenced by segment `load`/`run`. */
   readonly name: string;
+  /** First logical address of the area. */
   readonly start: number;
+  /** Area size in bytes. */
   readonly size: number;
   /**
    * Byte offset of this region in the linked image (`file = %O`).
    * `-1` when `file = ""` (RAM / overlay run area).
    */
   readonly fileOffset: number;
+  /** True when unused bytes of a file-backed area are padded to `size`. */
   readonly fill: boolean;
+  /** Padding byte used when `fill` is true; defaults to 0. */
   readonly fillval: number;
 };
 
+/** One ld65 SEGMENTS entry. */
 export type Ld65Segment = {
+  /** Segment name selected by `.segment`. */
   readonly name: string;
+  /** MEMORY area holding the segment's bytes in the image. */
   readonly load: string;
+  /** MEMORY area where the segment executes; equals `load` when not specified. */
   readonly run: string;
+  /** Fixed start address within the load area, or undefined to place after the previous segment. */
   readonly start: number | undefined;
+  /** True when `__NAME_LOAD__`, `__NAME_RUN__`, and `__NAME_SIZE__` symbols are generated. */
   readonly define: boolean;
+  /** ld65 segment type (`ro`, `rw`, `bss`, `zp`, ...); defaults to `ro`. */
   readonly type: string;
 };
 
+/** One ld65 SYMBOLS entry. */
 export type Ld65Symbol = {
+  /** Symbol name. */
   readonly name: string;
+  /** Unevaluated `value` expression text. */
   readonly valueExpr: string;
 };
 
+/** Parsed ld65 configuration in declaration order. */
 export type Ld65Config = {
+  /** MEMORY areas keyed by name, in declaration order. */
   readonly memories: ReadonlyMap<string, Ld65MemoryRegion>;
+  /** Segments keyed by name, in declaration order. */
   readonly segments: ReadonlyMap<string, Ld65Segment>;
+  /** SYMBOLS entries in declaration order. */
   readonly symbols: readonly Ld65Symbol[];
   /** Total size of `file = %O` regions, in order of MEMORY declaration. */
   readonly imageSize: number;
@@ -94,20 +114,20 @@ export function ld65LinkRecipe(config: Ld65Config, target = "65xx.nes"): Assembl
   }
   return {
     target,
-    regions: [...config.memories.values()].map((region) => ({
-      name: region.name,
-      start: region.start,
-      size: region.size,
-      ...(region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {}),
-      ...(region.fill ? { fillByte: region.fillval } : {}),
-      addressSpace: "65xx.ines-address-space",
-    })),
-    placements: [...config.segments.values()].map((segment) => ({
-      section: segment.name,
-      load: segment.load,
-      run: segment.run,
-      ...(segment.start !== undefined ? { start: segment.start } : {}),
-    })),
+    regions: [...config.memories.values()].map((region) =>
+      Object.assign(
+        { name: region.name, start: region.start, size: region.size },
+        region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
+        region.fill ? { fillByte: region.fillval } : {},
+        { addressSpace: "65xx.ines-address-space" },
+      ),
+    ),
+    placements: [...config.segments.values()].map((segment) =>
+      Object.assign(
+        { section: segment.name, load: segment.load, run: segment.run },
+        segment.start !== undefined ? { start: segment.start } : {},
+      ),
+    ),
     // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
     symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()],
   };
@@ -123,7 +143,7 @@ SEGMENTS {
 
 /**
  * Returns the built-in 32 KiB `$8000` layout used when a target omits `linkerConfig`.
- * @returns {string} A minimal ld65 config.
+ * @returns A minimal ld65 config.
  */
 export function defaultLd65ConfigText(): string {
   return DEFAULT_LINKER_CONFIG;
@@ -131,8 +151,8 @@ export function defaultLd65ConfigText(): string {
 
 /**
  * Parses an ld65 config string into memories, segments, and exported symbols.
- * @param {string} source Linker configuration text.
- * @returns {Ld65Config} The parsed layout.
+ * @param source Linker configuration text.
+ * @returns The parsed layout.
  */
 export function parseLd65Config(source: string): Ld65Config {
   // Replace block comments with whitespace so adjacent tokens stay separate.
@@ -208,8 +228,8 @@ export function parseLd65Config(source: string): Ld65Config {
 
 /**
  * Linker-defined names produced by `define = yes` plus the SYMBOLS block.
- * @param {Ld65Config} config Parsed linker configuration.
- * @returns {string[]} Symbol names that must stay session-global.
+ * @param config Parsed linker configuration.
+ * @returns Symbol names that must stay session-global.
  */
 export function linkerDefinedSymbolNames(config: Ld65Config): string[] {
   const names: string[] = [];
@@ -238,9 +258,9 @@ const LD65_BLOCK_BODY: Readonly<Record<"MEMORY" | "SEGMENTS" | "SYMBOLS", RegExp
 
 /**
  * Reads semicolon-terminated statements inside a named MEMORY/SEGMENTS/SYMBOLS block.
- * @param {string} source Config text.
- * @param {"MEMORY" | "SEGMENTS" | "SYMBOLS"} block MEMORY, SEGMENTS, or SYMBOLS.
- * @returns {string[]} Statement bodies, without the trailing semicolon.
+ * @param source Config text.
+ * @param block MEMORY, SEGMENTS, or SYMBOLS.
+ * @returns Statement bodies, without the trailing semicolon.
  */
 function readBlockStatements(source: string, block: "MEMORY" | "SEGMENTS" | "SYMBOLS"): string[] {
   const match = source.match(LD65_BLOCK_BODY[block]);
@@ -253,6 +273,7 @@ function readBlockStatements(source: string, block: "MEMORY" | "SEGMENTS" | "SYM
     .filter(Boolean);
 }
 
+/** Parsed `NAME: key = value, ...` statement. */
 type NamedStatement = {
   name: string;
   attrs: Partial<Record<string, string>>;
@@ -260,8 +281,8 @@ type NamedStatement = {
 
 /**
  * Parses `NAME: key = value, key = value`.
- * @param {string} statement One semicolon-terminated statement.
- * @returns {NamedStatement} Name plus attribute map.
+ * @param statement One semicolon-terminated statement.
+ * @returns Name plus attribute map.
  */
 function parseNamedStatement(statement: string): NamedStatement {
   const colon = statement.indexOf(":");
@@ -284,8 +305,8 @@ function parseNamedStatement(statement: string): NamedStatement {
 
 /**
  * Splits on commas that are not inside quotes.
- * @param {string} input Attribute list.
- * @returns {string[]} Attribute assignments.
+ * @param input Attribute list.
+ * @returns Attribute assignments.
  */
 function splitTopLevelCommas(input: string): string[] {
   const parts: string[] = [];
@@ -323,8 +344,8 @@ function splitTopLevelCommas(input: string): string[] {
 
 /**
  * Parses `$hex` or decimal tokens. Returns undefined when missing.
- * @param {string | undefined} token Raw attribute value.
- * @returns {number | undefined} The numeric value.
+ * @param token Raw attribute value.
+ * @returns The numeric value.
  */
 function parseNumberToken(token: string | undefined): number | undefined {
   if (token === undefined || token === "") {
@@ -342,10 +363,10 @@ function parseNumberToken(token: string | undefined): number | undefined {
 
 /**
  * Requires a numeric attribute.
- * @param {Partial<Record<string, string>>} attrs Attribute map.
- * @param {string} key Attribute name.
- * @param {string} owner Statement name for errors.
- * @returns {number} The parsed number.
+ * @param attrs Attribute map.
+ * @param key Attribute name.
+ * @param owner Statement name for errors.
+ * @returns The parsed number.
  */
 function requireNumber(attrs: Partial<Record<string, string>>, key: string, owner: string): number {
   const value = parseNumberToken(attrs[key]);
@@ -357,8 +378,8 @@ function requireNumber(attrs: Partial<Record<string, string>>, key: string, owne
 
 /**
  * Parses ld65 yes/no flags.
- * @param {string | undefined} raw Raw token.
- * @returns {boolean | undefined} Parsed flag.
+ * @param raw Raw token.
+ * @returns Parsed flag.
  */
 function parseYesNo(raw: string | undefined): boolean | undefined {
   if (raw === undefined) {

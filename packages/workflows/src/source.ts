@@ -145,22 +145,27 @@ async function candidateGeneration(
   return { commit, tree, ref, descriptor };
 }
 
+/** Human-readable verb for progress text, derived from the action id. */
 function sourceActionName(action: SourceAction): string {
   return action;
 }
 
+/** True when the value is an array whose elements still need their own checks. */
 function isUnknownArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+/** True for a plain object that can hold JSON object fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** True when every element is a string. */
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((item): item is string => typeof item === "string");
 }
 
+/** Reject a merge preview that is missing identities or file lists. */
 function assertSourceMergePreview(value: unknown): asserts value is SourceMergePreview {
   if (
     !isRecord(value) ||
@@ -177,6 +182,7 @@ function assertSourceMergePreview(value: unknown): asserts value is SourceMergeP
   }
 }
 
+/** True when the payload names a pristine generated asset path and hash. */
 function isPristineAsset(value: unknown): value is GenerationRecipe["pristineAssets"][number] {
   return (
     typeof value === "object" &&
@@ -188,6 +194,7 @@ function isPristineAsset(value: unknown): value is GenerationRecipe["pristineAss
   );
 }
 
+/** Reject a generation recipe whose files or assets fail identity checks. */
 function assertGenerationRecipe(value: unknown): asserts value is GenerationRecipe {
   if (
     typeof value !== "object" ||
@@ -393,6 +400,7 @@ function sourceTarget(host: SourceWorkflowHost, id: string): SourceTargetDescrip
   }
   return target;
 }
+/** Assemble the working tree through the host without applying regeneration. */
 const buildProject = (project: SourceProject, host: SourceWorkflowHost, signal?: AbortSignal) =>
   sourceTarget(host, project.configuration.target).build(project, host, signal);
 export type { SourceProjectInspection } from "./source-target.js";
@@ -418,11 +426,6 @@ export async function executeSourceOperation(
   readSourceOperation(operation);
   operation.signal?.throwIfAborted();
   if (operation.captures !== undefined) {
-    if (operation.action !== "import" || operation.capture !== undefined) {
-      throw new Error(
-        "A capture queue is only valid for import and cannot be combined with capture.",
-      );
-    }
     return importSourceCaptures(
       operation.captures,
       (capture, onProgress) =>

@@ -1,8 +1,9 @@
 # Trace import
 
 Trace imports add runtime evidence to an existing analysis project. They do not prove that every
-reachable instruction or data structure has been found. Keep the original capture if you need to
-reprocess it. The importer reads it without modifying, moving, or deleting it.
+reachable instruction or data structure has been found. The importer reads a capture without
+modifying, moving, or deleting it. Retained evidence does not need the original afterward; keep it
+only to reprocess information that was not imported, such as registers omitted by `analysis`.
 
 ## Import an instruction trace
 
@@ -41,9 +42,14 @@ try {
 ```
 
 Run `node import-trace.mjs /path/to/analysis /path/to/trace.json`. The input is an
-`uttori-asm-instruction-trace` JSON artifact with schema version 1. Its ROM hash must match the
-project's headerless content hash. Architecture and address-space names must already match the project. The importer does not
-translate recorder addresses.
+`uttori-asm-instruction-trace` JSON artifact with schema version 1 or an ACT2 instruction archive.
+Its ROM hash must match the project's headerless content hash. Architecture and address-space names
+must already match the project. The importer does not translate recorder addresses.
+
+A Git source project's evidence store has indexed research. Library imports into it must pass the
+matching `research` snapshot; otherwise they are rejected. Use `uttori-asm source import <project>
+<capture...>` instead, which pins research, uses `analysis` retention and records the archive identity
+in the Git capture catalog.
 
 For decoded capture streams, use `importRuntimeTraceSourceIntoProject(source, directory, context,
 options)`. The source supplies validated metadata and `read(accept)`, calls `accept` synchronously
@@ -55,7 +61,7 @@ source or retain its chunks.
 
 | Limit                                     | Default                   | Meaning                                                                           |
 | ----------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- |
-| File `maxBytes`                           | 2 GiB                     | Whole input file, positive safe integer                                           |
+| File `maxBytes`                           | 32 GiB                    | Whole input file, positive safe integer                                           |
 | SQLite project `maxIndexRecords`          | `Number.MAX_SAFE_INTEGER` | No fixed record ceiling; storage and input budgets still apply                    |
 | In-memory `maxIndexRecords`, full profile | 8,000,000                 | Distinct aggregate index records                                                  |
 | Explicit `maxIndexRecords`                | Caller supplied           | Positive safe integer; maximum 8M when counters or final records remain in memory |
@@ -72,7 +78,8 @@ A custom source must enforce its own input-byte budget. Chunk validation, sequen
 cumulative loss counts, ROM identity, and index limits still apply. Progress callbacks run
 synchronously and should return quickly.
 
-The source workflow and CLI default to `analysis`. For SNES this retains joint PC/opcode-byte
+`source import` always uses `analysis`; `evidence-import` defaults to it and accepts
+`--trace-index full`. For SNES `analysis` retains joint PC/opcode-byte
 variants with the decoder's P width bits, E, DB and D (including aliases and unknown values),
 exact observation totals and all supported memory facts. It consolidates snapshots that differ
 only in other registers or arithmetic flags. The versioned receipt is `65816-analysis-v3`.

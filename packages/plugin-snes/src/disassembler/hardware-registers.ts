@@ -1,3 +1,4 @@
+/** One exported MMIO constant emitted into generated SNES defines. */
 export interface SnesHardwareDefine {
   /** Conventional assembler symbol. */
   readonly symbol: string;
@@ -297,10 +298,15 @@ const FIXED_REGISTERS: Partial<Record<number, SnesHardwareDefine>> = Object.free
   ),
 );
 
+/** One DMA/HDMA register slot within a channel's `$43x0–$43xF` block. */
 interface DmaRegisterDefinition {
+  /** Byte offset within the 16-byte channel register set. */
   readonly offset: number;
+  /** Canonical symbol factory for channel 0–7. */
   readonly symbol: (channel: number) => string;
+  /** Optional legacy alias symbol factory. */
   readonly legacySymbol?: (channel: number) => string;
+  /** Register purpose copied into generated hover text. */
   readonly description: string;
 }
 
@@ -383,6 +389,7 @@ const DMA_REGISTERS_BY_OFFSET = new Map(
   DMA_REGISTER_DEFINITIONS.map((definition) => [definition.offset, definition] as const),
 );
 
+/** Volatile MMIO identity returned for CPU I/O bank queries. */
 export interface SnesHardwareRegister {
   /** 24-bit CPU address that was queried (bank is preserved). */
   readonly address: number;
@@ -399,8 +406,8 @@ export interface SnesHardwareRegister {
  * ROM mirrors of those banks are never classified as I/O. DMA/HDMA channels
  * Documented DMA/HDMA fields in `$4300–$437F` use the SNESdev `DMAPn`…`NLTRn`
  * spelling, including both addresses of the shared unused byte.
- * @param {number} address 24-bit SNES CPU bus address.
- * @returns {SnesHardwareRegister | undefined} Volatile register identity, or `undefined` if not MMIO.
+ * @param address 24-bit SNES CPU bus address.
+ * @returns Volatile register identity, or `undefined` if not MMIO.
  */
 export const identifySnesHardwareRegister = (address: number): SnesHardwareRegister | undefined => {
   const bank = (address >>> 16) & 0xff;
@@ -433,6 +440,7 @@ export const identifySnesHardwareRegister = (address: number): SnesHardwareRegis
   return undefined;
 };
 
+/** Format immediate values for generated define lines. */
 const hex = (value: number, width: number): string =>
   `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 
@@ -443,7 +451,7 @@ export const SNES_HARDWARE_DEFINES_SOURCE = "defines.asm";
  * Returns the complete documented set of CPU-visible register constants used by generated source.
  * DMA channel registers are expanded so repeated `$43x0` access patterns remain obvious and every
  * emitted symbol has its own hover annotation.
- * @returns {readonly SnesHardwareDefine[]} Register definitions in ascending address order.
+ * @returns Register definitions in ascending address order.
  */
 export const snesHardwareDefineRecords = (): readonly SnesHardwareDefine[] => {
   const values: SnesHardwareDefine[] = [...FIXED_REGISTER_DEFINITIONS, ...FIXED_REGISTER_ALIASES];
@@ -471,11 +479,12 @@ export const snesHardwareDefineRecords = (): readonly SnesHardwareDefine[] => {
 
 /**
  * Returns the complete set of CPU-visible register symbol/address pairs used by generated source.
- * @returns {readonly [string, number][]} Symbol/address pairs in ascending address order.
+ * @returns Symbol/address pairs in ascending address order.
  */
 export const snesHardwareDefines = (): readonly (readonly [string, number])[] =>
   snesHardwareDefineRecords().map(({ symbol, address }) => [symbol, address] as const);
 
+/** One built-in numeric constant bundled with hardware defines. */
 interface SnesBuiltInConstant {
   readonly symbol: string;
   readonly value: number;
@@ -511,6 +520,11 @@ const INTERRUPT_STATUS_MASKS: readonly SnesBuiltInConstant[] = [
   },
 ];
 
+/**
+ * Render `symbol = $value ; description` lines for built-in constants.
+ * @param constants Constant table to emit.
+ * @param width Hex digit width for the immediate.
+ */
 const renderConstants = (constants: readonly SnesBuiltInConstant[], width: number): string[] =>
   constants.map(
     ({ symbol, value, description }) => `${symbol} = ${hex(value, width)} ; ${description}`,
@@ -519,7 +533,7 @@ const renderConstants = (constants: readonly SnesBuiltInConstant[], width: numbe
 /**
  * Renders the built-in SNES register and bit-mask vocabulary included by generated source.
  * These are ordinary symbols, not assembler magic, so projects may add their own aliases.
- * @returns {string} Deterministic native assembly source.
+ * @returns Deterministic native assembly source.
  */
 export const renderSnesHardwareDefines = (): string => {
   const lines = [

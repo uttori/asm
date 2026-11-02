@@ -1,4 +1,4 @@
-# Project configuration
+# Project Configuration
 
 Requires Node.js 26+ for CLI/library use or VS Code 1.140.0+ for the extension. Create
 `uttori-asm.config.json` in the project directory:
@@ -22,17 +22,17 @@ the workspace is trusted.
 
 ## Fields
 
-| Field          | Meaning                                                                       |
-| -------------- | ----------------------------------------------------------------------------- |
-| `plugins`      | Ordered `{ module, options? }` entries. Each plugin validates its own options |
-| `target`       | Target contribution ID or alias                                               |
-| `architecture` | Initial processor ID or alias valid for the target                            |
-| `includePaths` | Additional source/binary include directories                                  |
-| `entryPoints`  | Editor/indexing build roots. Pass the source explicitly to the CLI            |
-| `buildOutput`  | Editor build destination. Pass output explicitly to the CLI                   |
+| Field          | Meaning                                                                                                    |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| `plugins`      | Ordered `{ module, options? }` entries. Each plugin validates its own options                              |
+| `target`       | Target contribution ID or alias                                                                            |
+| `architecture` | Initial processor ID or alias valid for the target                                                         |
+| `includePaths` | Additional source/binary include directories                                                               |
+| `entryPoints`  | Editor/indexing build roots. Pass the source explicitly to the CLI                                         |
+| `buildOutput`  | Editor build destination. Pass output explicitly to the CLI                                                |
 | `linkProject`  | Opt-in native build manifest for editor Build/Run/Debug and module-aware indexing, relative to this config |
-| `baseImage`    | Editor base ROM for patching. Use CLI `--base-image` for terminal builds      |
-| `$schema`      | Optional editor schema URI                                                    |
+| `baseImage`    | Editor base ROM for patching. Use CLI `--base-image` for terminal builds                                   |
+| `$schema`      | Optional editor schema URI                                                                                 |
 
 Unknown fields are rejected. The loader searches only its supplied project directory, not parents.
 Use CLI `--config path` or editor `asm.configFile` for a nested configuration.
@@ -41,8 +41,11 @@ workspace root. Bare package names resolve as installed modules. Relative plugin
 beside the configuration. Published plugins should point at executable JavaScript.
 
 Overrides take precedence over project values, then host defaults. Explicit CLI plugins append to
-configured plugins without reordering. With no configuration or explicit plugins, the CLI selects
-SNES. The generic loader/core has no default target.
+configured plugins without reordering. CLI `--include-path` values replace configured `includePaths`
+and resolve from the current directory; without either, the current directory is searched. CLI
+`--plugin-option plugin:key=value` names a loaded plugin by module or plugin ID and fails otherwise.
+With no configuration or explicit plugins, the CLI selects SNES; a configuration file must list its
+own plugins. The generic loader/core has no default target.
 
 The generic loader selects a sole registered target automatically. Multiple targets require an
 explicit choice. An omitted architecture uses that target's default. For host integration,

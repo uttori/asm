@@ -73,8 +73,8 @@ const summaries: Readonly<Record<string, string>> = {
 /**
  * Groups forms by mnemonic for editor tooling (hover, completion, signatures).
  *
- * @param {readonly InstructionForm[]} forms Assembly forms for one CPU.
- * @returns {InstructionDescriptor[]} Sorted instruction descriptors.
+ * @param forms Assembly forms for one CPU.
+ * @returns Sorted instruction descriptors.
  */
 export function buildInstructionCatalog(
   forms: readonly InstructionForm[],

@@ -13,6 +13,7 @@ import {
   Range,
   Task,
   TaskGroup,
+  TaskScope,
   Uri,
   window,
   workspace,
@@ -24,7 +25,11 @@ import {
 import { captureBuildControls, changedBuildInputs } from "./build-inputs.js";
 import { SourceCaptureCoordinator } from "./capture-coordinator.js";
 import type { SourceController } from "./controller.js";
-import { readSourceGenerationReview, type SourceGenerationReview } from "./generation-review.js";
+import {
+  readGenerationDiffStats,
+  readSourceGenerationReview,
+  type SourceGenerationReview,
+} from "./generation-review.js";
 import { SourceProjectSession } from "./session.js";
 import {
   isRecord,
@@ -304,11 +309,19 @@ export class SourceBuildCoordinator {
         const message = `${summary} Review ${review.files.length} changed files in Generation Preview. ${next} After applying, review/resolve and stage changes, then Finish; Finish builds and commits the merge.`;
         // Persist every conflicting path and the next steps after the notification disappears.
         this.host.output.info(message);
+        const first = this.session.incoming[0];
+        if (first?.command?.arguments?.length) {
+          void commands.executeCommand(
+            "asm.source.diff",
+            ...(first.command.arguments as [Uri, Uri, string]),
+          );
+        }
+        void commands.executeCommand("uttori-asm.home.focus");
         void window
           .showInformationMessage(message, "Review Generation", "Show Analysis Output")
           .then((choice) => {
             if (choice === "Review Generation") {
-              void commands.executeCommand("uttori-asm.sourceProject.focus");
+              void commands.executeCommand("uttori-asm.home.focus");
             }
             if (choice === "Show Analysis Output") {
               this.host.output.show(true);
@@ -476,6 +489,14 @@ export class SourceBuildCoordinator {
     ) {
       return undefined;
     }
+    const stats = await readGenerationDiffStats(root, review.before, review.after);
+    if (
+      root !== this.session.root ||
+      candidate !== this.session.candidate ||
+      preview !== this.session.preview
+    ) {
+      return undefined;
+    }
     const rows: SourceRow[] = [];
     const label = review.previewed ? "Generation Preview" : "Generated";
     for (const { status, path: file, conflict } of review.files) {
@@ -487,12 +508,16 @@ export class SourceBuildCoordinator {
         `${file} · ${label} ${review.before.slice(0, 7)} → ${review.after.slice(0, 7)}`,
       ]);
       row.description = conflict ? "predicted conflict" : status;
+      const count = stats.get(file);
+      row.additions = count?.additions;
+      row.deletions = count?.deletions;
       rows.push(row);
     }
     this.session.incoming = rows;
     return review;
   }
 
+  /** Create a VS Code task that runs the native source build for one project root. */
   buildTask(root: string, folder?: WorkspaceFolder): Task {
     const definition = { type: "uttori-source", action: "build", project: root };
     const scope =
@@ -527,7 +552,7 @@ export class SourceBuildCoordinator {
     });
     const task = new Task(
       definition,
-      scope ?? 2,
+      scope ?? TaskScope.Workspace,
       "Build and Check",
       "Uttori Source",
       execution,

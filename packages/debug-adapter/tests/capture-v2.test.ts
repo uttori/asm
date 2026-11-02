@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, writeFile, rm, stat, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -131,44 +130,6 @@ test("ACT2 decodes exact u64 sequences and variants, rejects malformed envelopes
   t.throws(() =>
     validateCaptureRequest({ operation: "start", bufferBytes: 4718656, scope: "bus" }),
   );
-});
-
-test("native bounded queue and TypeScript decoder agree on ACT2 framing and CRC", async (t) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), "ares-queue-"));
-  try {
-    const executable = path.join(directory, "test");
-    const env = {
-      ...process.env,
-      ...(process.platform === "darwin"
-        ? {
-            CPLUS_INCLUDE_PATH:
-              "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1",
-          }
-        : {}),
-    };
-    execFileSync(
-      "c++",
-      [
-        "-std=c++17",
-        "-Wall",
-        "-Wextra",
-        "-Werror",
-        "packages/debug-sidecar-ares/native/capture-v2/queue-test.cpp",
-        "-o",
-        executable,
-      ],
-      { env },
-    );
-    const hex = execFileSync(executable, { encoding: "utf8" }).trim();
-    const bytes = Buffer.from(hex, "hex"),
-      id = bytes.toString("hex", 8, 24);
-    const decoded = decodeCaptureChunk(bytes, id);
-    t.is(decoded.instructions.length, 3854);
-    t.is(decoded.through, "3854");
-    t.true(decoded.instructions.every((i) => i.address === 0x8000 && i.detail.bytes[0] === 0xea));
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
 });
 
 const fixture = async (

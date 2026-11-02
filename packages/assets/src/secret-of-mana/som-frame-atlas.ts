@@ -12,12 +12,13 @@ import { validateFrameComposition } from "./som-frame-composition.js";
 import { spritePaletteColors, type SpritePaletteCatalog } from "./som-sprite-palettes.js";
 import type { FrameLayout, FrameLayoutScope, FrameRecord } from "./som-types.js";
 
-/** Reject malformed editor rectangles only when their consuming scope requests them.
- * @param {readonly number[] | undefined} bounds X, y, width, and height.
- * @param {number} width Canvas width.
- * @param {number} height Canvas height.
- * @param {string} label Rectangle described in the error.
- * @returns {void} Nothing; invalid rectangles throw.
+/**
+ * Reject malformed editor rectangles only when their consuming scope requests them.
+ * @param bounds X, y, width, and height.
+ * @param width Canvas width.
+ * @param height Canvas height.
+ * @param label Rectangle described in the error.
+ * @returns Nothing; invalid rectangles throw.
  */
 function rectangle(
   bounds: readonly number[] | undefined,
@@ -40,9 +41,10 @@ function rectangle(
   }
 }
 
-/** Version, segment map, and integer dimensions required before any segment is read.
- * @param {unknown} value Candidate frame-atlas sidecar.
- * @returns {boolean} Whether the envelope can be validated as a version-one layout.
+/**
+ * Version, segment map, and integer dimensions required before any segment is read.
+ * @param value Candidate frame-atlas sidecar.
+ * @returns Whether the envelope can be validated as a version-one layout.
  */
 function isVersionOneLayout(value: unknown): value is FrameLayout {
   if (typeof value !== "object" || value === null) {
@@ -64,17 +66,19 @@ function isVersionOneLayout(value: unknown): value is FrameLayout {
   );
 }
 
-/** Accept only the omitted mode or the native-strip mode.
- * @param {unknown} value `tileSources` field from a sidecar.
- * @returns {boolean} Whether the mode is known.
+/**
+ * Accept only the omitted mode or the native-strip mode.
+ * @param value `tileSources` field from a sidecar.
+ * @returns Whether the mode is known.
  */
 function isKnownTileSource(value: unknown): boolean {
   return value === undefined || value === "native-strip";
 }
 
-/** One RGBA8 color, as stored in an atlas index palette.
- * @param {unknown} color Candidate palette entry.
- * @returns {boolean} Whether `color` is four integer channels in byte range.
+/**
+ * One RGBA8 color, as stored in an atlas index palette.
+ * @param color Candidate palette entry.
+ * @returns Whether `color` is four integer channels in byte range.
  */
 function isRgba8(color: unknown): boolean {
   if (!Array.isArray(color) || color.length !== 4) {
@@ -88,9 +92,10 @@ function isRgba8(color: unknown): boolean {
   return true;
 }
 
-/** Two finite integers, the shape stored for a frame origin.
- * @param {unknown} value Candidate origin pair.
- * @returns {boolean} Whether `value` is a safe-integer pair.
+/**
+ * Two finite integers, the shape stored for a frame origin.
+ * @param value Candidate origin pair.
+ * @returns Whether `value` is a safe-integer pair.
  */
 function isIntegerPair(value: unknown): value is readonly [number, number] {
   if (!Array.isArray(value) || value.length !== 2) {
@@ -104,14 +109,17 @@ function isIntegerPair(value: unknown): value is readonly [number, number] {
   return true;
 }
 
+/** Narrow untrusted JSON values to plain objects. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Accept indexed PNG source bit depths supported by frame atlases. */
 function isIndexedSourceDepth(value: unknown): value is IndexedImage["sourceBitDepth"] {
   return value === 1 || value === 2 || value === 4 || value === 8;
 }
 
+/** Recognize four-channel RGBA tuples with byte-wide channels. */
 function isRgbaTuple(value: unknown): value is readonly [number, number, number, number] {
   return (
     Array.isArray(value) &&
@@ -123,6 +131,7 @@ function isRgbaTuple(value: unknown): value is readonly [number, number, number,
   );
 }
 
+/** Parse and validate an indexed image model from untrusted JSON. */
 function readIndexedImage(value: unknown): IndexedImage {
   if (
     !isRecord(value) ||
@@ -158,9 +167,10 @@ function readIndexedImage(value: unknown): IndexedImage {
   };
 }
 
-/** Blank external tiles are 64 zero indexes. Missing indexes are not blank.
- * @param {unknown} indexes Candidate index list.
- * @returns {boolean} Whether every index is zero and the list has tile length.
+/**
+ * Blank external tiles are 64 zero indexes. Missing indexes are not blank.
+ * @param indexes Candidate index list.
+ * @returns Whether every index is zero and the list has tile length.
  */
 function isBlankExternalIndexes(indexes: unknown): boolean {
   if (!Array.isArray(indexes) || indexes.length !== 64) {
@@ -176,10 +186,10 @@ function isBlankExternalIndexes(indexes: unknown): boolean {
 
 /**
  * Validate one assembly segment, or all segments and editor metadata in whole-atlas mode.
- * @param {FrameLayout} layout Frame atlas sidecar.
- * @param {string} [segmentName] Segment validated for assembly.
- * @param {boolean} [whole] Validate every segment and frame record.
- * @returns {FrameLayout} The same layout after validation.
+ * @param layout Frame atlas sidecar.
+ * @param [segmentName] Segment validated for assembly.
+ * @param [whole] Validate every segment and frame record.
+ * @returns The same layout after validation.
  */
 export function validateFrameLayout(
   layout: FrameLayout,
@@ -230,7 +240,7 @@ export function validateFrameLayout(
       ) {
         throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
       }
-      if (Array.isArray(frame.blocks))
+      if (Array.isArray(frame.blocks)) {
         for (const block of frame.blocks) {
           if (
             block.paletteGroup !== undefined &&
@@ -241,6 +251,7 @@ export function validateFrameLayout(
             throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
           }
         }
+      }
     }
   }
   const names = whole ? Object.keys(layout.segments) : [segmentName ?? ""];
@@ -380,9 +391,13 @@ export function validateFrameLayout(
   return layout;
 }
 
+/** Verified atlas image, layout binding and per-pose tile groups. */
 export interface InspectedFrameAtlas {
+  /** Decoded indexed PNG pixels for the atlas sheet. */
   image: IndexedImage;
+  /** Frame layout metadata bound to catalogue palette words. */
   layout: FrameLayout;
+  /** Pose-grouped 8×8 index tiles extracted from the sheet. */
   tiles: Map<string, IndexedPixels[]>;
 }
 
@@ -403,12 +418,13 @@ export function bindFrameAtlasPalette(
   };
 }
 
-/** Parse and validate the authored pixels once, keeping SoM palette/group policy in this adapter.
- * @param {AssetInput} source Indexed PNG.
- * @param {FrameLayout} layout Frame atlas sidecar.
- * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
- * @param {FrameLayoutScope} [options] Segment or whole-atlas scope.
- * @returns {InspectedFrameAtlas} Validated image, layout, and extracted tiles.
+/**
+ * Parse and validate the authored pixels once, keeping SoM palette/group policy in this adapter.
+ * @param source Indexed PNG.
+ * @param layout Frame atlas sidecar.
+ * @param catalog Shared palette catalogue.
+ * @param [options] Segment or whole-atlas scope.
+ * @returns Validated image, layout, and extracted tiles.
  */
 export function inspectFrameAtlas(
   source: AssetInput,
@@ -469,10 +485,11 @@ export function inspectFrameAtlas(
   return { image, layout, tiles };
 }
 
-/** Encode the already inspected native indexes with the game's 4bpp storage codec.
- * @param {InspectedFrameAtlas} inspected Validated atlas.
- * @param {string} segmentName Segment to encode.
- * @returns {Uint8Array} Native 4bpp tile bytes.
+/**
+ * Encode the already inspected native indexes with the game's 4bpp storage codec.
+ * @param inspected Validated atlas.
+ * @param segmentName Segment to encode.
+ * @returns Native 4bpp tile bytes.
  */
 export function encodeInspectedFrameSegment(inspected: InspectedFrameAtlas, segmentName: string) {
   const tiles = inspected.tiles.get(segmentName);
@@ -487,9 +504,10 @@ export function encodeInspectedFrameSegment(inspected: InspectedFrameAtlas, segm
   );
 }
 
-/** Read mutually exclusive assembly selectors; omission selects the whole contiguous atlas.
- * @param {Readonly<Record<string, unknown>>} options Resolved assembly options.
- * @returns {string | string[] | undefined} Named segment, selected run, or whole-atlas selection.
+/**
+ * Read mutually exclusive assembly selectors; omission selects the whole contiguous atlas.
+ * @param options Resolved assembly options.
+ * @returns Named segment, selected run, or whole-atlas selection.
  * Invalid types and simultaneous selectors throw before encoding or previewing.
  */
 export function readFrameAtlasSelection(
@@ -521,11 +539,12 @@ export function readFrameAtlasSelection(
   return undefined;
 }
 
-/** Resolve a nonempty selection in ROM order, rejecting gaps, overlaps and duplicate ownership.
+/**
+ * Resolve a nonempty selection in ROM order, rejecting gaps, overlaps and duplicate ownership.
  * Each native 4bpp tile occupies 32 bytes; the selected spans must form one continuous run.
- * @param {FrameLayout} layout Sidecar retaining physical segment identities.
- * @param {readonly string[]} [selection] Segment names; omission selects the entire atlas.
- * @returns {string[]} Names in ascending ROM address order; malformed spans throw.
+ * @param layout Sidecar retaining physical segment identities.
+ * @param [selection] Segment names; omission selects the entire atlas.
+ * @returns Names in ascending ROM address order; malformed spans throw.
  */
 export function frameAtlasSegmentOrder(
   layout: FrameLayout,
@@ -563,10 +582,11 @@ export function frameAtlasSegmentOrder(
   return spans.map((span) => span.name);
 }
 
-/** Encode one continuous run from a whole-atlas inspection, preserving each segment's palette indexes.
- * @param {InspectedFrameAtlas} inspected Whole-atlas inspection containing every selected segment.
- * @param {readonly string[]} [selection] Physical segment names; omission selects the entire atlas.
- * @returns {Uint8Array} Owned native tile bytes in ROM order; invalid ownership throws.
+/**
+ * Encode one continuous run from a whole-atlas inspection, preserving each segment's palette indexes.
+ * @param inspected Whole-atlas inspection containing every selected segment.
+ * @param [selection] Physical segment names; omission selects the entire atlas.
+ * @returns Owned native tile bytes in ROM order; invalid ownership throws.
  */
 export function encodeInspectedFrameSegments(
   inspected: InspectedFrameAtlas,
@@ -584,13 +604,14 @@ export function encodeInspectedFrameSegments(
   return bytes;
 }
 
-/** Assembly entry point for a named segment or a continuous run of segments.
- * @param {AssetInput} source Indexed PNG.
- * @param {FrameLayout} layout Frame atlas sidecar.
- * @param {string | readonly string[] | undefined} segmentName One segment, a contiguous selection,
+/**
+ * Assembly entry point for a named segment or a continuous run of segments.
+ * @param source Indexed PNG.
+ * @param layout Frame atlas sidecar.
+ * @param segmentName One segment, a contiguous selection,
  * or undefined for the entire atlas. Multiple spans are emitted in ROM address order.
- * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
- * @returns {Uint8Array} Native 4bpp tile bytes; gapped or overlapping selections throw.
+ * @param catalog Shared palette catalogue.
+ * @returns Native 4bpp tile bytes; gapped or overlapping selections throw.
  */
 export function encodeFrameAtlas(
   source: AssetInput,
@@ -614,8 +635,8 @@ export function encodeFrameAtlas(
  * Refresh every recorded occurrence and bottom strip from current authoritative pixels.
  * Composition is additive metadata from reviewed evidence; it cannot be inferred from RGB.
  * Returns owned indexes, retaining guides outside painted pixels and all source-only tiles.
- * @param {InspectedFrameAtlas} inspected Whole-atlas inspection.
- * @returns {IndexedPixels} Rebuilt atlas indexes.
+ * @param inspected Whole-atlas inspection.
+ * @returns Rebuilt atlas indexes.
  */
 export function refreshFrameAtlas(inspected: InspectedFrameAtlas) {
   const { image, layout, tiles } = inspected;
@@ -734,10 +755,11 @@ export function refreshFrameAtlas(inspected: InspectedFrameAtlas) {
   );
 }
 
-/** Parse the declared layout resource. Validation occurs at the consumer's selected scope.
- * @param {Readonly<Record<string, unknown>>} options Include options naming `layout`.
- * @param {Readonly<Record<string, AssetInput>>} resources Declared sidecar files.
- * @returns {FrameLayout} Parsed layout sidecar.
+/**
+ * Parse the declared layout resource. Validation occurs at the consumer's selected scope.
+ * @param options Include options naming `layout`.
+ * @param resources Declared sidecar files.
+ * @returns Parsed layout sidecar.
  */
 export function readFrameLayout(
   options: Readonly<Record<string, unknown>>,

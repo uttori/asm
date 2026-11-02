@@ -3,10 +3,12 @@ import type { SnesSourceBuild } from "@uttori/asm-plugin-snes/disassembler";
 import { SNES_MAPPERS } from "@uttori/asm-plugin-snes/disassembler";
 import { TreeItem, TreeItemCollapsibleState, window } from "vscode";
 
+/** Narrow UI payloads to plain objects before field validation. */
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Accept only SNES mapper ids supported by the disassembler plugin. */
 export function isSnesMapper(value: string): value is (typeof SNES_MAPPERS)[number] {
   return (
     value === "lorom" ||
@@ -20,12 +22,14 @@ export function isSnesMapper(value: string): value is (typeof SNES_MAPPERS)[numb
   );
 }
 
+/** Validate minimal layout object identity fields from worker payloads. */
 export function isLayoutObject(
   value: unknown,
 ): value is { readonly id: string; readonly kind: string } {
   return isRecord(value) && typeof value.id === "string" && typeof value.kind === "string";
 }
 
+/** Validate a SNES source build report before updating UI state. */
 export function isSnesSourceBuild(value: unknown): value is SnesSourceBuild {
   return (
     isRecord(value) &&
@@ -54,6 +58,7 @@ export function isSnesSourceBuild(value: unknown): value is SnesSourceBuild {
   );
 }
 
+/** Validate native merge preview metadata returned from Git operations. */
 export function isSourceMergePreview(value: unknown): value is SourceMergePreview {
   return (
     isRecord(value) &&
@@ -69,6 +74,7 @@ export function isSourceMergePreview(value: unknown): value is SourceMergePrevie
   );
 }
 
+/** Validate generation commit identity from Prepare worker responses. */
 export function isGenerationCommit(
   value: unknown,
 ): value is { readonly generation: { readonly commit: string } } {
@@ -80,6 +86,7 @@ export function isGenerationCommit(
   );
 }
 
+/** Validate one relocation edit record from source worker responses. */
 export function isRelocationEdit(value: unknown): value is {
   readonly path: string;
   readonly beforeSha256: string;
@@ -95,6 +102,7 @@ export function isRelocationEdit(value: unknown): value is {
   );
 }
 
+/** Parse and validate a relocation edit list from the worker. */
 export function relocationEdits(value: unknown): readonly {
   readonly path: string;
   readonly beforeSha256: string;
@@ -109,6 +117,11 @@ export function relocationEdits(value: unknown): readonly {
 
 /** Cached native tree rows keep rendering independent of database and filesystem scans. */
 export class SourceRow extends TreeItem {
+  /** Inserted lines for an incoming generation file, when Git numstat is available. */
+  additions?: number;
+  /** Deleted lines for an incoming generation file, when Git numstat is available. */
+  deletions?: number;
+
   constructor(
     label: string,
     readonly children: SourceRow[] = [],

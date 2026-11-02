@@ -1,10 +1,15 @@
-/** Caller-owned cumulative counters, initialized to zero for an import. Timing runs
+/**
+ * Caller-owned cumulative counters, initialized to zero for an import. Timing runs
  * omit them so diagnostic writes do not become part of the measured hot path.
  */
 export interface TraceCacheMetrics {
+  /** Successful lookups of keys already resident in the working set. */
   hits: number;
+  /** Lookups that required loading or constructing a new value. */
   misses: number;
+  /** Insertions that displaced an existing key under the fixed capacity policy. */
   evictions: number;
+  /** Largest number of keys held simultaneously during the measured import. */
   peakEntries: number;
 }
 
@@ -16,7 +21,8 @@ export interface TraceIndexMetrics extends TraceCacheMetrics {
   payloads: number;
 }
 
-/** A fixed 4,096-entry working set with deterministic pseudo-random replacement.
+/**
+ * A fixed 4,096-entry working set with deterministic pseudo-random replacement.
  * Clear-all loses every useful entry. FIFO/LRU repeatedly evicts the next needed
  * key in a rotating 4,097-key trace. Single random victims break that pattern
  * without growing the cache or updating recency on every hit. All-unique scans
@@ -34,9 +40,10 @@ export class TraceCache<T> {
     this.#metrics = metrics;
   }
 
-  /** Look up a value. Undefined is reserved for misses.
-   * @param {string} key Complete semantic key, never a lossy coordinate projection.
-   * @returns {T | undefined} Retained value, or a cache miss.
+  /**
+   * Look up a value. Undefined is reserved for misses.
+   * @param key Complete semantic key, never a lossy coordinate projection.
+   * @returns Retained value, or a cache miss.
    */
   get(key: string): T | undefined {
     const value = this.#entries.get(key);
@@ -50,11 +57,12 @@ export class TraceCache<T> {
     return value;
   }
 
-  /** Insert a missing key, returning the displaced entry so its owner can flush it.
+  /**
+   * Insert a missing key, returning the displaced entry so its owner can flush it.
    * Existing keys must be updated through their caller-owned mutable value instead.
-   * @param {string} key Previously missing semantic key.
-   * @param {T} value Defined value whose ownership stays with the caller.
-   * @returns {object | undefined} Displaced key/value, or undefined while filling unused capacity.
+   * @param key Previously missing semantic key.
+   * @param value Defined value whose ownership stays with the caller.
+   * @returns Displaced key/value, or undefined while filling unused capacity.
    */
   insert(key: string, value: T): { key: string; value: T } | undefined {
     let displaced: { key: string; value: T } | undefined;
@@ -85,8 +93,9 @@ export class TraceCache<T> {
     return displaced;
   }
 
-  /** Iterate the retained working set, for a final durable delta flush.
-   * @returns {MapIterator} Live entries. Do not insert while iterating.
+  /**
+   * Iterate the retained working set, for a final durable delta flush.
+   * @returns Live entries. Do not insert while iterating.
    */
   entries(): MapIterator<[string, T]> {
     return this.#entries.entries();

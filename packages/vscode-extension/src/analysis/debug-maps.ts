@@ -24,35 +24,46 @@ const DEBUG_MAP_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
 
 /** Exact project identity a debug map must describe before it can be used. */
 export interface AnalysisDebugMapIdentity {
+  /** Analysis target id the map must describe. */
   readonly target: string;
+  /** Expected ROM content hash for identity matching. */
   readonly romContentSha256: string;
+  /** Expected ROM byte length for identity matching. */
   readonly romContentSize: number;
 }
 
 /** Qualified analysis location, optionally carrying explicit mirrored output offsets. */
 export interface AnalysisDebugMapLocation {
+  /** Address space containing the qualified location. */
   readonly addressSpace: string;
+  /** Address within the space used for navigation. */
   readonly address: number;
+  /** Explicit mirrored ROM offsets when known. */
   readonly outputOffsets: readonly number[];
+  /** Architecture hints narrowing disassembly selection. */
   readonly architectureHints: readonly string[];
 }
 
 /** Valid current map plus roots that may resolve its portable source names. */
 export interface AnalysisDebugMapCandidate {
+  /** Absolute path to the accepted debug map file. */
   readonly file: string;
+  /** Validated map payload matching the requested identity. */
   readonly map: DebugMap;
+  /** Source roots that can resolve portable paths in the map. */
   readonly sourceRoots: readonly string[];
 }
 
 /**
  * Deduplicate path or identity strings and sort them with the host locale comparison for
  * repeatable candidate ordering.
- * @param {readonly string[]} values Candidate identity strings, possibly repeated.
- * @returns {readonly string[]} Unique strings sorted with localeCompare.
+ * @param values Candidate identity strings, possibly repeated.
+ * @returns Unique strings sorted with localeCompare.
  */
 const sortedUnique = (values: readonly string[]): readonly string[] =>
   [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 
+/** Narrow JSON payloads to plain objects before map validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -84,6 +95,7 @@ export function isAcceptedDebugMap(map: Parameters<typeof validateDebugMap>[0]):
   );
 }
 
+/** Distinguish a single identity argument from an identity list overload. */
 function isIdentityList(
   value: AnalysisDebugMapIdentity | readonly AnalysisDebugMapIdentity[],
 ): value is readonly AnalysisDebugMapIdentity[] {
@@ -93,17 +105,17 @@ function isIdentityList(
 /**
  * Resolve a configured relative path against its workspace root, falling back to the process
  * directory when no root exists.
- * @param {string} value Absolute or workspace-relative configured filename.
- * @param {string | undefined} root Owning workspace root, if available.
- * @returns {string} Absolute path resolved against root or process.cwd().
+ * @param value Absolute or workspace-relative configured filename.
+ * @param root Owning workspace root, if available.
+ * @returns Absolute path resolved against root or process.cwd().
  */
 const resolvedConfigurationPath = (value: string, root: string | undefined): string =>
   path.isAbsolute(value) ? value : path.resolve(root ?? process.cwd(), value);
 
 /**
  * SHA-256 for an exact current source file.
- * @param {string} file Absolute source filename.
- * @returns {string} Lowercase SHA-256 digest.
+ * @param file Absolute source filename.
+ * @returns Lowercase SHA-256 digest.
  */
 export const analysisSourceSha256 = (file: string): string =>
   createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -113,9 +125,9 @@ export const analysisSourceSha256 = (file: string): string =>
  * folders.
  * An absolute map path is authoritative; callers still verify the source bytes before
  * navigation.
- * @param {DebugMapSource} source Portable source identity from the map.
- * @param {AnalysisDebugMapCandidate} candidate Map filename and candidate source roots.
- * @returns {readonly string[]} Deduplicated candidate paths to hash-check before use.
+ * @param source Portable source identity from the map.
+ * @param candidate Map filename and candidate source roots.
+ * @returns Deduplicated candidate paths to hash-check before use.
  */
 const sourcePaths = (
   source: DebugMapSource,
@@ -133,10 +145,10 @@ const sourcePaths = (
 
 /**
  * Resolves a portable map source only when its current bytes still match the map.
- * @param {DebugMapSource} source Portable debug-map source identity.
- * @param {AnalysisDebugMapCandidate} candidate Map and candidate source roots.
- * @param {string} [expectedFile] Only resolve this editor's source, avoiding unrelated file reads.
- * @returns {string | undefined} Exact current source path, when one exists.
+ * @param source Portable debug-map source identity.
+ * @param candidate Map and candidate source roots.
+ * @param [expectedFile] Only resolve this editor's source, avoiding unrelated file reads.
+ * @returns Exact current source path, when one exists.
  */
 export const currentAnalysisSourcePath = (
   source: DebugMapSource,
@@ -156,8 +168,8 @@ export const currentAnalysisSourcePath = (
 
 /**
  * Finds bounded workspace debug maps whose target and ROM output identity exactly match.
- * @param {AnalysisDebugMapIdentity | readonly AnalysisDebugMapIdentity[]} identity One or more native analysis project target and ROM identities.
- * @returns {Promise<readonly AnalysisDebugMapCandidate[]>} Valid matching debug-map candidates.
+ * @param identity One or more native analysis project target and ROM identities.
+ * @returns Valid matching debug-map candidates.
  */
 export const findAnalysisDebugMapCandidates = async (
   identity: AnalysisDebugMapIdentity | readonly AnalysisDebugMapIdentity[],
@@ -192,7 +204,7 @@ export const findAnalysisDebugMapCandidates = async (
 
 /**
  * Discover portable map filenames without parsing or hashing on the UI thread.
- * @returns {Promise<readonly { file: string; sourceRoots: readonly string[] }[]>} Map paths and source roots.
+ * @returns Map paths and source roots.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.findFiles
  */
 export const discoverAnalysisDebugMapFiles = async (): Promise<
@@ -285,9 +297,9 @@ export const discoverAnalysisDebugMapFiles = async (): Promise<
 
 /**
  * Resolves logical and explicit-output mirror identities without mapper inference.
- * @param {DebugMap} map Exact ROM-matched debug map.
- * @param {AnalysisDebugMapLocation} location Native analysis instruction identity.
- * @returns {readonly DebugMapRange[]} Matching architecture-compatible source ranges.
+ * @param map Exact ROM-matched debug map.
+ * @param location Native analysis instruction identity.
+ * @returns Matching architecture-compatible source ranges.
  */
 export const analysisDebugMapRanges = (
   map: DebugMap,

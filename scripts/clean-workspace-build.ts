@@ -24,8 +24,7 @@ const GENERATED_PACKAGE_DIRECTORIES = [
  * depend on a POSIX shell. Keeping the allow-list in code makes cleanup identical on macOS, Linux,
  * and Windows. The containment check is intentionally redundant with the literal list: if this
  * helper is later parameterized, an absolute or parent-relative target must still fail closed.
- * @param {string} [workspace] Optional workspace directory name for a single-package prepack build.
- * @returns {void}
+ * @param [workspace] Optional workspace directory name for a single-package prepack build.
  */
 export const cleanWorkspaceBuild = (workspace?: string): void => {
   const root = path.resolve(import.meta.dirname, "..");

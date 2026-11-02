@@ -15,14 +15,14 @@ Addresses and lengths are bytes. Every address is qualified by a named space. Eq
 spaces are not interchangeable. File-space addresses are offsets into headerless ROM content.
 CPU addresses require the target plugin's mapper to become file offsets. Ranges are half-open
 `[start, end)`: length is `end - start`, and the final byte is `end - 1`. Project validation enforces
-the declared `addressBits` (1–53). Interactive edit helpers also constrain file addresses/ranges to
-the ROM content. `RomImage` copies input bytes
+the declared `addressBits` (1–53). Research validation constrains qualified addresses and ranges to
+their declared space. `RomImage` copies input bytes
 and returns copies from reads. Its full-file hash includes a copier header and its content hash does not.
 
 Snapshot/load helpers own and close their connections before returning decoded objects. Their
 `readonly` types do not freeze objects at runtime. Prefer replacement arrays and keep the original
-snapshot unchanged for undo and selected-record comparisons. Pure edit helpers persist nothing.
-Retain their inverse in caller-owned undo state and commit the inverse as a separate edit.
+snapshot unchanged for revision-checked publication. Research proposals persist nothing; apply them
+as ordinary file edits with native Undo and Git review.
 
 `openAnalysisProjectStore()` returns a caller-owned connection. Close it exactly once in `finally`.
 Use a single `store.transaction(callback, false)` for related reads and consume iterators inside
@@ -31,18 +31,19 @@ back. Prepare asynchronous inputs first. Calls cannot nest transactions or outli
 `false` selects a deferred read snapshot, not an enforced read-only connection. Long-lived readers
 can retain WAL pages. Lock contention waits up to five seconds before SQLite reports failure.
 
-Advanced `SqliteAnalysisStore` exports remain public for bounded queries and host integrations.
+Advanced `SqliteAnalysisStore` exports from `@uttori/asm-disassembler/storage` remain public for
+bounded queries and host integrations.
 Opening validates the physical format, not all records. Raw table replacement requires an active
 transaction but does not perform semantic validation or publish a revision/pointer automatically.
 Prefer the validated APIs below for application edits.
 
-| API                                                                             | Replacement and preservation contract                                                                                                                                                                                                    |
-| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `loadAnalysisProjectSnapshot`                                                   | Complete validated records, including all runtime history in memory.                                                                                                                                                                     |
-| `loadAnalysisProjectViewSnapshot`                                               | Metadata plus optional runtime projection. Omitted runtime is not an empty backing store.                                                                                                                                                |
-| `commitAnalysisProjectTransaction` / `commitPreparedAnalysisProjectTransaction` | Complete replacement, including runtime. Require the caller's revision for existing projects.                                                                                                                                            |
-| `commitAnalysisProjectViewUpdate`                                               | Each supplied metadata array replaces that entire table. Omitted tables and all runtime remain. `[]` clears a supplied table.                                                                                                            |
-| `publishAnalysisProject`                                                        | Create or replace everything, including runtime. Samples the revision at call time and cannot detect a replacement based on an old caller snapshot. Editing clients use the revision-checked commit APIs. View updates preserve history. |
+| API                                                                             | Replacement and preservation contract                                                                                                                        |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `loadAnalysisProjectSnapshot`                                                   | Complete validated records, including all runtime history in memory.                                                                                         |
+| `loadAnalysisProjectViewSnapshot`                                               | Metadata plus optional runtime projection. Omitted runtime is not an empty backing store.                                                                    |
+| `commitAnalysisProjectTransaction` / `commitPreparedAnalysisProjectTransaction` | Complete replacement, including runtime. Require the caller's revision for existing projects.                                                                |
+| `commitAnalysisProjectViewUpdate`                                               | Each supplied metadata array replaces that entire table. Omitted tables and all runtime remain. `[]` clears a supplied table.                                |
+| `publishAnalysisProject`                                                        | Create a project without a revision. Replacing an existing project, including runtime, requires the revision the caller read. View updates preserve history. |
 
 ## Project Layout
 
@@ -89,7 +90,7 @@ Complete runtime arrays retain their semantic shape and sort by ID. Streaming co
 depend on physical row order.
 
 Use the store APIs, which register all codecs and own cache lifetime. Low-level Node SQLite readers
-must call `registerRuntimeHistory(database)` before preparing runtime views and call its returned cache
+must call `registerRuntimeHistory(database)` from `@uttori/asm-disassembler/storage` before preparing runtime views and call its returned cache
 reset at transaction boundaries. Query the `runtime` view with `analysis_json(payload)` for semantic
 JSON; raw SQLite JSON functions cannot decode UAR/1. `runtime_fact_locations` exposes coordinate-only
 queries without reading or decompressing history payloads. Only SQLite storage format 4 is supported.
@@ -168,8 +169,9 @@ stored record says.
 User-facing research edits are Git-tracked `uttori-research` decisions. Stable identities and manual
 provenance survive renames; `ProjectLabel.sourceName` is the validated assembly symbol. Inline label
 comments and `ProjectComment.placement: "inline-instruction"` remain separate presentation choices.
-Naming alone does not add an analysis entry point. `synchronizeSourceResearch()` indexes declarations
-into SQLite; native Git and editor Undo provide history. See [the installed workflow](PROJECTS.md).
+Naming alone does not add an analysis entry point. `renameResearchSymbol()`, `changeResearchSymbol()`
+and `changeResearchAnalysis()` prepare content-checked declarations without writing files.
+`synchronizeSourceResearch()` indexes declarations into SQLite; native Git and editor Undo provide history. See [the installed workflow](PROJECTS.md).
 
 The generic static-analysis engine accepts target-provided decode, state-transfer, join, and address-entry callbacks. It deterministically emits CFG nodes and edges, function candidates, coverage, unresolved control flow, boundary conflicts, evidence paths, and explicit incomplete results when a work or call-context limit is reached. It never guesses through an ambiguous decode.
 
@@ -208,15 +210,16 @@ transactional and does not change the semantic revision.
 `annotationEditView()` and `annotationNodesAt()` load names/provenance and selected boundaries for
 label/comment forms without loading all CFG variants.
 
-Persisted views use `SqliteAnalysisStore` queries: source counts/pages, ROM coverage totals and
-200-row segment/detail pages, call ownership, processor hints, bounded navigation, and evidence
-inspection. Coverage and graph builds use temporary SQL tables and publish complete results under
-a short writer lock. Dependency triggers invalidate relevant caches. A comment edit does not rebuild
-runtime coverage, graph ownership, or decoder variants.
+Persisted views use `SqliteAnalysisStore` queries: capture-source counts and 200-row pages, call
+ownership, a bounded CFG navigation window, viewport execution totals, MMIO observations, and evidence
+inspection with at most 200 reverse links. The call graph builds in temporary SQL tables and
+publishes under a short writer lock. Dependency triggers invalidate relevant caches. A comment edit
+does not rebuild graph ownership or decoder variants.
 
 `sourceExportView()` reads only editable metadata, functions, and conflicts. Pair it with
 `instructionExportGroups()` in the same read transaction to stream every instruction variant in ROM
-order. `runtimeInstructionVariants()` groups captured bytes and decoder state in SQL, then returns a
+order. `sourceExportSnapshot(render)` performs that pairing and stages an optional lossless export
+projection; concurrent analysis or provenance edits discard the staged result. `runtimeInstructionVariants()` groups captured bytes and decoder state in SQL, then returns a
 cursor. Prepare it before opening its consuming read transaction. Reanalysis reads grouped execution
 seeds and selected MMIO accesses, while all original runtime facts remain in the database.
 
@@ -251,8 +254,8 @@ atomically only after the reader completes. `createRuntimeTraceFileSource()` ada
 files to this interface and avoids validating/copying every rich chunk twice. The source owns its
 input byte budget. Project import owns cancellation, index-record limits and revision checks.
 
-For large native captures, `importRuntimeTraceIntoProject()` aggregates chunks in connection-local
-SQLite temporary counters, then writes columnar runtime rows into the project. Parsing and integrity
+`importRuntimeTraceIntoProject()` reads a JSON trace artifact or an ACT2 instruction archive. It
+aggregates chunks in connection-local SQLite temporary counters, then writes columnar runtime rows into the project. Parsing and integrity
 checks finish before publication. Failures before commit leave runtime facts and the semantic
 revision unchanged. Instruction imports save an explicitly supplied storage policy separately, so
 that policy can survive a failed import. A pointer-file write can fail after the database commits.
@@ -268,6 +271,8 @@ It does not establish file ownership or prohibit editing. Git source projects re
 generation commits, verify their payload and original-ROM equality, then integrate them with native
 three-way merges. `sourceContentHash()` and byte-comparison helpers support verification; target
 plugins render assembly and perform build/layout checks. Ordinary working files remain editable.
+Git source-project services, including `openSourceProject()`, `previewSourceGeneration()` and
+`sourceGit()`, are exported from `@uttori/asm-disassembler/source-project`.
 
 ## Source build conversion progress
 
@@ -279,7 +284,7 @@ Successful source builds publish a compact `summary.json` beside the selected bu
 
 Analysis interval annotations retain `codecId`, `codecVersion`, JSON-safe options, and optional plugin provenance. An optional compression reference records capacity, bank, and fill policy. These declarations contain no extracted bytes and do not invoke conversion during project load. Unknown IDs remain readable. `resolveProjectNativeAssetId()` identifies known v1 `snes.asset.*` declarations for analysis display without changing the stored ID, version, or options; other versions remain unresolved.
 
-The disassembler owns ROM identity, interval classification, raw source export, and conservative project edits. It no longer exports a runtime asset codec, range planner, compressor, or preview registry. New source assets use [`includeAsset`](https://github.com/uttori/asm/blob/master/packages/plugin-snes/ASSET-INCLUSION.md) and standalone byte conversion uses [`@uttori/asm-assets`](https://github.com/uttori/asm/blob/master/packages/assets/README.md). Source export continues to preserve unclassified ROM bytes as raw data; a declaration does not automatically authorize an edited ROM range or reencode a cartridge stream.
+The disassembler owns ROM identity, interval classification, raw source export, and revision-checked project publication. It no longer exports a runtime asset codec, range planner, compressor, or preview registry. New source assets use [`includeAsset`](https://github.com/uttori/asm/blob/master/packages/plugin-snes/ASSET-INCLUSION.md) and standalone byte conversion uses [`@uttori/asm-assets`](https://github.com/uttori/asm/blob/master/packages/assets/README.md). Source export continues to preserve unclassified ROM bytes as raw data; a declaration does not automatically authorize an edited ROM range or reencode a cartridge stream.
 
 For implementation ownership, schema-change steps, transaction invariants, importer rules, and test
 gates, read the [architecture guide](https://github.com/uttori/asm/blob/master/packages/disassembler/ARCHITECTURE.md) and repository
@@ -289,9 +294,9 @@ Instruction trace artifacts can retain execution-time bytes/state and CPU/DMA/HD
 
 ## Working-index and storage
 
-Source and CLI instruction imports default to compact `analysis` retention: SNES decoder state,
-paired opcode bytes, exact counts and memory evidence. Explicit `full` retains all registers;
-the library default remains `full` for compatibility. In-memory imports default to an 8M distinct-record
+`source import` always uses compact `analysis` retention, and `evidence-import` defaults to it:
+SNES decoder state, paired opcode bytes, exact counts and memory evidence. Explicit `full`
+(`--trace-index full`) retains all registers; the library default remains `full` for compatibility. In-memory imports default to an 8M distinct-record
 budget; SQLite project imports have no fixed record ceiling when counters and emitted facts
 both remain on disk. Explicit input, record and storage budgets still apply.
 
@@ -309,9 +314,9 @@ or deleted to satisfy a budget.
 
 Imports read source captures without copying them into the project. Imported facts, register values,
 counts, provenance and receipts remain durable when the capture is discarded; full-profile history
-is compressed losslessly inside the database. Source captures are needed only for information that
-was not imported, such as original event ordering, omitted registers in a compact profile, or graphics
-views that require companion artifacts.
+is compressed losslessly inside the database. Analysis, generation, graphics queries and builds use
+the imported evidence. Source captures are needed only for information that was not imported, such
+as original event ordering or registers omitted by the compact profile.
 
 Post-import maintenance evicts stale or over-budget disposable projections and attempts nonblocking WAL
 checkpoint/truncation. Active readers can defer truncation. The configured 64 MiB journal size limit
@@ -320,7 +325,8 @@ available. VACUUM remains explicit after large deletions. It does not run after 
 
 ## Implementation ownership
 
-The public entry remains `@uttori/asm-disassembler`. Physical source and declaration paths follow
+The public entries are `@uttori/asm-disassembler`, `@uttori/asm-disassembler/storage` and
+`@uttori/asm-disassembler/source-project`. Physical source and declaration paths follow
 [the internal module boundaries](ARCHITECTURE.md#internal-module-boundaries). Project APIs own
 validation/revision-checked publication; the SQLite facade owns bounded physical queries. Source
 integrity/publication accepts explicit verified inputs. Shared evidence inspection computes provenance

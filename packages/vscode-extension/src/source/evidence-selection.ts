@@ -5,10 +5,12 @@ import { window, workspace } from "vscode";
 import { findAnalysisProjectDirectories } from "../analysis/project-discovery.js";
 import { analysisWorker } from "../analysis/worker-client.js";
 
+/** Narrow worker payloads to plain objects before manifest validation. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Validate ROM identity fields on an analysis manifest snapshot. */
 function isRomManifest(
   value: unknown,
 ): value is { readonly rom: { readonly contentSha256: string } } {

@@ -15,26 +15,34 @@ import {
   type PngGuidance,
 } from "./png-guidance.js";
 
+/** Hash on-disk PNG bytes to detect external replacements. */
 const hash = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
+/** Narrow backup JSON to plain objects before reading fields. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** A stroke holds native index replacements; indexes are row-major positions, never RGB matches. */
 export interface PixelStroke {
+  /** Document version the stroke must match to apply. */
   readonly version: number;
+  /** Row-major pixel positions receiving the palette index. */
   readonly pixels: readonly number[];
+  /** Palette index written at each listed position. */
   readonly index: number;
 }
 
 /** PNG bytes stay in memory until native Save; VS Code owns undo and backup lifecycle. */
 export class PngDocument implements CustomDocument {
   readonly #changed = new EventEmitter<void>();
+  /** Fired when pixel or disk state changes require UI refresh. */
   readonly onDidChange = this.#changed.event;
   readonly #edited = new EventEmitter<CustomDocumentEditEvent<PngDocument>>();
+  /** Fired when a paint stroke creates a new undo element. */
   readonly onDidEdit = this.#edited.event;
   readonly #disposed = new EventEmitter<void>();
+  /** Fired once when the custom document is closed. */
   readonly onDidDispose = this.#disposed.event;
   #savedIndexes: Uint8Array;
   #diskHash: string;
@@ -158,9 +166,11 @@ export class PngDocument implements CustomDocument {
     return fs.readFile(uri.fsPath);
   }
 
+  /** Monotonic revision bumped on each successful pixel mutation. */
   get version(): number {
     return this.#version;
   }
+  /** Whether in-memory indexes differ from the last saved snapshot. */
   get dirty(): boolean {
     return !this.image.indexes.every((value, index) => value === this.#savedIndexes[index]);
   }
@@ -227,6 +237,7 @@ export class PngDocument implements CustomDocument {
     });
   }
 
+  /** Encode current indexes to PNG bytes, optionally revalidating guidance first. */
   async snapshot(checkGuidance = true): Promise<Uint8Array> {
     const version = this.version;
     if (checkGuidance) {
@@ -369,6 +380,7 @@ export class PngDocument implements CustomDocument {
     this.drafts.changed(this.uri);
   }
 
+  /** Serialize draft bytes, indexes, and guidance identity for VS Code backup. */
   backup(): Uint8Array {
     let guidanceSha256 = this.guidance?.sha256 ?? null;
     if (this.#backupGuidanceMismatch) {
@@ -386,6 +398,7 @@ export class PngDocument implements CustomDocument {
       }),
     );
   }
+  /** Release emitters and unregister from draft tracking on close. */
   dispose(): void {
     if (this.#closed) {
       return;

@@ -167,9 +167,9 @@ export function isBenchmarkSample(value: unknown): value is BenchmarkSample {
 
 /**
  * Computes a nearest-rank percentile from numeric samples.
- * @param {number[]} values The sample values.
- * @param {number} percentileValue The percentile in the inclusive range zero to one.
- * @returns {number} The selected percentile value.
+ * @param values The sample values.
+ * @param percentileValue The percentile in the inclusive range zero to one.
+ * @returns The selected percentile value.
  */
 export function percentile(values: number[], percentileValue: number): number {
   if (values.length === 0) {
@@ -182,8 +182,8 @@ export function percentile(values: number[], percentileValue: number): number {
 
 /**
  * Builds stable distribution statistics for an arbitrary numeric sample.
- * @param {number[]} values Sample values.
- * @returns {BenchmarkStatistics} Minimum, median, nearest-rank p95, maximum, and MAD.
+ * @param values Sample values.
+ * @returns Minimum, median, nearest-rank p95, maximum, and MAD.
  */
 export function benchmarkStatistics(values: number[]): BenchmarkStatistics {
   if (values.length === 0) {
@@ -206,8 +206,8 @@ export function benchmarkStatistics(values: number[]): BenchmarkStatistics {
 
 /**
  * Aggregates isolated operation timings and boundary-sampled memory.
- * @param {OperationBenchmarkSample[]} samples Measured samples.
- * @returns {OperationBenchmarkAggregate} Distribution for every sample field.
+ * @param samples Measured samples.
+ * @returns Distribution for every sample field.
  */
 export function aggregateOperationSamples(
   samples: OperationBenchmarkSample[],
@@ -231,8 +231,8 @@ export function aggregateOperationSamples(
 
 /**
  * Aggregates benchmark samples into stable median, p95, and peak values.
- * @param {BenchmarkSample[]} samples The measured samples.
- * @returns {BenchmarkAggregate} The aggregated report values.
+ * @param samples The measured samples.
+ * @returns The aggregated report values.
  */
 export function aggregateSamples(samples: BenchmarkSample[]): BenchmarkAggregate {
   const phaseNames = [

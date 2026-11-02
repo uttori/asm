@@ -30,12 +30,13 @@ export function rgbaNativePng(
   });
 }
 
-/** Encode a bounded RGBA preview as a portable PNG, scaling only for presentation.
- * @param {Uint8Array | Uint8ClampedArray} rgba Exact row-major RGBA8 pixels, including Canvas buffers.
- * @param {number} width Original pixel width.
- * @param {number} height Original pixel height.
- * @param {number} maxEdge Longest displayed edge in pixels, at most 1024.
- * @returns {Uint8Array} Complete PNG bytes.
+/**
+ * Encode a bounded RGBA preview as a portable PNG, scaling only for presentation.
+ * @param rgba Exact row-major RGBA8 pixels, including Canvas buffers.
+ * @param width Original pixel width.
+ * @param height Original pixel height.
+ * @param maxEdge Longest displayed edge in pixels, at most 1024.
+ * @returns Complete PNG bytes.
  */
 export function rgbaPreviewPng(
   rgba: Uint8Array | Uint8ClampedArray,
@@ -67,9 +68,10 @@ export function rgbaPreviewPng(
   });
 }
 
-/** Draw bounded min/max PCM buckets without changing the audio used for playback.
- * @param {Int16Array} samples Signed source or decoded PCM16 frames.
- * @returns {Uint8Array} A 256×64 PNG waveform thumbnail.
+/**
+ * Draw bounded min/max PCM buckets without changing the audio used for playback.
+ * @param samples Signed source or decoded PCM16 frames.
+ * @returns A 256×64 PNG waveform thumbnail.
  */
 export function waveformPreviewPng(samples: Int16Array): Uint8Array {
   const width = 256;
@@ -94,10 +96,11 @@ export function waveformPreviewPng(samples: Int16Array): Uint8Array {
   return rgbaPreviewPng(rgba, width, height);
 }
 
-/** Render one indexed tile to an owned RGBA buffer for a caller-owned PNG writer.
- * @param {Tile} tile Display-order indexes for one 8×8 tile.
- * @param {number[][]} palette RGBA8 entries in index order.
- * @returns {Uint8Array} Owned row-major RGBA8 pixels.
+/**
+ * Render one indexed tile to an owned RGBA buffer for a caller-owned PNG writer.
+ * @param tile Display-order indexes for one 8×8 tile.
+ * @param palette RGBA8 entries in index order.
+ * @returns Owned row-major RGBA8 pixels.
  */
 export function tileRgba(
   tile: Tile,

@@ -6,7 +6,7 @@ let owner: symbol | undefined;
 
 /**
  * Serializes interactive setup and runtime trace recording across debug sessions.
- * @returns {() => void} Idempotent release callback.
+ * @returns Idempotent release callback.
  */
 export const acquireTraceLease = (): (() => void) => {
   if (owner) {

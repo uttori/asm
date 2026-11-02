@@ -27,9 +27,13 @@ function isSpritePaletteCatalog(value: unknown): value is SpritePaletteCatalog {
 
 /** A bounded view of the existing catalog; names and unknown fields remain in the text document. */
 export interface PaletteView {
+  /** Catalogue palette id from the JSON document. */
   readonly id: string;
+  /** Display name shown in the palette editor webview. */
   readonly name: string;
+  /** First global palette index owned by this catalogue entry. */
   readonly firstIndex: number;
+  /** BGR555 words rendered as editable hex tokens. */
   readonly words: readonly string[];
 }
 

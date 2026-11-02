@@ -30,6 +30,7 @@ export class LinkedBuildController implements Disposable {
   readonly #inputs = new Set<string>();
   readonly #builds = new Map<string, AssemblyLinkedResult>();
   readonly #changed = new EventEmitter<Uri>();
+  /** Fired when a linked assembly input file changes on disk. */
   readonly onDidChangeInput = this.#changed.event;
   #busy = false;
 
@@ -314,6 +315,7 @@ export class LinkedBuildController implements Disposable {
     }
   }
 
+  /** Dispose the source worker and registered build commands. */
   dispose(): void {
     this.#worker.dispose();
     this.#changed.dispose();

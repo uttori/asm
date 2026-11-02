@@ -26,11 +26,17 @@ export function createSourceWorkflowHost(
       loadProjectEnvironment({ cwd: path.dirname(configFile), configFile, bundledPlugins }),
   };
 }
+/** Default host wiring bundled SNES and 65xx plugins for CLI and editor workers. */
 export const defaultSourceHost = createSourceWorkflowHost();
 
 /** Build scripts set this only for a self-contained executable; source/declaration imports use packages. */
 declare const UTTORI_SOURCE_BUNDLED: boolean | undefined;
 
+/**
+ * Fingerprint the active Node toolchain and plugin modules for reproducible source builds.
+ * @param plugins Resolved plugin module paths participating in the operation.
+ * @returns SHA-256 toolchain identity.
+ */
 export function sourceToolchain(plugins: readonly string[]) {
   if (typeof UTTORI_SOURCE_BUNDLED !== "undefined" && UTTORI_SOURCE_BUNDLED) {
     return fingerprintNodeToolchain(plugins, [import.meta.url]);

@@ -6,6 +6,7 @@ import type {
 
 /** Own every consumed module input across passes, including virtual documents and converter resources. */
 export class ModuleFileProvider implements AssemblyFileProvider {
+  /** Immutable byte snapshots retained for the current build pass. */
   readonly snapshots = new Map<string, Uint8Array>();
   private bytes = 0;
 
@@ -33,10 +34,12 @@ export class ModuleFileProvider implements AssemblyFileProvider {
     this.snapshots.set(filename, bytes.slice());
   }
 
+  /** Delegates path resolution to the wrapped provider without caching. */
   resolvePath(filename: string, options?: AssemblyFileResolutionOptions): string | undefined {
     return this.provider.resolvePath(filename, options);
   }
 
+  /** Delegates file metadata queries to the wrapped provider. */
   stat(filename: string): AssemblyFileStat {
     return this.provider.stat(filename);
   }
@@ -52,6 +55,7 @@ export class ModuleFileProvider implements AssemblyFileProvider {
     return bytes.slice();
   }
 
+  /** Decodes a retained snapshot using the same copy-on-read boundary as binary reads. */
   readTextFile(filename: string, encoding: BufferEncoding = "utf8"): string {
     const bytes = this.readFile(filename);
     if (typeof Buffer !== "undefined") {

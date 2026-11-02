@@ -141,6 +141,11 @@ that editor's own API declarations and checks SQLite in the real Extension Host.
   fields, and internal algorithms with non-obvious semantics. Explain relevant units, defaults,
   valid ranges, ownership, lifecycle, side effects, failure behavior, or invariants. Avoid
   restating obvious names or signatures and adding boilerplate tags without useful information.
+- `npm run lint` enforces JSDoc coverage in `packages/*/src`: every top-level declaration, public
+  or protected class member, and direct field of an exported interface or object type needs a
+  description. Private members and fields of internal types are exempt. In TypeScript files, tags
+  carry no `{Type}` (the signature owns it), multi-line blocks start their text on the line after
+  `/**`, and parameters read `@param name Description`.
 - Add short inline comments immediately before complex branches and non-obvious logic. Explain
   why the path exists, which invariant it protects, or why ordering matters, especially around
   validation, fallbacks, state transitions, cancellation/recovery, and compatibility behavior.

@@ -25,7 +25,7 @@ const path = nodePath ?? virtualPath;
 
 /**
  * Fail explicitly if a host selects the Node provider in a browser runtime.
- * @returns {typeof import("node:fs")} Node's synchronous filesystem API.
+ * @returns Node's synchronous filesystem API.
  */
 const requireNodeFs = (): typeof import("node:fs") => {
   if (!nodeFs) {
@@ -36,14 +36,19 @@ const requireNodeFs = (): typeof import("node:fs") => {
 
 /** Search context supplied by includes and file-reading expressions. */
 export type AssemblyFileResolutionOptions = {
+  /** Active source file used as a relative include anchor. */
   currentFile?: string;
+  /** Additional directories searched after macro and current file locations. */
   includePaths?: string[];
+  /** Macro expansion site used ahead of the current file in search order. */
   macroSourceFile?: string;
 };
 
 /** Provider metadata used for existence checks and source-cache invalidation. */
 export type AssemblyFileStat = {
+  /** Whether the path resolves to a stored or on-disk object. */
   exists: boolean;
+  /** Whether the provider can read bytes for an existing path. */
   readable: boolean;
   /** Byte length when known. */
   size?: number;
@@ -58,6 +63,7 @@ export type AssemblyFileStat = {
 export interface AssemblyFileProvider {
   /** Return a stable file identity, or undefined if no candidate exists. */
   resolvePath(filename: string, options?: AssemblyFileResolutionOptions): string | undefined;
+  /** Returns existence, readability, and optional size or mtime metadata. */
   stat(filePath: string): AssemblyFileStat;
   /** Read synchronously, throwing on failure. Callers must treat returned bytes as read-only. */
   readFile(filePath: string): Uint8Array;
@@ -74,9 +80,9 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
 
   /**
    * Find the first existing path: macro directory, current source directory, include paths, then cwd.
-   * @param {string} filename Include path token, optionally quoted.
-   * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
-   * @returns {string | undefined} First existing file identity, or undefined.
+   * @param filename Include path token, optionally quoted.
+   * @param [options] Source and include directories in search order.
+   * @returns First existing file identity, or undefined.
    */
   resolvePath(filename: string, options: AssemblyFileResolutionOptions = {}): string | undefined {
     requireNodeFs();
@@ -111,6 +117,7 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
     return undefined;
   }
 
+  /** Probes disk metadata without recording the path as a consumed dependency. */
   stat(filePath: string): AssemblyFileStat {
     const fs = requireNodeFs();
     let st: import("node:fs").Stats;
@@ -127,12 +134,14 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
     }
   }
 
+  /** Reads disk bytes and records the path in the build dependency set. */
   readFile(filePath: string): Uint8Array {
     const fs = requireNodeFs();
     this.readFiles.add(filePath);
     return new Uint8Array(fs.readFileSync(filePath));
   }
 
+  /** Reads disk text and records the path in the build dependency set. */
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
     const fs = requireNodeFs();
     this.readFiles.add(filePath);
@@ -181,6 +190,7 @@ export class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
     }
   }
 
+  /** Applies overlays and retained snapshots before falling back to disk stat. */
   override stat(file: string): AssemblyFileStat {
     const name = path.resolve(file);
     if (this.#overlays.has(name)) {
@@ -195,6 +205,7 @@ export class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
     return super.stat(name);
   }
 
+  /** Returns immutable snapshot bytes, honoring overlays and the build byte budget. */
   override readFile(file: string): Uint8Array {
     const name = path.resolve(file);
     let bytes = this.#snapshots.get(name);
@@ -220,6 +231,7 @@ export class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
     return bytes.slice();
   }
 
+  /** Decodes snapshot bytes using the same copy-on-read path as binary reads. */
   override readTextFile(file: string, encoding: BufferEncoding = "utf8"): string {
     return Buffer.from(this.readFile(file)).toString(encoding);
   }
@@ -245,6 +257,7 @@ export class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
 
 /** Virtual lookup base. No host cwd fallback or filesystem access is used. */
 export type MemoryAssemblyFileProviderOptions = {
+  /** Default relative lookup root when no macro or current file anchor applies. */
   workingDirectory?: string;
 };
 
@@ -264,9 +277,9 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
 
   /**
    * Match an exact virtual key, then search macro/source/include directories and workingDirectory.
-   * @param {string} filename Include path token, optionally quoted.
-   * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
-   * @returns {string | undefined} First existing file identity, or undefined.
+   * @param filename Include path token, optionally quoted.
+   * @param [options] Source and include directories in search order.
+   * @returns First existing file identity, or undefined.
    */
   resolvePath(filename: string, options: AssemblyFileResolutionOptions = {}): string | undefined {
     if (!filename) {
@@ -299,6 +312,7 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     return undefined;
   }
 
+  /** Reports virtual document presence and encoded byte length. */
   stat(filePath: string): AssemblyFileStat {
     const entry = this.files.get(filePath);
     if (entry === undefined) {
@@ -315,6 +329,7 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     };
   }
 
+  /** Returns a copy of virtual file bytes, encoding strings as UTF-8. */
   readFile(filePath: string): Uint8Array {
     const entry = this.files.get(filePath);
     if (entry === undefined) {
@@ -323,6 +338,7 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     return typeof entry === "string" ? new TextEncoder().encode(entry) : new Uint8Array(entry);
   }
 
+  /** Returns stored string content or decodes binary virtual entries. */
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
     const entry = this.files.get(filePath);
     if (entry === undefined) {
@@ -340,8 +356,8 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
 
 /**
  * Removes matching wrapping quotes from a user-supplied file path token.
- * @param {string} filename The raw path token.
- * @returns {string} The unwrapped path.
+ * @param filename The raw path token.
+ * @returns The unwrapped path.
  */
 export function stripWrappingQuotes(filename: string): string {
   if (

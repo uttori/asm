@@ -13,7 +13,9 @@ import type { SomRoomNativeTile } from "./som-room-native.js";
 
 /** Trusted source attribution supplied by the host; a physical destination is an occurrence rather than an owner ID. */
 export interface SomRoomBoundTile extends SomRoomNativeTile {
+  /** Native owner identity assigned by the host baseline. */
   readonly owner: string;
+  /** Whether low-plane index edits may apply to this tile. */
   readonly editable: boolean;
 }
 

@@ -32,34 +32,56 @@ import {
   type SuperFxAbstractState,
 } from "./superfx-state.js";
 
+/** Configured GSU entry point seeded into SuperFX control-flow analysis. */
 export interface SuperFxEntryPoint {
+  /** Stable id used in the seed id and synthesized manual evidence id. */
   readonly id: string;
+  /** 24-bit GSU address; its bank becomes the entry program bank. */
   readonly address: number;
+  /** Known prefix state overriding the prefix-free default at entry. */
   readonly state?: {
+    /** Pending ALT1/ALT2 bits. */
     readonly alt?: 0 | 1 | 2 | 3;
+    /** Register selected by a preceding `TO`/`WITH`. */
     readonly destinationRegister?: number;
+    /** Register selected by a preceding `FROM`/`WITH`. */
     readonly sourceRegister?: number;
   };
+  /** Evidence ids; when omitted, a manual record `manual:entry:<id>` is synthesized. */
   readonly evidence?: readonly string[];
 }
 
+/** Seeds, constraints and limits for one SuperFX analysis run. */
 export interface SuperFxAnalysisOptions {
+  /** Configured entry points, seeded with their optional prefix state. */
   readonly entryPoints?: readonly SuperFxEntryPoint[];
+  /** Project labels; only those in the GSU ROM address space become seeds. */
   readonly labels?: readonly ProjectLabel[];
+  /** Existing annotations; data classifications block decoding and `in` points become seeds. Prior `static:superfx:` records are ignored. */
   readonly annotations?: readonly IntervalAnnotation[];
+  /** Existing evidence records, passed through and used to avoid duplicate entry evidence. */
   readonly evidence?: readonly EvidenceRecord[];
+  /** Manual targets for indirect control transfers in the GSU ROM address space. */
   readonly targetOverrides?: readonly AnalysisTargetOverrideRecord[];
+  /** Target-set addresses seeded as additional entry points. */
   readonly targetSets?: readonly AnalysisTargetSetRecord[];
+  /** Work-item cap forwarded to the generic worklist; its default applies when omitted. */
   readonly maxWorkItems?: number;
+  /** Call-depth cap forwarded to the generic worklist; its default applies when omitted. */
   readonly maxCallDepth?: number;
 }
 
+/** Static CFG result plus project records derived from it. */
 export interface SuperFxAnalysisResult extends StaticAnalysisResult<SuperFxAbstractState> {
+  /** Analysis records for nodes, edges, entries and diagnostics. */
   readonly records: readonly AnalysisRecord[];
+  /** Opcode and operand annotations for every decoded instruction. */
   readonly annotations: readonly IntervalAnnotation[];
+  /** Input evidence plus the run and synthesized entry evidence, sorted by id. */
   readonly evidenceRecords: readonly EvidenceRecord[];
 }
 
+/** Classifications that must never be decoded as GSU instructions. */
 const DATA_CLASSIFICATIONS = new Set([
   "data8",
   "data16",
@@ -73,14 +95,19 @@ const DATA_CLASSIFICATIONS = new Set([
   "empty",
   "text",
 ]);
+/**
+ * Test whether an annotated interval covers a GSU address.
+ * @param entry Layout or data span from project annotations.
+ * @param address 24-bit GSU program counter.
+ */
 const contains = (entry: IntervalAnnotation, address: number): boolean =>
   entry.start <= address && address < entry.end;
 
 /**
  * Applies a SuperFX entry point state override to the initial state.
- * @param {SuperFxAbstractState} state Initial state.
- * @param {SuperFxEntryPoint["state"]} override Entry point state override.
- * @returns {SuperFxAbstractState} State with the override applied.
+ * @param state Initial state.
+ * @param override Entry point state override.
+ * @returns State with the override applied.
  */
 const applyEntryState = (
   state: SuperFxAbstractState,
@@ -103,8 +130,8 @@ const applyEntryState = (
 
 /**
  * Converts a decoded instruction into a set of control targets.
- * @param {DecodedInstruction} instruction Decoded instruction.
- * @returns {readonly StaticControlTarget[]} Control targets.
+ * @param instruction Decoded instruction.
+ * @returns Control targets.
  */
 const controlsFor = (instruction: DecodedInstruction): readonly StaticControlTarget[] =>
   instruction.references
@@ -132,8 +159,8 @@ const controlsFor = (instruction: DecodedInstruction): readonly StaticControlTar
 
 /**
  * Converts a decoded instruction into a set of effective addresses.
- * @param {DecodedInstruction} instruction Decoded instruction.
- * @returns {readonly StaticEffectiveAddress[]} Effective addresses.
+ * @param instruction Decoded instruction.
+ * @returns Effective addresses.
  */
 const effectiveAddressesFor = (
   instruction: DecodedInstruction,
@@ -157,9 +184,9 @@ const effectiveAddressesFor = (
 
 /**
  * Converts a static analysis result into a set of analysis records.
- * @param {StaticAnalysisResult<SuperFxAbstractState>} result Static analysis result.
- * @param {string} runEvidence Evidence string.
- * @returns {readonly AnalysisRecord[]} Analysis records.
+ * @param result Static analysis result.
+ * @param runEvidence Evidence string.
+ * @returns Analysis records.
  */
 const recordsFor = (
   result: StaticAnalysisResult<SuperFxAbstractState>,
@@ -241,9 +268,9 @@ const recordsFor = (
 
 /**
  * Converts a static analysis result into a set of interval annotations.
- * @param {StaticAnalysisResult<SuperFxAbstractState>} result Static analysis result.
- * @param {string} evidence Evidence string.
- * @returns {readonly IntervalAnnotation[]} Interval annotations.
+ * @param result Static analysis result.
+ * @param evidence Evidence string.
+ * @returns Interval annotations.
  */
 const annotationsFor = (
   result: StaticAnalysisResult<SuperFxAbstractState>,
@@ -278,9 +305,9 @@ const annotationsFor = (
 
 /**
  * Runs conservative control-flow analysis over one contiguous SuperFX program image.
- * @param {SuperFxRomImage} image Immutable GSU ROM image to analyze.
- * @param {SuperFxAnalysisOptions} options Entry points, annotations, and overrides.
- * @returns {SuperFxAnalysisResult} CFG, evidence, conflicts, and project records.
+ * @param image Immutable GSU ROM image to analyze.
+ * @param options Entry points, annotations, and overrides.
+ * @returns CFG, evidence, conflicts, and project records.
  */
 export const analyzeSuperFxRom = (
   image: SuperFxRomImage,

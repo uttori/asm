@@ -68,8 +68,8 @@ interface DecodedMapPiece {
  * Insertions can also write beyond the parent rectangle. Their full physical writes affect later
  * motifs; the returned parent tiles project only its own cells after all insertions finish.
  * The input history is copied and never mutated. Recursive motifs and truncated input fail closed.
- * @param {Uint8Array} bytes Pointer-bounded map piece.
- * @returns {object} Compact row-major tile IDs and the consumed extent.
+ * @param bytes Pointer-bounded map piece.
+ * @returns Compact row-major tile IDs and the consumed extent.
  */
 export function decodeMapPiece(
   bytes: Uint8Array,
@@ -130,12 +130,13 @@ export function decodeMapPiece(
   return result;
 }
 
-/** Decode one bounded stream; motif overlays cannot supply history to the earlier base pass.
- * @param {Uint8Array} bytes Command bytes for one piece or motif.
- * @param {number} width Logical tile width.
- * @param {number} height Logical tile height.
- * @param {readonly object[]} motifs Deferred recipes belonging to this piece.
- * @returns {object} Tiles, commands, and motif insertions.
+/**
+ * Decode one bounded stream; motif overlays cannot supply history to the earlier base pass.
+ * @param bytes Command bytes for one piece or motif.
+ * @param width Logical tile width.
+ * @param height Logical tile height.
+ * @param motifs Deferred recipes belonging to this piece.
+ * @returns Tiles, commands, and motif insertions.
  */
 function decodeMapStream(
   bytes: Uint8Array,
