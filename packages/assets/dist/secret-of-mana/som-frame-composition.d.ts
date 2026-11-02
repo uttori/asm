@@ -1,4 +1,4 @@
-import type { ExternalTileRef, FrameLayout, FrameRecord } from "./som-types.js";
+import type { ExternalTileRef, FrameLayout, FramePlacement, FrameRecord } from "./som-types.js";
 /**
  * Resolve the adapter's ROM/expanded-slot references, then use the portable grid expander.
  * Existing external references are an explicit read-only inventory, never guessed pixels.
@@ -14,7 +14,7 @@ export declare function deriveFramePlacements(layout: FrameLayout, frame: FrameR
     y: number;
     flipX: boolean | undefined;
     flipY: boolean | undefined;
-} & ({
+} & (({
     segment: string;
     tile: number;
     external?: undefined;
@@ -22,7 +22,7 @@ export declare function deriveFramePlacements(layout: FrameLayout, frame: FrameR
     segment?: undefined;
     tile?: undefined;
     external: ExternalTileRef;
-}))[];
+}) & Pick<FramePlacement, "paletteGroup">))[];
 /** Check raw body evidence against editable blocks before interpreting any derived geometry.
  * @param {FrameRecord} frame Pose that may carry a native body record.
  * @returns {void} Nothing; invalid records throw.
@@ -41,7 +41,7 @@ export declare function validateFrameComposition(layout: FrameLayout, frame: Fra
     y: number;
     flipX: boolean | undefined;
     flipY: boolean | undefined;
-} & ({
+} & (({
     segment: string;
     tile: number;
     external?: undefined;
@@ -49,5 +49,5 @@ export declare function validateFrameComposition(layout: FrameLayout, frame: Fra
     segment?: undefined;
     tile?: undefined;
     external: ExternalTileRef;
-}))[] | undefined;
+}) & Pick<FramePlacement, "paletteGroup">))[] | undefined;
 //# sourceMappingURL=som-frame-composition.d.ts.map

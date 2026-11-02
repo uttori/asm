@@ -1,4 +1,4 @@
-import { isReferenceExpressionNode, } from "@uttori/asm-core";
+import { RelocatableInstruction, linkConstant, linkBinary, isReferenceExpressionNode, } from "@uttori/asm-core";
 import { classify65816, prepare65816, read65816, prepared65816 } from "./65816-resolution.js";
 import { cpu65816Modes, cpu65816Specifications } from "./65816-spec.js";
 import { syntax65816 } from "./65816-syntax.js";
@@ -23,6 +23,7 @@ const modeId = (key) => cpu65816Modes[key]?.id ?? key;
 /** 65816 flags belong to this encoder instance and reset once per assembly pass. */
 export class Typed65816 {
     optimizeDirectPage;
+    supportsRelocatable = true;
     deferOperandBindingErrors = true;
     /** True selects 16-bit expression immediates; lexical widths can override this hint. */
     m16 = false;
@@ -47,6 +48,10 @@ export class Typed65816 {
         this.smartMode = value;
     }
     prepare(frame) {
+        if (frame.isRelocatable) {
+            frame.choose("65816-module-preparation", 0);
+            return;
+        }
         const r = prepare65816(syntax65816(frame.instruction.operands), frame);
         // The tuple is occurrence-owned. Its scalar expression is already retained by parsed syntax.
         frame.chooseScalars("65816-preparation", 0, r.length, r.value, r.generated, r.flattened, r.mode, r.hexDigits, r.explicitDp);
@@ -59,11 +64,20 @@ export class Typed65816 {
     }
     /** Shared selection preserves the distinct numeric-read positions of each hardware family. */
     run(frame, context) {
+        if (frame.isRelocatable) {
+            return this.runModule(frame, context);
+        }
+        return this.runAbsolute(frame, context);
+    }
+    /** Existing numeric selection remains shared with explicit Asar source adaptation. */
+    runAbsolute(frame, context) {
         const syntax = syntax65816(frame.instruction.operands), p = syntax.cpu65816, op = p.mnemonic, emit = !!context;
         if (p.suffixError) {
             throw new Error(p.suffixError);
         }
-        let r = prepared65816(frame, p.scalar);
+        // Object preparation intentionally carries no numeric tuple. Compatibility selection
+        // observes its authored-address preview in this invocation instead of decoding that marker.
+        let r = frame.isRelocatable ? undefined : prepared65816(frame, p.scalar);
         r ??= prepare65816(syntax, frame);
         r = { ...r, scalar: p.scalar };
         const initial = r;
@@ -136,7 +150,9 @@ export class Typed65816 {
                 return len <= 1 ? 1 : 2;
             }
             const wide = family(op, "LDX LDY CPX CPY") ? this.x16 : this.m16;
-            return wide ? 2 : 1;
+            // A CPU-width hint cannot discard a resolved immediate's high byte. Banked
+            // routine labels still encode a word even after another path selected eight-bit A.
+            return wide || len > 1 ? 2 : 1;
         };
         const implied = opcode("imp"), acc = opcode("acc");
         // Implied repeats preserve their decimal-prefix convention; accumulator repeats use numeric values.
@@ -521,8 +537,9 @@ export class Typed65816 {
                 if (op !== "BIT") {
                     throw new Error(`Opcode ${op} does not support immediate mode.`);
                 }
-                const wide = forced ? len !== 1 : r.hexDigits === 4;
-                const width = wide ? 2 : 1;
+                // Banked symbols can have more than four hex digits before their immediate
+                // low word is encoded; use operand width rather than an exact digit count.
+                const width = len <= 1 ? 1 : 2;
                 return output("immM", width, false, value);
             }
             let width = 1;
@@ -555,6 +572,242 @@ export class Typed65816 {
         }
         frame.choose("unknown", 0);
         return -1;
+    }
+    /** Module forms are determined from syntax/state; final symbol addresses cannot shrink instructions. */
+    runModule(frame, context) {
+        const p = syntax65816(frame.instruction.operands).cpu65816;
+        if (p.suffixError) {
+            throw frame.error(p.suffixError);
+        }
+        const op = p.mnemonic;
+        let compatibility;
+        // Legacy emission can choose a different width/repeat count than its sizing pass. Probe that exact
+        // path with a borrowed cursor; real bytes and symbolic fields still use the native object writer.
+        if (frame.sourceAdapter === "asar" &&
+            (!p.hasOperand || frame.previewSource(p.scalar) !== undefined)) {
+            compatibility = frame.withSourcePreview((advance) => {
+                this.runAbsolute(frame, {
+                    emission: {
+                        write1: () => advance(1),
+                        write2: () => advance(2),
+                        write3: () => advance(3),
+                        writeByte: () => advance(1),
+                        writeBytes: (bytes) => advance(bytes.length),
+                        writeValue: (_value, width) => advance(width),
+                    },
+                    diagnostics: { error: (message) => frame.error(message) },
+                });
+                return frame.snapshot();
+            });
+        }
+        const instruction = new RelocatableInstruction(frame, context);
+        const table = encodings.get(op);
+        const code = (mode) => {
+            const value = table?.get(modeId(mode));
+            if (value === undefined) {
+                throw frame.error(`${op} does not support relocatable form '${mode}'.`);
+            }
+            return value;
+        };
+        const finish = (mode) => instruction.finish(mode, { m16: this.m16, x16: this.x16, smartMode: this.smartMode });
+        if (table?.has(modeId("imp"))) {
+            let count = 1;
+            if (p.whole.immediate) {
+                count = compatibility?.size ?? frame.constant(p.wholeScalar, "Instruction repeat count");
+            }
+            if (!Number.isInteger(count) || count < 1 || count > 0x1000000) {
+                throw frame.error("Invalid instruction repeat count.");
+            }
+            for (let index = 0; index < count; index++) {
+                instruction.opcode(code("imp"));
+            }
+            return finish("implied-repeat");
+        }
+        if ((p.shape?.kind === "register" && p.shape.name === "a") ||
+            (!p.hasOperand && table?.has(modeId("acc")))) {
+            instruction.opcode(code("acc"));
+            return finish("accumulator");
+        }
+        if (family(op, "ASL LSR ROL ROR INC DEC") && p.whole.immediate) {
+            const count = compatibility?.size ?? frame.constant(p.wholeScalar, "Accumulator repeat count");
+            if (count < 1 || count > 0x1000000) {
+                throw frame.error("Invalid accumulator repeat count.");
+            }
+            for (let index = 0; index < count; index++) {
+                instruction.opcode(code("acc"));
+            }
+            return finish("accumulator-repeat");
+        }
+        if (family(op, "MVP MVN")) {
+            if (p.parts.length !== 2) {
+                throw frame.error(`${op} requires source and destination banks.`);
+            }
+            instruction.opcode(code("block"));
+            for (const part of p.parts) {
+                instruction.field(part.scalar, { width: 1, minimum: 0 });
+            }
+            return finish("blockMove");
+        }
+        if (table?.has(modeId("rel8")) || op === "BRL" || op === "PER") {
+            const width = op === "BRL" || op === "PER" ? 2 : 1;
+            instruction.opcode(code(width === 1 ? "rel8" : "rel16"));
+            instruction.field(p.wholeScalar, {
+                width,
+                kind: "relative",
+                signed: true,
+                addressWidth: 24,
+                wrapWidth: 16,
+            });
+            return finish("relative");
+        }
+        if (family(op, "BRK COP WDM REP SEP")) {
+            if (this.smartMode && (op === "REP" || op === "SEP")) {
+                const mask = frame.constant(p.scalar, `${op} CPU-width mask`);
+                if (mask & 0x20) {
+                    this.m16 = op === "REP";
+                }
+                if (mask & 0x10) {
+                    this.x16 = op === "REP";
+                }
+            }
+            instruction
+                .opcode(code("sig"))
+                .field(p.hasOperand ? p.scalar : linkConstant(0), { width: 1 });
+            return finish("signature");
+        }
+        if (op === "PEA") {
+            instruction.opcode(code("imm16")).field(p.scalar, { width: 2 });
+            return finish("immediate16");
+        }
+        if (p.whole.immediate) {
+            const index = family(op, "LDX LDY CPX CPY");
+            let width = p.width;
+            if (compatibility && compatibility.size > 1) {
+                width = compatibility.size - 1;
+            }
+            if (width === undefined) {
+                width = index ? Number(this.x16) + 1 : Number(this.m16) + 1;
+                if (p.scalar.width.literalBytes !== undefined) {
+                    width = p.scalar.width.literalBytes;
+                }
+            }
+            if (width !== 1 && width !== 2) {
+                throw frame.error("65816 immediates require a byte or word width.");
+            }
+            instruction
+                .opcode(code(index ? "immX" : "immM"))
+                .field(p.scalar, { width, truncate: frame.sourceAdapter === "asar" });
+            return finish("immediate");
+        }
+        const shape = p.shape;
+        if (!p.hasOperand || shape?.kind !== "memory" || "kind" in shape.address) {
+            throw frame.error(`${op} requires a scalar address.`);
+        }
+        const jump = family(op, "JMP JSR JML JSL");
+        const indexed = shape.index?.register;
+        // Exported masked operands use parentheses for arithmetic grouping, matching absolute assembly.
+        const groupedMath = p.whole.math && shape.index?.position !== "inside" && shape.innerIndex !== "s";
+        let mode = "abs";
+        let width = 2;
+        if (shape.delimiter === "brackets") {
+            if (jump) {
+                mode = "indlong";
+            }
+            else {
+                mode = indexed === "y" ? "dily" : "dil";
+                width = 1;
+            }
+        }
+        else if (shape.delimiter === "parentheses" && !groupedMath) {
+            if (jump) {
+                mode = shape.index?.position === "inside" ? "indx" : "ind";
+            }
+            else {
+                width = 1;
+                if (shape.innerIndex === "s") {
+                    mode = "sriy";
+                }
+                else if (shape.index?.position === "inside") {
+                    mode = "dix";
+                }
+                else {
+                    mode = indexed === "y" ? "diy" : "dpi";
+                }
+            }
+        }
+        else if (indexed === "s") {
+            mode = "sr";
+            width = 1;
+        }
+        else {
+            const authored = p.width ?? p.scalar.width.literalBytes;
+            if (authored !== undefined) {
+                if (authored !== 1 && authored !== 2 && authored !== 3) {
+                    throw frame.error("Address width must be 1..3 bytes.");
+                }
+                width = authored;
+            }
+            if (op === "JML" || op === "JSL") {
+                width = 3;
+            }
+            // Near calls preserve their RTS convention. A far call must be authored as JSL.
+            if (jump && op !== "JML" && op !== "JSL") {
+                width = 2;
+            }
+            if (width === 1) {
+                mode = "dp";
+                if (indexed === "x") {
+                    mode = "dpx";
+                }
+                else if (indexed === "y") {
+                    mode = "dpy";
+                }
+            }
+            else if (width === 2) {
+                mode = "abs";
+                if (indexed === "x") {
+                    mode = "abx";
+                }
+                else if (indexed === "y") {
+                    mode = "aby";
+                }
+            }
+            else {
+                mode = indexed === "x" ? "longx" : "long";
+            }
+        }
+        if (compatibility &&
+            compatibility.size >= 2 &&
+            compatibility.size <= 4 &&
+            table?.has(modeId(compatibility.form))) {
+            mode = compatibility.form;
+            const selectedWidth = compatibility.size - 1;
+            if (selectedWidth === 1 || selectedWidth === 2 || selectedWidth === 3) {
+                width = selectedWidth;
+            }
+        }
+        if (op === "PEI") {
+            mode = "dpi";
+            width = 1;
+        }
+        let kind = "absolute";
+        if (width === 1 && mode !== "sr" && mode !== "sriy") {
+            kind = "directPage";
+        }
+        if (width === 2 && mode !== "ind" && mode !== "indlong") {
+            kind = jump ? "programBank" : "dataBank";
+        }
+        // Plain indirect JMP/JML fetch their pointers from bank zero; indexed indirect calls use PBR.
+        const addressWidth = mode === "ind" || mode === "indlong" ? 16 : 24;
+        let operand = shape.address;
+        // Asar's near data syntax writes the low word without a DBR declaration. Preserve that
+        // established meaning while retaining checked near control flow and native module semantics.
+        if (frame.sourceAdapter === "asar" && kind === "dataBank") {
+            operand = linkBinary("&", frame.compileLink(shape.address), linkConstant(65535));
+            kind = "absolute";
+        }
+        instruction.opcode(code(mode)).field(operand, { width, kind, addressWidth, minimum: 0 });
+        return finish(mode);
     }
 }
 /** Implied repeats historically interpret the decimal prefix of an expanded hexadecimal value. */

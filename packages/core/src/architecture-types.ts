@@ -1,4 +1,6 @@
 import type { ExpressionNode } from "./ir/expression-node.js";
+import type { LinkExpression } from "./ir/link-expression.js";
+import type { RelocationEncoding } from "./relocatable.js";
 
 /** Expression values are numeric or string literals. Conversion is the caller's responsibility. */
 export type MathValue = number | string;
@@ -12,6 +14,8 @@ export interface OperandResolutionContext {
 
 /** Writes at the session's logical cursor, applying target mapping and stage write rules. */
 export interface EncoderEmissionContext {
+  /** Object producers retain an explicit field; absolute-only embedding hosts may omit this capability. */
+  writeRelocation?(expression: LinkExpression, encoding: RelocationEncoding): void;
   /** Emit the low byte and advance by one byte. */
   write1(value: number): void;
   write2(value: number): void;

@@ -3,7 +3,7 @@ export const handleRelativeLabel = ({ session }, _words, raw) => {
     session.symbolScope.handleRelativeLabel(raw);
 };
 export const registerFlowControlDirectives = (registry, context) => {
-    registry.registerTyped(["+", "-"], ({ source }) => {
+    registry.registerImmutableTyped(["+", "-"], ({ source }) => {
         const spelling = source.raw;
         const direction = spelling.includes("+") ? 1 : -1;
         const depth = (spelling.match(direction === 1 ? /\+/g : /-/g) ?? []).length;

@@ -64,7 +64,7 @@ import {
 } from "../editor-info/format.js";
 import { informationOverlayGap } from "../editor-info/layout.js";
 import { EditorInformationWorker } from "../editor-info/worker-client.js";
-import { findAnalysisProjectDirectories } from "./coverage-tree.js";
+import { findAnalysisProjectDirectories } from "./project-discovery.js";
 import { discoverAnalysisDebugMapFiles } from "./debug-maps.js";
 import { analysisWorker } from "./worker-client.js";
 

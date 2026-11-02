@@ -1,9 +1,16 @@
 /**
  * Minimal ld65 linker-config parser for the NES iNES target.
  *
- * Enough of MEMORY / SEGMENTS / SYMBOLS to assemble ca65 sources that emit a
- * flat image (Zelda 1's `Z.cfg`) without producing relocatable objects.
+ * MEMORY / SEGMENTS / SYMBOLS support is shared by the flat NES assembler
+ * and the portable link-recipe adapter. Parsing itself never places sections.
  */
+
+import {
+  compileLinkExpression,
+  parseExpressionNode,
+  type AssemblyLinkRecipe,
+  type LinkRecipeSymbol,
+} from "@uttori/asm-core";
 
 export type Ld65MemoryRegion = {
   readonly name: string;
@@ -39,6 +46,72 @@ export type Ld65Config = {
   /** Total size of `file = %O` regions, in order of MEMORY declaration. */
   readonly imageSize: number;
 };
+
+/** Preserve declaration order and RAM/load/run distinctions without assigning object contributions. */
+export function ld65LinkRecipe(config: Ld65Config, target = "65xx.nes"): AssemblyLinkRecipe {
+  const symbols: LinkRecipeSymbol[] = [];
+  for (const segment of config.segments.values()) {
+    if (!segment.define) {
+      continue;
+    }
+    for (const [suffix, property] of [
+      ["LOAD", "load"],
+      ["RUN", "run"],
+      ["SIZE", "size"],
+      ["RUN_END", "runEnd"],
+    ] as const) {
+      symbols.push({ name: `__${segment.name}_${suffix}__`, section: segment.name, property });
+    }
+  }
+  for (const symbol of config.symbols) {
+    symbols.push({
+      name: symbol.name,
+      expression: compileLinkExpression(parseExpressionNode(symbol.valueExpr), {
+        reference: (node) => {
+          if (node.type !== "identifier") {
+            throw new Error("Linker-config symbols require global names.");
+          }
+          return { kind: "symbol", name: node.name };
+        },
+        current: () => {
+          throw new Error("Linker-config symbols have no implicit section cursor.");
+        },
+        literal: (node) => {
+          if (node.type !== "literal") {
+            throw new Error("Linker-config expressions require integer literals.");
+          }
+          const text = node.value;
+          if (text.startsWith("$")) {
+            return Number.parseInt(text.slice(1), 16);
+          }
+          if (text.startsWith("%")) {
+            return Number.parseInt(text.slice(1), 2);
+          }
+          return Number(text);
+        },
+      }),
+    });
+  }
+  return {
+    target,
+    regions: [...config.memories.values()].map((region) => ({
+      name: region.name,
+      start: region.start,
+      size: region.size,
+      ...(region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {}),
+      ...(region.fill ? { fillByte: region.fillval } : {}),
+      addressSpace: "65xx.ines-address-space",
+    })),
+    placements: [...config.segments.values()].map((segment) => ({
+      section: segment.name,
+      load: segment.load,
+      run: segment.run,
+      ...(segment.start !== undefined ? { start: segment.start } : {}),
+    })),
+    // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
+    symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()],
+  };
+}
 
 const DEFAULT_LINKER_CONFIG = `MEMORY {
     ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;

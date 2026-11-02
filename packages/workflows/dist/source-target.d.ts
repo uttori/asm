@@ -1,2 +1,2 @@
-export type { SourceTargetDescriptor, SourceBuildResult, SourceProjectInspection, SourceAnalysisOptions, SourceCaptureResult, SourceTargetCaptureOptions, } from "@uttori/asm-disassembler/source-project";
+export type { SourceTargetDescriptor, SourceBuildResult, SourceProjectInspection, SourceModuleInspection, SourceAnalysisOptions, SourceCaptureResult, SourceTargetCaptureOptions, } from "@uttori/asm-disassembler/source-project";
 //# sourceMappingURL=source-target.d.ts.map

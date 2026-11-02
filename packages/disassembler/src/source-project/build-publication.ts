@@ -5,9 +5,11 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import { prunePriorSourceBuilds, pruneSourceBuilds } from "./build-cache.js";
+import { type SourceBuildCoverage, type SourceBuildSummary } from "./build-coverage.js";
 
 /** Target validation produces this identity before publication; paths name one immutable build pair. */
 export interface SourceBuildReceipt {
+  readonly coverage?: SourceBuildCoverage;
   readonly inputSha256: string;
   readonly outputFile: string;
   readonly debugMapFile: string;
@@ -68,9 +70,25 @@ export function publishSourceBuild<T extends SourceBuildReceipt>(options: {
     durableReplace(path.join(build, "build.json"), record);
     fs.rmSync(path.join(build, "pending.json"));
     durableReplace(path.join(directory, "current.json"), record);
+    // Readers obtain totals without parsing a debug map or the full dependency inventory.
+    // Publish only after the complete build is selected; freshness checks bind both receipts.
+    const summary: SourceBuildSummary = {
+      version: 1,
+      inputSha256: receipt.inputSha256,
+      ...(receipt.coverage ? { coverage: receipt.coverage } : {}),
+    };
+    const summaryWarnings: string[] = [];
+    try {
+      durableReplace(path.join(directory, "summary.json"), canonicalJson(summary));
+    } catch (error) {
+      // Progress is an advisory projection. Its failure cannot undo the already selected ROM/map
+      // pair; readers report a missing or stale summary until a later successful publication.
+      summaryWarnings.push(`Could not publish build coverage summary: ${String(error)}`);
+    }
     const cacheWarnings = [
       ...new Set([
         ...priorWarnings,
+        ...summaryWarnings,
         ...pruneSourceBuilds(directory, receipt.inputSha256, fileName),
       ]),
     ];

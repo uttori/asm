@@ -15,6 +15,7 @@ import {
   type PluginModuleRequest,
   type ProjectConfigurationDefaults,
 } from "@uttori/asm-plugin-loader-node";
+import { readAssemblyBuildConfiguration } from "@uttori/asm-plugin-loader-node/build-configuration";
 
 /** Editor plugin entry: a module specifier alone, or a specifier with activation options. */
 export type PluginModuleSetting = string | PluginModuleRequest;
@@ -37,6 +38,8 @@ export interface ProjectEnvironmentSettings {
   readonly workspaceTrusted: boolean;
   /** Explicit config path, absolute or relative to cwd; omitted to discover the project config. */
   readonly configFile?: string;
+  /** Explicit opt-in native build manifest, resolved against cwd. */
+  readonly linkProject?: string;
   /** Additional plugin requests; ignored for activation while the workspace is untrusted. */
   readonly plugins?: readonly PluginModuleSetting[];
   /** Target ID or alias overriding the project config and host default. */
@@ -57,6 +60,8 @@ export interface ProjectEnvironmentState {
   readonly index: WorkspaceIndex;
   /** User-facing warning when workspace trust prevented requested plugin configuration. */
   readonly trustNotice?: string;
+  /** Saved build metadata whose changes require a fresh environment/module-root selection. */
+  readonly linkInputs?: readonly string[];
 }
 
 /** Host-owned plugin catalog and defaults retained across environment replacements. */
@@ -141,16 +146,28 @@ export class ProjectEnvironmentController {
     settings: ProjectEnvironmentSettings,
     overlays: ReadonlyMap<string, string> = new Map(),
   ): Promise<ProjectEnvironmentState> {
-    const cwd = path.resolve(settings.cwd);
-    const pluginModules = configuredPluginModules(settings.plugins);
-    const configuredPath = discoverProjectConfigurationPath(cwd, settings.configFile);
+    const link =
+      settings.workspaceTrusted && settings.linkProject
+        ? readAssemblyBuildConfiguration(path.resolve(settings.cwd, settings.linkProject))
+        : undefined;
+    const cwd = link?.directory ?? path.resolve(settings.cwd);
+    // Native manifests own their compiler configuration. Unrelated active-editor overrides
+    // must not make background diagnostics analyze a different program than the build worker.
+    const pluginModules = link ? [] : configuredPluginModules(settings.plugins);
+    const configuredPath = link
+      ? link.configFile
+      : discoverProjectConfigurationPath(cwd, settings.configFile);
     const hasWorkspaceConfiguration =
-      Boolean(settings.configFile) || Boolean(configuredPath && existsSync(configuredPath));
+      Boolean(configuredPath && existsSync(configuredPath)) ||
+      Boolean(!link && settings.configFile);
     const workspacePluginsRequested = hasWorkspaceConfiguration || pluginModules.length > 0;
     // Untrusted projects must not activate workspace plugins; trusted explicit requests own
     // their defaults so a host target cannot silently replace missing project configuration.
     const useHostDefaults =
       !settings.workspaceTrusted || (!hasWorkspaceConfiguration && pluginModules.length === 0);
+    const linkPlugin = link?.target.startsWith("65xx.")
+      ? "@uttori/asm-plugin-65xx"
+      : "@uttori/asm-plugin-snes";
     const loader = new NodePluginLoader();
     let next: ProjectEnvironmentState;
 
@@ -158,17 +175,23 @@ export class ProjectEnvironmentController {
       const loaded = await loader.loadProjectEnvironment({
         cwd,
         allowProjectConfiguration: settings.workspaceTrusted,
-        ...(settings.workspaceTrusted && (settings.configFile || configuredPath)
-          ? { configFile: settings.configFile ?? configuredPath }
-          : {}),
+        ...(settings.workspaceTrusted && configuredPath ? { configFile: configuredPath } : {}),
         pluginModules: settings.workspaceTrusted ? pluginModules : [],
         bundledPlugins: this.options.bundledPlugins,
         ...(this.options.activateBundledPlugins ? { activateBundledPlugins: true } : {}),
-        ...(useHostDefaults ? { defaults: this.options.defaults } : {}),
+        ...(useHostDefaults && !link ? { defaults: this.options.defaults } : {}),
+        ...(link
+          ? {
+              defaults: {
+                plugins: [{ module: linkPlugin }],
+                target: link.target,
+              },
+            }
+          : {}),
         overrides: {
-          ...(settings.target ? { target: settings.target } : {}),
-          ...(settings.architecture ? { architecture: settings.architecture } : {}),
-          ...(settings.includePaths ? { includePaths: settings.includePaths } : {}),
+          ...(link || settings.target ? { target: link?.target ?? settings.target } : {}),
+          ...(!link && settings.architecture ? { architecture: settings.architecture } : {}),
+          ...(!link && settings.includePaths ? { includePaths: settings.includePaths } : {}),
         },
         logger: this.options.logger,
       });
@@ -177,7 +200,8 @@ export class ProjectEnvironmentController {
         target: loaded.target,
         architecture: loaded.architecture,
         targetOptions: loaded.targetOptions,
-        entryPoints: [...(settings.entryPoints ?? [])],
+        entryPoints: link ? Object.keys(link.moduleRoots) : [...(settings.entryPoints ?? [])],
+        moduleRoots: link?.moduleRoots,
         includePaths: [...loaded.includePaths],
         logger: this.options.logger,
         cacheDir: path.join(cwd, ".uttori-asm", "cache"),
@@ -187,7 +211,7 @@ export class ProjectEnvironmentController {
       for (const [file, content] of overlays) {
         index.updateDocument(file, content);
       }
-      if (overlays.size > 0 || (settings.entryPoints?.length ?? 0) > 0) {
+      if (overlays.size > 0 || (indexOptions.entryPoints?.length ?? 0) > 0) {
         if (this.options.indexer) {
           const snapshot = await this.options.indexer(settings, overlays);
           index = WorkspaceIndex.fromSnapshot(indexOptions, snapshot, overlays);
@@ -199,6 +223,7 @@ export class ProjectEnvironmentController {
       next = Object.freeze({
         loaded,
         index,
+        ...(link ? { linkInputs: link.inputs } : {}),
         ...(!settings.workspaceTrusted && workspacePluginsRequested
           ? {
               trustNotice:
@@ -237,6 +262,8 @@ export class ProjectEnvironmentController {
         architecture: loaded.architecture,
         targetOptions: loaded.targetOptions,
         entryPoints: previous.entryPoints,
+        module: previous.module,
+        moduleRoots: previous.moduleRoots,
         includePaths: [...loaded.includePaths],
       },
       snapshot,

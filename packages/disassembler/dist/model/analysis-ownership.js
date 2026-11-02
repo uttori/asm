@@ -1,5 +1,67 @@
 /**
- * Validate compact captured-code ownership without reconstructing every path. A predecessor must
+ * Attach a compact ownership forest to leaf-only CFG records. Entries are accepted CFG node IDs,
+ * already matched to function candidates by the target. Calls and returns do not transfer ownership;
+ * the caller's continuation is reached through its fallthrough edge. Shared blocks stay unowned.
+ * Every node is propagated at most twice, including loss of ownership at an ambiguous merge.
+ */
+export function withCompactAnalysisOwnership(records, entries) {
+    const outgoing = new Map();
+    const nodes = new Set();
+    for (const record of records) {
+        if (record.kind === "cfg-node") {
+            nodes.add(record.id);
+        }
+        else if (record.kind === "cfg-edge" &&
+            record.to &&
+            ["branch", "fallthrough", "jump"].includes(record.edgeKind)) {
+            const targets = outgoing.get(record.from) ?? [];
+            targets.push(record.to);
+            outgoing.set(record.from, targets);
+        }
+    }
+    const owners = new Map();
+    const predecessors = new Map();
+    const queue = [];
+    for (const entry of entries) {
+        if (nodes.has(entry)) {
+            owners.set(entry, entry);
+            queue.push(entry);
+        }
+    }
+    for (const id of queue) {
+        const owner = owners.get(id);
+        for (const target of outgoing.get(id) ?? []) {
+            // Removed/blocked decode targets are diagnostics, never members of the ownership forest.
+            if (!nodes.has(target) || entries.has(target)) {
+                continue;
+            }
+            if (!owners.has(target)) {
+                owners.set(target, owner);
+                if (owner) {
+                    predecessors.set(target, id);
+                }
+                queue.push(target);
+            }
+            else if (owners.get(target) !== null && owners.get(target) !== owner) {
+                owners.set(target, null);
+                predecessors.delete(target);
+                queue.push(target);
+            }
+        }
+    }
+    return records.map((record) => {
+        if (record.kind !== "cfg-node") {
+            return record;
+        }
+        const owner = owners.get(record.id);
+        return {
+            ...record,
+            ...(owner ? { functionEntry: owner, evidencePredecessor: predecessors.get(record.id) } : {}),
+        };
+    });
+}
+/**
+ * Validate compact CFG ownership without reconstructing every path. A predecessor must
  * lead to the same entry in an acyclic forest. Legacy explicit evidence paths remain independent.
  * Partial views may omit entries/predecessors already checked at publication; any relationships
  * present in the view still have to agree. Publication always uses the default complete scope.

@@ -105,6 +105,8 @@ const environmentController = new ProjectEnvironmentController({
 export interface ServerSettings {
   /** Explicit config path; omitted to discover uttori-asm.config.json from the workspace root. */
   configFile?: string;
+  /** Native manifest selection also supplies independent module roots to analysis. */
+  linkProject?: string;
   /** Additional plugin requests validated during environment loading; empty means none. */
   plugins: readonly PluginModuleSetting[];
   /** Target ID or alias overriding the config/default target when supplied by the editor. */
@@ -223,6 +225,12 @@ function resolveAgainstWorkspace(value: string): string {
  */
 function isProjectConfigFile(file: string): boolean {
   const resolved = path.resolve(file);
+  if (
+    (settings.linkProject && resolved === resolveAgainstWorkspace(settings.linkProject)) ||
+    (index && environmentController.current.linkInputs?.includes(resolved))
+  ) {
+    return true;
+  }
   if (settings.configFile && resolved === resolveAgainstWorkspace(settings.configFile)) {
     return true;
   }
@@ -279,6 +287,7 @@ export function mergeServerSettings(previous: ServerSettings, value: unknown): S
   const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(next, key);
   return {
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
+    linkProject: has("linkProject") ? stringValue(next.linkProject) : previous.linkProject,
     plugins: isPluginSettingList(next.plugins) ? next.plugins : previous.plugins,
     target: has("target") ? stringValue(next.target) : previous.target,
     architecture: has("architecture") ? stringValue(next.architecture) : previous.architecture,
@@ -322,6 +331,8 @@ function applyConfigFileDefaults(next: ServerSettings): ServerSettings {
   return {
     ...next,
     configFile: next.configFile ?? relativeConfig,
+    linkProject:
+      next.linkProject ?? (extras.linkProject ? relativeToConfig(extras.linkProject) : undefined),
     target: next.target ?? extras.target,
     architecture: next.architecture ?? extras.architecture,
     entryPoints:
@@ -349,6 +360,7 @@ function projectSettings(next: ServerSettings): ProjectEnvironmentSettings {
     cwd: workspaceRoot(),
     workspaceTrusted: next.workspaceTrusted,
     ...(next.configFile ? { configFile: next.configFile } : {}),
+    ...(next.linkProject ? { linkProject: next.linkProject } : {}),
     plugins: next.plugins,
     ...(next.target ? { target: next.target } : {}),
     ...(next.architecture ? { architecture: next.architecture } : {}),
@@ -685,6 +697,11 @@ function buildBinary(
   const startedAt = Date.now();
   const log = connection.console;
   try {
+    if (settings.linkProject) {
+      throw new Error(
+        "Native manifest builds run through the editor build worker or uttori-asm build. Absolute LSP assembly cannot build this manifest.",
+      );
+    }
     const resolved = resolveBuildEntry(requestedFile, settings.entryPoints, workspaceRoot());
     const file = resolved.file;
     log.info("Build Binary starting");

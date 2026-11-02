@@ -14,7 +14,17 @@ for (const extension of ["sfc", "nes"]) {
       const outputFile = path.join(directory, inputSha256, `output.${extension}`);
       return {
         directory,
-        receipt: { inputSha256, outputFile, debugMapFile: outputFile + ".debug.json" },
+        receipt: {
+          inputSha256,
+          outputFile,
+          debugMapFile: outputFile + ".debug.json",
+          coverage: {
+            romSha256: "a".repeat(64),
+            totalBytes: 10,
+            remainingBytes: 10 - id,
+            convertedBytes: id,
+          },
+        },
         output: Uint8Array.of(id),
         debugMap: JSON.stringify({ id }),
       };
@@ -23,10 +33,18 @@ for (const extension of ["sfc", "nes"]) {
     publishSourceBuild(first);
     fs.writeFileSync(path.join(directory, first.receipt.inputSha256, "user-notes.txt"), "keep");
     const pointer = fs.readFileSync(path.join(directory, "current.json"), "utf8");
+    const summary = fs.readFileSync(path.join(directory, "summary.json"), "utf8");
+    t.true(summary.length < 1024);
+    t.deepEqual(JSON.parse(summary), {
+      version: 1,
+      inputSha256: first.receipt.inputSha256,
+      coverage: first.receipt.coverage,
+    });
     const failed = options(2);
     fs.mkdirSync(failed.receipt.debugMapFile, { recursive: true });
     t.throws(() => publishSourceBuild(failed));
     t.is(fs.readFileSync(path.join(directory, "current.json"), "utf8"), pointer);
+    t.is(fs.readFileSync(path.join(directory, "summary.json"), "utf8"), summary);
     t.deepEqual([...fs.readFileSync(first.receipt.outputFile)], [1]);
     fs.rmSync(failed.receipt.debugMapFile, { recursive: true });
     publishSourceBuild(failed);
@@ -89,7 +107,7 @@ test("large source inventories and legacy receipts do not disable automatic buil
   t.is(second.cacheWarnings, undefined);
   const third = publish(3);
   t.false(fs.existsSync(path.dirname(second.outputFile)));
-  t.deepEqual(fs.readdirSync(path.dirname(third.outputFile)).sort(), [
+  t.deepEqual(fs.readdirSync(path.dirname(third.outputFile)).toSorted(), [
     "build.json",
     "owner.json",
     "program.sfc",
@@ -125,4 +143,24 @@ test("abandoned attempts retire even when the next publication fails, preserving
   t.false(fs.existsSync(path.dirname(abandoned.outputFile)));
   t.deepEqual(fs.readFileSync(path.join(directory, "current.json")), pointer);
   t.deepEqual([...fs.readFileSync(current.outputFile)], [1]);
+});
+
+test("an unavailable progress projection does not reject an already published ROM/map pair", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-summary-publication-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(directory, "summary.json"));
+  const inputSha256 = "a".repeat(64);
+  const outputFile = path.join(directory, inputSha256, "program.sfc");
+  const result = publishSourceBuild({
+    directory,
+    receipt: { inputSha256, outputFile, debugMapFile: `${outputFile}.debug.json` },
+    output: Uint8Array.of(1),
+    debugMap: "{}",
+  });
+  t.true(result.cacheWarnings?.some((warning) => warning.includes("coverage summary")));
+  t.is(
+    JSON.parse(fs.readFileSync(path.join(directory, "current.json"), "utf8")).inputSha256,
+    inputSha256,
+  );
+  t.deepEqual([...fs.readFileSync(result.outputFile)], [1]);
 });

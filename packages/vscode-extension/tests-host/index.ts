@@ -15,6 +15,7 @@ import { runAssetRecoverySmoke } from "./asset-recovery.js";
 import { runAssetSourceConversionSmoke } from "./asset-source-conversion.js";
 import { runBinaryPreviewSmoke } from "./binary-preview.js";
 import { runColdDebugActivationSmoke } from "./cold-debug.js";
+import { runLinkedBuildSmoke } from "./linked-build.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
 import { runNesSourceSmoke } from "./nes-source.js";
 import { runPaletteEditorSmoke } from "./palette-editor.js";
@@ -132,6 +133,7 @@ const REQUIRED_COMMANDS = [
   "asm.source.initDiz",
   "asm.source.select",
   "asm.source.prepare",
+  "asm.source.migrate",
   "asm.source.preview",
   "asm.source.apply",
   "asm.source.finish",
@@ -140,6 +142,10 @@ const REQUIRED_COMMANDS = [
   "asm.source.editResearch",
   "asm.source.editAnalysis",
   "asm.build",
+  "asm.object.assemble",
+  "asm.library.create",
+  "asm.link",
+  "asm.linked.build",
   "asm.assetPreview.open",
   "asm.analysis.toggleAnnotations",
   "asm.editorInfo.choosePreset",
@@ -531,8 +537,14 @@ export async function run(): Promise<void> {
   }
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
-  if (process.env.UTTORI_VSCODE_PAUSED_RUNTIME && process.env.UTTORI_VSCODE_RELEASE_PHASE === "installed") {
+  if (
+    process.env.UTTORI_VSCODE_PAUSED_RUNTIME &&
+    process.env.UTTORI_VSCODE_RELEASE_PHASE === "installed"
+  ) {
     await runPausedRuntimeSmoke(folder);
+  }
+  if (process.env.UTTORI_VSCODE_LINKED_BUILD === "1") {
+    return runLinkedBuildSmoke(folder);
   }
   if (process.env.UTTORI_VSCODE_NES_SOURCE === "1") {
     return runNesSourceSmoke(folder);
@@ -630,20 +642,12 @@ export async function run(): Promise<void> {
   try {
     const coverage = new AnalysisCoverageProvider();
     const roots = await coverage.getChildren();
-    assert.equal(roots.length, 1);
     assert.equal(
-      coverage.getTreeItem(roots[0]).collapsibleState,
-      vscode.TreeItemCollapsibleState.Collapsed,
+      roots.length,
+      0,
+      "Legacy evidence stores do not appear in build conversion progress.",
     );
-    const groups = await coverage.getChildren(roots[0]);
-    assert.deepEqual(
-      groups.map(({ label }) => label),
-      ["Summary", "Classifications"],
-    );
-    const conflict = (await coverage.getChildren(groups[0])).find(
-      ({ label }) => label === "Conflict",
-    );
-    assert.ok(conflict);
+    coverage.dispose();
     const sources = new AnalysisSourcesProvider();
     try {
       const sourceRoots = await sources.getChildren();

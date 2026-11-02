@@ -48,6 +48,7 @@ import {
   type SnesSessionState,
 } from "./session-state.js";
 import { snesRomAddressSpace } from "./target/address-space.js";
+import { createSnesLinkTarget, createSnesSourceLinkRecipe } from "./target/link-target.js";
 import { directiveCatalog } from "./tooling/directive-catalog.js";
 import { cpu65816Catalog, spc700Catalog, superFxCatalog } from "./tooling/instruction-catalog.js";
 
@@ -565,6 +566,8 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
       syntaxProfile: ASAR_SYNTAX_PROFILE,
       defaultOutputExtension: ".sfc",
       createOptions: targetOptions,
+      createLinkTarget: createSnesLinkTarget,
+      createSourceLinkRecipe: createSnesSourceLinkRecipe,
     });
   },
 });

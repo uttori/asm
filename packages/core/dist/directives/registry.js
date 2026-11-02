@@ -1,8 +1,8 @@
 import { CORE_DIRECTIVE_GROUPS } from "../directive-groups.js";
 import { recordExecutionParser, withTypedExecution } from "../internal-instrumentation.js";
 import { createNormalizedCommand } from "../ir/normalized-command.js";
-import { copySyntaxValue, } from "../ir/source-syntax.js";
-import { syntaxCodec } from "../ir/syntax-codec.js";
+import { copySyntaxValue, immutableSyntaxValue, isImmutableSyntaxValue, } from "../ir/source-syntax.js";
+import { syntaxCodec, immutableSyntaxCodec, } from "../ir/syntax-codec.js";
 import { clonePluginSyntax } from "../plugin/syntax-snapshot.js";
 import { registerDataDirectives } from "./data.js";
 import { registerFillPadDirectives } from "./fill-pad.js";
@@ -77,6 +77,19 @@ export class DirectiveRegistry {
         const codec = syntaxCodec("1", parse, validate);
         this.registerSyntax(names, `core.directive.${names[0]}`, codec, (payload, command) => execute(codec.read(payload), command));
     }
+    /**
+     * Built-in guards and executors borrow immutable syntax across passes and sessions.
+     * Guards must be pure; execution state belongs in the session, never in the payload.
+     * Plugin registration remains mutable; unknown/transported payloads are copied before validation.
+     */
+    registerImmutableTyped(keywords, parse, validate, execute) {
+        const names = typeof keywords === "string" ? [keywords] : keywords;
+        const codec = immutableSyntaxCodec("1", parse, validate);
+        this.registerSyntax(names, `core.directive.${names[0]}`, codec, (payload, command) => execute(codec.read(payload), command));
+        for (const name of names) {
+            this.syntaxHandlers.get(name).immutable = true;
+        }
+    }
     syntaxKeyword(keyword) {
         if (this.syntaxHandlers.has(keyword)) {
             return keyword;
@@ -108,14 +121,18 @@ export class DirectiveRegistry {
             grammarVersion: entry.grammar.version,
         };
         try {
-            const payload = copySyntaxValue(entry.grammar.parse(clonePluginSyntax({
+            const parsed = entry.grammar.parse(clonePluginSyntax({
                 keyword: this.syntaxKeyword(command.keyword),
                 text: command.command,
                 words: [this.syntaxKeyword(command.keyword), ...command.words.slice(1)],
                 source: command.source,
                 ...(command.parsed.declaration ? { declaration: command.parsed.declaration } : {}),
-            })));
-            if (!entry.grammar.validate(copySyntaxValue(payload))) {
+            }));
+            // A read-only codec already detached, bounded and froze this exact root.
+            // Ordinary plugin parsers and validators still receive independent mutable copies.
+            const owned = entry.immutable && isImmutableSyntaxValue(parsed);
+            const payload = owned ? parsed : copySyntaxValue(parsed);
+            if (!entry.grammar.validate(owned ? payload : copySyntaxValue(payload))) {
                 throw new Error(`Invalid syntax payload for '${entry.id}'.`);
             }
             return { ...identity, payload };
@@ -135,8 +152,18 @@ export class DirectiveRegistry {
         if (syntax.error !== undefined) {
             throw new Error(syntax.error);
         }
-        const payload = copySyntaxValue(syntax.payload);
-        if (!entry.grammar.validate(copySyntaxValue(payload))) {
+        let payload;
+        if (entry.immutable) {
+            // Identity proof never crosses serialization. A mutable transported tree is
+            // checked and copied on every execution; a shallow freeze cannot forge ownership.
+            payload = isImmutableSyntaxValue(syntax.payload)
+                ? syntax.payload
+                : immutableSyntaxValue(syntax.payload);
+        }
+        else {
+            payload = copySyntaxValue(syntax.payload);
+        }
+        if (!entry.grammar.validate(entry.immutable ? payload : copySyntaxValue(payload))) {
             throw new Error(`Invalid syntax payload for '${entry.id}'.`);
         }
         withTypedExecution(() => entry.execute(payload, command));

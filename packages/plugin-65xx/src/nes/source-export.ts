@@ -1,4 +1,8 @@
-import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
+import {
+  type AssemblyModuleOptions,
+  type AssemblyLinkRecipe,
+  Uint8ArrayDecoderSource,
+} from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
   projectSourceLabelNames,
@@ -84,7 +88,10 @@ export function exportNesSource(
     /** Explicit data classifications and versioned text/graphics layouts, qualified to original bytes. */
     readonly annotations?: readonly IntervalAnnotation[];
   } = {},
+  exportOptions: { readonly module?: AssemblyModuleOptions } = {},
 ): {
+  /** Native sections plus the original physical cartridge order; omitted from existing absolute exports. */
+  relocatable?: { readonly moduleId: string; readonly linkRecipe: AssemblyLinkRecipe };
   files: SourceGenerationFile[];
   segments: readonly NesSourceSegment[];
   codeBytes: number;
@@ -278,9 +285,12 @@ export function exportNesSource(
       }
     }
     const lines = [
-      `; Physical ${segment.name} bank; org excludes the iNES header, base selects its logical origin.`,
-      `org ${nesSourceHex(start, 6)}`,
-      `base ${nesSourceHex(segment.origin)}`,
+      exportOptions.module
+        ? `; Physical ${segment.name} bank; the link recipe selects its load/run addresses.`
+        : `; Physical ${segment.name} bank; org excludes the iNES header, base selects its logical origin.`,
+      ...(exportOptions.module
+        ? [`section "${segment.name}", code`]
+        : [`org ${nesSourceHex(start, 6)}`, `base ${nesSourceHex(segment.origin)}`]),
       "",
       `${segment.name}_start:`,
     ];
@@ -476,5 +486,43 @@ export function exportNesSource(
     canonicalJson({ format: "uttori-source-code", version: 1, romSha256, ranges }),
   );
   add("main.asm", main.join("\n") + "\n");
+  if (exportOptions.module) {
+    if (!exportOptions.module.id.trim()) {
+      throw new Error("Module export requires a stable module identity.");
+    }
+    const linkRecipe: AssemblyLinkRecipe = {
+      target: "65xx.nes",
+      checksumPolicy: "preserve",
+      regions: [
+        {
+          name: "__ines_header",
+          start: 0,
+          size: 16,
+          outputOffset: 0,
+          initialBytes: [...rom.header()],
+        },
+        ...segments.map((segment) => ({
+          name: segment.name,
+          start: segment.origin,
+          size: segment.size,
+          outputOffset: segment.offset,
+          addressSpace: "65xx.ines-address-space",
+        })),
+      ],
+      placements: segments.map((segment) => ({
+        section: segment.name,
+        load: segment.name,
+        run: segment.name,
+      })),
+    };
+    add("link-recipe.json", canonicalJson(linkRecipe));
+    return {
+      files,
+      segments,
+      codeBytes,
+      ranges,
+      relocatable: { moduleId: exportOptions.module.id, linkRecipe },
+    };
+  }
   return { files, segments, codeBytes, ranges };
 }

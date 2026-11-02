@@ -47,9 +47,26 @@ export function publishSourceBuild(options) {
         durableReplace(path.join(build, "build.json"), record);
         fs.rmSync(path.join(build, "pending.json"));
         durableReplace(path.join(directory, "current.json"), record);
+        // Readers obtain totals without parsing a debug map or the full dependency inventory.
+        // Publish only after the complete build is selected; freshness checks bind both receipts.
+        const summary = {
+            version: 1,
+            inputSha256: receipt.inputSha256,
+            ...(receipt.coverage ? { coverage: receipt.coverage } : {}),
+        };
+        const summaryWarnings = [];
+        try {
+            durableReplace(path.join(directory, "summary.json"), canonicalJson(summary));
+        }
+        catch (error) {
+            // Progress is an advisory projection. Its failure cannot undo the already selected ROM/map
+            // pair; readers report a missing or stale summary until a later successful publication.
+            summaryWarnings.push(`Could not publish build coverage summary: ${String(error)}`);
+        }
         const cacheWarnings = [
             ...new Set([
                 ...priorWarnings,
+                ...summaryWarnings,
                 ...pruneSourceBuilds(directory, receipt.inputSha256, fileName),
             ]),
         ];

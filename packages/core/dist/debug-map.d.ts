@@ -1,4 +1,4 @@
-import type { AddressToLineMapping, SerializableAddressRange, InstructionSourceInfo, AssetEmissionInfo } from "./addressToLine.js";
+import type { AddressToLineMapping, SerializableAddressRange, InstructionSourceInfo, AssetEmissionInfo, StructFieldEmissionInfo } from "./addressToLine.js";
 export declare const DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
 export declare const DEBUG_MAP_SCHEMA_VERSION = 1;
 export interface DebugMapSource {
@@ -22,7 +22,12 @@ export interface DebugMapAsset extends Omit<AssetEmissionInfo, "fileIdx" | "asse
     readonly sourceId: number;
     readonly assetSourceId: number;
 }
+/** Scalar record attribution resolved by the linker or absolute source writer. */
+export interface DebugMapField extends Omit<StructFieldEmissionInfo, "fileIdx"> {
+    readonly sourceId: number;
+}
 export interface DebugMap {
+    readonly fields?: readonly DebugMapField[];
     readonly format: typeof DEBUG_MAP_FORMAT;
     readonly schemaVersion: typeof DEBUG_MAP_SCHEMA_VERSION;
     readonly fingerprint: {

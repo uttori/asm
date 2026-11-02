@@ -28,8 +28,10 @@ export interface CliArguments {
     readonly instructionTrace?: string;
     /** Positive integer MiB limit. Undefined delegates to the shared 32 GiB import default. */
     readonly traceMaxMiB?: number;
-    readonly traceIndex?: "full";
+    readonly traceIndex?: "full" | "analysis";
     readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
+    /** Explicitly consolidate SNES register snapshots before physical compaction. */
+    readonly analysisOnly?: boolean;
     /** Repeatable 24-bit SNES CPU bus addresses, not ROM file offsets. */
     readonly entryPoints: readonly number[];
     /** Positive work-item limit. Undefined delegates to {@link DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS}. */

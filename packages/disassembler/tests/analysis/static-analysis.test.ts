@@ -6,6 +6,48 @@ import {
   type StaticInstruction,
 } from "../../src/index.js";
 
+test("long static discovery paths fit a bounded heap and retain full selected ancestry", (t) => {
+  const output = execFileSync(
+    process.execPath,
+    [
+      "--max-old-space-size=192",
+      "--conditions=uttori-source",
+      "--import=tsx",
+      new URL("./fixtures/static-analysis-memory.mjs", import.meta.url).pathname,
+    ],
+    { encoding: "utf8", timeout: 30000 },
+  );
+  t.deepEqual(JSON.parse(output), { instructions: 30000, pathLength: 30000 });
+});
+
+test("SNES record publication retains compact ancestry within a bounded heap", (t) => {
+  const output = execFileSync(
+    process.execPath,
+    [
+      "--max-old-space-size=192",
+      "--conditions=uttori-source",
+      "--import=tsx",
+      new URL("./fixtures/snes-analysis-memory.mjs", import.meta.url).pathname,
+    ],
+    { encoding: "utf8", timeout: 30000 },
+  );
+  t.deepEqual(JSON.parse(output), { instructions: 12001, pathLength: 12001 });
+});
+
+test("deep static call contexts retain their full meaning with bounded identity storage", (t) => {
+  const output = execFileSync(
+    process.execPath,
+    [
+      "--max-old-space-size=192",
+      "--conditions=uttori-source",
+      "--import=tsx",
+      new URL("./fixtures/compact-context-memory.mjs", import.meta.url).pathname,
+    ],
+    { encoding: "utf8", timeout: 30000 },
+  );
+  t.deepEqual(JSON.parse(output), { instructions: 30000, depth: 64 });
+});
+
 const instruction = (
   address: number,
   size: number,
@@ -167,3 +209,4 @@ test("generic static analysis accepts compatible CPU mirrors without a boundary 
   t.false(result.conflicts.some((conflict) => conflict.kind === "instruction-boundary"));
   t.is(result.coverage.reachedBytes, 1);
 });
+import { execFileSync } from "node:child_process";

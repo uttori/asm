@@ -4117,6 +4117,204 @@ function parseDataList(text) {
   return splitRespectingFunctions(text).map(parseDataOperand);
 }
 
+// packages/core/src/ir/link-expression.ts
+function linkInteger(value) {
+  if (!Number.isSafeInteger(value)) {
+    throw new Error(`Link expression requires a safe integer: ${value}`);
+  }
+  return value;
+}
+function linkConstant(value) {
+  return { kind: "constant", value: linkInteger(value) };
+}
+function linkBinary(operator, left, right) {
+  if (operator === "-" && left.kind === "section" && right.kind === "section" && left.module === right.module && left.section === right.section) {
+    return linkConstant(left.offset - right.offset);
+  }
+  if (left.kind !== "constant" || right.kind !== "constant") {
+    return { kind: "binary", operator, left, right };
+  }
+  const a = left.value;
+  const b = right.value;
+  let value;
+  switch (operator) {
+    case "+":
+      value = a + b;
+      break;
+    case "-":
+      value = a - b;
+      break;
+    case "*":
+      value = a * b;
+      break;
+    case "/":
+    case "%":
+      if (b === 0) {
+        throw new Error("Division by zero in link expression.");
+      }
+      value = operator === "/" ? Math.trunc(a / b) : a % b;
+      break;
+    case "**":
+      value = a ** b;
+      break;
+    case "<<":
+    case ">>":
+      if (b < 0 || b > 52) {
+        throw new Error("Link expression shift must be in 0..52.");
+      }
+      value = Number(operator === "<<" ? BigInt(a) << BigInt(b) : BigInt(a) >> BigInt(b));
+      break;
+    case "&":
+      value = Number(BigInt(a) & BigInt(b));
+      break;
+    case "|":
+      value = Number(BigInt(a) | BigInt(b));
+      break;
+    case "^":
+      value = Number(BigInt(a) ^ BigInt(b));
+      break;
+    case "<":
+      value = Number(a < b);
+      break;
+    case ">":
+      value = Number(a > b);
+      break;
+    case "<=":
+      value = Number(a <= b);
+      break;
+    case ">=":
+      value = Number(a >= b);
+      break;
+    case "=":
+    case "==":
+      value = Number(a === b);
+      break;
+    case "!=":
+      value = Number(a !== b);
+      break;
+    case "&&":
+      value = Number(a !== 0 && b !== 0);
+      break;
+    case "||":
+      value = Number(a !== 0 || b !== 0);
+      break;
+  }
+  return linkConstant(value);
+}
+function linkUnary(operator, argument) {
+  if (argument.kind !== "constant") {
+    return { kind: "unary", operator, argument };
+  }
+  const value = argument.value;
+  if (operator === "-") {
+    return linkConstant(-value);
+  }
+  if (operator === "~") {
+    return linkConstant(Number(~BigInt(value)));
+  }
+  let shift = 0;
+  if (operator === "high") {
+    shift = 8;
+  }
+  if (operator === "bank") {
+    shift = 16;
+  }
+  return linkConstant(Number(BigInt(value) >> BigInt(shift) & 255n));
+}
+function compileLinkExpression(expression, context, depth = 0) {
+  if (depth > 128) {
+    throw new Error("Link expression nesting exceeds 128.");
+  }
+  const compile = (node) => compileLinkExpression(node, context, depth + 1);
+  switch (expression.type) {
+    case "literal":
+    case "string":
+      return linkConstant(context.literal(expression));
+    case "identifier":
+      if (expression.name === "*") {
+        return context.current();
+      }
+      return context.reference(expression);
+    case "member":
+    case "index":
+    case "relativeReference":
+      return context.reference(expression);
+    case "template":
+    case "defineReference": {
+      const bound = context.bind?.(expression);
+      if (!bound || bound === expression) {
+        throw new Error("Unbound template in link expression.");
+      }
+      return compile(bound);
+    }
+    case "binary": {
+      const left = compile(expression.left);
+      if (left.kind === "constant") {
+        if (expression.operator === "&&" && left.value === 0) {
+          return linkConstant(0);
+        }
+        if (expression.operator === "||" && left.value !== 0) {
+          return linkConstant(1);
+        }
+      }
+      return linkBinary(expression.operator, left, compile(expression.right));
+    }
+    case "unary": {
+      const argument = compile(expression.argument);
+      if (expression.operator === "+") {
+        return argument;
+      }
+      if (expression.operator === "<") {
+        return linkUnary("low", argument);
+      }
+      if (expression.operator === ">") {
+        return linkUnary("high", argument);
+      }
+      if (expression.operator === "^" || expression.operator === "<:") {
+        return linkUnary("bank", argument);
+      }
+      return linkUnary(expression.operator, argument);
+    }
+    case "call": {
+      const name = expression.callee.name.toLowerCase();
+      if (name === "pc" && expression.arguments.length === 0) {
+        return context.current();
+      }
+      const extraction = {
+        low: "low",
+        lobyte: "low",
+        high: "high",
+        hibyte: "high",
+        bank: "bank",
+        bankbyte: "bank"
+      };
+      if (extraction[name] && expression.arguments.length === 1) {
+        return linkUnary(extraction[name], compile(expression.arguments[0]));
+      }
+      if ((name === "loword" || name === "hiword") && expression.arguments.length === 1) {
+        let value = compile(expression.arguments[0]);
+        if (name === "hiword") {
+          value = linkBinary(">>", value, linkConstant(16));
+        }
+        return linkBinary("&", value, linkConstant(65535));
+      }
+      const resolved = context.call?.(expression, compile);
+      if (resolved) {
+        return resolved;
+      }
+      throw new Error(
+        `Function '${name}' is unavailable in a link expression; evaluate it at assembly time.`
+      );
+    }
+    case "error":
+    case "range":
+    case "raw":
+    case "sourceText":
+    default:
+      throw new Error(`Expression '${expression.type}' cannot be retained for linking.`);
+  }
+}
+
 // packages/core/src/ir/parsed-operand.ts
 function parseInstructionOperands(mnemonic, text, grammar2) {
   const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
@@ -4370,6 +4568,129 @@ function definePlugin(plugin2) {
   return plugin2;
 }
 
+// packages/core/src/services/source-link-recipe.ts
+function addressedSourceLinkRecipe(options) {
+  const regions = [];
+  const placements = [];
+  const prefix = options.prefix ?? [];
+  let cursor = prefix.length;
+  if (prefix.length) {
+    regions.push({
+      name: "__source_header",
+      start: 0,
+      size: prefix.length,
+      outputOffset: 0,
+      initialBytes: [...prefix]
+    });
+  }
+  const entries2 = options.sections.map((section) => ({ ...section, outputOffset: options.outputOffset(section.loadAddress) })).toSorted((a, b) => a.outputOffset - b.outputOffset || a.size - b.size);
+  const gap = (end) => {
+    if (end > cursor) {
+      regions.push({
+        name: `__source_gap_${cursor}`,
+        start: 0,
+        size: end - cursor,
+        outputOffset: cursor,
+        fillByte: options.fillByte
+      });
+    }
+    cursor = Math.max(cursor, end);
+  };
+  for (const entry of entries2) {
+    if (!Number.isSafeInteger(entry.outputOffset) || entry.outputOffset < prefix.length) {
+      throw new Error(`Source ORG for '${entry.section}' does not map to payload storage.`);
+    }
+    if (entry.size && entry.outputOffset < cursor) {
+      throw new Error(
+        `Source contributions overlap at '${entry.section}'; use the absolute patch workflow for overlapping writes.`
+      );
+    }
+    gap(entry.outputOffset);
+    const load = `${entry.section}:load`;
+    const run = entry.runAddress === entry.loadAddress ? load : `${entry.section}:run`;
+    regions.push({
+      name: load,
+      start: entry.loadAddress,
+      size: entry.size,
+      outputOffset: entry.outputOffset,
+      fillByte: options.fillByte
+    });
+    if (run !== load) {
+      regions.push({ name: run, start: entry.runAddress, size: entry.size });
+    }
+    placements.push({ section: entry.section, load, run });
+    cursor = Math.max(cursor, entry.outputOffset + entry.size);
+  }
+  if (options.outputSize !== void 0) {
+    if (cursor > options.outputSize) {
+      throw new Error("Source layout exceeds its configured container size.");
+    }
+    gap(options.outputSize);
+  }
+  return {
+    target: options.target,
+    targetOptions: options.targetOptions,
+    checksumPolicy: options.checksumPolicy ?? "preserve",
+    regions,
+    placements
+  };
+}
+
+// packages/core/src/ir/relocatable-instruction.ts
+var RelocatableInstruction = class {
+  constructor(frame, context) {
+    this.frame = frame;
+    this.context = context;
+  }
+  frame;
+  context;
+  parts = [];
+  size = 0;
+  /** Opcode bytes are completely known before placement; symbolic opcode/register choices are rejected. */
+  opcode(...values) {
+    for (const value of values) {
+      if (!Number.isInteger(value) || value < 0 || value > 255) {
+        throw this.frame.error(`Invalid opcode byte: ${value}`);
+      }
+      this.parts.push(value);
+      this.size++;
+    }
+    return this;
+  }
+  /** Retain an operand's pure expression and its target-owned encoding contract. */
+  field(value, encoding) {
+    this.parts.push({ value, encoding });
+    this.size += encoding.width;
+    return this;
+  }
+  /** Relative PC anchors are assigned after the entire instruction size is known. */
+  finish(form, state = null) {
+    this.frame.choose(form, this.size, state);
+    if (this.context) {
+      if (!this.context.emission.writeRelocation) {
+        throw this.frame.error("Encoder host does not support relocatable fields.");
+      }
+      for (const part of this.parts) {
+        if (typeof part === "number") {
+          this.context.emission.write1(part);
+        } else {
+          let encoding = part.encoding;
+          if (encoding.kind === "relative" && !encoding.pc) {
+            const start = this.frame.sectionPosition();
+            encoding = {
+              ...encoding,
+              pc: { section: start.section, offset: this.frame.instructionAddress + this.size }
+            };
+          }
+          const expression = "expression" in part.value ? this.frame.compileLink(part.value) : part.value;
+          this.context.emission.writeRelocation(expression, encoding);
+        }
+      }
+    }
+    return this.size;
+  }
+};
+
 // packages/core/src/decoder-types.ts
 var Uint8ArrayDecoderSource = class {
   #bytes;
@@ -4410,6 +4731,21 @@ var Uint8ArrayDecoderSource = class {
     }
     return this.#bytes.slice(offset, end);
   }
+};
+
+// packages/core/src/linker/types.ts
+var LinkError = class extends Error {
+  constructor(code, message, source, allocations = []) {
+    const location = source ? `${source.file}:${source.line}: ` : "";
+    super(`${location}${message}`);
+    this.code = code;
+    this.source = source;
+    this.allocations = allocations;
+  }
+  code;
+  source;
+  allocations;
+  name = "LinkError";
 };
 
 // packages/plugin-65xx/src/ca65-profile.ts
@@ -7225,6 +7561,16 @@ function closeActiveSegment(session, state) {
     state.currentSegment = null;
     return;
   }
+  if (session.module) {
+    if (segment.define) {
+      for (const suffix of ["LOAD", "RUN", "SIZE", "RUN_END"]) {
+        session.module.declare(`__${segment.name}_${suffix}__`, "import");
+      }
+    }
+    state.currentSegment = null;
+    state.currentLoadMemory = null;
+    return;
+  }
   const size = session.currentTargetBaseAddress - state.segmentLoadStart;
   state.memoryCursors[segment.load] = session.currentTargetBaseAddress;
   if (segment.define) {
@@ -7246,12 +7592,23 @@ function closeActiveSegment(session, state) {
 }
 function applyLinkerSymbols(session, state) {
   for (const symbol of state.linker.symbols) {
+    if (session.module) {
+      session.module.declare(symbol.name, "import");
+      continue;
+    }
     session.globalSymbols.add(symbol.name);
     const value = session.operandResolver.getnum(symbol.valueExpr);
     session.symbolScope.setLabel(symbol.name, value, true);
   }
 }
 function openSegment(session, state, segment) {
+  if (session.module) {
+    const kind = segment.type === "bss" || segment.type === "zp" ? "bss" : "code";
+    session.module.selectSection({ name: segment.name, kind });
+    state.currentSegment = segment.name;
+    state.currentLoadMemory = segment.load;
+    return;
+  }
   const loadMemory = state.linker.memories.get(segment.load);
   const runMemory = state.linker.memories.get(segment.run);
   if (!loadMemory || !runMemory) {
@@ -7300,6 +7657,70 @@ function handlePopseg(state) {
 }
 
 // packages/plugin-65xx/src/linker-config.ts
+function ld65LinkRecipe(config, target = "65xx.nes") {
+  const symbols = [];
+  for (const segment of config.segments.values()) {
+    if (!segment.define) {
+      continue;
+    }
+    for (const [suffix, property] of [
+      ["LOAD", "load"],
+      ["RUN", "run"],
+      ["SIZE", "size"],
+      ["RUN_END", "runEnd"]
+    ]) {
+      symbols.push({ name: `__${segment.name}_${suffix}__`, section: segment.name, property });
+    }
+  }
+  for (const symbol of config.symbols) {
+    symbols.push({
+      name: symbol.name,
+      expression: compileLinkExpression(parseExpressionNode(symbol.valueExpr), {
+        reference: (node) => {
+          if (node.type !== "identifier") {
+            throw new Error("Linker-config symbols require global names.");
+          }
+          return { kind: "symbol", name: node.name };
+        },
+        current: () => {
+          throw new Error("Linker-config symbols have no implicit section cursor.");
+        },
+        literal: (node) => {
+          if (node.type !== "literal") {
+            throw new Error("Linker-config expressions require integer literals.");
+          }
+          const text = node.value;
+          if (text.startsWith("$")) {
+            return Number.parseInt(text.slice(1), 16);
+          }
+          if (text.startsWith("%")) {
+            return Number.parseInt(text.slice(1), 2);
+          }
+          return Number(text);
+        }
+      })
+    });
+  }
+  return {
+    target,
+    regions: [...config.memories.values()].map((region) => ({
+      name: region.name,
+      start: region.start,
+      size: region.size,
+      ...region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
+      ...region.fill ? { fillByte: region.fillval } : {},
+      addressSpace: "65xx.ines-address-space"
+    })),
+    placements: [...config.segments.values()].map((segment) => ({
+      section: segment.name,
+      load: segment.load,
+      run: segment.run,
+      ...segment.start !== void 0 ? { start: segment.start } : {}
+    })),
+    // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
+    symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()]
+  };
+}
 var DEFAULT_LINKER_CONFIG = `MEMORY {
     ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
 }
@@ -7617,6 +8038,13 @@ function createNesLifecycle({ state }) {
     const nes = state.get(nes65xxSessionStateKey);
     resetNes65xxStageState(nes);
     session.outputFillByte = nes.fillByte;
+    if (session.module) {
+      for (const name of linkerDefinedSymbolNames(nes.linker)) {
+        session.module.declare(name, "import");
+      }
+      session.bytes = 0;
+      return;
+    }
     const total = nes.header.length + nes.linker.imageSize;
     const image = Array.from({ length: total }, () => nes.fillByte);
     for (let index = 0; index < nes.header.length; index++) {
@@ -7827,7 +8255,7 @@ function parse(id, { words }) {
   }
   throw new Error(`Missing typed ca65 directive grammar '${id}'.`);
 }
-function execute(node, { session, state, targetId }) {
+function execute(node, { session, state, targetId }, id) {
   const profile = state.get(ca65SessionStateKey);
   switch (node.operation) {
     case "error":
@@ -7848,6 +8276,7 @@ function execute(node, { session, state, targetId }) {
       return;
     case "segment": {
       if (targetId !== NES_65XX_TARGET_ID) {
+        session.module?.selectSection({ name: node.name });
         profile.currentFlatSegment = node.name;
         return;
       }
@@ -7871,7 +8300,15 @@ function execute(node, { session, state, targetId }) {
     }
     case "symbols":
       for (const name of node.names) {
-        markGlobalSymbol(session, name);
+        if (session.module) {
+          if (id.endsWith(".export")) {
+            session.module.exportSymbol(name);
+          } else {
+            session.module.declare(name, "import");
+          }
+        } else {
+          markGlobalSymbol(session, name);
+        }
       }
       return;
     case "data":
@@ -7880,6 +8317,21 @@ function execute(node, { session, state, targetId }) {
     case "mapped":
       if (session.isDefinitionCollectionStage) {
         session.step(node.values.length * (node.mode === "big" ? 2 : 1));
+        return;
+      }
+      if (session.module) {
+        for (const value of node.values) {
+          const expression = node.mode === "big" ? value : {
+            type: "unary",
+            operator: node.mode === "low" ? "<" : ">",
+            argument: value
+          };
+          session.module.write(
+            expression,
+            node.mode === "big" ? 2 : 1,
+            node.mode === "big" ? "big" : "little"
+          );
+        }
         return;
       }
       for (const expression of node.values) {
@@ -7900,6 +8352,14 @@ function execute(node, { session, state, targetId }) {
         throw new Error(
           node.operation === "align" ? ".align boundary must be a positive integer." : ".res count must be non-negative."
         );
+      }
+      if (session.module) {
+        if (node.operation === "align") {
+          session.module.align(value, fill);
+        } else {
+          session.module.reserve(value, node.fill ? fill : void 0);
+        }
+        return;
       }
       const count = node.operation === "reserve" ? value : (value - session.currentTargetAddress % value) % value;
       if (session.isDefinitionCollectionStage) {
@@ -7947,7 +8407,7 @@ function ca65DirectiveSyntax(id) {
       if ((id === "65xx.directive.incbin" || id === "65xx.directive.assert") && context.session.targetOptions.sourceStyle === "asar") {
         return void 0;
       }
-      return { execute: (payload) => execute(codec.read(payload), context) };
+      return { execute: (payload) => execute(codec.read(payload), context, id) };
     }
   };
 }
@@ -15433,6 +15893,55 @@ function has65xxPolicy(syntax2) {
   return "policy65xx" in syntax2 && typeof syntax2.policy65xx === "object" && syntax2.policy65xx !== null && "kind" in syntax2.policy65xx && syntax2.policy65xx.kind === "65xx-v1";
 }
 
+// packages/plugin-65xx/src/target/link-target.ts
+function createNesSourceLinkRecipe(context, sections) {
+  if (context.options.sourceStyle !== "asar") {
+    throw new Error("The NES Asar adapter requires sourceStyle: asar in target configuration.");
+  }
+  const state = context.state.get(nes65xxSessionStateKey);
+  return addressedSourceLinkRecipe({
+    target: context.targetId,
+    sections,
+    outputOffset: (address2) => state.header.length + address2,
+    prefix: state.header,
+    outputSize: state.header.length + state.linker.imageSize,
+    fillByte: state.fillByte
+  });
+}
+function createNesLinkTarget() {
+  return {
+    target: "65xx.nes",
+    revision: "nes-link-v1",
+    validate(modules, recipe, allocations) {
+      const header = recipe.regions.find(
+        (region) => region.outputOffset === 0 && region.initialBytes
+      )?.initialBytes;
+      if (!header || header.length !== 16 || header[0] !== 78 || header[1] !== 69 || header[2] !== 83 || header[3] !== 26) {
+        throw new LinkError("ines-header", "Link recipe requires a complete iNES header.");
+      }
+      for (const module of modules) {
+        const declared = module.targetOptions.header;
+        if (!Array.isArray(declared) || declared.length !== header.length || declared.some((byte, index) => byte !== header[index])) {
+          throw new LinkError(
+            "ines-header",
+            `Module '${module.id}' declares an incompatible iNES header.`
+          );
+        }
+      }
+      for (const allocation of allocations) {
+        if (allocation.runAddress < 0 || allocation.runAddress + allocation.size > 65536) {
+          throw new LinkError(
+            "nes-address",
+            `Section '${allocation.module}:${allocation.section}' exceeds the 16-bit run address space.`
+          );
+        }
+      }
+    },
+    finalize() {
+    }
+  };
+}
+
 // packages/plugin-65xx/src/operands/resolution.ts
 function valueWidth(value) {
   if (!Number.isFinite(value)) {
@@ -15458,6 +15967,14 @@ function valueWidth(value) {
   return Math.max(1, Math.ceil(digits / 2));
 }
 function expand(plan2, frame) {
+  if (frame.isRelocatable && (frame.sourceAdapter !== "asar" || frame.previewSource(plan2.scalar) === void 0)) {
+    return {
+      length: plan2.force ?? plan2.hexWidth ?? 2,
+      generated: false,
+      value: 0,
+      flattened: false
+    };
+  }
   let length = plan2.hexWidth ?? 2;
   let value = 0;
   let generated = false;
@@ -15707,6 +16224,7 @@ var TypedArch65xx = class {
     }
   }
   cpu;
+  supportsRelocatable = true;
   deferOperandBindingErrors = true;
   forms;
   catalog;
@@ -15851,6 +16369,9 @@ var TypedArch65xx = class {
     const form = this.resolveForm(frame, syntax2, state);
     if (!form) {
       return false;
+    }
+    if (frame.isRelocatable) {
+      return this.encodeModule(frame, context, syntax2, form);
     }
     frame.choose(form.mnemonic + ":" + form.mode, modeSize(form), {
       cpu: this.cpu.id,
@@ -16032,6 +16553,73 @@ var TypedArch65xx = class {
       const mask = 2 ** (width * 8) - 1;
       context.emission.writeValue(values[i] & mask, width, "little");
     }
+    return true;
+  }
+  /** Form tables supply every field's width/order, including vendor and prefixed instructions. */
+  encodeModule(frame, context, syntax2, form) {
+    const instruction = new RelocatableInstruction(frame, context).opcode(...form.encoding);
+    const parts2 = syntax2.policy65xx.parts;
+    const scalar3 = selectedScalar(syntax2);
+    let fields = [scalar3];
+    switch (form.codec) {
+      case "none":
+        fields = [];
+        break;
+      case "accumulator-relative8":
+        fields = [parts2[1].scalar];
+        break;
+      case "zero-page-relative8":
+      case "zero-page-immediate8":
+      case "three-unsigned16-le":
+      case "immediate-unsigned8":
+      case "immediate-unsigned16":
+        fields = parts2.slice(0, form.operands.length).map((part) => part.scalar);
+        break;
+      case "relative16":
+      case "relative8":
+      case "special-page":
+      case "unsigned16-le":
+      case "unsigned24-le":
+      case "unsigned8":
+        if (!syntax2.policy65xx.hasOperand && form.mnemonic === "BRK") {
+          fields = [linkConstant(0)];
+        }
+        break;
+    }
+    if (fields.length !== form.operands.length || fields.some((field) => !field)) {
+      throw frame.error(`${form.mnemonic} requires ${form.operands.length} encoded operands.`);
+    }
+    for (let index = 0; index < fields.length; index++) {
+      const field = form.operands[index];
+      const relative = field.relative === true || form.codec === "relative8" || form.codec === "relative16" || form.codec === "zero-page-relative8" && index === 1 || form.codec === "accumulator-relative8";
+      const encoding = {
+        width: field.width,
+        kind: relative ? "relative" : "absolute",
+        addressWidth: 16,
+        wrapWidth: 16
+      };
+      if (relative) {
+        const start = frame.sectionPosition();
+        instruction.field(fields[index], {
+          ...encoding,
+          signed: true,
+          pc: {
+            section: start.section,
+            offset: frame.instructionAddress + (form.relativeBaseOffset ?? modeSize(form))
+          }
+        });
+      } else if (form.codec === "special-page") {
+        instruction.field(fields[index], { ...encoding, minimum: 65280, maximum: 65535 });
+      } else {
+        const immediate = form.mode === "immediate" || form.codec.startsWith("immediate-") && index === 0 || form.codec === "zero-page-immediate8" && index === 1;
+        instruction.field(fields[index], {
+          ...encoding,
+          minimum: immediate ? -(2 ** (8 * field.width - 1)) : 0,
+          constraint: form.operandConstraint === "power-of-two" ? "powerOfTwo" : void 0
+        });
+      }
+    }
+    instruction.finish(`${form.mnemonic}:${form.mode}`, { cpu: this.cpu.id, mode: form.mode });
     return true;
   }
   /** Validate before writing, retaining a classification value only when its evaluation schedule requires it. */
@@ -16443,7 +17031,34 @@ function register65xxContributions(context) {
     syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
     createSyntaxProfile: (options) => options.sourceStyle === "asar" ? ASAR_SYNTAX_PROFILE : CA65_65XX_SYNTAX_PROFILE,
     defaultOutputExtension: ".nes",
-    createOptions: createNes65xxTargetOptions
+    createOptions: createNes65xxTargetOptions,
+    createLinkTarget: createNesLinkTarget,
+    createSourceLinkRecipe: createNesSourceLinkRecipe,
+    createLinkRecipe: ({ state }) => {
+      const nes = state.get(nes65xxSessionStateKey);
+      const recipe = ld65LinkRecipe(nes.linker, NES_65XX_TARGET_ID);
+      return {
+        ...recipe,
+        regions: [
+          {
+            name: "__ines_header",
+            start: 0,
+            size: nes.header.length,
+            outputOffset: 0,
+            initialBytes: [...nes.header]
+          },
+          // The flat NES lifecycle fills the complete cartridge with the target byte, including MEMORY gaps.
+          // Keep its established output here; ld65LinkRecipe remains available for explicit per-region policies.
+          ...recipe.regions.map((region) => ({
+            ...region,
+            ...region.outputOffset !== void 0 ? {
+              outputOffset: region.outputOffset + nes.header.length,
+              fillByte: nes.fillByte
+            } : {}
+          }))
+        ]
+      };
+    }
   });
 }
 function validate65xxPluginOptions(configured) {

@@ -11,6 +11,7 @@ const TOP_LEVEL_KEYS = new Set([
     "includePaths",
     "entryPoints",
     "buildOutput",
+    "linkProject",
     "baseImage",
 ]);
 const PLUGIN_KEYS = new Set(["module", "options"]);
@@ -87,6 +88,7 @@ export const validateProjectConfiguration = (value) => {
     const includePaths = optionalStringArray(value.includePaths, "includePaths");
     const entryPoints = optionalStringArray(value.entryPoints, "entryPoints");
     const buildOutput = optionalText(value.buildOutput, "buildOutput");
+    const linkProject = optionalText(value.linkProject, "linkProject");
     const baseImage = optionalText(value.baseImage, "baseImage");
     return {
         ...(schema === undefined ? {} : { $schema: schema }),
@@ -98,6 +100,7 @@ export const validateProjectConfiguration = (value) => {
         ...(includePaths === undefined ? {} : { includePaths }),
         ...(entryPoints === undefined ? {} : { entryPoints }),
         ...(buildOutput === undefined ? {} : { buildOutput }),
+        ...(linkProject === undefined ? {} : { linkProject }),
         ...(baseImage === undefined ? {} : { baseImage }),
     };
 };

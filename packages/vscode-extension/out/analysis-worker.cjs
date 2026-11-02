@@ -78,6 +78,60 @@ var EvidencePool = class {
   }
 };
 
+// packages/disassembler/src/model/analysis-ownership.ts
+function validateAnalysisOwnership(records, scope = "complete") {
+  if (!records.some(
+    (record3) => record3.kind === "cfg-node" && (record3.functionEntry !== void 0 || record3.evidencePredecessor !== void 0)
+  )) {
+    return;
+  }
+  const nodes = /* @__PURE__ */ new Map();
+  for (const record3 of records) {
+    if (record3.kind === "cfg-node") {
+      nodes.set(record3.id, record3);
+    }
+  }
+  const complete = /* @__PURE__ */ new Set();
+  for (const node of nodes.values()) {
+    if (node.functionEntry === void 0) {
+      if (node.evidencePredecessor !== void 0) {
+        throw new Error(`Analysis node '${node.id}' has a predecessor without function ownership.`);
+      }
+      continue;
+    }
+    const entry = nodes.get(node.functionEntry);
+    if (!entry && scope === "complete" || entry && (entry.functionEntry !== entry.id || entry.addressSpace !== node.addressSpace)) {
+      throw new Error(`Analysis node '${node.id}' has an invalid function entry.`);
+    }
+    const visiting = /* @__PURE__ */ new Set();
+    let current = node;
+    while (!complete.has(current.id)) {
+      if (visiting.has(current.id)) {
+        throw new Error(`Analysis node '${current.id}' has a cyclic evidence predecessor.`);
+      }
+      visiting.add(current.id);
+      const predecessor = current.evidencePredecessor;
+      if (predecessor === void 0) {
+        if (current.id !== node.functionEntry) {
+          throw new Error(`Analysis node '${current.id}' does not lead to its function entry.`);
+        }
+        break;
+      }
+      const previous = nodes.get(predecessor);
+      if (current.id === node.functionEntry || !previous && scope === "complete" || previous && (previous.functionEntry !== node.functionEntry || previous.addressSpace !== node.addressSpace)) {
+        throw new Error(`Analysis node '${current.id}' has an invalid evidence predecessor.`);
+      }
+      if (!previous) {
+        break;
+      }
+      current = previous;
+    }
+    for (const id of visiting) {
+      complete.add(id);
+    }
+  }
+}
+
 // packages/disassembler/src/model/project-labels.ts
 var validateSourceLabelName = (name2) => {
   if (typeof name2 !== "string" || name2.length > 256 || !/^[A-Z_a-z]\w*$/.test(name2)) {
@@ -1295,60 +1349,6 @@ var RecordIdSet = class {
     }
   }
 };
-
-// packages/disassembler/src/model/analysis-ownership.ts
-function validateAnalysisOwnership(records, scope = "complete") {
-  if (!records.some(
-    (record3) => record3.kind === "cfg-node" && (record3.functionEntry !== void 0 || record3.evidencePredecessor !== void 0)
-  )) {
-    return;
-  }
-  const nodes = /* @__PURE__ */ new Map();
-  for (const record3 of records) {
-    if (record3.kind === "cfg-node") {
-      nodes.set(record3.id, record3);
-    }
-  }
-  const complete = /* @__PURE__ */ new Set();
-  for (const node of nodes.values()) {
-    if (node.functionEntry === void 0) {
-      if (node.evidencePredecessor !== void 0) {
-        throw new Error(`Analysis node '${node.id}' has a predecessor without function ownership.`);
-      }
-      continue;
-    }
-    const entry = nodes.get(node.functionEntry);
-    if (!entry && scope === "complete" || entry && (entry.functionEntry !== entry.id || entry.addressSpace !== node.addressSpace)) {
-      throw new Error(`Analysis node '${node.id}' has an invalid function entry.`);
-    }
-    const visiting = /* @__PURE__ */ new Set();
-    let current = node;
-    while (!complete.has(current.id)) {
-      if (visiting.has(current.id)) {
-        throw new Error(`Analysis node '${current.id}' has a cyclic evidence predecessor.`);
-      }
-      visiting.add(current.id);
-      const predecessor = current.evidencePredecessor;
-      if (predecessor === void 0) {
-        if (current.id !== node.functionEntry) {
-          throw new Error(`Analysis node '${current.id}' does not lead to its function entry.`);
-        }
-        break;
-      }
-      const previous = nodes.get(predecessor);
-      if (current.id === node.functionEntry || !previous && scope === "complete" || previous && (previous.functionEntry !== node.functionEntry || previous.addressSpace !== node.addressSpace)) {
-        throw new Error(`Analysis node '${current.id}' has an invalid evidence predecessor.`);
-      }
-      if (!previous) {
-        break;
-      }
-      current = previous;
-    }
-    for (const id of visiting) {
-      complete.add(id);
-    }
-  }
-}
 
 // packages/disassembler/src/model/runtime-graphics-fact.ts
 var record = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -3746,440 +3746,6 @@ var readInstructionExecutionSummary = (database2, manifest, ranges) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-query-cache.ts
-var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
-var installQueryCache = (db, key3, dependencies) => {
-  if (!/^[\d_a-z]+$/.test(key3)) {
-    throw new Error("Invalid internal query cache key.");
-  }
-  if (dependencies.some(
-    (table) => ![
-      "analysis",
-      "annotations",
-      "labels",
-      "comments",
-      "regions",
-      "imports",
-      "evidence",
-      "runtime"
-    ].includes(table)
-  )) {
-    throw new Error("Invalid query dependency.");
-  }
-  db.exec(QUERY_CACHE_SCHEMA);
-  for (const table of dependencies.flatMap(
-    (name2) => name2 === "runtime" ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"] : [name2]
-  )) {
-    for (const event of ["INSERT", "UPDATE", "DELETE"]) {
-      const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
-      const condition = table === "runtime_fact_rows" && event === "UPDATE" ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL" : "";
-      db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key3}_${table}_${event} AFTER ${update} ON ${table} ${condition} BEGIN
-      DELETE FROM query_cache WHERE name='${key3}'; END`);
-    }
-  }
-};
-var readQueryCache = (db, key3, signature) => {
-  if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
-    return void 0;
-  }
-  const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key3, signature);
-  if (!row) {
-    return void 0;
-  }
-  const parsed = JSON.parse(String(row.payload));
-  return parsed;
-};
-var writeQueryCache = (db, key3, signature, value) => {
-  db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(
-    key3,
-    signature,
-    JSON.stringify(value)
-  );
-};
-
-// packages/disassembler/src/storage/sqlite-coverage-query.ts
-var COVERAGE_CLASSES = ["opcode", "operand", "data", "asset", "unknown"];
-var COVERAGE_RUNTIME = ["executed", "operand", "read", "written"];
-function isCoverageCounts(value, keys) {
-  return isRecord4(value) && keys.every((key3) => isFiniteNumber(value[key3])) && Object.keys(value).every((key3) => keys.includes(key3));
-}
-function isSqliteCoverageSummary(value) {
-  if (!isRecord4(value) || !isFiniteNumber(value.contentSize) || !isStringArray(value.fileAddressSpaces) || !Array.isArray(value.segments) || value.segments.length !== 0 || !Array.isArray(value.unprojected) || value.unprojected.length !== 0 || !Array.isArray(value.diagnostics) || value.diagnostics.length !== 0 || !isFiniteNumber(value.detailCount) || !isRecord4(value.summary)) {
-    return false;
-  }
-  const summary = value.summary;
-  return isFiniteNumber(summary.totalBytes) && isFiniteNumber(summary.classifiedBytes) && isFiniteNumber(summary.unknownBytes) && isFiniteNumber(summary.conflictBytes) && isFiniteNumber(summary.segmentCount) && isCoverageCounts(summary.bytesByClassification, COVERAGE_CLASSES) && isCoverageCounts(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME);
-}
-function requireConflict(value) {
-  const record3 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record3.kind !== "conflict") {
-    throw new Error("Invalid stored analysis record.");
-  }
-  return record3;
-}
-function requireAccessWidth(value) {
-  const parsed = parseSqlitePayload(value);
-  if (!isRecord4(parsed) || typeof parsed.access !== "string" || !isFiniteNumber(parsed.width)) {
-    throw new Error("Invalid runtime memory coverage payload.");
-  }
-  return { access: parsed.access, width: parsed.width };
-}
-var coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
-var cachedCoverage = (db, manifest) => {
-  const value = readQueryCache(db, "coverage", coverageSignature(manifest));
-  if (value === void 0) {
-    return void 0;
-  }
-  if (!isSqliteCoverageSummary(value)) {
-    throw new Error("Invalid coverage summary cache.");
-  }
-  return value;
-};
-var prepareCoverage = (db, manifest) => {
-  db.exec(`CREATE TEMP TABLE query_coverage_segments (start INTEGER PRIMARY KEY, payload TEXT NOT NULL);
-    CREATE TEMP TABLE query_coverage_details (kind TEXT, id TEXT, reason TEXT, payload TEXT NOT NULL);
-    CREATE INDEX temp.query_coverage_detail_order ON query_coverage_details(kind,id,reason);
-    DELETE FROM query_coverage_segments; DELETE FROM query_coverage_details;
-    CREATE TEMP TABLE coverage_events (pos INTEGER NOT NULL, category TEXT NOT NULL, id TEXT NOT NULL, delta INTEGER NOT NULL);`);
-  const fileAddressSpaces = manifest.addressSpaces.filter((s) => s.kind === "file").map((s) => s.id).toSorted((a, b) => a.localeCompare(b));
-  const files = new Set(fileAddressSpaces);
-  const size = manifest.rom.contentSize;
-  if (!Number.isSafeInteger(size) || size < 0) {
-    throw new Error("Invalid ROM coverage size.");
-  }
-  const event = db.prepare("INSERT INTO temp.coverage_events VALUES(?,?,?,?)");
-  const detail = db.prepare("INSERT INTO query_coverage_details VALUES(?,?,?,?)");
-  const unprojected = (kind, id, reason) => {
-    detail.run(
-      kind,
-      id,
-      reason,
-      JSON.stringify({
-        id: `${kind}:${id}:${reason}`,
-        label: id,
-        description: reason,
-        icon: "debug-disconnect"
-      })
-    );
-  };
-  const add = (kind, id, start, end, categories) => {
-    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
-      unprojected(kind, id, "invalid-range");
-      return false;
-    }
-    if (start >= size || size === 0) {
-      unprojected(kind, id, "outside-rom");
-      return false;
-    }
-    const clipped = Math.min(end, size);
-    if (clipped !== end) {
-      detail.run(
-        "z-diagnostic",
-        id,
-        "clipped",
-        JSON.stringify({
-          id: `diagnostic:${id}:${start}:${end}`,
-          label: id,
-          description: "clipped",
-          tooltip: `Clipped coverage range [${start}, ${end}) to ROM content [${start}, ${clipped}).`,
-          icon: "warning"
-        })
-      );
-    }
-    for (const [category, identity] of categories) {
-      event.run(start, category, identity, 1);
-      event.run(clipped, category, identity, -1);
-    }
-    return true;
-  };
-  try {
-    for (const row of db.prepare("SELECT * FROM annotations WHERE classification != 'unreached'").iterate()) {
-      const record3 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
-      if (!files.has(record3.addressSpace)) {
-        unprojected("annotation", record3.id, "non-file-address-space");
-        continue;
-      }
-      let classification = "data";
-      if (["opcode", "operand"].includes(record3.classification)) {
-        classification = record3.classification;
-      }
-      if (["graphics", "music", "compressed", "asset"].includes(record3.classification)) {
-        classification = "asset";
-      }
-      add("annotation", record3.id, record3.start, record3.end, [
-        ["classification", classification],
-        ["annotationIds", record3.id]
-      ]);
-    }
-    for (const row of db.prepare("SELECT id,address_space,start,end FROM regions").iterate()) {
-      const id = String(row.id);
-      if (!files.has(String(row.address_space))) {
-        unprojected("region", id, "non-file-address-space");
-        continue;
-      }
-      add("region", id, Number(row.start), Number(row.end), [["regionIds", id]]);
-    }
-    for (const row of db.prepare(
-      "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.kind='cfg-node'"
-    ).iterate()) {
-      const id = String(row.id);
-      if (row.file_offset === null) {
-        unprojected("analysis", id, "missing-file-offset");
-        continue;
-      }
-      const start = Number(row.file_offset);
-      add("analysis", id, start, start + 1, [
-        ["classification", "opcode"],
-        ["analysisIds", id]
-      ]);
-      if (Number(row.size) > 1) {
-        add("analysis", id, start + 1, start + Number(row.size), [
-          ["classification", "operand"],
-          ["analysisIds", id]
-        ]);
-      }
-    }
-    const node = db.prepare(
-      "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.id=? AND a.kind='cfg-node'"
-    );
-    for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='conflict'").iterate()) {
-      const record3 = requireConflict(row.payload);
-      if (files.has(record3.addressSpace)) {
-        add("analysis", record3.id, record3.address, record3.end ?? record3.address + 1, [
-          ["conflictIds", record3.id]
-        ]);
-        continue;
-      }
-      let projected = false;
-      for (const id of record3.nodes) {
-        const target = node.get(id);
-        if (!target || target.file_offset === null) {
-          continue;
-        }
-        projected = add(
-          "analysis",
-          record3.id,
-          Number(target.file_offset),
-          Number(target.file_offset) + Number(target.size),
-          [
-            ["conflictIds", record3.id],
-            ["analysisIds", id]
-          ]
-        ) || projected;
-      }
-      if (!projected) {
-        unprojected("analysis", record3.id, "missing-file-offset");
-      }
-    }
-    const identity = "p.value || CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END";
-    for (const row of db.prepare(
-      `SELECT ${identity} AS id,q.file_offset,q.size FROM runtime r JOIN query_execution_offsets q ON q.row_id=r.rowid JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE r.kind='runtime-execution'`
-    ).iterate()) {
-      const id = String(row.id);
-      if (row.file_offset === null) {
-        unprojected("runtime", id, "missing-file-offset");
-        continue;
-      }
-      const start = Number(row.file_offset);
-      add("runtime", id, start, start + 1, [
-        ["runtime", "executed"],
-        ["runtimeIds", id]
-      ]);
-      if (Number(row.size) > 1) {
-        add("runtime", id, start + 1, start + Number(row.size), [
-          ["runtime", "operand"],
-          ["runtimeIds", id]
-        ]);
-      }
-    }
-    for (const row of db.prepare(
-      `SELECT ${identity} AS id,r.address_space,r.start,r.end,r.coverage FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE r.kind='runtime-coverage'`
-    ).iterate()) {
-      const id = String(row.id);
-      if (!files.has(String(row.address_space))) {
-        unprojected("runtime", id, "non-file-address-space");
-        continue;
-      }
-      add("runtime", id, Number(row.start), Number(row.end), [
-        ["runtime", String(row.coverage)],
-        ["runtimeIds", id]
-      ]);
-    }
-    for (const row of db.prepare(`SELECT ${identity} AS id,r.accessed_address,r.payload FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id
-      WHERE r.kind='runtime-memory-access' AND r.accessed_address_space IN (SELECT value FROM json_each(?))`).iterate(JSON.stringify(fileAddressSpaces))) {
-      const id = String(row.id);
-      const payload = requireAccessWidth(row.payload);
-      for (const [access, classification] of [
-        ["read", "read"],
-        ["write", "written"]
-      ]) {
-        if (payload.access === access || payload.access === "read-write") {
-          add(
-            "runtime",
-            id,
-            Number(row.accessed_address),
-            Number(row.accessed_address) + payload.width,
-            [
-              ["runtime", classification],
-              ["runtimeIds", id]
-            ]
-          );
-        }
-      }
-    }
-    event.run(0, "boundary", "", 0);
-    event.run(size, "boundary", "", 0);
-    const active = /* @__PURE__ */ new Map();
-    const ids = (category) => [...active.get(category)?.keys() ?? []].toSorted((a, b) => a.localeCompare(b));
-    const put = db.prepare("INSERT INTO query_coverage_segments VALUES(?,?)");
-    const summary = {
-      totalBytes: size,
-      classifiedBytes: 0,
-      unknownBytes: 0,
-      conflictBytes: 0,
-      segmentCount: 0,
-      bytesByClassification: { opcode: 0, operand: 0, data: 0, asset: 0, unknown: 0 },
-      bytesByRuntimeCoverage: { executed: 0, operand: 0, read: 0, written: 0 }
-    };
-    let classifiedBytes = 0, unknownBytes = 0, conflictBytes = 0, segmentCount = 0;
-    const classificationTotals = { ...summary.bytesByClassification };
-    const runtimeTotals = { ...summary.bytesByRuntimeCoverage };
-    let previous = 0;
-    let pending;
-    let pendingKey;
-    const savePending = () => {
-      if (pending) {
-        put.run(pending.start, JSON.stringify(pending));
-        segmentCount++;
-      }
-    };
-    const flush = (end) => {
-      if (end <= previous) {
-        return;
-      }
-      const classifications = ["opcode", "operand", "data", "asset"].filter(
-        (c) => active.get("classification")?.has(c)
-      );
-      const runtime = ["executed", "operand", "read", "written"].filter(
-        (c) => active.get("runtime")?.has(c)
-      );
-      const conflictIds = ids("conflictIds");
-      let status = "classified";
-      if (classifications.length === 0) {
-        status = "unknown";
-      }
-      if (classifications.length > 1 || conflictIds.length) {
-        status = "conflict";
-      }
-      const segment = {
-        start: previous,
-        end,
-        status,
-        classifications: classifications.length ? classifications : ["unknown"],
-        runtime,
-        annotationIds: ids("annotationIds"),
-        analysisIds: ids("analysisIds"),
-        runtimeIds: ids("runtimeIds"),
-        conflictIds,
-        regionIds: ids("regionIds")
-      };
-      const { start: _start, end: _end, ...segmentIdentity } = segment;
-      const key3 = JSON.stringify(segmentIdentity);
-      if (pending && key3 === pendingKey) {
-        pending = { ...pending, end };
-      } else {
-        savePending();
-        pending = segment;
-        pendingKey = key3;
-      }
-      const bytes = end - previous;
-      for (const c of segment.classifications) {
-        classificationTotals[c] += bytes;
-      }
-      for (const c of runtime) {
-        runtimeTotals[c] += bytes;
-      }
-      if (status === "classified") {
-        classifiedBytes += bytes;
-      } else if (status === "conflict") {
-        conflictBytes += bytes;
-      } else {
-        unknownBytes += bytes;
-      }
-      previous = end;
-    };
-    for (const row of db.prepare(
-      "SELECT pos,category,id,SUM(delta) AS delta FROM temp.coverage_events GROUP BY pos,category,id HAVING SUM(delta) != 0 OR category='boundary' ORDER BY pos,category,id"
-    ).iterate()) {
-      flush(Number(row.pos));
-      if (row.category === "boundary") {
-        continue;
-      }
-      const category = String(row.category), id = String(row.id);
-      let values = active.get(category);
-      if (!values) {
-        values = /* @__PURE__ */ new Map();
-        active.set(category, values);
-      }
-      const count = (values.get(id) ?? 0) + Number(row.delta);
-      if (count === 0) {
-        values.delete(id);
-      } else {
-        values.set(id, count);
-      }
-    }
-    savePending();
-    const result = {
-      contentSize: size,
-      fileAddressSpaces,
-      segments: [],
-      unprojected: [],
-      diagnostics: [],
-      detailCount: Number(db.prepare("SELECT count(*) AS n FROM query_coverage_details").get().n),
-      summary: {
-        ...summary,
-        classifiedBytes,
-        unknownBytes,
-        conflictBytes,
-        segmentCount,
-        bytesByClassification: classificationTotals,
-        bytesByRuntimeCoverage: runtimeTotals
-      }
-    };
-    return result;
-  } finally {
-    db.exec("DROP TABLE temp.coverage_events");
-  }
-};
-var publishCoverage = (db) => {
-  db.exec(`CREATE TABLE IF NOT EXISTS main.query_coverage_segments(start INTEGER PRIMARY KEY,payload TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS main.query_coverage_details(kind TEXT,id TEXT,reason TEXT,payload TEXT NOT NULL);
-    CREATE INDEX IF NOT EXISTS main.query_coverage_detail_order ON query_coverage_details(kind,id,reason);
-    DELETE FROM main.query_coverage_segments;INSERT INTO main.query_coverage_segments SELECT * FROM temp.query_coverage_segments;
-    DELETE FROM main.query_coverage_details;INSERT INTO main.query_coverage_details SELECT * FROM temp.query_coverage_details;`);
-};
-var coveragePage = (db, kind, offset) => {
-  if (!Number.isSafeInteger(offset) || offset < 0) {
-    throw new Error("Invalid analysis page offset.");
-  }
-  const table = kind === "segments" ? "query_coverage_segments" : "query_coverage_details";
-  const order = kind === "segments" ? "start" : "kind,id,reason";
-  return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
-};
-var coverageConflictPage = (db, offset) => {
-  if (!Number.isSafeInteger(offset) || offset < 0) {
-    throw new Error("Invalid analysis page offset.");
-  }
-  const condition = "json_extract(payload,'$.status')='conflict'";
-  const count = Number(
-    db.prepare(`SELECT count(*) AS n FROM query_coverage_segments WHERE ${condition}`).get().n
-  );
-  const segments = db.prepare(
-    `SELECT payload FROM query_coverage_segments WHERE ${condition} ORDER BY start LIMIT 200 OFFSET ?`
-  ).all(offset).map((row) => JSON.parse(String(row.payload)));
-  return { count, segments };
-};
-
 // packages/disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
   const record3 = requireAnalysisRecord(parseSqlitePayload(value));
@@ -4480,6 +4046,57 @@ function queryGraphicsEvidence(db, query) {
   }
   return result;
 }
+
+// packages/disassembler/src/storage/sqlite-query-cache.ts
+var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
+var installQueryCache = (db, key3, dependencies) => {
+  if (!/^[\d_a-z]+$/.test(key3)) {
+    throw new Error("Invalid internal query cache key.");
+  }
+  if (dependencies.some(
+    (table) => ![
+      "analysis",
+      "annotations",
+      "labels",
+      "comments",
+      "regions",
+      "imports",
+      "evidence",
+      "runtime"
+    ].includes(table)
+  )) {
+    throw new Error("Invalid query dependency.");
+  }
+  db.exec(QUERY_CACHE_SCHEMA);
+  for (const table of dependencies.flatMap(
+    (name2) => name2 === "runtime" ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"] : [name2]
+  )) {
+    for (const event of ["INSERT", "UPDATE", "DELETE"]) {
+      const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
+      const condition = table === "runtime_fact_rows" && event === "UPDATE" ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL" : "";
+      db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key3}_${table}_${event} AFTER ${update} ON ${table} ${condition} BEGIN
+      DELETE FROM query_cache WHERE name='${key3}'; END`);
+    }
+  }
+};
+var readQueryCache = (db, key3, signature) => {
+  if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
+    return void 0;
+  }
+  const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key3, signature);
+  if (!row) {
+    return void 0;
+  }
+  const parsed = JSON.parse(String(row.payload));
+  return parsed;
+};
+var writeQueryCache = (db, key3, signature, value) => {
+  db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(
+    key3,
+    signature,
+    JSON.stringify(value)
+  );
+};
 
 // packages/disassembler/src/storage/sqlite-research-inputs.ts
 var SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
@@ -5884,7 +5501,6 @@ var enforceDatabaseBudget = (db) => {
 };
 var CACHES = [
   { key: "source_export", tables: ["query_source_export_rows", "query_source_export_evidence"] },
-  { key: "coverage", tables: ["query_coverage_segments", "query_coverage_details"] },
   { key: "graph", tables: ["query_graph_nodes", "query_graph_edges"] },
   {
     key: "instruction_variants",
@@ -5897,6 +5513,7 @@ var CACHES = [
   { key: "evidence_links", tables: ["query_evidence_links"] }
 ];
 var RETIRED_CACHES = [
+  { key: "coverage", tables: ["query_coverage_segments", "query_coverage_details"] },
   { key: "snes_roles", tables: [] },
   { key: "runtime_architectures", tables: ["query_runtime_architectures"] }
 ];
@@ -7269,54 +6886,6 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       return { ...base, referencedBy, referencedByTotal };
     }, false);
   }
-  /** Exact coverage totals. Build only when classifications, code, or runtime facts changed.
-   * @returns {object} Persisted summary and detail count.
-   */
-  coverageSummary() {
-    const cached = cachedCoverage(this.#database, this.manifest());
-    if (cached) {
-      return cached;
-    }
-    this.prepareAnnotationQueries();
-    try {
-      this.cachedProjection(
-        "coverage",
-        coverageSignature(this.manifest()),
-        ["analysis", "annotations", "regions", "runtime"],
-        () => prepareCoverage(this.#database, this.manifest()),
-        () => publishCoverage(this.#database),
-        (value) => {
-          if (!isSqliteCoverageSummary(value)) {
-            throw new Error("Project changed while building coverage. Refresh the view.");
-          }
-          return value;
-        }
-      );
-      const published = cachedCoverage(this.#database, this.manifest());
-      if (!published) {
-        throw new Error("Project changed while building coverage. Refresh the view.");
-      }
-      return published;
-    } finally {
-      this.#database.exec(
-        "DROP TABLE IF EXISTS temp.query_coverage_segments;DROP TABLE IF EXISTS temp.query_coverage_details"
-      );
-    }
-  }
-  /** Read at most 200 coverage rows from a current projection.
-   * @param {"segments" | "details"} kind Collection to page.
-   * @param {number} offset Nonnegative row offset.
-   * @returns {unknown[]} Persisted rows, never the full ROM map.
-   */
-  coveragePage(kind, offset = 0) {
-    this.coverageSummary();
-    return this.transaction(() => coveragePage(this.#database, kind, offset), false);
-  }
-  /** Current conflicting ROM intervals, paged at 200 rows; offsets count conflicts only. */
-  coverageConflicts(offset = 0) {
-    this.coverageSummary();
-    return this.transaction(() => coverageConflictPage(this.#database, offset), false);
-  }
   /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
    * @returns {object} Functions, calls, unresolved sites, and ownership.
    */
@@ -8665,7 +8234,7 @@ var projectRequest = (message) => {
     return store.transaction(
       () => ({
         manifest: store.manifest(),
-        shards: store.evidenceChoices(message.evidenceSelection)
+        shards: store.evidenceChoices()
       }),
       false
     );
@@ -8795,12 +8364,6 @@ var projectRequest = (message) => {
       );
     }, false);
   }
-  if (message.operation === "coverage") {
-    return store.coverageSummary();
-  }
-  if (message.operation === "coverageConflicts") {
-    return store.coverageConflicts(message.offset);
-  }
   throw new Error("Unknown analysis worker operation.");
 };
 var request = (message) => {
@@ -8821,9 +8384,7 @@ var request = (message) => {
       store.writePointer(message.directory);
     }
   }
-  if (["coverage", "coverageConflicts", "annotations", "debugAnnotations", "navigation"].includes(
-    message.operation
-  )) {
+  if (["annotations", "debugAnnotations", "navigation"].includes(message.operation)) {
     store.assertCurrentAnalysis();
   }
   const revision = store.revision();

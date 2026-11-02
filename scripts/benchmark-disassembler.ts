@@ -20,7 +20,6 @@ import {
   RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
   RomImage,
   buildInstructionAnalysisAnnotations,
-  buildRomCoverageMap,
   commitPreparedAnalysisProjectTransaction,
   importRuntimeInstructionTrace,
   loadAnalysisProject,
@@ -66,7 +65,6 @@ const OPERATION_IDS = [
   "analysis",
   "project-serialization",
   "project-load",
-  "coverage-projection",
   "instruction-annotation-projection",
   "transaction-prepare",
   "transaction-commit",
@@ -779,22 +777,6 @@ const prepareOperation = (
         observation: {
           projectRecords: countRecords(project.shards),
           databaseRevision: manifest.revision ?? 0,
-        },
-      };
-    };
-  }
-  if (operation === "coverage-projection") {
-    return () => {
-      const coverage = buildRomCoverageMap(project.manifest, project.shards);
-      if (coverage.summary.totalBytes !== rom.length) {
-        throw new Error("Coverage projection did not span the complete ROM.");
-      }
-      return {
-        retained: coverage,
-        observation: {
-          segments: coverage.segments.length,
-          classifiedBytes: coverage.summary.classifiedBytes,
-          unknownBytes: coverage.summary.unknownBytes,
         },
       };
     };

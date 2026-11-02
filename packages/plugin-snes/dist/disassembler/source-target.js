@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { RomImage, openAnalysisProjectStore } from "@uttori/asm-disassembler";
-import { sourceFilePublicationEpoch, sourceProjectLocalInputs, sourceContentHash, assertSourcePath, } from "@uttori/asm-disassembler/source-project";
-import { buildSnesSource, inspectSnesSource, prepareSnesGeneration, snesGenerationOptionsHash, analyzeSnesProject, SNES_MAPPERS, prepareSnesSourceExpansion, prepareSnesSourceRelocation, createSnesAddressContext, } from "@uttori/asm-plugin-snes/disassembler";
+import { sourceFilePublicationEpoch, readSourceLinkBuild, sourceProjectLocalInputs, sourceContentHash, assertSourcePath, } from "@uttori/asm-disassembler/source-project";
+import { buildSnesSource, inspectSnesSource, inspectSnesSourceModule, prepareSnesGeneration, snesGenerationOptionsHash, analyzeSnesProject, SNES_MAPPERS, prepareSnesSourceExpansion, prepareSnesSourceRelocation, createSnesAddressContext, } from "@uttori/asm-plugin-snes/disassembler";
 import { snesRomAddressSpace } from "@uttori/asm-plugin-snes/target";
 import { initializeSnesSourceProject } from "./source-initialize.js";
 function assertSourceLayout(value, romSha256) {
@@ -48,6 +48,10 @@ async function withSourceBuild(project, host, signal, run) {
     const root = project.repository.root;
     const environmentInputs = new Map();
     const readEnvironment = (file) => {
+        const captured = environmentInputs.get(file);
+        if (captured) {
+            return captured;
+        }
         const bytes = Uint8Array.from(fs.readFileSync(file));
         environmentInputs.set(file, bytes);
         return bytes;
@@ -76,6 +80,7 @@ async function withSourceBuild(project, host, signal, run) {
         .split(path.sep)
         .join("/");
     assertSourcePath(entrySource);
+    const link = readSourceLinkBuild(configuration, configFile, path.resolve(root, entrySource), readEnvironment);
     const raw = JSON.parse(Buffer.from(readEnvironment(path.join(path.dirname(configFile), "source-raw.json"))).toString("utf8"));
     if (!isRecord(raw) ||
         raw.format !== "uttori-source-raw" ||
@@ -128,7 +133,12 @@ async function withSourceBuild(project, host, signal, run) {
             .map((plugin) => plugin.resolvedModule));
         const result = run({
             root,
+            controlInputs: [...environmentInputs].map(([file, bytes]) => ({
+                path: file,
+                sha256: sourceContentHash(bytes),
+            })),
             entrySource,
+            ...(link ? { link } : {}),
             environment: loaded.environment,
             includePaths: loaded.includePaths,
             targetOptions: loaded.targetOptions,
@@ -145,6 +155,7 @@ async function withSourceBuild(project, host, signal, run) {
             outputDirectory: path.join(root, ".uttori-local/builds"),
             toolchainSha256: toolchain.sha256,
             configurationSha256: sourceContentHash(canonicalJson({
+                ...(link ? { link: { module: link.module, recipe: link.recipe } } : {}),
                 configuration: sourceContentHash(configurationBytes),
                 project: project.configurationSha256,
                 layout,
@@ -314,6 +325,7 @@ export const snesSourceTarget = {
     initialize: initializeSnesSourceProject,
     build: (project, host, signal) => withSourceBuild(project, host, signal, buildSnesSource),
     inspect: inspectBuiltinProject,
+    inspectModules: (project, host, module, overlays, signal) => withSourceBuild(project, host, signal, (options) => inspectSnesSourceModule({ ...options, module, overlays })),
     generationOptionsHash: snesGenerationOptionsHash,
     prepare: prepareSnesGeneration,
     analyze: analyzeSnesProject,

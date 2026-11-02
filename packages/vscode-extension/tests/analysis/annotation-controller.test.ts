@@ -144,7 +144,7 @@ registerHooks({
     }
     if (
       context.parentURL?.includes("annotation-controller") &&
-      ["./coverage-tree.js", "./debug-maps.js", "./worker-client.js"].includes(specifier)
+      ["./project-discovery.js", "./debug-maps.js", "./worker-client.js"].includes(specifier)
     ) {
       return { shortCircuit: true, url: "information-test:dependencies" };
     }

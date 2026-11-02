@@ -1,3 +1,4 @@
+import { RelocatableInstruction, linkBinary, linkConstant } from "@uttori/asm-core";
 import { encodeSuperFxMoveShortAddress } from "../asar/compatibility.js";
 import { chooseOperandPreparation, expandOperandPlan, generatedValue, preparedParts, } from "./operand-values.js";
 import { hasOwn, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, } from "./superfx-encodings.js";
@@ -8,11 +9,16 @@ const signedByte = (value) => (value & 0xffff) < 0x80 || (value & 0xffff) >= 0xf
 /** Native GSU instruction selection. Values are invocation-local and never stored on syntax nodes. */
 export class TypedSuperFx {
     asarMoveShortAddress;
+    supportsRelocatable = true;
     deferOperandBindingErrors = true;
     constructor(asarMoveShortAddress = () => false) {
         this.asarMoveShortAddress = asarMoveShortAddress;
     }
     prepare(frame) {
+        if (frame.isRelocatable) {
+            frame.choose("superfx-module-preparation", 0);
+            return;
+        }
         const syntax = superFxSyntax(frame.instruction.operands).superfx;
         // Implied forms have no numeric observations or preparation payload to copy.
         if (syntax.parts.length === 0) {
@@ -33,6 +39,9 @@ export class TypedSuperFx {
     }
     /** The same ordered form selection drives sizing and emission; speculative reads occur only for auto forms. */
     run(frame, context) {
+        if (frame.isRelocatable) {
+            return this.runModule(frame, context);
+        }
         const syntax = superFxSyntax(frame.instruction.operands).superfx;
         const { mnemonic: op, parts } = syntax;
         const emit = !!context;
@@ -254,6 +263,123 @@ export class TypedSuperFx {
             }
         }
         return choose("unknown", emit ? 0 : 1);
+    }
+    /** Registers are fixed opcode fields; relocatable automatic MOVE forms consistently use long operands. */
+    runModule(frame, context) {
+        const { mnemonic: op, parts } = superFxSyntax(frame.instruction.operands).superfx;
+        const instruction = new RelocatableInstruction(frame, context);
+        const finish = (form) => instruction.finish(form);
+        if (hasOwn(IMPLIED_OPCODES, op) || hasOwn(PREFIXED_OPCODES, op)) {
+            if (parts.length) {
+                throw frame.error(`${op} does not take operands.`);
+            }
+            if (hasOwn(IMPLIED_OPCODES, op)) {
+                instruction.opcode(IMPLIED_OPCODES[op]);
+            }
+            else {
+                instruction.opcode(PREFIXED_OPCODES[op].prefix, PREFIXED_OPCODES[op].opcode);
+            }
+            return finish("implied");
+        }
+        const [left, right] = parts;
+        if (parts.length === 1 && hasOwn(SHORT_BRANCH_OPCODES, op)) {
+            instruction.opcode(SHORT_BRANCH_OPCODES[op]).field(left.scalar, {
+                width: 1,
+                kind: left.rawOffset ? "absolute" : "relative",
+                signed: true,
+                addressWidth: 24,
+                wrapWidth: 16,
+                minimum: -128,
+                maximum: 127,
+            });
+            return finish("branch");
+        }
+        const registerOp = (encoding, reg) => {
+            if (reg < (encoding.min ?? 0) || reg > (encoding.max ?? 15)) {
+                throw frame.error(`Register ${reg} is outside the instruction range.`);
+            }
+            if (encoding.prefix !== undefined) {
+                instruction.opcode(encoding.prefix);
+            }
+            instruction.opcode(encoding.base + reg);
+            return finish("register");
+        };
+        if (parts.length === 1) {
+            if (left.register !== null && hasOwn(REGISTER_OPS, op)) {
+                return registerOp(REGISTER_OPS[op], left.register);
+            }
+            if (left.indirectRegister !== null && hasOwn(INDIRECT_OPS, op)) {
+                return registerOp(INDIRECT_OPS[op], left.indirectRegister);
+            }
+            if (left.immediate && hasOwn(IMMEDIATE_OPS, op)) {
+                return registerOp(IMMEDIATE_OPS[op], frame.constant(left.scalar, "Opcode-embedded immediate"));
+            }
+        }
+        if (parts.length !== 2) {
+            throw frame.error(`Unsupported relocatable ${String(op)} operand tuple.`);
+        }
+        const l = left.register, r = right.register, li = left.indirectRegister, ri = right.indirectRegister;
+        if (l !== null && r !== null && (op === "MOVE" || op === "MOVES")) {
+            if (op === "MOVE") {
+                instruction.opcode(0x20 + r, 0x10 + l);
+            }
+            else {
+                instruction.opcode(0x20 + l, 0xb0 + r);
+            }
+            return finish("register-pair");
+        }
+        if (l !== null && right.immediate && ["MOVE", "IBT", "IWT"].includes(op)) {
+            const width = op === "IBT" ? 1 : 2;
+            instruction
+                .opcode((width === 1 ? 0xa0 : 0xf0) + l)
+                .field(right.scalar, { width, signed: true });
+            return finish(width === 1 ? "ibt" : "iwt");
+        }
+        if (((li !== null && r !== null) || (l !== null && ri !== null)) &&
+            (op === "MOVEB" || op === "MOVEW")) {
+            const store = li !== null;
+            const data = store ? li : l;
+            const pointer = store ? r : ri;
+            if (pointer > 11) {
+                throw frame.error("Indirect pointer register must be R0..R11.");
+            }
+            if (data !== 0) {
+                instruction.opcode((store ? 0xb0 : 0x10) + data);
+            }
+            if (op === "MOVEB") {
+                instruction.opcode(0x3d);
+            }
+            instruction.opcode((store ? 0x30 : 0x40) + pointer);
+            return finish("register-memory");
+        }
+        const load = l !== null;
+        const store = r !== null && li === null && left.indirect;
+        if (load || store) {
+            const operand = load ? right : left;
+            const reg = l ?? r;
+            const shortOp = load ? "LMS" : "SMS";
+            const longOp = load ? "LM" : "SM";
+            if (op === shortOp || op === longOp || op === "MOVE" || (load && op === "LEA")) {
+                if (op !== "LEA") {
+                    instruction.opcode(load ? 0x3d : 0x3e);
+                }
+                const short = op === shortOp;
+                instruction.opcode((short ? 0xa0 : 0xf0) + reg);
+                if (short) {
+                    const address = frame.compileLink(operand.scalar);
+                    instruction.field(linkBinary(">>", address, linkConstant(1)), {
+                        width: 1,
+                        minimum: 0,
+                        checks: [{ expression: address, minimum: 0, maximum: 0x1fe, alignment: 2 }],
+                    });
+                }
+                else {
+                    instruction.field(operand.scalar, { width: 2, minimum: 0 });
+                }
+                return finish(short ? "ram-short" : "ram-long");
+            }
+        }
+        throw frame.error(`Unsupported relocatable ${String(op)} operand tuple.`);
     }
 }
 //# sourceMappingURL=typed-superfx.js.map

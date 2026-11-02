@@ -24,7 +24,7 @@ export const handleDataDirective = ({ runtime }, words) => {
 };
 export const registerDataDirectives = (registry, context) => {
     const keywords = ["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"];
-    registry.registerTyped(keywords, ({ text, words, source }) => {
+    registry.registerImmutableTyped(keywords, ({ text, words, source }) => {
         const command = createNormalizedCommand(source.raw, text, [...words], source.file, source.line);
         const statement = parseNumericDataStatement(command);
         if (!statement) {

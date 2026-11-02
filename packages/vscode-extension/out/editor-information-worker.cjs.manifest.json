@@ -9,7 +9,7 @@
   "inputs": [
     {
       "file": "package-lock.json",
-      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
+      "sha256": "6c51bc05ebd03b6c8012aa08bb62754be4c635bb138490124e59e34cf92671bc"
     },
     {
       "file": "packages/core/src/canonical-json.ts",
@@ -17,7 +17,7 @@
     },
     {
       "file": "packages/core/src/debug-map.ts",
-      "sha256": "a5db5b6f7963b7ac4b04d3e0d8f132f3728e4465fb36082bbce296e8ab75ad4f"
+      "sha256": "bb21e686f144deb80a0f753cfce2132d5008ede551f9a04a448cc951dfc18ed2"
     },
     {
       "file": "packages/vscode-extension/esbuild.mjs",

@@ -25,8 +25,8 @@ registerHooks({
       typeof context.parentURL === "string" &&
       /[/\\]analysis[/\\]sources-tree\.(ts|js|mts|mjs)/.test(context.parentURL)
     ) {
-      if (specifier === "./coverage-tree.js") {
-        return { shortCircuit: true, url: "analysis-sources-test:coverage-tree" };
+      if (specifier === "./project-discovery.js") {
+        return { shortCircuit: true, url: "analysis-sources-test:project-discovery" };
       }
       if (specifier === "./worker-client.js") {
         return { shortCircuit: true, url: "analysis-sources-test:worker-client" };
@@ -58,7 +58,7 @@ registerHooks({
         `,
       };
     }
-    if (url === "analysis-sources-test:coverage-tree") {
+    if (url === "analysis-sources-test:project-discovery") {
       return {
         shortCircuit: true,
         format: "module",

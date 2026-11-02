@@ -6,6 +6,7 @@ import type {
   SerializableAddressRange,
   InstructionSourceInfo,
   AssetEmissionInfo,
+  StructFieldEmissionInfo,
 } from "./addressToLine.js";
 import { canonicalJson } from "./canonical-json.js";
 
@@ -37,7 +38,13 @@ export interface DebugMapAsset extends Omit<AssetEmissionInfo, "fileIdx" | "asse
   readonly assetSourceId: number;
 }
 
+/** Scalar record attribution resolved by the linker or absolute source writer. */
+export interface DebugMapField extends Omit<StructFieldEmissionInfo, "fileIdx"> {
+  readonly sourceId: number;
+}
+
 export interface DebugMap {
+  readonly fields?: readonly DebugMapField[];
   readonly format: typeof DEBUG_MAP_FORMAT;
   readonly schemaVersion: typeof DEBUG_MAP_SCHEMA_VERSION;
   readonly fingerprint: { readonly algorithm: "sha256"; readonly value: string };
@@ -123,6 +130,16 @@ export const createDebugMap = (options: CreateDebugMapOptions): DebugMap => {
               sourceId: sourceIdByOriginal.get(fileIdx) ?? -1,
             }))
             .filter((entry) => entry.sourceId >= 0),
+        }
+      : {}),
+    ...(options.mapping.structFields.length
+      ? {
+          fields: options.mapping.structFields
+            .map(({ fileIdx, ...field }) => ({
+              ...field,
+              sourceId: sourceIdByOriginal.get(fileIdx) ?? -1,
+            }))
+            .filter((field) => field.sourceId >= 0),
         }
       : {}),
     ...(options.mapping.assets.length

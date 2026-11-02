@@ -132,6 +132,8 @@ export declare const DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
  * {@link DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH}.
  */
 export interface StaticAnalysisLimits {
+    /** Default false. Use SHA-256 call-context identities for compact native graphs; full call-site lists remain on nodes. */
+    readonly compactContextIds?: boolean;
     /** Positive safe integer work budget. Reaching it returns an incomplete result with a reason. */
     readonly maxWorkItems?: number;
     /** Nonnegative call-context depth. Zero discards call history, and deeper calls report a bound. */
@@ -184,7 +186,7 @@ export interface StaticAnalysisNode<State> {
     readonly effectiveAddresses: readonly StaticEffectiveAddress[];
     readonly entryPoint: string;
     readonly evidence: readonly string[];
-    /** Node ids from the seed to this instruction, inclusive. */
+    /** Node ids from the seed to this instruction, inclusive; materialized only when read. */
     readonly evidencePath: readonly string[];
 }
 export type StaticAnalysisEdgeKind = "branch" | "call" | "fallthrough" | "interrupt" | "jump" | "return" | "unresolved";
@@ -208,6 +210,8 @@ export interface StaticFunctionCandidate {
     readonly address: number;
     readonly source: "call" | "entry" | "interrupt";
     readonly evidence: readonly string[];
+    /** Discovery call site, absent for seed functions. Avoids expanding ancestry for publication. */
+    readonly evidencePredecessor?: string;
     readonly evidencePath: readonly string[];
 }
 /** Site where decode, mapping, or instruction bytes could not be accepted. */

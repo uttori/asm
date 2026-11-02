@@ -46,6 +46,9 @@ export interface InstructionSourceInfo {
   readonly size?: number;
   readonly outputOffset?: number;
   readonly operands: readonly ResolvedInstructionOperand[];
+  /** Fixed object encoding and assembly-time processor assumptions, when emitted by a linker. */
+  readonly form?: string;
+  readonly state?: import("./ir/source-syntax.js").SyntaxValue;
 }
 
 /** One emitted asset, attributed to the assembly statement and its binary input separately. */
@@ -83,6 +86,10 @@ export interface AssetEmissionConversion {
 
 /** One encoded scalar of a typed record; line identifies the containing initializer's opening line. */
 export interface StructFieldEmissionInfo {
+  /** Final run address and processor scope are available after object linking. */
+  readonly address?: number;
+  readonly architecture?: string;
+  readonly addressSpace?: string;
   readonly fileIdx: number;
   readonly line: number;
   /** Fully qualified record/field, including the element index for array fields. */

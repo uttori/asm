@@ -269,11 +269,11 @@ generation commits, verify their payload and original-ROM equality, then integra
 three-way merges. `sourceContentHash()` and byte-comparison helpers support verification; target
 plugins render assembly and perform build/layout checks. Ordinary working files remain editable.
 
-## ROM Coverage Map
+## Source build conversion progress
 
-`buildRomCoverageMap()` produces a read-only, target-neutral projection of a validated project's ROM-content coverage. It combines file-space annotations, CFG records with explicit `fileOffset` values, regions, ranged conflicts, runtime execution offsets, and file-space runtime coverage into maximally coalesced half-open segments. Each segment keeps classification, runtime, provenance, region, and conflict ids separate so the presentation layer cannot hide contradictory evidence.
+`sourceBuildCoverage()` (from `@uttori/asm-disassembler/source-project`) counts the unique original-ROM input slices still consumed from the declared raw-block directory. Repeated and relocated includes count once, unused raw blocks contribute nothing, and added ROM capacity does not change the original-ROM denominator. Instructions, structured data, headers and converted assets account for the other bytes.
 
-Summary totals distinguish exclusive classified, unknown, and conflicted bytes. Per-classification totals intentionally overlap when a byte has incompatible classifications. CPU and RAM records without an explicit file offset are returned in `unprojected`. The helper never guesses a mapper translation. Partially out-of-range records are clipped with diagnostics, and wholly invalid or out-of-ROM records remain visible as unprojected input.
+Successful source builds publish a compact `summary.json` beside the selected build receipt. Analysis Coverage reads those saved totals and verifies input freshness in the background. Source and asset drafts are marked stale. The sidebar displays build conversion progress only; Sources, runtime annotations and command-palette evidence inspection query their own bounded data when needed.
 
 ## Asset declarations
 

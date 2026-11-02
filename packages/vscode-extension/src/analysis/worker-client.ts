@@ -81,7 +81,7 @@ export class AnalysisWorkerClient {
     operation: AnalysisWorkerOperation,
     options: Pick<
       AnalysisWorkerRequest,
-      "offset" | "ranges" | "sourceId" | "navigationTarget" | "evidenceSelection" | "evidenceRecord"
+      "ranges" | "sourceId" | "navigationTarget" | "evidenceRecord"
     > = {},
   ): Promise<unknown> {
     if (this.disposed) {

@@ -2,6 +2,7 @@ import { fork, type ChildProcess } from "node:child_process";
 
 import type { AssetOperation } from "@uttori/asm-workflows/asset-interchange";
 import type { AssetSourceOperation } from "@uttori/asm-workflows/asset-source";
+import type { AssemblyBuildOperation } from "@uttori/asm-workflows/build";
 import type { SourceOperation } from "@uttori/asm-workflows/source";
 
 import { WorkerRequestSlots, workerTimeout } from "../workers/lifecycle.js";
@@ -11,6 +12,7 @@ type WorkerRequest<T> = T extends unknown ? Omit<T, "signal" | "onProgress"> : n
 export type SourceProcessOperation =
   | WorkerRequest<SourceOperation>
   | AssetOperation
+  | AssemblyBuildOperation
   | AssetSourceOperation;
 
 export interface SourceProcessOptions {
@@ -98,7 +100,8 @@ export class SourceProcessClient {
       let cancellationTimer: NodeJS.Timeout | undefined;
       let deadline: NodeJS.Timeout | undefined;
       const report = (message: string): void => {
-        const progress = `[${((Date.now() - started) / 1000).toFixed(1)}s] ${message}`;
+        // VS Code treats bracketed text as filter categories; elapsed time must stay plain text.
+        const progress = `${((Date.now() - started) / 1000).toFixed(1)}s: ${message}`;
         this.log(progress);
         options.onProgress?.(progress);
       };

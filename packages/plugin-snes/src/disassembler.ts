@@ -86,6 +86,8 @@ export {
   type SnesSourceBuild,
   type InspectSnesSourceOptions,
   type SnesSourceInspection,
+  type InspectSnesModuleOptions,
+  inspectSnesSourceModule,
   inspectSnesSource,
   buildSnesSource,
 } from "./disassembler/source-build.js";

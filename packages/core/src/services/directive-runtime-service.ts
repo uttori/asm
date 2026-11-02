@@ -17,6 +17,7 @@ export type PushPcStackEntry = {
 };
 
 export interface DirectiveRuntimeHost {
+  readonly moduleIdentity?: string;
   addressWidth: number;
   characterMappings: Map<string, number>;
   currentTargetAddress: number;
@@ -42,6 +43,8 @@ export interface DirectiveRuntimeHost {
   write2(value: number): void;
   write3(value: number): void;
   write4(value: number): void;
+  /** Module-aware scalar path; structural embedding hosts may retain their numeric-only contract. */
+  writeExpression?(expression: ExpressionNode, width: 1 | 2 | 3 | 4): void;
 }
 
 export class DirectiveRuntimeService {
@@ -159,10 +162,7 @@ export class DirectiveRuntimeService {
         // These nodes are parsed literal occurrences: no define/list binding or speculative reads
         // remain. Numeric observation still runs at each original write cursor through getnum.
         for (const operand of literalDataOperands(statement.literalData)) {
-          this.writeDataByLength(
-            statement.width,
-            this.host.operandResolver.getnum(operand.expression),
-          );
+          this.writeDataExpression(statement.width, operand.expression);
         }
       }
       if (this.host.collectSourceMetadata) {
@@ -219,7 +219,7 @@ export class DirectiveRuntimeService {
       } else if (estimateOnly) {
         estimatedItems++;
       } else {
-        this.writeDataByLength(statement.width, this.host.operandResolver.getnum(entry.expression));
+        this.writeDataExpression(statement.width, entry.expression);
       }
     }
     if (estimateOnly) {
@@ -259,6 +259,15 @@ export class DirectiveRuntimeService {
         break;
       default:
         throw new Error(`Unsupported data length ${len}`);
+    }
+  }
+
+  /** Keep expression ownership until the writer can decide between an immediate scalar and a fixup. */
+  private writeDataExpression(width: 1 | 2 | 3 | 4, expression: ExpressionNode): void {
+    if (this.host.moduleIdentity !== undefined && this.host.writeExpression) {
+      this.host.writeExpression(expression, width);
+    } else {
+      this.writeDataByLength(width, this.host.operandResolver.getnum(expression));
     }
   }
 

@@ -12,7 +12,7 @@ export interface SourceGraphicsQuery {
 export interface SourceRequestMap {
   init: { readonly rom: string; readonly dizRawFile?: string; readonly mapper?: string };
   status: { readonly candidate?: string };
-  prepare: Record<never, never>;
+  prepare: { readonly assembly?: "linked" };
   preview: { readonly candidate: string };
   apply: { readonly candidate: string };
   finish: { readonly message?: string };
@@ -55,7 +55,7 @@ export type SourceOperation<Action extends SourceAction = SourceAction> = {
 const fields: { readonly [Action in SourceAction]: readonly string[] } = {
   init: ["rom", "dizRawFile", "mapper"],
   status: ["candidate"],
-  prepare: [],
+  prepare: ["assembly"],
   preview: ["candidate"],
   apply: ["candidate"],
   finish: ["message"],
@@ -126,6 +126,9 @@ function assertRequest(value: unknown): asserts value is SourceOperation {
       ))
   ) {
     throw new Error("Invalid source overlays.");
+  }
+  if (value.assembly !== undefined && value.assembly !== "linked") {
+    throw new Error("Source preparation supports only explicit linked migration.");
   }
   if (value.action === "init" && !isText(value.rom)) {
     throw new Error("Initialization requires an original ROM path.");

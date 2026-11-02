@@ -80,7 +80,6 @@ larger shared owners remain valid. RAM bindings are excluded. This validation ru
 in both the CLI and the editor regeneration process; successful ROM equality alone
 does not satisfy the codec requirement.
 
-
 The exporter splits raw spans at these bounds and replaces complete non-code
 spans. It rejects overlaps, code, typed-header splits and interior source labels.
 The asset source path is relative to the generated bank file. Pure generation snapshots

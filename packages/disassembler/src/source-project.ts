@@ -108,9 +108,31 @@ export type {
   InitializeSourceOptions,
   SourceBuildResult,
   SourceProjectInspection,
+  SourceModuleInspection,
   SourceAnalysisOptions,
   SourceCaptureResult,
   SourceTargetCaptureOptions,
 } from "./source-project/target-contracts.js";
 
 export { SourceOperationError, type SourceFailureCode } from "./source-project/errors.js";
+export {
+  buildLinkedObjects,
+  publishLinkedBuild,
+  type LinkedBuildReceipt,
+} from "./source-project/link-build.js";
+
+export {
+  type SourceLinkBuild,
+  readSourceLinkBuild,
+  sourceLinkFiles,
+  sourceLinkEntry,
+  linkSourceAssembly,
+  sourceMappingFromLink,
+} from "./source-project/source-link.js";
+
+export {
+  sourceBuildCoverage,
+  isSourceBuildCoverage,
+  type SourceBuildCoverage,
+  type SourceBuildSummary,
+} from "./source-project/build-coverage.js";

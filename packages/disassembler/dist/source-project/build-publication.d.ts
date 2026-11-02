@@ -1,5 +1,7 @@
+import { type SourceBuildCoverage } from "./build-coverage.js";
 /** Target validation produces this identity before publication; paths name one immutable build pair. */
 export interface SourceBuildReceipt {
+    readonly coverage?: SourceBuildCoverage;
     readonly inputSha256: string;
     readonly outputFile: string;
     readonly debugMapFile: string;

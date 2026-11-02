@@ -56,6 +56,7 @@ export type { AddressingMode, CpuDefinition, CpuFeature, FeatureExpression, Inst
 export { matchesFeatures } from "./instructions/schema.js";
 export { NES_65XX_ADDRESS_SPACE_ID, NES_65XX_LIFECYCLE_ID, NES_65XX_OUTPUT_FORMAT_ID, NES_65XX_TARGET_ID, createNes65xxTargetOptions, } from "./target/nes.js";
 export { NES_65XX_SESSION_STATE_ID, nes65xxSessionStateKey } from "./session-state.js";
-export { parseLd65Config, defaultLd65ConfigText } from "./linker-config.js";
+export { parseLd65Config, defaultLd65ConfigText, ld65LinkRecipe } from "./linker-config.js";
 export { CA65_65XX_SESSION_STATE_ID, CA65_65XX_SYNTAX_PROFILE, ca65CpuNames, ca65CpuShorthands, ca65SessionStateKey, resolve65xxCpuName, rewriteCa65Command, } from "./ca65-profile.js";
+export { createNesLinkTarget } from "./target/link-target.js";
 //# sourceMappingURL=index.d.ts.map

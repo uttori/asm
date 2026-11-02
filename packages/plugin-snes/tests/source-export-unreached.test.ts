@@ -2,7 +2,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { RomImage, openAnalysisProjectStore, publishAnalysisProject, sourceExportSha256, type AnalysisProject, type AnalysisFunctionRecord, type IntervalAnnotation, type RuntimeInstructionRecord } from "@uttori/asm-disassembler";
+import {
+  RomImage,
+  openAnalysisProjectStore,
+  publishAnalysisProject,
+  sourceExportSha256,
+  type AnalysisProject,
+  type AnalysisFunctionRecord,
+  type IntervalAnnotation,
+  type RuntimeInstructionRecord,
+} from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -121,20 +130,38 @@ test("asset includes retain displaced record identities and their logical indexe
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asset-entry-comments-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const { rom, project } = fixture();
-  fs.writeFileSync(path.join(directory, "struct-map.json"), JSON.stringify({
-    format: "uttori-asm-snes-struct-map", schemaVersion: 1,
-    structures: [{ id: "ActorMarker", size: 2, fields: [{ name: "id", offset: 0, size: 2 }] }],
-    bindings: [{ name: "RoomActors", structure: "ActorMarker", address: 0x808020,
-      fileOffset: 0x20, count: 3, firstIndex: 7,
-      entryComments: { 7: "Elinee", 8: "Polter Chair", 9: "Reward chest" } }],
-  }));
+  fs.writeFileSync(
+    path.join(directory, "struct-map.json"),
+    JSON.stringify({
+      format: "uttori-asm-snes-struct-map",
+      schemaVersion: 1,
+      structures: [{ id: "ActorMarker", size: 2, fields: [{ name: "id", offset: 0, size: 2 }] }],
+      bindings: [
+        {
+          name: "RoomActors",
+          structure: "ActorMarker",
+          address: 0x808020,
+          fileOffset: 0x20,
+          count: 3,
+          firstIndex: 7,
+          entryComments: { 7: "Elinee", 8: "Polter Chair", 9: "Reward chest" },
+        },
+      ],
+    }),
+  );
   const directive = 'includeAsset("../assets/actors.json", "raw")';
-  fs.writeFileSync(path.join(directory, "asset-includes.json"), JSON.stringify({
-    version: 1, entries: [{ start: 0x20, end: 0x24, directive }],
-  }));
+  fs.writeFileSync(
+    path.join(directory, "asset-includes.json"),
+    JSON.stringify({
+      version: 1,
+      entries: [{ start: 0x20, end: 0x24, directive }],
+    }),
+  );
   renderSourceFixture(project, rom, directory, options);
   const bank = fs.readFileSync(path.join(directory, "banks/bank-000.asm"), "utf8");
-  t.true(bank.includes(`  ; RoomActors[7]: Elinee\n  ; RoomActors[8]: Polter Chair\n  ${directive}`));
+  t.true(
+    bank.includes(`  ; RoomActors[7]: Elinee\n  ; RoomActors[8]: Polter Chair\n  ${directive}`),
+  );
   // The following record remains outside the asset and keeps its own directive/comment.
   t.true(bank.includes("; Reward chest\ndataStruct RoomActors[9],"));
   t.is(bank.match(/Polter Chair/g)?.length, 1);
@@ -230,23 +257,46 @@ test("combined asset includes retain interior annotations and exact native outpu
     shards: {
       ...project.shards,
       comments: [
-        { id: "first-pose", addressSpace: "rom.file", address: 0x20,
-          text: "First pose uses palette $C827AC.", evidence: ["legacy"] },
-        { id: "later-pose", addressSpace: "rom.file", address: 0x22,
-          text: "Later pose tiles.\nNative palette indexes remain unchanged.", evidence: ["legacy"] },
-        { id: "following-owner", addressSpace: "rom.file", address: 0x24,
-          text: "Separate following data.", evidence: ["legacy"] },
+        {
+          id: "first-pose",
+          addressSpace: "rom.file",
+          address: 0x20,
+          text: "First pose uses palette $C827AC.",
+          evidence: ["legacy"],
+        },
+        {
+          id: "later-pose",
+          addressSpace: "rom.file",
+          address: 0x22,
+          text: "Later pose tiles.\nNative palette indexes remain unchanged.",
+          evidence: ["legacy"],
+        },
+        {
+          id: "following-owner",
+          addressSpace: "rom.file",
+          address: 0x24,
+          text: "Separate following data.",
+          evidence: ["legacy"],
+        },
       ],
     },
   };
   const directive = 'includeAsset("../assets/poses.bin", "raw")';
-  fs.writeFileSync(path.join(directory, "asset-includes.json"), JSON.stringify({
-    version: 1, entries: [{ start: 0x20, end: 0x24, directive }],
-  }));
+  fs.writeFileSync(
+    path.join(directory, "asset-includes.json"),
+    JSON.stringify({
+      version: 1,
+      entries: [{ start: 0x20, end: 0x24, directive }],
+    }),
+  );
   renderSourceFixture(annotated, rom, directory, options);
   fs.writeFileSync(path.join(directory, "assets/poses.bin"), rom.read(0x20, 4)!);
   const bank = fs.readFileSync(path.join(directory, "banks/bank-000.asm"), "utf8");
-  t.true(bank.includes(`  ; At asset offset $000002:\n  ; Later pose tiles.\n  ; Native palette indexes remain unchanged.\n  ${directive}`));
+  t.true(
+    bank.includes(
+      `  ; At asset offset $000002:\n  ; Later pose tiles.\n  ; Native palette indexes remain unchanged.\n  ${directive}`,
+    ),
+  );
   t.is(bank.match(/Later pose tiles/g)?.length, 1);
   t.true(bank.indexOf("Separate following data.") > bank.indexOf(directive));
   const romFile = path.join(directory, "original.sfc");
@@ -260,15 +310,36 @@ test("combined asset includes still reject interior labels and observed code", (
   const { rom, project } = fixture();
   const directive = 'includeAsset("../assets/poses.bin", "raw")';
   const mapFile = path.join(directory, "asset-includes.json");
-  fs.writeFileSync(mapFile, JSON.stringify({ version: 1, entries: [{ start: 0x20, end: 0x24, directive }] }));
+  fs.writeFileSync(
+    mapFile,
+    JSON.stringify({ version: 1, entries: [{ start: 0x20, end: 0x24, directive }] }),
+  );
   const labelled: AnalysisProject = {
     ...project,
-    shards: { ...project.shards, labels: [{ id: "interior-entry", addressSpace: "rom.file",
-      address: 0x22, name: "SecondPoseTiles", sourceName: "SecondPoseTiles", evidence: ["legacy"] }] },
+    shards: {
+      ...project.shards,
+      labels: [
+        {
+          id: "interior-entry",
+          addressSpace: "rom.file",
+          address: 0x22,
+          name: "SecondPoseTiles",
+          sourceName: "SecondPoseTiles",
+          evidence: ["legacy"],
+        },
+      ],
+    },
   };
-  t.throws(() => renderSourceFixture(labelled, rom, directory, options), { message: /conflicts with exported data or metadata/ });
-  fs.writeFileSync(mapFile, JSON.stringify({ version: 1, entries: [{ start: 0, end: 5, directive }] }));
-  t.throws(() => renderSourceFixture(project, rom, directory, options), { message: /conflicts with exported data or metadata/ });
+  t.throws(() => renderSourceFixture(labelled, rom, directory, options), {
+    message: /conflicts with exported data or metadata/,
+  });
+  fs.writeFileSync(
+    mapFile,
+    JSON.stringify({ version: 1, entries: [{ start: 0, end: 5, directive }] }),
+  );
+  t.throws(() => renderSourceFixture(project, rom, directory, options), {
+    message: /conflicts with exported data or metadata/,
+  });
 });
 
 /** Automatic function marker seeded by an imported entry point, not a reviewed source label. */
@@ -510,6 +581,113 @@ test("inferred entry precedence requires a surviving runtime proof and retains e
     } else {
       t.regex(source, /Fn_808001:/, name);
     }
+  }
+});
+
+test("certain manual instruction extents survive speculative boundaries but preserve real contradictions", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-reviewed-boundary-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture(
+    [0xa9, 0x18, 0x60],
+    [capture("load", 0x808000, [0xa9, 0x18], 0x20)],
+  );
+  const original = project.shards.analysis.find((record) => record.kind === "cfg-node")!;
+  const node = { ...original, id: "static:cfg:808000" };
+  const manual = {
+    id: "manual:boundary",
+    source: "manual" as const,
+    sourceId: "review",
+    confidence: "certain" as const,
+  };
+  const input: AnalysisProject = {
+    ...project,
+    shards: {
+      ...project.shards,
+      evidence: [...project.shards.evidence, manual],
+      annotations: [
+        { ...annotation("opcode", 0, 1), evidence: [manual.id] },
+        { ...annotation("operand", 1, 2), evidence: [manual.id] },
+      ],
+      analysis: [
+        node,
+        inferredEntry(0x808001),
+        {
+          id: "static:boundary",
+          kind: "conflict",
+          addressSpace: "snes.cpu",
+          address: 0x808001,
+          conflictKind: "instruction-boundary",
+          message: "Speculative operand entry",
+          evidence: [],
+          nodes: [node.id, "static:cfg:808001"],
+        },
+      ],
+    },
+  };
+  const output = path.join(directory, "reviewed");
+  const exported = renderSourceFixture(input, rom, output, options);
+  t.true(exported.spans.some((span) => span.start === 0 && span.end === 2 && span.role === "code"));
+  const source = fs.readFileSync(path.join(output, "banks/bank-000.asm"), "utf8");
+  t.regex(source, /LDA\.b #\$18/);
+  t.notRegex(source, /Fn_808001:/);
+  const romFile = path.join(directory, "original.sfc");
+  fs.writeFileSync(romFile, rom.bytes());
+  t.true(
+    (await verifyRenderedFixture({ sourceDirectory: output, romFile, emitDebugMap: false }))
+      .comparison.equal,
+  );
+
+  const overlap = fixture(
+    [0xa9, 0x18, 0x60],
+    [capture("load", 0x808000, [0xa9, 0x18], 0x20), capture("operand-entry", 0x808001, [0x18])],
+  );
+  const variants: Record<string, AnalysisProject["shards"]> = {
+    imported: {
+      ...input.shards,
+      evidence: input.shards.evidence.map((record) =>
+        record.id === manual.id ? { ...record, source: "import" } : record,
+      ),
+    },
+    tentative: {
+      ...input.shards,
+      evidence: input.shards.evidence.map((record) =>
+        record.id === manual.id ? { ...record, confidence: "high" } : record,
+      ),
+    },
+    stateConflict: {
+      ...input.shards,
+      analysis: input.shards.analysis.map((record) =>
+        record.kind === "conflict" ? { ...record, conflictKind: "state-ambiguity" } : record,
+      ),
+    },
+    capturedConflict: {
+      ...input.shards,
+      analysis: [...input.shards.analysis, ...overlap.project.shards.analysis],
+    },
+    explicitLabel: {
+      ...input.shards,
+      labels: [
+        {
+          id: "operand",
+          name: "OperandByte",
+          addressSpace: "snes.cpu",
+          address: 0x808001,
+          evidence: [],
+        },
+      ],
+    },
+  };
+  for (const [name, shards] of Object.entries(variants)) {
+    const result = renderSourceFixture(
+      { ...project, shards },
+      rom,
+      path.join(directory, name),
+      options,
+    );
+    t.false(
+      result.spans.some((span) => span.start === 0 && span.role === "code"),
+      name,
+    );
   }
 });
 

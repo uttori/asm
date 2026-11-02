@@ -51,6 +51,7 @@ export {
 } from "./model/project-types.js";
 export { resolveProjectNativeAssetId } from "./model/project-asset-ids.js";
 export { EvidencePool } from "./model/evidence-pool.js";
+export { withCompactAnalysisOwnership } from "./model/analysis-ownership.js";
 export {
   validateSourceLabelName,
   legacySourceLabelName,
@@ -88,17 +89,6 @@ export {
   type AnalysisSourceGroup,
   type AnalysisSourceSummary,
 } from "./analysis/analysis-sources.js";
-export {
-  type RomCoverageClassification,
-  type RomCoverageStatus,
-  type RomRuntimeCoverage,
-  type RomCoverageSegment,
-  type UnprojectedRomCoverageRecord,
-  type RomCoverageDiagnostic,
-  type RomCoverageSummary,
-  type RomCoverageMap,
-  buildRomCoverageMap,
-} from "./analysis/coverage-map.js";
 export {
   type InstructionEffectiveAddressAnnotation,
   type InstructionStateTransitionAnnotation,

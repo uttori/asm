@@ -62,11 +62,11 @@ function enterNamespace(session, name) {
     });
 }
 export const registerNamespaceDirectives = (registry, context) => {
-    registry.registerTyped("namespace", parseNamespace, syntaxUnion(syntaxRecord({
+    registry.registerImmutableTyped("namespace", parseNamespace, syntaxUnion(syntaxRecord({
         operation: syntaxUnion(syntaxLiteral("nest"), syntaxLiteral("unnest"), syntaxLiteral("clear"), syntaxLiteral("leave")),
     }), syntaxRecord({ operation: syntaxLiteral("enter"), name: syntaxString })), (payload) => executeNamespace(context, payload));
-    registry.registerTyped("pushns", () => ({}), syntaxRecord({}), () => handlePushNamespace(context));
-    registry.registerTyped("pullns", () => ({}), syntaxRecord({}), () => handlePullNamespace(context));
+    registry.registerImmutableTyped("pushns", () => ({}), syntaxRecord({}), () => handlePushNamespace(context));
+    registry.registerImmutableTyped("pullns", () => ({}), syntaxRecord({}), () => handlePullNamespace(context));
 };
 /** Shared source/public-entry grammar for `namespace`. */
 const parseNamespace = ({ words }) => {

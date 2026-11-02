@@ -31,17 +31,10 @@ function isSources(
   );
 }
 
-function isCoverage(value: unknown): value is {
-  readonly summary: { readonly totalBytes: number; readonly classifiedBytes: number };
-  readonly segments: readonly unknown[];
-} {
-  return (
-    isRecord(value) &&
-    isRecord(value.summary) &&
-    typeof value.summary.totalBytes === "number" &&
-    typeof value.summary.classifiedBytes === "number" &&
-    Array.isArray(value.segments)
-  );
+function isEvidenceChoices(
+  value: unknown,
+): value is { readonly shards: { readonly annotations: readonly unknown[] } } {
+  return isRecord(value) && isRecord(value.shards) && Array.isArray(value.shards.annotations);
 }
 
 function isAnnotationRows(value: unknown): value is readonly {
@@ -94,7 +87,7 @@ async function pidArgsOf(
   return value;
 }
 
-test("analysis worker isolates validated shards, serves bounded pages, invalidates and recovers", async (t) => {
+test("analysis worker isolates validated shards, serves bounded evidence choices, invalidates and recovers", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-worker-test-"));
   const workerFile = path.join(directory, "worker.cjs");
   const projectDirectory = path.join(directory, "project");
@@ -228,36 +221,17 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       }),
       { message: /no longer matches/ },
     );
-    const request = client.request(projectDirectory, "coverage");
+    const request = client.request(projectDirectory, "evidenceChoices");
     t.is(
-      client.request(projectDirectory, "coverage"),
+      client.request(projectDirectory, "evidenceChoices"),
       request,
       "concurrent projections are deduplicated",
     );
-    const map = await request;
-    if (!isCoverage(map)) {
-      throw new Error("expected coverage");
+    const choices = await request;
+    if (!isEvidenceChoices(choices)) {
+      throw new Error("expected bounded evidence choices");
     }
-    t.is(map.summary.totalBytes, 1024);
-    t.is(map.summary.classifiedBytes, 0);
-    t.deepEqual(map.segments, [], "summary does not copy full projection to UI");
-    const conflicts = await client.request(projectDirectory, "coverageConflicts");
-    const laterConflicts = await client.request(projectDirectory, "coverageConflicts", {
-      offset: 200,
-    });
-    if (
-      !isRecord(conflicts) ||
-      !Array.isArray(conflicts.segments) ||
-      !isRecord(laterConflicts) ||
-      !Array.isArray(laterConflicts.segments)
-    ) {
-      throw new Error("expected conflict pages");
-    }
-    t.is(conflicts.count, 300);
-    t.is(conflicts.segments.length, 200);
-    t.is(laterConflicts.segments.length, 100);
-    t.deepEqual(conflicts.segments[0].classifications, ["opcode", "data"]);
-    t.is(laterConflicts.segments[0].start, 200);
+    t.is(choices.shards.annotations.length, 200, "inspection choices stay bounded per collection");
     const annotationRows = await client.request(projectDirectory, "annotations", {
       ranges: [
         { architecture: "fixture", addressSpace: "cpu", start: 0, end: 2, sourceId: 0, line: 1 },
@@ -269,9 +243,6 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     t.is(annotationRows.length, 2);
     t.deepEqual(annotationRows[0].annotation.stateObservations[0].state, { m: true });
     t.deepEqual(annotationRows[0].annotation.stateObservations[0].evidence, ["test"]);
-    await t.throwsAsync(client.request(projectDirectory, "coverageConflicts", { offset: -1 }), {
-      message: /offset/,
-    });
     await t.throwsAsync(client.request(path.join(directory, "missing"), "manifest"));
     t.true(
       logs.some(({ level, message }) => level === "debug" && message.includes("Analysis sources:")),
@@ -290,13 +261,15 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       analysisProjectRevision(current.manifest),
     );
     client.invalidate();
-    const revisedCoverage = await client.request(projectDirectory, "coverage");
-    if (!isCoverage(revisedCoverage)) {
-      throw new Error("expected revised coverage");
+    const revisedChoices = await client.request(projectDirectory, "evidenceChoices");
+    if (!isEvidenceChoices(revisedChoices)) {
+      throw new Error("expected revised evidence choices");
     }
-    t.is(revisedCoverage.summary.classifiedBytes, 0);
+    t.deepEqual(revisedChoices.shards.annotations, []);
     client.dispose();
-    await t.throwsAsync(client.request(projectDirectory, "coverage"), { message: /disposed/ });
+    await t.throwsAsync(client.request(projectDirectory, "evidenceChoices"), {
+      message: /disposed/,
+    });
   } finally {
     client.dispose();
     fs.rmSync(directory, { recursive: true, force: true });
@@ -330,13 +303,20 @@ test("distinct read admission is bounded, duplicate requests share capacity, and
     client.dispose();
     fs.rmSync(directory, { recursive: true, force: true });
   });
-  const active = client.request("busy", "coverage");
-  t.is(client.request("busy", "coverage"), active);
-  const queued = client.request("busy", "coverageConflicts", { offset: 200 });
-  const results = Promise.allSettled([active, queued]);
-  await t.throwsAsync(client.request("busy", "coverageConflicts", { offset: 400 }), {
-    message: /capacity/,
+  const active = client.request("busy", "evidenceChoices");
+  t.is(client.request("busy", "evidenceChoices"), active);
+  const queued = client.request("busy", "explainEvidence", {
+    evidenceRecord: { kind: "annotations", id: "first" },
   });
+  const results = Promise.allSettled([active, queued]);
+  await t.throwsAsync(
+    client.request("busy", "explainEvidence", {
+      evidenceRecord: { kind: "annotations", id: "second" },
+    }),
+    {
+      message: /capacity/,
+    },
+  );
   client.invalidate();
   t.true((await results).every((result) => result.status === "rejected"));
   const invalidations = logs.filter((entry) =>
@@ -344,7 +324,10 @@ test("distinct read admission is bounded, duplicate requests share capacity, and
   );
   t.is(invalidations.length, 2);
   t.true(invalidations.every((entry) => entry.level === "debug"));
-  t.truthy(await client.request("ready", "coverage"), "new generation starts after invalidation");
+  t.truthy(
+    await client.request("ready", "evidenceChoices"),
+    "new generation starts after invalidation",
+  );
   client.dispose();
   await t.throwsAsync(client.request("ready", "manifest"), { message: /disposed/ });
 });
@@ -356,11 +339,26 @@ test("new viewport reads replace queued stale ranges without replacing the activ
     client.dispose();
     fs.rmSync(directory, { recursive: true, force: true });
   });
-  const active = client.request("busy", "annotations", { offset: 0 });
-  const stale = t.throwsAsync(client.request("busy", "annotations", { offset: 1 }), {
-    message: /superseded/,
+  const active = client.request("busy", "annotations", {
+    ranges: [
+      { architecture: "fixture", addressSpace: "cpu", start: 0, end: 1, sourceId: 0, line: 1 },
+    ],
   });
-  const latest = client.request("busy", "annotations", { offset: 2 });
+  const stale = t.throwsAsync(
+    client.request("busy", "annotations", {
+      ranges: [
+        { architecture: "fixture", addressSpace: "cpu", start: 1, end: 2, sourceId: 0, line: 2 },
+      ],
+    }),
+    {
+      message: /superseded/,
+    },
+  );
+  const latest = client.request("busy", "annotations", {
+    ranges: [
+      { architecture: "fixture", addressSpace: "cpu", start: 2, end: 3, sourceId: 0, line: 3 },
+    ],
+  });
   await stale;
   t.truthy(await active);
   t.truthy(await latest);
@@ -377,7 +375,7 @@ test("malformed worker envelopes fail and settle the whole lane", async (t) => {
   });
   const results = await Promise.allSettled([
     client.request("ready", "manifest"),
-    client.request("ready", "coverage"),
+    client.request("ready", "evidenceChoices"),
   ]);
   t.true(results.every((result) => result.status === "rejected"));
 });
@@ -392,7 +390,7 @@ test("interactive annotations bypass bulk work and retain their process when a b
     client.dispose();
     fs.rmSync(directory, { recursive: true, force: true });
   });
-  const bulk = pidOf(client.request("busy", "coverage"));
+  const bulk = pidOf(client.request("busy", "evidenceChoices"));
   const annotations = pidOf(client.request("ready", "annotations"));
   t.is(
     await Promise.race([bulk.then(() => "bulk"), annotations.then(() => "annotations")]),
@@ -404,7 +402,7 @@ test("interactive annotations bypass bulk work and retain their process when a b
   t.not(editor.pid, preview.pid);
   t.not(editor.pid, background.pid);
   t.is((await pidOf(client.request("ready", "manifest"))).pid, editor.pid);
-  await t.throwsAsync(client.request("crash", "coverage"));
+  await t.throwsAsync(client.request("crash", "evidenceChoices"));
   t.is(
     (await pidOf(client.request("ready", "manifest"))).pid,
     editor.pid,
@@ -435,7 +433,7 @@ test("a viewport timeout cannot reject a concurrent project load", async (t) => 
   t.not(preview.pid, saved.pid, "preview requests restart in their own worker");
 });
 
-test("projection process gives queued pages their own timeout and keeps the parent responsive", async (t) => {
+test("projection process gives queued requests their own timeout and keeps the parent responsive", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-projection-queue-"));
   const client = new AnalysisWorkerClient(fakeProcess(directory), { timeoutMs: 1000 });
   let heartbeats = 0;
@@ -449,7 +447,7 @@ test("projection process gives queued pages their own timeout and keeps the pare
   });
   const start = performance.now();
   const results = await Promise.all(
-    (["coverage", "annotations", "coverageConflicts"] as const).map((operation) =>
+    (["evidenceChoices", "annotations", "explainEvidence"] as const).map((operation) =>
       pidArgsOf(client.request("busy", operation)),
     ),
   );
@@ -478,7 +476,7 @@ test("projection failures and timeouts report the operation/budget, reject queue
   t.deepEqual(first.args, ["--max-old-space-size=128"]);
   const failed = await Promise.allSettled([
     client.request("crash", "annotations"),
-    client.request("normal", "coverageConflicts"),
+    client.request("normal", "explainEvidence"),
   ]);
   for (const result of failed) {
     t.is(result.status, "rejected");
@@ -490,20 +488,20 @@ test("projection failures and timeouts report the operation/budget, reject queue
       /Analysis annotations process exited \(23\).*128 MiB.*test projection failure/s,
     );
   }
-  const recovered = await pidOf(client.request("normal", "coverageConflicts"));
+  const recovered = await pidOf(client.request("normal", "explainEvidence"));
   t.not(recovered.pid, first.pid);
   maxMemoryMiB = 256;
-  const resized = await pidArgsOf(client.request("normal", "coverageConflicts"));
+  const resized = await pidArgsOf(client.request("normal", "explainEvidence"));
   t.not(resized.pid, recovered.pid, "a changed project budget restarts the process");
   t.deepEqual(resized.args, ["--max-old-space-size=256"]);
-  await t.throwsAsync(client.request("timeout", "coverageConflicts"), {
-    message: /Analysis coverageConflicts process exceeded 1 seconds.*256 MiB/,
+  await t.throwsAsync(client.request("timeout", "explainEvidence"), {
+    message: /Analysis explainEvidence process exceeded 1 seconds.*256 MiB/,
   });
-  t.not((await pidOf(client.request("normal", "coverageConflicts"))).pid, resized.pid);
+  t.not((await pidOf(client.request("normal", "explainEvidence"))).pid, resized.pid);
   maxMemoryMiB = 0;
-  await t.throwsAsync(client.request("normal", "coverage"), {
+  await t.throwsAsync(client.request("normal", "evidenceChoices"), {
     message: /asm.analysis.maxMemoryMiB/,
   });
   maxMemoryMiB = 128;
-  t.truthy(await client.request("normal", "coverage"));
+  t.truthy(await client.request("normal", "evidenceChoices"));
 });

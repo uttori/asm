@@ -324,7 +324,12 @@ export function renderSymbolDocs(index: WorkspaceIndex, symbol: AssemblySymbolDe
   if (symbol.containerName) {
     lines.push("", `In \`${symbol.containerName}\``);
   }
-  if (symbol.value !== undefined) {
+  if (symbol.relocatable) {
+    lines.push(
+      "",
+      `Section: \`${symbol.relocatable.section} + $${symbol.relocatable.offset.toString(16).toUpperCase()}\` (unlinked)`,
+    );
+  } else if (symbol.value !== undefined) {
     const value =
       typeof symbol.value === "number"
         ? `$${symbol.value.toString(16).toUpperCase()}`

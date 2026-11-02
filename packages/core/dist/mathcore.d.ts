@@ -1,6 +1,7 @@
 import type { ExpressionHost, MathValue } from "./architecture-types.js";
 import type { BinaryOperator, ExpressionNode, ReferenceExpressionNode, UnaryOperator } from "./ir/expression-node.js";
 import { type FunctionTemplate } from "./ir/function-template.js";
+import { type LinkExpressionContext } from "./ir/link-expression.js";
 type UserFunction = {
     readonly args: readonly string[];
     readonly content: string;
@@ -18,6 +19,8 @@ type OperatorTable = {
     readonly [K in BinaryOperator]: BinaryOperatorSpec;
 };
 export declare class MathCore {
+    /** Object assembly supplies pure name binding; numeric layout/preprocessing reads must remain constant. */
+    linkContext?: () => LinkExpressionContext;
     /** Definition identity owns cached syntax; replacing a function releases its previous template. */
     private readonly functionTemplates;
     /** Parsed syntax is reused only within an assembly snapshot; state-dependent values are never cached. */
@@ -120,6 +123,8 @@ export declare class MathCore {
      * @returns {number} The result of the function call.
      */
     callUserFunction: (name: string, args: (number | string)[]) => number;
+    /** Bind scalar function parameters structurally so unresolved addresses never become source text. */
+    bindLinkFunction(name: string, arguments_: readonly ExpressionNode[]): ExpressionNode | undefined;
     /**
      * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
      * @param {string} name The name of the function to call.

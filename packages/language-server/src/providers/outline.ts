@@ -198,6 +198,9 @@ export function outlineDisplayName(symbol: AssemblySymbolDefinition): string {
  * @returns {string} The detail string.
  */
 export function outlineDetail(symbol: AssemblySymbolDefinition): string {
+  if (symbol.relocatable) {
+    return `${symbol.kind} ${symbol.relocatable.section}+$${symbol.relocatable.offset.toString(16).toUpperCase()} (unlinked)`;
+  }
   if (symbol.value === undefined) {
     return symbol.kind;
   }

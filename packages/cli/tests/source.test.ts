@@ -811,7 +811,7 @@ test("bulk source imports preserve per-file commits, retry idempotently and acce
     t.true(retried.imports.every((result) => !result.changed));
   }
   t.true(child.stderr.includes(captures[2]));
-  t.regex(child.stderr, /Capture 3\/3.*Import completed/);
+  t.regex(child.stderr, /^\d+\.\d+s: Capture 3\/3.*Import completed/m);
   t.is(readCatalog().fileSha256, beforeRetry);
 });
 
@@ -1057,3 +1057,67 @@ r 32768 U
     },
   );
 }
+
+test("linked disassembly migration verifies pristine objects then preserves working edits through native Git integration", async (t) => {
+  const { directory, rom } = await fixture((cleanup) => t.teardown(cleanup));
+  const rawFile = path.join(directory, "source/assets/raw/000000.bin");
+  const raw = fs.readFileSync(rawFile);
+  raw[7] = 0xeb;
+  fs.writeFileSync(rawFile, raw);
+  const bankFile = path.join(directory, "source/banks/bank-000.asm");
+  fs.appendFileSync(bankFile, "; Retain this authored explanation.\n");
+  await sourceGit(directory, ["add", "--all"]);
+  await sourceGit(directory, ["commit", "-m", "Retain source edits before migration"]);
+  await sourceGit(directory, ["mv", "source/main.asm", "source/engine.asm"]);
+  const configFile = path.join(directory, "source/uttori-asm.config.json");
+  const renamedConfiguration = fs
+    .readFileSync(configFile, "utf8")
+    .replace('"main.asm"', '"engine.asm"');
+  fs.writeFileSync(configFile, renamedConfiguration);
+  await sourceGit(directory, ["add", "--all"]);
+  await sourceGit(directory, ["commit", "-m", "Rename the source entry point"]);
+  const head = (await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString();
+  const research = fs.readFileSync(path.join(directory, ".uttori/research/names.json"));
+  const prepared = await executeSourceOperation({
+    directory,
+    action: "prepare",
+    assembly: "linked",
+  });
+  t.is(prepared.verification.outputSha256, rom.identity.sha256);
+  t.true(prepared.verification.checks.includes("object-serialization"));
+  t.true(prepared.verification.checks.includes("complete-container-equality"));
+  t.is(prepared.generation.descriptor.inputs.assembly, "linked");
+  const proof = JSON.parse(
+    (
+      await sourceGit(directory, [
+        "show",
+        `${prepared.generation.commit}:source/link-verification.json`,
+      ])
+    ).stdout.toString(),
+  );
+  t.is(proof.outputSha256, proof.originalContainerSha256);
+  t.is(proof.outputSize, rom.fileBytes().length);
+  t.is((await sourceGit(directory, ["rev-parse", "HEAD"])).stdout.toString(), head);
+  t.regex(fs.readFileSync(bankFile, "utf8"), /^org /m);
+  const candidate = prepared.generation.commit;
+  const preview = await executeSourceOperation({ directory, action: "preview", candidate });
+  t.deepEqual(preview.conflicts, []);
+  await executeSourceOperation({ directory, action: "apply", candidate });
+  const finished = await executeSourceOperation({ directory, action: "finish" });
+  t.is(finished.phase, "verified");
+  t.deepEqual(fs.readFileSync(path.join(directory, ".uttori/research/names.json")), research);
+  t.regex(fs.readFileSync(bankFile, "utf8"), /section "rom_bank_000"/);
+  t.true(fs.readFileSync(bankFile, "utf8").includes("Retain this authored explanation."));
+  t.false(fs.existsSync(path.join(directory, "source/main.asm")));
+  t.true(fs.existsSync(path.join(directory, "source/engine.asm")));
+  const built = await expectOperation({ directory, action: "build" }, isSnesSourceBuild);
+  const expected = Buffer.from(rom.fileBytes());
+  expected[7] = 0xeb;
+  t.deepEqual(fs.readFileSync(built.outputFile), expected);
+  const repeated = await executeSourceOperation({ directory, action: "prepare" });
+  t.is(repeated.generation.descriptor.inputs.assembly, "linked");
+  t.is(repeated.verification.outputSha256, rom.identity.sha256);
+  const unchanged = await executeSourceOperation({ directory, action: "prepare" });
+  t.is(unchanged.generation.descriptor.id, repeated.generation.descriptor.id);
+  t.deepEqual(fs.readFileSync(rawFile), raw);
+});

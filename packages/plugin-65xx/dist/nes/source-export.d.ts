@@ -1,3 +1,4 @@
+import { type AssemblyModuleOptions, type AssemblyLinkRecipe } from "@uttori/asm-core";
 import { type ProjectLabel, type ProjectComment, type IntervalAnnotation, type AnalysisControlFlowNodeRecord } from "@uttori/asm-disassembler";
 import { type SourceGenerationFile } from "@uttori/asm-disassembler/source-project";
 import type { NesCartridge } from "./cartridge.js";
@@ -16,7 +17,14 @@ export declare function exportNesSource(rom: NesCartridge, nodes: readonly Analy
     readonly comments?: readonly ProjectComment[];
     /** Explicit data classifications and versioned text/graphics layouts, qualified to original bytes. */
     readonly annotations?: readonly IntervalAnnotation[];
+}, exportOptions?: {
+    readonly module?: AssemblyModuleOptions;
 }): {
+    /** Native sections plus the original physical cartridge order; omitted from existing absolute exports. */
+    relocatable?: {
+        readonly moduleId: string;
+        readonly linkRecipe: AssemblyLinkRecipe;
+    };
     files: SourceGenerationFile[];
     segments: readonly NesSourceSegment[];
     codeBytes: number;

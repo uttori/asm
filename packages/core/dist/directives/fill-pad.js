@@ -108,12 +108,12 @@ export const handlePad = (ctx, words) => {
  */
 export const registerFillPadDirectives = (registry, context) => {
     const pattern = (kind, keywords) => {
-        registry.registerTyped(keywords, ({ words }) => parsePattern(words, kind), syntaxRecord({ width: syntaxNumber, expression: syntaxExpression }), (payload) => executePattern(context, kind, payload));
+        registry.registerImmutableTyped(keywords, ({ words }) => parsePattern(words, kind), syntaxRecord({ width: syntaxNumber, expression: syntaxExpression }), (payload) => executePattern(context, kind, payload));
     };
     pattern("fill", ["fillbyte", "fillword", "filllong", "filldword"]);
     pattern("pad", ["padbyte", "padword", "padlong", "paddword"]);
-    registry.registerTyped("fill", parseFill, syntaxRecord({ expression: syntaxExpression }), (payload) => executeFill(context, payload));
-    registry.registerTyped("pad", parsePad, syntaxRecord({ operation: syntaxLiteral("pad"), address: syntaxOptional(syntaxExpression) }), (payload) => executePad(context, payload));
+    registry.registerImmutableTyped("fill", parseFill, syntaxRecord({ expression: syntaxExpression }), (payload) => executeFill(context, payload));
+    registry.registerImmutableTyped("pad", parsePad, syntaxRecord({ operation: syntaxLiteral("pad"), address: syntaxOptional(syntaxExpression) }), (payload) => executePad(context, payload));
 };
 /** Shared source/public-entry grammar for `fill`. */
 const parseFill = ({ words }) => {

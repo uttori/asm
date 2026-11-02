@@ -30,5 +30,14 @@ export declare const syntaxExpression: SyntaxGuard<ExpressionNode>;
 export declare function syntaxCodec<T>(version: string, parse: (input: SyntaxParseInput) => T, guard: SyntaxGuard<T>): SyntaxGrammar & {
     read(payload: SyntaxValue): T;
 };
+/** Borrowed lexical data. Runtime freezing also covers nested fields of legacy mutable AST types. */
+export type ImmutableSyntax<T> = Readonly<T>;
+/**
+ * Explicit read-only codec for built-ins. Guards must be pure and executors must not mutate payloads.
+ * Mutable plugins keep syntaxCodec; transported values still require bounded copying and validation.
+ */
+export declare function immutableSyntaxCodec<T>(version: string, parse: (input: SyntaxParseInput) => T, guard: SyntaxGuard<T>): SyntaxGrammar & {
+    read(payload: SyntaxValue): ImmutableSyntax<T>;
+};
 export {};
 //# sourceMappingURL=syntax-codec.d.ts.map

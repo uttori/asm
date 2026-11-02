@@ -4,4 +4,5 @@ export { handleA8, handleA16, handleAccu, handleI8, handleI16, handleIndex, hand
 export { SNES_SESSION_STATE_ID, type SnesSpcBlockType, type SnesSpcBlockData, type SnesSessionState, snesSessionStateKey, cloneSnesSessionState, } from "./session-state.js";
 export { createSpcRuntime } from "./directives/spc.js";
 export { type AddressSpaceContext, type SnesRomAddressSpace, snesRomAddressSpace, } from "./target/address-space.js";
+export { createSnesLinkTarget } from "./target/link-target.js";
 //# sourceMappingURL=target.d.ts.map

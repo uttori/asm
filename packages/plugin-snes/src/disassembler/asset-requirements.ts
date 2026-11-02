@@ -19,8 +19,12 @@ export interface SnesAssetIncludeEntry {
 
 /** Project rules remain optional; malformed rules must never silently disable admission checks. */
 export function parseSnesAssetRequirements(value: unknown): readonly SnesAssetRequirement[] {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) throw new Error("Asset requirements must be an array.");
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    throw new Error("Asset requirements must be an array.");
+  }
   const structures = new Set<string>();
   return value.map((row: unknown) => {
     if (
@@ -28,24 +32,27 @@ export function parseSnesAssetRequirements(value: unknown): readonly SnesAssetRe
       row === null ||
       !("structure" in row) ||
       typeof row.structure !== "string" ||
-      !/^[A-Za-z_]\w*$/.test(row.structure) ||
+      !/^[A-Z_a-z]\w*$/.test(row.structure) ||
       !("format" in row) ||
       typeof row.format !== "string" ||
       !row.format.trim()
     ) {
       throw new Error("Asset requirements need a structure name and format.");
     }
-    if (structures.has(row.structure))
+    if (structures.has(row.structure)) {
       throw new Error(`Duplicate asset requirement: ${row.structure}.`);
+    }
     structures.add(row.structure);
     let options: Record<string, string> | undefined;
     if ("options" in row) {
-      if (typeof row.options !== "object" || row.options === null || Array.isArray(row.options))
+      if (typeof row.options !== "object" || row.options === null || Array.isArray(row.options)) {
         throw new Error("Asset requirement options must be literal strings.");
+      }
       options = {};
       for (const [key, option] of Object.entries(row.options)) {
-        if (!/^[A-Za-z_]\w*$/.test(key) || typeof option !== "string")
+        if (!/^[A-Z_a-z]\w*$/.test(key) || typeof option !== "string") {
           throw new Error("Asset requirement options must be literal strings.");
+        }
         options[key] = option;
       }
     }
@@ -63,13 +70,19 @@ export function verifySnesAssetRequirements(
   entries: readonly SnesAssetIncludeEntry[],
   catalog: LoadedSnesStructMap | undefined,
 ): void {
-  if (!requirements.length) return;
-  if (!catalog) throw new Error("Asset requirements need a struct-map.json input.");
+  if (!requirements.length) {
+    return;
+  }
+  if (!catalog) {
+    throw new Error("Asset requirements need a struct-map.json input.");
+  }
   const calls = entries.map((entry) => ({ ...entry, call: parseAssetCall(entry.directive) }));
   const rules = new Map(requirements.map((rule) => [rule.structure, rule]));
   for (const binding of catalog.bindings) {
     const rule = rules.get(binding.structure.id);
-    if (!rule || binding.fileOffset === undefined) continue;
+    if (!rule || binding.fileOffset === undefined) {
+      continue;
+    }
     const end = binding.fileOffset + binding.structure.size * binding.count;
     let covered = binding.fileOffset;
     const matching = calls
@@ -87,9 +100,13 @@ export function verifySnesAssetRequirements(
     // Coverage is a union, not a requirement for one particular palette slice or
     // room filename. Aliases retain their existing physical owner and source identity.
     for (const entry of matching) {
-      if (entry.start > covered) break;
+      if (entry.start > covered) {
+        break;
+      }
       covered = Math.max(covered, entry.end);
-      if (covered >= end) break;
+      if (covered >= end) {
+        break;
+      }
     }
     if (covered < end) {
       const options = JSON.stringify(rule.options ?? {});

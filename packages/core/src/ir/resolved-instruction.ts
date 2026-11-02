@@ -1,6 +1,8 @@
 import type { EncoderDiagnosticContext, EncoderEmissionContext } from "../architecture-types.js";
 import type { AssemblyStageName } from "../plugin/contracts.js";
+import type { SectionPosition } from "../relocatable.js";
 import type { ExpressionNode, ReferenceExpressionNode } from "./expression-node.js";
+import { requireLinkConstant, type LinkExpression } from "./link-expression.js";
 import type { OperandScalar, ParsedInstructionOperands } from "./parsed-operand.js";
 import type { ReferenceResolution } from "./reference-path.js";
 import { copySyntaxValue, type SyntaxValue } from "./source-syntax.js";
@@ -26,6 +28,15 @@ export type OperandBindingFailure = {
 
 /** Narrow capabilities deliberately omit all string evaluation, expansion and operand classifiers. */
 export interface TypedOperandEvaluationContext {
+  /** Explicit module compatibility mode; omitted contexts retain their native encoding policy. */
+  readonly sourceAdapter?: "asar" | "ca65";
+  /** Optional authored-address preview used exclusively to preserve source encoding choices. */
+  previewSource?(expression: ExpressionNode): number | undefined;
+  /** Advance only a borrowed preview cursor while selecting a compatibility encoding. */
+  withSourcePreview?<T>(operation: (advance: (bytes: number) => void) => T): T;
+  /** Present only during section-relative assembly; never substitutes numeric placeholder addresses. */
+  compileLink?(expression: ExpressionNode): LinkExpression;
+  sectionPosition?(): SectionPosition;
   readonly bindingFailure?: OperandBindingFailure;
   evaluate(expression: ExpressionNode): number;
   /** Mathematical grouping can round differently from a numeric atom read. */
@@ -81,7 +92,11 @@ export class InstructionResolutionFrame {
   ) {
     this.identity = context.stageIdentity();
     this.stage = context.stage();
-    this.address = context.currentAddress();
+    // Branch fixups use section offsets even when source selection observes authored bus addresses.
+    this.address =
+      context.sourceAdapter === "asar" && context.sectionPosition
+        ? context.sectionPosition().offset
+        : context.currentAddress();
     if (preparation && (preparation.stage !== this.stage || preparation.address !== this.address)) {
       throw new Error("Instruction preparation belongs to a different stage or cursor.");
     }
@@ -208,6 +223,62 @@ export class InstructionResolutionFrame {
     return this.context.currentAddress();
   }
 
+  /** The invocation-start byte cursor is stable even after opcode writes advance the live cursor. */
+  get instructionAddress(): number {
+    this.assertActive();
+    return this.address;
+  }
+
+  /** Distinguishes object production from the existing absolute numeric encoding contract. */
+  get isRelocatable(): boolean {
+    this.assertActive();
+    return this.context.compileLink !== undefined;
+  }
+
+  /** Source policy belongs to this frame and cannot be inferred from operand spelling. */
+  get sourceAdapter(): "asar" | "ca65" | undefined {
+    this.assertActive();
+    return this.context.sourceAdapter;
+  }
+
+  /** Undefined means layout cannot determine this operand yet; the normal unresolved form remains authoritative. */
+  previewSource(scalar: OperandScalar): number | undefined {
+    this.assertActive();
+    return this.context.previewSource?.(scalar.expression);
+  }
+
+  /** Borrow an isolated numeric cursor so compatibility selection observes opcode-before-operand timing without emitting bytes. */
+  withSourcePreview<T>(operation: (advance: (bytes: number) => void) => T): T {
+    this.assertActive();
+    if (!this.context.withSourcePreview) {
+      throw new Error("Source preview cursor is unavailable.");
+    }
+    return this.context.withSourcePreview(operation);
+  }
+
+  /** Preserve the operand's bound symbolic meaning at its actual evaluation cursor. */
+  compileLink(scalar: OperandScalar): LinkExpression {
+    this.assertActive();
+    if (!this.context.compileLink) {
+      throw new Error("Instruction frame is not producing a relocatable module.");
+    }
+    return this.context.compileLink(scalar.expression);
+  }
+
+  /** Opcode/register/count decisions must be invariant under final placement. */
+  constant(scalar: OperandScalar, purpose: string): number {
+    return requireLinkConstant(this.compileLink(scalar), purpose);
+  }
+
+  /** Relative fields capture a section position rather than a guessed final program counter. */
+  sectionPosition(): SectionPosition {
+    this.assertActive();
+    if (!this.context.sectionPosition) {
+      throw new Error("Instruction has no section-relative cursor.");
+    }
+    return this.context.sectionPosition();
+  }
+
   /** Release access even after failures; a retained frame can never act on the next instruction. */
   close(): void {
     this.active = false;
@@ -240,6 +311,8 @@ export class InstructionResolutionFrame {
 
 /** Typed encoders receive no legacy operand facade. Sizing and encoding must share their form selector. */
 export interface TypedArchitectureEncoder {
+  /** Opt-in contract: every supported instruction form can retain typed symbolic operand fields. */
+  readonly supportsRelocatable?: boolean;
   /** Opt in only with structural unresolved operands and explicit numeric-read diagnostic timing. */
   readonly deferOperandBindingErrors?: boolean;
   /** Observe stage-entry and refreshed-command classification at the original lowering points. */

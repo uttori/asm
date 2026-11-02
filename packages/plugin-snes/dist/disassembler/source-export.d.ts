@@ -1,10 +1,12 @@
-import { type DecodedInstruction } from "@uttori/asm-core";
+import { type DecodedInstruction, type AssemblyModuleOptions } from "@uttori/asm-core";
 import { type AnalysisProjectManifest, type AnalysisProjectShards, type RomImage, type SourceExportManifest } from "@uttori/asm-disassembler";
 import { type InstructionExportRecord } from "@uttori/asm-disassembler/storage";
 import { type SnesRamMapVariable } from "./ram-map.js";
 import { type SnesMapper } from "./rom-header.js";
 /** Options for `exportSnes65816Source`. `sourceProjectSha256` is required provenance. */
 export interface SnesSourceExportOptions {
+    /** Emit relocatable section declarations plus a link recipe for an object-producing host. */
+    readonly module?: AssemblyModuleOptions;
     /** Render immutable output to an owned sink. In this form directory supplies inputs only; no files are published or removed. */
     readonly emitFile: (file: {
         readonly path: string;

@@ -4,10 +4,32 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { test } from "../../../tests/ava-helper.js";
+import { createLinkedBuildFixture } from "../../../tests/fixtures/linked-build.js";
 import { bundledProjectOptions } from "../src/bundled-plugins.js";
 import { IndexWorkerClient } from "../src/index-worker-client.js";
 import { ProjectEnvironmentController } from "../src/project-environment.js";
 import { completionsFor } from "../src/providers.js";
+
+test("bundled indexing preserves each native module identity across snapshot publication", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-native-index-worker-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  createLinkedBuildFixture(directory);
+  const worker = new IndexWorkerClient(workerFile);
+  t.teardown(() => worker.dispose());
+  const controller = new ProjectEnvironmentController({
+    ...bundledProjectOptions,
+    indexer: (settings, overlays) => worker.analyze(settings, overlays),
+  });
+  t.teardown(() => controller.dispose());
+  const state = await controller.replace({
+    cwd: directory,
+    workspaceTrusted: true,
+    linkProject: "build.json",
+  });
+  t.is(state.index.moduleRoots[path.join(directory, "main.asm")].id, "main");
+  t.is(state.index.moduleRoots[path.join(directory, "helper.asm")].id, "helper");
+  t.deepEqual(state.index.getDiagnostics(path.join(directory, "main.asm")), []);
+});
 
 const workerFile = pathToFileURL(path.resolve("packages/language-server/out/index-worker.mjs"));
 

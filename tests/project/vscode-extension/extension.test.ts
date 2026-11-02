@@ -222,6 +222,10 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
     "asm.source.abort",
     "asm.source.editResearch",
     "asm.source.editAnalysis",
+    "asm.object.assemble",
+    "asm.library.create",
+    "asm.link",
+    "asm.linked.build",
   ]) {
     t.true(commands.has(command), command);
   }
@@ -316,6 +320,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.trace.indexMode",
       "asm.baseImage",
       "asm.buildOutput",
+      "asm.linkProject",
       "asm.configFile",
       "asm.debug.captureContext",
       "asm.debug.traceDetail",

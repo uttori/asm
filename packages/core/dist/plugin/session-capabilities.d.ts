@@ -8,6 +8,18 @@ import type { LabelEntry } from "../services/symbol-scope-service.js";
  * Host-owned services, assembly entry points, registries and disposal are intentionally absent.
  */
 export interface PluginSessionCapabilities {
+    /** Versioned optional object-production capabilities, borrowed for the same synchronous callback. */
+    readonly module?: {
+        readonly apiVersion: 1;
+        readonly id: string;
+        selectSection(options: import("../relocatable.js").AssemblySectionOptions): void;
+        declare(name: string, visibility: "import" | "export"): void;
+        exportSymbol(name: string): void;
+        compile(expression: ExpressionNode): import("../ir/link-expression.js").LinkExpression;
+        write(expression: ExpressionNode, width: 1 | 2 | 3 | 4, endianness?: "little" | "big"): void;
+        reserve(count: number, fill?: number): void;
+        align(boundary: number, fill?: number): void;
+    };
     readonly targetOptions: Readonly<Record<string, unknown>>;
     readonly arch: string;
     readonly currentLine: number;

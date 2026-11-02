@@ -36,6 +36,7 @@ for (const [name, filename] of [
             const contents = fs
               .readFileSync(args.path, "utf8")
               .replaceAll("import.meta.url", JSON.stringify(pathToFileURL(args.path).href));
+            /** @type {import("esbuild").Loader} */
             let loader = "js";
             if (
               args.path.endsWith(".ts") ||

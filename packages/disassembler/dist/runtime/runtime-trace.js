@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { TraceCache } from "../internal/trace-cache.js";
 import { validateRuntimeInstructionDetails, } from "../model/trace-detail.js";
+import { snesAnalysisTraceState, SNES_ANALYSIS_TRACE_PROFILE } from "./runtime-analysis-profile.js";
 import { TraceChunkFormatter } from "./trace-chunk-formatter.js";
 /** Native, emulator-neutral on-disk identity for an explicitly recorded instruction trace. */
 export const RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
@@ -159,14 +160,14 @@ export const importRuntimeInstructionTrace = (value, context) => {
 /**
  * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
  * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
- * @param {string} mode Retention profile. Only full indexing is supported.
+ * @param {string} mode Full snapshots or compact analysis state.
  * @param {number} requested Explicit caller budget, if any.
  * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
  * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
  */
 export const runtimeTraceIndexRecordLimit = (mode, requested, storage) => {
-    if (mode !== "full") {
-        throw new Error("Only full runtime trace indexing is supported.");
+    if (mode !== "full" && mode !== "analysis") {
+        throw new Error("Only full or analysis runtime trace indexing is supported.");
     }
     let defaultLimit = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
     let maximum = MAX_RUNTIME_TRACE_INDEX_RECORDS;
@@ -304,7 +305,9 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             const base = { architecture: artifact.architecture, count: 1, evidence: [] };
             // Keep bytes and decoding state together: independent sets could pair self-modified code
             // with register values that were never observed when those bytes executed.
-            const state = detail.state;
+            const state = indexMode === "analysis" && artifact.architecture === "snes.65816"
+                ? snesAnalysisTraceState(detail.state)
+                : detail.state;
             const content = JSON.stringify({ address, bytes: detail.bytes, state });
             // Full snapshots may contain large or mostly unique register objects. Fixed-size keys
             // bound per-variant key allocations without dropping any captured register fields.
@@ -412,7 +415,10 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         const prepared = checkpoint(recovery);
         recovery = prepared.recovery;
         const sourceSha256 = prepared.sourceSha256;
-        storage?.onSource?.(sourceSha256, "full");
+        const profile = indexMode === "analysis" && artifact.architecture === "snes.65816"
+            ? SNES_ANALYSIS_TRACE_PROFILE
+            : "full";
+        storage?.onSource?.(sourceSha256, profile);
         const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
         const evidenceIds = [evidenceId];
         const executions = [];
@@ -511,6 +517,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         };
         const report = {
             id: `import:instruction-trace:${sourceSha256}`,
+            ...(profile === "full" ? {} : { indexProfile: profile }),
             format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
             sourceName,
             sourceSha256,

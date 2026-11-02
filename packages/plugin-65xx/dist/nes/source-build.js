@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Assembler, NodeAssemblySnapshotProvider, createDebugMap, } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { checkRawBlockConsumption, publishSourceBuild, assertSourcePath, sourceContentHash, } from "@uttori/asm-disassembler/source-project";
+import { checkRawBlockConsumption, publishSourceBuild, sourceBuildCoverage, assertSourcePath, sourceContentHash, linkSourceAssembly, sourceMappingFromLink, } from "@uttori/asm-disassembler/source-project";
 import { NesCartridge } from "./cartridge.js";
 import { validateNesMapper } from "./mapper.js";
 /** Assemble a complete iNES image without publication; stale dependencies invalidate the result. */
@@ -15,7 +15,14 @@ export function inspectNesSource(options) {
         overlays.set(path.resolve(root, file), bytes);
     }
     const files = new NodeAssemblySnapshotProvider({ overlays });
+    // Bind the selected recipe/configuration bytes before assembly, then retain them in normal freshness checks.
+    for (const input of [...(options.controlInputs ?? []), ...(options.link?.dependencies ?? [])]) {
+        if (sourceContentHash(files.readFile(input.path)) !== input.sha256) {
+            throw new Error(`Source link input changed: ${input.path}`);
+        }
+    }
     const assembler = new Assembler({
+        module: options.link?.module,
         environment: options.environment,
         target: "65xx.nes",
         architecture: "65xx.2a03",
@@ -27,7 +34,10 @@ export function inspectNesSource(options) {
         assembler.setIncludePaths([path.dirname(entry), ...(options.includePaths ?? [])]);
         assembler.setCurrentFile(entry);
         assembler.assembleSource(files.readTextFile(entry), entry);
-        const output = Uint8Array.from(assembler.getBinaryOutput());
+        const linked = options.link
+            ? linkSourceAssembly(assembler, options.link, options.signal)
+            : undefined;
+        const output = linked?.output ?? Uint8Array.from(assembler.getBinaryOutput());
         const cartridge = new NesCartridge(output);
         validateNesMapper(cartridge);
         if (options.expectedHeader && !Buffer.from(cartridge.header()).equals(options.expectedHeader)) {
@@ -36,7 +46,7 @@ export function inspectNesSource(options) {
         if (output.length !== options.expectedSize) {
             throw new Error(`NES layout expected ${options.expectedSize} bytes; received ${output.length}.`);
         }
-        const mapping = assembler.addressToLineMapping;
+        const mapping = linked ? sourceMappingFromLink(linked, root) : assembler.addressToLineMapping;
         if (options.rawBlocks) {
             const { directory, original, blockSize } = options.rawBlocks;
             if (!Number.isSafeInteger(blockSize) || blockSize < 1 || blockSize > 65536) {
@@ -71,7 +81,9 @@ export function inspectNesSource(options) {
             output,
             mapping,
             snapshots: files.snapshots,
-            symbols: new Map([...assembler.labelTable].map(([name, symbol]) => [name, symbol.value])),
+            symbols: new Map(linked
+                ? linked.symbols.map((symbol) => [symbol.name, symbol.value])
+                : [...assembler.labelTable].map(([name, symbol]) => [name, symbol.value])),
             diagnostics: [],
         };
     }
@@ -95,6 +107,9 @@ export function buildNesSource(options) {
         .toSorted((a, b) => a.path.localeCompare(b.path));
     const inputSha256 = sourceContentHash(canonicalJson({
         inputs,
+        ...(options.link
+            ? { link: { module: options.link.module, recipe: options.link.recipe } }
+            : {}),
         configuration: options.configurationSha256,
         toolchain: options.toolchainSha256,
         expectedSize: options.expectedSize,
@@ -111,6 +126,9 @@ export function buildNesSource(options) {
         outputFile,
         debugMapFile,
         inputSha256,
+        ...(options.rawBlocks
+            ? { coverage: sourceBuildCoverage(mapping, options.root, options.rawBlocks) }
+            : {}),
         inputs,
         outputSize: output.length,
         debugMapFingerprint: map.fingerprint.value,
@@ -121,6 +139,8 @@ export function buildNesSource(options) {
             toolchainSha256: options.toolchainSha256,
             checks: [
                 "assembly",
+                ...(options.link ? ["object-serialization", "link-placement-and-relocations"] : []),
+                ...(options.link && options.originalContent ? ["complete-container-equality"] : []),
                 "ines-sections",
                 "declared-output-size",
                 "input-freshness",

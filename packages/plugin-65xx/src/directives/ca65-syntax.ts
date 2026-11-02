@@ -216,7 +216,11 @@ function parse(id: string, { words }: SyntaxParseInput): Payload {
 }
 
 /** Each execution refreshes live scope, cursor and CPU state; syntax never stores resolved values. */
-function execute(node: Payload, { session, state, targetId }: DirectiveFactoryContext): void {
+function execute(
+  node: Payload,
+  { session, state, targetId }: DirectiveFactoryContext,
+  id: string,
+): void {
   const profile = state.get(ca65SessionStateKey);
   switch (node.operation) {
     case "error":
@@ -237,6 +241,7 @@ function execute(node: Payload, { session, state, targetId }: DirectiveFactoryCo
       return;
     case "segment": {
       if (targetId !== NES_65XX_TARGET_ID) {
+        session.module?.selectSection({ name: node.name });
         profile.currentFlatSegment = node.name;
         return;
       }
@@ -262,7 +267,15 @@ function execute(node: Payload, { session, state, targetId }: DirectiveFactoryCo
     }
     case "symbols":
       for (const name of node.names) {
-        markGlobalSymbol(session, name);
+        if (session.module) {
+          if (id.endsWith(".export")) {
+            session.module.exportSymbol(name);
+          } else {
+            session.module.declare(name, "import");
+          }
+        } else {
+          markGlobalSymbol(session, name);
+        }
       }
       return;
     case "data":
@@ -271,6 +284,24 @@ function execute(node: Payload, { session, state, targetId }: DirectiveFactoryCo
     case "mapped":
       if (session.isDefinitionCollectionStage) {
         session.step(node.values.length * (node.mode === "big" ? 2 : 1));
+        return;
+      }
+      if (session.module) {
+        for (const value of node.values) {
+          const expression =
+            node.mode === "big"
+              ? value
+              : {
+                  type: "unary" as const,
+                  operator: node.mode === "low" ? ("<" as const) : (">" as const),
+                  argument: value,
+                };
+          session.module.write(
+            expression,
+            node.mode === "big" ? 2 : 1,
+            node.mode === "big" ? "big" : "little",
+          );
+        }
         return;
       }
       for (const expression of node.values) {
@@ -293,6 +324,14 @@ function execute(node: Payload, { session, state, targetId }: DirectiveFactoryCo
             ? ".align boundary must be a positive integer."
             : ".res count must be non-negative.",
         );
+      }
+      if (session.module) {
+        if (node.operation === "align") {
+          session.module.align(value, fill);
+        } else {
+          session.module.reserve(value, node.fill ? fill : undefined);
+        }
+        return;
       }
       const count =
         node.operation === "reserve"
@@ -354,7 +393,7 @@ export function ca65DirectiveSyntax(id: string): DirectiveSyntaxContribution {
       ) {
         return undefined;
       }
-      return { execute: (payload) => execute(codec.read(payload), context) };
+      return { execute: (payload) => execute(codec.read(payload), context, id) };
     },
   };
 }

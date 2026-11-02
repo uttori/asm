@@ -25,6 +25,11 @@ import {
   bindFunctionTemplate,
   type FunctionTemplate,
 } from "./ir/function-template.js";
+import {
+  compileLinkExpression,
+  requireLinkConstant,
+  type LinkExpressionContext,
+} from "./ir/link-expression.js";
 
 type UserFunction = {
   readonly args: readonly string[];
@@ -105,6 +110,8 @@ const NUMERIC_UNARY_ALIASES: Readonly<Record<string, string>> = {
 };
 
 export class MathCore {
+  /** Object assembly supplies pure name binding; numeric layout/preprocessing reads must remain constant. */
+  linkContext?: () => LinkExpressionContext;
   /** Definition identity owns cached syntax; replacing a function releases its previous template. */
   private readonly functionTemplates = new WeakMap<UserFunction, FunctionTemplate>();
   /** Parsed syntax is reused only within an assembly snapshot; state-dependent values are never cached. */
@@ -199,6 +206,16 @@ export class MathCore {
    * @returns {number} The expression result.
    */
   evaluateMathInput(expression: string | ExpressionNode): number {
+    if (this.linkContext) {
+      const node =
+        typeof expression === "string"
+          ? parseExpressionAtSite(expression, "math-cache")
+          : expression;
+      return requireLinkConstant(
+        compileLinkExpression(node, this.linkContext()),
+        "Numeric assembly expression",
+      );
+    }
     if (typeof expression !== "string") {
       return this.evaluateExpressionNode(expression);
     }
@@ -589,6 +606,54 @@ export class MathCore {
     }
     return this.math(bindFunctionTemplate(template, args));
   };
+
+  /** Bind scalar function parameters structurally so unresolved addresses never become source text. */
+  bindLinkFunction(
+    name: string,
+    arguments_: readonly ExpressionNode[],
+  ): ExpressionNode | undefined {
+    const definition = this.userFunctions.get(name);
+    if (!definition) {
+      return undefined;
+    }
+    if (arguments_.length !== definition.args.length) {
+      throw new Error(
+        `Function '${name}' requires ${definition.args.length} arguments in module assembly.`,
+      );
+    }
+    let template = this.functionTemplates.get(definition);
+    if (!template) {
+      template = compileFunctionTemplate(definition.content, definition.args);
+      this.functionTemplates.set(definition, template);
+    }
+    const substitute = (node: ExpressionNode): ExpressionNode => {
+      if (node.type === "identifier") {
+        const index = definition.args.indexOf(node.name);
+        return index < 0 ? node : arguments_[index];
+      }
+      if (node.type === "binary") {
+        return { ...node, left: substitute(node.left), right: substitute(node.right) };
+      }
+      if (node.type === "unary") {
+        return { ...node, argument: substitute(node.argument) };
+      }
+      if (node.type === "call") {
+        return { ...node, arguments: node.arguments.map(substitute) };
+      }
+      if (node.type === "member" || node.type === "index") {
+        const object = substitute(node.object);
+        if (!isReferenceExpressionNode(object)) {
+          throw new Error("A symbolic function reference root must remain a reference.");
+        }
+        if (node.type === "member") {
+          return { ...node, object };
+        }
+        return { ...node, object, index: substitute(node.index) };
+      }
+      return node;
+    };
+    return substitute(template.syntax);
+  }
 
   /**
    * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.

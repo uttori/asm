@@ -4,7 +4,7 @@
   "source": "packages/vscode-extension/src/source/process.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/source-process.mjs.licenses.txt",
-  "sha256": "d353a5a1149898157877980cfcd9e246292cf153aef89e8b83fa2de59546f349",
+  "sha256": "75f6f03fc77bc092a902aa22ca3478f5ba6b1fcb6eeb470cb15f1f50f9c92911",
   "noticesSha256": "a2a01846522c5a8fc35803892e7a9b08a7f2a1ce4e60a0133adc35dc6a267dfd",
   "inputs": [
     {
@@ -229,7 +229,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
+      "sha256": "6c51bc05ebd03b6c8012aa08bb62754be4c635bb138490124e59e34cf92671bc"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",
@@ -349,11 +349,11 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-boss-background.ts",
-      "sha256": "c0a0cfa81659da9a10b273451e4fe86dda28b14a2df38162f3b01bc479679eb6"
+      "sha256": "6e39b1daff5c4659c9b6ae2c2643f5e93412cfcdc5351670fc26d680cbd02de4"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-boss-graphics.ts",
-      "sha256": "9926d7b9ef4623804ef4c7a181d8e47613c230a66352579f3ebb8060fdd36dd5"
+      "sha256": "541120aef3c876b752e5cda43075d65b906286246e27d6f0b9d6dd99fc60fa61"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-boss-image.ts",
@@ -369,15 +369,15 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-atlas.ts",
-      "sha256": "a167db7aafe9e408d2c156597bd24822577aa65e70b7c04a262c30c0082ecbe3"
+      "sha256": "606008b36b56e7dd0a4cde1f520e89c0a5754e62c2957ea467130e146ed5829e"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-composition.ts",
-      "sha256": "76266b1a324c87bbca3ad58d8bb32ff2285c0984359e75d8fe0ecf2e47eaa9b7"
+      "sha256": "013b255f2976b551ded62be34d504d815c6018c3461dcae28923dba220c6e723"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-edit.ts",
-      "sha256": "11950974ddf22c3acfcd8583cf32960b8fd3bb24a108458496b6afcef3648abc"
+      "sha256": "dfba4dae3b69a748d2a0c4155500476b5bdfba204d5756ac7c7ee13790d30077"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-lz.ts",
@@ -393,7 +393,7 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-palette-edit.ts",
-      "sha256": "741ec451e7974eae3612e56c202433bcc3bca8063e544fc6974dd33cc11568b3"
+      "sha256": "4aec6c1425ced2b5e641ad17d2d45ee41ef664e20f40e70b56a4bd2dc1bc8d2b"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-room-assets.ts",
@@ -497,7 +497,7 @@
     },
     {
       "file": "packages/core/src/addressToLine.ts",
-      "sha256": "5e4c47f4d3f6edd5128068b5b322ea378326d086585f66287d7b5e00b4afd2c1"
+      "sha256": "f913e835613b2c0cf9a3bdbe2536067e51274725c0a0753d25f8438f9634c329"
     },
     {
       "file": "packages/core/src/architecture-registry.ts",
@@ -505,11 +505,11 @@
     },
     {
       "file": "packages/core/src/architecture-types.ts",
-      "sha256": "888fe046fbc83abba8a7ec65f15c185b584c7bf47eb1e715c3f1a6eddaecf385"
+      "sha256": "c548823805f437d071f8376e31fdba342ac96433bf68cc687c7f3d46e644de92"
     },
     {
       "file": "packages/core/src/assembler.ts",
-      "sha256": "b4547735db5d5609a57da806628b49c0706b7bc545964901c5c48647cc211c40"
+      "sha256": "b585b32dcfb62e52c9478906aad0d52eb006491e506cc16044252e09e34728be"
     },
     {
       "file": "packages/core/src/canonical-json.ts",
@@ -521,7 +521,7 @@
     },
     {
       "file": "packages/core/src/debug-map.ts",
-      "sha256": "a5db5b6f7963b7ac4b04d3e0d8f132f3728e4465fb36082bbce296e8ab75ad4f"
+      "sha256": "bb21e686f144deb80a0f753cfce2132d5008ede551f9a04a448cc951dfc18ed2"
     },
     {
       "file": "packages/core/src/decoder-types.ts",
@@ -529,7 +529,7 @@
     },
     {
       "file": "packages/core/src/diagnostics.ts",
-      "sha256": "5be55c393885562212c86df61078a180464ae9e548dd43ae30f8a6a3acbfbc4f"
+      "sha256": "b057c8c58e278da9323e98b0a77296e293d0617bba8f9e9d77fc0b2defbabbbc"
     },
     {
       "file": "packages/core/src/directive-groups.ts",
@@ -581,7 +581,7 @@
     },
     {
       "file": "packages/core/src/index.ts",
-      "sha256": "2d82411d088432b5b4dd6e9027006c886cbc747c308e363e9a66fdab2c51a820"
+      "sha256": "0e7cd6eab0c461db3eea9603d9a64c2c2b40977a2e35352a33b81303ba309057"
     },
     {
       "file": "packages/core/src/internal-instrumentation.ts",
@@ -644,6 +644,10 @@
       "sha256": "457e0d8edf774c41c1aa5086dea29a1fbd06e6926867d808ca52be52607b984f"
     },
     {
+      "file": "packages/core/src/ir/link-expression.ts",
+      "sha256": "077060eb23d770df023388a5aaa932372a41ce48debebdf9961be1940c2384ec"
+    },
+    {
       "file": "packages/core/src/ir/macro-arguments.ts",
       "sha256": "d212bf868371a17574ce58e62756dfe31af9ec7db227b24d6c9b26a15bc51b90"
     },
@@ -668,8 +672,12 @@
       "sha256": "b712b014ea21ae686fb7d13c6882817fd96cd3698293185572a46b24bba9bab6"
     },
     {
+      "file": "packages/core/src/ir/relocatable-instruction.ts",
+      "sha256": "e1cffb5c30d4199d5af8580bf3e9ef3f64150a82f7ada1442fe618e6cae82243"
+    },
+    {
       "file": "packages/core/src/ir/resolved-instruction.ts",
-      "sha256": "960457626f95ee493e0564a3557490b7c4595cf029314076adc5ac0fd9a8d704"
+      "sha256": "e25ab0b001e95906bb75ff6b1535a4af4e7869de061b3099442b6274030bd7f9"
     },
     {
       "file": "packages/core/src/ir/source-fragment.ts",
@@ -688,12 +696,60 @@
       "sha256": "f023f7c6897a9e9af1066da6d3b63ac259918db6f78120b2b122b3e631cf6661"
     },
     {
+      "file": "packages/core/src/linker.ts",
+      "sha256": "e9cfffd3be0bb717a153291f0b9c1cbb9735ad2d5394708903ac0f062fba2f56"
+    },
+    {
+      "file": "packages/core/src/linker/driver.ts",
+      "sha256": "abaace5d4ae1a5b2f56e73c07e18a4e068fe54da85f7319827cdc8a2664f942d"
+    },
+    {
+      "file": "packages/core/src/linker/envelope.ts",
+      "sha256": "46ca65f8c5c9be186807f6843dae029370bd23a62baee2fa87f68df4526f8d80"
+    },
+    {
+      "file": "packages/core/src/linker/layout.ts",
+      "sha256": "d371c9d35a3a388a18d464322b82307cef614869a34309b0f10241d996b800f5"
+    },
+    {
+      "file": "packages/core/src/linker/library.ts",
+      "sha256": "465475ce9b03a18302ffeebf4e7035c007fb83dd87f30e4bb9455b6d9c7ce986"
+    },
+    {
+      "file": "packages/core/src/linker/object.ts",
+      "sha256": "82d5ad9b95de9580d4511fe0b684c3b76a7ce79100eb486c1152a0c0dbaeaae1"
+    },
+    {
+      "file": "packages/core/src/linker/recipe.ts",
+      "sha256": "de1703fc78df9152dacb52ae7e5ce9b06318207eea04c8c75040d423f103125c"
+    },
+    {
+      "file": "packages/core/src/linker/relocations.ts",
+      "sha256": "8ba8c37d0e01a31e7b1faa95623d97751c2a67b8a4e0d4fecb03220d2d99b7ec"
+    },
+    {
+      "file": "packages/core/src/linker/symbols.ts",
+      "sha256": "6ff034be96a97feaaad31671436628d18eccc5f32adb5e1373aa44abc2ad202a"
+    },
+    {
+      "file": "packages/core/src/linker/types.ts",
+      "sha256": "7ab318f6535ac9543d8acb91f8c2eaa7d1bd6a48d95cce7a71d59c2b9d37a72c"
+    },
+    {
+      "file": "packages/core/src/linker/validation.ts",
+      "sha256": "8b20046f9a4661297741253cafc180262af29587cbc3a29a303d578c818a7efb"
+    },
+    {
+      "file": "packages/core/src/linker/value.ts",
+      "sha256": "4831d8e2680cc743c9dfba9017ea083663b0a9843d1f82bfbe3b2a27a19087ef"
+    },
+    {
       "file": "packages/core/src/lsp/directive-catalog.ts",
       "sha256": "098d3115206c2fd46c470f5f155334a8eb7f9fb4dd9d1713f72610260b8d499d"
     },
     {
       "file": "packages/core/src/mathcore.ts",
-      "sha256": "ab38a6401860dc1e5ecac992cf3a5dace1990dc3e50cff269faca05535bcf5ba"
+      "sha256": "82327d59c533067519a2767add6f16a100464617d3f5a84676ab2e7a9373a954"
     },
     {
       "file": "packages/core/src/operand-resolver.ts",
@@ -701,7 +757,7 @@
     },
     {
       "file": "packages/core/src/plugin/contracts.ts",
-      "sha256": "b1532bfa2c8bc2910fad3cddfb75ea6a1f95d3f7883105e516a81efa54d35c21"
+      "sha256": "6759bb03584e8a250bba8e29af28a9423227f36c0d88dabb8608cf9c719b3636"
     },
     {
       "file": "packages/core/src/plugin/diagnostics.ts",
@@ -726,6 +782,14 @@
     {
       "file": "packages/core/src/plugin/syntax-snapshot.ts",
       "sha256": "aeb9c309c16016b11eb07d7646eb419edec83714965dcb9fc2a8c27b64dc3dca"
+    },
+    {
+      "file": "packages/core/src/relocatable.ts",
+      "sha256": "a3077e00f6b7bbe7ea525939fc84d22ab0d07ac48266d2ebe6f0885aff65c214"
+    },
+    {
+      "file": "packages/core/src/services/asar-module-layout.ts",
+      "sha256": "05a29e6bc1228d2dc253875061161651e5e290dd211fa5ba8bf4411c66709aff"
     },
     {
       "file": "packages/core/src/services/assembly-front-end-service.ts",
@@ -753,7 +817,7 @@
     },
     {
       "file": "packages/core/src/services/data-struct-engine.ts",
-      "sha256": "a61f87c6f20cc8288027c65880adfcb635a7d89a242bac83471e81b49b06d789"
+      "sha256": "40fcc755cb255dbf70981b1aad733a255caf1a058e2a4535903e2852bcb0fc62"
     },
     {
       "file": "packages/core/src/services/define-engine.ts",
@@ -761,11 +825,11 @@
     },
     {
       "file": "packages/core/src/services/directive-runtime-service.ts",
-      "sha256": "cbbf26494bba835fe77d1c93fe19c8b099d3a13b1641efafd28d98d6faf40068"
+      "sha256": "7601dfa11c171a6459f9d16edc7184c61ec4ec4b1c47e86a061a9cf2b4fb9712"
     },
     {
       "file": "packages/core/src/services/front-end-command-service.ts",
-      "sha256": "9baf43bf8e0404ab0dbb5826e5c52453cbde21859d6663209437e5fe6e2706b4"
+      "sha256": "12d5f0aade641f9837620c29a07407337631130abe450d7004b6fe634314ac01"
     },
     {
       "file": "packages/core/src/services/include-source-service.ts",
@@ -776,20 +840,32 @@
       "sha256": "8bde0c4dab3fa14655b165a248aa0bb64248fe87e70e9d2c6d571207801aee85"
     },
     {
+      "file": "packages/core/src/services/module-assembly.ts",
+      "sha256": "d182826037d05fa8c17141dd81748e95c19d50470c0f48b40e6212a00306e457"
+    },
+    {
+      "file": "packages/core/src/services/module-file-provider.ts",
+      "sha256": "41237438370b71f12b5d2f8a138bc86f11e2b8595043cd36bc8cfd8259e800b8"
+    },
+    {
       "file": "packages/core/src/services/occurrence-syntax-cache.ts",
       "sha256": "b2dcefed1e1e41dc6dd8da2d96d54157eb7380434c7ef53b29cfa45ee97867a1"
     },
     {
       "file": "packages/core/src/services/output-writer-service.ts",
-      "sha256": "94b4417d4fff56d07381ae4b30b00aafb9ec9812152d16f2611aac3c08d20ae9"
+      "sha256": "aeecb315632414ee753566ef82bf62051017f1a67b90c24595140af65742fa46"
     },
     {
       "file": "packages/core/src/services/plugin-session-capabilities.ts",
-      "sha256": "7ace99b7ebab284ce9090e8c84b8aee2603d4f32a7a669fb92d63359a7889e0c"
+      "sha256": "456160533abe07364908f5e546d830171ea98d1e30352e46acba8f4f0f7e9f2a"
     },
     {
       "file": "packages/core/src/services/program-model-builder.ts",
       "sha256": "f0ec0bffcecbf596e9b521e39a31ccb0e87168b8466c121fa1912fbe5a293273"
+    },
+    {
+      "file": "packages/core/src/services/source-link-recipe.ts",
+      "sha256": "0470e987344552ba18418b105311ece6c7506439e4203bb4a0786bfc8b85b393"
     },
     {
       "file": "packages/core/src/services/struct-engine.ts",
@@ -805,7 +881,7 @@
     },
     {
       "file": "packages/core/src/services/symbol-scope-service.ts",
-      "sha256": "8bcff6a85c1b70425fb2a6926bc1ba3bcf9d177e2238fc6e49d0b7b7ea078adf"
+      "sha256": "2a38d706a6489116a3e6c33f3faaf07b5489aad306099a3c7456f91f0068fe1b"
     },
     {
       "file": "packages/core/src/source-field-edits.ts",
@@ -836,10 +912,6 @@
       "sha256": "dd565ca49ed534a34f7cf1e159c0d49e73991f1d5a9690ce06a01c953ce82af5"
     },
     {
-      "file": "packages/disassembler/src/analysis/coverage-map.ts",
-      "sha256": "adb7f9bbc1c4b359e1074d8bc036fbe9b2195f200d225322d62859b726f036ed"
-    },
-    {
       "file": "packages/disassembler/src/analysis/instruction-annotations.ts",
       "sha256": "3e6b221916b509f8489ddc3dfee13dc3aee9231e1e7752110600ab4521e09b58"
     },
@@ -849,11 +921,11 @@
     },
     {
       "file": "packages/disassembler/src/analysis/static-analysis.ts",
-      "sha256": "12be44af58ede9dfff51cbb2aa759bc87a6926acdd3f2b28bb9d4d8011b353b7"
+      "sha256": "edab9317a84010c8e639fc7f1464806e572361356f7a85506b1d70a718a930d6"
     },
     {
       "file": "packages/disassembler/src/index.ts",
-      "sha256": "1f742f37c1ddd8488c78d431ff60068b76a9d48882bc496c897ab51f464d79a5"
+      "sha256": "a001a764bab75aaa5d97c8846f58471fad9458c524f542bb3df22c8c3d447e27"
     },
     {
       "file": "packages/disassembler/src/internal/capture-limits.ts",
@@ -881,7 +953,7 @@
     },
     {
       "file": "packages/disassembler/src/model/analysis-ownership.ts",
-      "sha256": "c108554886e61d0f80025494e4acb93f174c6f72cc38f87293720266f96ba0e7"
+      "sha256": "455b214cc1a6b5ca200d64f33eba7c45f74e9f09aee24cc2c5c03e1f4c7f6200"
     },
     {
       "file": "packages/disassembler/src/model/evidence-pool.ts",
@@ -901,7 +973,7 @@
     },
     {
       "file": "packages/disassembler/src/model/project-types.ts",
-      "sha256": "dc4cb0f31255376addd7e61fb13bde9fbf0a47e63aa76a58bf2bf949eaf15bf1"
+      "sha256": "4c12d8f6dac1ffc0d3ac1c10df8d89176bdab96ea1ef7933d681caa843757a05"
     },
     {
       "file": "packages/disassembler/src/model/project-validation.ts",
@@ -1029,7 +1101,7 @@
     },
     {
       "file": "packages/disassembler/src/source-project.ts",
-      "sha256": "df48662c77e59fcec8ab5190f9c94f3b916a4cc56e2dd5f0f7f11c22c2055dfb"
+      "sha256": "a107ee1ef5295eb465f602bc0ace321a261f759bc21ba7543c6fb310db21648d"
     },
     {
       "file": "packages/disassembler/src/source-project/blobs.ts",
@@ -1037,11 +1109,15 @@
     },
     {
       "file": "packages/disassembler/src/source-project/build-cache.ts",
-      "sha256": "7ac152fba1665cb9554decfbf827ce1a9cd411d149559979bad43947b9f1616e"
+      "sha256": "2a5523fa9d0716793c156a25e1bed9ff259064c188ab8e80e2bcb96d9a086397"
+    },
+    {
+      "file": "packages/disassembler/src/source-project/build-coverage.ts",
+      "sha256": "ac42bb65c4df1602037e748cbbee1487f0f4fb7343c57cdd2e4c0861565aa458"
     },
     {
       "file": "packages/disassembler/src/source-project/build-publication.ts",
-      "sha256": "c712d652ad65f3195a7169f3bc0b15949a78ca35b9ec91b54e17ca4abdd49dce"
+      "sha256": "ad3da2743168dc7b25deeff709dba55b0fde3a3c17d7c5d4dc13281ea28ef11b"
     },
     {
       "file": "packages/disassembler/src/source-project/captures.ts",
@@ -1061,7 +1137,7 @@
     },
     {
       "file": "packages/disassembler/src/source-project/generation.ts",
-      "sha256": "aa8ea4a0a602955cffed7f24fe77253948e9fb1d7710a7d6cc16f19cdb5b4368"
+      "sha256": "5a70d1b9c173505ed76097503a8c6cded5e096978b90ca5e2afac27cdcbf16ff"
     },
     {
       "file": "packages/disassembler/src/source-project/git.ts",
@@ -1070,6 +1146,10 @@
     {
       "file": "packages/disassembler/src/source-project/input-snapshot.ts",
       "sha256": "a566657eeb7fea27ed4c55ce13bbf8b03d771ceb20c603dd8cff13cbf2d5d5cb"
+    },
+    {
+      "file": "packages/disassembler/src/source-project/link-build.ts",
+      "sha256": "a1ab49a6329e44d8e6cb74dc67875064ef00c476d8c6cefda8a67043ad414c4e"
     },
     {
       "file": "packages/disassembler/src/source-project/merge.ts",
@@ -1096,16 +1176,16 @@
       "sha256": "a6c8c5359ddd8dcb4c5e88b53ec291fa0ef78be3b224c49aba33d9f674d2fcd5"
     },
     {
+      "file": "packages/disassembler/src/source-project/source-link.ts",
+      "sha256": "28ef0f41353b56b80fa0af81ec115136eff0166793a6c5df903d8dfb59824bc1"
+    },
+    {
       "file": "packages/disassembler/src/source/source-export.ts",
-      "sha256": "7d9332b5074f3cf47b83f5ddacc305876ef398b7b2ad87369b85203a1611ad9b"
+      "sha256": "7569a71d14d12cf4378a49679662ab426bb43ee756d22bc01ef40d542223a065"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-annotation-query.ts",
       "sha256": "e47eb37066a76909280b3eb2a0c11f76b9cb1eb63b0eda40c9093777f0168508"
-    },
-    {
-      "file": "packages/disassembler/src/storage/sqlite-coverage-query.ts",
-      "sha256": "0a1c918983cb76888821199916eda0dbb0baf48f6b15d4f84e4a07bc267a4d5a"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-graph-query.ts",
@@ -1165,11 +1245,11 @@
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-storage-policy.ts",
-      "sha256": "ab9277715c2cda849b9bf2680d698194a6dff79f7e485b2e2e043c7dc62552c9"
+      "sha256": "3a57bea3eefab94c13dac789b981cb3145db1daacb5169fb623bc07898a08f73"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-store.ts",
-      "sha256": "8b16b6a257705edd91f6d966f1a0c58d55852d3cbabcf1bb5693a3e55e96e150"
+      "sha256": "c3f08903deae0945c94734c559ef1fa8360b38aadfb3c86428c7675a1f90995b"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-trace-stage.ts",
@@ -1177,7 +1257,7 @@
     },
     {
       "file": "packages/game-secret-of-mana/src/assembly.ts",
-      "sha256": "f0d0f701c862f12f25fd86242783e20f7df6a61cad495ae1937998159af56ec4"
+      "sha256": "750a5712be87d8464b6a7eab559186e824df0d8cf82a03bfb995cf061a93b81a"
     },
     {
       "file": "packages/game-secret-of-mana/src/room-adapter.ts",
@@ -1213,11 +1293,11 @@
     },
     {
       "file": "packages/plugin-65xx/src/directives/ca65-syntax.ts",
-      "sha256": "6b9de748cb5028b6f1a6a0aa05a3de21c1f9483cb49ddaa412b4d78d88b01c3b"
+      "sha256": "bce9dff7ebd2c02c51afa22d03370fecf5146a72e842da5388e919a4d61b0d4c"
     },
     {
       "file": "packages/plugin-65xx/src/directives/ca65.ts",
-      "sha256": "1f90e8717f6260263fb1121def908ca9bcf941efd2981884cad985c1d883c567"
+      "sha256": "6be81b9ea08ded1f3c59ff8039d54b34a8daf4be201e8b3d146923ce781b4451"
     },
     {
       "file": "packages/plugin-65xx/src/disassembler.ts",
@@ -1225,7 +1305,7 @@
     },
     {
       "file": "packages/plugin-65xx/src/index.ts",
-      "sha256": "66ce2f307f6ffbd5316e1cbc3c26cee30e216d938e9751e135593e1913e53be5"
+      "sha256": "cbcd3d42434ec8065e49db239786fc48b021cba2b6926d7557748ef8d673a44c"
     },
     {
       "file": "packages/plugin-65xx/src/instructions/catalog.ts",
@@ -1249,7 +1329,7 @@
     },
     {
       "file": "packages/plugin-65xx/src/linker-config.ts",
-      "sha256": "993afaf9db11bbead619a3237091a7daaceec1e555975e3d17978694236d9cee"
+      "sha256": "a4bafb3d838d2e9682aaf6af44cef783f2bb942a2061222d1d15bf663ec399c1"
     },
     {
       "file": "packages/plugin-65xx/src/nes/analysis.ts",
@@ -1293,7 +1373,7 @@
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-build.ts",
-      "sha256": "449b08ced1aebac5440b018dbc9a9d0d3232a2f50fe7f60ed2c3be989163060c"
+      "sha256": "8c4681aa949249c7fc7d362959818eb7825d9d2f92a3592e5eb44313ad12f89f"
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-data.ts",
@@ -1301,11 +1381,11 @@
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-export.ts",
-      "sha256": "8d1e77216c3b8b1168e5921ea8eac1f6f3e057424ec77b731c53c633d9012355"
+      "sha256": "1782575a86af20fd74c0bcea2a351fac72a4bb1949d0e2327fb7821ce64a17e7"
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-generation.ts",
-      "sha256": "dc0d85d29380097e7b680aacf4d57a911be0ce29701da600bd6566ad7f89ad6e"
+      "sha256": "cb8e815a084b6f43fef228a7f425f602458d58024924e8759c29b7764fdd93cd"
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-index.ts",
@@ -1317,11 +1397,11 @@
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-target.ts",
-      "sha256": "3ddc457fc24a727b5db6635a90580075c7094b011aa21ed5fa037f04068ac7f1"
+      "sha256": "9920a96e5f6cfadf59b763dc76cd74be6ce8183d5b14ee98dc96b65edef603b8"
     },
     {
       "file": "packages/plugin-65xx/src/operands/resolution.ts",
-      "sha256": "7ef1cb5d01db2d7271b5c039d86a43bd5e612e67d511bd888dd8157403949162"
+      "sha256": "20b2e3140614a9413b96a09999ce8d07a814aef0fd801173ed144710555f8a47"
     },
     {
       "file": "packages/plugin-65xx/src/operands/syntax.ts",
@@ -1332,16 +1412,24 @@
       "sha256": "d6c459e963a65e85e3ba309f8a208e62c52e34e3528e9b02d2871f5018ec1917"
     },
     {
+      "file": "packages/plugin-65xx/src/target/link-target.ts",
+      "sha256": "be4596f713cc02bb94a19f57afff56d1c242d16545008edcc30ea534fab5d15e"
+    },
+    {
       "file": "packages/plugin-65xx/src/target/nes.ts",
-      "sha256": "ca2f129df0a411bb791b810d2031c8cdf9daccbb0c0dd238d4f7ca51b07ef13b"
+      "sha256": "94bd3f465d77919a18ebe0ca4e77e348f0ff4ece18e3865bc305308de750f81f"
     },
     {
       "file": "packages/plugin-65xx/src/typed-architecture.ts",
-      "sha256": "4fc55c58ce929130f025c0aa43f7f818bf1ace2cba9c89a12aa0b852c9d935c1"
+      "sha256": "d17ec148c4d7d6dea9247df33cd1e50c6a66ab7a45b8b94c377e53a710db18be"
+    },
+    {
+      "file": "packages/plugin-loader-node/src/build-configuration.ts",
+      "sha256": "9897004a9c7f51c61a787bf0f2aa8d37ef02d3015eecf462e44165565913c0b1"
     },
     {
       "file": "packages/plugin-loader-node/src/configuration.ts",
-      "sha256": "78b4a0ebb2d2c94ddca10f4dd97c80682ee30ff5643f32fd6ae119e3171430df"
+      "sha256": "76df6f5ff3143c4c81e810236995c8ccf5f8138894439066a19e0c66702da5ed"
     },
     {
       "file": "packages/plugin-loader-node/src/index.ts",
@@ -1421,15 +1509,15 @@
     },
     {
       "file": "packages/plugin-snes/src/architectures/typed-65816.ts",
-      "sha256": "e6829b714ea152ed40d4e37dd21d77fc73caf01f163d0e9511b915e9383b16b4"
+      "sha256": "0dbc92afb1968198c46384e23cb81df788cf361b4ff6b70b07efb790b1b9e0c2"
     },
     {
       "file": "packages/plugin-snes/src/architectures/typed-spc700.ts",
-      "sha256": "a6b858a8f20288e917b1a1396da48de2905f2a3899ef2f17d990705e652c0675"
+      "sha256": "08156eeb993c910a8edfae8794789da1e598ce2f66ddb65caf2c2e6716e3a5d5"
     },
     {
       "file": "packages/plugin-snes/src/architectures/typed-superfx.ts",
-      "sha256": "508c3ecce3fc2ebd5a737ea2d063cc0f88dc36792f1e0f469bc37d27dfd93791"
+      "sha256": "92b12e1a85bcbbb4d7144289bfde01ef99c29fa723145406a54c9249b013867e"
     },
     {
       "file": "packages/plugin-snes/src/asar/compatibility.ts",
@@ -1437,7 +1525,7 @@
     },
     {
       "file": "packages/plugin-snes/src/assembler.ts",
-      "sha256": "8492ea6a6e802e3e0a61cb00e3731e625fd9e56e7501dae4b0af6391a57fc0bd"
+      "sha256": "bb82c5cb05f0c3dc420b13840e002fcee8568e0d176b6ac55cefc4a8661fd218"
     },
     {
       "file": "packages/plugin-snes/src/assets/assembly-formats.ts",
@@ -1473,11 +1561,11 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler.ts",
-      "sha256": "89f208376d7626ef2e4c585bed5f7b1a46c6b5720710839b4f2c35a6aa0e2112"
+      "sha256": "5935b87e6f0290659e2e9f6afeb8ce6eeff78374f9797fe733bb4d82e2727a62"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/65816-analysis.ts",
-      "sha256": "c58a00c47ecfd860072add7dbbb598c93fe30971106f742b5209374612caf1de"
+      "sha256": "592a484b435b9ba4398840d6899546c8f3f047d386a41f3012b37ad8c1e6685c"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/65816-state.ts",
@@ -1493,7 +1581,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/asset-requirements.ts",
-      "sha256": "95b516f29025d5b3265c1e3410a3ed9033af13a62a41d8553c0bf5388816fce3"
+      "sha256": "6826d15de9e1c39422def4aa717e97be75de642e0eeca436abf4be1541acbb8d"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/code-preservation.ts",
@@ -1517,7 +1605,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/project-initializer.ts",
-      "sha256": "0237fb7bf7cb83070a41f86796d7cb41542375fe430f8abbb827e6cbc4e9cd8b"
+      "sha256": "1934eb5038a914cbcc066ed65fcd2ab35361ce1e321c85a9079abc66bccb849f"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/ram-map.ts",
@@ -1561,11 +1649,11 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-build.ts",
-      "sha256": "82452394c9b69fcc7955d5f71c587b44349daf40e59dce4ac0ac323dfcb5b802"
+      "sha256": "675487aafbc6b61f42fabdd2c7d783d2d690c84d640060205705d2d129b204a3"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-export.ts",
-      "sha256": "0c03b903aa8eeaf564d721c72c09089e5f0d41b92e88572090a1d4cb5cb70a66"
+      "sha256": "f9d17cef040458a428cc1b1a10fc15a3a9baf92675635d43718b3ef4ec8c8009"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-generation-blobs.ts",
@@ -1573,7 +1661,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-generation.ts",
-      "sha256": "2ccb9fcccb296b7d852c70e7e8367801d173da91f746061530bbd732be9c93ca"
+      "sha256": "4777e1c058fd364fc5e363819d3bac18dee27efc926667fd285899fc0da300a1"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-initialize.ts",
@@ -1585,7 +1673,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-target.ts",
-      "sha256": "eca63da3e47ae52037f1fb94b36e5a85a0b75fc1151516604e83993eb3bd8778"
+      "sha256": "a6d33332527632fa4ef3ed7db1d8e8916f1ab4af0d391decae55111d091fd373"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/spc700-address-space.ts",
@@ -1649,11 +1737,15 @@
     },
     {
       "file": "packages/plugin-snes/src/target.ts",
-      "sha256": "f5bf09950b32d1b2ad60f22e0462c70ed72c41e40f7068e0da0f34babf9c4abe"
+      "sha256": "ee238841c5da4a761c95622317b590316759a0423f69737fbcab9b6c96c7861d"
     },
     {
       "file": "packages/plugin-snes/src/target/address-space.ts",
       "sha256": "fc20539c447591dc696aeece2ac3a1c8972a39cfba17a204bfe252751a1b777a"
+    },
+    {
+      "file": "packages/plugin-snes/src/target/link-target.ts",
+      "sha256": "c1b81c6771af9112dff8c747023d0367a0b6ede28660813a7ce0cf730abd2481"
     },
     {
       "file": "packages/plugin-snes/src/tooling/directive-catalog.ts",
@@ -1669,7 +1761,7 @@
     },
     {
       "file": "packages/vscode-extension/src/source/process.ts",
-      "sha256": "d5f9b99f0c57789fde9d45b1130455b093b056c46796b10888c4c1827eed4ffb"
+      "sha256": "bd572d2430f9b69828aa6c4274ef46f74b38c263387153570a61dbd16739ed10"
     },
     {
       "file": "packages/workflows/src/asset-interchange/contracts.ts",
@@ -1728,6 +1820,14 @@
       "sha256": "a9470588d44ccc288380de00ac82b565fcf5fec628445b193a56d9ff86498341"
     },
     {
+      "file": "packages/workflows/src/build-contracts.ts",
+      "sha256": "c9e0a1208732a8a17b31566f4f571f9706e9763ac5fd16104b0ae0abb9cad29f"
+    },
+    {
+      "file": "packages/workflows/src/build.ts",
+      "sha256": "c5d6901e1f1a6a8000464988e061ff16816b77b5ceea959505bd1d075dcd58c2"
+    },
+    {
       "file": "packages/workflows/src/source-builtins.ts",
       "sha256": "44ac54d49894a8b18106e440804457416a283f544b532719db3c4e20b98a3e57"
     },
@@ -1744,8 +1844,12 @@
       "sha256": "4d6bfa2412be6d5bac79322f6ef9838808b4f59a0dc85e739018f956931e6116"
     },
     {
+      "file": "packages/workflows/src/source-recipes.ts",
+      "sha256": "d5341e5d0a9138d40a926501f7d49ba8158106875d11289e9bd23e8bdaa8ef81"
+    },
+    {
       "file": "packages/workflows/src/source-requests.ts",
-      "sha256": "b3b55bc585467f378e9671c743b3191c8bef2cea0c65be35d589745d4ce44daa"
+      "sha256": "e4fb1d634a48b3b56954efe98bc7b1100ba11314f1996c7a7161d5a4dbfc9807"
     },
     {
       "file": "packages/workflows/src/source-research.ts",
@@ -1757,7 +1861,7 @@
     },
     {
       "file": "packages/workflows/src/source.ts",
-      "sha256": "9a435f519d7e26d775131cacc913b786514f8132d4d1ddffd056327308df8e2d"
+      "sha256": "51add9c2c44e4ae5ff697302e08fd73f6157f59df9e971fe6441e44fa7f2662f"
     },
     {
       "file": "scripts/bundle-notices.mjs",

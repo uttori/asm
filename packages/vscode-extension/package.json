@@ -325,6 +325,12 @@
         "enablement": "isWorkspaceTrusted"
       },
       {
+        "command": "asm.source.migrate",
+        "title": "Prepare Migration to Linked Sources",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.source.preview",
         "title": "Preview Regeneration with Current Edits",
         "category": "Assembly",
@@ -406,6 +412,30 @@
         "command": "asm.asset.convertToPng",
         "title": "Convert to PNG",
         "category": "Assembly Source",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.object.assemble",
+        "title": "Assemble Relocatable Object",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.library.create",
+        "title": "Create Object Library",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.link",
+        "title": "Link Objects and Libraries",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.linked.build",
+        "title": "Build Linked Project",
+        "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
       }
     ],
@@ -513,33 +543,6 @@
           "command": "asm.source.select",
           "when": "view == uttori-asm.sourceProject",
           "group": "navigation"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "asm.coverage.classifyRange",
-          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
-          "group": "inline"
-        },
-        {
-          "command": "asm.coverage.explainEvidence",
-          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment",
-          "group": "inline@2"
-        },
-        {
-          "command": "asm.coverage.setStateEntryPoint",
-          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
-          "group": "analysis@1"
-        },
-        {
-          "command": "asm.coverage.resolveTarget",
-          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
-          "group": "analysis@2"
-        },
-        {
-          "command": "asm.coverage.renameLabel",
-          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
-          "group": "analysis@3"
         }
       ],
       "editor/title": [
@@ -848,7 +851,7 @@
       },
       {
         "view": "uttori-asm.analysisCoverage",
-        "contents": "No native analysis project found. Set `asm.analysisProject` or create an `analysis.json` project with the CLI."
+        "contents": "Select a Git source project and Build Current Source to measure bytes remaining."
       },
       {
         "view": "uttori-asm.sources",
@@ -1145,6 +1148,12 @@
           },
           "maxItems": 8,
           "description": "Ordered hover-row templates, using the same ${field} placeholders as inline parts. Omit for preset defaults; [] hides analysis rows. Missing fields suppress the entire row."
+        },
+        "asm.linkProject": {
+          "scope": "resource",
+          "type": "string",
+          "default": "",
+          "description": "Native build manifest for Build Binary, Run, Debug and Watch, relative to the workspace root. When empty, use linkProject from uttori-asm.config.json; omit both to retain absolute assembly."
         }
       }
     },

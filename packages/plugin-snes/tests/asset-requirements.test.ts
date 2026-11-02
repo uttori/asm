@@ -81,5 +81,5 @@ test("optional policy remains backward compatible, while malformed contracts fai
       { structure: "Color", format: "other" },
     ],
   ])
-    t.throws(() => parseSnesAssetRequirements(value));
+    {t.throws(() => parseSnesAssetRequirements(value));}
 });

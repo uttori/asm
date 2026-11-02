@@ -105,6 +105,7 @@ function isGenerationInputs(value) {
         isSha256(value.researchSha256) &&
         isSha256(value.toolchainSha256) &&
         isSha256(value.optionsSha256) &&
+        (value.assembly === undefined || value.assembly === "linked") &&
         (value.captureCatalogSha256 === undefined || isSha256(value.captureCatalogSha256)));
 }
 /** Validate all externally loaded identity fields before using a descriptor for ancestry selection. */

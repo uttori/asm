@@ -1,1 +1,1 @@
-{"version":3,"file":"source-target.d.ts","sourceRoot":"","sources":["../../src/nes/source-target.ts"],"names":[],"mappings":"AAKA,OAAO,EAUL,KAAK,sBAAsB,EAE5B,MAAM,yCAAyC,CAAC;AA6RjD,+FAA+F;AAC/F,eAAO,MAAM,eAAe,EAAE,sBAa7B,CAAC"}
+{"version":3,"file":"source-target.d.ts","sourceRoot":"","sources":["../../src/nes/source-target.ts"],"names":[],"mappings":"AAKA,OAAO,EAWL,KAAK,sBAAsB,EAE5B,MAAM,yCAAyC,CAAC;AA6SjD,+FAA+F;AAC/F,eAAO,MAAM,eAAe,EAAE,sBAa7B,CAAC"}

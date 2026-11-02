@@ -36,13 +36,11 @@ import {
   AnalysisAnnotationController,
   TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
 } from "./analysis/annotation-controller.js";
-import {
-  AnalysisCoverageProvider,
-  initializeAnalysisProjectDiscovery,
-} from "./analysis/coverage-tree.js";
+import { AnalysisCoverageProvider } from "./analysis/coverage-tree.js";
 import { AnalysisEvidenceInspector } from "./analysis/evidence-inspector.js";
 import { parseAnalysisNavigationTarget } from "./analysis/navigation-target.js";
 import { navigateToAnalysisLocation } from "./analysis/navigation.js";
+import { initializeAnalysisProjectDiscovery } from "./analysis/project-discovery.js";
 import { AnalysisSourcesProvider } from "./analysis/sources-tree.js";
 import { initializeAnalysisWorker } from "./analysis/worker-client.js";
 import { AssetPreviewController } from "./asset-preview-controller.js";
@@ -56,6 +54,7 @@ import {
   registerDebugging,
   type BuiltDebugArtifacts,
 } from "./debug/session.js";
+import { LinkedBuildController } from "./linked-build.js";
 import { IndexDetailsProvider } from "./project/index-tree.js";
 import { ProjectOutlineProvider } from "./project/outline-tree.js";
 import { ProjectPanelProvider } from "./project/panel.js";
@@ -138,6 +137,8 @@ let extensionContext: ExtensionContext | undefined;
 
 /** One source target supplies Build, Run, Debug and Watch artifact pairs. */
 let sourceController: SourceController | undefined;
+/** Opt-in relocatable builds use the same artifact contract as absolute builds. */
+let linkedBuildController: LinkedBuildController | undefined;
 /** Watch epochs discard obsolete results after source saves or target changes. */
 let watchEpoch = 0;
 let watchBuildRunning = false;
@@ -186,6 +187,7 @@ function serverInitializationOptions(resource?: Uri): Record<string, unknown> {
   const config = workspace.getConfiguration("asm", resource ?? null);
   return {
     configFile: config.get<string>("configFile", ""),
+    linkProject: config.get<string>("linkProject", ""),
     plugins: config.get<unknown[]>("plugins", []),
     target: config.get<string>("target", ""),
     entryPoints: config.get<string[]>("entryPoints", []),
@@ -270,8 +272,10 @@ export function activate(context: ExtensionContext): void {
     log: true,
   });
   sourceController = new SourceController(context, analysisOutputChannel, binaryDrafts);
+  linkedBuildController = new LinkedBuildController(context, analysisOutputChannel, binaryDrafts);
   context.subscriptions.push(
     sourceController,
+    linkedBuildController,
     initializeAnalysisProjectDiscovery(() => sourceController?.root),
   );
   const clientOptions: LanguageClientOptions = {
@@ -327,7 +331,23 @@ export function activate(context: ExtensionContext): void {
     indexProvider.refresh();
   };
   const outlineProvider = new ProjectOutlineProvider(() => languageClientFor());
-  const coverageProvider = new AnalysisCoverageProvider();
+  const coverageProvider = new AnalysisCoverageProvider((root, inputSha256) => {
+    const controller = sourceController;
+    if (!controller || controller.root !== root) {
+      return undefined;
+    }
+    if (
+      controller.buffers().length ||
+      controller.binaryBuffers().length ||
+      controller.opaqueBinaryBuffers().length
+    ) {
+      return true;
+    }
+    if (controller.session.build?.inputSha256 !== inputSha256) {
+      return undefined;
+    }
+    return controller.session.buildStale;
+  });
   const sourcesProvider = new AnalysisSourcesProvider();
   const analysisAnnotationController = new AnalysisAnnotationController(
     undefined,
@@ -335,10 +355,17 @@ export function activate(context: ExtensionContext): void {
   );
   editorInformationController = analysisAnnotationController;
   context.subscriptions.push(
-    sourceController.onDidBuild(({ root, build }) =>
-      analysisAnnotationController.buildCompleted(build.debugMapFile, root),
-    ),
+    sourceController.onDidBuild(({ root, build }) => {
+      analysisAnnotationController.buildCompleted(build.debugMapFile, root);
+      coverageProvider.refresh();
+    }),
+    sourceController.onDidChangeTreeData(() => coverageProvider.refresh()),
     sourceController.onDidChangeSavedInput(scheduleWatchBuild),
+    linkedBuildController.onDidChangeInput(() => {
+      if (!sourceController?.root) {
+        scheduleWatchBuild();
+      }
+    }),
     sourceController.onDidSelectProject(() => {
       stopWatch();
       analysisAnnotationController.configurationChanged();
@@ -364,6 +391,10 @@ export function activate(context: ExtensionContext): void {
   const evidenceInspector = new AnalysisEvidenceInspector();
   const analysisManifestWatcher = workspace.createFileSystemWatcher("**/analysis.json");
   const analysisShardWatcher = workspace.createFileSystemWatcher("**/analysis/**/*.json");
+  const coverageInputWatcher = workspace.createFileSystemWatcher("**/*");
+  const buildSummaryWatcher = workspace.createFileSystemWatcher(
+    "**/.uttori-local/builds/{summary,current}.json",
+  );
 
   context.subscriptions.push(
     ...registerDebugging(context.extensionPath),
@@ -371,6 +402,7 @@ export function activate(context: ExtensionContext): void {
     statusItem,
     analysisAnnotationController,
     sourcesProvider,
+    coverageProvider,
     indexProvider,
     window.createTreeView(IndexDetailsProvider.viewId, { treeDataProvider: indexProvider }),
     window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
@@ -390,6 +422,14 @@ export function activate(context: ExtensionContext): void {
     }),
     analysisManifestWatcher,
     analysisShardWatcher,
+    buildSummaryWatcher,
+    coverageInputWatcher,
+    coverageInputWatcher.onDidCreate((uri) => coverageProvider.inputChanged(uri)),
+    coverageInputWatcher.onDidChange((uri) => coverageProvider.inputChanged(uri)),
+    coverageInputWatcher.onDidDelete((uri) => coverageProvider.inputChanged(uri)),
+    buildSummaryWatcher.onDidCreate(() => coverageProvider.refresh()),
+    buildSummaryWatcher.onDidChange(() => coverageProvider.refresh()),
+    buildSummaryWatcher.onDidDelete(() => coverageProvider.refresh()),
     analysisManifestWatcher.onDidCreate(refreshAnalysisViews),
     analysisManifestWatcher.onDidChange(refreshAnalysisViews),
     analysisManifestWatcher.onDidDelete(refreshAnalysisViews),
@@ -447,7 +487,7 @@ export function activate(context: ExtensionContext): void {
       commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`),
     ),
     commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
-    commands.registerCommand("asm.coverage.refresh", refreshAnalysisViews),
+    commands.registerCommand("asm.coverage.refresh", () => coverageProvider.refresh()),
     commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
     commands.registerCommand("asm.analysis.navigate", (element?: unknown) => {
       const target = parseAnalysisNavigationTarget(element);
@@ -455,20 +495,20 @@ export function activate(context: ExtensionContext): void {
         void navigateToAnalysisLocation(target);
       }
     }),
-    commands.registerCommand("asm.coverage.classifyRange", (element?: unknown) =>
-      sourceController?.editEvidence("classification", coverageProvider.editTarget(element)),
+    commands.registerCommand("asm.coverage.classifyRange", () =>
+      sourceController?.editEvidence("classification"),
     ),
-    commands.registerCommand("asm.coverage.setStateEntryPoint", (element?: unknown) =>
-      sourceController?.editEvidence("state", coverageProvider.editTarget(element)),
+    commands.registerCommand("asm.coverage.setStateEntryPoint", () =>
+      sourceController?.editEvidence("state"),
     ),
-    commands.registerCommand("asm.coverage.resolveTarget", (element?: unknown) =>
-      sourceController?.editEvidence("targets", coverageProvider.editTarget(element)),
+    commands.registerCommand("asm.coverage.resolveTarget", () =>
+      sourceController?.editEvidence("targets"),
     ),
-    commands.registerCommand("asm.coverage.renameLabel", (element?: unknown) =>
-      sourceController?.editEvidence("symbols", coverageProvider.editTarget(element)),
+    commands.registerCommand("asm.coverage.renameLabel", () =>
+      sourceController?.editEvidence("symbols"),
     ),
-    commands.registerCommand("asm.coverage.explainEvidence", (element?: unknown) =>
-      evidenceInspector.explainEvidence(coverageProvider.editTarget(element)),
+    commands.registerCommand("asm.coverage.explainEvidence", () =>
+      evidenceInspector.explainEvidence(),
     ),
     workspace.onDidGrantWorkspaceTrust(() => {
       refreshProjectViews();
@@ -955,7 +995,8 @@ function onDocumentSaved(document: TextDocument): void {
   if (sourceController?.root) {
     return;
   }
-  const relevant = isAssemblyDocument(document);
+  const relevant =
+    isAssemblyDocument(document) || linkedBuildController?.tracks(document.uri.fsPath);
   if (relevant) {
     scheduleWatchBuild();
   }
@@ -1145,6 +1186,42 @@ async function runBuild(
       void window.showErrorMessage(`Source build: ${message}`);
       return { ok: false, message };
     }
+  }
+  try {
+    const linked = await linkedBuildController?.buildConfigured(
+      documentUri ? Uri.parse(documentUri) : undefined,
+    );
+    if (linked) {
+      const root =
+        workspace.getWorkspaceFolder(Uri.file(linked.outputFile))?.uri.fsPath ??
+        path.dirname(linked.outputFile);
+      editorInformationController?.buildCompleted(linked.debugMapFile, root);
+      const message = `Assembly: linked ${linked.outputSize} bytes + debug map → ${linked.outputFile}.`;
+      outputChannel?.info(message);
+      if (transient) {
+        window.setStatusBarMessage(message, 4000);
+      } else {
+        void window.showInformationMessage(message);
+      }
+      return {
+        ok: true,
+        outputPath: linked.outputFile,
+        debugMapPath: linked.debugMapFile,
+        outputSha256: linked.outputSha256,
+        debugMapFingerprint: linked.debugMapFingerprint,
+        outputChanged: linked.outputChanged,
+        debugMapChanged: linked.debugMapChanged,
+        bytes: linked.outputSize,
+        outputSize: linked.outputSize,
+        target: linked.target,
+        architecture: linked.architecture,
+      };
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    outputChannel?.error(message);
+    void window.showErrorMessage(`Assembly: ${message}`);
+    return { ok: false, message };
   }
   const client = languageClientFor(documentUri ? Uri.parse(documentUri) : undefined);
   if (!client) {

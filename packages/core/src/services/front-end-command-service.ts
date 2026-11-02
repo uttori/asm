@@ -4,6 +4,11 @@ import type { SourceSpan } from "../source-location.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
 
 export type FrontEndCommandHost = {
+  readonly moduleIdentity?: string;
+  assignModuleSymbol?(
+    name: string,
+    expression: import("../ir/expression-node.js").ExpressionNode,
+  ): void;
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   currentGlobalParentLabel: string;
@@ -76,6 +81,12 @@ export class FrontEndCommandService {
 
   /** Resolve each assignment in the current scope; the parsed expression never stores its value. */
   executeAssignmentStatement(statement: AssignmentStatement): string {
+    if (this.host.moduleIdentity !== undefined && this.host.assignModuleSymbol) {
+      const name = this.host.symbolScope.qualifySymbolName(statement.target);
+      this.host.assignModuleSymbol(name, statement.expression);
+      this.host.recordCurrentAddress();
+      return name;
+    }
     const value = this.host.mathCore.math(statement.expression);
     const assignedName = this.host.symbolScope.qualifySymbolName(statement.target);
     this.host.symbolScope.setLabel(assignedName, value, true);

@@ -11,6 +11,10 @@ export type LabelEntry = {
     modifiesHierarchy?: boolean;
 };
 export interface SymbolScopeHost {
+    /** Present only for section-relative assembly; canonical bindings are retained with their module. */
+    readonly moduleIdentity?: string;
+    readonly moduleSection?: string;
+    recordLabelBinding?(name: string, entry: LabelEntry): void;
     mode: "layout" | "emit";
     enforceResolvedLabels: boolean;
     isDefinitionCollectionStage: boolean;
@@ -26,6 +30,7 @@ export interface SymbolScopeHost {
             addr: number;
             macroInstance?: number;
             unit?: string;
+            section?: string;
         }[];
     };
     backwardLabels: {
@@ -33,6 +38,7 @@ export interface SymbolScopeHost {
             addr: number;
             macroInstance?: number;
             unit?: string;
+            section?: string;
         }[];
     };
     currentParentLabel: string;
@@ -52,7 +58,16 @@ export interface SymbolScopeHost {
 }
 export declare class SymbolScopeService {
     readonly host: SymbolScopeHost;
+    private bindingObserver?;
     constructor(host: SymbolScopeHost);
+    /** Canonical qualification is shared with numeric lookup; nested lookups restore their observer. */
+    resolveLabelBinding(label: string): {
+        name: string;
+        entry: LabelEntry;
+    } | undefined;
+    private resolvedLabelValue;
+    /** Preserve every canonical alias, including labels synthesized inside macro and namespace scopes. */
+    private storeLabel;
     /**
      * Returns the current ca65-style object file name (last `.asm` on the include stack).
      * @returns {string} The object-file basename, or empty when unknown.

@@ -30,6 +30,7 @@ the workspace is trusted.
 | `includePaths` | Additional source/binary include directories                                  |
 | `entryPoints`  | Editor/indexing build roots. Pass the source explicitly to the CLI            |
 | `buildOutput`  | Editor build destination. Pass output explicitly to the CLI                   |
+| `linkProject`  | Opt-in native build manifest for editor Build/Run/Debug and module-aware indexing, relative to this config |
 | `baseImage`    | Editor base ROM for patching. Use CLI `--base-image` for terminal builds      |
 | `$schema`      | Optional editor schema URI                                                    |
 
@@ -46,6 +47,10 @@ SNES. The generic loader/core has no default target.
 The generic loader selects a sole registered target automatically. Multiple targets require an
 explicit choice. An omitted architecture uses that target's default. For host integration,
 option merging, and cache/disposal behavior, see [API contracts](https://github.com/uttori/asm/blob/master/packages/core/API.md).
+
+Native manifests use the shared [linked build workflow](../workflows/LINKED-BUILDS.md).
+Data-only manifest validation and the module-root/configuration projection are exposed through
+`@uttori/asm-plugin-loader-node/build-configuration`; these helpers do not activate plugins.
 
 ## 6502 example
 

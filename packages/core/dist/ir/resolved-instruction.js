@@ -1,3 +1,4 @@
+import { requireLinkConstant } from "./link-expression.js";
 import { copySyntaxValue } from "./source-syntax.js";
 import { syntaxExpression } from "./syntax-codec.js";
 /**
@@ -22,7 +23,11 @@ export class InstructionResolutionFrame {
         this.preparation = preparation;
         this.identity = context.stageIdentity();
         this.stage = context.stage();
-        this.address = context.currentAddress();
+        // Branch fixups use section offsets even when source selection observes authored bus addresses.
+        this.address =
+            context.sourceAdapter === "asar" && context.sectionPosition
+                ? context.sectionPosition().offset
+                : context.currentAddress();
         if (preparation && (preparation.stage !== this.stage || preparation.address !== this.address)) {
             throw new Error("Instruction preparation belongs to a different stage or cursor.");
         }
@@ -125,6 +130,54 @@ export class InstructionResolutionFrame {
     currentAddress() {
         this.assertActive();
         return this.context.currentAddress();
+    }
+    /** The invocation-start byte cursor is stable even after opcode writes advance the live cursor. */
+    get instructionAddress() {
+        this.assertActive();
+        return this.address;
+    }
+    /** Distinguishes object production from the existing absolute numeric encoding contract. */
+    get isRelocatable() {
+        this.assertActive();
+        return this.context.compileLink !== undefined;
+    }
+    /** Source policy belongs to this frame and cannot be inferred from operand spelling. */
+    get sourceAdapter() {
+        this.assertActive();
+        return this.context.sourceAdapter;
+    }
+    /** Undefined means layout cannot determine this operand yet; the normal unresolved form remains authoritative. */
+    previewSource(scalar) {
+        this.assertActive();
+        return this.context.previewSource?.(scalar.expression);
+    }
+    /** Borrow an isolated numeric cursor so compatibility selection observes opcode-before-operand timing without emitting bytes. */
+    withSourcePreview(operation) {
+        this.assertActive();
+        if (!this.context.withSourcePreview) {
+            throw new Error("Source preview cursor is unavailable.");
+        }
+        return this.context.withSourcePreview(operation);
+    }
+    /** Preserve the operand's bound symbolic meaning at its actual evaluation cursor. */
+    compileLink(scalar) {
+        this.assertActive();
+        if (!this.context.compileLink) {
+            throw new Error("Instruction frame is not producing a relocatable module.");
+        }
+        return this.context.compileLink(scalar.expression);
+    }
+    /** Opcode/register/count decisions must be invariant under final placement. */
+    constant(scalar, purpose) {
+        return requireLinkConstant(this.compileLink(scalar), purpose);
+    }
+    /** Relative fields capture a section position rather than a guessed final program counter. */
+    sectionPosition() {
+        this.assertActive();
+        if (!this.context.sectionPosition) {
+            throw new Error("Instruction has no section-relative cursor.");
+        }
+        return this.context.sectionPosition();
     }
     /** Release access even after failures; a retained frame can never act on the next instruction. */
     close() {

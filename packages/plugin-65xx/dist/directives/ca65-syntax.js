@@ -153,7 +153,7 @@ function parse(id, { words }) {
     throw new Error(`Missing typed ca65 directive grammar '${id}'.`);
 }
 /** Each execution refreshes live scope, cursor and CPU state; syntax never stores resolved values. */
-function execute(node, { session, state, targetId }) {
+function execute(node, { session, state, targetId }, id) {
     const profile = state.get(ca65SessionStateKey);
     switch (node.operation) {
         case "error":
@@ -174,6 +174,7 @@ function execute(node, { session, state, targetId }) {
             return;
         case "segment": {
             if (targetId !== NES_65XX_TARGET_ID) {
+                session.module?.selectSection({ name: node.name });
                 profile.currentFlatSegment = node.name;
                 return;
             }
@@ -199,7 +200,17 @@ function execute(node, { session, state, targetId }) {
         }
         case "symbols":
             for (const name of node.names) {
-                markGlobalSymbol(session, name);
+                if (session.module) {
+                    if (id.endsWith(".export")) {
+                        session.module.exportSymbol(name);
+                    }
+                    else {
+                        session.module.declare(name, "import");
+                    }
+                }
+                else {
+                    markGlobalSymbol(session, name);
+                }
             }
             return;
         case "data":
@@ -208,6 +219,19 @@ function execute(node, { session, state, targetId }) {
         case "mapped":
             if (session.isDefinitionCollectionStage) {
                 session.step(node.values.length * (node.mode === "big" ? 2 : 1));
+                return;
+            }
+            if (session.module) {
+                for (const value of node.values) {
+                    const expression = node.mode === "big"
+                        ? value
+                        : {
+                            type: "unary",
+                            operator: node.mode === "low" ? "<" : ">",
+                            argument: value,
+                        };
+                    session.module.write(expression, node.mode === "big" ? 2 : 1, node.mode === "big" ? "big" : "little");
+                }
                 return;
             }
             for (const expression of node.values) {
@@ -228,6 +252,15 @@ function execute(node, { session, state, targetId }) {
                 throw new Error(node.operation === "align"
                     ? ".align boundary must be a positive integer."
                     : ".res count must be non-negative.");
+            }
+            if (session.module) {
+                if (node.operation === "align") {
+                    session.module.align(value, fill);
+                }
+                else {
+                    session.module.reserve(value, node.fill ? fill : undefined);
+                }
+                return;
             }
             const count = node.operation === "reserve"
                 ? value
@@ -281,7 +314,7 @@ export function ca65DirectiveSyntax(id) {
                 context.session.targetOptions.sourceStyle === "asar") {
                 return undefined;
             }
-            return { execute: (payload) => execute(codec.read(payload), context) };
+            return { execute: (payload) => execute(codec.read(payload), context, id) };
         },
     };
 }

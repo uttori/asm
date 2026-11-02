@@ -3,12 +3,21 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { acquireFileLease, sourceContentHash } from "@uttori/asm-disassembler/source-project";
+import {
+  acquireFileLease,
+  sourceContentHash,
+  sourceLinkFiles,
+  readSourceLinkBuild,
+} from "@uttori/asm-disassembler/source-project";
 
 import { test } from "../../../tests/ava-helper.js";
 import { createSnesAssemblerEnvironment } from "../src/assembler.js";
 import type { SnesPlacementContract } from "../src/disassembler/rom-layout/check.js";
-import { buildSnesSource, inspectSnesSource } from "../src/disassembler/source-build.js";
+import {
+  buildSnesSource,
+  inspectSnesSource,
+  inspectSnesSourceModule,
+} from "../src/disassembler/source-build.js";
 
 for (const boundary of [
   "pending.json",
@@ -167,7 +176,7 @@ test("placement inspection measures prospective emission without publishing or a
   t.deepEqual(fs.readFileSync(path.join(path.dirname(baseline.outputFile), "build.json")), receipt);
   t.deepEqual(
     fs.readdirSync(options.outputDirectory).toSorted(),
-    ["current.json", baseline.inputSha256].toSorted(),
+    ["current.json", "summary.json", baseline.inputSha256].toSorted(),
   );
   t.deepEqual(
     JSON.parse(fs.readFileSync(path.join(options.outputDirectory, "current.json"), "utf8")),
@@ -240,10 +249,108 @@ test("ordinary builds enforce saved placement and pointer contracts before repla
   t.deepEqual(fs.readFileSync(receiptPath), receipt);
   t.deepEqual(
     fs.readdirSync(options.outputDirectory).toSorted(),
-    ["current.json", baseline.inputSha256].toSorted(),
+    ["current.json", "summary.json", baseline.inputSha256].toSorted(),
   );
   t.deepEqual(
     JSON.parse(fs.readFileSync(path.join(options.outputDirectory, "current.json"), "utf8")),
     baseline,
   );
+});
+
+test("module inspection hashes consumed overlays and host identities without publishing a ROM", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "module-inspection-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = 'section "Data",data\nimport External\ndl External\nincbin "asset.bin"\n';
+  fs.writeFileSync(path.join(root, "main.asm"), source);
+  fs.writeFileSync(path.join(root, "asset.bin"), Uint8Array.of(1, 2));
+  const options = {
+    root,
+    entrySource: "main.asm",
+    environment: await createSnesAssemblerEnvironment(),
+    module: { id: "preview" },
+  };
+  const baseline = inspectSnesSourceModule(options);
+  const overlays = new Map([["asset.bin", Uint8Array.of(3, 4)]]);
+  const preview = inspectSnesSourceModule({ ...options, overlays });
+  t.deepEqual([...preview.modules[0].sections[0].bytes], [0, 0, 0, 3, 4]);
+  t.is(preview.modules[0].fixups.length, 1);
+  t.not(preview.inputSha256, baseline.inputSha256);
+  t.is(inspectSnesSourceModule({ ...options, overlays }).inputSha256, preview.inputSha256);
+  t.not(
+    inspectSnesSourceModule({ ...options, overlays, toolchainSha256: "a".repeat(64) }).inputSha256,
+    preview.inputSha256,
+  );
+  t.not(
+    inspectSnesSourceModule({ ...options, overlays, configurationSha256: "b".repeat(64) })
+      .inputSha256,
+    preview.inputSha256,
+  );
+  t.deepEqual(
+    preview.inputs.map((input) => input.path),
+    ["asset.bin", "main.asm"],
+  );
+  t.deepEqual([...fs.readFileSync(path.join(root, "asset.bin"))], [1, 2]);
+  t.deepEqual(fs.readdirSync(root).toSorted(), ["asset.bin", "main.asm"]);
+  t.throws(
+    () =>
+      inspectSnesSourceModule({
+        ...options,
+        overlays: new Map([["unused.asm", Uint8Array.of(1)]]),
+      }),
+    { message: /not consumed/ },
+  );
+});
+
+test("linked source inspection resolves structured extent aliases after placement and snapshots recipe inputs", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "linked-source-inspection-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const sourceFile = path.join(root, "main.asm");
+  fs.writeFileSync(
+    sourceFile,
+    'section "Data",data\nstruct Record\n.value: dw\nendstruct\ndataStruct Record, { value = $1234 }\nEnd:\n',
+  );
+  const options = {
+    root,
+    entrySource: "main.asm",
+    environment: await createSnesAssemblerEnvironment(),
+    targetOptions: { checksumEnabled: false },
+    expectedSize: 2,
+    resolveSymbols: ["Record.value"],
+    link: {
+      module: { id: "placed" },
+      recipe: {
+        target: "snes.sfc",
+        targetOptions: { mapper: "hirom" },
+        checksumPolicy: "preserve" as const,
+        regions: [{ name: "ROM", start: 0xc00100, size: 2, outputOffset: 0x100 }],
+        placements: [{ section: "Data", load: "ROM", run: "ROM" }],
+      },
+    },
+  };
+  for (const generated of sourceLinkFiles(
+    Buffer.from(JSON.stringify({ entryPoints: ["main.asm"] })),
+    "placed",
+    options.link.recipe,
+  )) {
+    fs.writeFileSync(path.join(root, generated.path), generated.bytes);
+  }
+  const configFile = path.join(root, "uttori-asm.config.json");
+  const configuration = { entryPoints: ["main.asm"], linkProject: "build.json" };
+  const link = readSourceLinkBuild(configuration, configFile, path.join(root, "main.asm"), (file) =>
+    fs.readFileSync(file),
+  );
+  if (!link) {
+    throw new Error("Expected source link selection.");
+  }
+  const inspected = inspectSnesSource({ ...options, link, expectedSize: 0x102 });
+  t.deepEqual(inspected.diagnostics, []);
+  t.is(inspected.symbols.get("Record.value"), 0xc00100);
+  t.is(inspected.mapping.structFields[0].outputOffset, 0x100);
+  t.deepEqual(Array.from(inspected.output.subarray(0x100)), [0x34, 0x12]);
+  const recipeFile = path.join(root, "link-recipe.json");
+  t.true(inspected.snapshots.has(recipeFile));
+  fs.appendFileSync(recipeFile, " ");
+  t.throws(() => inspectSnesSource({ ...options, link, expectedSize: 0x102 }), {
+    message: /Source link input changed/,
+  });
 });

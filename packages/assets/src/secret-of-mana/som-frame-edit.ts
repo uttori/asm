@@ -131,7 +131,10 @@ export function renderStableFrameAtlas(
         flipX: p.flipX,
         flipY: p.flipY,
         // Display colors can vary without changing the one native tile source.
-        indexMap: Array.from({ length: 16 }, (_, i) => (p.paletteGroup ?? frame.paletteGroup ?? segment.palette) * 16 + i),
+        indexMap: Array.from(
+          { length: 16 },
+          (_, i) => (p.paletteGroup ?? frame.paletteGroup ?? segment.palette) * 16 + i,
+        ),
       });
     }
   }

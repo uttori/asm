@@ -63,15 +63,6 @@ import {
   type SqliteAnnotationView,
   type InstructionExportRecord,
 } from "./sqlite-annotation-query.js";
-import {
-  cachedCoverage,
-  prepareCoverage,
-  coveragePage,
-  coverageConflictPage,
-  coverageSignature,
-  publishCoverage,
-  isSqliteCoverageSummary,
-} from "./sqlite-coverage-query.js";
 import { prepareGraph, publishGraph, isCallGraph } from "./sqlite-graph-query.js";
 import { queryGraphicsEvidence, type GraphicsEvidenceQuery } from "./sqlite-graphics-query.js";
 import {
@@ -1707,57 +1698,6 @@ export class SqliteAnalysisStore {
       const referencedByTotal = metadataCount + runtimeCount;
       return { ...base, referencedBy, referencedByTotal };
     }, false);
-  }
-
-  /** Exact coverage totals. Build only when classifications, code, or runtime facts changed.
-   * @returns {object} Persisted summary and detail count.
-   */
-  coverageSummary() {
-    const cached = cachedCoverage(this.#database, this.manifest());
-    if (cached) {
-      return cached;
-    }
-    this.prepareAnnotationQueries();
-    try {
-      this.cachedProjection(
-        "coverage",
-        coverageSignature(this.manifest()),
-        ["analysis", "annotations", "regions", "runtime"],
-        () => prepareCoverage(this.#database, this.manifest()),
-        () => publishCoverage(this.#database),
-        (value) => {
-          if (!isSqliteCoverageSummary(value)) {
-            throw new Error("Project changed while building coverage. Refresh the view.");
-          }
-          return value;
-        },
-      );
-      const published = cachedCoverage(this.#database, this.manifest());
-      if (!published) {
-        throw new Error("Project changed while building coverage. Refresh the view.");
-      }
-      return published;
-    } finally {
-      this.#database.exec(
-        "DROP TABLE IF EXISTS temp.query_coverage_segments;DROP TABLE IF EXISTS temp.query_coverage_details",
-      );
-    }
-  }
-
-  /** Read at most 200 coverage rows from a current projection.
-   * @param {"segments" | "details"} kind Collection to page.
-   * @param {number} offset Nonnegative row offset.
-   * @returns {unknown[]} Persisted rows, never the full ROM map.
-   */
-  coveragePage(kind: "segments" | "details", offset = 0): unknown[] {
-    this.coverageSummary();
-    return this.transaction(() => coveragePage(this.#database, kind, offset), false);
-  }
-
-  /** Current conflicting ROM intervals, paged at 200 rows; offsets count conflicts only. */
-  coverageConflicts(offset = 0) {
-    this.coverageSummary();
-    return this.transaction(() => coverageConflictPage(this.#database, offset), false);
   }
 
   /** Persisted call graph plus current labels, without retaining CFG contexts between requests.

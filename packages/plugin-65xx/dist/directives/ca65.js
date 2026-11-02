@@ -5,6 +5,7 @@
  * `.segment`, `.export`, `.import`, `.byte`/`.byt`, `.addr`/`.word`,
  * `.lobytes`, `.hibytes`, `.dbyt`.
  */
+import { parseExpressionNode } from "@uttori/asm-core";
 import { ca65CpuNames, ca65CpuShorthands, resolve65xxCpuName, } from "../ca65-profile.js";
 /**
  * Strips one layer of matching quotes from a token.
@@ -102,6 +103,16 @@ export function closeActiveSegment(session, state) {
         state.currentSegment = null;
         return;
     }
+    if (session.module) {
+        if (segment.define) {
+            for (const suffix of ["LOAD", "RUN", "SIZE", "RUN_END"]) {
+                session.module.declare(`__${segment.name}_${suffix}__`, "import");
+            }
+        }
+        state.currentSegment = null;
+        state.currentLoadMemory = null;
+        return;
+    }
     const size = session.currentTargetBaseAddress - state.segmentLoadStart;
     state.memoryCursors[segment.load] = session.currentTargetBaseAddress;
     if (segment.define) {
@@ -129,6 +140,10 @@ export function closeActiveSegment(session, state) {
  */
 export function applyLinkerSymbols(session, state) {
     for (const symbol of state.linker.symbols) {
+        if (session.module) {
+            session.module.declare(symbol.name, "import");
+            continue;
+        }
         session.globalSymbols.add(symbol.name);
         const value = session.operandResolver.getnum(symbol.valueExpr);
         session.symbolScope.setLabel(symbol.name, value, true);
@@ -143,6 +158,13 @@ export function applyLinkerSymbols(session, state) {
  * @returns {void}
  */
 export function openSegment(session, state, segment) {
+    if (session.module) {
+        const kind = segment.type === "bss" || segment.type === "zp" ? "bss" : "code";
+        session.module.selectSection({ name: segment.name, kind });
+        state.currentSegment = segment.name;
+        state.currentLoadMemory = segment.load;
+        return;
+    }
     const loadMemory = state.linker.memories.get(segment.load);
     const runMemory = state.linker.memories.get(segment.run);
     if (!loadMemory || !runMemory) {
@@ -190,7 +212,17 @@ function markGlobalSymbols(session, words, keyword) {
         throw new Error(`${keyword} requires at least one identifier.`);
     }
     for (const name of names) {
-        markGlobalSymbol(session, name);
+        if (session.module) {
+            if (keyword === ".export") {
+                session.module.exportSymbol(name);
+            }
+            else {
+                session.module.declare(name, "import");
+            }
+        }
+        else {
+            markGlobalSymbol(session, name);
+        }
     }
 }
 /**
@@ -237,13 +269,27 @@ export function handleAddr(session, words) {
  * @param {number} width Bytes consumed per value when estimating.
  * @returns {void}
  */
-function emitMappedBytes(session, words, write, width) {
+function emitMappedBytes(session, words, write, width, symbolic) {
     const params = parameterList(words);
     if (params.length === 0) {
         throw new Error(`${words[0]} requires at least one parameter.`);
     }
     if (session.isDefinitionCollectionStage) {
         session.step(params.length * width);
+        return;
+    }
+    if (session.module) {
+        for (const param of params) {
+            let expression = parseExpressionNode(param);
+            if (symbolic === "low" || symbolic === "high") {
+                expression = {
+                    type: "unary",
+                    operator: symbolic === "low" ? "<" : ">",
+                    argument: expression,
+                };
+            }
+            session.module.write(expression, width, symbolic === "bigWord" ? "big" : "little");
+        }
         return;
     }
     for (const param of params) {
@@ -257,7 +303,7 @@ function emitMappedBytes(session, words, write, width) {
  * @returns {void}
  */
 export function handleLobytes(session, words) {
-    emitMappedBytes(session, words, (value) => session.write1(value & 0xff), 1);
+    emitMappedBytes(session, words, (value) => session.write1(value & 0xff), 1, "low");
 }
 /**
  * Handles `.hibytes expr[, expr...]`.
@@ -266,7 +312,7 @@ export function handleLobytes(session, words) {
  * @returns {void}
  */
 export function handleHibytes(session, words) {
-    emitMappedBytes(session, words, (value) => session.write1((value >> 8) & 0xff), 1);
+    emitMappedBytes(session, words, (value) => session.write1((value >> 8) & 0xff), 1, "high");
 }
 /**
  * Handles `.dbyt expr[, expr...]` (16-bit big-endian).
@@ -278,7 +324,7 @@ export function handleDbyt(session, words) {
     emitMappedBytes(session, words, (value) => {
         session.write1((value >> 8) & 0xff);
         session.write1(value & 0xff);
-    }, 2);
+    }, 2, "bigWord");
 }
 /**
  * Handles `.dword` / `.faraddr` (32-bit or 24-bit little-endian).
@@ -357,6 +403,10 @@ export function handleRes(session, words) {
     if (!Number.isInteger(count) || count < 0) {
         throw new Error(".res count must be non-negative.");
     }
+    if (session.module) {
+        session.module.reserve(count, params[1] ? fill : undefined);
+        return;
+    }
     if (session.isDefinitionCollectionStage) {
         session.step(count);
         return;
@@ -379,6 +429,10 @@ export function handleAlign(session, words) {
     const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
     if (!Number.isInteger(boundary) || boundary <= 0) {
         throw new Error(".align boundary must be a positive integer.");
+    }
+    if (session.module) {
+        session.module.align(boundary, fill);
+        return;
     }
     const count = (boundary - (session.currentTargetAddress % boundary)) % boundary;
     if (session.isDefinitionCollectionStage) {

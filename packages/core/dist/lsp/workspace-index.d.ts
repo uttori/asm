@@ -20,6 +20,10 @@ export type FileAnalysis = {
  * Configuration for a workspace index.
  */
 export type WorkspaceIndexOptions = {
+    /** Analyze module-authored roots using section-relative symbols and import declarations. */
+    module?: import("../relocatable.js").AssemblyModuleOptions;
+    /** Absolute source-root paths select independent module identities; other roots retain the fallback module/absolute mode. */
+    moduleRoots?: Readonly<Record<string, import("../relocatable.js").AssemblyModuleOptions>>;
     /** Frozen plugin environment used by every analysis session. */
     environment: AssemblerEnvironment;
     /** Target contribution ID or alias. */
@@ -42,10 +46,12 @@ export type WorkspaceIndexOptions = {
 export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environment" | "target">;
 export type RootAnalysis = CachedRootAnalysis;
 /** Shared by worker producers, transport validation and snapshot hydration. */
-export declare const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION: 3;
+export declare const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION: 5;
 /** Structured-clone payload from an isolated analyzer. It contains no plugin instances or file handles. */
 export interface WorkspaceAnalysisSnapshot {
-    /** Revision 2 carries typed operand occurrences; revision 1 ranges cannot be reused for rename. */
+    readonly module?: import("../relocatable.js").AssemblyModuleOptions;
+    readonly moduleRoots?: WorkspaceIndexOptions["moduleRoots"];
+    /** Revision 5 also binds source adapters so cached absolute/native interpretations cannot leak across selections. */
     readonly version: typeof WORKSPACE_ANALYSIS_SNAPSHOT_VERSION;
     readonly target: string;
     readonly architecture: string;
@@ -102,6 +108,9 @@ export declare class WorkspaceIndex {
     includePaths: string[];
     architecture: string;
     readonly targetOptions: Readonly<Record<string, unknown>>;
+    module?: import("../relocatable.js").AssemblyModuleOptions;
+    /** Owned per-root selections also participate in persistent cache and worker-snapshot identity. */
+    moduleRoots: NonNullable<WorkspaceIndexOptions["moduleRoots"]>;
     readonly environment: AssemblerEnvironment;
     readonly target: string;
     readonly toolingCatalog: ToolingCatalog;

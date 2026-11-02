@@ -4,6 +4,7 @@ import path from "node:path";
 
 import {
   sourceGit,
+  openSourceProject,
   sourceContentHash,
   type SourceTargetDescriptor,
 } from "@uttori/asm-disassembler/source-project";
@@ -11,6 +12,7 @@ import {
 import { test } from "../../../tests/ava-helper.js";
 import {
   executeSourceOperation,
+  inspectSourceModules,
   createSourceWorkflowHost,
   readSourceOperation,
 } from "../src/source.js";
@@ -100,6 +102,39 @@ test("independent target initialization and unsupported capabilities do not need
     { message: /does not support expand/ },
   );
   t.is(analyses, 0);
+  const opened = await openSourceProject(project);
+  await t.throwsAsync(inspectSourceModules(opened, { id: "tiny" }, host), {
+    message: /does not support relocatable module inspection/,
+  });
+  const overlays = new Map([["candidate.asm", Uint8Array.of(1)]]);
+  const controller = new AbortController();
+  const inspection = { modules: [], inputs: [], inputSha256: hash };
+  const moduleHost = createSourceWorkflowHost(
+    [],
+    [
+      {
+        ...target,
+        inspectModules: async (selected, selectedHost, module, files, signal) => {
+          t.is(selected, opened);
+          t.is(selectedHost, moduleHost);
+          t.deepEqual(module, { id: "tiny" });
+          t.is(files, overlays);
+          t.is(signal, controller.signal);
+          return inspection;
+        },
+      },
+    ],
+  );
+  t.is(
+    await inspectSourceModules(opened, { id: "tiny" }, moduleHost, overlays, controller.signal),
+    inspection,
+  );
+  controller.abort();
+  await t.throwsAsync(
+    inspectSourceModules(opened, { id: "tiny" }, moduleHost, overlays, controller.signal),
+    { name: "AbortError" },
+  );
+
   t.throws(() => readSourceOperation({ action: "build", directory: project, candidate: "bad" }), {
     message: /does not accept candidate/,
   });

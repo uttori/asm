@@ -1,4 +1,7 @@
 import {
+  RelocatableInstruction,
+  linkBinary,
+  linkConstant,
   isReferenceExpressionNode,
   type InstructionResolutionFrame,
   type TypedArchitectureEncoder,
@@ -13,7 +16,10 @@ import {
   type OperandExpansion,
 } from "./operand-values.js";
 import { spc700Modes, spc700Specifications } from "./spc700-spec.js";
-import { spcSyntax, type SpcOperand } from "./spc700-syntax.js";
+import { parseSpcOperands, spcSyntax, type SpcOperand } from "./spc700-syntax.js";
+
+/** The opcode matrix uses P while accepted source also spells the register PSW. */
+const moduleRegister = (name: string): string => (name === "psw" ? "p" : name);
 
 const encodings = new Map<string, Map<string, number>>();
 for (const spec of spc700Specifications) {
@@ -22,6 +28,14 @@ for (const spec of spc700Specifications) {
   encodings.set(spec.mnemonic, forms);
 }
 const families = (value: string, list: string): boolean => list.split(" ").includes(value);
+/** Pattern syntax comes from the same opcode matrix as the decoder, with a concrete bit placeholder. */
+const modulePatterns = spc700Specifications.map((specification) => ({
+  specification,
+  parts: parseSpcOperands(
+    specification.mnemonic,
+    specification.syntax.replaceAll("addr.bit", "addr.0"),
+  ).spc700.parts,
+}));
 /** Expanded facts belong to one occurrence. Permissive numeric-prefix behavior is retained explicitly. */
 interface SpcValue {
   part: SpcOperand;
@@ -36,9 +50,14 @@ interface SpcValue {
 
 /** All SPC forms execute structural operands; opcode writes retain each family's established ordering. */
 export class TypedSpc700 implements TypedArchitectureEncoder {
+  readonly supportsRelocatable = true;
   readonly deferOperandBindingErrors = true;
   /** Preserve per-slot observations before the whole-fragment width probe. */
   prepare(frame: InstructionResolutionFrame): void {
+    if (frame.isRelocatable) {
+      frame.choose("spc700-module-preparation", 0);
+      return;
+    }
     const syntax = spcSyntax(frame.instruction.operands).spc700;
     const parts = syntax.parts.map((p) => expandOperandPlan(p.plan, frame));
     // SPC lowering always observes the whole fragment after its separate operand slots.
@@ -52,6 +71,9 @@ export class TypedSpc700 implements TypedArchitectureEncoder {
     return this.run(frame, context) > 0;
   }
   private run(frame: InstructionResolutionFrame, context?: TypedEncoderContext): number {
+    if (frame.isRelocatable) {
+      return this.runModule(frame, context);
+    }
     const syntax = spcSyntax(frame.instruction.operands).spc700,
       op = syntax.mnemonic,
       emit = !!context;
@@ -711,4 +733,190 @@ export class TypedSpc700 implements TypedArchitectureEncoder {
     }
     return choose("unknown", emit ? 0 : 1);
   }
+
+  /** Matrix-driven object emission covers all hardware forms without interpreting provisional values. */
+  private runModule(frame: InstructionResolutionFrame, context?: TypedEncoderContext): number {
+    const syntax = spcSyntax(frame.instruction.operands).spc700;
+    if (syntax.suffixError || (syntax.width !== undefined && syntax.width > 2)) {
+      throw frame.error("SPC700 address width must be byte or word.");
+    }
+    const instruction = new RelocatableInstruction(frame, context);
+    const parts = syntax.parts;
+    const op = syntax.mnemonic;
+    if (op === "TCALL") {
+      if (parts.length !== 1) {
+        throw frame.error("TCALL requires one table index.");
+      }
+      const index = frame.constant(parts[0].scalar, "TCALL table index");
+      if (index < 0 || index > 15) {
+        throw frame.error("TCALL index must be 0..15.");
+      }
+      return instruction.opcode((index << 4) | 1).finish("tableCall");
+    }
+    if (["SET", "CLR", "BBS", "BBC"].includes(syntax.bitFamily ?? "")) {
+      const family = syntax.bitFamily!;
+      const branch = family === "BBS" || family === "BBC";
+      if (parts.length !== (branch ? 2 : 1)) {
+        throw frame.error(`${op} has an invalid operand count.`);
+      }
+      const bit = parts[0].bit ?? syntax.bit;
+      if (bit === undefined || bit < 0 || bit > 7) {
+        throw frame.error("Direct bit index must be 0..7.");
+      }
+      let opcode = family === "SET" ? 2 : 0x12;
+      if (branch) {
+        opcode = family === "BBS" ? 3 : 0x13;
+      }
+      instruction
+        .opcode(opcode | (bit << 5))
+        .field(parts[0].scalar, { width: 1, kind: "directPage", addressWidth: 16 });
+      if (branch) {
+        instruction.field(parts[1].wholeScalar, {
+          width: 1,
+          kind: "relative",
+          signed: true,
+          addressWidth: 16,
+          wrapWidth: 16,
+        });
+      }
+      return instruction.finish(branch ? "directBitRelative" : "directBit");
+    }
+    const candidates = modulePatterns.filter(
+      (pattern) =>
+        pattern.specification.mnemonic === op &&
+        pattern.parts.length === parts.length &&
+        pattern.parts.every((part, index) => moduleOperandsMatch(part, parts[index])),
+    );
+    const widthScore = (pattern: (typeof modulePatterns)[number]): number => {
+      let score = 0;
+      for (let index = 0; index < parts.length; index++) {
+        const expected = pattern.parts[index];
+        if (
+          expected.shape?.kind !== "memory" ||
+          "kind" in expected.shape.address ||
+          expected.shape.bit
+        ) {
+          continue;
+        }
+        const name = expected.shape.address.expression;
+        if (name.type !== "identifier" || (name.name !== "dp" && name.name !== "addr")) {
+          continue;
+        }
+        const preferred = syntax.width ?? parts[index].scalar.width.literalBytes ?? 2;
+        const width = name.name === "dp" ? 1 : 2;
+        if (preferred === width) {
+          score++;
+        } else if (syntax.width !== undefined) {
+          return -1;
+        }
+      }
+      return score;
+    };
+    const pattern = candidates
+      .filter((candidate) => widthScore(candidate) >= 0)
+      .toSorted((a, b) => widthScore(b) - widthScore(a))[0];
+    if (!pattern) {
+      throw frame.error(`${op} has no matching relocatable SPC700 operand form.`);
+    }
+    const spec = pattern.specification;
+    instruction.opcode(spec.opcode[0]);
+    let fields = parts
+      .map((part, index) => ({ part, expected: pattern.parts[index] }))
+      .filter(
+        ({ part }) =>
+          part.shape?.kind === "immediate" ||
+          (part.shape?.kind === "memory" && !("kind" in part.shape.address)),
+      );
+    // SPC encodes source before destination for its two direct/immediate memory fields.
+    if (spec.mode === spc700Modes.dpDp.id || spec.mode === spc700Modes.dpImm.id) {
+      fields = fields.toReversed();
+    }
+    for (const { part, expected } of fields) {
+      const shape = part.shape;
+      if (shape?.kind === "memory" && shape.bit) {
+        const address = frame.compileLink(part.scalar);
+        const bit = frame.constant(shape.bit.selector, "Memory bit index");
+        if (bit < 0 || bit > 7) {
+          throw frame.error("Memory bit index must be 0..7.");
+        }
+        const packed = linkBinary(
+          "|",
+          linkBinary("&", address, linkConstant(0x1fff)),
+          linkConstant(bit << 13),
+        );
+        instruction.field(packed, {
+          width: 2,
+          minimum: 0,
+          checks: [{ expression: address, minimum: 0, maximum: 0x1fff }],
+        });
+        continue;
+      }
+      const expectedShape = expected.shape;
+      let name = "const";
+      if (
+        expectedShape?.kind === "memory" &&
+        !("kind" in expectedShape.address) &&
+        expectedShape.address.expression.type === "identifier"
+      ) {
+        name = expectedShape.address.expression.name;
+      }
+      const width = name === "addr" ? 2 : 1;
+      let kind: import("@uttori/asm-core").RelocationEncoding["kind"] = "absolute";
+      if (name === "label") {
+        kind = "relative";
+      }
+      if (name === "dp") {
+        kind = "directPage";
+      }
+      if (name === "upage") {
+        kind = "upperPage";
+      }
+      instruction.field(part.scalar, {
+        width,
+        kind,
+        signed: name === "label",
+        addressWidth: 16,
+        wrapWidth: 16,
+      });
+    }
+    const size = instruction.finish(spec.mode);
+    if (size !== spec.minimumSize) {
+      throw frame.error(`Relocatable ${op} disagrees with the shared opcode size.`);
+    }
+    return size;
+  }
+}
+
+/** Match addressing syntax before selecting width; symbol values never choose an object opcode. */
+function moduleOperandsMatch(expected: SpcOperand, actual: SpcOperand): boolean {
+  const a = actual.shape;
+  const e = expected.shape;
+  if (!a || !e || a.kind !== e.kind) {
+    return false;
+  }
+  if (a.kind === "register" && e.kind === "register") {
+    return moduleRegister(a.name) === moduleRegister(e.name);
+  }
+  if (a.kind === "immediate") {
+    return true;
+  }
+  if (a.kind !== "memory" || e.kind !== "memory") {
+    return false;
+  }
+  if (
+    a.delimiter !== e.delimiter ||
+    a.index?.register !== e.index?.register ||
+    a.index?.position !== e.index?.position ||
+    !!a.postIncrement !== !!e.postIncrement ||
+    !!a.bit !== !!e.bit
+  ) {
+    return false;
+  }
+  if (a.bit && e.bit && a.bit.inverted !== e.bit.inverted) {
+    return false;
+  }
+  if ("kind" in a.address || "kind" in e.address) {
+    return "kind" in a.address && "kind" in e.address && a.address.name === e.address.name;
+  }
+  return true;
 }

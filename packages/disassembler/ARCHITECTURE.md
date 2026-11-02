@@ -209,19 +209,19 @@ The `.dizraw` importer lives in the SNES plugin because Diz classifications and 
 target-specific. It imports what can be represented and records unsupported fields. There is no
 `.dizraw` export. Native instruction traces follow the same identity/provenance rule.
 
-## Coverage, call graph, and instruction annotations
+## Build progress, call graph, and instruction annotations
 
 These are deterministic read-only projections over validated project records:
 
-- `buildRomCoverageMap()` coalesces code, operand, data, asset, unknown, conflict, execution, and
-  memory overlays. Overlapping classification totals intentionally overlap.
+- `sourceBuildCoverage()` counts unique original-ROM raw input slices during a source build.
+  The compact build summary supplies sidebar conversion progress without a full-ROM evidence map.
 - `SqliteAnalysisStore.callGraph()` assigns ownership only through persisted function entries and evidence
   paths. Missing callers/callees stay orphaned.
 - `buildInstructionAnalysisAnnotations()` combines CFG identity, static effective addresses,
   context-specific state transitions, manual/runtime state, execution/coverage, memory access, record
   ids, and provenance.
 
-CPU/RAM facts appear as unprojected diagnostics unless a record supplies an explicit file offset.
+Instruction annotations retain logical address spaces and explicit file offsets.
 Malformed optional metadata becomes a diagnostic, not a reason to fabricate presentation data.
 
 ## Assets and compression

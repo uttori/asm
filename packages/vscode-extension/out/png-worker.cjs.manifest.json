@@ -41,7 +41,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
+      "sha256": "6c51bc05ebd03b6c8012aa08bb62754be4c635bb138490124e59e34cf92671bc"
     },
     {
       "file": "packages/assets/src/image-conversion.ts",

@@ -6,6 +6,9 @@ For saved Aseprite/PNG export, review, application and recovery, see the
 Command-line assembly, ROM analysis, evidence import, and Git source editing for Uttori ASM.
 Includes the SNES plugin. Other targets use installed plugins and project configuration.
 
+Native `assemble-object`, `library`, `link`, and `build` commands are also available. See the shared
+[linked build guide](../workflows/LINKED-BUILDS.md) for manifests, atomic artifact receipts and editor opt-in.
+
 ## Install
 
 Requires Node.js 26 or newer. Exposes an executable, ESM JavaScript, and TypeScript declarations.
@@ -92,3 +95,5 @@ See the guide for output channels, defaults, overwrite rules, and interruption b
 
 [Report an issue](https://github.com/uttori/asm/issues). Licensed under
 [MIT](https://github.com/uttori/asm/blob/master/LICENSE).
+
+Generated Git source projects can opt into linked disassembly with `uttori-asm source prepare <project> --linked`. Review and adopt the candidate through the normal Git workflow; see [Disassembly Migration](../workflows/DISASSEMBLY-MIGRATION.md). Existing absolute assembly remains the default.

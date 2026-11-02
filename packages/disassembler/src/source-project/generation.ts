@@ -16,6 +16,8 @@ export const SOURCE_GENERATION_FILE = ".uttori/generation.json";
 
 /** Small immutable input identities. Large evidence remains in a separately retained private input store. */
 export interface SourceGenerationInputs {
+  /** Explicit linked generation intent survives Prepare/Preview/Apply before the new configuration is adopted. */
+  readonly assembly?: "linked";
   readonly project: string;
   readonly romSha256: string;
   readonly evidenceSha256: string;
@@ -184,6 +186,7 @@ function isGenerationInputs(value: unknown): value is SourceGenerationInputs {
     isSha256(value.researchSha256) &&
     isSha256(value.toolchainSha256) &&
     isSha256(value.optionsSha256) &&
+    (value.assembly === undefined || value.assembly === "linked") &&
     (value.captureCatalogSha256 === undefined || isSha256(value.captureCatalogSha256))
   );
 }

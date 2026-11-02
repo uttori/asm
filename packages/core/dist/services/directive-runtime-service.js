@@ -109,7 +109,7 @@ export class DirectiveRuntimeService {
                 // These nodes are parsed literal occurrences: no define/list binding or speculative reads
                 // remain. Numeric observation still runs at each original write cursor through getnum.
                 for (const operand of literalDataOperands(statement.literalData)) {
-                    this.writeDataByLength(statement.width, this.host.operandResolver.getnum(operand.expression));
+                    this.writeDataExpression(statement.width, operand.expression);
                 }
             }
             if (this.host.collectSourceMetadata) {
@@ -165,7 +165,7 @@ export class DirectiveRuntimeService {
                 estimatedItems++;
             }
             else {
-                this.writeDataByLength(statement.width, this.host.operandResolver.getnum(entry.expression));
+                this.writeDataExpression(statement.width, entry.expression);
             }
         }
         if (estimateOnly) {
@@ -202,6 +202,15 @@ export class DirectiveRuntimeService {
                 break;
             default:
                 throw new Error(`Unsupported data length ${len}`);
+        }
+    }
+    /** Keep expression ownership until the writer can decide between an immediate scalar and a fixup. */
+    writeDataExpression(width, expression) {
+        if (this.host.moduleIdentity !== undefined && this.host.writeExpression) {
+            this.host.writeExpression(expression, width);
+        }
+        else {
+            this.writeDataByLength(width, this.host.operandResolver.getnum(expression));
         }
     }
     /**

@@ -1,5 +1,5 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { readAnalysisTargetState, analyzeStaticControlFlow, HalfOpenIntervalIndex, } from "@uttori/asm-disassembler";
+import { readAnalysisTargetState, analyzeStaticControlFlow, EvidencePool, HalfOpenIntervalIndex, withCompactAnalysisOwnership, } from "@uttori/asm-disassembler";
 import { Cpu65816Decoder } from "../architectures/65816-decoder.js";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { applyCpu65816StateOverride, cpu65816DecodeState, cpu65816StateKey, emulationVectorCpu65816State, enterCpu65816Address, joinCpu65816States, nativeVectorCpu65816State, resetCpu65816State, transferCpu65816State, unknownCpu65816State, } from "./65816-state.js";
@@ -157,80 +157,116 @@ const annotationState = (state) => ({
     ...(knownNumber(state.d) === undefined ? {} : { directPage: knownNumber(state.d) }),
     ...(knownNumber(state.s) === undefined ? {} : { stackPointer: knownNumber(state.s) }),
 });
-const recordsFor = (result, runEvidence) => [
-    ...result.nodes.map((node) => ({
-        id: `static:${node.id}`,
-        kind: "cfg-node",
-        addressSpace: SNES_CPU_ADDRESS_SPACE,
-        address: node.address,
-        fileOffset: node.fileOffset,
-        size: node.size,
-        opcode: node.opcode,
-        specificationId: node.specificationId,
-        mnemonic: node.mnemonic,
-        mode: node.mode,
-        context: node.context,
-        incomingState: cpu65816StateRecord(node.incomingState),
-        outgoingState: cpu65816StateRecord(node.outgoingState),
-        effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
-        entryPoint: node.entryPoint,
-        evidencePath: node.evidencePath.map((id) => `static:${id}`),
-        evidence: [...new Set([...node.evidence, runEvidence])].toSorted(),
-    })),
-    ...result.edges.map((edge) => ({
-        id: `static:${edge.id}`,
-        kind: "cfg-edge",
-        addressSpace: SNES_CPU_ADDRESS_SPACE,
-        from: `static:${edge.from}`,
-        fromAddress: edge.fromAddress,
-        ...(edge.to ? { to: `static:${edge.to}` } : {}),
-        ...(edge.toAddress === undefined ? {} : { toAddress: edge.toAddress }),
-        edgeKind: edge.kind,
-        indirect: edge.indirect,
-        ...(edge.override ? { override: edge.override } : {}),
-        ...(edge.explanation ? { explanation: edge.explanation } : {}),
-        evidence: [...new Set([...edge.evidence, runEvidence])].toSorted(),
-    })),
-    ...result.functions.map((fn) => ({
-        id: `static:${fn.id}`,
-        kind: "function",
-        addressSpace: SNES_CPU_ADDRESS_SPACE,
-        address: fn.address,
-        source: fn.source,
-        evidencePath: fn.evidencePath.map((id) => `static:${id}`),
-        evidence: [...new Set([...fn.evidence, runEvidence])].toSorted(),
-    })),
-    ...result.conflicts.map((conflict) => ({
-        id: `static:${conflict.id}`,
-        kind: "conflict",
-        addressSpace: SNES_CPU_ADDRESS_SPACE,
-        address: conflict.address,
-        conflictKind: conflict.kind,
-        message: conflict.message,
-        nodes: conflict.nodes.map((id) => `static:${id}`),
-        evidence: [...new Set([...conflict.evidence, runEvidence])].toSorted(),
-    })),
-    ...result.unresolved.map((flow) => ({
-        id: `static:${flow.id}`,
-        kind: "unresolved",
-        addressSpace: SNES_CPU_ADDRESS_SPACE,
-        address: flow.address,
-        flowKind: flow.kind,
-        indirect: flow.indirect,
-        reason: flow.reason,
-        evidence: [...new Set([...flow.evidence, runEvidence])].toSorted(),
-    })),
-    {
-        id: "static:65816:summary",
-        kind: "summary",
-        architecture: "snes.65816",
-        status: result.status,
-        coverage: coverageRecord(result.coverage),
-        processedWorkItems: result.processedWorkItems,
-        incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
-        evidence: [runEvidence],
-    },
-];
+const recordsFor = (result, runEvidence, retainGraph) => {
+    const evidencePool = new EvidencePool();
+    const ids = new Map();
+    // Paths and edges repeat the same CFG identities. Prefix each identity once so publication
+    // does not allocate a distinct string for every occurrence along every discovery path.
+    const staticId = (id) => {
+        let value = ids.get(id);
+        if (value === undefined) {
+            value = `static:${id}`;
+            ids.set(id, value);
+        }
+        return value;
+    };
+    const functionAddresses = new Set(result.functions.map((fn) => fn.address));
+    const entries = new Set(result.nodes
+        .filter((node) => functionAddresses.has(node.address))
+        .map((node) => staticId(node.id)));
+    /** Consume only this private run's arrays when the caller requests native records alone. */
+    const project = (values, convert) => {
+        if (retainGraph) {
+            return values.map(convert);
+        }
+        // The worklist just allocated these arrays for this run; no external caller has received them.
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+        const owned = values;
+        const output = [];
+        output.length = owned.length;
+        while (owned.length > 0) {
+            const index = owned.length - 1;
+            output[index] = convert(owned.pop());
+        }
+        return output;
+    };
+    const records = [
+        ...project(result.nodes, (node) => ({
+            id: staticId(node.id),
+            kind: "cfg-node",
+            addressSpace: SNES_CPU_ADDRESS_SPACE,
+            address: node.address,
+            fileOffset: node.fileOffset,
+            size: node.size,
+            opcode: node.opcode,
+            specificationId: node.specificationId,
+            mnemonic: node.mnemonic,
+            mode: node.mode,
+            context: node.context,
+            incomingState: cpu65816StateRecord(node.incomingState),
+            outgoingState: cpu65816StateRecord(node.outgoingState),
+            effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
+            entryPoint: node.entryPoint,
+            // The ownership forest below retains navigation without expanding every shared path prefix.
+            evidencePath: [staticId(node.id)],
+            evidence: evidencePool.sorted([...node.evidence, runEvidence]),
+        })),
+        ...project(result.edges, (edge) => ({
+            id: staticId(edge.id),
+            kind: "cfg-edge",
+            addressSpace: SNES_CPU_ADDRESS_SPACE,
+            from: staticId(edge.from),
+            fromAddress: edge.fromAddress,
+            ...(edge.to ? { to: staticId(edge.to) } : {}),
+            ...(edge.toAddress === undefined ? {} : { toAddress: edge.toAddress }),
+            edgeKind: edge.kind,
+            indirect: edge.indirect,
+            ...(edge.override ? { override: edge.override } : {}),
+            ...(edge.explanation ? { explanation: edge.explanation } : {}),
+            evidence: evidencePool.sorted([...edge.evidence, runEvidence]),
+        })),
+        ...project(result.functions, (fn) => ({
+            id: staticId(fn.id),
+            kind: "function",
+            addressSpace: SNES_CPU_ADDRESS_SPACE,
+            address: fn.address,
+            source: fn.source,
+            evidencePath: fn.evidencePredecessor ? [staticId(fn.evidencePredecessor)] : [],
+            evidence: evidencePool.sorted([...fn.evidence, runEvidence]),
+        })),
+        ...project(result.conflicts, (conflict) => ({
+            id: staticId(conflict.id),
+            kind: "conflict",
+            addressSpace: SNES_CPU_ADDRESS_SPACE,
+            address: conflict.address,
+            conflictKind: conflict.kind,
+            message: conflict.message,
+            nodes: conflict.nodes.map((id) => staticId(id)),
+            evidence: evidencePool.sorted([...conflict.evidence, runEvidence]),
+        })),
+        ...project(result.unresolved, (flow) => ({
+            id: staticId(flow.id),
+            kind: "unresolved",
+            addressSpace: SNES_CPU_ADDRESS_SPACE,
+            address: flow.address,
+            flowKind: flow.kind,
+            indirect: flow.indirect,
+            reason: flow.reason,
+            evidence: evidencePool.sorted([...flow.evidence, runEvidence]),
+        })),
+        {
+            id: "static:65816:summary",
+            kind: "summary",
+            architecture: "snes.65816",
+            status: result.status,
+            coverage: coverageRecord(result.coverage),
+            processedWorkItems: result.processedWorkItems,
+            incompleteReasons: incompleteReasonRecords(result.incompleteReasons),
+            evidence: [runEvidence],
+        },
+    ];
+    return withCompactAnalysisOwnership(records, entries);
+};
 const annotationsFor = (result, runEvidence) => {
     const output = new Map();
     const stateByOffset = new Map();
@@ -557,11 +593,16 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
         ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
         targetOverrides,
         onProgress: options.onProgress,
+        compactContextIds: options.compactContextIds,
     });
+    // Interval generation still consumes abstract states. Finish it before optionally draining the
+    // private CFG, so native publication never holds a second complete worklist graph in memory.
+    const annotationsResult = annotationsFor(result, runEvidence);
+    const records = recordsFor(result, runEvidence, options.retainGraph ?? true);
     return {
         ...result,
-        records: recordsFor(result, runEvidence),
-        annotations: annotationsFor(result, runEvidence),
+        records,
+        annotations: annotationsResult,
         evidenceRecords: [...evidenceRecords.values()].toSorted((left, right) => left.id.localeCompare(right.id)),
     };
 };

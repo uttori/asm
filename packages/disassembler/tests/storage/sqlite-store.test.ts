@@ -22,7 +22,6 @@ import {
   openAnalysisProjectStore,
   loadAnalysisProjectSnapshot,
   commitAnalysisProjectTransaction,
-  buildRomCoverageMap,
 } from "../../src/index.js";
 import { compareRuntimeRecordIds, runtimeColumns } from "../../src/storage/sqlite-records.js";
 import { RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL } from "../../src/storage/sqlite-runtime-batch.js";
@@ -674,16 +673,7 @@ test("SQLite round trips every runtime variant including optional and zero-value
   }
   const store = openAnalysisProjectStore(directory);
   try {
-    const streamed = store.transaction(
-      () =>
-        buildRomCoverageMap(
-          loaded.manifest,
-          { ...loaded.shards, runtime: [] },
-          store.runtimeRecords(),
-        ),
-      false,
-    );
-    t.deepEqual(streamed, buildRomCoverageMap(loaded.manifest, loaded.shards));
+    t.deepEqual([...store.runtimeRecords()], loaded.shards.runtime);
     t.deepEqual([...store.runtimeRecordsByKinds(["runtime-coverage"])], [runtime[4]]);
   } finally {
     store.close();

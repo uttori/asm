@@ -75,7 +75,21 @@ const temporary = (): string => fs.mkdtempSync(path.join(os.tmpdir(), "uttori-re
 test("explicit maintenance retires product caches and triggers without changing authoritative records", (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  publishAnalysisProject(directory, project());
+  const base = project();
+  const runtime = [
+    {
+      id: "retained-read",
+      kind: "runtime-coverage" as const,
+      architecture: "snes.65816",
+      addressSpace: "snes.cpu",
+      start: 0x8000,
+      end: 0x8001,
+      coverage: "read" as const,
+      count: 1,
+      evidence: [],
+    },
+  ];
+  publishAnalysisProject(directory, { ...base, shards: { ...base.shards, runtime } });
   const store = openAnalysisProjectStore(directory);
   const db = new DatabaseSync(store.file);
   try {
@@ -83,11 +97,18 @@ test("explicit maintenance retires product caches and triggers without changing 
     db.exec(
       "CREATE TABLE query_runtime_architectures(address_space TEXT, address INTEGER, architecture TEXT)",
     );
-    for (const key of ["snes_roles", "runtime_architectures", "retained_fixture"]) {
+    db.exec(
+      "CREATE TABLE query_coverage_segments(start INTEGER PRIMARY KEY,payload TEXT NOT NULL); CREATE TABLE query_coverage_details(kind TEXT,id TEXT,reason TEXT,payload TEXT NOT NULL)",
+    );
+    for (const key of ["coverage", "snes_roles", "runtime_architectures", "retained_fixture"]) {
       installQueryCache(db, key, ["analysis", "runtime"]);
       db.prepare("INSERT INTO query_cache VALUES(?,?,?)").run(key, "1", "true");
     }
     const result = store.maintainStorage();
+    t.true(result.evicted.includes("coverage"));
+    for (const table of ["query_coverage_segments", "query_coverage_details"]) {
+      t.falsy(db.prepare("SELECT 1 FROM sqlite_schema WHERE name=?").get(table));
+    }
     t.true(result.evicted.includes("snes_roles"));
     t.true(result.evicted.includes("runtime_architectures"));
     t.falsy(
@@ -96,7 +117,7 @@ test("explicit maintenance retires product caches and triggers without changing 
     t.is(
       db
         .prepare(
-          "SELECT count(*) AS n FROM sqlite_schema WHERE type='trigger' AND (name GLOB 'cache_snes_roles_*' OR name GLOB 'cache_runtime_architectures_*')",
+          "SELECT count(*) AS n FROM sqlite_schema WHERE type='trigger' AND (name GLOB 'cache_snes_roles_*' OR name GLOB 'cache_runtime_architectures_*' OR name GLOB 'cache_coverage_*')",
         )
         .get()!.n,
       0,
@@ -104,6 +125,7 @@ test("explicit maintenance retires product caches and triggers without changing 
     t.truthy(db.prepare("SELECT 1 FROM query_cache WHERE name='retained_fixture'").get());
     t.is(store.revision(), revision);
     t.deepEqual(store.loadTable("evidence"), []);
+    t.deepEqual([...store.runtimeRecords()], runtime);
     t.false(store.maintainStorage().evicted.includes("snes_roles"));
   } finally {
     db.close();

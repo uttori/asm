@@ -114,4 +114,8 @@ export interface SyntaxGrammar {
  * Allow up to 1,000,000 values and 128 nesting levels (the root is level zero).
  */
 export declare function copySyntaxValue(value: unknown): SyntaxValue;
+/** Detach and freeze a bounded JSON tree; never freeze caller-owned parser or transport objects. */
+export declare function immutableSyntaxValue(value: unknown): SyntaxValue;
+/** Object.freeze alone cannot prove recursive immutability or prior structural validation. */
+export declare function isImmutableSyntaxValue(value: unknown): value is SyntaxValue;
 //# sourceMappingURL=source-syntax.d.ts.map

@@ -63,7 +63,7 @@ function selectArchitecture({ session }, archParam) {
  */
 const empty = () => ({});
 export const registerGenericLayoutDirectives = (registry, context) => {
-    registry.registerTyped("base", ({ words }) => {
+    registry.registerImmutableTyped("base", ({ words }) => {
         if (words.length !== 2) {
             throw new Error("BASE directive requires exactly one parameter.");
         }
@@ -92,7 +92,7 @@ export const registerGenericLayoutDirectives = (registry, context) => {
         session.currentTargetAddress = value;
         session.currentTargetStartAddress = value;
     });
-    registry.registerTyped("org", ({ words }) => {
+    registry.registerImmutableTyped("org", ({ words }) => {
         if (words.length !== 2) {
             throw new Error("ORG requires a single address parameter.");
         }
@@ -101,11 +101,11 @@ export const registerGenericLayoutDirectives = (registry, context) => {
         context.org.runtime.executeOrg(address, text);
     });
     const emptySyntax = syntaxRecord({});
-    registry.registerTyped("pushbase", empty, emptySyntax, () => handlePushBase(context.addressStack));
-    registry.registerTyped("pullbase", empty, emptySyntax, () => handlePullBase(context.addressStack));
-    registry.registerTyped("pushpc", empty, emptySyntax, () => context.runtime.runtime.handlePushPC());
-    registry.registerTyped("pullpc", empty, emptySyntax, () => context.runtime.runtime.handlePullPC());
-    registry.registerTyped("arch", ({ words }) => parseArchitectureName(words), syntaxRecord({ name: syntaxString }), ({ name }) => selectArchitecture(context.architecture, name));
+    registry.registerImmutableTyped("pushbase", empty, emptySyntax, () => handlePushBase(context.addressStack));
+    registry.registerImmutableTyped("pullbase", empty, emptySyntax, () => handlePullBase(context.addressStack));
+    registry.registerImmutableTyped("pushpc", empty, emptySyntax, () => context.runtime.runtime.handlePushPC());
+    registry.registerImmutableTyped("pullpc", empty, emptySyntax, () => context.runtime.runtime.handlePullPC());
+    registry.registerImmutableTyped("arch", ({ words }) => parseArchitectureName(words), syntaxRecord({ name: syntaxString }), ({ name }) => selectArchitecture(context.architecture, name));
 };
 /**
  * Registers the core layout directive group.

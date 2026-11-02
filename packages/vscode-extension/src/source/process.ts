@@ -1,3 +1,4 @@
+import somPlugin from "@uttori/asm-game-secret-of-mana";
 import { executeSourceOperation } from "@uttori/asm-game-secret-of-mana/source-host";
 import {
   executeAssetOperation,
@@ -5,10 +6,16 @@ import {
 } from "@uttori/asm-game-secret-of-mana/workflows";
 import { type AssetOperation } from "@uttori/asm-workflows/asset-interchange";
 import { type AssetSourceOperation } from "@uttori/asm-workflows/asset-source";
+import {
+  createAssemblyBuildHost,
+  executeAssemblyBuildOperation,
+  type AssemblyBuildOperation,
+} from "@uttori/asm-workflows/build";
 import { SourceOperationError } from "@uttori/asm-workflows/source";
 import { type SourceOperation } from "@uttori/asm-workflows/source";
 
 const cancellation = new AbortController();
+const assemblyHost = createAssemblyBuildHost([["@uttori/asm-game-secret-of-mana", somPlugin]]);
 let started = false;
 let publication: { resolve(): void; reject(error: Error): void } | undefined;
 
@@ -53,6 +60,13 @@ function isAssetOperation(
   );
 }
 
+/** Explicit action names keep ordinary source operations on their existing dispatcher. */
+function isAssemblyBuildOperation(
+  operation: SourceOperation | AssetOperation | AssetSourceOperation | AssemblyBuildOperation,
+): operation is AssemblyBuildOperation {
+  return ["assemble-object", "library", "link", "build-linked"].includes(operation.action);
+}
+
 /** One isolated operation per process; SQLite and native Git own recovery after an interrupted writer. */
 process.on(
   "message",
@@ -60,7 +74,14 @@ process.on(
     message:
       | { type: "cancel" }
       | { type: "publish-confirm"; error?: string }
-      | { type: "run"; operation: SourceOperation | AssetOperation | AssetSourceOperation },
+      | {
+          type: "run";
+          operation:
+            | SourceOperation
+            | AssetOperation
+            | AssetSourceOperation
+            | AssemblyBuildOperation;
+        },
   ) => {
     if (message.type === "cancel") {
       cancellation.abort();
@@ -80,7 +101,17 @@ process.on(
     }
     started = true;
     let operation: Promise<unknown>;
-    if (
+    if (isAssemblyBuildOperation(message.operation)) {
+      operation = executeAssemblyBuildOperation(
+        message.operation,
+        {
+          signal: cancellation.signal,
+          onProgress: (progress) => process.send?.({ type: "progress", message: progress }),
+          beforePublish,
+        },
+        assemblyHost,
+      );
+    } else if (
       message.operation.action === "asset-convert" ||
       message.operation.action === "asset-conversion-finish" ||
       message.operation.action === "asset-source-target"

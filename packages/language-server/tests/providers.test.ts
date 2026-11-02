@@ -1127,3 +1127,46 @@ test("project outline groups the include DAG under entry points and lists orphan
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("module analysis snapshots retain section identity and cannot hydrate an absolute workspace", (t) => {
+  const options = snesWorkspaceIndexOptions({ module: { id: "analysis" } });
+  const index = new WorkspaceIndex(options);
+  const moduleFile = path.resolve("/virtual/module-providers.asm");
+  index.openDocument(
+    moduleFile,
+    'section "Code"\nStart:\nnop\nsection "Data",data\nData:\ndl Start\n',
+  );
+  index.reindex();
+  t.deepEqual(index.getDiagnostics(moduleFile), []);
+  t.deepEqual(index.getSymbols(moduleFile).find(({ name }) => name === "Start")?.relocatable, {
+    section: "Code",
+    offset: 0,
+  });
+  const snapshot = index.snapshot();
+  const hydrated = WorkspaceIndex.fromSnapshot(options, snapshot, index.overlay);
+  t.deepEqual(hydrated.getSymbols(moduleFile), index.getSymbols(moduleFile));
+  t.throws(
+    () => WorkspaceIndex.fromSnapshot(snesWorkspaceIndexOptions(), snapshot, index.overlay),
+    { message: /different environment/ },
+  );
+  t.throws(
+    () =>
+      WorkspaceIndex.fromSnapshot(
+        snesWorkspaceIndexOptions({ module: { id: "another" } }),
+        snapshot,
+        index.overlay,
+      ),
+    { message: /different environment/ },
+  );
+  const hover = hoverFor(
+    hydrated,
+    moduleFile,
+    { line: 1, character: 1 },
+    index.getFileText(moduleFile)!,
+  );
+  t.regex(JSON.stringify(hover), /unlinked/);
+  t.regex(JSON.stringify(documentSymbolsFor(hydrated, moduleFile)), /unlinked/);
+  index.configure({ module: undefined });
+  t.false(index.getSymbols(moduleFile).some((symbol) => symbol.relocatable !== undefined));
+  t.true(index.getStatus().lastReindexAnalyzedRoots > 0);
+});

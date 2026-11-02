@@ -6,9 +6,12 @@ import {
   inspectFrameAtlas,
   refreshFrameAtlas,
 } from "../src/secret-of-mana/som-frame-atlas.js";
-import { inspectSpritePaletteUsers, planSpritePaletteEdits } from "../src/secret-of-mana/som-palette-edit.js";
-import { renderStableFrameAtlas } from "../src/secret-of-mana/som-frame-edit.js";
 import { deriveFramePlacements } from "../src/secret-of-mana/som-frame-composition.js";
+import { renderStableFrameAtlas } from "../src/secret-of-mana/som-frame-edit.js";
+import {
+  inspectSpritePaletteUsers,
+  planSpritePaletteEdits,
+} from "../src/secret-of-mana/som-palette-edit.js";
 import {
   spritePaletteColors,
   spritePaletteBytes,
@@ -19,32 +22,72 @@ import type { FrameLayout, SpriteAtlasSource } from "../src/secret-of-mana/som-t
 
 /** Two poses share one native tile but display red and green palette groups. */
 function displayPaletteFixture() {
-  const catalog: SpritePaletteCatalog = { version: 1, palettes: {
-    C08000: { romAddress: "C08000", firstIndex: 0, words: Array(16).fill("001F"),
-      users: [{ atlas: "shared.png", role: "primary", segments: ["tile"] }] },
-    C08020: { romAddress: "C08020", firstIndex: 0, words: Array(16).fill("03E0"),
-      users: [{ atlas: "shared.png", role: "runtime-variant", segments: ["tile"] }] },
-  } };
-  const layout: FrameLayout = { version: 1, width: 16, height: 16, paletteRefs: ["C08000", "C08020"],
-    guideIndex: 32, tileSources: "native-strip", segments: { tile: {
-      romAddress: "C09000", palette: 0, tiles: [{ x: 0, y: 8 }],
-      tileAtlas: { bounds: [0, 8, 8, 8], columns: 1, step: 8, sourceOnly: [] },
-    } }, frames: [
-      { id: "red", bounds: [0, 0, 8, 8], origin: [0, 0],
-        placements: [{ id: "one", x: 0, y: 0, segment: "tile", tile: 0 }] },
-      { id: "green", bounds: [8, 0, 8, 8], origin: [8, 0], paletteGroup: 1,
-        placements: [{ id: "one", x: 0, y: 0, segment: "tile", tile: 0 }] },
-    ] };
+  const catalog: SpritePaletteCatalog = {
+    version: 1,
+    palettes: {
+      C08000: {
+        romAddress: "C08000",
+        firstIndex: 0,
+        words: Array(16).fill("001F"),
+        users: [{ atlas: "shared.png", role: "primary", segments: ["tile"] }],
+      },
+      C08020: {
+        romAddress: "C08020",
+        firstIndex: 0,
+        words: Array(16).fill("03E0"),
+        users: [{ atlas: "shared.png", role: "runtime-variant", segments: ["tile"] }],
+      },
+    },
+  };
+  const layout: FrameLayout = {
+    version: 1,
+    width: 16,
+    height: 16,
+    paletteRefs: ["C08000", "C08020"],
+    guideIndex: 32,
+    tileSources: "native-strip",
+    segments: {
+      tile: {
+        romAddress: "C09000",
+        palette: 0,
+        tiles: [{ x: 0, y: 8 }],
+        tileAtlas: { bounds: [0, 8, 8, 8], columns: 1, step: 8, sourceOnly: [] },
+      },
+    },
+    frames: [
+      {
+        id: "red",
+        bounds: [0, 0, 8, 8],
+        origin: [0, 0],
+        placements: [{ id: "one", x: 0, y: 0, segment: "tile", tile: 0 }],
+      },
+      {
+        id: "green",
+        bounds: [8, 0, 8, 8],
+        origin: [8, 0],
+        paletteGroup: 1,
+        placements: [{ id: "one", x: 0, y: 0, segment: "tile", tile: 0 }],
+      },
+    ],
+  };
   const indexes = new Uint8Array(256);
   for (const frame of layout.frames!) {
-    frame.blocks = [{ id: "one", x: 0, y: 0, size: 8, flipX: false, flipY: false, tiles: [["tile", 0]] }];
+    frame.blocks = [
+      { id: "one", x: 0, y: 0, size: 8, flipX: false, flipY: false, tiles: [["tile", 0]] },
+    ];
     frame.placements = deriveFramePlacements(layout, frame);
   }
-  for (let y = 8; y < 16; y++) indexes.fill(1, y * 16, y * 16 + 8);
+  for (let y = 8; y < 16; y++) {
+    indexes.fill(1, y * 16, y * 16 + 8);
+  }
   const palette: [number, number, number, number][] = [
-    ...layout.paletteRefs.flatMap(id => spritePaletteColors(catalog, id)), [255, 0, 255, 255],
+    ...layout.paletteRefs.flatMap((id) => spritePaletteColors(catalog, id)),
+    [255, 0, 255, 255],
   ];
-  const source = { bytes: createIndexedPng({ width: 16, height: 16, indexes, palette }), mediaType: "image/png" };
+  const source = {
+    bytes: createIndexedPng({ width: 16, height: 16, indexes, palette }),
+    mediaType: "image/png",
+  };
   return { catalog, layout, source };
 }
 
@@ -52,12 +95,18 @@ test("shared tiles retain distinct displayed palettes through refresh and stable
   const { catalog, layout, source } = displayPaletteFixture();
   const before = encodeFrameAtlas(source, layout, "tile", catalog);
   const inspected = inspectFrameAtlas(source, layout, catalog, { whole: true });
-  for (const rendered of [refreshFrameAtlas(inspected), renderStableFrameAtlas(inspected.tiles, layout)]) {
+  for (const rendered of [
+    refreshFrameAtlas(inspected),
+    renderStableFrameAtlas(inspected.tiles, layout),
+  ]) {
     t.is(rendered.indexes[0], 1);
     t.is(rendered.indexes[8], 17);
     t.is(rendered.indexes[128], 1);
     t.notDeepEqual(inspected.image.palette[1], inspected.image.palette[17]);
-    const updated = { bytes: createIndexedPng({ ...rendered, palette: inspected.image.palette }), mediaType: "image/png" };
+    const updated = {
+      bytes: createIndexedPng({ ...rendered, palette: inspected.image.palette }),
+      mediaType: "image/png",
+    };
     t.deepEqual(encodeFrameAtlas(updated, layout, "tile", catalog), before);
   }
   t.deepEqual(inspectSpritePaletteUsers(catalog, [{ id: "shared.png", layout }]).errors, []);
@@ -67,7 +116,9 @@ test("display palette groups reject invalid references even for a selected nativ
   const { catalog, layout, source } = displayPaletteFixture();
   for (const invalid of [-1, 0.5, 2, NaN]) {
     layout.frames![1].paletteGroup = invalid;
-    t.throws(() => encodeFrameAtlas(source, layout, "tile", catalog), { message: /display palette group/ });
+    t.throws(() => encodeFrameAtlas(source, layout, "tile", catalog), {
+      message: /display palette group/,
+    });
   }
 });
 
@@ -75,27 +126,38 @@ test("block display palettes override pose colors and remain part of retained co
   const { catalog, layout, source } = displayPaletteFixture();
   const frame = layout.frames![0];
   frame.blocks![0].paletteGroup = 1;
-  t.throws(() => inspectFrameAtlas(source, layout, catalog, { whole: true }), { message: /Derived placements disagree/ });
+  t.throws(() => inspectFrameAtlas(source, layout, catalog, { whole: true }), {
+    message: /Derived placements disagree/,
+  });
   frame.placements = deriveFramePlacements(layout, frame);
   const inspected = inspectFrameAtlas(source, layout, catalog, { whole: true });
   t.is(refreshFrameAtlas(inspected).indexes[0], 17);
   t.is(renderStableFrameAtlas(inspected.tiles, layout).indexes[0], 17);
   frame.blocks![0].paletteGroup = 2;
-  t.throws(() => deriveFramePlacements(layout, frame), { message: /invalid display palette group/ });
-  t.throws(() => encodeFrameAtlas(source, layout, "tile", catalog), { message: /invalid display palette group/ });
+  t.throws(() => deriveFramePlacements(layout, frame), {
+    message: /invalid display palette group/,
+  });
+  t.throws(() => encodeFrameAtlas(source, layout, "tile", catalog), {
+    message: /invalid display palette group/,
+  });
 });
 
 test("blank poses retain an explicit display palette without inventing a native tile owner", (t) => {
   const { catalog, layout } = displayPaletteFixture();
   const frame = layout.frames![1];
   frame.blocks![0].tiles = [0xc09020];
-  frame.placements = [{ id: "blank", x: 0, y: 0,
-    external: { romAddress: "C09020", indexes: Array(64).fill(0) } }];
+  frame.placements = [
+    { id: "blank", x: 0, y: 0, external: { romAddress: "C09020", indexes: Array(64).fill(0) } },
+  ];
   frame.placements = deriveFramePlacements(layout, frame);
   catalog.palettes.C08020.users![0].segments = [];
   t.deepEqual(inspectSpritePaletteUsers(catalog, [{ id: "shared.png", layout }]).errors, []);
   delete frame.paletteGroup;
-  t.true(inspectSpritePaletteUsers(catalog, [{ id: "shared.png", layout }]).errors.some(error => error.includes("has no segment")));
+  t.true(
+    inspectSpritePaletteUsers(catalog, [{ id: "shared.png", layout }]).errors.some((error) =>
+      error.includes("has no segment"),
+    ),
+  );
 });
 
 test("palette slices bound physical ownership and overlapping views must agree", (t) => {

@@ -14,9 +14,10 @@ const digestFile = async (file, signal) => {
     return hash.digest("hex");
 };
 /** Verify the entire companion before feeding a save state to native code. Every
- * path is a flat, regular artifact, and every byte is bound to this ROM/build.
+ * path is a flat, regular artifact, and every byte is bound to the recording's identity.
+ * Producer revisions authenticate the companion, not the build currently loading it.
  * @param {string} directory Companion directory selected by the user.
- * @param {Pick<CaptureFileMetadata, "romContentSha256" | "romFileSha256" | "producer">} identity ROM and producer identity of the verified running emulator.
+ * @param {Pick<CaptureFileMetadata, "romContentSha256" | "romFileSha256" | "producer">} identity Required ROM and recorded producer identity; the running build may differ.
  */
 export const verifyCaptureContext = async (directory, identity, signal) => {
     signal?.throwIfAborted();
@@ -37,7 +38,7 @@ export const verifyCaptureContext = async (directory, identity, signal) => {
         producer.id !== identity.producer.id ||
         producer.revision !== identity.producer.revision ||
         !isRecord(manifest.files)) {
-        throw new Error("Capture context requires the matching ROM and emulator build.");
+        throw new Error("Capture context does not match the supplied recording identity.");
     }
     const nes = manifest.architecture === "65xx.2a03";
     if ((nes &&

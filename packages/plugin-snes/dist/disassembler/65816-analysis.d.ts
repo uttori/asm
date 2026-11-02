@@ -20,6 +20,8 @@ export interface Snes65816EntryPoint {
  * as input (the run rewrites `static:65816:*` annotations on the way out).
  */
 export interface Snes65816AnalysisOptions extends StaticAnalysisLimits {
+    /** Default true. False consumes detailed worklist arrays during publication; records and coverage remain complete. */
+    readonly retainGraph?: boolean;
     /** Existing project intervals. `static:65816:*` ids are stripped then regenerated. */
     readonly annotations?: readonly IntervalAnnotation[];
     /** Named labels used as additional CFG seeds. */
@@ -33,7 +35,7 @@ export interface Snes65816AnalysisOptions extends StaticAnalysisLimits {
     /** Manual resolutions for indirect control-flow sites. */
     readonly targetOverrides?: readonly AnalysisTargetOverrideRecord[];
 }
-/** Worklist CFG plus project-shaped records, opcode/operand intervals, and run evidence. */
+/** Worklist CFG plus native records and intervals. Detailed worklist arrays are empty when retainGraph is false. */
 export interface Snes65816AnalysisResult extends StaticAnalysisResult<Cpu65816AbstractState> {
     /** CFG nodes/edges, functions, conflicts, unresolved flows, and a run summary. */
     readonly records: readonly AnalysisRecord[];

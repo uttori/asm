@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { window, workspace } from "vscode";
 
-import { findAnalysisProjectDirectories } from "../analysis/coverage-tree.js";
+import { findAnalysisProjectDirectories } from "../analysis/project-discovery.js";
 import { analysisWorker } from "../analysis/worker-client.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {

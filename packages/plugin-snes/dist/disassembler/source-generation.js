@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { RomImage, openAnalysisProjectStore, validateProjectRom } from "@uttori/asm-disassembler";
-import { assertSourcePath, sourceGit, retainSourceGeneration, sourceContentHash, verifySourceGeneration, createSourceInputSnapshot, createSourceScratch, } from "@uttori/asm-disassembler/source-project";
+import { assertSourcePath, sourceLinkFiles, sourceLinkEntry, readSourceLinkBuild, sourceGit, retainSourceGeneration, sourceContentHash, verifySourceGeneration, createSourceInputSnapshot, createSourceScratch, } from "@uttori/asm-disassembler/source-project";
 import { lostCodeRanges } from "./code-preservation.js";
 import { buildSnesSource } from "./source-build.js";
 import { exportSnes65816Source } from "./source-export.js";
@@ -11,6 +11,7 @@ import { validateSnesStructMap } from "./struct-map.js";
 /** Exact render options include recipe contents and the pristine-asset selection, not host paths. */
 export function snesGenerationOptionsHash(options) {
     return sourceContentHash(canonicalJson({
+        ...(options.assembly ? { assembly: options.assembly } : {}),
         sourceRoot: options.sourceRoot,
         recipes: options.recipes
             .map((file) => ({ path: file.path, sha256: sourceContentHash(file.bytes) }))
@@ -55,6 +56,9 @@ function isSourceCodeContract(value) {
  */
 export async function prepareSnesGeneration(options) {
     assertSourcePath(options.sourceRoot);
+    if (options.assembly !== options.inputs.assembly) {
+        throw new Error("Generation assembly selection changed.");
+    }
     options.signal?.throwIfAborted();
     if (snesGenerationOptionsHash(options) !== options.inputs.optionsSha256) {
         throw new Error("Generation recipe identity changed.");
@@ -78,6 +82,10 @@ export async function prepareSnesGeneration(options) {
         prior.descriptor.inputs.romSha256 !== options.inputs.romSha256) {
         throw new Error("Prepare regeneration from the accepted project/ROM lineage.");
     }
+    const compilerRecipe = options.recipes.find((file) => file.path === "uttori-asm.config.json");
+    const entrySource = options.assembly === "linked" && compilerRecipe
+        ? sourceLinkEntry(JSON.parse(Buffer.from(compilerRecipe.bytes).toString("utf8")))
+        : "main.asm";
     const scratch = createSourceScratch(options.repository, "prepare");
     const temporary = scratch.directory;
     const source = path.join(temporary, options.sourceRoot);
@@ -134,13 +142,15 @@ export async function prepareSnesGeneration(options) {
             const exportedManifest = exportSnes65816Source(project, loadedRom, source, {
                 sourceProjectSha256: sourceContentHash(canonicalJson(project.manifest)),
                 instructionGroups,
+                ...(options.assembly === "linked" ? { module: { id: options.inputs.project } } : {}),
                 emitFile: (file) => {
                     options.signal?.throwIfAborted();
                     // Reports are disposable diagnostics, not editable source or merge inputs.
                     if (file.path === "annotation-report.json") {
                         return;
                     }
-                    write({ path: `${options.sourceRoot}/${file.path}`, bytes: file.bytes });
+                    const outputPath = file.path === "main.asm" ? entrySource : file.path;
+                    write({ path: `${options.sourceRoot}/${outputPath}`, bytes: file.bytes });
                 },
             });
             return { manifest: exportedManifest, rom: loadedRom };
@@ -222,14 +232,42 @@ export async function prepareSnesGeneration(options) {
         // Configuration is a build input on both histories. Research maps remain owned by the source
         // branch and are retained there through the explicit checkpoint required before applying.
         const configuration = options.recipes.find((file) => file.path === "uttori-asm.config.json");
-        write({ path: `${options.sourceRoot}/${configuration.path}`, bytes: configuration.bytes });
+        let configurationBytes = configuration.bytes;
+        if (options.assembly === "linked") {
+            if (!manifest.relocatable) {
+                throw new Error("Exporter did not provide a relocatable recipe.");
+            }
+            for (const file of sourceLinkFiles(configuration.bytes, options.inputs.project, manifest.relocatable.linkRecipe, options.sourceRoot)) {
+                const name = `${options.sourceRoot}/${file.path}`;
+                const previous = generated.get(name);
+                // The exporter already emitted this recipe; do not replace or silently disagree with its layout.
+                if (previous) {
+                    if (!Buffer.from(previous.bytes).equals(file.bytes)) {
+                        throw new Error("Generated link recipes disagree.");
+                    }
+                    continue;
+                }
+                write({ path: name, bytes: file.bytes });
+            }
+            configurationBytes = generated.get(`${options.sourceRoot}/${configuration.path}`).bytes;
+        }
+        else {
+            write({ path: `${options.sourceRoot}/${configuration.path}`, bytes: configurationBytes });
+        }
+        const configFile = path.join(source, configuration.path);
+        const linkConfiguration = JSON.parse(Buffer.from(configurationBytes).toString("utf8"));
+        if (!isRecord(linkConfiguration)) {
+            throw new Error("Source compiler configuration must be an object.");
+        }
+        const link = readSourceLinkBuild(linkConfiguration, configFile, path.join(source, entrySource), (file) => fs.readFileSync(file));
         options.onProgress?.("Assembling generated source and verifying original-ROM equality.");
         const loaded = await options.loadEnvironment(path.join(source, configuration.path));
         let build;
         try {
             build = buildSnesSource({
                 root: temporary,
-                entrySource: `${options.sourceRoot}/main.asm`,
+                ...(link ? { link, originalContainer: rom.fileBytes() } : {}),
+                entrySource: `${options.sourceRoot}/${entrySource}`,
                 environment: loaded.environment,
                 includePaths: loaded.includePaths,
                 targetOptions: { ...loaded.targetOptions, checksumEnabled: false, checksumMode: "asar" },
@@ -242,7 +280,7 @@ export async function prepareSnesGeneration(options) {
                 },
                 outputDirectory: path.join(temporary, "build"),
                 toolchainSha256: options.inputs.toolchainSha256,
-                configurationSha256: sourceContentHash(configuration.bytes),
+                configurationSha256: sourceContentHash(configurationBytes),
                 signal: options.signal,
             });
         }
@@ -250,6 +288,25 @@ export async function prepareSnesGeneration(options) {
             await loaded.dispose();
         }
         options.onProgress?.("Retaining the verified immutable generation in Git.");
+        if (link) {
+            // Keep a portable proof in the immutable payload; temporary paths and debug-map hashes would
+            // make identical generations differ merely because they used different scratch directories.
+            write({
+                path: `${options.sourceRoot}/link-verification.json`,
+                bytes: Buffer.from(canonicalJson({
+                    format: "uttori-source-link-verification",
+                    version: 1,
+                    target: "snes.sfc",
+                    module: link.module.id,
+                    recipeSha256: sourceContentHash(canonicalJson(link.recipe)),
+                    originalContainerSha256: rom.identity.sha256,
+                    outputSha256: build.verification.outputSha256,
+                    outputSize: rom.identity.fileSize,
+                    toolchainSha256: options.inputs.toolchainSha256,
+                    checks: build.verification.checks,
+                })),
+            });
+        }
         const generation = await retainSourceGeneration(options.repository, {
             files: [...generated.values(), createSourceInputSnapshot(options.inputFiles)],
             inputs: options.inputs,

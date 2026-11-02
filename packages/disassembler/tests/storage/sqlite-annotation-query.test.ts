@@ -9,7 +9,6 @@ import {
   publishAnalysisProject,
   openAnalysisProjectStore,
   buildInstructionAnalysisAnnotations,
-  buildRomCoverageMap,
   type AnalysisProject,
   type AnalysisControlFlowNodeRecord,
   type RuntimeEvidenceRecord,
@@ -535,75 +534,6 @@ test("partial index construction rolls back", (t) => {
   } finally {
     inspect.close();
   }
-});
-
-test("SQL coverage pages and totals match the standalone sweep and survive unrelated edits", (t) => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-coverage-"));
-  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const base = project();
-  const shards = {
-    ...base.shards,
-    regions: [
-      { id: "region", name: "Test region", addressSpace: "file", start: 0, end: 4, evidence: [] },
-    ],
-    analysis: [
-      ...base.shards.analysis,
-      {
-        id: "conflict",
-        kind: "conflict" as const,
-        addressSpace: "cpu",
-        address: 0x100,
-        conflictKind: "test",
-        message: "Test",
-        nodes: ["node", "alias"],
-        evidence: [],
-      },
-    ],
-    runtime: [
-      ...base.shards.runtime,
-      {
-        id: "file-coverage",
-        kind: "runtime-coverage" as const,
-        architecture: "fixture.cpu",
-        addressSpace: "file",
-        start: 0,
-        end: 3,
-        coverage: "read" as const,
-        count: 1,
-        evidence: [],
-      },
-      {
-        id: "outside",
-        kind: "runtime-execution" as const,
-        architecture: "fixture.cpu",
-        addressSpace: "cpu",
-        address: 0x111,
-        fileOffset: 0x7fff,
-        size: 3,
-        count: 1,
-        evidence: [],
-      },
-    ],
-  };
-  publishAnalysisProject(directory, { ...base, shards });
-  const store = openAnalysisProjectStore(directory);
-  t.teardown(() => store.close());
-  const expected = buildRomCoverageMap(base.manifest, shards);
-  const actual = store.coverageSummary();
-  t.deepEqual(actual.summary, expected.summary);
-  t.deepEqual(store.coveragePage("segments"), expected.segments);
-  t.is(actual.detailCount, expected.diagnostics.length + expected.unprojected.length);
-  store.transaction(() =>
-    store.replaceTables({
-      comments: [{ id: "new", addressSpace: "cpu", address: 0x100, text: "New", evidence: [] }],
-    }),
-  );
-  t.deepEqual(store.coverageSummary(), actual);
-  store.transaction(() => store.replaceTables({ annotations: [] }));
-  t.deepEqual(
-    store.coverageSummary().summary,
-    buildRomCoverageMap(base.manifest, { ...shards, annotations: [] }).summary,
-  );
 });
 
 test("SQL call ownership preserves aliases, missing edges, and last-entry evidence paths", (t) => {

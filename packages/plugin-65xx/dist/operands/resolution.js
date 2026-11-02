@@ -26,6 +26,17 @@ function valueWidth(value) {
 }
 /** Speculative width reads swallow errors, as unresolved operands must survive definition collection. */
 function expand(plan, frame) {
+    // Native modules use authored widths. The explicit Asar adapter may reuse known source addresses
+    // for encoding selection while keeping the actual field expression relocatable.
+    if (frame.isRelocatable &&
+        (frame.sourceAdapter !== "asar" || frame.previewSource(plan.scalar) === undefined)) {
+        return {
+            length: plan.force ?? plan.hexWidth ?? 2,
+            generated: false,
+            value: 0,
+            flattened: false,
+        };
+    }
     let length = plan.hexWidth ?? 2;
     let value = 0;
     let generated = false;

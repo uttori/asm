@@ -5,9 +5,11 @@ import { ca65DirectiveSyntax } from "./directives/ca65-syntax.js";
 import { buildInstructionCatalog } from "./instructions/catalog.js";
 import { nmos6502Cpu, nmos6502Forms, nmos6502xCpu, nmos6502xForms, ricoh2a03Cpu, } from "./instructions/opcodes.js";
 import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
+import { ld65LinkRecipe } from "./linker-config.js";
 import { nesAssetFormats } from "./nes/assets.js";
 import { parse65xxOperands } from "./operands/syntax.js";
-import { NES_65XX_SESSION_STATE_ID, cloneNes65xxSessionState, resetNes65xxStageState, } from "./session-state.js";
+import { nes65xxSessionStateKey, NES_65XX_SESSION_STATE_ID, cloneNes65xxSessionState, resetNes65xxStageState, } from "./session-state.js";
+import { createNesLinkTarget, createNesSourceLinkRecipe } from "./target/link-target.js";
 import { NES_65XX_ADDRESS_SPACE_ID, NES_65XX_LIFECYCLE_ID, NES_65XX_OUTPUT_FORMAT_ID, NES_65XX_TARGET_ID, createInitialNesState, createNes65xxTargetOptions, createNesAddressSpace, createNesLifecycle, createNesOutputFormat, } from "./target/nes.js";
 import { TypedArch65xx } from "./typed-architecture.js";
 /** Flat 16-bit raw binary target (`65xx`, `6502-raw` aliases). */
@@ -379,6 +381,35 @@ export function register65xxContributions(context) {
         createSyntaxProfile: (options) => options.sourceStyle === "asar" ? ASAR_SYNTAX_PROFILE : CA65_65XX_SYNTAX_PROFILE,
         defaultOutputExtension: ".nes",
         createOptions: createNes65xxTargetOptions,
+        createLinkTarget: createNesLinkTarget,
+        createSourceLinkRecipe: createNesSourceLinkRecipe,
+        createLinkRecipe: ({ state }) => {
+            const nes = state.get(nes65xxSessionStateKey);
+            const recipe = ld65LinkRecipe(nes.linker, NES_65XX_TARGET_ID);
+            return {
+                ...recipe,
+                regions: [
+                    {
+                        name: "__ines_header",
+                        start: 0,
+                        size: nes.header.length,
+                        outputOffset: 0,
+                        initialBytes: [...nes.header],
+                    },
+                    // The flat NES lifecycle fills the complete cartridge with the target byte, including MEMORY gaps.
+                    // Keep its established output here; ld65LinkRecipe remains available for explicit per-region policies.
+                    ...recipe.regions.map((region) => ({
+                        ...region,
+                        ...(region.outputOffset !== undefined
+                            ? {
+                                outputOffset: region.outputOffset + nes.header.length,
+                                fillByte: nes.fillByte,
+                            }
+                            : {}),
+                    })),
+                ],
+            };
+        },
     });
 }
 /** Activation accepts either target's configuration; the selected target validates it again per session. */
@@ -434,6 +465,7 @@ export { cmos65c02Cpu, cmos65c02Forms, cmos65sc02Cpu, cmos65sc02Forms, commodore
 export { matchesFeatures } from "./instructions/schema.js";
 export { NES_65XX_ADDRESS_SPACE_ID, NES_65XX_LIFECYCLE_ID, NES_65XX_OUTPUT_FORMAT_ID, NES_65XX_TARGET_ID, createNes65xxTargetOptions, } from "./target/nes.js";
 export { NES_65XX_SESSION_STATE_ID, nes65xxSessionStateKey } from "./session-state.js";
-export { parseLd65Config, defaultLd65ConfigText } from "./linker-config.js";
+export { parseLd65Config, defaultLd65ConfigText, ld65LinkRecipe } from "./linker-config.js";
 export { CA65_65XX_SESSION_STATE_ID, CA65_65XX_SYNTAX_PROFILE, ca65CpuNames, ca65CpuShorthands, ca65SessionStateKey, resolve65xxCpuName, rewriteCa65Command, } from "./ca65-profile.js";
+export { createNesLinkTarget } from "./target/link-target.js";
 //# sourceMappingURL=index.js.map

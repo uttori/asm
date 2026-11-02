@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import type { AssemblyLinkRecipe } from "@uttori/asm-core";
+
 import type { RomIdentity } from "../model/rom-image.js";
 
 /** Format of the pure renderer's in-memory inventory. */
@@ -11,7 +13,8 @@ export const SOURCE_EXPORT_SCHEMA_VERSION = 1;
 export type SourceExportFileKind = "source" | "asset" | "configuration";
 /**
  * Role of a contiguous ROM span in the export.
- * `code` is a reconstructed instruction. Everything else is emitted as a binary asset.
+ * `code` is a reconstructed instruction. A `raw` role can also contain typed data or converted
+ * asset includes; build emission metadata determines conversion progress.
  */
 export type SourceExportSpanRole =
   | "code"
@@ -63,6 +66,12 @@ export interface SourceExportSpan {
 
 /** Deterministic in-memory render inventory; Git generation commits own persistence. */
 export interface SourceExportManifest {
+  /** Optional object-producer entry and layout input. Absolute exports retain their existing inventory. */
+  readonly relocatable?: {
+    readonly moduleId: string;
+    readonly entrySource: string;
+    readonly linkRecipe: AssemblyLinkRecipe;
+  };
   readonly format: typeof SOURCE_EXPORT_FORMAT;
   readonly schemaVersion: typeof SOURCE_EXPORT_SCHEMA_VERSION;
   readonly target: string;

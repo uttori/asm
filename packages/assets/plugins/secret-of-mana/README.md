@@ -93,6 +93,12 @@ in rows of sixteen tiles. Its header reports the total and the number of source-
 tiles. This bottom atlas makes every source tile visible, including tiles that no
 captured pose exposes unobscured.
 
+Keep one visible pose for each actor-relative native-index shape. Palette-only
+colorways belong in `paletteVariants`, with complete captured records retained in
+`frameAliases`. An alias can retain its historical `paletteRefs` after unused PNG
+palette banks are removed. These historical rectangles do not own current pixels.
+The project naming review can preview referenced palettes without repeating pose art.
+
 Open `secret-of-mana/` as the editor workspace to use its checked-in
 `.vscode/settings.json`; this loads the disassembly config and registers the SoM
 formats for Asset Preview. When opening the monorepo root instead, set

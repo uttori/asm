@@ -171,6 +171,27 @@ export function validateFrameLayout(layout, { segmentName, whole = false } = {})
     if (!isKnownTileSource(layout.tileSources)) {
         throw new Error("Unknown atlas tile source mode.");
     }
+    // A shared tile stream can depict different actors with different runtime
+    // colors. Validate display groups even when assembly selects one segment.
+    if (Array.isArray(layout.frames)) {
+        for (const frame of layout.frames) {
+            if (frame.paletteGroup !== undefined &&
+                (!Number.isInteger(frame.paletteGroup) ||
+                    frame.paletteGroup < 0 ||
+                    frame.paletteGroup >= layout.paletteRefs.length)) {
+                throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
+            }
+            if (Array.isArray(frame.blocks))
+                for (const block of frame.blocks) {
+                    if (block.paletteGroup !== undefined &&
+                        (!Number.isInteger(block.paletteGroup) ||
+                            block.paletteGroup < 0 ||
+                            block.paletteGroup >= layout.paletteRefs.length)) {
+                        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+                    }
+                }
+        }
+    }
     const names = whole ? Object.keys(layout.segments) : [segmentName ?? ""];
     for (const name of names) {
         const segment = Object.hasOwn(layout.segments, name) ? layout.segments[name] : undefined;
@@ -521,7 +542,7 @@ export function refreshFrameAtlas(inspected) {
                     throw new Error(`Unknown tile reference in ${frame.id}:${occurrence.id}.`);
                 }
                 source = `${segmentName}:${tileIndex}`;
-                palette = segment.palette;
+                palette = occurrence.paletteGroup ?? frame.paletteGroup ?? segment.palette;
             }
             const x = frame.origin[0] + occurrence.x;
             const y = frame.origin[1] + occurrence.y;

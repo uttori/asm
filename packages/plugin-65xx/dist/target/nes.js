@@ -167,6 +167,13 @@ export function createNesLifecycle({ state }) {
         const nes = state.get(nes65xxSessionStateKey);
         resetNes65xxStageState(nes);
         session.outputFillByte = nes.fillByte;
+        if (session.module) {
+            for (const name of linkerDefinedSymbolNames(nes.linker)) {
+                session.module.declare(name, "import");
+            }
+            session.bytes = 0;
+            return;
+        }
         const total = nes.header.length + nes.linker.imageSize;
         const image = Array.from({ length: total }, () => nes.fillByte);
         for (let index = 0; index < nes.header.length; index++) {

@@ -63,6 +63,8 @@ export interface CaptureRecovery {
     readonly chunkThrough: string;
     readonly eventThrough: string;
     readonly reason?: string;
+    /** Present only when a bounded frame component extended past the initial file snapshot. */
+    readonly reasonCode?: "truncated";
 }
 /** Input byte budget and cooperative cancellation apply to both header reads and archive scans. */
 export interface CaptureFileReadOptions {

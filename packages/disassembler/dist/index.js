@@ -1,12 +1,13 @@
 /** Supported assembly and embedding entry point; specialized host contracts have explicit subpaths. */
 export { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST, } from "./model/project-types.js";
 export { resolveProjectNativeAssetId } from "./model/project-asset-ids.js";
+export { EvidencePool } from "./model/evidence-pool.js";
+export { withCompactAnalysisOwnership } from "./model/analysis-ownership.js";
 export { validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames, } from "./model/project-labels.js";
 export { detectCopierHeaderSize, RomImage, } from "./model/rom-image.js";
 export { validateRuntimeInstructionDetails, } from "./model/trace-detail.js";
 export { validateRuntimeBusFact, } from "./model/runtime-bus-types.js";
 export { buildAnalysisSourceCatalog, } from "./analysis/analysis-sources.js";
-export { buildRomCoverageMap, } from "./analysis/coverage-map.js";
 export { buildInstructionAnalysisAnnotations, } from "./analysis/instruction-annotations.js";
 export { DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, analyzeStaticControlFlow, } from "./analysis/static-analysis.js";
 export { explainProjectEvidence, } from "./analysis/project-evidence.js";

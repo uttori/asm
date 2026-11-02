@@ -1,7 +1,7 @@
 import { checkedDeclaration, parseDeclarationNode, structDeclarationGuard, } from "../ir/declaration-node.js";
 /** Records and layouts use the same checked transport path as target directive overrides. */
 export const registerStructBinaryDirectives = (registry, { session }) => {
-    registry.registerTyped(["struct", "endstruct", "datastruct", "datastructs", "enddatastructs"], ({ text, words, declaration }) => {
+    registry.registerImmutableTyped(["struct", "endstruct", "datastruct", "datastructs", "enddatastructs"], ({ text, words, declaration }) => {
         const node = checkedDeclaration(declaration ?? parseDeclarationNode(text, words));
         if (!structDeclarationGuard(node)) {
             throw new Error("Expected a struct declaration or record initializer.");

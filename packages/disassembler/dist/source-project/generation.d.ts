@@ -4,6 +4,8 @@ import { type SourceRepository } from "./git.js";
 export declare const SOURCE_GENERATION_FILE = ".uttori/generation.json";
 /** Small immutable input identities. Large evidence remains in a separately retained private input store. */
 export interface SourceGenerationInputs {
+    /** Explicit linked generation intent survives Prepare/Preview/Apply before the new configuration is adopted. */
+    readonly assembly?: "linked";
     readonly project: string;
     readonly romSha256: string;
     readonly evidenceSha256: string;

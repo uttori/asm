@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { openAnalysisProjectStore } from "@uttori/asm-disassembler";
-import { sourceFilePublicationEpoch, sourceProjectLocalInputs, sourceContentHash, assertSourcePath, readSourceCaptureCatalog, } from "@uttori/asm-disassembler/source-project";
+import { sourceFilePublicationEpoch, readSourceLinkBuild, sourceProjectLocalInputs, sourceContentHash, assertSourcePath, readSourceCaptureCatalog, } from "@uttori/asm-disassembler/source-project";
 import { loadNesRom, buildNesSource, inspectNesSource, prepareNesGeneration, analyzeNesProject, importNesPPUCapture, nesGenerationOptionsHash, initializeNesSourceProject, } from "@uttori/asm-plugin-65xx/disassembler";
 function assertSourceLayout(value, romSha256) {
     if (typeof value !== "object" ||
@@ -40,6 +40,10 @@ async function withSourceBuild(project, host, signal, run) {
     const root = project.repository.root;
     const environmentInputs = new Map();
     const readEnvironment = (file) => {
+        const captured = environmentInputs.get(file);
+        if (captured) {
+            return captured;
+        }
         const bytes = Uint8Array.from(fs.readFileSync(file));
         environmentInputs.set(file, bytes);
         return bytes;
@@ -68,6 +72,7 @@ async function withSourceBuild(project, host, signal, run) {
         .split(path.sep)
         .join("/");
     assertSourcePath(entrySource);
+    const link = readSourceLinkBuild(configuration, configFile, path.resolve(root, entrySource), readEnvironment);
     const raw = JSON.parse(Buffer.from(readEnvironment(path.join(path.dirname(configFile), "source-raw.json"))).toString("utf8"));
     if (!isRecord(raw) ||
         raw.format !== "uttori-source-raw" ||
@@ -100,7 +105,12 @@ async function withSourceBuild(project, host, signal, run) {
             .map((plugin) => plugin.resolvedModule));
         const result = run({
             root,
+            controlInputs: [...environmentInputs].map(([file, bytes]) => ({
+                path: file,
+                sha256: sourceContentHash(bytes),
+            })),
             entrySource,
+            ...(link ? { link } : {}),
             environment: loaded.environment,
             includePaths: loaded.includePaths,
             targetOptions: loaded.targetOptions,
@@ -114,6 +124,7 @@ async function withSourceBuild(project, host, signal, run) {
             outputDirectory: path.join(root, ".uttori-local/builds"),
             toolchainSha256: toolchain.sha256,
             configurationSha256: sourceContentHash(canonicalJson({
+                ...(link ? { link: { module: link.module, recipe: link.recipe } } : {}),
                 configuration: sourceContentHash(configurationBytes),
                 project: project.configurationSha256,
                 layout,

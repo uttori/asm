@@ -14,4 +14,7 @@ export { lostCodeRanges } from "./source-project/code-preservation.js";
 export { checkRawBlockConsumption } from "./source-project/raw-consumption.js";
 export { publishSourceBuild } from "./source-project/build-publication.js";
 export { SourceOperationError } from "./source-project/errors.js";
+export { buildLinkedObjects, publishLinkedBuild, } from "./source-project/link-build.js";
+export { readSourceLinkBuild, sourceLinkFiles, sourceLinkEntry, linkSourceAssembly, sourceMappingFromLink, } from "./source-project/source-link.js";
+export { sourceBuildCoverage, isSourceBuildCoverage, } from "./source-project/build-coverage.js";
 //# sourceMappingURL=source-project.js.map

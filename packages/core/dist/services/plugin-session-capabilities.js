@@ -1,6 +1,45 @@
 /** Creates a closed capability surface. Every access checks the synchronous borrow, including nested methods. */
 export function createPluginSessionCapabilities(session, assertBorrowed) {
+    const moduleCapabilities = Object.freeze({
+        apiVersion: 1,
+        get id() {
+            assertBorrowed();
+            return session.moduleIdentity;
+        },
+        selectSection(options) {
+            assertBorrowed();
+            session.selectModuleSection(options);
+        },
+        declare(name, visibility) {
+            assertBorrowed();
+            session.declareModuleSymbol(name, visibility);
+        },
+        exportSymbol(name) {
+            assertBorrowed();
+            session.exportModuleSymbol(name);
+        },
+        compile(expression) {
+            assertBorrowed();
+            return session.compileLinkExpression(expression);
+        },
+        write(expression, width, endianness) {
+            assertBorrowed();
+            session.writeExpression(expression, width, endianness);
+        },
+        reserve(count, fill) {
+            assertBorrowed();
+            session.reserveModuleBytes(count, fill);
+        },
+        align(boundary, fill) {
+            assertBorrowed();
+            session.alignModule(boundary, fill);
+        },
+    });
     return Object.freeze({
+        get module() {
+            assertBorrowed();
+            return session.moduleAssembly ? moduleCapabilities : undefined;
+        },
         get targetOptions() {
             assertBorrowed();
             return session.targetOptions;

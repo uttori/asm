@@ -9,6 +9,8 @@ import type { SourceRepository } from "./git.js";
 import type { SourceBuildVerification } from "./merge.js";
 /** Original assets come from immutable Git objects or original ROM bytes, never live working files. */
 export interface SourceGenerationOptions {
+  /** Omission preserves the existing absolute renderer/build path. */
+  readonly assembly?: "linked";
   readonly repository: SourceRepository;
   readonly parent: string;
   readonly evidenceDirectory: string;

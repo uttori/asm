@@ -33,17 +33,20 @@ export function prunePriorSourceBuilds(directory, incoming, fileName) {
     if (fs.existsSync(pointer)) {
         try {
             const stat = fs.lstatSync(pointer);
-            if (!stat.isFile() || stat.size > 16 * 1024 * 1024)
+            if (!stat.isFile() || stat.size > 16 * 1024 * 1024) {
                 return [];
+            }
             const parsed = JSON.parse(fs.readFileSync(pointer, "utf8"));
-            if (!isRecord(parsed))
+            if (!isRecord(parsed)) {
                 return [];
+            }
             const id = receiptString(parsed, "inputSha256");
             if (!id ||
                 !/^[\da-f]{64}$/.test(id) ||
                 receiptString(parsed, "outputFile") !== path.join(directory, id, fileName) ||
-                receiptString(parsed, "debugMapFile") !== path.join(directory, id, `${fileName}.debug.json`))
+                receiptString(parsed, "debugMapFile") !== path.join(directory, id, `${fileName}.debug.json`)) {
                 return [];
+            }
             current = id;
         }
         catch {

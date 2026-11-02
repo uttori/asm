@@ -6,9 +6,9 @@ import { pathToFileURL } from "node:url";
 /** Run only against the preserved pre-migration checkout; never refresh expectations from migrated code. */
 const root = process.env.AST_BASELINE_ROOT;
 if (!root || !process.argv[2])
-  throw new Error(
+  {throw new Error(
     "Set AST_BASELINE_ROOT to the pre-migration checkout and supply an output JSON path.",
-  );
+  );}
 const importSource = (relative) => import(pathToFileURL(path.join(root, relative)).href);
 const { Assembler } = await importSource("packages/core/src/index.ts");
 const { createSnesAssemblerEnvironment } = await importSource(
@@ -21,7 +21,7 @@ const fixture = JSON.parse(
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 for (const [file, expected] of Object.entries(fixture.sourceHashes)) {
   if (hash(fs.readFileSync(path.join(root, file))) !== expected)
-    throw new Error("Baseline source identity mismatch: " + file);
+    {throw new Error("Baseline source identity mismatch: " + file);}
 }
 const cases = [];
 for (const { cpu, source, options } of fixture.cases) {
@@ -30,7 +30,7 @@ for (const { cpu, source, options } of fixture.cases) {
     trace = [];
   const builtin = a.mathCore.callBuiltInFunction;
   a.mathCore.callBuiltInFunction = (name, args) => {
-    if (name === "pc") calls.push([a.traceStage, a.currentTargetAddress]);
+    if (name === "pc") {calls.push([a.traceStage, a.currentTargetAddress]);}
     return builtin(name, args);
   };
   a.setTraceListener((event) => trace.push(event));

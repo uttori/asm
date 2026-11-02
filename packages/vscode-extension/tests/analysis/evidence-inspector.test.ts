@@ -2,16 +2,6 @@ import { test } from "../../../../tests/ava-helper.js";
 import { host, resetHost, pick } from "../helpers/editor-host.js";
 
 const { AnalysisEvidenceInspector } = await import("../../src/analysis/evidence-inspector.js");
-const target = {
-  projectDirectory: "/selected/evidence",
-  start: 0,
-  end: 16,
-  annotationIds: ["code"],
-  analysisIds: ["flow"],
-  conflictIds: ["conflict"],
-  runtimeIds: ["trace"],
-  regionIds: ["bank"],
-};
 const choices = () => ({
   shards: {
     analysis: [],
@@ -38,26 +28,15 @@ test.beforeEach(() => resetHost());
 test.serial(
   "evidence inspection keeps the selected store and reports bounded reverse references",
   async (t) => {
-    host.projects = ["/wrong/evidence"];
+    host.projects = ["/selected/evidence"];
     host.picks = [pick("code")];
     host.analysisRequest = async (_root, action) =>
       action === "evidenceChoices" ? choices() : explanation;
-    await new AnalysisEvidenceInspector().explainEvidence(target);
+    await new AnalysisEvidenceInspector().explainEvidence();
     t.deepEqual(host.requests, [
+      ["/selected/evidence", "evidenceChoices"],
       [
-        target.projectDirectory,
-        "evidenceChoices",
-        {
-          evidenceSelection: {
-            annotations: ["code"],
-            analysis: ["flow", "conflict"],
-            runtime: ["trace"],
-            regions: ["bank"],
-          },
-        },
-      ],
-      [
-        target.projectDirectory,
+        "/selected/evidence",
         "explainEvidence",
         { evidenceRecord: { kind: "annotations", id: "code" } },
       ],
@@ -118,9 +97,9 @@ test.serial(
     });
     const inspector = new AnalysisEvidenceInspector();
     await inspector.explainEvidence();
-    await inspector.explainEvidence(target);
+    await inspector.explainEvidence();
     t.true(host.infos[0].includes("selected project"));
-    t.true(host.infos[1].includes("conflict range"));
+    t.true(host.infos[1].includes("selected project"));
     t.is(host.documents.length, 0);
   },
 );
@@ -129,6 +108,7 @@ test.serial(
   "invalid evidence replies and worker failures surface diagnostics without publishing a document",
   async (t) => {
     const inspector = new AnalysisEvidenceInspector();
+    host.projects = ["/selected/evidence"];
     for (const invalid of [
       null,
       {},
@@ -137,7 +117,7 @@ test.serial(
       { ...choices(), shards: { ...choices().shards, annotations: [{ id: 1 }] } },
     ]) {
       host.analysisRequest = async () => invalid;
-      await inspector.explainEvidence(target);
+      await inspector.explainEvidence();
       t.true(host.errors.at(-1)?.includes("choices are unavailable"));
     }
     for (const invalid of [
@@ -151,7 +131,7 @@ test.serial(
       host.picks = [pick("code")];
       host.analysisRequest = async (_root, action) =>
         action === "evidenceChoices" ? choices() : invalid;
-      await inspector.explainEvidence(target);
+      await inspector.explainEvidence();
       t.true(host.errors.at(-1)?.includes("explanation is unavailable"));
     }
     for (const error of [new Error("Store closed"), "cancelled"]) {
@@ -160,7 +140,7 @@ test.serial(
         // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- Exercise malformed transport rejection.
         return Promise.reject(error);
       };
-      await inspector.explainEvidence(target);
+      await inspector.explainEvidence();
       t.true(host.errors.at(-1)?.includes(String(error).replace("Error: ", "")));
     }
     t.is(host.documents.length, 0);

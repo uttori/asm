@@ -63,6 +63,8 @@ interface DecodedMapPiece {
  * Motifs decode in queue order against the completed parent and earlier insertions. Narrow motifs
  * can read outside their own rectangle through the native eight-bit history cursor. Optional
  * physical history supplies such cells when they also lie outside the parent; missing cells fail.
+ * Insertions can also write beyond the parent rectangle. Their full physical writes affect later
+ * motifs; the returned parent tiles project only its own cells after all insertions finish.
  * The input history is copied and never mutated. Recursive motifs and truncated input fail closed.
  * @param {Uint8Array} bytes Pointer-bounded map piece.
  * @returns {object} Compact row-major tile IDs and the consumed extent.

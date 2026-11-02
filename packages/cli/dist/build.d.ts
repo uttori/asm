@@ -1,0 +1,8 @@
+import { type AssemblyBuildOperation } from "@uttori/asm-workflows/build";
+/** New workflows are explicit commands; bare source invocations and assemble retain absolute Asar semantics. */
+export declare const assemblyBuildUsage = "uttori-asm assemble-object <source.asm> [output.uobj] --module <id> [--config <config.json>] [--source-adapter <asar|ca65>]\nuttori-asm library <output.ulib> <object.uobj> [more-objects...]\nuttori-asm link <build.json>\nuttori-asm build <build.json>\n\nBuild manifests use {\"format\":\"uttori-build\",\"version\":1,\"recipe\":...,\"modules\":[{\"id\":\"main\",\"source\":\"main.asm\"}]}.\nPaths resolve beside the manifest. link accepts serialized objects/libraries only; build also assembles modules.\nLinked ROM, debug map, symbols and allocation report publish together under outputDirectory/current.json.\nObject assembly uses the normal plugin configuration. -- ends option parsing for paths beginning with --.";
+/** Strict adapter for the shared Node service; no host-specific assembly or linking occurs here. */
+export declare function parseAssemblyBuildArguments(argv: readonly string[], directory: string): AssemblyBuildOperation;
+/** Emit a compact structured receipt for scripts; failures preserve the previously selected linked build. */
+export declare function runAssemblyBuildCli(argv: readonly string[]): Promise<number>;
+//# sourceMappingURL=build.d.ts.map

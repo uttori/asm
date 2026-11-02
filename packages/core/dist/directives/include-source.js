@@ -356,7 +356,7 @@ export const handleInclude = ({ includeSource, defineEngine }, words, _raw = "",
  */
 export const registerIncludeSourceDirectives = (registry, context) => {
     for (const directive of ["incsrc", "include"]) {
-        registry.registerTyped(directive, ({ words }) => parseIncludeTarget(words, directive), syntaxRecord({ path: syntaxString, quote: syntaxString }), ({ path, quote }) => {
+        registry.registerImmutableTyped(directive, ({ words }) => parseIncludeTarget(words, directive), syntaxRecord({ path: syntaxString, quote: syntaxString }), ({ path, quote }) => {
             const expander = context.defineEngine ?? IDENTITY_INCLUDE_DEFINES;
             const filename = resolveIncludeTarget({ path, quote }, expander);
             if (directive === "incsrc") {
@@ -367,7 +367,7 @@ export const registerIncludeSourceDirectives = (registry, context) => {
             }
         });
     }
-    registry.registerTyped("includeonce", () => ({}), syntaxRecord({}), () => context.includeSource.guardCurrentFile());
-    registry.registerTyped("incbin", ({ words }) => parseIncbinPayload(words), incbinSyntax, (payload) => executeIncbin(context, payload));
+    registry.registerImmutableTyped("includeonce", () => ({}), syntaxRecord({}), () => context.includeSource.guardCurrentFile());
+    registry.registerImmutableTyped("incbin", ({ words }) => parseIncbinPayload(words), incbinSyntax, (payload) => executeIncbin(context, payload));
 };
 //# sourceMappingURL=include-source.js.map

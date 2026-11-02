@@ -397,17 +397,20 @@ export function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
                     tag: { type: "integer", minimum: 0, maximum: 255 },
                 },
                 encode: (bytes, options) => {
-                    if (bytes.length !== options.size)
+                    if (bytes.length !== options.size) {
                         throw new Error("Boss tilemap size mismatch.");
+                    }
                     return encodeBossTilemap(bytes, options.tag === undefined ? 1 : Number(options.tag));
                 },
                 decode: (bytes, options, maxOutputBytes) => {
                     const size = Number(options.size);
-                    if (size > maxOutputBytes)
+                    if (size > maxOutputBytes) {
                         throw new Error("Boss tilemap exceeds output limit.");
+                    }
                     const result = decodeBossTilemap(bytes, size);
-                    if (result.consumed !== bytes.length)
+                    if (result.consumed !== bytes.length) {
                         throw new Error("Trailing bytes after boss tilemap.");
+                    }
                     return result.data;
                 },
             });

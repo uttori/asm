@@ -71,10 +71,11 @@ function isResearchAnalysisChange(value) {
 }
 export const sourceUsage = `uttori-asm source <status|prepare|build|index|analyze|catalog|finish|abort|clean> <project>
 uttori-asm source init <new-folder> <original-rom> [--mapper <mapper>] [--dizraw <research.dizraw>]
+uttori-asm source prepare <project> --linked
 uttori-asm source <preview|apply|discard> <project> <generation-commit>
 uttori-asm source expand <project> <capacity-bytes>
 uttori-asm source relocate <project> <object-id>
-uttori-asm source import <project> <capture.act2-or-json> [more-captures...]
+uttori-asm source import <project> <capture.act2-or-json> [more-captures...] [--recover-partial]
 uttori-asm source research <project> [<symbol-id> <aliases|suppress|restore|entry|no-entry> [aliases...]]
 uttori-asm source research <project> --analysis [<change.json>]
 uttori-asm source graphics <project> [<capture-sha256> [<cpu-pc> [<prg-offset>]]]
@@ -178,6 +179,9 @@ export async function runSourceCli(argv) {
     }
     let validArity = argv.length ===
         (["preview", "apply", "discard", "relocate", "expand"].includes(action) ? 3 : 2);
+    if (action === "prepare" && argv.length === 3 && argv[2] === "--linked") {
+        validArity = true;
+    }
     if (action === "import") {
         validArity = argv.length >= 3;
     }
@@ -187,15 +191,19 @@ export async function runSourceCli(argv) {
     }
     try {
         const started = performance.now();
+        const importFiles = argv.slice(2).filter((value) => value !== "--recover-partial");
         const result = await executeSourceOperation(readSourceOperation({
             action,
             directory,
+            assembly: action === "prepare" && argv.includes("--linked") ? "linked" : undefined,
             candidate: ["preview", "apply", "discard", "status"].includes(action)
                 ? candidate
                 : undefined,
-            capture: action === "import" && argv.length === 3 ? candidate : undefined,
-            captures: action === "import" && argv.length > 3 ? argv.slice(2) : undefined,
-            onProgress: (message) => console.error(`[${((performance.now() - started) / 1000).toFixed(1)}s] ${message}`),
+            capture: action === "import" && importFiles.length === 1 ? importFiles[0] : undefined,
+            captures: action === "import" && importFiles.length > 1 ? importFiles : undefined,
+            recoverPartial: action === "import" && argv.includes("--recover-partial") ? true : undefined,
+            // Keep elapsed time as plain text so log viewers do not treat it as a filter category.
+            onProgress: (message) => console.error(`${((performance.now() - started) / 1000).toFixed(1)}s: ${message}`),
             objectId: action === "relocate" ? candidate : undefined,
             expansionSize: action === "expand" ? Number(candidate) : undefined,
         }));

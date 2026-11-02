@@ -4,7 +4,7 @@
   "source": "packages/language-server/src/asset-preview-worker.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/server/asset-preview-worker.mjs.licenses.txt",
-  "sha256": "88722c87d40f9f1359fbf7ebbaef94c613ff39fbc39ef61ea87449adc1a31b58",
+  "sha256": "eb53b268e669b496efb5d837fc3062112da2f08b10f5d02d99079f0299887c09",
   "noticesSha256": "f325c5f66539b503ef71aec95dfe578634512c184168b1f2c6e649fabbf85a9e",
   "inputs": [
     {
@@ -257,7 +257,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
+      "sha256": "6c51bc05ebd03b6c8012aa08bb62754be4c635bb138490124e59e34cf92671bc"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",
@@ -365,11 +365,11 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-boss-background.ts",
-      "sha256": "c0a0cfa81659da9a10b273451e4fe86dda28b14a2df38162f3b01bc479679eb6"
+      "sha256": "6e39b1daff5c4659c9b6ae2c2643f5e93412cfcdc5351670fc26d680cbd02de4"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-boss-graphics.ts",
-      "sha256": "9926d7b9ef4623804ef4c7a181d8e47613c230a66352579f3ebb8060fdd36dd5"
+      "sha256": "541120aef3c876b752e5cda43075d65b906286246e27d6f0b9d6dd99fc60fa61"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-boss-image.ts",
@@ -385,15 +385,15 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-atlas.ts",
-      "sha256": "a167db7aafe9e408d2c156597bd24822577aa65e70b7c04a262c30c0082ecbe3"
+      "sha256": "606008b36b56e7dd0a4cde1f520e89c0a5754e62c2957ea467130e146ed5829e"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-composition.ts",
-      "sha256": "76266b1a324c87bbca3ad58d8bb32ff2285c0984359e75d8fe0ecf2e47eaa9b7"
+      "sha256": "013b255f2976b551ded62be34d504d815c6018c3461dcae28923dba220c6e723"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-edit.ts",
-      "sha256": "11950974ddf22c3acfcd8583cf32960b8fd3bb24a108458496b6afcef3648abc"
+      "sha256": "dfba4dae3b69a748d2a0c4155500476b5bdfba204d5756ac7c7ee13790d30077"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-lz.ts",
@@ -401,7 +401,7 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-palette-edit.ts",
-      "sha256": "741ec451e7974eae3612e56c202433bcc3bca8063e544fc6974dd33cc11568b3"
+      "sha256": "4aec6c1425ced2b5e641ad17d2d45ee41ef664e20f40e70b56a4bd2dc1bc8d2b"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-room-assets.ts",
@@ -453,7 +453,7 @@
     },
     {
       "file": "packages/core/src/addressToLine.ts",
-      "sha256": "5e4c47f4d3f6edd5128068b5b322ea378326d086585f66287d7b5e00b4afd2c1"
+      "sha256": "f913e835613b2c0cf9a3bdbe2536067e51274725c0a0753d25f8438f9634c329"
     },
     {
       "file": "packages/core/src/architecture-registry.ts",
@@ -461,11 +461,11 @@
     },
     {
       "file": "packages/core/src/architecture-types.ts",
-      "sha256": "888fe046fbc83abba8a7ec65f15c185b584c7bf47eb1e715c3f1a6eddaecf385"
+      "sha256": "c548823805f437d071f8376e31fdba342ac96433bf68cc687c7f3d46e644de92"
     },
     {
       "file": "packages/core/src/assembler.ts",
-      "sha256": "b4547735db5d5609a57da806628b49c0706b7bc545964901c5c48647cc211c40"
+      "sha256": "b585b32dcfb62e52c9478906aad0d52eb006491e506cc16044252e09e34728be"
     },
     {
       "file": "packages/core/src/canonical-json.ts",
@@ -477,7 +477,7 @@
     },
     {
       "file": "packages/core/src/debug-map.ts",
-      "sha256": "a5db5b6f7963b7ac4b04d3e0d8f132f3728e4465fb36082bbce296e8ab75ad4f"
+      "sha256": "bb21e686f144deb80a0f753cfce2132d5008ede551f9a04a448cc951dfc18ed2"
     },
     {
       "file": "packages/core/src/decoder-types.ts",
@@ -485,7 +485,7 @@
     },
     {
       "file": "packages/core/src/diagnostics.ts",
-      "sha256": "5be55c393885562212c86df61078a180464ae9e548dd43ae30f8a6a3acbfbc4f"
+      "sha256": "b057c8c58e278da9323e98b0a77296e293d0617bba8f9e9d77fc0b2defbabbbc"
     },
     {
       "file": "packages/core/src/directive-groups.ts",
@@ -533,7 +533,7 @@
     },
     {
       "file": "packages/core/src/index.ts",
-      "sha256": "2d82411d088432b5b4dd6e9027006c886cbc747c308e363e9a66fdab2c51a820"
+      "sha256": "0e7cd6eab0c461db3eea9603d9a64c2c2b40977a2e35352a33b81303ba309057"
     },
     {
       "file": "packages/core/src/internal-instrumentation.ts",
@@ -596,6 +596,10 @@
       "sha256": "457e0d8edf774c41c1aa5086dea29a1fbd06e6926867d808ca52be52607b984f"
     },
     {
+      "file": "packages/core/src/ir/link-expression.ts",
+      "sha256": "077060eb23d770df023388a5aaa932372a41ce48debebdf9961be1940c2384ec"
+    },
+    {
       "file": "packages/core/src/ir/macro-arguments.ts",
       "sha256": "d212bf868371a17574ce58e62756dfe31af9ec7db227b24d6c9b26a15bc51b90"
     },
@@ -620,8 +624,12 @@
       "sha256": "b712b014ea21ae686fb7d13c6882817fd96cd3698293185572a46b24bba9bab6"
     },
     {
+      "file": "packages/core/src/ir/relocatable-instruction.ts",
+      "sha256": "e1cffb5c30d4199d5af8580bf3e9ef3f64150a82f7ada1442fe618e6cae82243"
+    },
+    {
       "file": "packages/core/src/ir/resolved-instruction.ts",
-      "sha256": "960457626f95ee493e0564a3557490b7c4595cf029314076adc5ac0fd9a8d704"
+      "sha256": "e25ab0b001e95906bb75ff6b1535a4af4e7869de061b3099442b6274030bd7f9"
     },
     {
       "file": "packages/core/src/ir/source-fragment.ts",
@@ -640,12 +648,16 @@
       "sha256": "f023f7c6897a9e9af1066da6d3b63ac259918db6f78120b2b122b3e631cf6661"
     },
     {
+      "file": "packages/core/src/linker/types.ts",
+      "sha256": "7ab318f6535ac9543d8acb91f8c2eaa7d1bd6a48d95cce7a71d59c2b9d37a72c"
+    },
+    {
       "file": "packages/core/src/lsp/directive-catalog.ts",
       "sha256": "098d3115206c2fd46c470f5f155334a8eb7f9fb4dd9d1713f72610260b8d499d"
     },
     {
       "file": "packages/core/src/mathcore.ts",
-      "sha256": "ab38a6401860dc1e5ecac992cf3a5dace1990dc3e50cff269faca05535bcf5ba"
+      "sha256": "82327d59c533067519a2767add6f16a100464617d3f5a84676ab2e7a9373a954"
     },
     {
       "file": "packages/core/src/operand-resolver.ts",
@@ -653,7 +665,7 @@
     },
     {
       "file": "packages/core/src/plugin/contracts.ts",
-      "sha256": "b1532bfa2c8bc2910fad3cddfb75ea6a1f95d3f7883105e516a81efa54d35c21"
+      "sha256": "6759bb03584e8a250bba8e29af28a9423227f36c0d88dabb8608cf9c719b3636"
     },
     {
       "file": "packages/core/src/plugin/diagnostics.ts",
@@ -678,6 +690,14 @@
     {
       "file": "packages/core/src/plugin/syntax-snapshot.ts",
       "sha256": "aeb9c309c16016b11eb07d7646eb419edec83714965dcb9fc2a8c27b64dc3dca"
+    },
+    {
+      "file": "packages/core/src/relocatable.ts",
+      "sha256": "a3077e00f6b7bbe7ea525939fc84d22ab0d07ac48266d2ebe6f0885aff65c214"
+    },
+    {
+      "file": "packages/core/src/services/asar-module-layout.ts",
+      "sha256": "05a29e6bc1228d2dc253875061161651e5e290dd211fa5ba8bf4411c66709aff"
     },
     {
       "file": "packages/core/src/services/assembly-front-end-service.ts",
@@ -705,7 +725,7 @@
     },
     {
       "file": "packages/core/src/services/data-struct-engine.ts",
-      "sha256": "a61f87c6f20cc8288027c65880adfcb635a7d89a242bac83471e81b49b06d789"
+      "sha256": "40fcc755cb255dbf70981b1aad733a255caf1a058e2a4535903e2852bcb0fc62"
     },
     {
       "file": "packages/core/src/services/define-engine.ts",
@@ -713,11 +733,11 @@
     },
     {
       "file": "packages/core/src/services/directive-runtime-service.ts",
-      "sha256": "cbbf26494bba835fe77d1c93fe19c8b099d3a13b1641efafd28d98d6faf40068"
+      "sha256": "7601dfa11c171a6459f9d16edc7184c61ec4ec4b1c47e86a061a9cf2b4fb9712"
     },
     {
       "file": "packages/core/src/services/front-end-command-service.ts",
-      "sha256": "9baf43bf8e0404ab0dbb5826e5c52453cbde21859d6663209437e5fe6e2706b4"
+      "sha256": "12d5f0aade641f9837620c29a07407337631130abe450d7004b6fe634314ac01"
     },
     {
       "file": "packages/core/src/services/include-source-service.ts",
@@ -728,20 +748,32 @@
       "sha256": "8bde0c4dab3fa14655b165a248aa0bb64248fe87e70e9d2c6d571207801aee85"
     },
     {
+      "file": "packages/core/src/services/module-assembly.ts",
+      "sha256": "d182826037d05fa8c17141dd81748e95c19d50470c0f48b40e6212a00306e457"
+    },
+    {
+      "file": "packages/core/src/services/module-file-provider.ts",
+      "sha256": "41237438370b71f12b5d2f8a138bc86f11e2b8595043cd36bc8cfd8259e800b8"
+    },
+    {
       "file": "packages/core/src/services/occurrence-syntax-cache.ts",
       "sha256": "b2dcefed1e1e41dc6dd8da2d96d54157eb7380434c7ef53b29cfa45ee97867a1"
     },
     {
       "file": "packages/core/src/services/output-writer-service.ts",
-      "sha256": "94b4417d4fff56d07381ae4b30b00aafb9ec9812152d16f2611aac3c08d20ae9"
+      "sha256": "aeecb315632414ee753566ef82bf62051017f1a67b90c24595140af65742fa46"
     },
     {
       "file": "packages/core/src/services/plugin-session-capabilities.ts",
-      "sha256": "7ace99b7ebab284ce9090e8c84b8aee2603d4f32a7a669fb92d63359a7889e0c"
+      "sha256": "456160533abe07364908f5e546d830171ea98d1e30352e46acba8f4f0f7e9f2a"
     },
     {
       "file": "packages/core/src/services/program-model-builder.ts",
       "sha256": "f0ec0bffcecbf596e9b521e39a31ccb0e87168b8466c121fa1912fbe5a293273"
+    },
+    {
+      "file": "packages/core/src/services/source-link-recipe.ts",
+      "sha256": "0470e987344552ba18418b105311ece6c7506439e4203bb4a0786bfc8b85b393"
     },
     {
       "file": "packages/core/src/services/struct-engine.ts",
@@ -757,7 +789,7 @@
     },
     {
       "file": "packages/core/src/services/symbol-scope-service.ts",
-      "sha256": "8bcff6a85c1b70425fb2a6926bc1ba3bcf9d177e2238fc6e49d0b7b7ea078adf"
+      "sha256": "2a38d706a6489116a3e6c33f3faaf07b5489aad306099a3c7456f91f0068fe1b"
     },
     {
       "file": "packages/core/src/source-field-edits.ts",
@@ -781,7 +813,7 @@
     },
     {
       "file": "packages/game-secret-of-mana/src/assembly.ts",
-      "sha256": "f0d0f701c862f12f25fd86242783e20f7df6a61cad495ae1937998159af56ec4"
+      "sha256": "750a5712be87d8464b6a7eab559186e824df0d8cf82a03bfb995cf061a93b81a"
     },
     {
       "file": "packages/game-secret-of-mana/src/preview.ts",
@@ -813,15 +845,15 @@
     },
     {
       "file": "packages/plugin-65xx/src/directives/ca65-syntax.ts",
-      "sha256": "6b9de748cb5028b6f1a6a0aa05a3de21c1f9483cb49ddaa412b4d78d88b01c3b"
+      "sha256": "bce9dff7ebd2c02c51afa22d03370fecf5146a72e842da5388e919a4d61b0d4c"
     },
     {
       "file": "packages/plugin-65xx/src/directives/ca65.ts",
-      "sha256": "1f90e8717f6260263fb1121def908ca9bcf941efd2981884cad985c1d883c567"
+      "sha256": "6be81b9ea08ded1f3c59ff8039d54b34a8daf4be201e8b3d146923ce781b4451"
     },
     {
       "file": "packages/plugin-65xx/src/index.ts",
-      "sha256": "66ce2f307f6ffbd5316e1cbc3c26cee30e216d938e9751e135593e1913e53be5"
+      "sha256": "cbcd3d42434ec8065e49db239786fc48b021cba2b6926d7557748ef8d673a44c"
     },
     {
       "file": "packages/plugin-65xx/src/instructions/catalog.ts",
@@ -845,7 +877,7 @@
     },
     {
       "file": "packages/plugin-65xx/src/linker-config.ts",
-      "sha256": "993afaf9db11bbead619a3237091a7daaceec1e555975e3d17978694236d9cee"
+      "sha256": "a4bafb3d838d2e9682aaf6af44cef783f2bb942a2061222d1d15bf663ec399c1"
     },
     {
       "file": "packages/plugin-65xx/src/nes/assets.ts",
@@ -861,7 +893,7 @@
     },
     {
       "file": "packages/plugin-65xx/src/operands/resolution.ts",
-      "sha256": "7ef1cb5d01db2d7271b5c039d86a43bd5e612e67d511bd888dd8157403949162"
+      "sha256": "20b2e3140614a9413b96a09999ce8d07a814aef0fd801173ed144710555f8a47"
     },
     {
       "file": "packages/plugin-65xx/src/operands/syntax.ts",
@@ -872,12 +904,16 @@
       "sha256": "d6c459e963a65e85e3ba309f8a208e62c52e34e3528e9b02d2871f5018ec1917"
     },
     {
+      "file": "packages/plugin-65xx/src/target/link-target.ts",
+      "sha256": "be4596f713cc02bb94a19f57afff56d1c242d16545008edcc30ea534fab5d15e"
+    },
+    {
       "file": "packages/plugin-65xx/src/target/nes.ts",
-      "sha256": "ca2f129df0a411bb791b810d2031c8cdf9daccbb0c0dd238d4f7ca51b07ef13b"
+      "sha256": "94bd3f465d77919a18ebe0ca4e77e348f0ff4ece18e3865bc305308de750f81f"
     },
     {
       "file": "packages/plugin-65xx/src/typed-architecture.ts",
-      "sha256": "4fc55c58ce929130f025c0aa43f7f818bf1ace2cba9c89a12aa0b852c9d935c1"
+      "sha256": "d17ec148c4d7d6dea9247df33cd1e50c6a66ab7a45b8b94c377e53a710db18be"
     },
     {
       "file": "packages/vscode-extension/esbuild.mjs",

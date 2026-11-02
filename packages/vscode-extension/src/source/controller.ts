@@ -31,7 +31,6 @@ import {
   type WorkspaceFolder,
 } from "vscode";
 
-import type { AnalysisCoverageEditTarget } from "../analysis/coverage-tree.js";
 import { BinaryDrafts } from "../assets/binary-drafts.js";
 import { onDidChangeRuntimeCapture, runtimeCapturePhase } from "../runtime/capture-state.js";
 import { editAnalysisResearch } from "./analysis-editor.js";
@@ -42,7 +41,7 @@ import { changedBuildInputs } from "./build-inputs.js";
 import { registerSourceCodeActions } from "./code-actions.js";
 import { type SourceGenerationReview } from "./generation-review.js";
 import { SourceProcessClient } from "./process-client.js";
-import { findEvidenceSourceRoot, findSourceRoot } from "./project-path.js";
+import { findSourceRoot } from "./project-path.js";
 import { editSourceResearch } from "./research-editor.js";
 import { readGraphicsSelection, readSourceStatus } from "./result-readers.js";
 import { SourceProjectSession } from "./session.js";
@@ -110,6 +109,9 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       ),
       commands.registerCommand("asm.source.init", () => this.guard(() => this.create())),
       commands.registerCommand("asm.source.initDiz", () => this.guard(() => this.create(true))),
+      commands.registerCommand("asm.source.migrate", () =>
+        this.guard(() => this.builds.perform("prepare", undefined, undefined, undefined, "linked")),
+      ),
       commands.registerCommand("asm.source.refresh", () => this.guard(() => this.refresh())),
       commands.registerCommand("asm.asset.export", (request?: unknown) =>
         this.guard(() => this.assetFile("export", request)),
@@ -348,38 +350,21 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       : undefined;
   }
 
-  /** Route an evidence action only after proving which worktree owns that evidence store. */
-  async editEvidence(
-    action: "classification" | "state" | "targets" | "symbols",
-    target?: AnalysisCoverageEditTarget,
-  ): Promise<boolean> {
-    const handled = await this.guard(async () => {
-      const root = target
-        ? await findEvidenceSourceRoot(target.projectDirectory, this.session.root)
-        : this.session.root;
+  /** Command-palette research edits always use the explicitly selected source project. */
+  async editEvidence(action: "classification" | "state" | "targets" | "symbols"): Promise<void> {
+    await this.guard(async () => {
+      const root = this.session.root;
       if (!root) {
-        return false;
-      }
-      if (root !== this.session.root) {
-        await this.select(root);
+        return;
       }
       const context = () =>
         this.session.root === root ? { root, buffers: this.buffers() } : undefined;
       if (action === "symbols") {
         await editSourceResearch(this.session.worker, context);
       } else {
-        await editAnalysisResearch(this.session.worker, context, undefined, {
-          action,
-          ids: action === "targets" ? (target?.analysisIds ?? []) : (target?.annotationIds ?? []),
-          range:
-            target && action !== "targets" ? { start: target.start, end: target.end } : undefined,
-        });
+        await editAnalysisResearch(this.session.worker, context, undefined, { action });
       }
-      return true;
     });
-    // A rejected project identity was already reported by guard. It must not
-    // fall through into another editing path against that unverified target.
-    return handled ?? true;
   }
   getTreeItem(row: SourceRow): TreeItem {
     return row;

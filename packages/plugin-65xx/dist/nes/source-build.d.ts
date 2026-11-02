@@ -1,7 +1,14 @@
 import { type AssemblerEnvironment } from "@uttori/asm-core";
-import { type SourceBuildVerification } from "@uttori/asm-disassembler/source-project";
+import { type SourceBuildCoverage, type SourceBuildVerification, type SourceLinkBuild } from "@uttori/asm-disassembler/source-project";
 /** Saved inputs for a fixed-layout cartridge; pristine generations additionally require exact original bytes. */
 export interface BuildNesSourceOptions {
+    /** Explicit generated-module selection; omitted for existing absolute Asar projects. */
+    readonly link?: SourceLinkBuild;
+    /** Exact host configuration snapshots, included in saved-input freshness checks. */
+    readonly controlInputs?: readonly {
+        readonly path: string;
+        readonly sha256: string;
+    }[];
     readonly root: string;
     readonly entrySource: string;
     readonly environment: AssemblerEnvironment;
@@ -27,6 +34,7 @@ export interface NesSourceBuild {
     readonly outputFile: string;
     readonly debugMapFile: string;
     readonly inputSha256: string;
+    readonly coverage?: SourceBuildCoverage;
     readonly inputs: readonly {
         readonly path: string;
         readonly sha256: string;
@@ -43,7 +51,7 @@ export interface NesSourceBuild {
 export declare function inspectNesSource(options: BuildNesSourceOptions & {
     readonly overlays?: ReadonlyMap<string, Uint8Array | null>;
 }): {
-    output: Uint8Array<ArrayBuffer>;
+    output: Uint8Array<ArrayBufferLike>;
     mapping: import("@uttori/asm-core").AddressToLineMapping;
     snapshots: ReadonlyMap<string, Uint8Array<ArrayBufferLike>>;
     symbols: Map<string, number>;

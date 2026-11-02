@@ -39,6 +39,7 @@ function placementValue(p) {
         p.tile ?? null,
         p.external?.romAddress ?? null,
         p.external?.indexes ?? null,
+        p.paletteGroup ?? null,
     ];
 }
 /**
@@ -117,6 +118,15 @@ export function deriveFramePlacements(layout, frame) {
             throw new Error(`Invalid native block: ${frame.id}/${block.id}.`);
         }
         ids.add(block.id);
+        const display = {};
+        if (block.paletteGroup !== undefined) {
+            if (!Number.isInteger(block.paletteGroup) ||
+                block.paletteGroup < 0 ||
+                block.paletteGroup >= layout.paletteRefs.length) {
+                throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+            }
+            display.paletteGroup = block.paletteGroup;
+        }
         const references = block.tiles.map(resolve);
         return expandIndexedGrid({
             ...block,
@@ -132,7 +142,7 @@ export function deriveFramePlacements(layout, frame) {
             y: p.y,
             flipX: p.flipX,
             flipY: p.flipY,
-        }, references[index]));
+        }, references[index], display));
     });
 }
 /** Check raw body evidence against editable blocks before interpreting any derived geometry.

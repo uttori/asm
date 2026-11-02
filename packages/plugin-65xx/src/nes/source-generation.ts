@@ -6,6 +6,9 @@ import { openAnalysisProjectStore, validateProjectRom } from "@uttori/asm-disass
 import {
   lostCodeRanges,
   assertSourcePath,
+  sourceLinkFiles,
+  sourceLinkEntry,
+  readSourceLinkBuild,
   sourceGit,
   retainSourceGeneration,
   sourceContentHash,
@@ -30,11 +33,12 @@ export type {
 export function nesGenerationOptionsHash(
   options: Pick<
     PrepareNesGenerationOptions,
-    "sourceRoot" | "recipes" | "pristineAssets" | "codeWithdrawals"
+    "sourceRoot" | "recipes" | "pristineAssets" | "codeWithdrawals" | "assembly"
   >,
 ): string {
   return sourceContentHash(
     canonicalJson({
+      ...(options.assembly ? { assembly: options.assembly } : {}),
       sourceRoot: options.sourceRoot,
       recipes: options.recipes
         .map((file) => ({ path: file.path, sha256: sourceContentHash(file.bytes) }))
@@ -95,6 +99,9 @@ export async function prepareNesGeneration(
   options: PrepareNesGenerationOptions,
 ): Promise<PreparedNesGeneration> {
   assertSourcePath(options.sourceRoot);
+  if (options.assembly !== options.inputs.assembly) {
+    throw new Error("Generation assembly selection changed.");
+  }
   options.signal?.throwIfAborted();
   if (nesGenerationOptionsHash(options) !== options.inputs.optionsSha256) {
     throw new Error("Generation recipe identity changed.");
@@ -106,6 +113,11 @@ export async function prepareNesGeneration(
   ) {
     throw new Error("Prepare regeneration from the accepted project/ROM lineage.");
   }
+  const compilerRecipe = options.recipes.find((file) => file.path === "uttori-asm.config.json");
+  const entrySource =
+    options.assembly === "linked" && compilerRecipe
+      ? sourceLinkEntry(JSON.parse(Buffer.from(compilerRecipe.bytes).toString("utf8")))
+      : "main.asm";
   const scratch = createSourceScratch(options.repository, "prepare");
   const temporary = scratch.directory;
   const source = path.join(temporary, options.sourceRoot);
@@ -130,7 +142,7 @@ export async function prepareNesGeneration(
     // SQL keeps the complete runtime history out of JS. The iterator is consumed while this
     // snapshot is open so another evidence import cannot mix instruction variants into the render.
     store.prepareAnnotationQueries();
-    const { manifest, rom, cartridge } = store.transaction(() => {
+    const { manifest, rom, cartridge, relocatable } = store.transaction(() => {
       const project = store.sourceExportView();
       if (
         sourceContentHash(canonicalJson(project.manifest)) !== options.inputs.evidenceSha256 ||
@@ -154,10 +166,12 @@ export async function prepareNesGeneration(
           comments: project.shards.comments,
           annotations: project.shards.annotations,
         },
+        options.assembly === "linked" ? { module: { id: options.inputs.project } } : {},
       );
       for (const file of exported.files) {
         if (file.path !== "uttori-asm.config.json") {
-          write({ path: `${options.sourceRoot}/${file.path}`, bytes: file.bytes });
+          const outputPath = file.path === "main.asm" ? entrySource : file.path;
+          write({ path: `${options.sourceRoot}/${outputPath}`, bytes: file.bytes });
         }
       }
       return {
@@ -167,6 +181,7 @@ export async function prepareNesGeneration(
         },
         rom: loadedRom,
         cartridge: loadedCartridge,
+        relocatable: exported.relocatable,
       };
     }, false);
     const priorFiles = new Map(prior.files.map((file) => [file.path, file]));
@@ -264,13 +279,49 @@ export async function prepareNesGeneration(
     // Configuration is a build input on both histories. Research maps remain owned by the source
     // branch and are retained there through the explicit checkpoint required before applying.
     const configuration = options.recipes.find((file) => file.path === "uttori-asm.config.json")!;
-    write({ path: `${options.sourceRoot}/${configuration.path}`, bytes: configuration.bytes });
+    let configurationBytes = configuration.bytes;
+    if (options.assembly === "linked") {
+      if (!relocatable) {
+        throw new Error("Exporter did not provide a relocatable recipe.");
+      }
+      for (const file of sourceLinkFiles(
+        configuration.bytes,
+        options.inputs.project,
+        relocatable.linkRecipe,
+        options.sourceRoot,
+      )) {
+        const name = `${options.sourceRoot}/${file.path}`;
+        const previous = generated.get(name);
+        if (previous) {
+          if (!Buffer.from(previous.bytes).equals(file.bytes)) {
+            throw new Error("Generated link recipes disagree.");
+          }
+          continue;
+        }
+        write({ path: name, bytes: file.bytes });
+      }
+      configurationBytes = generated.get(`${options.sourceRoot}/${configuration.path}`)!.bytes;
+    } else {
+      write({ path: `${options.sourceRoot}/${configuration.path}`, bytes: configurationBytes });
+    }
+    const configFile = path.join(source, configuration.path);
+    const linkConfiguration: unknown = JSON.parse(Buffer.from(configurationBytes).toString("utf8"));
+    if (!isRecord(linkConfiguration)) {
+      throw new Error("Source compiler configuration must be an object.");
+    }
+    const link = readSourceLinkBuild(
+      linkConfiguration,
+      configFile,
+      path.join(source, entrySource),
+      (file) => fs.readFileSync(file),
+    );
     const loaded = await options.loadEnvironment(path.join(source, configuration.path));
     let build: NesSourceBuild;
     try {
       build = buildNesSource({
         root: temporary,
-        entrySource: `${options.sourceRoot}/main.asm`,
+        ...(link ? { link } : {}),
+        entrySource: `${options.sourceRoot}/${entrySource}`,
         environment: loaded.environment,
         includePaths: loaded.includePaths,
         targetOptions: loaded.targetOptions,
@@ -278,11 +329,32 @@ export async function prepareNesGeneration(
         originalContent: cartridge.bytes(),
         outputDirectory: path.join(temporary, "build"),
         toolchainSha256: options.inputs.toolchainSha256,
-        configurationSha256: sourceContentHash(configuration.bytes),
+        configurationSha256: sourceContentHash(configurationBytes),
         signal: options.signal,
       });
     } finally {
       await loaded.dispose();
+    }
+    if (link) {
+      // Keep a portable proof in the immutable payload; temporary paths and debug-map hashes would
+      // make identical generations differ merely because they used different scratch directories.
+      write({
+        path: `${options.sourceRoot}/link-verification.json`,
+        bytes: Buffer.from(
+          canonicalJson({
+            format: "uttori-source-link-verification",
+            version: 1,
+            target: "65xx.nes",
+            module: link.module.id,
+            recipeSha256: sourceContentHash(canonicalJson(link.recipe)),
+            originalContainerSha256: rom.identity.sha256,
+            outputSha256: build.verification.outputSha256,
+            outputSize: rom.identity.fileSize,
+            toolchainSha256: options.inputs.toolchainSha256,
+            checks: build.verification.checks,
+          }),
+        ),
+      });
     }
     const generation = await retainSourceGeneration(options.repository, {
       files: [...generated.values(), createSourceInputSnapshot(options.inputFiles)],

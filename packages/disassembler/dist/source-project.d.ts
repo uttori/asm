@@ -14,6 +14,9 @@ export { lostCodeRanges } from "./source-project/code-preservation.js";
 export { checkRawBlockConsumption, type RawBlockInput } from "./source-project/raw-consumption.js";
 export { publishSourceBuild, type SourceBuildReceipt } from "./source-project/build-publication.js";
 export type { SourceGenerationOptions, PreparedSourceGeneration, SourceInspection, } from "./source-project/generation-contracts.js";
-export type { SourceInitializationResult, SourceTargetDescriptor, SourceTargetOperation, SourceWorkflowHost, InitializeSourceOptions, SourceBuildResult, SourceProjectInspection, SourceAnalysisOptions, SourceCaptureResult, SourceTargetCaptureOptions, } from "./source-project/target-contracts.js";
+export type { SourceInitializationResult, SourceTargetDescriptor, SourceTargetOperation, SourceWorkflowHost, InitializeSourceOptions, SourceBuildResult, SourceProjectInspection, SourceModuleInspection, SourceAnalysisOptions, SourceCaptureResult, SourceTargetCaptureOptions, } from "./source-project/target-contracts.js";
 export { SourceOperationError, type SourceFailureCode } from "./source-project/errors.js";
+export { buildLinkedObjects, publishLinkedBuild, type LinkedBuildReceipt, } from "./source-project/link-build.js";
+export { type SourceLinkBuild, readSourceLinkBuild, sourceLinkFiles, sourceLinkEntry, linkSourceAssembly, sourceMappingFromLink, } from "./source-project/source-link.js";
+export { sourceBuildCoverage, isSourceBuildCoverage, type SourceBuildCoverage, type SourceBuildSummary, } from "./source-project/build-coverage.js";
 //# sourceMappingURL=source-project.d.ts.map

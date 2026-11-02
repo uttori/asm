@@ -2,6 +2,7 @@ import { type InstructionResolutionFrame, type TypedArchitectureEncoder, type Ty
 /** 65816 flags belong to this encoder instance and reset once per assembly pass. */
 export declare class Typed65816 implements TypedArchitectureEncoder {
     readonly optimizeDirectPage: () => boolean;
+    readonly supportsRelocatable = true;
     readonly deferOperandBindingErrors = true;
     /** True selects 16-bit expression immediates; lexical widths can override this hint. */
     m16: boolean;
@@ -19,5 +20,9 @@ export declare class Typed65816 implements TypedArchitectureEncoder {
     encode(frame: InstructionResolutionFrame, context: TypedEncoderContext): boolean;
     /** Shared selection preserves the distinct numeric-read positions of each hardware family. */
     private run;
+    /** Existing numeric selection remains shared with explicit Asar source adaptation. */
+    private runAbsolute;
+    /** Module forms are determined from syntax/state; final symbol addresses cannot shrink instructions. */
+    private runModule;
 }
 //# sourceMappingURL=typed-65816.d.ts.map

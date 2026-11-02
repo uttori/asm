@@ -11,7 +11,7 @@ import {
   type Command,
 } from "vscode";
 
-import { findAnalysisProjectDirectories } from "./coverage-tree.js";
+import { findAnalysisProjectDirectories } from "./project-discovery.js";
 import type { AnalysisNavigationTarget } from "./navigation-target.js";
 import { analysisWorker } from "./worker-client.js";
 

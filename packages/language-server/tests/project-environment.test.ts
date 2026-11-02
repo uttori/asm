@@ -5,6 +5,10 @@ import path from "node:path";
 import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 
 import { test } from "../../../tests/ava-helper.js";
+import {
+  createAsarSourceBuildFixture,
+  createLinkedBuildFixture,
+} from "../../../tests/fixtures/linked-build.js";
 import { createFixturePlugin } from "../../../tests/plugin/fixture-plugin.js";
 import { ProjectEnvironmentController } from "../src/project-environment.js";
 import { completionsFor } from "../src/providers.js";
@@ -21,6 +25,74 @@ const createController = (): ProjectEnvironmentController =>
       includePaths: ["./"],
     },
   });
+
+test("native build manifests analyze independent modules with their declared identities", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-module-analysis-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  createLinkedBuildFixture(directory);
+  const controller = createController();
+  t.teardown(() => controller.dispose());
+  const state = await controller.replace({
+    cwd: directory,
+    workspaceTrusted: true,
+    linkProject: "build.json",
+  });
+  t.deepEqual(state.index.moduleRoots, {
+    [path.join(directory, "main.asm")]: { id: "main" },
+    [path.join(directory, "helper.asm")]: { id: "helper" },
+  });
+  t.deepEqual(state.index.getDiagnostics(path.join(directory, "main.asm")), []);
+  t.deepEqual(state.index.getDiagnostics(path.join(directory, "helper.asm")), []);
+  t.true(state.linkInputs?.includes(path.join(directory, "recipe.json")));
+  const snapshot = state.index.snapshot();
+  const published = controller.publishAnalysis(snapshot, new Map());
+  t.deepEqual(published.moduleRoots, state.index.moduleRoots);
+  t.deepEqual(published.getDiagnostics(path.join(directory, "main.asm")), []);
+  t.throws(
+    () =>
+      controller.publishAnalysis(
+        {
+          ...snapshot,
+          moduleRoots: {
+            ...snapshot.moduleRoots,
+            [path.join(directory, "main.asm")]: { id: "changed" },
+          },
+        },
+        new Map(),
+      ),
+    { message: /different environment/ },
+  );
+});
+
+test("source adapters survive language-tooling root selection and snapshot publication", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-source-analysis-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  createAsarSourceBuildFixture(directory);
+  const controller = createController();
+  t.teardown(() => controller.dispose());
+  const state = await controller.replace({
+    cwd: directory,
+    workspaceTrusted: true,
+    linkProject: "build.json",
+  });
+  const main = path.join(directory, "main.asm");
+  t.deepEqual(state.index.moduleRoots[main], { id: "main", sourceAdapter: "asar" });
+  t.deepEqual(state.index.getDiagnostics(main), []);
+  const snapshot = state.index.snapshot();
+  t.is(snapshot.version, 5);
+  t.deepEqual(controller.publishAnalysis(snapshot, new Map()).moduleRoots[main], {
+    id: "main",
+    sourceAdapter: "asar",
+  });
+  t.throws(
+    () =>
+      controller.publishAnalysis(
+        { ...snapshot, moduleRoots: { ...snapshot.moduleRoots, [main]: { id: "main" } } },
+        new Map(),
+      ),
+    { message: /different environment/ },
+  );
+});
 
 test("repository editor config discovers the packaged SoM sprite preview format", async (t) => {
   const project = path.resolve("secret-of-mana");

@@ -133,8 +133,11 @@ export function deriveFramePlacements(layout: FrameLayout, frame: FrameRecord) {
     ids.add(block.id);
     const display: Pick<FramePlacement, "paletteGroup"> = {};
     if (block.paletteGroup !== undefined) {
-      if (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 ||
-        block.paletteGroup >= layout.paletteRefs.length) {
+      if (
+        !Number.isInteger(block.paletteGroup) ||
+        block.paletteGroup < 0 ||
+        block.paletteGroup >= layout.paletteRefs.length
+      ) {
         throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
       }
       display.paletteGroup = block.paletteGroup;

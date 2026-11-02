@@ -5,6 +5,9 @@ import { captureCrc32c, captureU64, captureSession, captureScope, captureChunkRe
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /** Preserve consumer failures instead of interpreting them as recoverable archive truncation. */
 const consumerRejected = (failed) => failed;
+/** Only physical EOF permits opt-in prefix recovery; malformed checksums and frames remain errors. */
+class CaptureTruncationError extends Error {
+}
 export function validateCaptureMetadata(m) {
     if (!isRecord(m)) {
         throw new Error("Capture requires a supported CPU scope and exact ROM/producer identity.");
@@ -158,6 +161,9 @@ export const recoverCaptureFile = async (file, accept, options = {}) => {
     });
     const read = async (length) => {
         options.signal?.throwIfAborted();
+        if (offset + length > before.size) {
+            throw new CaptureTruncationError("Torn capture frame or missing terminal frame.");
+        }
         checkCaptureSize(offset + length, options);
         const started = options.onTiming ? performance.now() : 0;
         const b = await reader.read(length, offset, before.size);
@@ -289,6 +295,7 @@ export const recoverCaptureFile = async (file, accept, options = {}) => {
             chunkThrough: String(chunkThrough),
             eventThrough: String(eventThrough),
             reason: error instanceof Error ? error.message : String(error),
+            ...(error instanceof CaptureTruncationError ? { reasonCode: "truncated" } : {}),
         };
     }
     finally {

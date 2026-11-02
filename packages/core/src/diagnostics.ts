@@ -30,6 +30,8 @@ export type AssemblyDiagnostic = {
 };
 
 export type AssemblySymbolDefinition = {
+  /** Unlinked section location; consumers must not display this offset as a final ROM address. */
+  relocatable?: import("./relocatable.js").SectionPosition;
   name: string;
   kind: AssemblySymbolKind;
   location: AssemblySourceLocation;

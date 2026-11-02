@@ -327,7 +327,7 @@ test.serial(
       ...initial,
       records: [{ path: declaration, collection: "annotations", value: { ...range, state } }],
     });
-    const hint = { action: "state" as const, ids: [range.id] };
+    const hint = { action: "state" as const };
     for (const [field, choice, key, expected] of [
       ["E · emulation mode", "Emulation (8-bit M/X)", "e", true],
       ["E · emulation mode", "Native", "e", false],
@@ -392,11 +392,7 @@ test.serial(
     const service = worker(selection());
     host.picks = [pick("Classify a Range…"), pick(declaration), pick("ROM"), pick("graphics")];
     host.inputs = ["$100", "$110", "snes.65816", "Graphics evidence"];
-    await editAnalysisResearch(service.client, context, undefined, {
-      action: "classification",
-      ids: [],
-      range: { start: 0x100, end: 0x110 },
-    });
+    await editAnalysisResearch(service.client, context);
     const value = changed(service).value;
     t.deepEqual(value, {
       id: "manual.range.rom.100.110",

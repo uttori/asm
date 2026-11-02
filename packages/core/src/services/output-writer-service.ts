@@ -5,8 +5,11 @@ import type {
   TargetAddressSpace,
   TargetOutputFormat,
 } from "../plugin/contracts.js";
+import type { ModuleAssembly } from "./module-assembly.js";
 
 export interface OutputWriterHost {
+  readonly moduleAssembly?: ModuleAssembly;
+  recordModuleWrite?(): void;
   traceStage: AssemblyStageName;
   currentTargetAddress: number;
   currentTargetBaseAddress: number;
@@ -48,6 +51,14 @@ export class OutputWriterService {
     if (num < 0) {
       throw new Error("step num is negative");
     }
+    if (this.host.moduleAssembly) {
+      const next = this.host.moduleAssembly.advance(num);
+      this.host.currentTargetAddress = next;
+      this.host.currentTargetBaseAddress = next;
+      this.host.syncWriteStarts();
+      this.host.incrementBytesWritten(num);
+      return;
+    }
     this.host.currentTargetAddress = this.host.pluginAddressSpace.advance(
       this.host.currentTargetAddress,
       num,
@@ -67,6 +78,13 @@ export class OutputWriterService {
   write1(num: number): void {
     if (Number.isNaN(num)) {
       throw new Error("write1 value is NaN");
+    }
+    // Section offsets are not mapped bus addresses. The linker owns mapper checks and placement.
+    if (this.host.moduleAssembly) {
+      this.host.moduleAssembly.write(num);
+      this.host.recordModuleWrite?.();
+      this.step(1);
+      return;
     }
 
     this.verifyLogicalPosition();
@@ -199,6 +217,9 @@ export class OutputWriterService {
    * @param {number} length The length of the value to write.
    */
   validateWrite(length: number): void {
+    if (this.host.moduleAssembly) {
+      return;
+    }
     this.host.beforeWrite?.(this.host.currentTargetBaseAddress, length);
   }
 
@@ -206,7 +227,7 @@ export class OutputWriterService {
    * Finishes the pass.
    */
   finishPass(): void {
-    if (this.host.canFinalize) {
+    if (this.host.canFinalize && !this.host.moduleAssembly) {
       this.host.pluginOutputFormat.finalize({
         state: this.host.pluginState,
         outputBytes: this.host.outputBytes,
@@ -220,6 +241,9 @@ export class OutputWriterService {
    * @returns {number} The mapped output offset.
    */
   toOutputOffset(addr: number): number {
+    if (this.host.moduleAssembly) {
+      return -1;
+    }
     return this.host.pluginAddressSpace.toOutputOffset(addr);
   }
 

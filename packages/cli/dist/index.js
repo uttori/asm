@@ -8,6 +8,7 @@ import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-pl
 import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import { SNES_MAPPERS, analyzeSnesProject, createSnesAnalysisProject, } from "@uttori/asm-plugin-snes/disassembler";
 import { assetUsage, runAssetCli } from "./asset-interchange/cli.js";
+import { assemblyBuildUsage, runAssemblyBuildCli } from "./build.js";
 import { publishOutputFiles } from "./output-files.js";
 import { runSourceCli, sourceUsage } from "./source.js";
 function isCliCommand(value) {
@@ -33,7 +34,7 @@ const commandOptions = {
     disassemble: ["--mapper", "--header-size", "--dizraw"],
     analyze: ["--rom", "--entry", "--max-work-items", "--max-call-depth"],
     "project-validate": ["--rom"],
-    "project-compact": [],
+    "project-compact": ["--analysis-only"],
     "project-storage": ["--cache-max-mib", "--storage-max-mib"],
     "evidence-import": [
         "--rom",
@@ -46,7 +47,7 @@ const commandOptions = {
     "evidence-report": [],
 };
 const knownOptions = new Set(["--help", ...Object.values(commandOptions).flat()]);
-const booleanOptions = new Set(["--help", "--verbose", "--debug"]);
+const booleanOptions = new Set(["--help", "--verbose", "--debug", "--analysis-only"]);
 const commandsWithOutput = new Set(["assemble", "disassemble", "evidence-report"]);
 /** Installed executable's help text. All flags are long options. -- ends option parsing. */
 export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
@@ -56,7 +57,7 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm evidence-import <project-directory> --rom <rom> [evidence-options]
   uttori-asm evidence-report <project-directory> [report.json]
   uttori-asm project-validate <project-directory> [--rom <rom>]
-  uttori-asm project-compact <project-directory>
+  uttori-asm project-compact <project-directory> [--analysis-only]
   uttori-asm project-storage <project-directory> [storage-options]
 
 Creation options (disassemble):
@@ -71,7 +72,7 @@ ROM identity (analyze, evidence-import):
 Evidence options (evidence-import):
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 32768)
-  --trace-index <mode>         full (default; retains all registers)
+  --trace-index <mode>         analysis (default) or full (retains all registers)
 
 Analysis options (analyze):
   --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
@@ -81,6 +82,7 @@ Analysis options (analyze):
 Storage options (project-storage, budget options also accepted by evidence-import):
   --cache-max-mib <count>      Disposable projection budget (default 256)
   --storage-max-mib <count>    Project database publication ceiling (0 disables)
+  --analysis-only             project-compact: keep counted SNES decoder variants and memory evidence
 
 Assemble options:
   --config <uttori-asm.config.json>
@@ -137,6 +139,7 @@ export const parseCliArguments = (argv) => {
     let maxCallDepth;
     let verbose = false;
     let help = false;
+    let analysisOnly = false;
     const suppliedOptions = new Set();
     const requireValue = (flag, inlineValue, index) => {
         const nextIndex = index + 1;
@@ -180,6 +183,10 @@ export const parseCliArguments = (argv) => {
         }
         if (flag === "--debug") {
             debugBuild = true;
+            continue;
+        }
+        if (flag === "--analysis-only") {
+            analysisOnly = true;
             continue;
         }
         const [value, consumedIndex] = requireValue(flag, inlineValue, index);
@@ -255,8 +262,8 @@ export const parseCliArguments = (argv) => {
                 break;
             }
             case "--trace-index":
-                if (value !== "full") {
-                    throw new Error("--trace-index must be full.");
+                if (value !== "full" && value !== "analysis") {
+                    throw new Error("--trace-index must be full or analysis.");
                 }
                 traceIndex = value;
                 break;
@@ -337,6 +344,7 @@ export const parseCliArguments = (argv) => {
         instructionTrace,
         traceMaxMiB,
         traceIndex,
+        ...(analysisOnly ? { analysisOnly: true } : {}),
         ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
         entryPoints: Object.freeze(entryPoints),
         maxWorkItems,
@@ -479,7 +487,7 @@ const importProjectEvidence = async (parsed, cwd) => {
         const result = await importRuntimeTraceIntoProject(filename, directory, {
             projectRomContentSha256: manifest.rom.contentSha256,
             sourceName: path.basename(filename),
-            indexMode: parsed.traceIndex,
+            indexMode: parsed.traceIndex ?? "analysis",
         }, {
             maxBytes: (parsed.traceMaxMiB ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES / 1024 ** 2) * 1024 ** 2,
             onStage: (stage) => console.log(stage),
@@ -714,6 +722,9 @@ const assemble = async (parsed, cwd) => {
  * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv = process.argv.slice(2)) => {
+    if (["assemble-object", "library", "link", "build"].includes(argv[0])) {
+        return runAssemblyBuildCli(argv);
+    }
     if (argv[0] === "asset") {
         return runAssetCli(argv.slice(1));
     }
@@ -729,7 +740,7 @@ export const runCli = async (argv = process.argv.slice(2)) => {
         return 1;
     }
     if (parsed.help) {
-        console.log(`${usage}\n\n${sourceUsage}\n\n${assetUsage}`);
+        console.log(`${usage}\n\n${assemblyBuildUsage}\n\n${sourceUsage}\n\n${assetUsage}`);
         return 0;
     }
     if (!parsed.input) {
@@ -796,7 +807,10 @@ const runCommand = async (parsed, cwd) => {
     }
     if (parsed.command === "project-compact") {
         try {
-            const result = compactAnalysisProject(path.resolve(cwd, parsed.input));
+            const result = compactAnalysisProject(path.resolve(cwd, parsed.input), {
+                analysisOnly: parsed.analysisOnly,
+                onProgress: (message) => console.error(message),
+            });
             console.log(`Success: compacted analysis storage. Freed ${(result.maintenance.removedBytes / 1024 / 1024).toFixed(1)} MiB.`);
             return result.maintenance.warnings.length ? 1 : 0;
         }

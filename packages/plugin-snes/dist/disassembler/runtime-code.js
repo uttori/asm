@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { EvidencePool, } from "@uttori/asm-disassembler";
 import { Cpu65816Decoder } from "../architectures/65816-decoder.js";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { createSnesAddressContext } from "./address-identities.js";
@@ -52,6 +53,7 @@ const known = (entry) => entry === undefined || entry === "unknown"
  * @returns {readonly AnalysisRecord[]} Captured CFG variants and explicit conflicts.
  */
 export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onProgress) => {
+    const evidencePool = new EvidencePool();
     const decoder = new Cpu65816Decoder();
     const context = createSnesAddressContext(mapper);
     const romBytes = rom.bytes();
@@ -78,7 +80,7 @@ export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.run
         if (duplicate) {
             nodes.set(id, {
                 ...duplicate,
-                evidence: [...new Set([...duplicate.evidence, ...sample.evidence])].toSorted(),
+                evidence: evidencePool.sorted([...duplicate.evidence, ...sample.evidence]),
             });
             continue;
         }
@@ -98,7 +100,7 @@ export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.run
                     flowKind: "decode",
                     indirect: false,
                     reason: "Captured bytes/state do not establish one complete 65816 instruction.",
-                    evidence: sample.evidence,
+                    evidence: evidencePool.intern(sample.evidence),
                 });
             }
             continue;
@@ -134,7 +136,7 @@ export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.run
             outgoingState: {},
             entryPoint: `captured:${sample.evidence[0]}`,
             evidencePath: [id],
-            evidence: [...new Set([...(prior?.evidence ?? []), ...sample.evidence])].toSorted(),
+            evidence: evidencePool.sorted([...(prior?.evidence ?? []), ...sample.evidence]),
             effectiveAddresses: instruction.references
                 .filter((ref) => ref.kind === "data" || ref.kind === "pointer")
                 .map((ref) => {

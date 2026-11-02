@@ -53,7 +53,11 @@ function literal(node: AssetValueNode): unknown {
     return node.value;
   }
   if (node.kind === "number") {
-    const raw = node.expression.trim();
+    // Numeric asset options carry typed syntax; only literal atoms belong in an editor preview.
+    if (node.expression.type !== "literal") {
+      throw new Error("Preview needs literal numeric options; Build Binary resolves expressions.");
+    }
+    const raw = node.expression.value;
     let value: number;
     if (/^\$[\da-f]+$/i.test(raw)) {
       value = Number.parseInt(raw.slice(1), 16);

@@ -63,6 +63,7 @@ export class SqliteRuntimeTraceBatch {
     #pending;
     #rows = 0;
     #finished = false;
+    /** An omitted source is reserved for a validated multi-capture retention rebuild. */
     constructor(db, source, intern) {
         this.#db = db;
         this.#source = source;
@@ -81,7 +82,9 @@ export class SqliteRuntimeTraceBatch {
         if (this.#finished || !this.#db.isTransaction) {
             throw new Error("Runtime trace batch is no longer active.");
         }
-        assertTraceRecordNamespace(record, this.#source);
+        if (this.#source !== undefined) {
+            assertTraceRecordNamespace(record, this.#source);
+        }
         if (this.#pending) {
             const instruction = this.#pending;
             if (record.kind !== "runtime-cpu-state" ||

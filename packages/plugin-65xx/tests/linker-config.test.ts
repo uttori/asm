@@ -1,5 +1,5 @@
 import { test } from "../../../tests/ava-helper.js";
-import { parseLd65Config } from "../src/linker-config.js";
+import { parseLd65Config, ld65LinkRecipe } from "../src/linker-config.js";
 
 const zeldaConfig = `MEMORY
 {
@@ -42,4 +42,28 @@ test("parseLd65Config maps sequential %O file offsets and RAM overlays", (t) => 
 
   t.is(config.segments.get("BANK_00_00")?.start, 0x8d60);
   t.is(config.symbols[0]?.name, "__BANK_01_CODE_RUN_END__");
+});
+
+test("link-recipe adaptation preserves RAM overlays and deferred section-derived symbols", (t) => {
+  const recipe = ld65LinkRecipe(parseLd65Config(zeldaConfig));
+  t.is(recipe.regions[2].outputOffset, undefined);
+  t.deepEqual(recipe.placements[2], {
+    section: "BANK_01_CODE",
+    load: "ROM_01",
+    run: "RAM_01_CODE",
+  });
+  t.deepEqual(recipe.symbols?.[0], {
+    name: "__BANK_01_CODE_LOAD__",
+    section: "BANK_01_CODE",
+    property: "load",
+  });
+  t.deepEqual(recipe.symbols?.at(-1), {
+    name: "__BANK_01_CODE_RUN_END__",
+    expression: {
+      kind: "binary",
+      operator: "+",
+      left: { kind: "symbol", name: "__BANK_01_CODE_RUN__" },
+      right: { kind: "symbol", name: "__BANK_01_CODE_SIZE__" },
+    },
+  });
 });

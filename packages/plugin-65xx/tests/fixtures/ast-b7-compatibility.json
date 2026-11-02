@@ -15,10 +15,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda $12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -36,11 +33,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda $0012",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -58,11 +51,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda $000012",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -80,11 +69,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda 0x12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -102,11 +87,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda 12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          12,
-          0
-        ],
+        "bytes": [173, 12, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -124,11 +105,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda %00010010",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -167,10 +144,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda $12.base",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -188,10 +162,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda #$12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          169,
-          18
-        ],
+        "bytes": [169, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -377,10 +348,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda $10+2",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -398,10 +366,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda ($10+2)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -419,59 +384,20 @@
       "source": "!value = $12\n!form = ($12,x)\nlda (pc()&255)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          0
-        ],
+        "bytes": [165, 0],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -489,60 +415,20 @@
       "source": "!value = $12\n!form = ($12,x)\nlda (pc()&255),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          185,
-          0,
-          0
-        ],
+        "bytes": [185, 0, 0],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -560,67 +446,22 @@
       "source": "!value = $12\n!form = ($12,x)\nlda (pc()&255,x)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          161,
-          0
-        ],
+        "bytes": [161, 0],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -659,59 +500,20 @@
       "source": "!value = $12\n!form = ($12,x)\nlda pc()&255",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          0
-        ],
+        "bytes": [165, 0],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -729,59 +531,20 @@
       "source": "!value = $12\n!form = ($12,x)\nlda pc()&255,x",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          181,
-          0
-        ],
+        "bytes": [181, 0],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -799,59 +562,20 @@
       "source": "!value = $12\n!form = ($12,x)\nlda #pc()&255",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          169,
-          0
-        ],
+        "bytes": [169, 0],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -1058,11 +782,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda a:$12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1101,11 +821,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda f:$12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1267,10 +983,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda #!value",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          169,
-          18
-        ],
+        "bytes": [169, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1288,10 +1001,7 @@
       "source": "!value = $12\n!form = ($12,x)\nlda !form",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          161,
-          18
-        ],
+        "bytes": [161, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1372,9 +1082,7 @@
       "source": "asl",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          10
-        ],
+        "bytes": [10],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1392,9 +1100,7 @@
       "source": "asl a",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          10
-        ],
+        "bytes": [10],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1454,10 +1160,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1475,10 +1178,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1517,11 +1217,7 @@
       "source": "bne +\nnop\n+",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          1,
-          234
-        ],
+        "bytes": [208, 1, 234],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1539,11 +1235,7 @@
       "source": "-\nnop\nbne -",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          234,
-          208,
-          253
-        ],
+        "bytes": [234, 208, 253],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1561,10 +1253,7 @@
       "source": "bne ++\n++",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          0
-        ],
+        "bytes": [208, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1603,110 +1292,32 @@
       "source": "lda #pc()&255\nnop\nlda #pc()&255",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          169,
-          0,
-          234,
-          169,
-          3
-        ],
+        "bytes": [169, 0, 234, 169, 3],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32771
-          ],
-          [
-            "collectDefinitions",
-            32771
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32771
-          ],
-          [
-            "resolveLayout",
-            32771
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32771
-          ],
-          [
-            "emitProgram",
-            32771
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32771],
+          ["collectDefinitions", 32771],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32771],
+          ["resolveLayout", 32771],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32771],
+          ["emitProgram", 32771]
         ],
         "error": null,
         "metadataHashes": {
@@ -1724,13 +1335,7 @@
       "source": "value = $12\nlda value\nvalue = $1234\nlda value",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18,
-          173,
-          52,
-          18
-        ],
+        "bytes": [165, 18, 173, 52, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1748,13 +1353,7 @@
       "source": "!v = $12\nlda !v\n!v = $1234\nlda !v",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18,
-          173,
-          52,
-          18
-        ],
+        "bytes": [165, 18, 173, 52, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1772,13 +1371,7 @@
       "source": "lda next\nnop\nnext:\nnop",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          4,
-          128,
-          234,
-          234
-        ],
+        "bytes": [173, 4, 128, 234, 234],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1796,12 +1389,7 @@
       "source": "struct Record $20\n.x db\nendstruct\nlda Record.x\nlda Record[1].x",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          32,
-          165,
-          33
-        ],
+        "bytes": [165, 32, 165, 33],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1819,109 +1407,32 @@
       "source": "function low(v) = v & 255\nlda #low(pc())\nlda low(pc())",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          169,
-          0,
-          165,
-          2
-        ],
+        "bytes": [169, 0, 165, 2],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32770
-          ],
-          [
-            "collectDefinitions",
-            32770
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32770
-          ],
-          [
-            "resolveLayout",
-            32770
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32770
-          ],
-          [
-            "emitProgram",
-            32770
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32770],
+          ["collectDefinitions", 32770],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32770],
+          ["resolveLayout", 32770],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32770],
+          ["emitProgram", 32770]
         ],
         "error": null,
         "metadataHashes": {
@@ -1939,10 +1450,7 @@
       "source": "macro load(v)\nlda <v>\nendmacro\n%load($12)\n%load(($12,x))",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": {
           "message": "Mismatched parentheses.",
@@ -1963,9 +1471,7 @@
       "source": "if 0\nlda (bad\nlda #missing\nendif\nnop",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          234
-        ],
+        "bytes": [234],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -1983,9 +1489,7 @@
       "source": "while 0\nlda #missing\nendwhile\nnop",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          234
-        ],
+        "bytes": [234],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2026,38 +1530,14 @@
       "result": {
         "bytes": [],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768]
         ],
         "error": {
           "message": "Unknown instruction: bogus",
@@ -2078,10 +1558,7 @@
       "source": "lda $12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2099,11 +1576,7 @@
       "source": "lda $0012",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2121,10 +1594,7 @@
       "source": "lda ($12)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          178,
-          18
-        ],
+        "bytes": [178, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2142,10 +1612,7 @@
       "source": "lda ($12,x)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          161,
-          18
-        ],
+        "bytes": [161, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2163,10 +1630,7 @@
       "source": "lda ($12),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          177,
-          18
-        ],
+        "bytes": [177, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2289,10 +1753,7 @@
       "source": "lda $12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2310,11 +1771,7 @@
       "source": "lda $0012",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2353,10 +1810,7 @@
       "source": "lda ($12,x)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          161,
-          18
-        ],
+        "bytes": [161, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2374,10 +1828,7 @@
       "source": "lda ($12),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          177,
-          18
-        ],
+        "bytes": [177, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2395,10 +1846,7 @@
       "source": "lda ($12),z",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          178,
-          18
-        ],
+        "bytes": [178, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2479,10 +1927,7 @@
       "source": "lda ($12,s),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          226,
-          18
-        ],
+        "bytes": [226, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2500,10 +1945,7 @@
       "source": "lda $12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2521,11 +1963,7 @@
       "source": "lda $0012",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2564,10 +2002,7 @@
       "source": "lda ($12,x)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          161,
-          18
-        ],
+        "bytes": [161, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2585,10 +2020,7 @@
       "source": "lda ($12),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          177,
-          18
-        ],
+        "bytes": [177, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2606,10 +2038,7 @@
       "source": "lda ($12),z",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          178,
-          18
-        ],
+        "bytes": [178, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2690,10 +2119,7 @@
       "source": "lda ($12,s),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          226,
-          18
-        ],
+        "bytes": [226, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2711,10 +2137,7 @@
       "source": "lda $12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2732,11 +2155,7 @@
       "source": "lda $0012",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2775,10 +2194,7 @@
       "source": "lda ($12,x)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          161,
-          18
-        ],
+        "bytes": [161, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2796,10 +2212,7 @@
       "source": "lda ($12),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          177,
-          18
-        ],
+        "bytes": [177, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2817,10 +2230,7 @@
       "source": "lda ($12),z",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          178,
-          18
-        ],
+        "bytes": [178, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2859,11 +2269,7 @@
       "source": "lda [$12],z",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          234,
-          178,
-          18
-        ],
+        "bytes": [234, 178, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2902,10 +2308,7 @@
       "source": "lda ($12,s),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          226,
-          18
-        ],
+        "bytes": [226, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2923,10 +2326,7 @@
       "source": "lda $12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2944,11 +2344,7 @@
       "source": "lda $0012",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2966,10 +2362,7 @@
       "source": "lda ($12)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          178,
-          18
-        ],
+        "bytes": [178, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -2987,10 +2380,7 @@
       "source": "lda ($12,x)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          161,
-          18
-        ],
+        "bytes": [161, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3008,10 +2398,7 @@
       "source": "lda ($12),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          177,
-          18
-        ],
+        "bytes": [177, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3134,10 +2521,7 @@
       "source": "lda $12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3155,11 +2539,7 @@
       "source": "lda $0012",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          173,
-          18,
-          0
-        ],
+        "bytes": [173, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3198,10 +2578,7 @@
       "source": "lda ($12,x)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          161,
-          18
-        ],
+        "bytes": [161, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3219,10 +2596,7 @@
       "source": "lda ($12),y",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          177,
-          18
-        ],
+        "bytes": [177, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3345,11 +2719,7 @@
       "source": "tst #$12,$34",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          131,
-          18,
-          52
-        ],
+        "bytes": [131, 18, 52],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3367,12 +2737,7 @@
       "source": "tst #$12,$3456,x",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          179,
-          18,
-          86,
-          52
-        ],
+        "bytes": [179, 18, 86, 52],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3392,14 +2757,8 @@
       "result": {
         "bytes": [],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768]
         ],
         "error": {
           "message": "TST does not support addressing mode 'immediate' on 65xx.huc6280. Expected immediateZeroPage, immediateAbsolute, immediateZeroPageIndexedX, immediateAbsoluteIndexedX. (ast-65xx.asm:2)",
@@ -3422,14 +2781,8 @@
       "result": {
         "bytes": [],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768]
         ],
         "error": {
           "message": "TST does not support addressing mode 'immediate' on 65xx.huc6280. Expected immediateZeroPage, immediateAbsolute, immediateZeroPageIndexedX, immediateAbsoluteIndexedX. (ast-65xx.asm:2)",
@@ -3450,112 +2803,32 @@
       "source": "tii pc(),pc()+1,pc()+2",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          115,
-          0,
-          128,
-          1,
-          128,
-          2,
-          128
-        ],
+        "bytes": [115, 0, 128, 1, 128, 2, 128],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -3573,15 +2846,7 @@
       "source": "tii $1234,$5678,$abcd",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          115,
-          52,
-          18,
-          120,
-          86,
-          205,
-          171
-        ],
+        "bytes": [115, 52, 18, 120, 86, 205, 171],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3599,10 +2864,7 @@
       "source": "tam #3",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          83,
-          3
-        ],
+        "bytes": [83, 3],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3620,10 +2882,7 @@
       "source": "tam #0",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          83,
-          0
-        ],
+        "bytes": [83, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3641,10 +2900,7 @@
       "source": "tam #4",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          83,
-          4
-        ],
+        "bytes": [83, 4],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3662,11 +2918,7 @@
       "source": "bbr0 $12,+\n+",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          15,
-          18,
-          0
-        ],
+        "bytes": [15, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3684,44 +2936,16 @@
       "source": "bbr0 pc()&255,+\n+",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          15,
-          0,
-          0
-        ],
+        "bytes": [15, 0, 0],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -3739,10 +2963,7 @@
       "source": "jsr $ff12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          34,
-          18
-        ],
+        "bytes": [34, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3760,11 +2981,7 @@
       "source": "jsr $00ff12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          32,
-          18,
-          255
-        ],
+        "bytes": [32, 18, 255],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3782,10 +2999,7 @@
       "source": "jsr 0xff12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          34,
-          18
-        ],
+        "bytes": [34, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3803,11 +3017,7 @@
       "source": "jsr 65300",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          32,
-          20,
-          255
-        ],
+        "bytes": [32, 20, 255],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3825,10 +3035,7 @@
       "source": "jsr $ff00+18",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          34,
-          18
-        ],
+        "bytes": [34, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3846,59 +3053,20 @@
       "source": "jsr pc()|$ff00",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          34,
-          0
-        ],
+        "bytes": [34, 0],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": null,
         "metadataHashes": {
@@ -3937,11 +3105,7 @@
       "source": "bbs0 $12,+\n+",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          7,
-          18,
-          0
-        ],
+        "bytes": [7, 18, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3959,11 +3123,7 @@
       "source": "ldm $12,#$34",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          60,
-          18,
-          52
-        ],
+        "bytes": [60, 18, 52],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -3981,10 +3141,7 @@
       "source": ".scope Scope\nvalue = $12\nlda value\n.endscope",
       "target": "65xx.ca65-raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4002,11 +3159,7 @@
       "source": ":\nnop\nbne :-",
       "target": "65xx.ca65-raw",
       "result": {
-        "bytes": [
-          234,
-          208,
-          253
-        ],
+        "bytes": [234, 208, 253],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4024,11 +3177,7 @@
       "source": "bne :+\n:\nnop",
       "target": "65xx.ca65-raw",
       "result": {
-        "bytes": [
-          208,
-          0,
-          234
-        ],
+        "bytes": [208, 0, 234],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4046,13 +3195,7 @@
       "source": ".setcpu \"65C02\"\nlda ($12)\n.pushcpu\n.setcpu \"6502\"\nnop\n.popcpu\nlda ($12)",
       "target": "65xx.ca65-raw",
       "result": {
-        "bytes": [
-          178,
-          18,
-          234,
-          178,
-          18
-        ],
+        "bytes": [178, 18, 234, 178, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4070,10 +3213,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4091,10 +3231,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4175,10 +3312,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4196,10 +3330,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4280,10 +3411,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4301,10 +3429,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4385,10 +3510,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4406,10 +3528,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4490,10 +3609,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4511,10 +3627,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4595,10 +3708,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4616,10 +3726,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4700,10 +3807,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4721,10 +3825,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4805,10 +3906,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4826,10 +3924,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4910,10 +4005,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -4931,10 +4023,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -5015,10 +4104,7 @@
       "source": "bne $8081",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          127
-        ],
+        "bytes": [208, 127],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -5036,10 +4122,7 @@
       "source": "bne $7f82",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          208,
-          128
-        ],
+        "bytes": [208, 128],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -5120,14 +4203,7 @@
       "source": "for i = 0..3\nlda #i\nendfor",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          169,
-          0,
-          169,
-          1,
-          169,
-          2
-        ],
+        "bytes": [169, 0, 169, 1, 169, 2],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -5145,12 +4221,7 @@
       "source": "macro load(v)\nlda #<v>\nendmacro\n%load(1)\n%load(2)",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          169,
-          1,
-          169,
-          2
-        ],
+        "bytes": [169, 1, 169, 2],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -5168,15 +4239,7 @@
       "source": "tii $10,$10,$10",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          115,
-          16,
-          0,
-          16,
-          0,
-          16,
-          0
-        ],
+        "bytes": [115, 16, 0, 16, 0, 16, 0],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -5383,9 +4446,7 @@
       "source": "if 0\nlda !missing\nendif\nnop",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          234
-        ],
+        "bytes": [234],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -5529,10 +4590,7 @@
       "source": "lda !later\n!later = $12",
       "target": "65xx.raw",
       "result": {
-        "bytes": [
-          165,
-          18
-        ],
+        "bytes": [165, 18],
         "calls": [],
         "error": null,
         "metadataHashes": {
@@ -5636,66 +4694,21 @@
       "result": {
         "bytes": [],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": {
           "message": "Maximum call stack size exceeded",
@@ -5802,42 +4815,15 @@
       "result": {
         "bytes": [],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768]
         ],
         "error": {
           "message": "Define 'missing' not found.",
@@ -5881,66 +4867,21 @@
       "result": {
         "bytes": [],
         "calls": [
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "collectDefinitions",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "resolveLayout",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ],
-          [
-            "emitProgram",
-            32768
-          ]
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["collectDefinitions", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["resolveLayout", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768],
+          ["emitProgram", 32768]
         ],
         "error": {
           "message": "Maximum call stack size exceeded",

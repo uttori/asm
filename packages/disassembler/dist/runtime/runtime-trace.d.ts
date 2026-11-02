@@ -41,7 +41,7 @@ export interface RuntimeInstructionTraceImportContext {
     /** Lowercase SHA-256 of headerless ROM content. A mismatch rejects the import. */
     readonly projectRomContentSha256: string;
     readonly sourceName: string;
-    /** Full indexing retains every supplied register; other modes are rejected. */
+    /** Full retains supplied registers. Analysis retains SNES decoder state and all memory facts. Defaults to full. */
     readonly indexMode?: string;
     /**
      * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
@@ -51,8 +51,8 @@ export interface RuntimeInstructionTraceImportContext {
      */
     readonly maxIndexRecords?: number;
 }
-/** Instruction imports retain all supplied registers, bytes, counts and bus observations. */
-export type RuntimeTraceIndexMode = "full";
+/** Full preserves registers; analysis consolidates SNES snapshots by decoder state and opcode bytes. */
+export type RuntimeTraceIndexMode = "full" | "analysis";
 /** Default and maximum distinct-fact budget when counters or output records remain on the heap. */
 export declare const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8000000;
 /** Native evidence plus deterministic diagnostics produced without mutating a project. */
@@ -155,7 +155,7 @@ export interface RuntimeTraceImporterStorage {
 /**
  * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
  * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
- * @param {string} mode Retention profile. Only full indexing is supported.
+ * @param {string} mode Full snapshots or compact analysis state.
  * @param {number} requested Explicit caller budget, if any.
  * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
  * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.

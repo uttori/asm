@@ -51,6 +51,11 @@
       "type": "string",
       "minLength": 1
     },
+    "linkProject": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Native build manifest used by editor Build/Run/Debug, relative to this config. Omit to keep absolute assembly."
+    },
     "baseImage": {
       "type": "string",
       "minLength": 1

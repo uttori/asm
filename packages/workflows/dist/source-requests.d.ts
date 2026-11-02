@@ -16,7 +16,9 @@ export interface SourceRequestMap {
     status: {
         readonly candidate?: string;
     };
-    prepare: Record<never, never>;
+    prepare: {
+        readonly assembly?: "linked";
+    };
     preview: {
         readonly candidate: string;
     };

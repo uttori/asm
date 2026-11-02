@@ -33,6 +33,7 @@ import {
 } from "@uttori/asm-plugin-snes/disassembler";
 
 import { assetUsage, runAssetCli } from "./asset-interchange/cli.js";
+import { assemblyBuildUsage, runAssemblyBuildCli } from "./build.js";
 import { publishOutputFiles } from "./output-files.js";
 import { runSourceCli, sourceUsage } from "./source.js";
 
@@ -835,6 +836,9 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
  * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv: readonly string[] = process.argv.slice(2)): Promise<number> => {
+  if (["assemble-object", "library", "link", "build"].includes(argv[0])) {
+    return runAssemblyBuildCli(argv);
+  }
   if (argv[0] === "asset") {
     return runAssetCli(argv.slice(1));
   }
@@ -849,7 +853,7 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
     return 1;
   }
   if (parsed.help) {
-    console.log(`${usage}\n\n${sourceUsage}\n\n${assetUsage}`);
+    console.log(`${usage}\n\n${assemblyBuildUsage}\n\n${sourceUsage}\n\n${assetUsage}`);
     return 0;
   }
   if (!parsed.input) {

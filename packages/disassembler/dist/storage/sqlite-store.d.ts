@@ -232,21 +232,6 @@ export declare class SqliteAnalysisStore {
      * @returns {ProjectEvidenceExplanation} Full direct provenance/conflicts, at most 200 reverse links.
      */
     explainEvidence(kind: ShardKind, id: string): ProjectEvidenceExplanation;
-    /** Exact coverage totals. Build only when classifications, code, or runtime facts changed.
-     * @returns {object} Persisted summary and detail count.
-     */
-    coverageSummary(): import("./sqlite-coverage-query.js").SqliteCoverageSummary;
-    /** Read at most 200 coverage rows from a current projection.
-     * @param {"segments" | "details"} kind Collection to page.
-     * @param {number} offset Nonnegative row offset.
-     * @returns {unknown[]} Persisted rows, never the full ROM map.
-     */
-    coveragePage(kind: "segments" | "details", offset?: number): unknown[];
-    /** Current conflicting ROM intervals, paged at 200 rows; offsets count conflicts only. */
-    coverageConflicts(offset?: number): {
-        count: number;
-        segments: unknown[];
-    };
     /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
      * @returns {object} Functions, calls, unresolved sites, and ownership.
      */
@@ -439,6 +424,13 @@ export declare class SqliteAnalysisStore {
     writePointer(directory: string): void;
     /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
     compact(): void;
+    /**
+     * Explicitly consolidate full SNES snapshots into counted decoder variants. A bounded staging
+     * database is verified first; one transaction swaps physical runtime tables, avoiding millions
+     * of deletion triggers and a database-sized WAL. Metadata, memory facts and research shadows
+     * retain their exact payloads. Refresh the portable capture catalog and compact() afterward.
+     */
+    retainSnesAnalysisEvidence(onProgress?: (message: string) => void): void;
     /** Current persisted policy. Defaults do not write or change the semantic revision.
      * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
      */

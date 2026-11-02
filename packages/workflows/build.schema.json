@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uttori.github.io/uttori-asm/build.schema.json",
+  "title": "Uttori native linked build",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "recipe"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "format": {
+      "const": "uttori-build"
+    },
+    "version": {
+      "const": 1
+    },
+    "config": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Plugin configuration relative to this manifest."
+    },
+    "modules": {
+      "type": "array",
+      "maxItems": 65536,
+      "description": "Ordered source modules. build assembles these before prebuilt objects; link rejects this list unless empty.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "source"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceAdapter": {
+            "enum": ["asar", "ca65"],
+            "description": "Explicit compatibility adapter; omission retains native section semantics."
+          }
+        }
+      }
+    },
+    "objects": {
+      "$ref": "#/$defs/paths"
+    },
+    "libraries": {
+      "$ref": "#/$defs/paths"
+    },
+    "recipe": {
+      "description": "Portable recipe, JSON recipe path, or a layout derived from source modules.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "target"],
+          "properties": {
+            "from": {
+              "const": "modules"
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target", "regions", "placements"],
+          "properties": {
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "targetOptions": {
+              "type": "object"
+            },
+            "checksumPolicy": {
+              "enum": ["preserve", "recompute"]
+            },
+            "regions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "start", "size"],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "size": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "outputOffset": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "fillByte": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "addressSpace": {
+                    "type": "string"
+                  },
+                  "initialBytes": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 255
+                    }
+                  }
+                }
+              }
+            },
+            "placements": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["section", "load", "run"],
+                "properties": {
+                  "section": {
+                    "type": "string"
+                  },
+                  "load": {
+                    "type": "string"
+                  },
+                  "run": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "alignment": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "bankSize": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            },
+            "symbols": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "assumptions": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "assertions": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "outputDirectory": {
+      "type": "string",
+      "minLength": 1,
+      "default": ".uttori-build"
+    },
+    "outputName": {
+      "type": "string",
+      "pattern": "^[\\w.-]+$",
+      "description": "Plain ROM filename. Defaults to program plus the target extension."
+    },
+    "original": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Complete original container. A byte difference prevents publication."
+    }
+  },
+  "$defs": {
+    "paths": {
+      "type": "array",
+      "maxItems": 65536,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

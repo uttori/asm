@@ -98,9 +98,9 @@ var require_is = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/is.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js
 var require_is2 = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/is.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean2;
@@ -134,9 +134,9 @@ var require_is2 = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messages.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js
 var require_messages = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messages.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -519,9 +519,9 @@ var require_messages = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/linkedMap.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js
 var require_linkedMap = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LRUCache = exports2.LinkedMap = exports2.Touch = void 0;
@@ -903,9 +903,9 @@ var require_linkedMap = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/disposable.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js
 var require_disposable = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Disposable = void 0;
@@ -921,9 +921,9 @@ var require_disposable = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/ral.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js
 var require_ral = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/ral.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var _ral;
@@ -946,9 +946,9 @@ var require_ral = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/events.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js
 var require_events = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/events.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -1083,9 +1083,9 @@ var require_events = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/cancellation.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js
 var require_cancellation = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1212,9 +1212,9 @@ var require_cancellation = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
 var require_sharedArrayCancellation = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SharedArrayReceiverStrategy = exports2.SharedArraySenderStrategy = void 0;
@@ -1291,9 +1291,9 @@ var require_sharedArrayCancellation = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/semaphore.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js
 var require_semaphore = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -1365,9 +1365,9 @@ var require_semaphore = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageReader.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js
 var require_messageReader = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1607,9 +1607,9 @@ ${JSON.stringify(Object.fromEntries(headers))}`));
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageWriter.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js
 var require_messageWriter = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1765,9 +1765,9 @@ var require_messageWriter = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
 var require_messageBuffer = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.AbstractMessageBuffer = void 0;
@@ -1916,9 +1916,9 @@ ${header}`);
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/connection.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js
 var require_connection = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/connection.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -2306,10 +2306,11 @@ var require_connection = __commonJS({
           } finally {
             if (result instanceof Promise) {
               result.then(() => {
-                inFlight--;
-                triggerMessageQueue();
               }).catch((error) => {
                 logger.error(`Processing message queue failed: ${error.toString()}`);
+              }).finally(() => {
+                inFlight--;
+                triggerMessageQueue();
               });
             } else {
               inFlight--;
@@ -3082,9 +3083,9 @@ ${JSON.stringify(message, null, 4)}`);
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/api.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js
 var require_api = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/api.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -3296,9 +3297,9 @@ var require_api = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-types/lib/umd/main.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js
 var require_main = __commonJS({
-  "node_modules/vscode-languageserver-types/lib/umd/main.js"(exports2, module2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js"(exports2, module2) {
     (function(factory) {
       if (typeof module2 === "object" && typeof module2.exports === "object") {
         var v = factory(require, exports2);
@@ -3324,15 +3325,15 @@ var require_main = __commonJS({
         }
         URI3.is = is;
       })(URI2 || (exports3.URI = URI2 = {}));
-      var integer5;
-      (function(integer6) {
-        integer6.MIN_VALUE = -2147483648;
-        integer6.MAX_VALUE = 2147483647;
+      var integer6;
+      (function(integer7) {
+        integer7.MIN_VALUE = -2147483648;
+        integer7.MAX_VALUE = 2147483647;
         function is(value) {
-          return typeof value === "number" && integer6.MIN_VALUE <= value && value <= integer6.MAX_VALUE;
+          return typeof value === "number" && integer7.MIN_VALUE <= value && value <= integer7.MAX_VALUE;
         }
-        integer6.is = is;
-      })(integer5 || (exports3.integer = integer5 = {}));
+        integer7.is = is;
+      })(integer6 || (exports3.integer = integer6 = {}));
       var uinteger2;
       (function(uinteger3) {
         uinteger3.MIN_VALUE = 0;
@@ -3446,7 +3447,7 @@ var require_main = __commonJS({
         ColorPresentation3.create = create;
         function is(value) {
           var candidate = value;
-          return Is2.objectLiteral(candidate) && Is2.string(candidate.label) && (Is2.undefined(candidate.textEdit) || TextEdit2.is(candidate)) && (Is2.undefined(candidate.additionalTextEdits) || Is2.typedArray(candidate.additionalTextEdits, TextEdit2.is));
+          return Is2.objectLiteral(candidate) && Is2.string(candidate.label) && (Is2.undefined(candidate.textEdit) || TextEdit2.is(candidate.textEdit)) && (Is2.undefined(candidate.additionalTextEdits) || Is2.typedArray(candidate.additionalTextEdits, TextEdit2.is));
         }
         ColorPresentation3.is = is;
       })(ColorPresentation2 || (exports3.ColorPresentation = ColorPresentation2 = {}));
@@ -3480,7 +3481,7 @@ var require_main = __commonJS({
         FoldingRange3.create = create;
         function is(value) {
           var candidate = value;
-          return Is2.objectLiteral(candidate) && Is2.uinteger(candidate.startLine) && Is2.uinteger(candidate.startLine) && (Is2.undefined(candidate.startCharacter) || Is2.uinteger(candidate.startCharacter)) && (Is2.undefined(candidate.endCharacter) || Is2.uinteger(candidate.endCharacter)) && (Is2.undefined(candidate.kind) || Is2.string(candidate.kind));
+          return Is2.objectLiteral(candidate) && Is2.uinteger(candidate.startLine) && Is2.uinteger(candidate.endLine) && (Is2.undefined(candidate.startCharacter) || Is2.uinteger(candidate.startCharacter)) && (Is2.undefined(candidate.endCharacter) || Is2.uinteger(candidate.endCharacter)) && (Is2.undefined(candidate.kind) || Is2.string(candidate.kind));
         }
         FoldingRange3.is = is;
       })(FoldingRange2 || (exports3.FoldingRange = FoldingRange2 = {}));
@@ -4896,10 +4897,10 @@ var require_main = __commonJS({
           return toString2.call(value) === "[object Number]" && min <= value && value <= max;
         }
         Is3.numberRange = numberRange;
-        function integer6(value) {
+        function integer7(value) {
           return toString2.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
         }
-        Is3.integer = integer6;
+        Is3.integer = integer7;
         function uinteger3(value) {
           return toString2.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
         }
@@ -4921,9 +4922,9 @@ var require_main = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/messages.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js
 var require_messages2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CM = exports2.ProtocolNotificationType = exports2.ProtocolNotificationType0 = exports2.ProtocolRequestType = exports2.ProtocolRequestType0 = exports2.RegistrationType = exports2.MessageDirection = void 0;
@@ -5004,9 +5005,9 @@ var require_messages2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
 var require_is3 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean2;
@@ -5048,9 +5049,9 @@ var require_is3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
 var require_protocol_implementation = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ImplementationRequest = void 0;
@@ -5065,9 +5066,9 @@ var require_protocol_implementation = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
 var require_protocol_typeDefinition = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeDefinitionRequest = void 0;
@@ -5082,9 +5083,9 @@ var require_protocol_typeDefinition = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
 var require_protocol_workspaceFolder = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DidChangeWorkspaceFoldersNotification = exports2.WorkspaceFoldersRequest = void 0;
@@ -5106,9 +5107,9 @@ var require_protocol_workspaceFolder = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
 var require_protocol_configuration = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ConfigurationRequest = void 0;
@@ -5123,9 +5124,9 @@ var require_protocol_configuration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
 var require_protocol_colorProvider = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ColorPresentationRequest = exports2.DocumentColorRequest = void 0;
@@ -5147,9 +5148,9 @@ var require_protocol_colorProvider = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
 var require_protocol_foldingRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FoldingRangeRefreshRequest = exports2.FoldingRangeRequest = void 0;
@@ -5171,9 +5172,9 @@ var require_protocol_foldingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
 var require_protocol_declaration = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DeclarationRequest = void 0;
@@ -5188,9 +5189,9 @@ var require_protocol_declaration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
 var require_protocol_selectionRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SelectionRangeRequest = void 0;
@@ -5205,9 +5206,9 @@ var require_protocol_selectionRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
 var require_protocol_progress = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WorkDoneProgressCancelNotification = exports2.WorkDoneProgressCreateRequest = exports2.WorkDoneProgress = void 0;
@@ -5237,9 +5238,9 @@ var require_protocol_progress = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
 var require_protocol_callHierarchy = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CallHierarchyOutgoingCallsRequest = exports2.CallHierarchyIncomingCallsRequest = exports2.CallHierarchyPrepareRequest = void 0;
@@ -5268,9 +5269,9 @@ var require_protocol_callHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
 var require_protocol_semanticTokens = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SemanticTokensRefreshRequest = exports2.SemanticTokensRangeRequest = exports2.SemanticTokensDeltaRequest = exports2.SemanticTokensRequest = exports2.SemanticTokensRegistrationType = exports2.TokenFormat = void 0;
@@ -5318,9 +5319,9 @@ var require_protocol_semanticTokens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
 var require_protocol_showDocument = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ShowDocumentRequest = void 0;
@@ -5335,9 +5336,9 @@ var require_protocol_showDocument = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
 var require_protocol_linkedEditingRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LinkedEditingRangeRequest = void 0;
@@ -5352,9 +5353,9 @@ var require_protocol_linkedEditingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
 var require_protocol_fileOperations = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WillDeleteFilesRequest = exports2.DidDeleteFilesNotification = exports2.DidRenameFilesNotification = exports2.WillRenameFilesRequest = exports2.DidCreateFilesNotification = exports2.WillCreateFilesRequest = exports2.FileOperationPatternKind = void 0;
@@ -5409,9 +5410,9 @@ var require_protocol_fileOperations = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
 var require_protocol_moniker = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.MonikerRequest = exports2.MonikerKind = exports2.UniquenessLevel = void 0;
@@ -5440,9 +5441,9 @@ var require_protocol_moniker = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
 var require_protocol_typeHierarchy = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeHierarchySubtypesRequest = exports2.TypeHierarchySupertypesRequest = exports2.TypeHierarchyPrepareRequest = void 0;
@@ -5469,9 +5470,9 @@ var require_protocol_typeHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
 var require_protocol_inlineValue = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineValueRefreshRequest = exports2.InlineValueRequest = void 0;
@@ -5493,9 +5494,9 @@ var require_protocol_inlineValue = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
 var require_protocol_inlayHint = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlayHintRefreshRequest = exports2.InlayHintResolveRequest = exports2.InlayHintRequest = void 0;
@@ -5524,9 +5525,9 @@ var require_protocol_inlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
 var require_protocol_diagnostic = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5609,9 +5610,9 @@ var require_protocol_diagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
 var require_protocol_notebook = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5835,9 +5836,9 @@ var require_protocol_notebook = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
 var require_protocol_inlineCompletion = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineCompletionRequest = void 0;
@@ -5852,9 +5853,9 @@ var require_protocol_inlineCompletion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
 var require_protocol_textDocumentContent = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TextDocumentContentRefreshRequest = exports2.TextDocumentContentRequest = void 0;
@@ -5875,9 +5876,9 @@ var require_protocol_textDocumentContent = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js
 var require_protocol = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6603,9 +6604,9 @@ var require_protocol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/connection.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js
 var require_connection2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.createProtocolConnection = createProtocolConnection;
@@ -6619,9 +6620,9 @@ var require_connection2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/api.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js
 var require_api2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8651,16 +8652,16 @@ var require_protocolConverter = __commonJS({
         if (Array.isArray(value)) {
           return async.map(value, (item) => asCompletionItem(item, allCommitCharacters), token);
         }
-        const list = value;
-        const { defaultRange, commitCharacters } = getCompletionItemDefaults(list, allCommitCharacters);
-        const converted = await async.map(list.items, (item) => {
-          return asCompletionItem(item, commitCharacters, list.applyKind?.commitCharacters, defaultRange, list.itemDefaults?.insertTextMode, list.itemDefaults?.insertTextFormat, list.itemDefaults?.data, list.applyKind?.data);
+        const list2 = value;
+        const { defaultRange, commitCharacters } = getCompletionItemDefaults(list2, allCommitCharacters);
+        const converted = await async.map(list2.items, (item) => {
+          return asCompletionItem(item, commitCharacters, list2.applyKind?.commitCharacters, defaultRange, list2.itemDefaults?.insertTextMode, list2.itemDefaults?.insertTextFormat, list2.itemDefaults?.data, list2.applyKind?.data);
         }, token);
-        return new code.CompletionList(converted, list.isIncomplete);
+        return new code.CompletionList(converted, list2.isIncomplete);
       }
-      function getCompletionItemDefaults(list, allCommitCharacters) {
-        const rangeDefaults = list.itemDefaults?.editRange;
-        const commitCharacters = list.itemDefaults?.commitCharacters ?? allCommitCharacters;
+      function getCompletionItemDefaults(list2, allCommitCharacters) {
+        const rangeDefaults = list2.itemDefaults?.editRange;
+        const commitCharacters = list2.itemDefaults?.commitCharacters ?? allCommitCharacters;
         return ls.Range.is(rangeDefaults) ? { defaultRange: asRange(rangeDefaults), commitCharacters } : rangeDefaults !== void 0 ? { defaultRange: { inserting: asRange(rangeDefaults.insert), replacing: asRange(rangeDefaults.replace) }, commitCharacters } : { defaultRange: void 0, commitCharacters };
       }
       function asCompletionItemKind(value) {
@@ -9458,8 +9459,8 @@ ${JSON.stringify(change, void 0, 4)}`);
         if (Array.isArray(value)) {
           return async.map(value, (item) => asInlineCompletionItem(item), token);
         }
-        const list = value;
-        const converted = await async.map(list.items, (item) => {
+        const list2 = value;
+        const converted = await async.map(list2.items, (item) => {
           return asInlineCompletionItem(item);
         }, token);
         return new code.InlineCompletionList(converted);
@@ -9558,98 +9559,6 @@ ${JSON.stringify(change, void 0, 4)}`);
         asInlineCompletionResult,
         asInlineCompletionItem
       };
-    }
-  }
-});
-
-// node_modules/vscode-languageclient/lib/common/utils/uuid.js
-var require_uuid = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/utils/uuid.js"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.empty = void 0;
-    exports2.v4 = v4;
-    exports2.isUUID = isUUID;
-    exports2.parse = parse4;
-    exports2.generateUuid = generateUuid;
-    var ValueUUID = class {
-      _value;
-      constructor(_value) {
-        this._value = _value;
-      }
-      asHex() {
-        return this._value;
-      }
-      equals(other) {
-        return this.asHex() === other.asHex();
-      }
-    };
-    var V4UUID = class _V4UUID extends ValueUUID {
-      static _chars = ["0", "1", "2", "3", "4", "5", "6", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
-      static _timeHighBits = ["8", "9", "a", "b"];
-      static _oneOf(array2) {
-        return array2[Math.floor(array2.length * Math.random())];
-      }
-      static _randomHex() {
-        return _V4UUID._oneOf(_V4UUID._chars);
-      }
-      constructor() {
-        super([
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          "-",
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          "-",
-          "4",
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          "-",
-          _V4UUID._oneOf(_V4UUID._timeHighBits),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          "-",
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex(),
-          _V4UUID._randomHex()
-        ].join(""));
-      }
-    };
-    exports2.empty = new ValueUUID("00000000-0000-0000-0000-000000000000");
-    function v4() {
-      return new V4UUID();
-    }
-    var _UUIDPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    function isUUID(value) {
-      return _UUIDPattern.test(value);
-    }
-    function parse4(value) {
-      if (!isUUID(value)) {
-        throw new Error("invalid uuid");
-      }
-      return new ValueUUID(value);
-    }
-    function generateUuid() {
-      return v4().asHex();
     }
   }
 });
@@ -9844,7 +9753,6 @@ var require_features = __commonJS({
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var Is2 = __importStar(require_is());
-    var UUID = __importStar(require_uuid());
     var LSPCancellationError = class extends vscode_1.CancellationError {
       data;
       constructor(data) {
@@ -10054,7 +9962,7 @@ var require_features = __commonJS({
         if (!capability) {
           return [void 0, void 0];
         } else if (vscode_languageserver_protocol_1.TextDocumentRegistrationOptions.is(capability)) {
-          const id = vscode_languageserver_protocol_1.StaticRegistrationOptions.hasId(capability) ? capability.id : UUID.generateUuid();
+          const id = vscode_languageserver_protocol_1.StaticRegistrationOptions.hasId(capability) ? capability.id : (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID();
           const selector = capability.documentSelector ?? documentSelector;
           if (selector) {
             return [id, Object.assign({}, capability, { documentSelector: selector })];
@@ -10064,7 +9972,7 @@ var require_features = __commonJS({
             return [void 0, void 0];
           }
           const options = Is2.boolean(capability) && capability === true ? { documentSelector } : Object.assign({}, capability, { documentSelector });
-          return [UUID.generateUuid(), options];
+          return [(0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), options];
         }
         return [void 0, void 0];
       }
@@ -11327,11 +11235,11 @@ var require_commonjs3 = __commonJS({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    var path46 = {
+    var path51 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    exports2.sep = defaultPlatform === "win32" ? path46.win32.sep : path46.posix.sep;
+    exports2.sep = defaultPlatform === "win32" ? path51.win32.sep : path51.posix.sep;
     exports2.minimatch.sep = exports2.sep;
     exports2.GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     exports2.minimatch.GLOBSTAR = exports2.GLOBSTAR;
@@ -11374,7 +11282,7 @@ var require_commonjs3 = __commonJS({
         defaults: (options) => orig.defaults(ext(def, options)),
         makeRe: (pattern, options = {}) => orig.makeRe(pattern, ext(def, options)),
         braceExpand: (pattern, options = {}) => orig.braceExpand(pattern, ext(def, options)),
-        match: (list, pattern, options = {}) => orig.match(list, pattern, ext(def, options)),
+        match: (list2, pattern, options = {}) => orig.match(list2, pattern, ext(def, options)),
         sep: orig.sep,
         GLOBSTAR: exports2.GLOBSTAR
       });
@@ -11393,13 +11301,13 @@ var require_commonjs3 = __commonJS({
     var makeRe = (pattern, options = {}) => new Minimatch(pattern, options).makeRe();
     exports2.makeRe = makeRe;
     exports2.minimatch.makeRe = exports2.makeRe;
-    var match = (list, pattern, options = {}) => {
+    var match = (list2, pattern, options = {}) => {
       const mm = new Minimatch(pattern, options);
-      list = list.filter((f) => mm.match(f));
-      if (mm.options.nonull && !list.length) {
-        list.push(pattern);
+      list2 = list2.filter((f) => mm.match(f));
+      if (mm.options.nonull && !list2.length) {
+        list2.push(pattern);
       }
-      return list;
+      return list2;
     };
     exports2.match = match;
     exports2.minimatch.match = exports2.match;
@@ -12171,7 +12079,6 @@ var require_diagnostic = __commonJS({
     exports2.DiagnosticFeature = exports2.DiagnosticPullMode = exports2.vsdiag = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var uuid_1 = require_uuid();
     var globPattern_1 = require_globPattern();
     var features_1 = require_features();
     function ensure(target, key3) {
@@ -12365,10 +12272,10 @@ var require_diagnostic = __commonJS({
           } catch (error) {
             if (error instanceof features_1.LSPCancellationError && vscode_languageserver_protocol_1.DiagnosticServerCancellationData.is(error.data) && error.data.retriggerRequest === false) {
               afterState = { state: RequestStateKind.outDated, document };
-            }
-            if (afterState === void 0 && error instanceof vscode_1.CancellationError) {
+            } else if (error instanceof vscode_1.CancellationError) {
               afterState = { state: RequestStateKind.reschedule, document };
             } else {
+              this.openRequests.delete(key3);
               throw error;
             }
           }
@@ -12550,7 +12457,7 @@ var require_diagnostic = __commonJS({
               return converted;
             };
             const provideDiagnostics = (resultIds2, token2, resultReporter2) => {
-              const partialResultToken = (0, uuid_1.generateUuid)();
+              const partialResultToken = (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID();
               const disposable = this.client.onProgress(vscode_languageserver_protocol_1.WorkspaceDiagnosticRequest.partialResult, partialResultToken, async (partialResult) => {
                 if (partialResult === void 0 || partialResult === null) {
                   resultReporter2(null);
@@ -12868,8 +12775,10 @@ var require_diagnostic = __commonJS({
           disposables.push(notebookFeature.onChangeNotificationSent(async (event) => {
             const textEvents = event.cells?.textContent || [];
             const changedCells = textEvents.map((c) => event.notebook.getCells().find((cell) => cell.document.uri.toString() === c.document.uri.toString()));
+            const pulledUris = /* @__PURE__ */ new Set();
             for (const cell of changedCells) {
               if (cell && matchesCell(cell)) {
+                pulledUris.add(cell.document.uri.toString());
                 this.diagnosticRequestor.pull(cell.document, () => {
                   this.backgroundScheduler.trigger();
                 });
@@ -12882,9 +12791,19 @@ var require_diagnostic = __commonJS({
             const openedCells = event.cells?.structure?.didOpen || [];
             for (const cell of openedCells) {
               if (matchesCell(cell)) {
+                pulledUris.add(cell.document.uri.toString());
                 this.diagnosticRequestor.pull(cell.document, () => {
                   this.backgroundScheduler.trigger();
                 });
+              }
+            }
+            if (options.interFileDependencies && event.cells?.structure !== void 0) {
+              for (const cell of event.notebook.getCells()) {
+                if (matchesCell(cell) && !pulledUris.has(cell.document.uri.toString())) {
+                  this.diagnosticRequestor.pull(cell.document, () => {
+                    this.backgroundScheduler.trigger();
+                  });
+                }
               }
             }
           }));
@@ -13037,7 +12956,7 @@ var require_notebook = __commonJS({
     exports2.NotebookDocumentSyncFeature = void 0;
     var vscode = __importStar(require("vscode"));
     var proto = __importStar(require_api2());
-    var UUID = __importStar(require_uuid());
+    var vscode_languageserver_protocol_1 = require_api2();
     var Is2 = __importStar(require_is());
     var globPattern_1 = require_globPattern();
     function ensure(target, key3) {
@@ -13908,7 +13827,7 @@ var require_notebook = __commonJS({
         if (options === void 0) {
           return;
         }
-        const id = options.id ?? UUID.generateUuid();
+        const id = options.id ?? (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID();
         this.register({ id, registerOptions: options });
       }
       register(data) {
@@ -14021,7 +13940,6 @@ var require_configuration = __commonJS({
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var Is2 = __importStar(require_is());
-    var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var ConfigurationFeature = class {
       _client;
@@ -14119,7 +14037,7 @@ var require_configuration = __commonJS({
         const section = this._client.clientOptions.synchronize?.configurationSection;
         if (section !== void 0) {
           this.register({
-            id: UUID.generateUuid(),
+            id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
             registerOptions: {
               section
             }
@@ -14178,13 +14096,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path46) {
+        function ensurePath(config, path51) {
           let current = config;
-          for (let i = 0; i < path46.length - 1; i++) {
-            let obj = current[path46[i]];
+          for (let i = 0; i < path51.length - 1; i++) {
+            let obj = current[path51[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path46[i]] = obj;
+              current[path51[i]] = obj;
             }
             current = obj;
           }
@@ -14202,8 +14120,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key3);
           }
           if (config) {
-            const path46 = keys[i].split(".");
-            ensurePath(result, path46)[path46[path46.length - 1]] = toJSONObject(config);
+            const path51 = keys[i].split(".");
+            ensurePath(result, path51)[path51[path51.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -14283,6 +14201,13 @@ var require_main2 = __commonJS({
                 var startOffset = this.offsetAt(range.start);
                 var endOffset = this.offsetAt(range.end);
                 this._content = this._content.substring(0, startOffset) + change.text + this._content.substring(endOffset, this._content.length);
+                var insertedEndOffset = startOffset + change.text.length;
+                var crlfAtStart = this._content.charCodeAt(startOffset - 1) === 13 && this._content.charCodeAt(startOffset) === 10;
+                var crlfAtEnd = this._content.charCodeAt(insertedEndOffset - 1) === 13 && this._content.charCodeAt(insertedEndOffset) === 10;
+                if (crlfAtStart || crlfAtEnd) {
+                  this._lineOffsets = void 0;
+                  continue;
+                }
                 var startLine = Math.max(range.start.line, 0);
                 var endLine = Math.max(range.end.line, 0);
                 var lineOffsets = this._lineOffsets;
@@ -14515,49 +14440,11 @@ var require_main2 = __commonJS({
 var require_textSynchronization = __commonJS({
   "node_modules/vscode-languageclient/lib/common/textSynchronization.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DidSaveTextDocumentFeature = exports2.WillSaveWaitUntilFeature = exports2.WillSaveFeature = exports2.DidChangeTextDocumentFeature = exports2.DidCloseTextDocumentFeature = exports2.DidOpenTextDocumentFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var vscode_languageserver_textdocument_1 = require_main2();
     var DidOpenTextDocumentFeature = class extends features_1.TextDocumentEventFeature {
       _syncedDocuments;
@@ -14595,7 +14482,7 @@ var require_textSynchronization = __commonJS({
       initialize(capabilities, documentSelector) {
         const textDocumentSyncOptions = capabilities.resolvedTextDocumentSync;
         if (documentSelector && textDocumentSyncOptions && textDocumentSyncOptions.openClose) {
-          this.register({ id: UUID.generateUuid(), registerOptions: { documentSelector } });
+          this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: { documentSelector } });
         }
       }
       get registrationType() {
@@ -14614,7 +14501,7 @@ var require_textSynchronization = __commonJS({
           }
           if (vscode_1.languages.match(documentSelector, textDocument) > 0 && !this._client.hasDedicatedTextSynchronizationFeature(textDocument)) {
             const visibleDocuments = this._client.visibleDocuments;
-            if (visibleDocuments.isVisible(textDocument)) {
+            if (!this._delayOpen || visibleDocuments.isVisible(textDocument)) {
               const middleware = this._client.middleware;
               const didOpen = (textDocument2) => {
                 return this._client.sendNotification(this._type, this._createParams(textDocument2));
@@ -14653,25 +14540,23 @@ var require_textSynchronization = __commonJS({
         }
       }
       /**
-       * Sends any pending open notifications unless they are for the document
-       * being closed.
-       *
-       * @param closingDocument The document being closed.
-       * @returns Whether a pending open notification was dropped because it was
-       *          for the closing document.
+       * Sends any pending open notifications.
        */
-      async sendPendingOpenNotifications(closingDocument) {
+      async sendPendingOpenNotifications() {
         const notifications = Array.from(this._pendingOpenNotifications.values());
         this._pendingOpenNotifications.clear();
-        let didDropOpenNotification = false;
         for (const notification of notifications) {
-          if (closingDocument !== void 0 && notification.uri.toString() === closingDocument) {
-            didDropOpenNotification = true;
-            continue;
-          }
           await super.callback(notification);
         }
-        return didDropOpenNotification;
+      }
+      /**
+       * Drops the pending open notification of a document that is being closed.
+       *
+       * @param uri The URI of the document being closed.
+       * @returns Whether a pending open notification was dropped.
+       */
+      dropPendingOpenNotification(uri) {
+        return this._pendingOpenNotifications.delete(uri);
       }
       getTextDocument(data) {
         return data;
@@ -14709,7 +14594,7 @@ var require_textSynchronization = __commonJS({
       initialize(capabilities, documentSelector) {
         const textDocumentSyncOptions = capabilities.resolvedTextDocumentSync;
         if (documentSelector && textDocumentSyncOptions && textDocumentSyncOptions.openClose) {
-          this.register({ id: UUID.generateUuid(), registerOptions: { documentSelector } });
+          this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: { documentSelector } });
         }
       }
       async callback(data) {
@@ -14784,7 +14669,7 @@ var require_textSynchronization = __commonJS({
         const textDocumentSyncOptions = capabilities.resolvedTextDocumentSync;
         if (documentSelector && textDocumentSyncOptions && textDocumentSyncOptions.change !== void 0 && textDocumentSyncOptions.change !== vscode_languageserver_protocol_1.TextDocumentSyncKind.None) {
           this.register({
-            id: UUID.generateUuid(),
+            id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
             registerOptions: Object.assign({}, { documentSelector }, { syncKind: textDocumentSyncOptions.change })
           });
         }
@@ -14936,7 +14821,7 @@ var require_textSynchronization = __commonJS({
         const textDocumentSyncOptions = capabilities.resolvedTextDocumentSync;
         if (documentSelector && textDocumentSyncOptions && textDocumentSyncOptions.willSave) {
           this.register({
-            id: UUID.generateUuid(),
+            id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
             registerOptions: { documentSelector }
           });
         }
@@ -14967,7 +14852,7 @@ var require_textSynchronization = __commonJS({
         const textDocumentSyncOptions = capabilities.resolvedTextDocumentSync;
         if (documentSelector && textDocumentSyncOptions && textDocumentSyncOptions.willSaveWaitUntil) {
           this.register({
-            id: UUID.generateUuid(),
+            id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
             registerOptions: { documentSelector }
           });
         }
@@ -15026,7 +14911,7 @@ var require_textSynchronization = __commonJS({
         if (documentSelector && textDocumentSyncOptions && textDocumentSyncOptions.save) {
           const saveOptions = typeof textDocumentSyncOptions.save === "boolean" ? { includeText: false } : { includeText: !!textDocumentSyncOptions.save.includeText };
           this.register({
-            id: UUID.generateUuid(),
+            id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
             registerOptions: Object.assign({}, { documentSelector }, saveOptions)
           });
         }
@@ -15043,11 +14928,11 @@ var require_textSynchronization = __commonJS({
     var USUAL_WORD_SEPARATORS = "`~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?";
     function createWordRegExp(allowInWords = "") {
       let source = "(-?\\d*\\.\\d\\w*)|([^";
-      for (const sep4 of USUAL_WORD_SEPARATORS) {
-        if (allowInWords.indexOf(sep4) >= 0) {
+      for (const sep5 of USUAL_WORD_SEPARATORS) {
+        if (allowInWords.indexOf(sep5) >= 0) {
           continue;
         }
-        source += "\\" + sep4;
+        source += "\\" + sep5;
       }
       source += "\\s]+)";
       return new RegExp(source, "g");
@@ -15188,49 +15073,11 @@ var require_textSynchronization = __commonJS({
 var require_completion = __commonJS({
   "node_modules/vscode-languageclient/lib/common/completion.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CompletionItemFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var SupportedCompletionItemKinds = [
       vscode_languageserver_protocol_1.CompletionItemKind.Text,
       vscode_languageserver_protocol_1.CompletionItemKind.Method,
@@ -15301,7 +15148,7 @@ var require_completion = __commonJS({
           return;
         }
         this.register({
-          id: UUID.generateUuid(),
+          id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
           registerOptions: options
         });
       }
@@ -15353,49 +15200,11 @@ var require_completion = __commonJS({
 var require_hover = __commonJS({
   "node_modules/vscode-languageclient/lib/common/hover.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.HoverFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var HoverFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
         super(client2, vscode_languageserver_protocol_1.HoverRequest.type);
@@ -15411,7 +15220,7 @@ var require_hover = __commonJS({
           return;
         }
         this.register({
-          id: UUID.generateUuid(),
+          id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
           registerOptions: options
         });
       }
@@ -15448,49 +15257,11 @@ var require_hover = __commonJS({
 var require_definition = __commonJS({
   "node_modules/vscode-languageclient/lib/common/definition.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DefinitionFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var DefinitionFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
         super(client2, vscode_languageserver_protocol_1.DefinitionRequest.type);
@@ -15505,7 +15276,7 @@ var require_definition = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -15540,49 +15311,11 @@ var require_definition = __commonJS({
 var require_signatureHelp = __commonJS({
   "node_modules/vscode-languageclient/lib/common/signatureHelp.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SignatureHelpFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var SignatureHelpFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
         super(client2, vscode_languageserver_protocol_1.SignatureHelpRequest.type);
@@ -15602,7 +15335,7 @@ var require_signatureHelp = __commonJS({
           return;
         }
         this.register({
-          id: UUID.generateUuid(),
+          id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
           registerOptions: options
         });
       }
@@ -15648,49 +15381,11 @@ var require_signatureHelp = __commonJS({
 var require_documentHighlight = __commonJS({
   "node_modules/vscode-languageclient/lib/common/documentHighlight.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentHighlightFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var DocumentHighlightFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
         super(client2, vscode_languageserver_protocol_1.DocumentHighlightRequest.type);
@@ -15703,7 +15398,7 @@ var require_documentHighlight = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -15735,49 +15430,11 @@ var require_documentHighlight = __commonJS({
 var require_documentSymbol = __commonJS({
   "node_modules/vscode-languageclient/lib/common/documentSymbol.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentSymbolFeature = exports2.SupportedSymbolTags = exports2.SupportedSymbolKinds = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     exports2.SupportedSymbolKinds = [
       vscode_languageserver_protocol_1.SymbolKind.File,
       vscode_languageserver_protocol_1.SymbolKind.Module,
@@ -15830,7 +15487,7 @@ var require_documentSymbol = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -15873,50 +15530,12 @@ var require_documentSymbol = __commonJS({
 var require_workspaceSymbol = __commonJS({
   "node_modules/vscode-languageclient/lib/common/workspaceSymbol.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WorkspaceSymbolFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var documentSymbol_1 = require_documentSymbol();
-    var UUID = __importStar(require_uuid());
     var WorkspaceSymbolFeature = class extends features_1.WorkspaceFeature {
       constructor(client2) {
         super(client2, vscode_languageserver_protocol_1.WorkspaceSymbolRequest.type);
@@ -15937,7 +15556,7 @@ var require_workspaceSymbol = __commonJS({
           return;
         }
         this.register({
-          id: UUID.generateUuid(),
+          id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
           registerOptions: capabilities.workspaceSymbolProvider === true ? { workDoneProgress: false } : capabilities.workspaceSymbolProvider
         });
       }
@@ -15985,49 +15604,11 @@ var require_workspaceSymbol = __commonJS({
 var require_reference = __commonJS({
   "node_modules/vscode-languageclient/lib/common/reference.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ReferencesFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var ReferencesFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
         super(client2, vscode_languageserver_protocol_1.ReferencesRequest.type);
@@ -16040,7 +15621,7 @@ var require_reference = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -16256,48 +15837,10 @@ var require_colorProvider = __commonJS({
 var require_codeAction = __commonJS({
   "node_modules/vscode-languageclient/lib/common/codeAction.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CodeActionFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var CodeActionFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
@@ -16339,7 +15882,7 @@ var require_codeAction = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -16400,48 +15943,10 @@ var require_codeAction = __commonJS({
 var require_codeLens = __commonJS({
   "node_modules/vscode-languageclient/lib/common/codeLens.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CodeLensFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var CodeLensFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
@@ -16464,7 +15969,7 @@ var require_codeLens = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -16513,48 +16018,10 @@ var require_codeLens = __commonJS({
 var require_formatting = __commonJS({
   "node_modules/vscode-languageclient/lib/common/formatting.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentOnTypeFormattingFeature = exports2.DocumentRangeFormattingFeature = exports2.DocumentFormattingFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var FileFormattingOptions;
     (function(FileFormattingOptions2) {
@@ -16580,7 +16047,7 @@ var require_formatting = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -16623,7 +16090,7 @@ var require_formatting = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -16687,7 +16154,7 @@ var require_formatting = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -16767,7 +16234,6 @@ var require_rename = __commonJS({
     exports2.RenameFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var UUID = __importStar(require_uuid());
     var Is2 = __importStar(require_is());
     var features_1 = require_features();
     var RenameFeature = class extends features_1.TextDocumentLanguageFeature {
@@ -16789,7 +16255,7 @@ var require_rename = __commonJS({
         if (Is2.boolean(capabilities.renameProvider)) {
           options.prepareProvider = false;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -16875,49 +16341,11 @@ var require_rename = __commonJS({
 var require_documentLink = __commonJS({
   "node_modules/vscode-languageclient/lib/common/documentLink.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentLinkFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var DocumentLinkFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
         super(client2, vscode_languageserver_protocol_1.DocumentLinkRequest.type);
@@ -16932,7 +16360,7 @@ var require_documentLink = __commonJS({
         if (!options) {
           return;
         }
-        this.register({ id: UUID.generateUuid(), registerOptions: options });
+        this.register({ id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), registerOptions: options });
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
@@ -16979,48 +16407,10 @@ var require_documentLink = __commonJS({
 var require_executeCommand = __commonJS({
   "node_modules/vscode-languageclient/lib/common/executeCommand.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ExecuteCommandFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var ExecuteCommandFeature = class {
       _client;
@@ -17043,7 +16433,7 @@ var require_executeCommand = __commonJS({
           return;
         }
         this.register({
-          id: UUID.generateUuid(),
+          id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
           registerOptions: Object.assign({}, capabilities.executeCommandProvider)
         });
       }
@@ -17903,47 +17293,9 @@ var require_inlayHint = __commonJS({
 var require_workspaceFolder = __commonJS({
   "node_modules/vscode-languageclient/lib/common/workspaceFolder.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WorkspaceFoldersFeature = void 0;
     exports2.arrayDiff = arrayDiff;
-    var UUID = __importStar(require_uuid());
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     function access(target, key3) {
@@ -18006,7 +17358,7 @@ var require_workspaceFolder = __commonJS({
         if (typeof value === "string") {
           id = value;
         } else if (value === true) {
-          id = UUID.generateUuid();
+          id = (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID();
         }
         if (id) {
           this.register({ id, registerOptions: void 0 });
@@ -18127,7 +17479,6 @@ var require_fileOperations = __commonJS({
     var code = __importStar(require("vscode"));
     var minimatch = __importStar(require_commonjs3());
     var proto = __importStar(require_api2());
-    var UUID = __importStar(require_uuid());
     function ensure(target, key3) {
       if (target[key3] === void 0) {
         target[key3] = {};
@@ -18178,7 +17529,7 @@ var require_fileOperations = __commonJS({
         if (capability?.filters !== void 0) {
           try {
             this.register({
-              id: UUID.generateUuid(),
+              id: proto.RAL().crypto.randomUUID(),
               registerOptions: { filters: capability.filters }
             });
           } catch (e) {
@@ -18219,13 +17570,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path46 = uri.fsPath.replace(/\\/g, "/");
+          const path51 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path46)) {
+              if (filter.matcher.match(path51)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -18239,7 +17590,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path46}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path51}/`)) {
                   return true;
                 }
               }
@@ -18433,49 +17784,11 @@ var require_fileOperations = __commonJS({
 var require_inlineCompletion = __commonJS({
   "node_modules/vscode-languageclient/lib/common/inlineCompletion.js"(exports2) {
     "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || /* @__PURE__ */ (function() {
-      var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function(o2) {
-          var ar = [];
-          for (var k in o2) if (Object.prototype.hasOwnProperty.call(o2, k)) ar[ar.length] = k;
-          return ar;
-        };
-        return ownKeys(o);
-      };
-      return function(mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) {
-          for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        }
-        __setModuleDefault(result, mod);
-        return result;
-      };
-    })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineCompletionItemFeature = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var InlineCompletionItemFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client2) {
         super(client2, vscode_languageserver_protocol_1.InlineCompletionRequest.type);
@@ -18490,7 +17803,7 @@ var require_inlineCompletion = __commonJS({
           return;
         }
         this.register({
-          id: UUID.generateUuid(),
+          id: (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(),
           registerOptions: options
         });
       }
@@ -18566,7 +17879,6 @@ var require_textDocumentContent = __commonJS({
     var vscode = __importStar(require("vscode"));
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var UUID = __importStar(require_uuid());
     var TextDocumentContentFeature = class {
       _client;
       _registrations = /* @__PURE__ */ new Map();
@@ -18607,7 +17919,7 @@ var require_textDocumentContent = __commonJS({
           return;
         }
         const capability = capabilities.workspace.textDocumentContent;
-        const id = vscode_languageserver_protocol_1.StaticRegistrationOptions.hasId(capability) ? capability.id : UUID.generateUuid();
+        const id = vscode_languageserver_protocol_1.StaticRegistrationOptions.hasId(capability) ? capability.id : (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID();
         this.register({
           id,
           registerOptions: capability
@@ -18700,6 +18012,7 @@ var require_fileSystemWatcher = __commonJS({
         if (!Array.isArray(data.registerOptions.watchers)) {
           return;
         }
+        this.unregister(data.id);
         const disposables = [];
         for (const watcher of data.registerOptions.watchers) {
           const globPattern = this._client.protocol2CodeConverter.asGlobPattern(watcher.globPattern);
@@ -18719,6 +18032,7 @@ var require_fileSystemWatcher = __commonJS({
         this._watchers.set(data.id, disposables);
       }
       registerRaw(id, fileSystemWatchers) {
+        this.unregister(id);
         const disposables = [];
         for (const fileSystemWatcher of fileSystemWatchers) {
           this.hookListeners(fileSystemWatcher, true, true, true, disposables);
@@ -18864,7 +18178,6 @@ var require_client = __commonJS({
     var p2c = __importStar(require_protocolConverter());
     var Is2 = __importStar(require_is());
     var async_1 = require_async();
-    var UUID = __importStar(require_uuid());
     var progressPart_1 = require_progressPart();
     var features_1 = require_features();
     var diagnostic_1 = require_diagnostic();
@@ -19080,8 +18393,8 @@ var require_client = __commonJS({
       }
       static fillVisibleResources(strings3, uris) {
         const seen = strings3 ?? /* @__PURE__ */ new Set();
-        for (const group2 of vscode_1.window.tabGroups.all) {
-          for (const tab of group2.tabs) {
+        for (const group of vscode_1.window.tabGroups.all) {
+          for (const tab of group.tabs) {
             const input = tab.input;
             let uri;
             if (input instanceof vscode_1.TabInputText) {
@@ -19415,8 +18728,9 @@ var require_client = __commonJS({
           return Promise.reject(new vscode_languageserver_protocol_1.ResponseError(vscode_languageserver_protocol_1.ErrorCodes.ConnectionInactive, `Client is not running`));
         }
         const needsPendingFullTextDocumentSync = this._didChangeTextDocumentFeature.syncKind === vscode_languageserver_protocol_1.TextDocumentSyncKind.Full;
+        const isOpenNotification = typeof type !== "string" && type.method === vscode_languageserver_protocol_1.DidOpenTextDocumentNotification.method;
         let openNotification;
-        if (needsPendingFullTextDocumentSync && typeof type !== "string" && type.method === vscode_languageserver_protocol_1.DidOpenTextDocumentNotification.method) {
+        if (needsPendingFullTextDocumentSync && isOpenNotification) {
           openNotification = params?.textDocument.uri;
           this._inFlightOpenNotifications.add(openNotification);
         }
@@ -19425,9 +18739,12 @@ var require_client = __commonJS({
           documentToClose = params.textDocument.uri;
         }
         const connection = await this.$start();
-        const didDropOpenNotification = await this._didOpenTextDocumentFeature.sendPendingOpenNotifications(documentToClose);
-        if (didDropOpenNotification) {
-          return;
+        if (documentToClose !== void 0) {
+          if (this._didOpenTextDocumentFeature.dropPendingOpenNotification(documentToClose)) {
+            return;
+          }
+        } else if (!isOpenNotification) {
+          await this._didOpenTextDocumentFeature.sendPendingOpenNotifications();
         }
         if (needsPendingFullTextDocumentSync) {
           await this.sendPendingFullTextDocumentChanges(connection);
@@ -19754,7 +19071,7 @@ ${this.data2String(data)}` : message;
           this.error(`${this._name} client: couldn't create connection to server.`, error, "force");
           reject2(error);
         }
-        return this._onStart;
+        return promise;
       }
       createOnStartPromise() {
         let resolve9;
@@ -19785,7 +19102,7 @@ ${this.data2String(data)}` : message;
         };
         this.fillInitializeParams(initParams);
         if (this._clientOptions.progressOnInitialization) {
-          const token = UUID.generateUuid();
+          const token = (0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID();
           const part = new progressPart_1.ProgressPart(connection, token);
           initParams.workDoneToken = token;
           try {
@@ -19858,14 +19175,14 @@ ${this.data2String(data)}` : message;
             if (this._clientOptions.initializationFailedHandler(error)) {
               void this.initialize(connection);
             } else {
-              void this.stop();
+              this.stopAfterFailedInitialize();
             }
           } else if (error instanceof vscode_languageserver_protocol_1.ResponseError && error.data && error.data.retry) {
             void vscode_1.window.showErrorMessage(error.message, { title: "Retry", id: "retry" }).then((item) => {
               if (item && item.id === "retry") {
                 void this.initialize(connection);
               } else {
-                void this.stop();
+                this.stopAfterFailedInitialize();
               }
             });
           } else {
@@ -19873,10 +19190,15 @@ ${this.data2String(data)}` : message;
               void vscode_1.window.showErrorMessage(error.message);
             }
             this.error("Server initialization failed.", error);
-            void this.stop();
+            this.stopAfterFailedInitialize();
           }
           throw error;
         }
+      }
+      stopAfterFailedInitialize() {
+        this.stop().catch((error) => {
+          this.error(`Stopping server failed`, error, false);
+        });
       }
       _clientGetRootPath() {
         const folders = vscode_1.workspace.workspaceFolders;
@@ -19926,25 +19248,31 @@ ${this.data2String(data)}` : message;
           await connection2.exit();
           return connection2;
         })(connection);
-        return this._onStop = Promise.race([tp, shutdown]).then((connection2) => {
-          if (connection2 !== void 0) {
-            connection2.end();
-            connection2.dispose();
-          } else {
-            this.error(`Stopping server timed out`, void 0, false);
-            throw new Error(`Stopping the server timed out`);
+        return this._onStop = (async () => {
+          try {
+            let result;
+            try {
+              result = await Promise.race([tp, shutdown]);
+            } catch (error) {
+              this.error(`Stopping server failed`, error, false);
+              throw error;
+            }
+            if (result !== void 0) {
+              result.end();
+              result.dispose();
+            } else {
+              this.error(`Stopping server timed out`, void 0, false);
+              throw new Error(`Stopping the server timed out`);
+            }
+          } finally {
+            this.$state = ClientState.Stopped;
+            mode === ShutdownMode.Stop && this.cleanUpChannel();
+            this._onStart = void 0;
+            this._onStop = void 0;
+            this._connection = void 0;
+            this._ignoredRegistrations.clear();
           }
-        }, (error) => {
-          this.error(`Stopping server failed`, error, false);
-          throw error;
-        }).finally(() => {
-          this.$state = ClientState.Stopped;
-          mode === ShutdownMode.Stop && this.cleanUpChannel();
-          this._onStart = void 0;
-          this._onStop = void 0;
-          this._connection = void 0;
-          this._ignoredRegistrations.clear();
-        });
+        })();
       }
       cleanUp(mode) {
         this._fileEvents = [];
@@ -20127,8 +19455,9 @@ ${this.data2String(data)}` : message;
           }
         }
         this._connection = void 0;
+        const handled = this.$state === ClientState.Stopping || handlerResult.handled === true;
         if (handlerResult.action === CloseAction.DoNotRestart) {
-          this.error(handlerResult.message ?? "Connection to server got closed. Server will not be restarted.", void 0, handlerResult.handled === true ? false : "force");
+          this.error(handlerResult.message ?? "Connection to server got closed. Server will not be restarted.", void 0, handled ? false : "force");
           this.cleanUp(ShutdownMode.Stop);
           if (this.$state === ClientState.Starting) {
             this.$state = ClientState.StartFailed;
@@ -20213,7 +19542,7 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
         if (!watchers) {
           return;
         }
-        this._dynamicFeatures.get(vscode_languageserver_protocol_1.DidChangeWatchedFilesNotification.type.method).registerRaw(UUID.generateUuid(), watchers);
+        this._dynamicFeatures.get(vscode_languageserver_protocol_1.DidChangeWatchedFilesNotification.type.method).registerRaw((0, vscode_languageserver_protocol_1.RAL)().crypto.randomUUID(), watchers);
       }
       _features = [];
       _dynamicFeatures = /* @__PURE__ */ new Map();
@@ -20690,12 +20019,13 @@ terminateTree "${pid}"
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/node/ril.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js
 var require_ril = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/node/ril.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var util_1 = require("util");
+    var crypto_1 = require("crypto");
     var api_1 = require_api();
     var MessageBuffer = class _MessageBuffer extends api_1.AbstractMessageBuffer {
       static emptyBuffer = Buffer.allocUnsafe(0);
@@ -20719,7 +20049,7 @@ var require_ril = __commonJS({
         if (length === void 0) {
           return buffer instanceof Buffer ? buffer : Buffer.from(buffer);
         } else {
-          return buffer instanceof Buffer ? buffer.slice(0, length) : Buffer.from(buffer, 0, length);
+          return buffer instanceof Buffer ? buffer.slice(0, length) : Buffer.from(buffer.subarray(0, length));
         }
       }
       allocNative(length) {
@@ -20786,6 +20116,9 @@ var require_ril = __commonJS({
       }
     };
     var _ril = Object.freeze({
+      crypto: Object.freeze({
+        randomUUID: () => (0, crypto_1.randomUUID)()
+      }),
       messageBuffer: Object.freeze({
         create: (encoding) => new MessageBuffer(encoding)
       }),
@@ -20848,9 +20181,9 @@ var require_ril = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/node/main.js
+// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js
 var require_main3 = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20905,9 +20238,9 @@ var require_main3 = __commonJS({
     exports2.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path46 = __importStar(require("path"));
+    var path51 = __importStar(require("path"));
     var os3 = __importStar(require("os"));
-    var fs26 = __importStar(require("fs"));
+    var fs29 = __importStar(require("fs"));
     var crypto_1 = require("crypto");
     var net_1 = require("net");
     var api_1 = require_api();
@@ -20936,7 +20269,7 @@ var require_main3 = __commonJS({
         this.errorCount = 0;
         const eventEmitter = this.process;
         eventEmitter.on("error", (error) => this.fireError(error));
-        eventEmitter.on("close", () => this.fireClose);
+        eventEmitter.on("close", () => this.fireClose());
       }
       write(msg) {
         try {
@@ -20969,7 +20302,7 @@ var require_main3 = __commonJS({
       constructor(port) {
         super();
         this.onData = new api_1.Emitter();
-        port.on("close", () => this.fireClose);
+        port.on("close", () => this.fireClose());
         port.on("error", (error) => this.fireError(error));
         port.on("message", (message) => {
           this.onData.fire(message);
@@ -21048,7 +20381,7 @@ var require_main3 = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs26.realpathSync(XDG_RUNTIME_DIR ?? os3.tmpdir());
+      const tmpDir = fs29.realpathSync(XDG_RUNTIME_DIR ?? os3.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -21057,7 +20390,7 @@ var require_main3 = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path46.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path51.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -21078,6 +20411,9 @@ var require_main3 = __commonJS({
           resolve9({
             onConnected: () => {
               return connected;
+            },
+            close: () => {
+              server.close();
             }
           });
         });
@@ -21116,6 +20452,9 @@ var require_main3 = __commonJS({
             port: () => boundPort,
             onConnected: () => {
               return connected;
+            },
+            close: () => {
+              server.close();
             }
           });
         });
@@ -21150,9 +20489,9 @@ var require_main3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/node/main.js
+// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js
 var require_main4 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
+  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -22424,8 +21763,8 @@ var require_main5 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = __importStar(require("child_process"));
-    var fs26 = __importStar(require("fs"));
-    var path46 = __importStar(require("path"));
+    var fs29 = __importStar(require("fs"));
+    var path51 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
     var Is2 = __importStar(require_is());
@@ -22605,7 +21944,7 @@ var require_main5 = __commonJS({
           params.processId = process.pid;
         }
       }
-      createMessageTransports(_encoding) {
+      async createMessageTransports(_encoding) {
         function getEnvironment(env2, fork4) {
           if (!env2 && !fork4) {
             return void 0;
@@ -22675,7 +22014,7 @@ var require_main5 = __commonJS({
         } else {
           json = server;
         }
-        return this._getServerWorkingDir(json.options).then((serverWorkingDir) => {
+        const startServer = (serverWorkingDir) => {
           if (NodeModule.is(json) && json.module) {
             const node = json;
             const transport = node.transport || TransportKind2.stdio;
@@ -22721,28 +22060,26 @@ var require_main5 = __commonJS({
                 return (0, node_1.createClientPipeTransport)(pipeName).then((transport2) => {
                   const process2 = cp.spawn(runtime, args, execOptions);
                   if (!process2 || !process2.pid) {
+                    transport2.close();
                     return handleChildProcessStartError(process2, `Launching server using runtime ${runtime} failed.`);
                   }
                   this._serverProcess = process2;
                   pipeStderr(process2.stderr, this.outputChannel);
                   pipeStdout(process2.stdout, this.outputChannel);
-                  return transport2.onConnected().then((protocol) => {
-                    return { reader: protocol[0], writer: protocol[1] };
-                  });
+                  return waitForConnection(process2, transport2);
                 });
               } else if (Transport.isSocket(transport)) {
                 return (0, node_1.createClientSocketTransport)(transport.port).then((transport2) => {
                   args.push(`--socket=${transport2.port()}`);
                   const process2 = cp.spawn(runtime, args, execOptions);
                   if (!process2 || !process2.pid) {
+                    transport2.close();
                     return handleChildProcessStartError(process2, `Launching server using runtime ${runtime} failed.`);
                   }
                   this._serverProcess = process2;
                   pipeStderr(process2.stderr, this.outputChannel);
                   pipeStdout(process2.stdout, this.outputChannel);
-                  return transport2.onConnected().then((protocol) => {
-                    return { reader: protocol[0], writer: protocol[1] };
-                  });
+                  return waitForConnection(process2, transport2);
                 });
               }
             } else {
@@ -22781,9 +22118,7 @@ var require_main5 = __commonJS({
                     this._serverProcess = sp;
                     pipeStderr(sp.stderr, this.outputChannel);
                     pipeStdout(sp.stdout, this.outputChannel);
-                    transport2.onConnected().then((protocol) => {
-                      resolve9({ reader: protocol[0], writer: protocol[1] });
-                    }, reject2);
+                    waitForConnection(sp, transport2).then(resolve9, reject2);
                   }, reject2);
                 } else if (Transport.isSocket(transport)) {
                   (0, node_1.createClientSocketTransport)(transport.port).then((transport2) => {
@@ -22793,9 +22128,7 @@ var require_main5 = __commonJS({
                     this._serverProcess = sp;
                     pipeStderr(sp.stderr, this.outputChannel);
                     pipeStdout(sp.stdout, this.outputChannel);
-                    transport2.onConnected().then((protocol) => {
-                      resolve9({ reader: protocol[0], writer: protocol[1] });
-                    }, reject2);
+                    waitForConnection(sp, transport2).then(resolve9, reject2);
                   }, reject2);
                 }
               });
@@ -22828,35 +22161,36 @@ var require_main5 = __commonJS({
               return (0, node_1.createClientPipeTransport)(pipeName).then((transport2) => {
                 const serverProcess = cp.spawn(command.command, args, options);
                 if (!serverProcess || !serverProcess.pid) {
+                  transport2.close();
                   return handleChildProcessStartError(serverProcess, `Launching server using command ${command.command} failed.`);
                 }
                 this._serverProcess = serverProcess;
                 this._isDetached = !!options.detached;
                 pipeStderr(serverProcess.stderr, this.outputChannel);
                 pipeStdout(serverProcess.stdout, this.outputChannel);
-                return transport2.onConnected().then((protocol) => {
-                  return { reader: protocol[0], writer: protocol[1] };
-                });
+                return waitForConnection(serverProcess, transport2);
               });
             } else if (Transport.isSocket(transport)) {
               return (0, node_1.createClientSocketTransport)(transport.port).then((transport2) => {
                 args.push(`--socket=${transport2.port()}`);
                 const serverProcess = cp.spawn(command.command, args, options);
                 if (!serverProcess || !serverProcess.pid) {
+                  transport2.close();
                   return handleChildProcessStartError(serverProcess, `Launching server using command ${command.command} failed.`);
                 }
                 this._serverProcess = serverProcess;
                 this._isDetached = !!options.detached;
                 pipeStderr(serverProcess.stderr, this.outputChannel);
                 pipeStdout(serverProcess.stdout, this.outputChannel);
-                return transport2.onConnected().then((protocol) => {
-                  return { reader: protocol[0], writer: protocol[1] };
-                });
+                return waitForConnection(serverProcess, transport2);
               });
             }
           }
           return Promise.reject(new Error(`Unsupported server configuration ` + JSON.stringify(server, null, 4)));
-        }).finally(() => {
+        };
+        try {
+          return await startServer(await this._getServerWorkingDir(json.options));
+        } finally {
           if (this._serverProcess !== void 0) {
             this._serverProcess.on("exit", (code, signal) => {
               if (code === 0) {
@@ -22869,22 +22203,22 @@ var require_main5 = __commonJS({
               }
             });
           }
-        });
+        }
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path46.isAbsolute(runtime)) {
+        if (path51.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path46.join(mainRootPath, runtime);
-          if (fs26.existsSync(result)) {
+          const result = path51.join(mainRootPath, runtime);
+          if (fs29.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path46.join(serverWorkingDirectory, runtime);
-          if (fs26.existsSync(result)) {
+          const result = path51.join(serverWorkingDirectory, runtime);
+          if (fs29.existsSync(result)) {
             return result;
           }
         }
@@ -22908,7 +22242,7 @@ var require_main5 = __commonJS({
         }
         if (cwd) {
           return new Promise((s) => {
-            fs26.lstat(cwd, (err2, stats) => {
+            fs29.lstat(cwd, (err2, stats) => {
               s(!err2 && stats.isDirectory() ? cwd : void 0);
             });
           });
@@ -22948,6 +22282,33 @@ var require_main5 = __commonJS({
       }
     };
     exports2.SettingMonitor = SettingMonitor;
+    function waitForConnection(childProcess, transport) {
+      return new Promise((resolve9, reject2) => {
+        const removeListeners = () => {
+          childProcess.removeListener("exit", onExit);
+          childProcess.removeListener("error", onError);
+        };
+        const onExit = (code, signal) => {
+          removeListeners();
+          transport.close();
+          reject2(new Error(`Server process exited before the connection could be established (code: ${code}, signal: ${signal}).`));
+        };
+        const onError = (error) => {
+          removeListeners();
+          transport.close();
+          reject2(error);
+        };
+        childProcess.once("exit", onExit);
+        childProcess.once("error", onError);
+        transport.onConnected().then((protocol) => {
+          removeListeners();
+          resolve9({ reader: protocol[0], writer: protocol[1] });
+        }, (error) => {
+          removeListeners();
+          reject2(error);
+        });
+      });
+    }
     function handleChildProcessStartError(process2, message) {
       if (process2 === null) {
         return Promise.reject(message);
@@ -23089,6 +22450,116 @@ var init_evidence_pool = __esm({
         return this.intern([...new Set(values)].toSorted());
       }
     };
+  }
+});
+
+// packages/disassembler/src/model/analysis-ownership.ts
+function withCompactAnalysisOwnership(records3, entries) {
+  const outgoing = /* @__PURE__ */ new Map();
+  const nodes = /* @__PURE__ */ new Set();
+  for (const record7 of records3) {
+    if (record7.kind === "cfg-node") {
+      nodes.add(record7.id);
+    } else if (record7.kind === "cfg-edge" && record7.to && ["branch", "fallthrough", "jump"].includes(record7.edgeKind)) {
+      const targets = outgoing.get(record7.from) ?? [];
+      targets.push(record7.to);
+      outgoing.set(record7.from, targets);
+    }
+  }
+  const owners = /* @__PURE__ */ new Map();
+  const predecessors = /* @__PURE__ */ new Map();
+  const queue = [];
+  for (const entry of entries) {
+    if (nodes.has(entry)) {
+      owners.set(entry, entry);
+      queue.push(entry);
+    }
+  }
+  for (const id of queue) {
+    const owner2 = owners.get(id);
+    for (const target of outgoing.get(id) ?? []) {
+      if (!nodes.has(target) || entries.has(target)) {
+        continue;
+      }
+      if (!owners.has(target)) {
+        owners.set(target, owner2);
+        if (owner2) {
+          predecessors.set(target, id);
+        }
+        queue.push(target);
+      } else if (owners.get(target) !== null && owners.get(target) !== owner2) {
+        owners.set(target, null);
+        predecessors.delete(target);
+        queue.push(target);
+      }
+    }
+  }
+  return records3.map((record7) => {
+    if (record7.kind !== "cfg-node") {
+      return record7;
+    }
+    const owner2 = owners.get(record7.id);
+    return {
+      ...record7,
+      ...owner2 ? { functionEntry: owner2, evidencePredecessor: predecessors.get(record7.id) } : {}
+    };
+  });
+}
+function validateAnalysisOwnership(records3, scope = "complete") {
+  if (!records3.some(
+    (record7) => record7.kind === "cfg-node" && (record7.functionEntry !== void 0 || record7.evidencePredecessor !== void 0)
+  )) {
+    return;
+  }
+  const nodes = /* @__PURE__ */ new Map();
+  for (const record7 of records3) {
+    if (record7.kind === "cfg-node") {
+      nodes.set(record7.id, record7);
+    }
+  }
+  const complete = /* @__PURE__ */ new Set();
+  for (const node of nodes.values()) {
+    if (node.functionEntry === void 0) {
+      if (node.evidencePredecessor !== void 0) {
+        throw new Error(`Analysis node '${node.id}' has a predecessor without function ownership.`);
+      }
+      continue;
+    }
+    const entry = nodes.get(node.functionEntry);
+    if (!entry && scope === "complete" || entry && (entry.functionEntry !== entry.id || entry.addressSpace !== node.addressSpace)) {
+      throw new Error(`Analysis node '${node.id}' has an invalid function entry.`);
+    }
+    const visiting = /* @__PURE__ */ new Set();
+    let current = node;
+    while (!complete.has(current.id)) {
+      if (visiting.has(current.id)) {
+        throw new Error(`Analysis node '${current.id}' has a cyclic evidence predecessor.`);
+      }
+      visiting.add(current.id);
+      const predecessor = current.evidencePredecessor;
+      if (predecessor === void 0) {
+        if (current.id !== node.functionEntry) {
+          throw new Error(`Analysis node '${current.id}' does not lead to its function entry.`);
+        }
+        break;
+      }
+      const previous = nodes.get(predecessor);
+      if (current.id === node.functionEntry || !previous && scope === "complete" || previous && (previous.functionEntry !== node.functionEntry || previous.addressSpace !== node.addressSpace)) {
+        throw new Error(`Analysis node '${current.id}' has an invalid evidence predecessor.`);
+      }
+      if (!previous) {
+        break;
+      }
+      current = previous;
+    }
+    for (const id of visiting) {
+      complete.add(id);
+    }
+  }
+}
+var init_analysis_ownership = __esm({
+  "packages/disassembler/src/model/analysis-ownership.ts"() {
+    "use strict";
   }
 });
 
@@ -23565,385 +23036,6 @@ var init_analysis_sources = __esm({
   }
 });
 
-// packages/disassembler/src/analysis/coverage-map.ts
-var CLASSIFICATION_ORDER, RUNTIME_ORDER, annotationClassification, compareStrings, arraysEqual, segmentsEqual, coverageAddressSpace, buildRomCoverageMap;
-var init_coverage_map = __esm({
-  "packages/disassembler/src/analysis/coverage-map.ts"() {
-    "use strict";
-    CLASSIFICATION_ORDER = [
-      "opcode",
-      "operand",
-      "data",
-      "asset",
-      "unknown"
-    ];
-    RUNTIME_ORDER = ["executed", "operand", "read", "written"];
-    annotationClassification = (classification2) => {
-      switch (classification2) {
-        case "opcode":
-        case "operand":
-          return classification2;
-        case "graphics":
-        case "music":
-        case "compressed":
-        case "asset":
-          return "asset";
-        case "unreached":
-          return void 0;
-        case "data8":
-        case "data16":
-        case "data24":
-        case "data32":
-        case "empty":
-        case "pointer16":
-        case "pointer24":
-        case "pointer32":
-        case "text": {
-          return "data";
-        }
-        default: {
-          const leftover = classification2;
-          throw new Error(`Unsupported annotation classification: ${String(leftover)}`);
-        }
-      }
-    };
-    compareStrings = (left, right) => left.localeCompare(right);
-    arraysEqual = (left, right) => left.length === right.length && left.every((value, index) => value === right[index]);
-    segmentsEqual = (left, right) => left.status === right.status && arraysEqual(left.classifications, right.classifications) && arraysEqual(left.runtime, right.runtime) && arraysEqual(left.annotationIds, right.annotationIds) && arraysEqual(left.analysisIds, right.analysisIds) && arraysEqual(left.runtimeIds, right.runtimeIds) && arraysEqual(left.conflictIds, right.conflictIds) && arraysEqual(left.regionIds, right.regionIds);
-    coverageAddressSpace = (record6) => {
-      if (record6.kind === "runtime-coverage" || record6.kind === "runtime-execution") {
-        return record6.addressSpace;
-      }
-      if (record6.kind === "runtime-memory-access") {
-        return record6.accessedAddressSpace;
-      }
-      return void 0;
-    };
-    buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) => {
-      const contentSize = manifest.rom.contentSize;
-      if (!Number.isSafeInteger(contentSize) || contentSize < 0) {
-        throw new Error("ROM coverage requires a non-negative safe content size.");
-      }
-      const fileAddressSpaces = manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id).toSorted(compareStrings);
-      const fileAddressSpaceSet = new Set(fileAddressSpaces);
-      const events = /* @__PURE__ */ new Map();
-      const unprojected = [];
-      const diagnostics = [];
-      let nextToken = 0;
-      const eventAt = (offset) => {
-        let event = events.get(offset);
-        if (!event) {
-          event = { starts: [], ends: [] };
-          events.set(offset, event);
-        }
-        return event;
-      };
-      const addOverlay = (overlay, start, end, source) => {
-        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
-          unprojected.push({ ...source, reason: "invalid-range" });
-          return false;
-        }
-        if (start >= contentSize || end <= 0 || contentSize === 0) {
-          unprojected.push({ ...source, reason: "outside-rom" });
-          return false;
-        }
-        const clippedStart = Math.max(0, start);
-        const clippedEnd = Math.min(contentSize, end);
-        if (clippedStart !== start || clippedEnd !== end) {
-          diagnostics.push({
-            recordId: source.id,
-            message: `Clipped coverage range [${start}, ${end}) to ROM content [${clippedStart}, ${clippedEnd}).`
-          });
-        }
-        const value = {
-          ...overlay,
-          token: nextToken++,
-          start: clippedStart,
-          end: clippedEnd
-        };
-        eventAt(clippedStart).starts.push(value);
-        eventAt(clippedEnd).ends.push(value);
-        return true;
-      };
-      const addAddressSpaceOverlay = (overlay, start, end, source) => {
-        if (!source.addressSpace || !fileAddressSpaceSet.has(source.addressSpace)) {
-          unprojected.push({ ...source, reason: "non-file-address-space" });
-          return false;
-        }
-        return addOverlay(overlay, start, end, source);
-      };
-      for (const annotation of shards.annotations) {
-        const classification2 = annotationClassification(annotation.classification);
-        if (!classification2) {
-          continue;
-        }
-        addAddressSpaceOverlay(
-          { classification: classification2, annotationId: annotation.id },
-          annotation.start,
-          annotation.end,
-          { kind: "annotation", id: annotation.id, addressSpace: annotation.addressSpace }
-        );
-      }
-      for (const region of shards.regions) {
-        addAddressSpaceOverlay({ regionId: region.id }, region.start, region.end, {
-          kind: "region",
-          id: region.id,
-          addressSpace: region.addressSpace
-        });
-      }
-      const controlFlowNodes = /* @__PURE__ */ new Map();
-      for (const record6 of shards.analysis) {
-        if (record6.kind !== "cfg-node") {
-          continue;
-        }
-        controlFlowNodes.set(record6.id, record6);
-        if (record6.fileOffset === void 0) {
-          unprojected.push({
-            kind: "analysis",
-            id: record6.id,
-            addressSpace: record6.addressSpace,
-            reason: "missing-file-offset"
-          });
-          continue;
-        }
-        addOverlay(
-          { classification: "opcode", analysisId: record6.id },
-          record6.fileOffset,
-          record6.fileOffset + 1,
-          { kind: "analysis", id: record6.id, addressSpace: record6.addressSpace }
-        );
-        if (record6.size > 1) {
-          addOverlay(
-            { classification: "operand", analysisId: record6.id },
-            record6.fileOffset + 1,
-            record6.fileOffset + record6.size,
-            { kind: "analysis", id: record6.id, addressSpace: record6.addressSpace }
-          );
-        }
-      }
-      const addConflict = (record6) => {
-        if (fileAddressSpaceSet.has(record6.addressSpace)) {
-          addOverlay({ conflictId: record6.id }, record6.address, record6.end ?? record6.address + 1, {
-            kind: "analysis",
-            id: record6.id,
-            addressSpace: record6.addressSpace
-          });
-          return;
-        }
-        let projected = false;
-        for (const nodeId of record6.nodes) {
-          const node = controlFlowNodes.get(nodeId);
-          if (!node || node.fileOffset === void 0) {
-            continue;
-          }
-          projected = addOverlay(
-            { conflictId: record6.id, analysisId: node.id },
-            node.fileOffset,
-            node.fileOffset + node.size,
-            { kind: "analysis", id: record6.id, addressSpace: record6.addressSpace }
-          ) || projected;
-        }
-        if (!projected) {
-          unprojected.push({
-            kind: "analysis",
-            id: record6.id,
-            addressSpace: record6.addressSpace,
-            reason: "missing-file-offset"
-          });
-        }
-      };
-      for (const record6 of shards.analysis) {
-        if (record6.kind === "conflict") {
-          addConflict(record6);
-        }
-      }
-      const addRuntimeAddressSpaceOverlay = (record6, runtimeCoverage, start, end) => {
-        const addressSpace = coverageAddressSpace(record6);
-        addAddressSpaceOverlay({ runtime: runtimeCoverage, runtimeId: record6.id }, start, end, {
-          kind: "runtime",
-          id: record6.id,
-          addressSpace
-        });
-      };
-      for (const record6 of runtime) {
-        if (record6.kind === "runtime-coverage") {
-          addRuntimeAddressSpaceOverlay(record6, record6.coverage, record6.start, record6.end);
-          continue;
-        }
-        if (record6.kind === "runtime-execution") {
-          if (record6.fileOffset === void 0) {
-            unprojected.push({
-              kind: "runtime",
-              id: record6.id,
-              addressSpace: record6.addressSpace,
-              reason: "missing-file-offset"
-            });
-            continue;
-          }
-          const size = record6.size ?? 1;
-          addOverlay(
-            { runtime: "executed", runtimeId: record6.id },
-            record6.fileOffset,
-            record6.fileOffset + 1,
-            { kind: "runtime", id: record6.id, addressSpace: record6.addressSpace }
-          );
-          if (size > 1) {
-            addOverlay(
-              { runtime: "operand", runtimeId: record6.id },
-              record6.fileOffset + 1,
-              record6.fileOffset + size,
-              { kind: "runtime", id: record6.id, addressSpace: record6.addressSpace }
-            );
-          }
-          continue;
-        }
-        if (record6.kind === "runtime-memory-access") {
-          if (!fileAddressSpaceSet.has(record6.accessedAddressSpace)) {
-            continue;
-          }
-          if (record6.access === "read" || record6.access === "read-write") {
-            addRuntimeAddressSpaceOverlay(
-              record6,
-              "read",
-              record6.accessedAddress,
-              record6.accessedAddress + record6.width
-            );
-          }
-          if (record6.access === "write" || record6.access === "read-write") {
-            addRuntimeAddressSpaceOverlay(
-              record6,
-              "written",
-              record6.accessedAddress,
-              record6.accessedAddress + record6.width
-            );
-          }
-        }
-      }
-      eventAt(0);
-      eventAt(contentSize);
-      const boundaries = [...events.keys()].toSorted((left, right) => left - right);
-      const active = /* @__PURE__ */ new Map();
-      const segments = [];
-      for (let index = 0; index + 1 < boundaries.length; index++) {
-        const start = boundaries[index];
-        const event = events.get(start);
-        for (const overlay of event.ends) {
-          active.delete(overlay.token);
-        }
-        for (const overlay of event.starts) {
-          active.set(overlay.token, overlay);
-        }
-        const end = boundaries[index + 1];
-        if (end <= start) {
-          continue;
-        }
-        const values = [...active.values()];
-        const classifications = /* @__PURE__ */ new Set();
-        for (const { classification: classification2 } of values) {
-          if (classification2) {
-            classifications.add(classification2);
-          }
-        }
-        const sortedClassifications = classifications.size === 0 ? ["unknown"] : [...classifications];
-        sortedClassifications.sort(
-          (left, right) => CLASSIFICATION_ORDER.indexOf(left) - CLASSIFICATION_ORDER.indexOf(right)
-        );
-        const conflictIds = [
-          ...new Set(values.flatMap(({ conflictId }) => conflictId ? [conflictId] : []))
-        ].toSorted(compareStrings);
-        let status = "classified";
-        if (classifications.size === 0 && conflictIds.length === 0) {
-          status = "unknown";
-        } else if (classifications.size > 1 || conflictIds.length > 0) {
-          status = "conflict";
-        }
-        const segment = {
-          start,
-          end,
-          status,
-          classifications: sortedClassifications,
-          runtime: [
-            ...new Set(
-              values.flatMap(({ runtime: runtimeKind }) => runtimeKind ? [runtimeKind] : [])
-            )
-          ].toSorted((left, right) => RUNTIME_ORDER.indexOf(left) - RUNTIME_ORDER.indexOf(right)),
-          annotationIds: [
-            ...new Set(values.flatMap(({ annotationId }) => annotationId ? [annotationId] : []))
-          ].toSorted(compareStrings),
-          analysisIds: [
-            ...new Set(values.flatMap(({ analysisId }) => analysisId ? [analysisId] : []))
-          ].toSorted(compareStrings),
-          runtimeIds: [
-            ...new Set(values.flatMap(({ runtimeId }) => runtimeId ? [runtimeId] : []))
-          ].toSorted(compareStrings),
-          conflictIds,
-          regionIds: [
-            ...new Set(values.flatMap(({ regionId }) => regionId ? [regionId] : []))
-          ].toSorted(compareStrings)
-        };
-        const previous = segments.at(-1);
-        if (previous && previous.end === segment.start && segmentsEqual(previous, segment)) {
-          segments[segments.length - 1] = { ...previous, end: segment.end };
-        } else {
-          segments.push(segment);
-        }
-      }
-      const bytesByClassification = {
-        opcode: 0,
-        operand: 0,
-        data: 0,
-        asset: 0,
-        unknown: 0
-      };
-      const bytesByRuntimeCoverage = {
-        executed: 0,
-        operand: 0,
-        read: 0,
-        written: 0
-      };
-      let classifiedBytes = 0;
-      let unknownBytes = 0;
-      let conflictBytes = 0;
-      for (const segment of segments) {
-        const size = segment.end - segment.start;
-        for (const classification2 of segment.classifications) {
-          bytesByClassification[classification2] += size;
-        }
-        for (const runtimeKind of segment.runtime) {
-          bytesByRuntimeCoverage[runtimeKind] += size;
-        }
-        if (segment.status === "classified") {
-          classifiedBytes += size;
-        } else if (segment.status === "unknown") {
-          unknownBytes += size;
-        } else {
-          conflictBytes += size;
-        }
-      }
-      return {
-        contentSize,
-        fileAddressSpaces,
-        segments,
-        summary: {
-          totalBytes: contentSize,
-          classifiedBytes,
-          unknownBytes,
-          conflictBytes,
-          segmentCount: segments.length,
-          bytesByClassification,
-          bytesByRuntimeCoverage
-        },
-        unprojected: unprojected.toSorted(
-          (left, right) => left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id) || left.reason.localeCompare(right.reason)
-        ),
-        diagnostics: diagnostics.toSorted(
-          (left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)
-        )
-      };
-    };
-  }
-});
-
 // packages/disassembler/src/analysis/instruction-annotations.ts
 var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, lowerBound, buildInstructionAnalysisAnnotations;
 var init_instruction_annotations = __esm({
@@ -23969,8 +23061,8 @@ var init_instruction_annotations = __esm({
       }
       return target;
     };
-    numberField = (record6, name2) => {
-      const value = record6[name2];
+    numberField = (record7, name2) => {
+      const value = record7[name2];
       return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
     };
     effectiveAddress = (value) => {
@@ -23993,7 +23085,7 @@ var init_instruction_annotations = __esm({
       };
     };
     annotationState = (annotation) => annotation.state;
-    runtimeState = (record6) => record6.state;
+    runtimeState = (record7) => record7.state;
     lowerBound = (values, target, at) => {
       let low = 0;
       let high = values.length;
@@ -24108,9 +23200,9 @@ var init_instruction_annotations = __esm({
           addAll(transition.evidence, node.evidence);
         }
       };
-      for (const record6 of shards.analysis) {
-        if (record6.kind === "cfg-node") {
-          addNode(record6);
+      for (const record7 of shards.analysis) {
+        if (record7.kind === "cfg-node") {
+          addNode(record7);
         }
       }
       for (const annotation of shards.annotations) {
@@ -24122,38 +23214,38 @@ var init_instruction_annotations = __esm({
           instruction2.outputOffsets = addValue(instruction2.outputOffsets, annotation.start);
         }
       }
-      for (const record6 of runtime()) {
-        if (record6.kind === "runtime-execution") {
-          const instruction2 = ensure(record6.addressSpace, record6.address);
-          if (record6.fileOffset !== void 0) {
-            instruction2.outputOffsets = addValue(instruction2.outputOffsets, record6.fileOffset);
+      for (const record7 of runtime()) {
+        if (record7.kind === "runtime-execution") {
+          const instruction2 = ensure(record7.addressSpace, record7.address);
+          if (record7.fileOffset !== void 0) {
+            instruction2.outputOffsets = addValue(instruction2.outputOffsets, record7.fileOffset);
           }
-          instruction2.architectures = addValue(instruction2.architectures, record6.architecture);
-          instruction2.executionCount += record6.count;
-          instruction2.executionRecordIds = addValue(instruction2.executionRecordIds, record6.id);
-          instruction2.evidence = addAll(instruction2.evidence, record6.evidence);
-        } else if (record6.kind === "runtime-cpu-state") {
-          const instruction2 = ensure(record6.addressSpace, record6.address);
+          instruction2.architectures = addValue(instruction2.architectures, record7.architecture);
+          instruction2.executionCount += record7.count;
+          instruction2.executionRecordIds = addValue(instruction2.executionRecordIds, record7.id);
+          instruction2.evidence = addAll(instruction2.evidence, record7.evidence);
+        } else if (record7.kind === "runtime-cpu-state") {
+          const instruction2 = ensure(record7.addressSpace, record7.address);
           addStateObservation(
             instruction2,
             "runtime",
-            record6.architecture,
-            runtimeState(record6),
-            record6.id,
-            record6.evidence,
-            record6.count
+            record7.architecture,
+            runtimeState(record7),
+            record7.id,
+            record7.evidence,
+            record7.count
           );
-        } else if (record6.kind === "runtime-memory-access") {
-          const instruction2 = ensure(record6.instructionAddressSpace, record6.instructionAddress);
-          instruction2.architectures = addValue(instruction2.architectures, record6.architecture);
+        } else if (record7.kind === "runtime-memory-access") {
+          const instruction2 = ensure(record7.instructionAddressSpace, record7.instructionAddress);
+          instruction2.architectures = addValue(instruction2.architectures, record7.architecture);
           const value = {
-            accessedAddressSpace: record6.accessedAddressSpace,
-            accessedAddress: record6.accessedAddress,
-            access: record6.access,
-            width: record6.width,
-            ...record6.actor === void 0 ? {} : { actor: record6.actor },
-            ...record6.channel === void 0 ? {} : { channel: record6.channel },
-            ...record6.value === void 0 ? {} : { value: record6.value }
+            accessedAddressSpace: record7.accessedAddressSpace,
+            accessedAddress: record7.accessedAddress,
+            access: record7.access,
+            width: record7.width,
+            ...record7.actor === void 0 ? {} : { actor: record7.actor },
+            ...record7.channel === void 0 ? {} : { channel: record7.channel },
+            ...record7.value === void 0 ? {} : { value: record7.value }
           };
           const key3 = canonicalJsonCompact(value);
           const accesses = instruction2.memoryAccesses ??= /* @__PURE__ */ new Map();
@@ -24162,10 +23254,10 @@ var init_instruction_annotations = __esm({
             access = { value, count: 0, recordIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
             accesses.set(key3, access);
           }
-          access.count += record6.count;
-          access.recordIds.add(record6.id);
-          addAll(access.evidence, record6.evidence);
-          instruction2.evidence = addAll(instruction2.evidence, record6.evidence);
+          access.count += record7.count;
+          access.recordIds.add(record7.id);
+          addAll(access.evidence, record7.evidence);
+          instruction2.evidence = addAll(instruction2.evidence, record7.evidence);
         }
       }
       for (const comment of shards.comments) {
@@ -24224,19 +23316,19 @@ var init_instruction_annotations = __esm({
         });
       }
       const coverageById = /* @__PURE__ */ new Map();
-      for (const record6 of runtime()) {
-        if (record6.kind !== "runtime-coverage") {
+      for (const record7 of runtime()) {
+        if (record7.kind !== "runtime-coverage") {
           continue;
         }
-        coverageById.set(record6.id, record6);
-        attachToRange(record6.addressSpace, record6.start, record6.end, (instruction2) => {
-          instruction2.architectures = addValue(instruction2.architectures, record6.architecture);
-          instruction2.coverageRecordIds = addValue(instruction2.coverageRecordIds, record6.id);
-          instruction2.evidence = addAll(instruction2.evidence, record6.evidence);
+        coverageById.set(record7.id, record7);
+        attachToRange(record7.addressSpace, record7.start, record7.end, (instruction2) => {
+          instruction2.architectures = addValue(instruction2.architectures, record7.architecture);
+          instruction2.coverageRecordIds = addValue(instruction2.coverageRecordIds, record7.id);
+          instruction2.evidence = addAll(instruction2.evidence, record7.evidence);
         });
       }
       const summaries2 = new Set(
-        shards.analysis.filter((record6) => record6.kind === "summary").map(({ architecture }) => architecture)
+        shards.analysis.filter((record7) => record7.kind === "summary").map(({ architecture }) => architecture)
       );
       if (summaries2.size === 1) {
         const [architecture] = summaries2;
@@ -24249,13 +23341,13 @@ var init_instruction_annotations = __esm({
       const finalized = mutable.map((instruction2) => {
         const coverage = /* @__PURE__ */ new Map();
         for (const recordId of instruction2.coverageRecordIds ?? []) {
-          const record6 = coverageById.get(recordId);
-          const previous = coverage.get(record6.coverage);
-          coverage.set(record6.coverage, {
-            coverage: record6.coverage,
-            count: (previous?.count ?? 0) + record6.count,
-            recordIds: sortedStrings([...previous?.recordIds ?? [], record6.id]),
-            evidence: sortedStrings([...previous?.evidence ?? [], ...record6.evidence])
+          const record7 = coverageById.get(recordId);
+          const previous = coverage.get(record7.coverage);
+          coverage.set(record7.coverage, {
+            coverage: record7.coverage,
+            count: (previous?.count ?? 0) + record7.count,
+            recordIds: sortedStrings([...previous?.recordIds ?? [], record7.id]),
+            evidence: sortedStrings([...previous?.evidence ?? [], ...record7.evidence])
           });
         }
         return Object.assign(
@@ -24344,19 +23436,19 @@ function isResearchMapping(value) {
   if (!isRecord6(value)) {
     return false;
   }
-  const record6 = value;
-  if (Object.keys(record6).some((key3) => key3 !== "fileOffset" && key3 !== "state")) {
+  const record7 = value;
+  if (Object.keys(record7).some((key3) => key3 !== "fileOffset" && key3 !== "state")) {
     return false;
   }
-  if (record6.fileOffset !== void 0 && !(Number.isSafeInteger(record6.fileOffset) && Number(record6.fileOffset) >= 0)) {
+  if (record7.fileOffset !== void 0 && !(Number.isSafeInteger(record7.fileOffset) && Number(record7.fileOffset) >= 0)) {
     return false;
   }
   let fields2 = 0;
-  if (record6.state !== void 0) {
-    if (typeof record6.state !== "object" || record6.state === null || Array.isArray(record6.state)) {
+  if (record7.state !== void 0) {
+    if (typeof record7.state !== "object" || record7.state === null || Array.isArray(record7.state)) {
       return false;
     }
-    const entries = Object.entries(record6.state);
+    const entries = Object.entries(record7.state);
     if (entries.length === 0 || entries.length > 64) {
       return false;
     }
@@ -24367,7 +23459,7 @@ function isResearchMapping(value) {
     }
     fields2 = entries.length;
   }
-  return record6.fileOffset !== void 0 || fields2 > 0;
+  return record7.fileOffset !== void 0 || fields2 > 0;
 }
 function matchesResearchMapping(mapping, location, delta = 0) {
   if (!mapping) {
@@ -24387,19 +23479,62 @@ var init_research_mapping = __esm({
 });
 
 // packages/disassembler/src/analysis/static-analysis.ts
-var DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, hexAddress, contextKey, nodeIdFor, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
+function readEvidencePath() {
+  return materializeEvidencePath(evidencePaths.get(this));
+}
+var import_node_crypto4, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, materializeEvidencePath, evidencePaths, withEvidencePath, hexAddress, callContexts, emptyCallContext, describeCallContext, contextKey, compactContextKeys, compactContextKey, nodeIdFor, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
 var init_static_analysis = __esm({
   "packages/disassembler/src/analysis/static-analysis.ts"() {
     "use strict";
+    import_node_crypto4 = require("node:crypto");
     init_canonical_json();
     init_evidence_pool();
     init_research_mapping();
     DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1e6;
     DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
+    materializeEvidencePath = (path51) => {
+      const values = [];
+      values.length = path51?.length ?? 0;
+      for (let current = path51; current; current = current.parent) {
+        values[current.length - 1] = current.id;
+      }
+      return values;
+    };
+    evidencePaths = /* @__PURE__ */ new WeakMap();
+    withEvidencePath = (record7, path51) => {
+      evidencePaths.set(record7, path51);
+      Object.defineProperty(record7, "evidencePath", { enumerable: true, get: readEvidencePath });
+      return record7;
+    };
     hexAddress = (address3) => address3.toString(16).padStart(6, "0");
-    contextKey = (context) => context.map(
-      (frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}${frame.executionContext ?? ""}`
-    ).join("/");
+    callContexts = /* @__PURE__ */ new WeakMap();
+    emptyCallContext = { key: "", sites: [] };
+    describeCallContext = (context) => {
+      if (context.length === 0) {
+        return emptyCallContext;
+      }
+      let value = callContexts.get(context);
+      if (!value) {
+        value = {
+          key: context.map(
+            (frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}${frame.executionContext ?? ""}`
+          ).join("/"),
+          sites: context.map((frame) => frame.callSite)
+        };
+        callContexts.set(context, value);
+      }
+      return value;
+    };
+    contextKey = (context) => describeCallContext(context).key;
+    compactContextKeys = /* @__PURE__ */ new WeakMap();
+    compactContextKey = (context) => {
+      let key3 = compactContextKeys.get(context);
+      if (key3 === void 0) {
+        key3 = (0, import_node_crypto4.createHash)("sha256").update(contextKey(context)).digest("hex");
+        compactContextKeys.set(context, key3);
+      }
+      return key3;
+    };
     nodeIdFor = (address3, context) => `cfg:${hexAddress(address3)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
     sortWork = (left, right) => left.address - right.address || contextKey(left.context).localeCompare(contextKey(right.context)) || left.entryPoint.localeCompare(right.entryPoint) || (left.predecessor ?? "").localeCompare(right.predecessor ?? "");
     StaticWorkQueue = class {
@@ -24415,6 +23550,10 @@ var init_static_analysis = __esm({
       }
       peek() {
         return this.#values[0]?.item;
+      }
+      /** Release an unexplored frontier after a deterministic work limit has been reported. */
+      clear() {
+        this.#values.length = 0;
       }
       push(item) {
         const queued = { item, sequence: this.#nextSequence++ };
@@ -24514,8 +23653,7 @@ var init_static_analysis = __esm({
           state: seed.state,
           context: [],
           entryPoint: seed.id,
-          evidence: sortedUnique5(seed.evidence),
-          path: []
+          evidence: sortedUnique5(seed.evidence)
         }))
       );
       const states = /* @__PURE__ */ new Map();
@@ -24572,7 +23710,13 @@ var init_static_analysis = __esm({
         }
         const enteredState = adapter.enterAddress?.(item.state, item.address) ?? item.state;
         const suffix = executionSuffix(item.address, enteredState);
-        const nodeId = nodeIdFor(item.address, item.context) + suffix;
+        let identity2;
+        if (options.compactContextIds && item.context.length > 0) {
+          identity2 = `cfg:${hexAddress(item.address)}:context:${compactContextKey(item.context)}`;
+        } else {
+          identity2 = nodeIdFor(item.address, item.context);
+        }
+        const nodeId = identity2 + suffix;
         const previousState = states.get(nodeId);
         const incomingState = previousState ? adapter.join(previousState, enteredState) : enteredState;
         if (previousState && adapter.stateKey(previousState) === adapter.stateKey(incomingState)) {
@@ -24669,24 +23813,33 @@ var init_static_analysis = __esm({
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction2, incomingState);
-        const path46 = [...item.path, nodeId];
-        nodes.set(nodeId, {
+        const path51 = {
           id: nodeId,
-          address: instruction2.address,
-          fileOffset: instruction2.fileOffset,
-          size: instruction2.size,
-          opcode: instruction2.opcode,
-          specificationId: instruction2.specificationId,
-          mnemonic: instruction2.mnemonic,
-          mode: instruction2.mode,
-          context: item.context.map((frame) => frame.callSite),
-          incomingState,
-          outgoingState,
-          effectiveAddresses: instruction2.effectiveAddresses ?? [],
-          entryPoint: item.entryPoint,
-          evidence: nodeEvidence,
-          evidencePath: path46
-        });
+          parent: item.path,
+          length: (item.path?.length ?? 0) + 1
+        };
+        nodes.set(
+          nodeId,
+          withEvidencePath(
+            {
+              id: nodeId,
+              address: instruction2.address,
+              fileOffset: instruction2.fileOffset,
+              size: instruction2.size,
+              opcode: instruction2.opcode,
+              specificationId: instruction2.specificationId,
+              mnemonic: instruction2.mnemonic,
+              mode: instruction2.mode,
+              context: describeCallContext(item.context).sites,
+              incomingState,
+              outgoingState,
+              effectiveAddresses: instruction2.effectiveAddresses ?? [],
+              entryPoint: item.entryPoint,
+              evidence: nodeEvidence
+            },
+            path51
+          )
+        );
         if (item.predecessor && item.edgeKind) {
           const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override) + suffix;
           edges.set(edgeId, {
@@ -24753,7 +23906,7 @@ var init_static_analysis = __esm({
             context,
             entryPoint: item.entryPoint,
             evidence: targetEvidence,
-            path: path46,
+            path: path51,
             edgeKind: kind,
             predecessor: nodeId,
             indirect: target.indirect,
@@ -24763,13 +23916,19 @@ var init_static_analysis = __esm({
           if (kind === "call" || kind === "interrupt") {
             const functionId = `function:${hexAddress(target.address)}${executionSuffix(target.address, outgoingState)}`;
             if (!functions.has(functionId)) {
-              functions.set(functionId, {
-                id: functionId,
-                address: target.address,
-                source: kind === "call" ? "call" : "interrupt",
-                evidence: targetEvidence,
-                evidencePath: path46
-              });
+              functions.set(
+                functionId,
+                withEvidencePath(
+                  {
+                    id: functionId,
+                    address: target.address,
+                    source: kind === "call" ? "call" : "interrupt",
+                    evidence: targetEvidence,
+                    evidencePredecessor: nodeId
+                  },
+                  path51
+                )
+              );
             }
           }
         };
@@ -24807,7 +23966,7 @@ var init_static_analysis = __esm({
               context: item.context.slice(0, -1),
               entryPoint: item.entryPoint,
               evidence: nodeEvidence,
-              path: path46,
+              path: path51,
               edgeKind: "return",
               predecessor: nodeId
             });
@@ -24819,7 +23978,7 @@ var init_static_analysis = __esm({
             context: item.context,
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            path: path46,
+            path: path51,
             edgeKind: "fallthrough",
             predecessor: nodeId
           });
@@ -24842,7 +24001,7 @@ var init_static_analysis = __esm({
       const sortedFunctions = [...functions.values()].toSorted(
         (left, right) => left.address - right.address || left.id.localeCompare(right.id)
       );
-      return {
+      const result = {
         status: incompleteReasons.size === 0 ? "complete" : "incomplete",
         nodes: sortedNodes,
         edges: [...edges.values()].toSorted(
@@ -24867,6 +24026,16 @@ var init_static_analysis = __esm({
         ),
         processedWorkItems
       };
+      states.clear();
+      nodes.clear();
+      edges.clear();
+      functions.clear();
+      conflicts.clear();
+      unresolved.clear();
+      ownership.clear();
+      ownedByNode.clear();
+      queue.clear();
+      return result;
     };
   }
 });
@@ -24877,25 +24046,25 @@ var init_project_evidence = __esm({
   "packages/disassembler/src/analysis/project-evidence.ts"() {
     "use strict";
     evidenceReferences = (shards, evidenceId) => [
-      ...shards.analysis.filter((record6) => record6.evidence.includes(evidenceId)).map((record6) => `analysis:${record6.id}`),
-      ...shards.annotations.filter((record6) => record6.evidence.includes(evidenceId)).map((record6) => `annotations:${record6.id}`),
-      ...shards.labels.filter((record6) => record6.evidence.includes(evidenceId)).map((record6) => `labels:${record6.id}`),
-      ...shards.comments.filter((record6) => record6.evidence.includes(evidenceId)).map((record6) => `comments:${record6.id}`),
-      ...shards.regions.filter((record6) => record6.evidence.includes(evidenceId)).map((record6) => `regions:${record6.id}`),
-      ...shards.runtime.filter((record6) => record6.evidence.includes(evidenceId)).map((record6) => `runtime:${record6.id}`)
+      ...shards.analysis.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `analysis:${record7.id}`),
+      ...shards.annotations.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `annotations:${record7.id}`),
+      ...shards.labels.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `labels:${record7.id}`),
+      ...shards.comments.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `comments:${record7.id}`),
+      ...shards.regions.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `regions:${record7.id}`),
+      ...shards.runtime.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `runtime:${record7.id}`)
     ];
     sortedUnique = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
     explainProjectEvidence = (shards, shard, recordId) => {
       const records3 = shards[shard];
-      const record6 = records3.find(({ id }) => id === recordId);
-      if (!record6) {
+      const record7 = records3.find(({ id }) => id === recordId);
+      if (!record7) {
         throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
       }
       let evidenceIds = [];
       if (shard === "evidence") {
-        evidenceIds = [record6.id];
-      } else if ("evidence" in record6) {
-        evidenceIds = record6.evidence;
+        evidenceIds = [record7.id];
+      } else if ("evidence" in record7) {
+        evidenceIds = record7.evidence;
       }
       const evidence = evidenceIds.map((id) => {
         const found = shards.evidence.find((entry) => entry.id === id);
@@ -24909,7 +24078,7 @@ var init_project_evidence = __esm({
       const conflicts = shards.analysis.filter(
         (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
       ).toSorted((left, right) => left.id.localeCompare(right.id));
-      return { shard, record: record6, evidence, referencedBy, conflicts };
+      return { shard, record: record7, evidence, referencedBy, conflicts };
     };
   }
 });
@@ -24934,40 +24103,40 @@ var init_runtime_evidence = __esm({
     stateValueKey = (value) => `${typeof value}:${String(value)}`;
     conflictReport = (runtime) => {
       const observations = [];
-      for (const record6 of runtime) {
-        if (record6.kind === "runtime-cpu-state") {
-          for (const [field, value] of Object.entries(record6.state)) {
+      for (const record7 of runtime) {
+        if (record7.kind === "runtime-cpu-state") {
+          for (const [field, value] of Object.entries(record7.state)) {
             observations.push({
-              architecture: record6.architecture,
-              addressSpace: record6.addressSpace,
-              address: record6.address,
+              architecture: record7.architecture,
+              addressSpace: record7.addressSpace,
+              address: record7.address,
               field,
               value,
-              record: record6.id,
-              evidence: record6.evidence
+              record: record7.id,
+              evidence: record7.evidence
             });
           }
-        } else if (record6.kind === "runtime-execution") {
-          if (record6.size !== void 0) {
+        } else if (record7.kind === "runtime-execution") {
+          if (record7.size !== void 0) {
             observations.push({
-              architecture: record6.architecture,
-              addressSpace: record6.addressSpace,
-              address: record6.address,
+              architecture: record7.architecture,
+              addressSpace: record7.addressSpace,
+              address: record7.address,
               field: "instruction-size",
-              value: record6.size,
-              record: record6.id,
-              evidence: record6.evidence
+              value: record7.size,
+              record: record7.id,
+              evidence: record7.evidence
             });
           }
-          if (record6.opcode !== void 0) {
+          if (record7.opcode !== void 0) {
             observations.push({
-              architecture: record6.architecture,
-              addressSpace: record6.addressSpace,
-              address: record6.address,
+              architecture: record7.architecture,
+              addressSpace: record7.addressSpace,
+              address: record7.address,
               field: "opcode",
-              value: record6.opcode,
-              record: record6.id,
-              evidence: record6.evidence
+              value: record7.opcode,
+              record: record7.id,
+              evidence: record7.evidence
             });
           }
         }
@@ -24980,17 +24149,17 @@ var init_runtime_evidence = __esm({
           observation.address,
           observation.field
         ].join(":");
-        const group2 = groups2.get(key3);
-        if (group2) {
-          group2.push(observation);
+        const group = groups2.get(key3);
+        if (group) {
+          group.push(observation);
         } else {
           groups2.set(key3, [observation]);
         }
       }
       const conflicts = [];
-      for (const [key3, group2] of groups2) {
+      for (const [key3, group] of groups2) {
         const byValue = /* @__PURE__ */ new Map();
-        for (const observation of group2) {
+        for (const observation of group) {
           const valueKey2 = stateValueKey(observation.value);
           const entries = byValue.get(valueKey2);
           if (entries) {
@@ -25002,7 +24171,7 @@ var init_runtime_evidence = __esm({
         if (byValue.size < 2) {
           continue;
         }
-        const first = group2[0];
+        const first = group[0];
         conflicts.push({
           id: `runtime-conflict:${key3}`,
           kind: first.field === "instruction-size" || first.field === "opcode" ? first.field : "cpu-state",
@@ -25023,7 +24192,7 @@ var init_runtime_evidence = __esm({
     };
     explanationReport = (shards) => {
       const runtimeEvidence = new Set(
-        shards.evidence.filter((record6) => record6.source === "runtime").map((record6) => record6.id)
+        shards.evidence.filter((record7) => record7.source === "runtime").map((record7) => record7.id)
       );
       const explanations = [];
       for (const annotation of shards.annotations) {
@@ -25038,17 +24207,17 @@ var init_runtime_evidence = __esm({
           evidence: sortedUnique2(evidence)
         });
       }
-      for (const record6 of shards.analysis) {
-        if (record6.kind !== "target-override") {
+      for (const record7 of shards.analysis) {
+        if (record7.kind !== "target-override") {
           continue;
         }
-        const evidence = record6.evidence.filter((id) => runtimeEvidence.has(id));
+        const evidence = record7.evidence.filter((id) => runtimeEvidence.has(id));
         if (evidence.length === 0) {
           continue;
         }
         explanations.push({
-          recordId: record6.id,
-          detail: `Runtime observation resolves control flow to ${record6.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
+          recordId: record7.id,
+          detail: `Runtime observation resolves control flow to ${record7.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
           evidence: sortedUnique2(evidence)
         });
       }
@@ -25058,30 +24227,30 @@ var init_runtime_evidence = __esm({
       if (incoming.length === 0) {
         return prior;
       }
-      const records3 = new Map(prior.map((record6) => [record6.id, record6]));
-      for (const record6 of incoming) {
-        const current = records3.get(record6.id);
+      const records3 = new Map(prior.map((record7) => [record7.id, record7]));
+      for (const record7 of incoming) {
+        const current = records3.get(record7.id);
         if (!current) {
-          records3.set(record6.id, record6);
+          records3.set(record7.id, record7);
           added[kind]++;
-        } else if (canonicalEquals(current, record6)) {
+        } else if (canonicalEquals(current, record7)) {
           existing[kind]++;
         } else if (combine) {
-          const merged = combine(current, record6);
+          const merged = combine(current, record7);
           if (!merged) {
             throw new Error(
-              `Runtime evidence id '${record6.id}' in '${kind}' changed content. Use a content-derived id.`
+              `Runtime evidence id '${record7.id}' in '${kind}' changed content. Use a content-derived id.`
             );
           }
           if (canonicalEquals(current, merged)) {
             existing[kind]++;
           } else {
-            records3.set(record6.id, merged);
+            records3.set(record7.id, merged);
             updated[kind]++;
           }
         } else {
           throw new Error(
-            `Runtime evidence id '${record6.id}' in '${kind}' changed content. Use a content-derived id.`
+            `Runtime evidence id '${record7.id}' in '${kind}' changed content. Use a content-derived id.`
           );
         }
       }
@@ -25111,17 +24280,17 @@ var init_runtime_evidence = __esm({
           added,
           updated,
           existing,
-          (current, record6) => {
-            if (current.kind !== "target-override" || record6.kind !== "target-override" || !current.id.startsWith("runtime:target-override:")) {
+          (current, record7) => {
+            if (current.kind !== "target-override" || record7.kind !== "target-override" || !current.id.startsWith("runtime:target-override:")) {
               return void 0;
             }
-            if (current.addressSpace !== record6.addressSpace || current.address !== record6.address) {
-              throw new Error(`Runtime target override '${record6.id}' changed its control-flow site.`);
+            if (current.addressSpace !== record7.addressSpace || current.address !== record7.address) {
+              throw new Error(`Runtime target override '${record7.id}' changed its control-flow site.`);
             }
             return {
               ...current,
-              targets: [.../* @__PURE__ */ new Set([...current.targets, ...record6.targets])].toSorted((a, b) => a - b),
-              evidence: sortedUnique2([...current.evidence, ...record6.evidence])
+              targets: [.../* @__PURE__ */ new Set([...current.targets, ...record7.targets])].toSorted((a, b) => a - b),
+              evidence: sortedUnique2([...current.evidence, ...record7.evidence])
             };
           }
         ),
@@ -25343,11 +24512,11 @@ ${entries.join(",\n")}
 function isRowRecord(value) {
   return !Array.isArray(value);
 }
-var import_node_crypto4, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, record, string, integer, sha2563, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
+var import_node_crypto5, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, record, string, integer, sha2563, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
   "packages/disassembler/src/runtime/runtime-trace.ts"() {
     "use strict";
-    import_node_crypto4 = require("node:crypto");
+    import_node_crypto5 = require("node:crypto");
     init_canonical_json();
     init_trace_cache();
     init_trace_detail();
@@ -25375,7 +24544,7 @@ var init_runtime_trace = __esm({
       }
       return value;
     };
-    sha2563 = (value) => (0, import_node_crypto4.createHash)("sha256").update(value).digest("hex");
+    sha2563 = (value) => (0, import_node_crypto5.createHash)("sha256").update(value).digest("hex");
     sha256Identity = (value, context) => {
       const identity2 = string(value, context);
       if (!/^[\da-f]{64}$/.test(identity2)) {
@@ -25539,7 +24708,7 @@ var init_runtime_trace = __esm({
       const maxIndexRecords = runtimeTraceIndexRecordLimit(indexMode, context.maxIndexRecords, storage);
       const envelope = canonicalJson({ ...artifact, chunks: [] });
       const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
-      const hash4 = (0, import_node_crypto4.createHash)("sha256").update(envelope.slice(0, split));
+      const hash4 = (0, import_node_crypto5.createHash)("sha256").update(envelope.slice(0, split));
       const suffix = envelope.slice(split + 2);
       const validateChunk = createRuntimeTraceChunkValidator();
       const index = storage?.index ?? createMemoryFactIndex();
@@ -26182,11 +25351,11 @@ var init_runtime_graphics = __esm({
           cgramHigh = !cgramHigh;
         }
       };
-      const record6 = (write) => {
+      const record7 = (write) => {
         const key3 = `${write.actor}:${write.channel}:${write.target}`;
-        let group2 = activity.get(key3);
-        if (!group2) {
-          group2 = {
+        let group = activity.get(key3);
+        if (!group) {
+          group = {
             actor: write.actor,
             channel: write.channel,
             target: write.target,
@@ -26197,13 +25366,13 @@ var init_runtime_graphics = __esm({
             byteTargets: 0,
             knownValueTargets: 0
           };
-          activity.set(key3, group2);
+          activity.set(key3, group);
         }
-        group2.portWrites++;
-        group2[write.status]++;
-        group2.byteTargets += write.bytes.length;
-        group2.knownValueTargets += write.bytes.filter((byte2) => byte2.value !== null).length;
-        if (!Number.isSafeInteger(group2.byteTargets)) {
+        group.portWrites++;
+        group[write.status]++;
+        group.byteTargets += write.bytes.length;
+        group.knownValueTargets += write.bytes.filter((byte2) => byte2.value !== null).length;
+        if (!Number.isSafeInteger(group.byteTargets)) {
           throw new Error("Graphics byte count exceeds the safe range.");
         }
         if (writes.length < 64) {
@@ -26279,9 +25448,9 @@ var init_runtime_graphics = __esm({
           const byte2 = port - 8472;
           if (vmain !== null && vramKnown === 65535) {
             const address3 = mapVram(vramAddress, vmain >> 2 & 3) * 2 + byte2;
-            record6({ ...base, target: "vram", status: "addressed", bytes: [{ address: address3, ...data }] });
+            record7({ ...base, target: "vram", status: "addressed", bytes: [{ address: address3, ...data }] });
           } else {
-            record6({
+            record7({
               ...base,
               target: "vram",
               status: "unknown",
@@ -26293,9 +25462,9 @@ var init_runtime_graphics = __esm({
         } else if (port === 8482) {
           if (cgramHigh === false) {
             cgramLatch = data;
-            record6({ ...base, target: "cgram", status: "latched", bytes: [] });
+            record7({ ...base, target: "cgram", status: "latched", bytes: [] });
           } else if (cgramHigh === true && cgramAddress !== null) {
-            record6({
+            record7({
               ...base,
               target: "cgram",
               status: "addressed",
@@ -26306,7 +25475,7 @@ var init_runtime_graphics = __esm({
             });
           } else {
             cgramLatch = { value: null, sourceSequence: null };
-            record6({
+            record7({
               ...base,
               target: "cgram",
               status: "unknown",
@@ -26317,7 +25486,7 @@ var init_runtime_graphics = __esm({
           advanceCgram();
         } else if (oamAddress === null) {
           oamLatch = { value: null, sourceSequence: null };
-          record6({ ...base, target: "oam", status: "unknown", reason: "missing-oam-state", bytes: [] });
+          record7({ ...base, target: "oam", status: "unknown", reason: "missing-oam-state", bytes: [] });
         } else {
           const address3 = oamAddress;
           oamAddress = address3 + 1 & 1023;
@@ -26325,14 +25494,14 @@ var init_runtime_graphics = __esm({
             oamLatch = data;
           }
           if (address3 & 512) {
-            record6({
+            record7({
               ...base,
               target: "oam",
               status: "addressed",
               bytes: [{ address: 512 | address3 & 31, ...data }]
             });
           } else if (address3 & 1) {
-            record6({
+            record7({
               ...base,
               target: "oam",
               status: "addressed",
@@ -26342,7 +25511,7 @@ var init_runtime_graphics = __esm({
               ]
             });
           } else {
-            record6({ ...base, target: "oam", status: "latched", bytes: [] });
+            record7({ ...base, target: "oam", status: "latched", bytes: [] });
           }
         }
       };
@@ -26350,7 +25519,7 @@ var init_runtime_graphics = __esm({
         push,
         finish: () => ({
           model: "snes-ppu-ports-v1",
-          activity: [...activity.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, group2]) => group2),
+          activity: [...activity.entries()].toSorted(([a], [b]) => a.localeCompare(b)).map(([, group]) => group),
           writes,
           omittedWrites
         })
@@ -26499,13 +25668,13 @@ var init_runtime_transfer = __esm({
       const activity = /* @__PURE__ */ new Map();
       const windows = [];
       let omittedWindows = 0;
-      const retain = (window19) => {
-        const key3 = `${window19.actor}:${window19.channel}`;
-        let group2 = activity.get(key3);
-        if (!group2) {
-          group2 = {
-            actor: window19.actor,
-            channel: window19.channel,
+      const retain = (window20) => {
+        const key3 = `${window20.actor}:${window20.channel}`;
+        let group = activity.get(key3);
+        if (!group) {
+          group = {
+            actor: window20.actor,
+            channel: window20.channel,
             complete: 0,
             interrupted: 0,
             leadingPartial: 0,
@@ -26515,7 +25684,7 @@ var init_runtime_transfer = __esm({
             reads: 0,
             writes: 0
           };
-          activity.set(key3, group2);
+          activity.set(key3, group);
         }
         const fields2 = {
           complete: "complete",
@@ -26524,17 +25693,17 @@ var init_runtime_transfer = __esm({
           "trailing-partial": "trailingPartial",
           "both-partial": "bothPartial"
         };
-        group2[fields2[window19.status]]++;
-        group2.reads += window19.reads;
-        group2.writes += window19.writes;
-        if (window19.begin && window19.end) {
-          group2.attemptedSlots += window19.end.transferred;
+        group[fields2[window20.status]]++;
+        group.reads += window20.reads;
+        group.writes += window20.writes;
+        if (window20.begin && window20.end) {
+          group.attemptedSlots += window20.end.transferred;
         }
-        if (!Number.isSafeInteger(group2.attemptedSlots)) {
+        if (!Number.isSafeInteger(group.attemptedSlots)) {
           throw new Error("Transfer slot total exceeds the safe integer range.");
         }
         if (windows.length < 64) {
-          windows.push(window19);
+          windows.push(window20);
         } else {
           omittedWindows++;
         }
@@ -26650,11 +25819,11 @@ function positiveDecimal(value) {
 function isBusTraceEvent(value) {
   return typeof value === "object" && value !== null;
 }
-var import_node_crypto5, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
+var import_node_crypto6, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
 var init_runtime_bus_trace = __esm({
   "packages/disassembler/src/runtime/runtime-bus-trace.ts"() {
     "use strict";
-    import_node_crypto5 = require("node:crypto");
+    import_node_crypto6 = require("node:crypto");
     init_trace_cache();
     init_runtime_bus_types();
     init_runtime_graphics();
@@ -26734,7 +25903,7 @@ var init_runtime_bus_trace = __esm({
         values: () => memory.values(),
         clear: () => memory.clear()
       };
-      const hash4 = (0, import_node_crypto5.createHash)("sha256").update(`uttori-bus-index-v1
+      const hash4 = (0, import_node_crypto6.createHash)("sha256").update(`uttori-bus-index-v1
 ${JSON.stringify(meta)}
 `);
       const factKeys = new TraceCache(context.cacheMetrics?.facts);
@@ -26848,7 +26017,7 @@ ${JSON.stringify(meta)}
             const factJson = JSON.stringify(fact);
             let key3 = factKeys.get(factJson);
             if (key3 === void 0) {
-              key3 = (0, import_node_crypto5.createHash)("sha256").update(factJson).digest("hex");
+              key3 = (0, import_node_crypto6.createHash)("sha256").update(factJson).digest("hex");
               factKeys.insert(factJson, key3);
             }
             if (index.add(key3, () => ({
@@ -26875,9 +26044,9 @@ ${JSON.stringify(meta)}
             observed++;
             contexts[access.context]++;
             const groupKey = `${access.actor}:${access.channel}:${access.phase}`;
-            let group2 = activity.get(groupKey);
-            if (!group2) {
-              group2 = {
+            let group = activity.get(groupKey);
+            if (!group) {
+              group = {
                 actor: access.actor,
                 channel: access.channel,
                 phase: access.phase,
@@ -26889,18 +26058,18 @@ ${JSON.stringify(meta)}
                 firstCycle: access.cycle,
                 lastCycle: access.cycle
               };
-              activity.set(groupKey, group2);
+              activity.set(groupKey, group);
             }
             if (access.direction === "read") {
-              group2.reads++;
+              group.reads++;
             } else {
-              group2.writes++;
+              group.writes++;
             }
             if (ordinal === 0) {
-              group2.unowned++;
+              group.unowned++;
             }
-            group2.lastSequence = access.sequence;
-            group2.lastCycle = access.cycle;
+            group.lastSequence = access.sequence;
+            group.lastCycle = access.cycle;
           }
           hash4.update(hashLines.join(""));
           if (context.onProgress) {
@@ -26922,7 +26091,7 @@ ${JSON.stringify(meta)}
               firstCycle,
               lastCycle: firstCycle === null ? null : String(previousCycle),
               ...counts ? { ppu: counts } : {},
-              activity: [...activity.values()].map((group2) => Object.assign({}, group2))
+              activity: [...activity.values()].map((group) => Object.assign({}, group))
             });
           }
         } catch (error) {
@@ -26945,16 +26114,16 @@ ${JSON.stringify(meta)}
             if (fact.kind !== "memory" || fact.record.kind !== "runtime-bus-access") {
               throw new Error("Bus trace index contains an unexpected fact kind.");
             }
-            const record6 = {
+            const record7 = {
               ...fact.record,
               id: `runtime:bus-trace:${sourceSha256}:${fact.record.id}`,
               count: count3,
               evidence: [evidenceId]
             };
             if (storage?.onRecord) {
-              storage.onRecord(record6);
+              storage.onRecord(record7);
             } else {
-              runtime.push(record6);
+              runtime.push(record7);
             }
           }
           const transferSummary = transfers?.finish();
@@ -26976,7 +26145,7 @@ ${JSON.stringify(meta)}
           if (transferSummary) {
             transferCounts.streamEvents = streamEvents;
             transferCounts.transferMarkers = markerEvents;
-            for (const group2 of transferSummary.activity) {
+            for (const group of transferSummary.activity) {
               for (const field of [
                 "complete",
                 "interrupted",
@@ -26987,7 +26156,7 @@ ${JSON.stringify(meta)}
                 "reads",
                 "writes"
               ]) {
-                transferCounts[`${group2.actor}${group2.channel}.${field}`] = group2[field];
+                transferCounts[`${group.actor}${group.channel}.${field}`] = group[field];
               }
             }
           }
@@ -27125,65 +26294,6 @@ var init_record_id_set = __esm({
   }
 });
 
-// packages/disassembler/src/model/analysis-ownership.ts
-function validateAnalysisOwnership(records3, scope = "complete") {
-  if (!records3.some(
-    (record6) => record6.kind === "cfg-node" && (record6.functionEntry !== void 0 || record6.evidencePredecessor !== void 0)
-  )) {
-    return;
-  }
-  const nodes = /* @__PURE__ */ new Map();
-  for (const record6 of records3) {
-    if (record6.kind === "cfg-node") {
-      nodes.set(record6.id, record6);
-    }
-  }
-  const complete = /* @__PURE__ */ new Set();
-  for (const node of nodes.values()) {
-    if (node.functionEntry === void 0) {
-      if (node.evidencePredecessor !== void 0) {
-        throw new Error(`Analysis node '${node.id}' has a predecessor without function ownership.`);
-      }
-      continue;
-    }
-    const entry = nodes.get(node.functionEntry);
-    if (!entry && scope === "complete" || entry && (entry.functionEntry !== entry.id || entry.addressSpace !== node.addressSpace)) {
-      throw new Error(`Analysis node '${node.id}' has an invalid function entry.`);
-    }
-    const visiting = /* @__PURE__ */ new Set();
-    let current = node;
-    while (!complete.has(current.id)) {
-      if (visiting.has(current.id)) {
-        throw new Error(`Analysis node '${current.id}' has a cyclic evidence predecessor.`);
-      }
-      visiting.add(current.id);
-      const predecessor = current.evidencePredecessor;
-      if (predecessor === void 0) {
-        if (current.id !== node.functionEntry) {
-          throw new Error(`Analysis node '${current.id}' does not lead to its function entry.`);
-        }
-        break;
-      }
-      const previous = nodes.get(predecessor);
-      if (current.id === node.functionEntry || !previous && scope === "complete" || previous && (previous.functionEntry !== node.functionEntry || previous.addressSpace !== node.addressSpace)) {
-        throw new Error(`Analysis node '${current.id}' has an invalid evidence predecessor.`);
-      }
-      if (!previous) {
-        break;
-      }
-      current = previous;
-    }
-    for (const id of visiting) {
-      complete.add(id);
-    }
-  }
-}
-var init_analysis_ownership = __esm({
-  "packages/disassembler/src/model/analysis-ownership.ts"() {
-    "use strict";
-  }
-});
-
 // packages/disassembler/src/model/runtime-graphics-fact.ts
 function isRuntimeGraphicsFact(value) {
   if (!record2(value) || !name(value.addressSpace) || !unsigned2(value.address) || !unsigned2(value.pc) || !name(value.actor) || value.context !== "instruction" && value.context !== "interrupt" && value.context !== "unattributed" || value.direction !== "read" && value.direction !== "write" || !unsigned2(value.value) || value.value > 255) {
@@ -27302,15 +26412,15 @@ var init_project_validation = __esm({
       if (!value || typeof value !== "object" || !isRowRecord3(value)) {
         return;
       }
-      const record6 = value;
-      for (const key3 in record6) {
-        if (!Object.hasOwn(record6, key3)) {
+      const record7 = value;
+      for (const key3 in record7) {
+        if (!Object.hasOwn(record7, key3)) {
           continue;
         }
         if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key3)) {
           throw new Error(`ROM byte payload '${location}.${key3}' is forbidden in analysis projects.`);
         }
-        const entry = record6[key3];
+        const entry = record7[key3];
         if (entry && typeof entry === "object") {
           assertNoRomPayload(entry, `${location}.${key3}`);
         }
@@ -27366,119 +26476,119 @@ var init_project_validation = __esm({
     };
     createRuntimeRecordValidator = (project, evidence, checkDuplicateIds = true) => {
       const ids = checkDuplicateIds ? new RecordIdSet() : void 0;
-      const evidenceIds = new Set(evidence.map((record6) => record6.id));
+      const evidenceIds = new Set(evidence.map((record7) => record7.id));
       const addressSpaceById = new Map(project.addressSpaces.map((space) => [space.id, space]));
-      const validate3 = (record6) => {
-        if (!record6 || typeof record6.id !== "string" || record6.id === "") {
+      const validate3 = (record7) => {
+        if (!record7 || typeof record7.id !== "string" || record7.id === "") {
           throw new Error("Analysis shard 'runtime' contains a record without an id.");
         }
-        if (ids && !ids.add(record6.id)) {
-          throw new Error(`Analysis shard 'runtime' contains duplicate id '${record6.id}'.`);
+        if (ids && !ids.add(record7.id)) {
+          throw new Error(`Analysis shard 'runtime' contains duplicate id '${record7.id}'.`);
         }
-        for (const id of record6.evidence) {
+        for (const id of record7.evidence) {
           if (!evidenceIds.has(id)) {
-            throw new Error(`Analysis record '${record6.id}' refers to missing evidence '${id}'.`);
+            throw new Error(`Analysis record '${record7.id}' refers to missing evidence '${id}'.`);
           }
         }
-        if (!Number.isSafeInteger(record6.count) || record6.count <= 0) {
-          throw new Error(`Runtime record '${record6.id}' has an invalid observation count.`);
+        if (!Number.isSafeInteger(record7.count) || record7.count <= 0) {
+          throw new Error(`Runtime record '${record7.id}' has an invalid observation count.`);
         }
-        if (record6.kind === "runtime-coverage") {
-          if (!Number.isSafeInteger(record6.start) || !Number.isSafeInteger(record6.end) || record6.start < 0 || record6.end <= record6.start) {
-            throw new Error(`Runtime coverage '${record6.id}' has an invalid half-open range.`);
+        if (record7.kind === "runtime-coverage") {
+          if (!Number.isSafeInteger(record7.start) || !Number.isSafeInteger(record7.end) || record7.start < 0 || record7.end <= record7.start) {
+            throw new Error(`Runtime coverage '${record7.id}' has an invalid half-open range.`);
           }
         }
-        if (record6.kind === "runtime-bus-access") {
-          if (record6.architecture !== "snes.65816") {
+        if (record7.kind === "runtime-bus-access") {
+          if (record7.architecture !== "snes.65816") {
             throw new Error("Bus facts require the SNES 65816 architecture.");
           }
-          validateRuntimeBusFact(record6);
+          validateRuntimeBusFact(record7);
         }
-        if (record6.kind === "runtime-graphics-access" && !isRuntimeGraphicsFact(record6)) {
+        if (record7.kind === "runtime-graphics-access" && !isRuntimeGraphicsFact(record7)) {
           throw new Error("Invalid runtime graphics fact.");
         }
-        if (record6.kind === "runtime-memory-access") {
-          if (record6.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record6.actor) || record6.channel !== void 0 && (!Number.isInteger(record6.channel) || record6.channel < 0 || record6.channel > 7 || !["dma", "hdma"].includes(record6.actor ?? "cpu"))) {
-            throw new Error(`Runtime memory access '${record6.id}' has an invalid actor/channel.`);
+        if (record7.kind === "runtime-memory-access") {
+          if (record7.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record7.actor) || record7.channel !== void 0 && (!Number.isInteger(record7.channel) || record7.channel < 0 || record7.channel > 7 || !["dma", "hdma"].includes(record7.actor ?? "cpu"))) {
+            throw new Error(`Runtime memory access '${record7.id}' has an invalid actor/channel.`);
           }
-          if (!Number.isSafeInteger(record6.width) || record6.width <= 0) {
-            throw new Error(`Runtime memory access '${record6.id}' has an invalid width.`);
+          if (!Number.isSafeInteger(record7.width) || record7.width <= 0) {
+            throw new Error(`Runtime memory access '${record7.id}' has an invalid width.`);
           }
-          if (record6.value !== void 0 && (!Number.isSafeInteger(record6.value) || record6.value < 0)) {
-            throw new Error(`Runtime memory access '${record6.id}' has an invalid value.`);
-          }
-        }
-        if (record6.kind === "runtime-execution") {
-          if (record6.size !== void 0 && (!Number.isSafeInteger(record6.size) || record6.size <= 0)) {
-            throw new Error(`Runtime execution '${record6.id}' has an invalid instruction size.`);
-          }
-          if (record6.opcode !== void 0 && (!Number.isInteger(record6.opcode) || record6.opcode < 0 || record6.opcode > 255)) {
-            throw new Error(`Runtime execution '${record6.id}' has an invalid opcode.`);
-          }
-          if (record6.fileOffset !== void 0 && (!Number.isSafeInteger(record6.fileOffset) || record6.fileOffset < 0 || record6.fileOffset >= project.rom.contentSize)) {
-            throw new Error(`Runtime execution '${record6.id}' has an invalid ROM file offset.`);
+          if (record7.value !== void 0 && (!Number.isSafeInteger(record7.value) || record7.value < 0)) {
+            throw new Error(`Runtime memory access '${record7.id}' has an invalid value.`);
           }
         }
-        if (record6.kind === "runtime-instruction") {
-          validateRuntimeInstructionDetails([{ bytes: record6.bytes, state: record6.state }], 1);
+        if (record7.kind === "runtime-execution") {
+          if (record7.size !== void 0 && (!Number.isSafeInteger(record7.size) || record7.size <= 0)) {
+            throw new Error(`Runtime execution '${record7.id}' has an invalid instruction size.`);
+          }
+          if (record7.opcode !== void 0 && (!Number.isInteger(record7.opcode) || record7.opcode < 0 || record7.opcode > 255)) {
+            throw new Error(`Runtime execution '${record7.id}' has an invalid opcode.`);
+          }
+          if (record7.fileOffset !== void 0 && (!Number.isSafeInteger(record7.fileOffset) || record7.fileOffset < 0 || record7.fileOffset >= project.rom.contentSize)) {
+            throw new Error(`Runtime execution '${record7.id}' has an invalid ROM file offset.`);
+          }
         }
-        if (record6.kind === "runtime-cpu-state") {
-          for (const [name2, value] of Object.entries(record6.state)) {
+        if (record7.kind === "runtime-instruction") {
+          validateRuntimeInstructionDetails([{ bytes: record7.bytes, state: record7.state }], 1);
+        }
+        if (record7.kind === "runtime-cpu-state") {
+          for (const [name2, value] of Object.entries(record7.state)) {
             if (name2 === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
-              throw new Error(`Runtime CPU state '${record6.id}' has invalid field '${name2}'.`);
+              throw new Error(`Runtime CPU state '${record7.id}' has invalid field '${name2}'.`);
             }
           }
         }
-        if ("addressSpace" in record6) {
-          const space = addressSpaceById.get(record6.addressSpace);
+        if ("addressSpace" in record7) {
+          const space = addressSpaceById.get(record7.addressSpace);
           if (!space) {
             throw new Error(
-              `Analysis record '${record6.id}' refers to unknown address space '${record6.addressSpace}'.`
+              `Analysis record '${record7.id}' refers to unknown address space '${record7.addressSpace}'.`
             );
           }
-          const addresses2 = record6.kind === "runtime-coverage" ? [record6.start, record6.end - 1] : [record6.address];
+          const addresses2 = record7.kind === "runtime-coverage" ? [record7.start, record7.end - 1] : [record7.address];
           if (addresses2.some(
             (address3) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= 2 ** space.addressBits
           )) {
             throw new Error(
-              `Analysis record '${record6.id}' exceeds address space '${record6.addressSpace}'.`
+              `Analysis record '${record7.id}' exceeds address space '${record7.addressSpace}'.`
             );
           }
         }
         let addresses = [];
-        if (record6.kind === "runtime-memory-access") {
+        if (record7.kind === "runtime-memory-access") {
           addresses = [
-            [record6.instructionAddressSpace, record6.instructionAddress],
-            [record6.accessedAddressSpace, record6.accessedAddress]
+            [record7.instructionAddressSpace, record7.instructionAddress],
+            [record7.accessedAddressSpace, record7.accessedAddress]
           ];
-        } else if (record6.kind === "runtime-bus-access" || record6.kind === "runtime-graphics-access") {
-          addresses = [[record6.addressSpace, record6.pc]];
-        } else if (record6.kind === "runtime-control-target") {
+        } else if (record7.kind === "runtime-bus-access" || record7.kind === "runtime-graphics-access") {
+          addresses = [[record7.addressSpace, record7.pc]];
+        } else if (record7.kind === "runtime-control-target") {
           addresses = [
-            [record6.fromAddressSpace, record6.fromAddress],
-            [record6.toAddressSpace, record6.toAddress]
+            [record7.fromAddressSpace, record7.fromAddress],
+            [record7.toAddressSpace, record7.toAddress]
           ];
         }
         for (const [spaceId, address3] of addresses) {
           const addressSpace = addressSpaceById.get(spaceId);
           if (!addressSpace) {
             throw new Error(
-              `Runtime record '${record6.id}' refers to unknown address space '${spaceId}'.`
+              `Runtime record '${record7.id}' refers to unknown address space '${spaceId}'.`
             );
           }
           if (!Number.isSafeInteger(address3) || address3 < 0 || address3 >= 2 ** addressSpace.addressBits) {
-            throw new Error(`Runtime record '${record6.id}' exceeds address space '${spaceId}'.`);
+            throw new Error(`Runtime record '${record7.id}' exceeds address space '${spaceId}'.`);
           }
         }
-        assertNoRomPayload(record6, `shards.runtime.${record6.id}`);
+        assertNoRomPayload(record7, `shards.runtime.${record7.id}`);
       };
       return Object.assign(validate3, { close: () => ids?.close() });
     };
     validateRuntimeRecords = (records3, project, evidence) => {
       const validate3 = createRuntimeRecordValidator(project, evidence);
       try {
-        for (const record6 of records3) {
-          validate3(record6);
+        for (const record7 of records3) {
+          validate3(record7);
         }
       } finally {
         validate3.close();
@@ -27487,7 +26597,7 @@ var init_project_validation = __esm({
     outsideSpace = (address3, exclusiveMaximum) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= exclusiveMaximum;
     validateLoadedShards = (shards, project, analysisScope = "complete") => {
       const { addressSpaces } = project;
-      const evidenceIds = new Set(shards.evidence.map((record6) => record6.id));
+      const evidenceIds = new Set(shards.evidence.map((record7) => record7.id));
       const shardKinds = [
         "analysis",
         "annotations",
@@ -27499,21 +26609,21 @@ var init_project_validation = __esm({
       ];
       for (const kind of shardKinds) {
         const ids = /* @__PURE__ */ new Set();
-        for (const record6 of shards[kind]) {
-          if (typeof record6.id !== "string" || record6.id === "") {
+        for (const record7 of shards[kind]) {
+          if (typeof record7.id !== "string" || record7.id === "") {
             throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
           }
-          if (ids.has(record6.id)) {
-            throw new Error(`Analysis shard '${kind}' contains duplicate id '${record6.id}'.`);
+          if (ids.has(record7.id)) {
+            throw new Error(`Analysis shard '${kind}' contains duplicate id '${record7.id}'.`);
           }
-          ids.add(record6.id);
-          if (!("evidence" in record6)) {
+          ids.add(record7.id);
+          if (!("evidence" in record7)) {
             continue;
           }
-          for (const evidence of record6.evidence) {
+          for (const evidence of record7.evidence) {
             if (!evidenceIds.has(evidence)) {
               throw new Error(
-                `Analysis record '${record6.id}' refers to missing evidence '${evidence}'.`
+                `Analysis record '${record7.id}' refers to missing evidence '${evidence}'.`
               );
             }
           }
@@ -27659,46 +26769,46 @@ var init_project_validation = __esm({
         shards.regions,
         shards.analysis
       ]) {
-        for (const record6 of records3) {
-          if (!("addressSpace" in record6)) {
+        for (const record7 of records3) {
+          if (!("addressSpace" in record7)) {
             continue;
           }
-          const addressSpace = addressSpaceById.get(record6.addressSpace);
+          const addressSpace = addressSpaceById.get(record7.addressSpace);
           if (!addressSpace) {
             throw new Error(
-              `Analysis record '${record6.id}' refers to unknown address space '${record6.addressSpace}'.`
+              `Analysis record '${record7.id}' refers to unknown address space '${record7.addressSpace}'.`
             );
           }
-          if ("mapping" in record6 && record6.mapping !== void 0) {
-            if (!isResearchMapping(record6.mapping) || record6.mapping.fileOffset !== void 0 && record6.mapping.fileOffset + ("start" in record6 ? record6.end - record6.start : 1) > project.rom.contentSize) {
-              throw new Error(`Invalid research mapping for '${record6.id}'.`);
+          if ("mapping" in record7 && record7.mapping !== void 0) {
+            if (!isResearchMapping(record7.mapping) || record7.mapping.fileOffset !== void 0 && record7.mapping.fileOffset + ("start" in record7 ? record7.end - record7.start : 1) > project.rom.contentSize) {
+              throw new Error(`Invalid research mapping for '${record7.id}'.`);
             }
           }
           const maximum = 2 ** addressSpace.addressBits;
           let invalid = false;
-          if ("start" in record6) {
-            invalid = outsideSpace(record6.start, maximum) || outsideSpace(record6.end - 1, maximum);
-          } else if ("address" in record6) {
-            invalid = outsideSpace(record6.address, maximum);
-            if ("kind" in record6 && record6.kind === "conflict" && record6.end !== void 0) {
-              invalid ||= outsideSpace(record6.end - 1, maximum);
+          if ("start" in record7) {
+            invalid = outsideSpace(record7.start, maximum) || outsideSpace(record7.end - 1, maximum);
+          } else if ("address" in record7) {
+            invalid = outsideSpace(record7.address, maximum);
+            if ("kind" in record7 && record7.kind === "conflict" && record7.end !== void 0) {
+              invalid ||= outsideSpace(record7.end - 1, maximum);
             }
           } else {
-            if ("fromAddress" in record6) {
-              invalid = outsideSpace(record6.fromAddress, maximum);
+            if ("fromAddress" in record7) {
+              invalid = outsideSpace(record7.fromAddress, maximum);
             }
-            if ("toAddress" in record6 && record6.toAddress !== void 0) {
-              invalid ||= outsideSpace(record6.toAddress, maximum);
+            if ("toAddress" in record7 && record7.toAddress !== void 0) {
+              invalid ||= outsideSpace(record7.toAddress, maximum);
             }
-            if ("targets" in record6) {
-              for (const target of record6.targets) {
+            if ("targets" in record7) {
+              for (const target of record7.targets) {
                 invalid ||= outsideSpace(target, maximum);
               }
             }
           }
           if (invalid) {
             throw new Error(
-              `Analysis record '${record6.id}' exceeds address space '${record6.addressSpace}'.`
+              `Analysis record '${record7.id}' exceeds address space '${record7.addressSpace}'.`
             );
           }
         }
@@ -27999,11 +27109,11 @@ var init_sqlite_runtime_payload = __esm({
     FIELD_NAMES = new Set(FIELDS.map(([key3]) => key3));
     HEADER_BYTES = 7;
     CHECKSUM_BYTES = 4;
-    encodePackedRuntimePayload = (record6) => {
-      if (Object.keys(record6.state).some((key3) => !FIELD_NAMES.has(key3))) {
+    encodePackedRuntimePayload = (record7) => {
+      if (Object.keys(record7.state).some((key3) => !FIELD_NAMES.has(key3))) {
         return void 0;
       }
-      const bytes = record6.bytes;
+      const bytes = record7.bytes;
       if (bytes !== void 0) {
         if (bytes.length < 1 || bytes.length > 4) {
           return void 0;
@@ -28017,10 +27127,10 @@ var init_sqlite_runtime_payload = __esm({
       let mask = 0;
       let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
       for (const [index, [key3, width]] of FIELDS.entries()) {
-        if (!Object.hasOwn(record6.state, key3)) {
+        if (!Object.hasOwn(record7.state, key3)) {
           continue;
         }
-        const value = record6.state[key3];
+        const value = record7.state[key3];
         const max = key3 === "e" ? 1 : 2 ** (width * 8) - 1;
         if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
           return void 0;
@@ -28038,7 +27148,7 @@ var init_sqlite_runtime_payload = __esm({
       }
       for (const [index, [key3, width]] of FIELDS.entries()) {
         if (mask & 1 << index) {
-          const field = record6.state[key3];
+          const field = record7.state[key3];
           if (typeof field !== "number") {
             return void 0;
           }
@@ -28206,11 +27316,11 @@ function requireFinite(value, label) {
   }
   return value;
 }
-function optionalFinite(record6, key3) {
-  if (!Object.hasOwn(record6, key3)) {
+function optionalFinite(record7, key3) {
+  if (!Object.hasOwn(record7, key3)) {
     return void 0;
   }
-  return requireFinite(record6[key3], key3);
+  return requireFinite(record7[key3], key3);
 }
 function requirePayload(value) {
   if (!value) {
@@ -28321,11 +27431,11 @@ function readPayload(value) {
   const parsed = parseSqlitePayload(value);
   return isRecord8(parsed) ? parsed : void 0;
 }
-function optionalBusActor(record6) {
-  if (!Object.hasOwn(record6, "actor")) {
+function optionalBusActor(record7) {
+  if (!Object.hasOwn(record7, "actor")) {
     return {};
   }
-  return { actor: requireBusActor(record6.actor) };
+  return { actor: requireBusActor(record7.actor) };
 }
 function allowsFinite2(value) {
   return value === void 0 || isFiniteNumber(value);
@@ -28375,12 +27485,12 @@ var init_sqlite_records = __esm({
       }
       return 0;
     };
-    runtimeColumns = (record6) => {
-      switch (record6.kind) {
+    runtimeColumns = (record7) => {
+      switch (record7.kind) {
         case "runtime-execution":
           return {
-            addressSpace: record6.addressSpace,
-            address: record6.address,
+            addressSpace: record7.addressSpace,
+            address: record7.address,
             start: null,
             end: null,
             fromAddressSpace: null,
@@ -28393,15 +27503,15 @@ var init_sqlite_records = __esm({
             accessedAddress: null,
             coverage: null,
             payload: canonicalJson({
-              ...record6.fileOffset === void 0 ? {} : { fileOffset: record6.fileOffset },
-              ...record6.size === void 0 ? {} : { size: record6.size },
-              ...record6.opcode === void 0 ? {} : { opcode: record6.opcode }
+              ...record7.fileOffset === void 0 ? {} : { fileOffset: record7.fileOffset },
+              ...record7.size === void 0 ? {} : { size: record7.size },
+              ...record7.opcode === void 0 ? {} : { opcode: record7.opcode }
             })
           };
         case "runtime-instruction":
           return {
-            addressSpace: record6.addressSpace,
-            address: record6.address,
+            addressSpace: record7.addressSpace,
+            address: record7.address,
             start: null,
             end: null,
             fromAddressSpace: null,
@@ -28413,7 +27523,7 @@ var init_sqlite_records = __esm({
             accessedAddressSpace: null,
             accessedAddress: null,
             coverage: null,
-            payload: canonicalJson({ bytes: record6.bytes, state: record6.state })
+            payload: canonicalJson({ bytes: record7.bytes, state: record7.state })
           };
         case "runtime-graphics-access":
           return {
@@ -28425,19 +27535,19 @@ var init_sqlite_records = __esm({
             fromAddress: null,
             toAddressSpace: null,
             toAddress: null,
-            instructionAddressSpace: record6.context === "instruction" ? record6.addressSpace : null,
-            instructionAddress: record6.context === "instruction" ? record6.pc : null,
-            accessedAddressSpace: record6.addressSpace,
-            accessedAddress: record6.address,
+            instructionAddressSpace: record7.context === "instruction" ? record7.addressSpace : null,
+            instructionAddress: record7.context === "instruction" ? record7.pc : null,
+            accessedAddressSpace: record7.addressSpace,
+            accessedAddress: record7.address,
             coverage: null,
             payload: canonicalJson({
-              pc: record6.pc,
-              actor: record6.actor,
-              context: record6.context,
-              direction: record6.direction,
-              value: record6.value,
-              cpuMapping: record6.cpuMapping,
-              effect: record6.effect
+              pc: record7.pc,
+              actor: record7.actor,
+              context: record7.context,
+              direction: record7.direction,
+              value: record7.value,
+              cpuMapping: record7.cpuMapping,
+              effect: record7.effect
             })
           };
         case "runtime-bus-access":
@@ -28451,20 +27561,20 @@ var init_sqlite_records = __esm({
             toAddressSpace: null,
             toAddress: null,
             // Unowned accesses must never become instruction observations through a coordinate query.
-            instructionAddressSpace: record6.context === "instruction" ? record6.addressSpace : null,
-            instructionAddress: record6.context === "instruction" ? record6.pc : null,
-            accessedAddressSpace: record6.addressSpace,
-            accessedAddress: record6.address,
+            instructionAddressSpace: record7.context === "instruction" ? record7.addressSpace : null,
+            instructionAddress: record7.context === "instruction" ? record7.pc : null,
+            accessedAddressSpace: record7.addressSpace,
+            accessedAddress: record7.address,
             coverage: null,
             payload: canonicalJson({
-              ...record6.ppu ? { ppu: record6.ppu } : {},
-              pc: record6.pc,
-              value: record6.value,
-              direction: record6.direction,
-              actor: record6.actor,
-              channel: record6.channel,
-              phase: record6.phase,
-              context: record6.context
+              ...record7.ppu ? { ppu: record7.ppu } : {},
+              pc: record7.pc,
+              value: record7.value,
+              direction: record7.direction,
+              actor: record7.actor,
+              channel: record7.channel,
+              phase: record7.phase,
+              context: record7.context
             })
           };
         case "runtime-memory-access":
@@ -28477,23 +27587,23 @@ var init_sqlite_records = __esm({
             fromAddress: null,
             toAddressSpace: null,
             toAddress: null,
-            instructionAddressSpace: record6.instructionAddressSpace,
-            instructionAddress: record6.instructionAddress,
-            accessedAddressSpace: record6.accessedAddressSpace,
-            accessedAddress: record6.accessedAddress,
+            instructionAddressSpace: record7.instructionAddressSpace,
+            instructionAddress: record7.instructionAddress,
+            accessedAddressSpace: record7.accessedAddressSpace,
+            accessedAddress: record7.accessedAddress,
             coverage: null,
             payload: canonicalJson({
-              access: record6.access,
-              width: record6.width,
-              ...record6.actor === void 0 ? {} : { actor: record6.actor },
-              ...record6.channel === void 0 ? {} : { channel: record6.channel },
-              ...record6.value === void 0 ? {} : { value: record6.value }
+              access: record7.access,
+              width: record7.width,
+              ...record7.actor === void 0 ? {} : { actor: record7.actor },
+              ...record7.channel === void 0 ? {} : { channel: record7.channel },
+              ...record7.value === void 0 ? {} : { value: record7.value }
             })
           };
         case "runtime-cpu-state":
           return {
-            addressSpace: record6.addressSpace,
-            address: record6.address,
+            addressSpace: record7.addressSpace,
+            address: record7.address,
             start: null,
             end: null,
             fromAddressSpace: null,
@@ -28505,14 +27615,14 @@ var init_sqlite_records = __esm({
             accessedAddressSpace: null,
             accessedAddress: null,
             coverage: null,
-            payload: canonicalJson({ state: record6.state })
+            payload: canonicalJson({ state: record7.state })
           };
         case "runtime-coverage":
           return {
-            addressSpace: record6.addressSpace,
+            addressSpace: record7.addressSpace,
             address: null,
-            start: record6.start,
-            end: record6.end,
+            start: record7.start,
+            end: record7.end,
             fromAddressSpace: null,
             fromAddress: null,
             toAddressSpace: null,
@@ -28521,7 +27631,7 @@ var init_sqlite_records = __esm({
             instructionAddress: null,
             accessedAddressSpace: null,
             accessedAddress: null,
-            coverage: record6.coverage,
+            coverage: record7.coverage,
             payload: null
           };
         case "runtime-control-target":
@@ -28530,16 +27640,16 @@ var init_sqlite_records = __esm({
             address: null,
             start: null,
             end: null,
-            fromAddressSpace: record6.fromAddressSpace,
-            fromAddress: record6.fromAddress,
-            toAddressSpace: record6.toAddressSpace,
-            toAddress: record6.toAddress,
+            fromAddressSpace: record7.fromAddressSpace,
+            fromAddress: record7.fromAddress,
+            toAddressSpace: record7.toAddressSpace,
+            toAddress: record7.toAddress,
             instructionAddressSpace: null,
             instructionAddress: null,
             accessedAddressSpace: null,
             accessedAddress: null,
             coverage: null,
-            payload: canonicalJson({ flowKind: record6.flowKind, indirect: record6.indirect })
+            payload: canonicalJson({ flowKind: record7.flowKind, indirect: record7.indirect })
           };
       }
       throw new Error("Unsupported runtime evidence kind.");
@@ -28697,12 +27807,12 @@ var init_sqlite_records = __esm({
       }
       throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
     };
-    analysisAddress = (record6) => {
-      if ("addressSpace" in record6 && "address" in record6) {
-        return { addressSpace: record6.addressSpace, address: record6.address };
+    analysisAddress = (record7) => {
+      if ("addressSpace" in record7 && "address" in record7) {
+        return { addressSpace: record7.addressSpace, address: record7.address };
       }
-      if ("addressSpace" in record6 && "fromAddress" in record6) {
-        return { addressSpace: record6.addressSpace, address: record6.fromAddress };
+      if ("addressSpace" in record7 && "fromAddress" in record7) {
+        return { addressSpace: record7.addressSpace, address: record7.fromAddress };
       }
       return { addressSpace: null, address: null };
     };
@@ -28721,7 +27831,7 @@ function isRecord9(value) {
 }
 function durableReplace(file, bytes, mode) {
   ensureDurableDirectory(import_node_path4.default.dirname(import_node_path4.default.resolve(file)));
-  const temporary = `${file}.${(0, import_node_crypto6.randomUUID)()}.tmp`;
+  const temporary = `${file}.${(0, import_node_crypto7.randomUUID)()}.tmp`;
   try {
     const fd = import_node_fs3.default.openSync(temporary, "wx", mode);
     try {
@@ -28764,8 +27874,8 @@ function syncDirectory(directory) {
 }
 function acquireFileLease(file) {
   ensureDurableDirectory(import_node_path4.default.dirname(import_node_path4.default.resolve(file)));
-  const owner2 = JSON.stringify({ pid: process.pid, host: import_node_os2.default.hostname(), token: (0, import_node_crypto6.randomUUID)() });
-  const candidate = `${file}.${(0, import_node_crypto6.randomUUID)()}.owner`;
+  const owner2 = JSON.stringify({ pid: process.pid, host: import_node_os2.default.hostname(), token: (0, import_node_crypto7.randomUUID)() });
+  const candidate = `${file}.${(0, import_node_crypto7.randomUUID)()}.owner`;
   durableReplace(candidate, owner2);
   try {
     try {
@@ -28810,11 +27920,11 @@ function acquireFileLease(file) {
     }
   };
 }
-var import_node_crypto6, import_node_fs3, import_node_os2, import_node_path4;
+var import_node_crypto7, import_node_fs3, import_node_os2, import_node_path4;
 var init_durable_files = __esm({
   "packages/disassembler/src/internal/durable-files.ts"() {
     "use strict";
-    import_node_crypto6 = require("node:crypto");
+    import_node_crypto7 = require("node:crypto");
     import_node_fs3 = __toESM(require("node:fs"), 1);
     import_node_os2 = __toESM(require("node:os"), 1);
     import_node_path4 = __toESM(require("node:path"), 1);
@@ -28822,18 +27932,18 @@ var init_durable_files = __esm({
 });
 
 // packages/disassembler/src/internal/source-inputs.ts
-function assertSourcePath(relative3) {
-  if (!relative3 || relative3.includes("\0") || relative3.includes("\\") || import_node_path5.default.isAbsolute(relative3) || /^[A-Za-z]:/.test(relative3) || relative3.split("/").some((part) => !part || part === "." || part === ".." || part.toLowerCase() === ".git")) {
-    throw new Error(`Invalid source project path: ${relative3}`);
+function assertSourcePath(relative4) {
+  if (!relative4 || relative4.includes("\0") || relative4.includes("\\") || import_node_path5.default.isAbsolute(relative4) || /^[A-Za-z]:/.test(relative4) || relative4.split("/").some((part) => !part || part === "." || part === ".." || part.toLowerCase() === ".git")) {
+    throw new Error(`Invalid source project path: ${relative4}`);
   }
 }
-var import_node_crypto7, import_node_path5, sourceContentHash;
+var import_node_crypto8, import_node_path5, sourceContentHash;
 var init_source_inputs = __esm({
   "packages/disassembler/src/internal/source-inputs.ts"() {
     "use strict";
-    import_node_crypto7 = require("node:crypto");
+    import_node_crypto8 = require("node:crypto");
     import_node_path5 = __toESM(require("node:path"), 1);
-    sourceContentHash = (value) => (0, import_node_crypto7.createHash)("sha256").update(value).digest("hex");
+    sourceContentHash = (value) => (0, import_node_crypto8.createHash)("sha256").update(value).digest("hex");
   }
 });
 
@@ -28943,31 +28053,31 @@ var init_metadata_validation = __esm({
       "empty",
       "text"
     ];
-    validateEditableMetadataRecord = (shard, record6) => {
-      if (!isRecord10(record6) || typeof record6.id !== "string" || !/^\w[\w./:-]*$/.test(record6.id) || !isStringList(record6.evidence)) {
+    validateEditableMetadataRecord = (shard, record7) => {
+      if (!isRecord10(record7) || typeof record7.id !== "string" || !/^\w[\w./:-]*$/.test(record7.id) || !isStringList(record7.evidence)) {
         throw new Error("Metadata needs a stable record ID and evidence list.");
       }
-      if (record6.mapping !== void 0 && !isResearchMapping(record6.mapping)) {
+      if (record7.mapping !== void 0 && !isResearchMapping(record7.mapping)) {
         throw new Error("Invalid research mapping selector.");
       }
-      if (record6.kind === "target-set" && record6.mapping && "fileOffset" in record6.mapping) {
+      if (record7.kind === "target-set" && record7.mapping && "fileOffset" in record7.mapping) {
         throw new Error(
           "Target sets use mapper state; a single physical anchor cannot select multiple targets."
         );
       }
-      const address3 = record6.address;
-      if ("address" in record6 && !(isSafeInteger3(address3) && address3 >= 0)) {
+      const address3 = record7.address;
+      if ("address" in record7 && !(isSafeInteger3(address3) && address3 >= 0)) {
         throw new Error("Metadata needs a nonnegative integer address.");
       }
-      if (typeof record6.addressSpace !== "string") {
+      if (typeof record7.addressSpace !== "string") {
         throw new Error("Metadata needs a named address space.");
       }
       if (shard === "labels") {
-        const name2 = record6.name;
-        if (typeof name2 !== "string" || name2 === "" || !("address" in record6) || "kind" in record6) {
+        const name2 = record7.name;
+        if (typeof name2 !== "string" || name2 === "" || !("address" in record7) || "kind" in record7) {
           throw new Error("Invalid label metadata.");
         }
-        const sourceName = record6.sourceName;
+        const sourceName = record7.sourceName;
         if (sourceName !== void 0) {
           if (typeof sourceName !== "string") {
             throw new Error(
@@ -28976,31 +28086,31 @@ var init_metadata_validation = __esm({
           }
           validateSourceLabelName(sourceName);
         }
-        if (record6.suppressed !== void 0 && typeof record6.suppressed !== "boolean") {
+        if (record7.suppressed !== void 0 && typeof record7.suppressed !== "boolean") {
           throw new Error("Invalid label suppression flag.");
         }
-        for (const value of [record6.comment, record6.inlineComment]) {
+        for (const value of [record7.comment, record7.inlineComment]) {
           if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
             throw new Error("Invalid label comment.");
           }
         }
       } else if (shard === "comments") {
-        const text2 = record6.text;
-        if (typeof text2 !== "string" || !text2.trim() || text2.includes("\0") || !("address" in record6) || "kind" in record6) {
+        const text2 = record7.text;
+        if (typeof text2 !== "string" || !text2.trim() || text2.includes("\0") || !("address" in record7) || "kind" in record7) {
           throw new Error("A standalone comment needs nonempty text.");
         }
       } else if (shard === "annotations") {
-        const classification2 = record6.classification;
-        const architecture = record6.architecture;
+        const classification2 = record7.classification;
+        const architecture = record7.architecture;
         if (typeof classification2 !== "string" || !CLASSIFICATIONS2.some((candidate) => candidate === classification2) || typeof architecture !== "string" || architecture === "") {
           throw new Error("Invalid classification metadata.");
         }
-        const start = record6.start;
-        const end = record6.end;
+        const start = record7.start;
+        const end = record7.end;
         if (!(isSafeInteger3(start) && isSafeInteger3(end) && start >= 0 && end > start)) {
           throw new Error("Classification bounds must describe a nonempty half-open interval.");
         }
-        const state = record6.state ?? {};
+        const state = record7.state ?? {};
         for (const [field, value] of stateEntries(state)) {
           if (field === "e" || field === "m" || field === "x" || field === "carry") {
             if (typeof value !== "boolean") {
@@ -29013,23 +28123,23 @@ var init_metadata_validation = __esm({
             }
           }
         }
-        readAnalysisTargetState(architecture, record6.state);
-        const points = record6.points;
+        readAnalysisTargetState(architecture, record7.state);
+        const points = record7.points;
         if (Array.isArray(points) && points.some(
           (point) => point !== "in" && point !== "out" && point !== "end" && point !== "read" || typeof point !== "string"
         )) {
           throw new Error("Invalid entry-point metadata.");
         }
       } else {
-        const kind = record6.kind;
-        const targets = record6.targets;
+        const kind = record7.kind;
+        const targets = record7.targets;
         if (kind !== "target-override" && kind !== "target-set" || !Array.isArray(targets) || targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
           throw new Error("Only target overrides and target sets are editable analysis records.");
         }
-        if (kind === "target-set" && (typeof record6.name !== "string" || !record6.name.trim())) {
+        if (kind === "target-set" && (typeof record7.name !== "string" || !record7.name.trim())) {
           throw new Error("A target set needs a name.");
         }
-        if (kind === "target-override" && !Number.isSafeInteger(record6.address)) {
+        if (kind === "target-override" && !Number.isSafeInteger(record7.address)) {
           throw new Error("A target override needs an instruction anchor.");
         }
       }
@@ -29082,40 +28192,40 @@ function validateResearchDecision(decision) {
   if (!isResearchCollection(collection) || typeof id !== "string" || !/^\w[\w./:-]*$/.test(id)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
-  const record6 = decision.value;
-  if (record6 === null) {
+  const record7 = decision.value;
+  if (record7 === null) {
     return;
   }
-  if (!isRecord11(record6) || record6.id !== id) {
+  if (!isRecord11(record7) || record7.id !== id) {
     throw new Error(`Research record identity mismatch: ${id}`);
   }
   if (collection === "evidence") {
-    const sourceId = record6.sourceId;
-    const detail = record6.detail;
-    if (record6.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record6.confidence) || detail !== void 0 && typeof detail !== "string") {
+    const sourceId = record7.sourceId;
+    const detail = record7.detail;
+    if (record7.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record7.confidence) || detail !== void 0 && typeof detail !== "string") {
       throw new Error("Research files may author only valid manual evidence.");
     }
     return;
   }
-  const evidence = record6.evidence;
+  const evidence = record7.evidence;
   if (!isUnknownArray2(evidence) || evidence.some((entry) => typeof entry !== "string")) {
     throw new Error(`Research record ${id} needs an evidence list.`);
   }
-  if (record6.mapping !== void 0 && !isResearchMapping(record6.mapping)) {
+  if (record7.mapping !== void 0 && !isResearchMapping(record7.mapping)) {
     throw new Error("Invalid research mapping selector.");
   }
   if (collection === "regions") {
-    const name2 = record6.name;
-    const start = record6.start;
-    const end = record6.end;
+    const name2 = record7.name;
+    const start = record7.start;
+    const end = record7.end;
     if (typeof name2 !== "string" || name2 === "" || !(isSafeInteger4(start) && isSafeInteger4(end) && start >= 0 && end > start)) {
       throw new Error(`Invalid research region: ${id}`);
     }
   } else {
-    validateEditableMetadataRecord(collection, record6);
+    validateEditableMetadataRecord(collection, record7);
   }
-  if (collection === "labels" && record6.aliases !== void 0) {
-    const aliases2 = record6.aliases;
+  if (collection === "labels" && record7.aliases !== void 0) {
+    const aliases2 = record7.aliases;
     if (!isUnknownArray2(aliases2)) {
       throw new Error("Symbol aliases must be an array.");
     }
@@ -29162,13 +28272,13 @@ function parseResearchDocument(value) {
   }
   return { format: "uttori-research", version: 1, project, romSha256, decisions: parsed };
 }
-function researchPath(root, relative3) {
-  assertSourcePath(relative3);
+function researchPath(root, relative4) {
+  assertSourcePath(relative4);
   let current = root;
-  for (const part of relative3.split("/")) {
+  for (const part of relative4.split("/")) {
     current = import_node_path6.default.join(current, part);
     if (import_node_fs4.default.existsSync(current) && import_node_fs4.default.lstatSync(current).isSymbolicLink()) {
-      throw new Error(`Research inputs cannot follow symlinks: ${relative3}`);
+      throw new Error(`Research inputs cannot follow symlinks: ${relative4}`);
     }
   }
   return current;
@@ -29196,9 +28306,9 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
   const visit2 = (initial) => {
     const pending = [initial];
     while (pending.length) {
-      const relative3 = pending.pop();
-      const file = researchPath(root, relative3);
-      const overlay = overlays.get(relative3);
+      const relative4 = pending.pop();
+      const file = researchPath(root, relative4);
+      const overlay = overlays.get(relative4);
       const stat3 = import_node_fs4.default.existsSync(file) ? import_node_fs4.default.lstatSync(file) : void 0;
       if (!stat3 && overlay === void 0) {
         throw new Error(
@@ -29207,7 +28317,7 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
       }
       if (stat3?.isDirectory()) {
         for (const entry of import_node_fs4.default.readdirSync(file).toSorted().toReversed()) {
-          pending.push(`${relative3}/${entry}`);
+          pending.push(`${relative4}/${entry}`);
         }
         continue;
       }
@@ -29216,10 +28326,10 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
           `Research input is not a regular file: ${file}. Select JSON files or directories in researchRoots.`
         );
       }
-      if (!relative3.endsWith(".json")) {
+      if (!relative4.endsWith(".json")) {
         continue;
       }
-      const name2 = relative3.normalize("NFC").toLowerCase();
+      const name2 = relative4.normalize("NFC").toLowerCase();
       if (names.has(name2)) {
         throw new Error(
           `Repeated or ambiguous research input: ${file}. Remove overlapping researchRoots or conflicting filenames.`
@@ -29245,15 +28355,15 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
           `Research input belongs to another project or ROM: ${file}. Expected project ${identity2.project} and ROM ${identity2.romSha256}; found project ${document.project} and ROM ${document.romSha256}.`
         );
       }
-      files.push({ path: relative3, sha256: sourceContentHash(bytes), document });
+      files.push({ path: relative4, sha256: sourceContentHash(bytes), document });
     }
   };
-  for (const relative3 of roots) {
-    visit2(relative3);
+  for (const relative4 of roots) {
+    visit2(relative4);
   }
-  for (const relative3 of overlays.keys()) {
-    if (roots.some((name2) => relative3 === name2 || relative3.startsWith(`${name2}/`)) && !names.has(relative3.normalize("NFC").toLowerCase())) {
-      visit2(relative3);
+  for (const relative4 of overlays.keys()) {
+    if (roots.some((name2) => relative4 === name2 || relative4.startsWith(`${name2}/`)) && !names.has(relative4.normalize("NFC").toLowerCase())) {
+      visit2(relative4);
     }
   }
   files.sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
@@ -29276,12 +28386,12 @@ function readResearchInputs(root, roots, identity2, overlays = /* @__PURE__ */ n
   const hash4 = sourceContentHash(canonicalJson({ ...selected, decisions }));
   return { ...selected, files, decisions, hash: hash4 };
 }
-function writeResearchDocument(root, relative3, document, expectedSha256) {
+function writeResearchDocument(root, relative4, document, expectedSha256) {
   parseResearchDocument(document);
-  if (!relative3.endsWith(".json")) {
+  if (!relative4.endsWith(".json")) {
     throw new Error("Research documents use .json files.");
   }
-  const file = researchPath(root, relative3);
+  const file = researchPath(root, relative4);
   import_node_fs4.default.mkdirSync(import_node_path6.default.dirname(file), { recursive: true });
   const lease = acquireFileLease(`${file}.lock`);
   try {
@@ -29442,12 +28552,12 @@ var init_sqlite_annotation_query = __esm({
         const exportData = table === "analysis" ? database.prepare("UPDATE analysis SET query_data=? WHERE rowid=?") : void 0;
         for (let rows2 = pending.all(); rows2.length; rows2 = pending.all()) {
           for (const row of rows2) {
-            const record6 = row.payload === null ? {} : requirePartialInstruction(row.payload);
-            const offset = record6.fileOffset;
+            const record7 = row.payload === null ? {} : requirePartialInstruction(row.payload);
+            const offset = record7.fileOffset;
             if (offset !== void 0 && (!Number.isSafeInteger(offset) || offset < 0)) {
               throw new Error("Invalid persisted instruction output offset.");
             }
-            update.run(offset ?? null, record6.size ?? null, row.row_id);
+            update.run(offset ?? null, record7.size ?? null, row.row_id);
             if (exportData) {
               const {
                 id,
@@ -29460,7 +28570,7 @@ var init_sqlite_annotation_query = __esm({
                 specificationId,
                 incomingState,
                 evidence
-              } = record6;
+              } = record7;
               exportData.run(
                 encodeSqlitePayload(
                   JSON.stringify({
@@ -29522,12 +28632,12 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record6 = requireAnalysisRecord(parseSqlitePayload(row.payload));
-          analysis.set(record6.id, record6);
-          if (record6.kind === "cfg-node") {
-            locate(record6.addressSpace, record6.address);
-            if (record6.fileOffset !== void 0) {
-              offsets.add(record6.fileOffset);
+          const record7 = requireAnalysisRecord(parseSqlitePayload(row.payload));
+          analysis.set(record7.id, record7);
+          if (record7.kind === "cfg-node") {
+            locate(record7.addressSpace, record7.address);
+            if (record7.fileOffset !== void 0) {
+              offsets.add(record7.fileOffset);
             }
           }
         }
@@ -29591,8 +28701,8 @@ var init_sqlite_annotation_query = __esm({
         }
       }
       for (const row of database.prepare("SELECT payload FROM analysis WHERE kind='summary'").iterate()) {
-        const record6 = requireAnalysisRecord(parseSqlitePayload(row.payload));
-        analysis.set(record6.id, record6);
+        const record7 = requireAnalysisRecord(parseSqlitePayload(row.payload));
+        analysis.set(record7.id, record7);
       }
       const runtime = /* @__PURE__ */ new Map();
       const executionCounts = /* @__PURE__ */ new Map();
@@ -29626,10 +28736,10 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record6 = runtimeFromRow(row);
-          runtime.set(record6.id, record6);
-          if (record6.kind === "runtime-execution" && record6.fileOffset !== void 0) {
-            offsets.add(record6.fileOffset);
+          const record7 = runtimeFromRow(row);
+          runtime.set(record7.id, record7);
+          if (record7.kind === "runtime-execution" && record7.fileOffset !== void 0) {
+            offsets.add(record7.fileOffset);
           }
         }
       };
@@ -29668,8 +28778,8 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record6 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
-          annotations.set(record6.id, record6);
+          const record7 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
+          annotations.set(record7.id, record7);
         }
         let commentCount = 0;
         for (const row of comment.iterate(space, address3)) {
@@ -29677,8 +28787,8 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record6 = requireProjectComment(parseSqlitePayload(row.payload));
-          comments.set(record6.id, record6);
+          const record7 = requireProjectComment(parseSqlitePayload(row.payload));
+          comments.set(record7.id, record7);
         }
         addRuntime(
           coverage.iterate(space, address3, address3),
@@ -29790,483 +28900,34 @@ var init_sqlite_annotation_query = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-query-cache.ts
-var QUERY_CACHE_SCHEMA, installQueryCache, readQueryCache, writeQueryCache;
-var init_sqlite_query_cache = __esm({
-  "packages/disassembler/src/storage/sqlite-query-cache.ts"() {
-    "use strict";
-    QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
-    installQueryCache = (db, key3, dependencies) => {
-      if (!/^[\d_a-z]+$/.test(key3)) {
-        throw new Error("Invalid internal query cache key.");
-      }
-      if (dependencies.some(
-        (table) => ![
-          "analysis",
-          "annotations",
-          "labels",
-          "comments",
-          "regions",
-          "imports",
-          "evidence",
-          "runtime"
-        ].includes(table)
-      )) {
-        throw new Error("Invalid query dependency.");
-      }
-      db.exec(QUERY_CACHE_SCHEMA);
-      for (const table of dependencies.flatMap(
-        (name2) => name2 === "runtime" ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"] : [name2]
-      )) {
-        for (const event of ["INSERT", "UPDATE", "DELETE"]) {
-          const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
-          const condition = table === "runtime_fact_rows" && event === "UPDATE" ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL" : "";
-          db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key3}_${table}_${event} AFTER ${update} ON ${table} ${condition} BEGIN
-      DELETE FROM query_cache WHERE name='${key3}'; END`);
-        }
-      }
-    };
-    readQueryCache = (db, key3, signature) => {
-      if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
-        return void 0;
-      }
-      const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key3, signature);
-      if (!row) {
-        return void 0;
-      }
-      const parsed = JSON.parse(String(row.payload));
-      return parsed;
-    };
-    writeQueryCache = (db, key3, signature, value) => {
-      db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(
-        key3,
-        signature,
-        JSON.stringify(value)
-      );
-    };
-  }
-});
-
-// packages/disassembler/src/storage/sqlite-coverage-query.ts
-function isCoverageCounts(value, keys) {
-  return isRecord8(value) && keys.every((key3) => isFiniteNumber(value[key3])) && Object.keys(value).every((key3) => keys.includes(key3));
-}
-function isSqliteCoverageSummary(value) {
-  if (!isRecord8(value) || !isFiniteNumber(value.contentSize) || !isStringArray(value.fileAddressSpaces) || !Array.isArray(value.segments) || value.segments.length !== 0 || !Array.isArray(value.unprojected) || value.unprojected.length !== 0 || !Array.isArray(value.diagnostics) || value.diagnostics.length !== 0 || !isFiniteNumber(value.detailCount) || !isRecord8(value.summary)) {
-    return false;
-  }
-  const summary = value.summary;
-  return isFiniteNumber(summary.totalBytes) && isFiniteNumber(summary.classifiedBytes) && isFiniteNumber(summary.unknownBytes) && isFiniteNumber(summary.conflictBytes) && isFiniteNumber(summary.segmentCount) && isCoverageCounts(summary.bytesByClassification, COVERAGE_CLASSES) && isCoverageCounts(summary.bytesByRuntimeCoverage, COVERAGE_RUNTIME);
-}
-function requireConflict(value) {
-  const record6 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record6.kind !== "conflict") {
-    throw new Error("Invalid stored analysis record.");
-  }
-  return record6;
-}
-function requireAccessWidth(value) {
-  const parsed = parseSqlitePayload(value);
-  if (!isRecord8(parsed) || typeof parsed.access !== "string" || !isFiniteNumber(parsed.width)) {
-    throw new Error("Invalid runtime memory coverage payload.");
-  }
-  return { access: parsed.access, width: parsed.width };
-}
-var COVERAGE_CLASSES, COVERAGE_RUNTIME, coverageSignature, cachedCoverage, prepareCoverage, publishCoverage, coveragePage, coverageConflictPage;
-var init_sqlite_coverage_query = __esm({
-  "packages/disassembler/src/storage/sqlite-coverage-query.ts"() {
-    "use strict";
-    init_record_shape();
-    init_sqlite_payload();
-    init_sqlite_query_cache();
-    COVERAGE_CLASSES = ["opcode", "operand", "data", "asset", "unknown"];
-    COVERAGE_RUNTIME = ["executed", "operand", "read", "written"];
-    coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
-    cachedCoverage = (db, manifest) => {
-      const value = readQueryCache(db, "coverage", coverageSignature(manifest));
-      if (value === void 0) {
-        return void 0;
-      }
-      if (!isSqliteCoverageSummary(value)) {
-        throw new Error("Invalid coverage summary cache.");
-      }
-      return value;
-    };
-    prepareCoverage = (db, manifest) => {
-      db.exec(`CREATE TEMP TABLE query_coverage_segments (start INTEGER PRIMARY KEY, payload TEXT NOT NULL);
-    CREATE TEMP TABLE query_coverage_details (kind TEXT, id TEXT, reason TEXT, payload TEXT NOT NULL);
-    CREATE INDEX temp.query_coverage_detail_order ON query_coverage_details(kind,id,reason);
-    DELETE FROM query_coverage_segments; DELETE FROM query_coverage_details;
-    CREATE TEMP TABLE coverage_events (pos INTEGER NOT NULL, category TEXT NOT NULL, id TEXT NOT NULL, delta INTEGER NOT NULL);`);
-      const fileAddressSpaces = manifest.addressSpaces.filter((s) => s.kind === "file").map((s) => s.id).toSorted((a, b) => a.localeCompare(b));
-      const files = new Set(fileAddressSpaces);
-      const size = manifest.rom.contentSize;
-      if (!Number.isSafeInteger(size) || size < 0) {
-        throw new Error("Invalid ROM coverage size.");
-      }
-      const event = db.prepare("INSERT INTO temp.coverage_events VALUES(?,?,?,?)");
-      const detail = db.prepare("INSERT INTO query_coverage_details VALUES(?,?,?,?)");
-      const unprojected = (kind, id, reason) => {
-        detail.run(
-          kind,
-          id,
-          reason,
-          JSON.stringify({
-            id: `${kind}:${id}:${reason}`,
-            label: id,
-            description: reason,
-            icon: "debug-disconnect"
-          })
-        );
-      };
-      const add = (kind, id, start, end, categories) => {
-        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
-          unprojected(kind, id, "invalid-range");
-          return false;
-        }
-        if (start >= size || size === 0) {
-          unprojected(kind, id, "outside-rom");
-          return false;
-        }
-        const clipped = Math.min(end, size);
-        if (clipped !== end) {
-          detail.run(
-            "z-diagnostic",
-            id,
-            "clipped",
-            JSON.stringify({
-              id: `diagnostic:${id}:${start}:${end}`,
-              label: id,
-              description: "clipped",
-              tooltip: `Clipped coverage range [${start}, ${end}) to ROM content [${start}, ${clipped}).`,
-              icon: "warning"
-            })
-          );
-        }
-        for (const [category, identity2] of categories) {
-          event.run(start, category, identity2, 1);
-          event.run(clipped, category, identity2, -1);
-        }
-        return true;
-      };
-      try {
-        for (const row of db.prepare("SELECT * FROM annotations WHERE classification != 'unreached'").iterate()) {
-          const record6 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
-          if (!files.has(record6.addressSpace)) {
-            unprojected("annotation", record6.id, "non-file-address-space");
-            continue;
-          }
-          let classification2 = "data";
-          if (["opcode", "operand"].includes(record6.classification)) {
-            classification2 = record6.classification;
-          }
-          if (["graphics", "music", "compressed", "asset"].includes(record6.classification)) {
-            classification2 = "asset";
-          }
-          add("annotation", record6.id, record6.start, record6.end, [
-            ["classification", classification2],
-            ["annotationIds", record6.id]
-          ]);
-        }
-        for (const row of db.prepare("SELECT id,address_space,start,end FROM regions").iterate()) {
-          const id = String(row.id);
-          if (!files.has(String(row.address_space))) {
-            unprojected("region", id, "non-file-address-space");
-            continue;
-          }
-          add("region", id, Number(row.start), Number(row.end), [["regionIds", id]]);
-        }
-        for (const row of db.prepare(
-          "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.kind='cfg-node'"
-        ).iterate()) {
-          const id = String(row.id);
-          if (row.file_offset === null) {
-            unprojected("analysis", id, "missing-file-offset");
-            continue;
-          }
-          const start = Number(row.file_offset);
-          add("analysis", id, start, start + 1, [
-            ["classification", "opcode"],
-            ["analysisIds", id]
-          ]);
-          if (Number(row.size) > 1) {
-            add("analysis", id, start + 1, start + Number(row.size), [
-              ["classification", "operand"],
-              ["analysisIds", id]
-            ]);
-          }
-        }
-        const node = db.prepare(
-          "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.id=? AND a.kind='cfg-node'"
-        );
-        for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='conflict'").iterate()) {
-          const record6 = requireConflict(row.payload);
-          if (files.has(record6.addressSpace)) {
-            add("analysis", record6.id, record6.address, record6.end ?? record6.address + 1, [
-              ["conflictIds", record6.id]
-            ]);
-            continue;
-          }
-          let projected = false;
-          for (const id of record6.nodes) {
-            const target = node.get(id);
-            if (!target || target.file_offset === null) {
-              continue;
-            }
-            projected = add(
-              "analysis",
-              record6.id,
-              Number(target.file_offset),
-              Number(target.file_offset) + Number(target.size),
-              [
-                ["conflictIds", record6.id],
-                ["analysisIds", id]
-              ]
-            ) || projected;
-          }
-          if (!projected) {
-            unprojected("analysis", record6.id, "missing-file-offset");
-          }
-        }
-        const identity2 = "p.value || CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END";
-        for (const row of db.prepare(
-          `SELECT ${identity2} AS id,q.file_offset,q.size FROM runtime r JOIN query_execution_offsets q ON q.row_id=r.rowid JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE r.kind='runtime-execution'`
-        ).iterate()) {
-          const id = String(row.id);
-          if (row.file_offset === null) {
-            unprojected("runtime", id, "missing-file-offset");
-            continue;
-          }
-          const start = Number(row.file_offset);
-          add("runtime", id, start, start + 1, [
-            ["runtime", "executed"],
-            ["runtimeIds", id]
-          ]);
-          if (Number(row.size) > 1) {
-            add("runtime", id, start + 1, start + Number(row.size), [
-              ["runtime", "operand"],
-              ["runtimeIds", id]
-            ]);
-          }
-        }
-        for (const row of db.prepare(
-          `SELECT ${identity2} AS id,r.address_space,r.start,r.end,r.coverage FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE r.kind='runtime-coverage'`
-        ).iterate()) {
-          const id = String(row.id);
-          if (!files.has(String(row.address_space))) {
-            unprojected("runtime", id, "non-file-address-space");
-            continue;
-          }
-          add("runtime", id, Number(row.start), Number(row.end), [
-            ["runtime", String(row.coverage)],
-            ["runtimeIds", id]
-          ]);
-        }
-        for (const row of db.prepare(`SELECT ${identity2} AS id,r.accessed_address,r.payload FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id
-      WHERE r.kind='runtime-memory-access' AND r.accessed_address_space IN (SELECT value FROM json_each(?))`).iterate(JSON.stringify(fileAddressSpaces))) {
-          const id = String(row.id);
-          const payload = requireAccessWidth(row.payload);
-          for (const [access, classification2] of [
-            ["read", "read"],
-            ["write", "written"]
-          ]) {
-            if (payload.access === access || payload.access === "read-write") {
-              add(
-                "runtime",
-                id,
-                Number(row.accessed_address),
-                Number(row.accessed_address) + payload.width,
-                [
-                  ["runtime", classification2],
-                  ["runtimeIds", id]
-                ]
-              );
-            }
-          }
-        }
-        event.run(0, "boundary", "", 0);
-        event.run(size, "boundary", "", 0);
-        const active = /* @__PURE__ */ new Map();
-        const ids = (category) => [...active.get(category)?.keys() ?? []].toSorted((a, b) => a.localeCompare(b));
-        const put = db.prepare("INSERT INTO query_coverage_segments VALUES(?,?)");
-        const summary = {
-          totalBytes: size,
-          classifiedBytes: 0,
-          unknownBytes: 0,
-          conflictBytes: 0,
-          segmentCount: 0,
-          bytesByClassification: { opcode: 0, operand: 0, data: 0, asset: 0, unknown: 0 },
-          bytesByRuntimeCoverage: { executed: 0, operand: 0, read: 0, written: 0 }
-        };
-        let classifiedBytes = 0, unknownBytes = 0, conflictBytes = 0, segmentCount = 0;
-        const classificationTotals = { ...summary.bytesByClassification };
-        const runtimeTotals = { ...summary.bytesByRuntimeCoverage };
-        let previous = 0;
-        let pending;
-        let pendingKey;
-        const savePending = () => {
-          if (pending) {
-            put.run(pending.start, JSON.stringify(pending));
-            segmentCount++;
-          }
-        };
-        const flush = (end) => {
-          if (end <= previous) {
-            return;
-          }
-          const classifications = ["opcode", "operand", "data", "asset"].filter(
-            (c) => active.get("classification")?.has(c)
-          );
-          const runtime = ["executed", "operand", "read", "written"].filter(
-            (c) => active.get("runtime")?.has(c)
-          );
-          const conflictIds = ids("conflictIds");
-          let status = "classified";
-          if (classifications.length === 0) {
-            status = "unknown";
-          }
-          if (classifications.length > 1 || conflictIds.length) {
-            status = "conflict";
-          }
-          const segment = {
-            start: previous,
-            end,
-            status,
-            classifications: classifications.length ? classifications : ["unknown"],
-            runtime,
-            annotationIds: ids("annotationIds"),
-            analysisIds: ids("analysisIds"),
-            runtimeIds: ids("runtimeIds"),
-            conflictIds,
-            regionIds: ids("regionIds")
-          };
-          const { start: _start, end: _end, ...segmentIdentity } = segment;
-          const key3 = JSON.stringify(segmentIdentity);
-          if (pending && key3 === pendingKey) {
-            pending = { ...pending, end };
-          } else {
-            savePending();
-            pending = segment;
-            pendingKey = key3;
-          }
-          const bytes = end - previous;
-          for (const c of segment.classifications) {
-            classificationTotals[c] += bytes;
-          }
-          for (const c of runtime) {
-            runtimeTotals[c] += bytes;
-          }
-          if (status === "classified") {
-            classifiedBytes += bytes;
-          } else if (status === "conflict") {
-            conflictBytes += bytes;
-          } else {
-            unknownBytes += bytes;
-          }
-          previous = end;
-        };
-        for (const row of db.prepare(
-          "SELECT pos,category,id,SUM(delta) AS delta FROM temp.coverage_events GROUP BY pos,category,id HAVING SUM(delta) != 0 OR category='boundary' ORDER BY pos,category,id"
-        ).iterate()) {
-          flush(Number(row.pos));
-          if (row.category === "boundary") {
-            continue;
-          }
-          const category = String(row.category), id = String(row.id);
-          let values = active.get(category);
-          if (!values) {
-            values = /* @__PURE__ */ new Map();
-            active.set(category, values);
-          }
-          const count3 = (values.get(id) ?? 0) + Number(row.delta);
-          if (count3 === 0) {
-            values.delete(id);
-          } else {
-            values.set(id, count3);
-          }
-        }
-        savePending();
-        const result = {
-          contentSize: size,
-          fileAddressSpaces,
-          segments: [],
-          unprojected: [],
-          diagnostics: [],
-          detailCount: Number(db.prepare("SELECT count(*) AS n FROM query_coverage_details").get().n),
-          summary: {
-            ...summary,
-            classifiedBytes,
-            unknownBytes,
-            conflictBytes,
-            segmentCount,
-            bytesByClassification: classificationTotals,
-            bytesByRuntimeCoverage: runtimeTotals
-          }
-        };
-        return result;
-      } finally {
-        db.exec("DROP TABLE temp.coverage_events");
-      }
-    };
-    publishCoverage = (db) => {
-      db.exec(`CREATE TABLE IF NOT EXISTS main.query_coverage_segments(start INTEGER PRIMARY KEY,payload TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS main.query_coverage_details(kind TEXT,id TEXT,reason TEXT,payload TEXT NOT NULL);
-    CREATE INDEX IF NOT EXISTS main.query_coverage_detail_order ON query_coverage_details(kind,id,reason);
-    DELETE FROM main.query_coverage_segments;INSERT INTO main.query_coverage_segments SELECT * FROM temp.query_coverage_segments;
-    DELETE FROM main.query_coverage_details;INSERT INTO main.query_coverage_details SELECT * FROM temp.query_coverage_details;`);
-    };
-    coveragePage = (db, kind, offset) => {
-      if (!Number.isSafeInteger(offset) || offset < 0) {
-        throw new Error("Invalid analysis page offset.");
-      }
-      const table = kind === "segments" ? "query_coverage_segments" : "query_coverage_details";
-      const order = kind === "segments" ? "start" : "kind,id,reason";
-      return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
-    };
-    coverageConflictPage = (db, offset) => {
-      if (!Number.isSafeInteger(offset) || offset < 0) {
-        throw new Error("Invalid analysis page offset.");
-      }
-      const condition = "json_extract(payload,'$.status')='conflict'";
-      const count3 = Number(
-        db.prepare(`SELECT count(*) AS n FROM query_coverage_segments WHERE ${condition}`).get().n
-      );
-      const segments = db.prepare(
-        `SELECT payload FROM query_coverage_segments WHERE ${condition} ORDER BY start LIMIT 200 OFFSET ?`
-      ).all(offset).map((row) => JSON.parse(String(row.payload)));
-      return { count: count3, segments };
-    };
-  }
-});
-
 // packages/disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
-  const record6 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record6.kind !== "cfg-node") {
+  const record7 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record7.kind !== "cfg-node") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record6;
+  return record7;
 }
 function requireEdge(value) {
-  const record6 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record6.kind !== "cfg-edge") {
+  const record7 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record7.kind !== "cfg-edge") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record6;
+  return record7;
 }
 function requireUnresolved(value) {
-  const record6 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record6.kind !== "unresolved") {
+  const record7 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record7.kind !== "unresolved") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record6;
+  return record7;
 }
 function requireFunctionRecord(value) {
-  const record6 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record6.kind !== "function") {
+  const record7 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record7.kind !== "function") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record6;
+  return record7;
 }
 function isLabelRefList(value) {
   return Array.isArray(value) && value.every(
@@ -30327,14 +28988,14 @@ var init_sqlite_graph_query = __esm({
       for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
         if (row.kind === "cfg-node") {
           const node = requireNode(row.payload);
-          const path46 = node.evidencePath.length ? node.evidencePath : [node.id];
+          const path51 = node.evidencePath.length ? node.evidencePath : [node.id];
           let owner2 = node.functionEntry;
-          for (let i = path46.length - 1; i >= 0; i--) {
+          for (let i = path51.length - 1; i >= 0; i--) {
             if (owner2) {
               break;
             }
-            if (entries.has(path46[i])) {
-              owner2 = path46[i];
+            if (entries.has(path51[i])) {
+              owner2 = path51[i];
               break;
             }
           }
@@ -30391,21 +29052,21 @@ var init_sqlite_graph_query = __esm({
         "SELECT from_id FROM query_graph_edges WHERE kind='unresolved' AND address_space=? AND from_address=?"
       );
       for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='unresolved'").iterate()) {
-        const record6 = requireUnresolved(row.payload);
+        const record7 = requireUnresolved(row.payload);
         const nodeIds = unique(
-          unresolvedNodes.all(record6.addressSpace, record6.address).map((nodeRow) => String(nodeRow.from_id))
+          unresolvedNodes.all(record7.addressSpace, record7.address).map((nodeRow) => String(nodeRow.from_id))
         );
         unresolved.push({
-          id: record6.id,
-          addressSpace: record6.addressSpace,
-          address: record6.address,
-          flowKind: record6.flowKind,
-          indirect: record6.indirect,
-          reason: record6.reason,
+          id: record7.id,
+          addressSpace: record7.addressSpace,
+          address: record7.address,
+          flowKind: record7.flowKind,
+          indirect: record7.indirect,
+          reason: record7.reason,
           nodeIds,
           ownerFunctionIds: unique(nodeIds.flatMap(owners)),
           outputOffsets: offsets(nodeIds),
-          evidence: record6.evidence
+          evidence: record7.evidence
         });
       }
       const incoming = /* @__PURE__ */ new Map(), outgoing = /* @__PURE__ */ new Map(), unresolvedByOwner = /* @__PURE__ */ new Map();
@@ -30417,9 +29078,9 @@ var init_sqlite_graph_query = __esm({
           append(incoming, id, call.id);
         }
       }
-      for (const record6 of unresolved) {
-        for (const id of record6.ownerFunctionIds) {
-          append(unresolvedByOwner, id, record6.id);
+      for (const record7 of unresolved) {
+        for (const id of record7.ownerFunctionIds) {
+          append(unresolvedByOwner, id, record7.id);
         }
       }
       const owned = db.prepare(
@@ -30554,6 +29215,63 @@ var init_sqlite_graphics_query = __esm({
   }
 });
 
+// packages/disassembler/src/storage/sqlite-query-cache.ts
+var QUERY_CACHE_SCHEMA, installQueryCache, readQueryCache, writeQueryCache;
+var init_sqlite_query_cache = __esm({
+  "packages/disassembler/src/storage/sqlite-query-cache.ts"() {
+    "use strict";
+    QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
+    installQueryCache = (db, key3, dependencies) => {
+      if (!/^[\d_a-z]+$/.test(key3)) {
+        throw new Error("Invalid internal query cache key.");
+      }
+      if (dependencies.some(
+        (table) => ![
+          "analysis",
+          "annotations",
+          "labels",
+          "comments",
+          "regions",
+          "imports",
+          "evidence",
+          "runtime"
+        ].includes(table)
+      )) {
+        throw new Error("Invalid query dependency.");
+      }
+      db.exec(QUERY_CACHE_SCHEMA);
+      for (const table of dependencies.flatMap(
+        (name2) => name2 === "runtime" ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"] : [name2]
+      )) {
+        for (const event of ["INSERT", "UPDATE", "DELETE"]) {
+          const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
+          const condition = table === "runtime_fact_rows" && event === "UPDATE" ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL" : "";
+          db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key3}_${table}_${event} AFTER ${update} ON ${table} ${condition} BEGIN
+      DELETE FROM query_cache WHERE name='${key3}'; END`);
+        }
+      }
+    };
+    readQueryCache = (db, key3, signature) => {
+      if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
+        return void 0;
+      }
+      const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key3, signature);
+      if (!row) {
+        return void 0;
+      }
+      const parsed = JSON.parse(String(row.payload));
+      return parsed;
+    };
+    writeQueryCache = (db, key3, signature, value) => {
+      db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(
+        key3,
+        signature,
+        JSON.stringify(value)
+      );
+    };
+  }
+});
+
 // packages/disassembler/src/storage/sqlite-research-inputs.ts
 function isRecord12(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -30568,22 +29286,22 @@ function analysisInput(collection, value) {
   if (!isRecord12(value)) {
     throw new Error("Invalid research record.");
   }
-  const record6 = value;
+  const record7 = value;
   if (collection === "labels") {
-    if (record6.analysisEntryPoint === false) {
+    if (record7.analysisEntryPoint === false) {
       return null;
     }
     return {
-      id: record6.id,
-      addressSpace: record6.addressSpace,
-      address: record6.address,
-      evidence: record6.evidence
+      id: record7.id,
+      addressSpace: record7.addressSpace,
+      address: record7.address,
+      evidence: record7.evidence
     };
   }
-  if (collection === "analysis" && !["target-override", "target-set"].includes(String(record6.kind))) {
+  if (collection === "analysis" && !["target-override", "target-set"].includes(String(record7.kind))) {
     return null;
   }
-  return record6;
+  return record7;
 }
 function changesAnalysisInputs(database, snapshot) {
   database.exec(SCHEMA);
@@ -30813,16 +29531,16 @@ END;`;
         return Buffer.concat([Buffer.from([typeof value === "string" ? 1 : 2]), bytes]);
       });
       const directoryBytes = (values.length + 1) * 4;
-      const size = directoryBytes + records3.reduce((n, record6) => n + record6.length, 0);
+      const size = directoryBytes + records3.reduce((n, record7) => n + record7.length, 0);
       if (size > MAX_BYTES) {
         throw new Error("Runtime history block exceeds its decoded byte limit.");
       }
       const body = Buffer.allocUnsafe(size);
       let offset = directoryBytes;
-      for (const [index, record6] of records3.entries()) {
+      for (const [index, record7] of records3.entries()) {
         body.writeUInt32LE(offset, index * 4);
-        record6.copy(body, offset);
-        offset += record6.length;
+        record7.copy(body, offset);
+        offset += record7.length;
       }
       body.writeUInt32LE(offset, values.length * 4);
       const header = Buffer.allocUnsafe(16);
@@ -30972,11 +29690,11 @@ function pairedState(payload) {
   }
   return parsed.state;
 }
-var import_node_crypto8, runtimeFactFingerprint, encodeRuntimeFactPayload, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
+var import_node_crypto9, runtimeFactFingerprint, encodeRuntimeFactPayload, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
   "packages/disassembler/src/storage/sqlite-runtime-storage.ts"() {
     "use strict";
-    import_node_crypto8 = require("node:crypto");
+    import_node_crypto9 = require("node:crypto");
     init_canonical_json();
     init_record_shape();
     init_sqlite_payload();
@@ -30984,21 +29702,21 @@ var init_sqlite_runtime_storage = __esm({
     init_sqlite_runtime_facts();
     init_sqlite_runtime_history();
     init_sqlite_runtime_payload();
-    runtimeFactFingerprint = (record6, columns2) => (0, import_node_crypto8.createHash)("sha256").update(
+    runtimeFactFingerprint = (record7, columns2) => (0, import_node_crypto9.createHash)("sha256").update(
       JSON.stringify(
         {
           accessedAddress: columns2.accessedAddress,
           accessedAddressSpace: columns2.accessedAddressSpace,
           address: columns2.address,
           addressSpace: columns2.addressSpace,
-          architecture: record6.architecture,
+          architecture: record7.architecture,
           coverage: columns2.coverage,
           end: columns2.end,
           fromAddress: columns2.fromAddress,
           fromAddressSpace: columns2.fromAddressSpace,
           instructionAddress: columns2.instructionAddress,
           instructionAddressSpace: columns2.instructionAddressSpace,
-          kind: record6.kind,
+          kind: record7.kind,
           payload: columns2.payload,
           start: columns2.start,
           toAddress: columns2.toAddress,
@@ -31008,12 +29726,12 @@ var init_sqlite_runtime_storage = __esm({
         2
       ) + "\n"
     ).digest();
-    encodeRuntimeFactPayload = (record6, payload) => {
+    encodeRuntimeFactPayload = (record7, payload) => {
       if (payload === null) {
         return null;
       }
-      if (record6.architecture === "snes.65816" && (record6.kind === "runtime-instruction" || record6.kind === "runtime-cpu-state")) {
-        const snapshot = record6.kind === "runtime-instruction" ? { bytes: record6.bytes, state: record6.state } : { state: record6.state };
+      if (record7.architecture === "snes.65816" && (record7.kind === "runtime-instruction" || record7.kind === "runtime-cpu-state")) {
+        const snapshot = record7.kind === "runtime-instruction" ? { bytes: record7.bytes, state: record7.state } : { state: record7.state };
         return encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
       }
       return encodeSqlitePayload(payload);
@@ -31146,24 +29864,24 @@ END;
        * @param {RuntimeEvidenceRecord} record Validated source fact with a stable external ID.
        * @param {Function} intern Transaction-owned prefix/evidence dictionary allocator.
        */
-      insert(record6, intern) {
-        const identity2 = sqliteRuntimeIdentity(record6.id);
+      insert(record7, intern) {
+        const identity2 = sqliteRuntimeIdentity(record7.id);
         const prefix = intern("runtime_prefixes", identity2.prefix);
-        const evidence = intern("runtime_evidence", JSON.stringify(record6.evidence));
-        const columns2 = runtimeColumns(record6);
+        const evidence = intern("runtime_evidence", JSON.stringify(record7.evidence));
+        const columns2 = runtimeColumns(record7);
         let statePrefix = null;
         const match = /^runtime:instruction-trace:([\da-f]{64}):(code|state):([\da-f]{64})$/.exec(
-          record6.id
+          record7.id
         );
-        if (match && (record6.kind === "runtime-instruction" || record6.kind === "runtime-cpu-state")) {
+        if (match && (record7.kind === "runtime-instruction" || record7.kind === "runtime-cpu-state")) {
           const counterpart = match[2] === "code" ? "state" : "code";
           const otherIdentity = sqliteRuntimeIdentity(
             `runtime:instruction-trace:${match[1]}:${counterpart}:${match[3]}`
           );
           const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
-          const expectedKind = record6.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record6.count && other.evidence_id === evidence && other.architecture === record6.architecture && other.address_space === record6.addressSpace && other.address === record6.address && canonicalEquals(pairedState(other.payload), record6.state)) {
-            if (record6.kind === "runtime-cpu-state") {
+          const expectedKind = record7.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
+          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record7.count && other.evidence_id === evidence && other.architecture === record7.architecture && other.address_space === record7.addressSpace && other.address === record7.address && canonicalEquals(pairedState(other.payload), record7.state)) {
+            if (record7.kind === "runtime-cpu-state") {
               this.#pair.run(prefix, other.oid);
               return;
             }
@@ -31172,15 +29890,15 @@ END;
           }
         }
         const payload = columns2.payload;
-        const fingerprint = runtimeFactFingerprint(record6, columns2);
+        const fingerprint = runtimeFactFingerprint(record7, columns2);
         const found = this.#findFact.get(fingerprint);
         let fid = found?.fid;
         if (fid === void 0) {
-          const encoded = encodeRuntimeFactPayload(record6, payload);
+          const encoded = encodeRuntimeFactPayload(record7, payload);
           this.#insertFact.run(
             fingerprint,
-            record6.kind,
-            record6.architecture,
+            record7.kind,
+            record7.architecture,
             columns2.addressSpace,
             columns2.address,
             columns2.start,
@@ -31207,9 +29925,9 @@ END;
           prefix,
           identityId,
           evidence,
-          record6.count,
+          record7.count,
           statePrefix,
-          record6.kind === "runtime-execution" ? 0 : 1
+          record7.kind === "runtime-execution" ? 0 : 1
         );
       }
     };
@@ -31217,25 +29935,25 @@ END;
 });
 
 // packages/disassembler/src/storage/sqlite-runtime-batch.ts
-function assertTraceRecordNamespace(record6, sourceSha256) {
+function assertTraceRecordNamespace(record7, sourceSha256) {
   const root = `runtime:instruction-trace:${sourceSha256}:`;
   let prefix = root;
-  if (record6.kind === "runtime-instruction") {
+  if (record7.kind === "runtime-instruction") {
     prefix += "code:";
-  } else if (record6.kind === "runtime-cpu-state") {
+  } else if (record7.kind === "runtime-cpu-state") {
     prefix += "state:";
-  } else if (record6.kind === "runtime-memory-access") {
+  } else if (record7.kind === "runtime-memory-access") {
     prefix += "memory:";
-  } else if (record6.kind !== "runtime-execution") {
+  } else if (record7.kind !== "runtime-execution") {
     throw new Error("Unsupported instruction trace batch record.");
   }
-  const suffix = record6.id.slice(prefix.length);
+  const suffix = record7.id.slice(prefix.length);
   let validSuffix = /^[\da-f]{64}$/.test(suffix);
-  if (record6.kind === "runtime-execution") {
-    const pc = record6.address.toString(16).toUpperCase().padStart(6, "0");
-    validSuffix = suffix === pc || record6.architecture === "65xx.2a03" && suffix.startsWith(`${pc}:mapping:`) && /^[\da-f]{64}$/.test(suffix.slice(pc.length + 9));
+  if (record7.kind === "runtime-execution") {
+    const pc = record7.address.toString(16).toUpperCase().padStart(6, "0");
+    validSuffix = suffix === pc || record7.architecture === "65xx.2a03" && suffix.startsWith(`${pc}:mapping:`) && /^[\da-f]{64}$/.test(suffix.slice(pc.length + 9));
   }
-  if (!record6.id.startsWith(prefix) || !validSuffix || !canonicalEquals(record6.evidence, [root.slice(0, -1)])) {
+  if (!record7.id.startsWith(prefix) || !validSuffix || !canonicalEquals(record7.evidence, [root.slice(0, -1)])) {
     throw new Error("Runtime record escaped its trace batch namespace or provenance.");
   }
 }
@@ -31281,41 +29999,41 @@ var init_sqlite_runtime_batch = __esm({
         );
       }
       /** Accept only the importer's adjacent code/state pairs; validate equality before sharing storage. */
-      add(record6) {
+      add(record7) {
         if (this.#finished || !this.#db.isTransaction) {
           throw new Error("Runtime trace batch is no longer active.");
         }
         if (this.#source !== void 0) {
-          assertTraceRecordNamespace(record6, this.#source);
+          assertTraceRecordNamespace(record7, this.#source);
         }
         if (this.#pending) {
           const instruction2 = this.#pending;
-          if (record6.kind !== "runtime-cpu-state" || record6.id !== instruction2.id.replace(":code:", ":state:") || record6.architecture !== instruction2.architecture || record6.addressSpace !== instruction2.addressSpace || record6.address !== instruction2.address || record6.count !== instruction2.count || !canonicalEquals(record6.state, instruction2.state)) {
+          if (record7.kind !== "runtime-cpu-state" || record7.id !== instruction2.id.replace(":code:", ":state:") || record7.architecture !== instruction2.architecture || record7.addressSpace !== instruction2.addressSpace || record7.address !== instruction2.address || record7.count !== instruction2.count || !canonicalEquals(record7.state, instruction2.state)) {
             throw new Error("Instruction trace batch has an inconsistent code/state pair.");
           }
           this.#pending = void 0;
           this.#append(
             instruction2,
-            this.#intern("runtime_prefixes", sqliteRuntimeIdentity(record6.id).prefix)
+            this.#intern("runtime_prefixes", sqliteRuntimeIdentity(record7.id).prefix)
           );
-        } else if (record6.kind === "runtime-instruction") {
-          this.#pending = record6;
-        } else if (record6.kind === "runtime-cpu-state") {
+        } else if (record7.kind === "runtime-instruction") {
+          this.#pending = record7;
+        } else if (record7.kind === "runtime-cpu-state") {
           throw new Error("Instruction trace batch state has no preceding instruction.");
         } else {
-          this.#append(record6, null);
+          this.#append(record7, null);
         }
         return true;
       }
       /** Encode once per physical observation; repeated shared facts are resolved together in SQL. */
-      #append(record6, statePrefix) {
-        const columns2 = runtimeColumns(record6);
-        const identity2 = sqliteRuntimeIdentity(record6.id);
+      #append(record7, statePrefix) {
+        const columns2 = runtimeColumns(record7);
+        const identity2 = sqliteRuntimeIdentity(record7.id);
         this.#stage.run(
           ++this.#rows,
-          runtimeFactFingerprint(record6, columns2),
-          record6.kind,
-          record6.architecture,
+          runtimeFactFingerprint(record7, columns2),
+          record7.kind,
+          record7.architecture,
           columns2.addressSpace,
           columns2.address,
           columns2.start,
@@ -31329,13 +30047,13 @@ var init_sqlite_runtime_batch = __esm({
           columns2.accessedAddressSpace,
           columns2.accessedAddress,
           columns2.coverage,
-          encodeRuntimeFactPayload(record6, columns2.payload),
+          encodeRuntimeFactPayload(record7, columns2.payload),
           this.#intern("runtime_prefixes", identity2.prefix),
           identity2.suffix,
-          this.#intern("runtime_evidence", JSON.stringify(record6.evidence)),
-          record6.count,
+          this.#intern("runtime_evidence", JSON.stringify(record7.evidence)),
+          record7.count,
           statePrefix,
-          record6.kind === "runtime-execution" ? 0 : 1
+          record7.kind === "runtime-execution" ? 0 : 1
         );
         if (this.#rows >= 1024) {
           this.#flush();
@@ -31384,11 +30102,11 @@ var init_sqlite_runtime_batch = __esm({
 function isByteList(value) {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
-var import_node_crypto9, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, ORDERED_STAGED_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
+var import_node_crypto10, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, ORDERED_STAGED_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
 var init_sqlite_runtime_summary = __esm({
   "packages/disassembler/src/storage/sqlite-runtime-summary.ts"() {
     "use strict";
-    import_node_crypto9 = require("node:crypto");
+    import_node_crypto10 = require("node:crypto");
     init_record_shape();
     init_sqlite_payload();
     init_sqlite_query_cache();
@@ -31486,13 +30204,13 @@ var init_sqlite_runtime_summary = __esm({
     };
     registerVariantKey = (db, fields2, masks) => {
       db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
-        const record6 = parseSqlitePayload(payload);
-        if (!isRecord8(record6) || !isByteList(record6.bytes) || !isRecord8(record6.state)) {
+        const record7 = parseSqlitePayload(payload);
+        if (!isRecord8(record7) || !isByteList(record7.bytes) || !isRecord8(record7.state)) {
           throw new Error("Invalid instruction variant payload.");
         }
         const state = {};
         for (const key3 of fields2) {
-          const value = record6.state[key3];
+          const value = record7.state[key3];
           const mask = masks[key3];
           if (mask && typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= mask.max) {
             state[key3] = value & mask.mask;
@@ -31500,7 +30218,7 @@ var init_sqlite_runtime_summary = __esm({
             state[key3] = value;
           }
         }
-        return JSON.stringify([record6.bytes, state]);
+        return JSON.stringify([record7.bytes, state]);
       });
     };
     isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== void 0 && !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
@@ -31517,7 +30235,7 @@ var init_sqlite_runtime_summary = __esm({
         });
       }
       if (!isCurrent(db, signature)) {
-        const pending = `pending:${(0, import_node_crypto9.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto10.randomUUID)()}`;
         let incremental = false;
         transaction(() => {
           incremental = readQueryCache(db, KEY, signature) !== void 0;
@@ -31611,13 +30329,13 @@ var init_sqlite_runtime_summary = __esm({
             const insert = db.prepare("INSERT INTO temp.runtime_summary_rows VALUES(?,?)");
             for (const row of db.prepare(RUNTIME_SUMMARY_ROWS_SQL).iterate()) {
               const parsed = parseSqlitePayload(row.payload);
-              const record6 = runtimeInstructionFields(isRecord8(parsed) ? parsed : void 0);
+              const record7 = runtimeInstructionFields(isRecord8(parsed) ? parsed : void 0);
               insert.run(
                 row.fid,
                 JSON.stringify({
-                  ...record6,
+                  ...record7,
                   state: Object.fromEntries(
-                    Object.entries(record6.state).filter(([key3]) => fields2.includes(key3))
+                    Object.entries(record7.state).filter(([key3]) => fields2.includes(key3))
                   )
                 })
               );
@@ -31628,11 +30346,11 @@ var init_sqlite_runtime_summary = __esm({
             }
             onReadProgress?.(staged);
             for (const row of db.prepare(ORDERED_STAGED_ROWS_SQL).iterate()) {
-              const record6 = runtimeFromRow(row);
-              if (record6.kind !== "runtime-instruction") {
+              const record7 = runtimeFromRow(row);
+              if (record7.kind !== "runtime-instruction") {
                 throw new Error("Invalid instruction summary representative.");
               }
-              yield record6;
+              yield record7;
             }
           } finally {
             db.exec("DROP TABLE IF EXISTS temp.runtime_summary_rows");
@@ -31674,10 +30392,10 @@ function* stageSourceExportGroups(database, groups2, complete, signal) {
   const evidenceSets = /* @__PURE__ */ new Map();
   let nextId = 0;
   let retainedBytes = 0;
-  for (const group2 of groups2) {
+  for (const group of groups2) {
     signal?.throwIfAborted();
-    for (const record6 of group2) {
-      const { evidence, ...instruction2 } = record6;
+    for (const record7 of group) {
+      const { evidence, ...instruction2 } = record7;
       const key3 = JSON.stringify(evidence);
       let id = evidenceSets.get(key3);
       if (id === void 0) {
@@ -31689,9 +30407,9 @@ function* stageSourceExportGroups(database, groups2, complete, signal) {
         }
         dictionary.run(id, key3);
       }
-      insert.run(record6.fileOffset, record6.id, JSON.stringify([instruction2, id]));
+      insert.run(record7.fileOffset, record7.id, JSON.stringify([instruction2, id]));
     }
-    yield group2;
+    yield group;
   }
   complete();
 }
@@ -31763,21 +30481,21 @@ function isRecord13(value) {
 function isStringArray2(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
-function optionalString(record6, key3) {
-  if (!Object.hasOwn(record6, key3)) {
+function optionalString(record7, key3) {
+  if (!Object.hasOwn(record7, key3)) {
     return void 0;
   }
-  const value = record6[key3];
+  const value = record7[key3];
   if (typeof value !== "string") {
     throw new Error("Invalid source metadata record.");
   }
   return value;
 }
-function optionalNumber(record6, key3) {
-  if (!Object.hasOwn(record6, key3)) {
+function optionalNumber(record7, key3) {
+  if (!Object.hasOwn(record7, key3)) {
     return void 0;
   }
-  const value = record6[key3];
+  const value = record7[key3];
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new Error("Invalid source metadata record.");
   }
@@ -31861,12 +30579,12 @@ var init_sqlite_source_query = __esm({
       );
       return { source, instructionCount, memoryCount, contributionCount };
     };
-    readSourcePage = (db, source, group2, offset = 0) => {
+    readSourcePage = (db, source, group, offset = 0) => {
       if (!Number.isSafeInteger(offset) || offset < 0) {
         throw new Error("Invalid source page offset.");
       }
       const evidence = JSON.stringify(source.evidenceIds);
-      if (group2 === "instructions") {
+      if (group === "instructions") {
         const rows2 = db.prepare(`${sourceEvidence} SELECT f.architecture,f.address_space,f.address,
       SUM(CASE WHEN f.kind='runtime-execution' THEN o.count ELSE 0 END) AS executions
       FROM ${observationLocations} WHERE ${sourceObservations} AND ${instructionKinds}
@@ -31888,25 +30606,25 @@ var init_sqlite_source_query = __esm({
           recordIds: []
         }));
       }
-      if (group2 === "memory") {
+      if (group === "memory") {
         return db.prepare(`${sourceEvidence} SELECT r.*,p.value AS id_prefix,e.value AS evidence
       FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id JOIN runtime_evidence e ON e.id=r.evidence_id
       WHERE ${sourceRuntime} AND r.kind='runtime-memory-access' ORDER BY r.evidence_id,r.kind,r.rowid LIMIT 200 OFFSET ?`).all(evidence, offset).map((row) => {
-          const record6 = runtimeFromRow(row);
-          if (record6.kind !== "runtime-memory-access") {
+          const record7 = runtimeFromRow(row);
+          if (record7.kind !== "runtime-memory-access") {
             throw new Error("Invalid memory observation.");
           }
-          const detail = `${record6.access} ${record6.accessedAddressSpace}:${hex2(record6.accessedAddress)} \xB7 ${record6.width} byte(s) \xB7 ${record6.count} observations`;
+          const detail = `${record7.access} ${record7.accessedAddressSpace}:${hex2(record7.accessedAddress)} \xB7 ${record7.width} byte(s) \xB7 ${record7.count} observations`;
           return {
-            id: record6.id,
-            label: hex2(record6.instructionAddress),
+            id: record7.id,
+            label: hex2(record7.instructionAddress),
             description: detail,
             detail,
-            architecture: record6.architecture,
-            addressSpace: record6.instructionAddressSpace,
-            address: record6.instructionAddress,
+            architecture: record7.architecture,
+            addressSpace: record7.instructionAddressSpace,
+            address: record7.instructionAddress,
             outputOffsets: [],
-            recordIds: [record6.id]
+            recordIds: [record7.id]
           };
         });
       }
@@ -32031,7 +30749,6 @@ var init_sqlite_storage_policy = __esm({
     };
     CACHES = [
       { key: "source_export", tables: ["query_source_export_rows", "query_source_export_evidence"] },
-      { key: "coverage", tables: ["query_coverage_segments", "query_coverage_details"] },
       { key: "graph", tables: ["query_graph_nodes", "query_graph_edges"] },
       {
         key: "instruction_variants",
@@ -32044,6 +30761,7 @@ var init_sqlite_storage_policy = __esm({
       { key: "evidence_links", tables: ["query_evidence_links"] }
     ];
     RETIRED_CACHES = [
+      { key: "coverage", tables: ["query_coverage_segments", "query_coverage_details"] },
       { key: "snes_roles", tables: [] },
       { key: "runtime_architectures", tables: ["query_runtime_architectures"] }
     ];
@@ -32197,11 +30915,11 @@ function isIndexedExportInstruction(value, spaces, knownEvidence) {
   const evidenceList = value.evidence;
   return typeof value.id === "string" && value.id !== "" && value.kind === "cfg-node" && isSafeInteger6(value.fileOffset) && value.fileOffset >= 0 && typeof addressSpace === "string" && isSafeInteger6(address3) && address3 >= 0 && address3 < (spaces.get(addressSpace) ?? 0) && isSafeInteger6(size) && size >= 1 && isSafeInteger6(opcode) && typeof value.specificationId === "string" && typeof incomingState === "object" && incomingState !== null && Array.isArray(evidenceList) && evidenceList.every((id) => typeof id === "string" && knownEvidence.has(id));
 }
-var import_node_crypto10, import_node_fs6, import_node_path7, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA2, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
+var import_node_crypto11, import_node_fs6, import_node_path7, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA2, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
   "packages/disassembler/src/storage/sqlite-store.ts"() {
     "use strict";
-    import_node_crypto10 = require("node:crypto");
+    import_node_crypto11 = require("node:crypto");
     import_node_fs6 = __toESM(require("node:fs"), 1);
     import_node_path7 = __toESM(require("node:path"), 1);
     import_node_sqlite2 = require("node:sqlite");
@@ -32217,7 +30935,6 @@ var init_sqlite_store = __esm({
     init_runtime_analysis_profile();
     init_runtime_evidence();
     init_sqlite_annotation_query();
-    init_sqlite_coverage_query();
     init_sqlite_graph_query();
     init_sqlite_graphics_query();
     init_sqlite_payload();
@@ -32321,11 +31038,11 @@ PRAGMA user_version=4;
       WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
 )`;
     analysisProjectSqlitePath = (directory, manifest) => {
-      const relative3 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
-      if (relative3 !== ANALYSIS_PROJECT_SQLITE_FILE) {
-        throw new Error(`Unsupported analysis sqlite path '${relative3}'.`);
+      const relative4 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
+      if (relative4 !== ANALYSIS_PROJECT_SQLITE_FILE) {
+        throw new Error(`Unsupported analysis sqlite path '${relative4}'.`);
       }
-      return import_node_path7.default.join(directory, relative3);
+      return import_node_path7.default.join(directory, relative4);
     };
     parseRecord = (payload) => parseSqlitePayload(payload);
     sqliteFileIdentity = (file) => {
@@ -32477,70 +31194,70 @@ PRAGMA user_version=4;
       }
       #insertRecord(kind, value) {
         if (kind === "evidence") {
-          const record6 = requireMetadataRecord(kind, value);
-          this.#insertEvidence.run(record6.id, encodeSqlitePayload(JSON.stringify(record6)));
+          const record7 = requireMetadataRecord(kind, value);
+          this.#insertEvidence.run(record7.id, encodeSqlitePayload(JSON.stringify(record7)));
           return;
         }
         if (kind === "labels") {
-          const record6 = requireMetadataRecord(kind, value);
+          const record7 = requireMetadataRecord(kind, value);
           this.#insertLabel.run(
-            record6.id,
-            record6.addressSpace,
-            record6.address,
-            record6.name,
-            encodeSqlitePayload(JSON.stringify(record6))
+            record7.id,
+            record7.addressSpace,
+            record7.address,
+            record7.name,
+            encodeSqlitePayload(JSON.stringify(record7))
           );
           return;
         }
         if (kind === "comments") {
-          const record6 = requireMetadataRecord(kind, value);
+          const record7 = requireMetadataRecord(kind, value);
           this.#insertComment.run(
-            record6.id,
-            record6.addressSpace,
-            record6.address,
-            encodeSqlitePayload(JSON.stringify(record6))
+            record7.id,
+            record7.addressSpace,
+            record7.address,
+            encodeSqlitePayload(JSON.stringify(record7))
           );
           return;
         }
         if (kind === "regions") {
-          const record6 = requireMetadataRecord(kind, value);
+          const record7 = requireMetadataRecord(kind, value);
           this.#insertRegion.run(
-            record6.id,
-            record6.addressSpace,
-            record6.start,
-            record6.end,
-            encodeSqlitePayload(JSON.stringify(record6))
+            record7.id,
+            record7.addressSpace,
+            record7.start,
+            record7.end,
+            encodeSqlitePayload(JSON.stringify(record7))
           );
           return;
         }
         if (kind === "annotations") {
-          const record6 = requireMetadataRecord(kind, value);
+          const record7 = requireMetadataRecord(kind, value);
           this.#insertAnnotation.run(
-            record6.id,
-            record6.addressSpace,
-            record6.start,
-            record6.end,
-            record6.classification,
-            encodeSqlitePayload(JSON.stringify(record6))
+            record7.id,
+            record7.addressSpace,
+            record7.start,
+            record7.end,
+            record7.classification,
+            encodeSqlitePayload(JSON.stringify(record7))
           );
           return;
         }
         if (kind === "analysis") {
-          const record6 = requireMetadataRecord(kind, value);
-          const located = analysisAddress(record6);
+          const record7 = requireMetadataRecord(kind, value);
+          const located = analysisAddress(record7);
           this.#insertAnalysis.run(
-            record6.id,
-            record6.kind,
+            record7.id,
+            record7.kind,
             located.addressSpace,
             located.address,
-            encodeSqlitePayload(JSON.stringify(record6))
+            encodeSqlitePayload(JSON.stringify(record7))
           );
           return;
         }
         if (kind === "imports") {
-          const record6 = requireMetadataRecord(kind, value);
-          this.#insertImport.run(record6.id, encodeSqlitePayload(JSON.stringify(record6)));
-          this.recordCaptureReceipt(record6);
+          const record7 = requireMetadataRecord(kind, value);
+          this.#insertImport.run(record7.id, encodeSqlitePayload(JSON.stringify(record7)));
+          this.recordCaptureReceipt(record7);
           return;
         }
         if (!isRuntimeEvidenceRecord(value)) {
@@ -32717,13 +31434,13 @@ PRAGMA user_version=4;
           "evidence",
           "imports"
         ]) {
-          const previous = new Map(before[kind].map((record6) => [record6.id, record6]));
-          const next = new Map(after[kind].map((record6) => [record6.id, record6]));
+          const previous = new Map(before[kind].map((record7) => [record7.id, record7]));
+          const next = new Map(after[kind].map((record7) => [record7.id, record7]));
           const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
           const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
           for (const id of /* @__PURE__ */ new Set([...previous.keys(), ...next.keys()])) {
-            const prior = previous.get(id), record6 = next.get(id);
-            if (canonicalEquals(prior, record6)) {
+            const prior = previous.get(id), record7 = next.get(id);
+            if (canonicalEquals(prior, record7)) {
               continue;
             }
             const stored = find.get(id);
@@ -32731,13 +31448,13 @@ PRAGMA user_version=4;
               throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
             }
             remove.run(id);
-            if (record6) {
-              this.#insertRecord(kind, record6);
+            if (record7) {
+              this.#insertRecord(kind, record7);
             }
           }
         }
-        const retained = new Set(after.evidence.map((record6) => record6.id));
-        const removed = before.evidence.filter((record6) => !retained.has(record6.id)).map((record6) => record6.id);
+        const retained = new Set(after.evidence.map((record7) => record7.id));
+        const removed = before.evidence.filter((record7) => !retained.has(record7.id)).map((record7) => record7.id);
         if (removed.length) {
           const ids = JSON.stringify(removed);
           for (const table of ["analysis", "annotations", "labels", "comments", "regions"]) {
@@ -32774,7 +31491,7 @@ PRAGMA user_version=4;
         projectResearchInputs(
           this.#database,
           snapshot,
-          (kind, record6) => this.#insertRecord(kind, record6)
+          (kind, record7) => this.#insertRecord(kind, record7)
         );
         this.validateView(
           view ?? {
@@ -32822,7 +31539,7 @@ PRAGMA user_version=4;
       suspendResearchInputs() {
         this.#requireTransaction();
         this.#researchSuspended = true;
-        clearResearchProjection(this.#database, (kind, record6) => this.#insertRecord(kind, record6));
+        clearResearchProjection(this.#database, (kind, record7) => this.#insertRecord(kind, record7));
       }
       /**
        * Publish analyzer output computed from the projected view without adopting Git decisions as
@@ -32847,7 +31564,7 @@ PRAGMA user_version=4;
           const protectedIds = new Set(
             snapshot.decisions.filter((decision) => decision.collection === collection).map((decision) => decision.id)
           );
-          const records3 = (updates[collection] ?? []).filter((record6) => !protectedIds.has(record6.id));
+          const records3 = (updates[collection] ?? []).filter((record7) => !protectedIds.has(record7.id));
           const current = [...records3];
           for (const decision of snapshot.decisions) {
             if (decision.collection === collection && decision.value !== null) {
@@ -32910,8 +31627,8 @@ PRAGMA user_version=4;
           }
           const records3 = shards[kind] ?? [];
           if (!this.#database.prepare(`SELECT 1 FROM ${kind} LIMIT 1`).get()) {
-            for (const record6 of records3) {
-              this.#insertRecord(kind, record6);
+            for (const record7 of records3) {
+              this.#insertRecord(kind, record7);
             }
             continue;
           }
@@ -32930,7 +31647,7 @@ PRAGMA user_version=4;
               );
               remember.set(batch.length, insert);
             }
-            insert.run(...batch.flatMap((record6, index) => [record6.id, offset + index]));
+            insert.run(...batch.flatMap((record7, index) => [record7.id, offset + index]));
           }
           const unchanged = [];
           const deleted = [];
@@ -32960,9 +31677,9 @@ PRAGMA user_version=4;
             if (row.ordinal === null) {
               deleted.push(id);
             } else {
-              const record6 = records3[Number(row.ordinal)];
+              const record7 = records3[Number(row.ordinal)];
               const json = decodeSqlitePayload(row.payload);
-              if (json === JSON.stringify(record6) || canonicalEquals(JSON.parse(json), record6)) {
+              if (json === JSON.stringify(record7) || canonicalEquals(JSON.parse(json), record7)) {
                 unchanged.push(id);
               } else {
                 deleted.push(id);
@@ -32997,19 +31714,19 @@ PRAGMA user_version=4;
           "INSERT OR IGNORE INTO temp.replacement_runtime_ids VALUES (?,?)"
         );
         const remove = this.#database.prepare("DELETE FROM runtime WHERE rowid=?");
-        for (const record6 of records3) {
-          const identity2 = sqliteRuntimeIdentity(record6.id);
+        for (const record7 of records3) {
+          const identity2 = sqliteRuntimeIdentity(record7.id);
           if (!remember.run(identity2.prefix, identity2.suffix).changes) {
-            throw new Error(`Duplicate runtime record ID '${record6.id}'.`);
+            throw new Error(`Duplicate runtime record ID '${record7.id}'.`);
           }
           const prior = this.#findRuntime.get(identity2.prefix, identity2.suffix);
-          if (prior && canonicalEquals(runtimeFromRow(prior), record6)) {
+          if (prior && canonicalEquals(runtimeFromRow(prior), record7)) {
             continue;
           }
           if (prior) {
             remove.run(prior.storage_rowid);
           }
-          this.#insertRecord("runtime", record6);
+          this.#insertRecord("runtime", record7);
         }
         this.#database.exec(`DELETE FROM runtime WHERE NOT EXISTS (
       SELECT 1 FROM temp.replacement_runtime_ids keep JOIN runtime_prefixes p ON p.value=keep.prefix
@@ -33021,19 +31738,19 @@ PRAGMA user_version=4;
        * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
        * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
        */
-      insertRuntime(record6) {
+      insertRuntime(record7) {
         this.#requireTransaction();
-        const identity2 = sqliteRuntimeIdentity(record6.id);
+        const identity2 = sqliteRuntimeIdentity(record7.id);
         const prior = this.#findRuntime.get(identity2.prefix, identity2.suffix);
         if (prior) {
-          if (!canonicalEquals(runtimeFromRow(prior), record6)) {
+          if (!canonicalEquals(runtimeFromRow(prior), record7)) {
             throw new Error(
-              `Runtime record '${record6.id}' has changed content for a stable imported ID.`
+              `Runtime record '${record7.id}' has changed content for a stable imported ID.`
             );
           }
           return false;
         }
-        this.#insertRecord("runtime", record6);
+        this.#insertRecord("runtime", record7);
         return true;
       }
       /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
@@ -33051,15 +31768,15 @@ PRAGMA user_version=4;
         const existing = this.#database.prepare(
           "SELECT 1 FROM runtime WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) LIMIT 1"
         ).get(prefix);
-        return (record6) => {
+        return (record7) => {
           this.#requireTransaction();
-          if (!record6.id.startsWith(prefix) || record6.id.lastIndexOf(":") !== prefix.length - 1) {
+          if (!record7.id.startsWith(prefix) || record7.id.lastIndexOf(":") !== prefix.length - 1) {
             throw new Error("Runtime record escaped its batch prefix.");
           }
           if (existing) {
-            return this.insertRuntime(record6);
+            return this.insertRuntime(record7);
           }
-          this.#insertRecord("runtime", record6);
+          this.#insertRecord("runtime", record7);
           return true;
         };
       }
@@ -33089,9 +31806,9 @@ PRAGMA user_version=4;
             (table, value) => this.#intern(table, value)
           );
           return {
-            add: (record6) => {
+            add: (record7) => {
               this.#requireTransaction();
-              return batch.add(record6);
+              return batch.add(record7);
             },
             finish: () => {
               this.#requireTransaction();
@@ -33101,13 +31818,13 @@ PRAGMA user_version=4;
         }
         let finished = false;
         return {
-          add: (record6) => {
+          add: (record7) => {
             this.#requireTransaction();
             if (finished) {
               throw new Error("Runtime trace batch is no longer active.");
             }
-            assertTraceRecordNamespace(record6, sourceSha256);
-            return this.insertRuntime(record6);
+            assertTraceRecordNamespace(record7, sourceSha256);
+            return this.insertRuntime(record7);
           },
           finish: () => {
             this.#requireTransaction();
@@ -33221,11 +31938,11 @@ PRAGMA user_version=4;
         }
         const records3 = [];
         for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`).iterate()) {
-          const record6 = requireMetadataRecord(kind, parseRecord(row.payload));
-          if ("evidence" in record6) {
-            Object.assign(record6, { evidence: this.#evidencePool.intern(record6.evidence) });
+          const record7 = requireMetadataRecord(kind, parseRecord(row.payload));
+          if ("evidence" in record7) {
+            Object.assign(record7, { evidence: this.#evidencePool.intern(record7.evidence) });
           }
-          records3.push(record6);
+          records3.push(record7);
         }
         return records3;
       }
@@ -33271,15 +31988,15 @@ PRAGMA user_version=4;
           imports: this.loadTable("imports"),
           runtime: []
         };
-        const ids = JSON.stringify((batch.analysis ?? []).map((record6) => record6.id));
+        const ids = JSON.stringify((batch.analysis ?? []).map((record7) => record7.id));
         const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
         const before = { ...base, analysis };
         const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
         this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
         this.patchMetadata(before, merged.shards);
         let runtime = 0;
-        for (const record6 of batch.runtime ?? []) {
-          if (this.insertRuntime(record6)) {
+        for (const record7 of batch.runtime ?? []) {
+          if (this.insertRuntime(record7)) {
             runtime++;
           }
         }
@@ -33431,12 +32148,12 @@ PRAGMA user_version=4;
             analysis: [
               ...shards.analysis,
               ...this.analysisByKinds(["conflict"]).filter(
-                (record6) => !shards.analysis.some((other) => other.id === record6.id)
+                (record7) => !shards.analysis.some((other) => other.id === record7.id)
               )
             ]
           };
           const base = explainProjectEvidence(view, kind, id);
-          const evidenceIds = JSON.stringify(base.evidence.map((record6) => record6.id));
+          const evidenceIds = JSON.stringify(base.evidence.map((record7) => record7.id));
           const metadata = "SELECT collection||':'||id AS reference FROM query_evidence_links WHERE evidence IN (SELECT value FROM json_each(?)) GROUP BY collection,id";
           const runtime = "SELECT 'runtime:'||p.value||CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END AS reference FROM runtime_evidence e JOIN runtime r ON r.evidence_id=e.id JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE EXISTS(SELECT 1 FROM json_each(e.value) value WHERE value.value IN (SELECT value FROM json_each(?)))";
           const metadataRows = this.#database.prepare(`${metadata} ORDER BY reference LIMIT 200`).all(evidenceIds);
@@ -33452,54 +32169,6 @@ PRAGMA user_version=4;
           const referencedByTotal = metadataCount + runtimeCount;
           return { ...base, referencedBy, referencedByTotal };
         }, false);
-      }
-      /** Exact coverage totals. Build only when classifications, code, or runtime facts changed.
-       * @returns {object} Persisted summary and detail count.
-       */
-      coverageSummary() {
-        const cached = cachedCoverage(this.#database, this.manifest());
-        if (cached) {
-          return cached;
-        }
-        this.prepareAnnotationQueries();
-        try {
-          this.cachedProjection(
-            "coverage",
-            coverageSignature(this.manifest()),
-            ["analysis", "annotations", "regions", "runtime"],
-            () => prepareCoverage(this.#database, this.manifest()),
-            () => publishCoverage(this.#database),
-            (value) => {
-              if (!isSqliteCoverageSummary(value)) {
-                throw new Error("Project changed while building coverage. Refresh the view.");
-              }
-              return value;
-            }
-          );
-          const published = cachedCoverage(this.#database, this.manifest());
-          if (!published) {
-            throw new Error("Project changed while building coverage. Refresh the view.");
-          }
-          return published;
-        } finally {
-          this.#database.exec(
-            "DROP TABLE IF EXISTS temp.query_coverage_segments;DROP TABLE IF EXISTS temp.query_coverage_details"
-          );
-        }
-      }
-      /** Read at most 200 coverage rows from a current projection.
-       * @param {"segments" | "details"} kind Collection to page.
-       * @param {number} offset Nonnegative row offset.
-       * @returns {unknown[]} Persisted rows, never the full ROM map.
-       */
-      coveragePage(kind, offset = 0) {
-        this.coverageSummary();
-        return this.transaction(() => coveragePage(this.#database, kind, offset), false);
-      }
-      /** Current conflicting ROM intervals, paged at 200 rows; offsets count conflicts only. */
-      coverageConflicts(offset = 0) {
-        this.coverageSummary();
-        return this.transaction(() => coverageConflictPage(this.#database, offset), false);
       }
       /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
        * @returns {object} Functions, calls, unresolved sites, and ownership.
@@ -33561,7 +32230,7 @@ PRAGMA user_version=4;
           }
           return restore(cached);
         }
-        const pending = `pending:${(0, import_node_crypto10.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto11.randomUUID)()}`;
         this.transaction(() => {
           installQueryCache(this.#database, key3, dependencies);
           writeQueryCache(this.#database, key3, pending, null);
@@ -33741,12 +32410,12 @@ PRAGMA user_version=4;
        * @param {number} offset Nonnegative page offset.
        * @returns {Array} Bounded source records.
        */
-      sourcePage(sourceId, group2, offset = 0) {
+      sourcePage(sourceId, group, offset = 0) {
         const source = this.sourceCatalog().sources.find(({ id }) => id === sourceId);
         if (!source) {
           throw new Error("Unknown analysis source.");
         }
-        return readSourcePage(this.#database, source, group2, offset);
+        return readSourcePage(this.#database, source, group, offset);
       }
       /**
        * Read names, comments and provenance for editing without materializing instruction variants.
@@ -33798,8 +32467,8 @@ PRAGMA user_version=4;
           return;
         }
         this.sourceExportSnapshot((groups2) => {
-          for (const group2 of groups2) {
-            void group2;
+          for (const group of groups2) {
+            void group;
           }
         }, signal);
       }
@@ -33830,7 +32499,7 @@ PRAGMA user_version=4;
           }
           return result;
         }
-        const pending = `pending:${(0, import_node_crypto10.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto11.randomUUID)()}`;
         this.transaction(() => {
           installQueryCache(this.#database, SOURCE_EXPORT_CACHE.key, ["analysis", "evidence"]);
           writeQueryCache(this.#database, SOURCE_EXPORT_CACHE.key, pending, null);
@@ -33887,22 +32556,22 @@ PRAGMA user_version=4;
         );
         const evidence = new Set(this.loadTable("evidence").map(({ id }) => id));
         let previous;
-        let group2 = [];
+        let group = [];
         const records3 = sourceExportCacheReady(this.#database) ? sourceExportCacheRecords(this.#database) : uncachedSourceExportRecords(this.#database);
-        for (const record6 of records3) {
-          if (!isIndexedExportInstruction(record6, spaces, evidence)) {
+        for (const record7 of records3) {
+          if (!isIndexedExportInstruction(record7, spaces, evidence)) {
             throw new Error("Invalid indexed export instruction or missing provenance.");
           }
-          const offset = record6.fileOffset;
+          const offset = record7.fileOffset;
           if (previous !== void 0 && previous !== offset) {
-            yield group2;
-            group2 = [];
+            yield group;
+            group = [];
           }
-          group2.push(record6);
+          group.push(record7);
           previous = offset;
         }
-        if (group2.length) {
-          yield group2;
+        if (group.length) {
+          yield group;
         }
       }
       /**
@@ -34022,7 +32691,7 @@ PRAGMA user_version=4;
        * @param {string} directory Project root for the watcher hint.
        */
       writePointer(directory) {
-        const temporary = import_node_path7.default.join(directory, `.analysis.json.${(0, import_node_crypto10.randomUUID)()}.tmp`);
+        const temporary = import_node_path7.default.join(directory, `.analysis.json.${(0, import_node_crypto11.randomUUID)()}.tmp`);
         try {
           this.transaction(() => {
             import_node_fs6.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
@@ -34084,7 +32753,7 @@ PRAGMA user_version=4;
         );
         const staging = import_node_path7.default.join(
           import_node_path7.default.dirname(this.file),
-          `.analysis-retention-${(0, import_node_crypto10.randomUUID)()}.sqlite`
+          `.analysis-retention-${(0, import_node_crypto11.randomUUID)()}.sqlite`
         );
         let target;
         const lifecycle = { attached: false };
@@ -34120,7 +32789,7 @@ PRAGMA user_version=4;
                 }
                 const state = snesAnalysisTraceState(sample.state);
                 retainedSources.add(match[1].slice("runtime:instruction-trace:".length));
-                const identity2 = (0, import_node_crypto10.createHash)("sha256").update(
+                const identity2 = (0, import_node_crypto11.createHash)("sha256").update(
                   JSON.stringify(
                     {
                       address: sample.address,
@@ -34402,12 +33071,12 @@ var init_project_store = __esm({
           const records3 = [];
           const projection = createProjection?.();
           try {
-            for (const record6 of store.runtimeRecords()) {
-              validate3(record6);
+            for (const record7 of store.runtimeRecords()) {
+              validate3(record7);
               if (projection) {
-                projection.push(record6);
+                projection.push(record7);
               } else {
-                records3.push(record6);
+                records3.push(record7);
               }
             }
             if (!projection) {
@@ -34448,11 +33117,11 @@ var init_project_store = __esm({
 });
 
 // packages/disassembler/src/project/project-transaction.ts
-var import_node_crypto11, fs8, import_node_path9, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
+var import_node_crypto12, fs8, import_node_path9, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
   "packages/disassembler/src/project/project-transaction.ts"() {
     "use strict";
-    import_node_crypto11 = require("node:crypto");
+    import_node_crypto12 = require("node:crypto");
     fs8 = __toESM(require("node:fs"), 1);
     import_node_path9 = __toESM(require("node:path"), 1);
     init_canonical_json();
@@ -34477,7 +33146,7 @@ var init_project_transaction = __esm({
     analysisProjectRevision = (manifest) => ({
       format: ANALYSIS_PROJECT_REVISION_FORMAT,
       version: ANALYSIS_PROJECT_REVISION_VERSION,
-      manifestSha256: (0, import_node_crypto11.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+      manifestSha256: (0, import_node_crypto12.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
     });
     assertAnalysisProjectRevision = (store, expected) => {
       const actual = analysisProjectRevision(store.manifest());
@@ -35651,18 +34320,18 @@ var init_capture_file_reader = __esm({
         if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit) {
           throw new Error("Torn capture frame or invalid component length.");
         }
-        const relative3 = offset - this.#start;
+        const relative4 = offset - this.#start;
         let available = 0;
-        if (relative3 >= 0 && relative3 <= this.#valid) {
-          available = Math.min(this.#valid - relative3, limit - offset);
+        if (relative4 >= 0 && relative4 <= this.#valid) {
+          available = Math.min(this.#valid - relative4, limit - offset);
         }
         if (available >= length) {
-          return Buffer.from(this.#buffer.subarray(relative3, relative3 + length));
+          return Buffer.from(this.#buffer.subarray(relative4, relative4 + length));
         }
         const nextLength = Math.min(this.#windowBytes, limit - offset);
         const next = this.#buffer.length >= nextLength ? this.#buffer : Buffer.allocUnsafe(nextLength);
         if (available) {
-          this.#buffer.copy(next, 0, relative3, relative3 + available);
+          this.#buffer.copy(next, 0, relative4, relative4 + available);
         }
         this.#buffer = next;
         this.#valid = 0;
@@ -36215,17 +34884,17 @@ var init_capture_file = __esm({
 });
 
 // packages/capture/src/capture-context.ts
-var import_node_crypto12, import_node_fs7, import_promises5, import_node_path10, isRecord15, digestFile, verifyCaptureContext;
+var import_node_crypto13, import_node_fs7, import_promises5, import_node_path10, isRecord15, digestFile, verifyCaptureContext;
 var init_capture_context = __esm({
   "packages/capture/src/capture-context.ts"() {
     "use strict";
-    import_node_crypto12 = require("node:crypto");
+    import_node_crypto13 = require("node:crypto");
     import_node_fs7 = require("node:fs");
     import_promises5 = require("node:fs/promises");
     import_node_path10 = __toESM(require("node:path"), 1);
     isRecord15 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     digestFile = async (file, signal) => {
-      const hash4 = (0, import_node_crypto12.createHash)("sha256");
+      const hash4 = (0, import_node_crypto13.createHash)("sha256");
       for await (const bytes of (0, import_node_fs7.createReadStream)(file, { signal })) {
         if (!Buffer.isBuffer(bytes)) {
           throw new Error(`Expected binary capture context data in ${import_node_path10.default.basename(file)}.`);
@@ -36617,7 +35286,7 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
     let publication;
     let validate3;
     if (options.validatedIndex && !options.recoverPartial) {
-      const key3 = (0, import_node_crypto13.createHash)("sha256").update(
+      const key3 = (0, import_node_crypto14.createHash)("sha256").update(
         canonicalJson({
           version: 1,
           identity: options.validatedIndex.identity,
@@ -36654,11 +35323,11 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
               publication = store.runtimeTracePublicationSink(sha2564);
             }
           },
-          onRecord: (record6) => {
+          onRecord: (record7) => {
             options.signal?.throwIfAborted();
             validate3 ??= createRuntimeRecordValidator(
               manifest,
-              record6.evidence.map((id) => ({
+              record7.evidence.map((id) => ({
                 id,
                 source: "runtime",
                 sourceId: "instruction-trace",
@@ -36666,12 +35335,12 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
               })),
               false
             );
-            validate3(record6);
-            if (publication?.add(record6)) {
+            validate3(record7);
+            if (publication?.add(record7)) {
               addedRuntime++;
             }
-            if (record6.kind === "runtime-execution") {
-              execution.push(record6);
+            if (record7.kind === "runtime-execution") {
+              execution.push(record7);
             }
           }
         });
@@ -36812,11 +35481,11 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
     }
   }
 }
-var import_node_crypto13, import_node_path13, importRuntimeTraceIntoProject, commitRuntimeEvidenceBatch;
+var import_node_crypto14, import_node_path13, importRuntimeTraceIntoProject, commitRuntimeEvidenceBatch;
 var init_runtime_trace_project = __esm({
   "packages/disassembler/src/project/runtime-trace-project.ts"() {
     "use strict";
-    import_node_crypto13 = require("node:crypto");
+    import_node_crypto14 = require("node:crypto");
     import_node_path13 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_project_validation();
@@ -36897,11 +35566,11 @@ var init_runtime_bus_project = __esm({
             onSource: (sha2564) => {
               insert = store.runtimeBatchInserter(`runtime:bus-trace:${sha2564}:`);
             },
-            onRecord: (record6) => {
+            onRecord: (record7) => {
               options.signal?.throwIfAborted();
               validate3 ??= createRuntimeRecordValidator(
                 manifest,
-                record6.evidence.map((id) => ({
+                record7.evidence.map((id) => ({
                   id,
                   source: "runtime",
                   sourceId: "bus-trace",
@@ -36909,8 +35578,8 @@ var init_runtime_bus_project = __esm({
                 })),
                 false
               );
-              validate3(record6);
-              if (insert(record6)) {
+              validate3(record7);
+              if (insert(record7)) {
                 addedRuntime++;
               }
             }
@@ -37112,14 +35781,14 @@ var init_capture_notes = __esm({
 });
 
 // packages/disassembler/src/source/source-export.ts
-var import_node_crypto14, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, sourceExportSha256, compareByteImages;
+var import_node_crypto15, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, sourceExportSha256, compareByteImages;
 var init_source_export = __esm({
   "packages/disassembler/src/source/source-export.ts"() {
     "use strict";
-    import_node_crypto14 = require("node:crypto");
+    import_node_crypto15 = require("node:crypto");
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
     SOURCE_EXPORT_SCHEMA_VERSION = 1;
-    sourceExportSha256 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
+    sourceExportSha256 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
     compareByteImages = (expected, actual) => {
       const common = Math.min(expected.length, actual.length);
       let firstDifference;
@@ -37282,12 +35951,12 @@ function renameResearchSymbol(snapshot, identity2, newName, newDocumentPath, res
     throw new Error(`Source name '${newName}' is already used by another symbol.`);
   }
   projectSourceLabelNames([...labels, symbol]);
-  const relative3 = file?.path ?? newDocumentPath;
-  assertSourcePath(relative3);
-  if (!relative3.endsWith(".json")) {
+  const relative4 = file?.path ?? newDocumentPath;
+  assertSourcePath(relative4);
+  if (!relative4.endsWith(".json")) {
     throw new Error("Symbol research documents use .json files.");
   }
-  const destination = file ?? snapshot.files.find((input) => input.path === relative3);
+  const destination = file ?? snapshot.files.find((input) => input.path === relative4);
   const document = parseResearchDocument({
     ...destination?.document ?? {
       format: "uttori-research",
@@ -37307,7 +35976,7 @@ function renameResearchSymbol(snapshot, identity2, newName, newDocumentPath, res
       )
     )
   });
-  return { path: relative3, expectedSha256: destination?.sha256 ?? null, document, symbol };
+  return { path: relative4, expectedSha256: destination?.sha256 ?? null, document, symbol };
 }
 var isArray2;
 var init_symbols = __esm({
@@ -37322,28 +35991,28 @@ var init_symbols = __esm({
 });
 
 // packages/disassembler/src/research-inputs/analysis.ts
-function validateLocations(record6, spaces) {
-  const space = spaces.find((item) => item.id === record6.addressSpace);
+function validateLocations(record7, spaces) {
+  const space = spaces.find((item) => item.id === record7.addressSpace);
   if (!space || !Number.isInteger(space.addressBits) || space.addressBits < 1 || space.addressBits > 53) {
     throw new Error("Select a declared project address space.");
   }
   const limit = 2 ** space.addressBits;
-  const addresses = "start" in record6 ? [record6.start, record6.end - 1] : [...record6.targets];
-  if ("address" in record6) {
-    addresses.push(record6.address);
+  const addresses = "start" in record7 ? [record7.start, record7.end - 1] : [...record7.targets];
+  if ("address" in record7) {
+    addresses.push(record7.address);
   }
   if (addresses.some((address3) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= limit)) {
     throw new Error(
       `Research locations exceed the ${space.addressBits}-bit address space '${space.id}'.`
     );
   }
-  if ("targets" in record6 && (record6.targets.length > 4096 || new Set(record6.targets).size !== record6.targets.length)) {
+  if ("targets" in record7 && (record7.targets.length > 4096 || new Set(record7.targets).size !== record7.targets.length)) {
     throw new Error("Use at most 4096 distinct indirect targets.");
   }
-  if ("state" in record6 && record6.state?.e && (record6.state.m === false || record6.state.x === false)) {
+  if ("state" in record7 && record7.state?.e && (record7.state.m === false || record7.state.x === false)) {
     throw new Error("65816 emulation mode requires 8-bit accumulator and index registers.");
   }
-  if ("asset" in record6 && record6.asset && !["asset", "compressed", "graphics", "music", "text"].includes(record6.classification)) {
+  if ("asset" in record7 && record7.asset && !["asset", "compressed", "graphics", "music", "text"].includes(record7.classification)) {
     throw new Error(
       "Remove the asset recipe explicitly before changing to a non-asset classification."
     );
@@ -37639,7 +36308,6 @@ __export(src_exports2, {
   assertAnalysisProjectRevision: () => assertAnalysisProjectRevision,
   buildAnalysisSourceCatalog: () => buildAnalysisSourceCatalog,
   buildInstructionAnalysisAnnotations: () => buildInstructionAnalysisAnnotations,
-  buildRomCoverageMap: () => buildRomCoverageMap,
   changeResearchAnalysis: () => changeResearchAnalysis,
   changeResearchSymbol: () => changeResearchSymbol,
   commitAnalysisProjectTransaction: () => commitAnalysisProjectTransaction,
@@ -37705,6 +36373,7 @@ __export(src_exports2, {
   validateSourceLabelName: () => validateSourceLabelName,
   verifyRuntimeCaptureCompanion: () => verifyRuntimeCaptureCompanion,
   withAnalysisReadSession: () => withAnalysisReadSession,
+  withCompactAnalysisOwnership: () => withCompactAnalysisOwnership,
   writeCaptureImportNotes: () => writeCaptureImportNotes,
   writeResearchDocument: () => writeResearchDocument
 });
@@ -37714,12 +36383,12 @@ var init_src2 = __esm({
     init_project_types();
     init_project_asset_ids();
     init_evidence_pool();
+    init_analysis_ownership();
     init_project_labels();
     init_rom_image();
     init_trace_detail();
     init_runtime_bus_types();
     init_analysis_sources();
-    init_coverage_map();
     init_instruction_annotations();
     init_static_analysis();
     init_project_evidence();
@@ -37757,8 +36426,8 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path45 = __toESM(require("node:path"), 1);
-var import_vscode31 = require("vscode");
+var path50 = __toESM(require("node:path"), 1);
+var import_vscode33 = require("vscode");
 var import_node = __toESM(require_main5(), 1);
 
 // packages/vscode-extension/src/analysis/annotation-controller.ts
@@ -39073,8 +37742,8 @@ var EditorInformationWorker = class {
   }
 };
 
-// packages/vscode-extension/src/analysis/coverage-tree.ts
-var path18 = __toESM(require("node:path"), 1);
+// packages/vscode-extension/src/analysis/project-discovery.ts
+var path17 = __toESM(require("node:path"), 1);
 init_src2();
 
 // packages/disassembler/src/source-project/git.ts
@@ -39248,12 +37917,2373 @@ function readSourceProjectLocalInputs(root) {
   };
 }
 
-// packages/vscode-extension/src/analysis/coverage-tree.ts
+// packages/core/src/linker/value.ts
+var import_node_crypto16 = require("node:crypto");
+function artifactHash(value) {
+  return (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
+}
+function isRecord19(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function record4(value, purpose) {
+  if (!isRecord19(value)) {
+    throw new Error(`${purpose} must be a record.`);
+  }
+  return value;
+}
+function list(value, purpose) {
+  if (!Array.isArray(value) || value.length > 1e6) {
+    throw new Error(`${purpose} must be a bounded array.`);
+  }
+  return value;
+}
+function textValue(value, purpose) {
+  if (typeof value !== "string" || !value.trim() || value.length > 65536) {
+    throw new Error(`${purpose} must be nonempty text.`);
+  }
+  return value;
+}
+function integer2(value, purpose, minimum = 0, maximum = Number.MAX_SAFE_INTEGER) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new Error(`${purpose} is outside ${minimum}..${maximum}.`);
+  }
+  return value;
+}
+
+// packages/core/src/linker/validation.ts
+var binaryOperators = /* @__PURE__ */ new Set([
+  "+",
+  "-",
+  "*",
+  "/",
+  "%",
+  "**",
+  "<<",
+  ">>",
+  "&",
+  "|",
+  "^",
+  "<",
+  ">",
+  "<=",
+  ">=",
+  "=",
+  "==",
+  "!=",
+  "&&",
+  "||"
+]);
+var unaryOperators = /* @__PURE__ */ new Set(["-", "~", "low", "high", "bank"]);
+function assertLinkExpression(value, depth = 0, budget = { nodes: 0 }) {
+  if (depth > 128 || ++budget.nodes > 1e5) {
+    throw new Error("Link expression exceeds nesting/node limits.");
+  }
+  const node = record4(value, "Link expression");
+  switch (node.kind) {
+    case "constant":
+      integer2(node.value, "Link constant", -Number.MAX_SAFE_INTEGER);
+      return;
+    case "symbol":
+      textValue(node.name, "Symbol name");
+      if (node.module !== void 0) {
+        textValue(node.module, "Symbol module");
+      }
+      return;
+    case "section":
+      textValue(node.module, "Section module");
+      textValue(node.section, "Section name");
+      integer2(node.offset, "Section offset", 0, 16777216);
+      return;
+    case "unary":
+      if (!unaryOperators.has(String(node.operator))) {
+        throw new Error("Unknown unary link operator.");
+      }
+      assertLinkExpression(node.argument, depth + 1, budget);
+      return;
+    case "binary":
+      if (!binaryOperators.has(String(node.operator))) {
+        throw new Error("Unknown binary link operator.");
+      }
+      assertLinkExpression(node.left, depth + 1, budget);
+      assertLinkExpression(node.right, depth + 1, budget);
+      return;
+    default:
+      throw new Error("Unknown link expression kind.");
+  }
+}
+
+// packages/core/src/linker/types.ts
+var LinkError = class extends Error {
+  constructor(code, message, source, allocations = []) {
+    const location = source ? `${source.file}:${source.line}: ` : "";
+    super(`${location}${message}`);
+    this.code = code;
+    this.source = source;
+    this.allocations = allocations;
+  }
+  code;
+  source;
+  allocations;
+  name = "LinkError";
+};
+
+// packages/core/src/linker/recipe.ts
+function assertLinkRecipe(input) {
+  const recipe = record4(input, "Link recipe");
+  textValue(recipe.target, "Link target");
+  if (recipe.targetOptions !== void 0) {
+    record4(recipe.targetOptions, "Link target options");
+  }
+  if (recipe.checksumPolicy !== void 0 && recipe.checksumPolicy !== "preserve" && recipe.checksumPolicy !== "recompute") {
+    throw new Error("Unknown checksum policy.");
+  }
+  for (const value of list(recipe.regions, "Memory regions")) {
+    const region = record4(value, "Memory region");
+    textValue(region.name, "Region name");
+    integer2(region.start, "Region start");
+    integer2(region.size, "Region size");
+    if (region.outputOffset !== void 0) {
+      integer2(region.outputOffset, "Region output offset");
+    }
+    if (region.fillByte !== void 0) {
+      integer2(region.fillByte, "Region fill byte", 0, 255);
+    }
+    if (region.addressSpace !== void 0) {
+      textValue(region.addressSpace, "Region address space");
+    }
+    if (region.initialBytes !== void 0) {
+      list(region.initialBytes, "Container bytes").forEach(
+        (byte2) => integer2(byte2, "Container byte", 0, 255)
+      );
+    }
+  }
+  for (const value of list(recipe.placements, "Section placements")) {
+    const placement = record4(value, "Section placement");
+    for (const key3 of ["section", "load", "run"]) {
+      textValue(placement[key3], `Placement ${key3}`);
+    }
+    if (placement.start !== void 0) {
+      integer2(placement.start, "Placement start");
+    }
+    for (const key3 of ["alignment", "bankSize"]) {
+      if (placement[key3] !== void 0) {
+        integer2(placement[key3], key3, 1, 16777216);
+      }
+    }
+  }
+  for (const value of list(recipe.symbols ?? [], "Recipe symbols")) {
+    const symbol = record4(value, "Recipe symbol");
+    textValue(symbol.name, "Recipe symbol name");
+    if (symbol.expression !== void 0) {
+      assertLinkExpression(symbol.expression);
+    } else {
+      textValue(symbol.section, "Derived section");
+      if (!["load", "run", "size", "runEnd"].includes(String(symbol.property))) {
+        throw new Error("Unknown derived symbol property.");
+      }
+    }
+  }
+  for (const value of list(recipe.assumptions ?? [], "Link assumptions")) {
+    const assumption = record4(value, "Link assumption");
+    textValue(assumption.section, "Assumption section");
+    if (assumption.module !== void 0) {
+      textValue(assumption.module, "Assumption module");
+    }
+    if (assumption.dataBank !== void 0 && assumption.dataBank !== "program") {
+      integer2(assumption.dataBank, "Data bank", 0, 255);
+    }
+    if (assumption.directPage !== void 0) {
+      integer2(assumption.directPage, "Direct page", 0, 65535);
+    }
+    if (assumption.state !== void 0) {
+      for (const expected of Object.values(record4(assumption.state, "Processor assumptions"))) {
+        if (typeof expected !== "boolean") {
+          integer2(expected, "Processor assumption", -Number.MAX_SAFE_INTEGER);
+        }
+      }
+    }
+  }
+  for (const value of list(recipe.assertions ?? [], "Link assertions")) {
+    const assertion = record4(value, "Link assertion");
+    textValue(assertion.message, "Assertion message");
+    assertLinkExpression(assertion.expression);
+  }
+}
+
+// packages/core/src/ir/link-expression.ts
+function linkInteger(value) {
+  if (!Number.isSafeInteger(value)) {
+    throw new Error(`Link expression requires a safe integer: ${value}`);
+  }
+  return value;
+}
+function linkConstant(value) {
+  return { kind: "constant", value: linkInteger(value) };
+}
+function linkBinary(operator, left, right) {
+  if (operator === "-" && left.kind === "section" && right.kind === "section" && left.module === right.module && left.section === right.section) {
+    return linkConstant(left.offset - right.offset);
+  }
+  if (left.kind !== "constant" || right.kind !== "constant") {
+    return { kind: "binary", operator, left, right };
+  }
+  const a = left.value;
+  const b = right.value;
+  let value;
+  switch (operator) {
+    case "+":
+      value = a + b;
+      break;
+    case "-":
+      value = a - b;
+      break;
+    case "*":
+      value = a * b;
+      break;
+    case "/":
+    case "%":
+      if (b === 0) {
+        throw new Error("Division by zero in link expression.");
+      }
+      value = operator === "/" ? Math.trunc(a / b) : a % b;
+      break;
+    case "**":
+      value = a ** b;
+      break;
+    case "<<":
+    case ">>":
+      if (b < 0 || b > 52) {
+        throw new Error("Link expression shift must be in 0..52.");
+      }
+      value = Number(operator === "<<" ? BigInt(a) << BigInt(b) : BigInt(a) >> BigInt(b));
+      break;
+    case "&":
+      value = Number(BigInt(a) & BigInt(b));
+      break;
+    case "|":
+      value = Number(BigInt(a) | BigInt(b));
+      break;
+    case "^":
+      value = Number(BigInt(a) ^ BigInt(b));
+      break;
+    case "<":
+      value = Number(a < b);
+      break;
+    case ">":
+      value = Number(a > b);
+      break;
+    case "<=":
+      value = Number(a <= b);
+      break;
+    case ">=":
+      value = Number(a >= b);
+      break;
+    case "=":
+    case "==":
+      value = Number(a === b);
+      break;
+    case "!=":
+      value = Number(a !== b);
+      break;
+    case "&&":
+      value = Number(a !== 0 && b !== 0);
+      break;
+    case "||":
+      value = Number(a !== 0 || b !== 0);
+      break;
+  }
+  return linkConstant(value);
+}
+function linkUnary(operator, argument) {
+  if (argument.kind !== "constant") {
+    return { kind: "unary", operator, argument };
+  }
+  const value = argument.value;
+  if (operator === "-") {
+    return linkConstant(-value);
+  }
+  if (operator === "~") {
+    return linkConstant(Number(~BigInt(value)));
+  }
+  let shift = 0;
+  if (operator === "high") {
+    shift = 8;
+  }
+  if (operator === "bank") {
+    shift = 16;
+  }
+  return linkConstant(Number(BigInt(value) >> BigInt(shift) & 255n));
+}
+function compileLinkExpression(expression, context, depth = 0) {
+  if (depth > 128) {
+    throw new Error("Link expression nesting exceeds 128.");
+  }
+  const compile = (node) => compileLinkExpression(node, context, depth + 1);
+  switch (expression.type) {
+    case "literal":
+    case "string":
+      return linkConstant(context.literal(expression));
+    case "identifier":
+      if (expression.name === "*") {
+        return context.current();
+      }
+      return context.reference(expression);
+    case "member":
+    case "index":
+    case "relativeReference":
+      return context.reference(expression);
+    case "template":
+    case "defineReference": {
+      const bound = context.bind?.(expression);
+      if (!bound || bound === expression) {
+        throw new Error("Unbound template in link expression.");
+      }
+      return compile(bound);
+    }
+    case "binary": {
+      const left = compile(expression.left);
+      if (left.kind === "constant") {
+        if (expression.operator === "&&" && left.value === 0) {
+          return linkConstant(0);
+        }
+        if (expression.operator === "||" && left.value !== 0) {
+          return linkConstant(1);
+        }
+      }
+      return linkBinary(expression.operator, left, compile(expression.right));
+    }
+    case "unary": {
+      const argument = compile(expression.argument);
+      if (expression.operator === "+") {
+        return argument;
+      }
+      if (expression.operator === "<") {
+        return linkUnary("low", argument);
+      }
+      if (expression.operator === ">") {
+        return linkUnary("high", argument);
+      }
+      if (expression.operator === "^" || expression.operator === "<:") {
+        return linkUnary("bank", argument);
+      }
+      return linkUnary(expression.operator, argument);
+    }
+    case "call": {
+      const name2 = expression.callee.name.toLowerCase();
+      if (name2 === "pc" && expression.arguments.length === 0) {
+        return context.current();
+      }
+      const extraction = {
+        low: "low",
+        lobyte: "low",
+        high: "high",
+        hibyte: "high",
+        bank: "bank",
+        bankbyte: "bank"
+      };
+      if (extraction[name2] && expression.arguments.length === 1) {
+        return linkUnary(extraction[name2], compile(expression.arguments[0]));
+      }
+      if ((name2 === "loword" || name2 === "hiword") && expression.arguments.length === 1) {
+        let value = compile(expression.arguments[0]);
+        if (name2 === "hiword") {
+          value = linkBinary(">>", value, linkConstant(16));
+        }
+        return linkBinary("&", value, linkConstant(65535));
+      }
+      const resolved = context.call?.(expression, compile);
+      if (resolved) {
+        return resolved;
+      }
+      throw new Error(
+        `Function '${name2}' is unavailable in a link expression; evaluate it at assembly time.`
+      );
+    }
+    case "error":
+    case "range":
+    case "raw":
+    case "sourceText":
+    default:
+      throw new Error(`Expression '${expression.type}' cannot be retained for linking.`);
+  }
+}
+
+// packages/core/src/source-location.ts
+function createSourceSpan(start, end, line) {
+  return {
+    start,
+    end,
+    // Operand-local spans omit physical lines so cached syntax remains plain JSON data.
+    ...line === void 0 ? {} : { line },
+    columnStart: start,
+    columnEnd: end
+  };
+}
+function createTextSpan(text2, start, end, line, lineStarts = sourceLineStarts(text2)) {
+  let low = 0;
+  let high = lineStarts.length;
+  while (low + 1 < high) {
+    const middle = low + high >>> 1;
+    if (lineStarts[middle] <= start) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+  const column = start - lineStarts[low];
+  return createSourceSpan(column, column + end - start, line + low);
+}
+function sourceLineStarts(text2) {
+  const starts = [0];
+  for (let at = text2.indexOf("\n"); at >= 0; at = text2.indexOf("\n", at + 1)) {
+    starts.push(at + 1);
+  }
+  return starts;
+}
+
+// packages/core/src/ir/expression-parse-state.ts
+var rawOutcomes = /* @__PURE__ */ new WeakMap();
+function setRawExpressionOutcome(node, outcome2) {
+  rawOutcomes.set(node, outcome2);
+}
+function expressionOutcomeKey(outcome2) {
+  return outcome2.kind === "native" ? "native" : `${outcome2.kind}:${outcome2.reason}`;
+}
+
+// packages/core/src/internal-instrumentation.ts
+var activeInstrumentation;
+function recordExpressionParse(site, outcome2) {
+  if (syntaxOwner === "execution") {
+    recordSyntaxBoundary("execution-expression-parse");
+  }
+  const metrics = activeInstrumentation;
+  if (!metrics) {
+    return;
+  }
+  metrics.counters.expressionParserCalls++;
+  if (site === "instrumentation") {
+    metrics.counters.expressionInstrumentationParses++;
+  }
+  const key3 = `${site}:${expressionOutcomeKey(outcome2)}`;
+  metrics.expressionBoundaries.parses[key3] = (metrics.expressionBoundaries.parses[key3] ?? 0) + 1;
+}
+var migrationGuard;
+function recordSyntaxBoundary(boundary) {
+  if (migrationGuard?.forbidden.has(boundary)) {
+    migrationGuard.violations.add(boundary);
+  }
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.syntaxBoundaries[boundary] = (metrics.syntaxBoundaries[boundary] ?? 0) + 1;
+  }
+}
+var syntaxOwner = "source";
+function recordExecutionParser(kind) {
+  if (syntaxOwner === "execution") {
+    recordSyntaxBoundary(`execution-${kind}-parse`);
+  }
+}
+
+// packages/core/src/ir/source-fragment.ts
+function sourceFragment(text2, origins = []) {
+  return { segments: [{ text: text2, origins }] };
+}
+
+// packages/core/src/ir/define-template.ts
+function parseDefineTemplate(text2, escapes = "basic") {
+  const parse4 = (start, end) => {
+    const parts2 = [];
+    for (let index = start; index < end; index++) {
+      const next = text2.at(index + 1);
+      if (text2[index] === "\\" && next !== void 0 && escapes !== "none" && (escapes === "string" || next === "\\" || next === "!")) {
+        parts2.push({ kind: "escape", start: index, end: index + 2, value: next });
+        index++;
+        continue;
+      }
+      if (text2[index] !== "!") {
+        continue;
+      }
+      if (next === "{") {
+        let cursor = index + 2;
+        let depth = 1;
+        for (; cursor < end && depth > 0; cursor++) {
+          if (text2[cursor] === "{") {
+            depth++;
+          } else if (text2[cursor] === "}") {
+            depth--;
+          }
+        }
+        if (depth !== 0) {
+          parts2.push({ kind: "error", start: index, end });
+          break;
+        }
+        parts2.push({
+          kind: "define",
+          start: index,
+          end: cursor,
+          name: text2.slice(index + 2, cursor - 1),
+          braced: true,
+          children: parse4(index + 2, cursor - 1)
+        });
+        index = cursor - 1;
+      } else if (next && /\w/.test(next)) {
+        let cursor = index + 2;
+        while (cursor < end && /\w/.test(text2[cursor])) {
+          cursor++;
+        }
+        parts2.push({
+          kind: "define",
+          start: index,
+          end: cursor,
+          name: text2.slice(index + 1, cursor),
+          braced: false,
+          children: []
+        });
+        index = cursor - 1;
+      }
+    }
+    return parts2;
+  };
+  return { text: text2, parts: parse4(0, text2.length) };
+}
+
+// packages/core/src/ir/expression-call-contracts.ts
+var firstSourceArgument = /* @__PURE__ */ new Set([
+  "countof",
+  "bytesof",
+  "startof",
+  "endof",
+  "defined",
+  "sizeof",
+  "objectsize",
+  "datasize",
+  "filesize",
+  "getfilestatus"
+]);
+function isSourceTextArgument(name2, index) {
+  if (name2 === "stringsequal" || name2 === "stringsequalnocase") {
+    return index < 2;
+  }
+  return index === 0 && (firstSourceArgument.has(name2) || /^(?:canreadfile|readfile)\d?$/.test(name2));
+}
+
+// packages/core/src/ir/expression-operators.ts
+var binaryPrecedence = {
+  "||": 0,
+  "&&": 1,
+  "==": 2,
+  "=": 2,
+  "!=": 2,
+  "<": 2,
+  ">": 2,
+  "<=": 2,
+  ">=": 2,
+  "|": 3,
+  "^": 3,
+  "&": 3,
+  "<<": 3,
+  ">>": 3,
+  "+": 4,
+  "-": 4,
+  "*": 5,
+  "/": 5,
+  "%": 5,
+  "**": 6
+};
+
+// packages/core/src/ir/expression-node.ts
+function attachRootSpan(node, text2, source) {
+  node.span ??= source ? createTextSpan(
+    source.text,
+    source.offset,
+    source.offset + text2.length,
+    source.line,
+    source.lineStarts
+  ) : createSourceSpan(0, text2.length);
+  return node;
+}
+function parseExpressionNode(input, source) {
+  return parseExpressionAtSite(input, "public", source);
+}
+function parseExpressionAtSite(input, site, source) {
+  return parseExpressionResult(input, site, source).node;
+}
+function parseExpressionResult(input, site = "public", source) {
+  const result = parseExpressionInput(input, site, source);
+  recordExpressionParse(site, result.outcome);
+  return result;
+}
+var ExpressionSyntaxError = class extends Error {
+  constructor(outcome2, diagnostic) {
+    super(outcome2.reason);
+    this.outcome = outcome2;
+    this.diagnostic = diagnostic;
+  }
+  outcome;
+  diagnostic;
+};
+function errorParseResult(text2, outcome2, source, diagnostic) {
+  if (text2.includes("!")) {
+    const defines = parseDefineTemplate(text2);
+    if (defines.parts.some((part) => part.kind === "define") && !defines.parts.some((part) => part.kind === "error")) {
+      return {
+        node: attachRootSpan({ type: "template", form: "source", text: text2, defines }, text2, source),
+        outcome: { kind: "native" }
+      };
+    }
+  }
+  const node = attachRootSpan(
+    {
+      type: "error",
+      value: text2,
+      outcome: outcome2,
+      ...diagnostic ?? { message: `Invalid number: ${text2}` }
+    },
+    text2,
+    source
+  );
+  setRawExpressionOutcome(node, outcome2);
+  return { node, outcome: outcome2 };
+}
+function parseLiteralValue(value) {
+  if (/^\$[\dA-Fa-f]+$/.test(value)) {
+    return Number.parseInt(value.slice(1), 16);
+  }
+  if (/^0x[\da-f]+$/i.test(value)) {
+    return Number.parseInt(value.slice(2), 16);
+  }
+  if (/^%[01]+$/.test(value)) {
+    return Number.parseInt(value.slice(1), 2);
+  }
+  if (/^-?\d+(?:\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+  throw new Error(`Unsupported literal expression: ${value}`);
+}
+function parseExpressionInput(input, site, source) {
+  const trimmed = input.trim();
+  if (source) {
+    source = { ...source, offset: source.offset + input.length - input.trimStart().length };
+  }
+  if (!trimmed) {
+    return errorParseResult(trimmed, { kind: "invalid", reason: "empty" }, source, {
+      code: "MATH_INVALID_INPUT",
+      message: "Invalid input: empty expression."
+    });
+  }
+  if (trimmed.startsWith("#") && trimmed.length > 1) {
+    return parseExpressionResult(
+      trimmed.slice(1),
+      site,
+      source && { ...source, offset: source.offset + 1 }
+    );
+  }
+  const rangeIndex = findTopLevelRange(trimmed);
+  if (rangeIndex !== -1) {
+    const start = parseExpressionResult(trimmed.slice(0, rangeIndex), site, source);
+    const end = parseExpressionResult(
+      trimmed.slice(rangeIndex + 2),
+      site,
+      source && { ...source, offset: source.offset + rangeIndex + 2 }
+    );
+    const outcome2 = start.outcome.kind === "native" ? end.outcome : start.outcome;
+    return {
+      node: attachRootSpan({ type: "range", start: start.node, end: end.node }, trimmed, source),
+      outcome: outcome2
+    };
+  }
+  try {
+    const parser = new ExpressionParser(tokenizeExpression(trimmed, source, site), trimmed);
+    const expression = parser.parseExpression();
+    if (!parser.isAtEnd()) {
+      const offset = parser.peek()?.offset ?? trimmed.length;
+      const rest = trimmed.slice(offset);
+      const diagnostic = rest.startsWith(",") ? { code: "MATH_INVALID_INPUT", message: `Invalid input: ${rest}` } : { code: "MATH_MISMATCHED_PARENTHESES", message: "Mismatched parentheses." };
+      return errorParseResult(
+        trimmed,
+        { kind: "invalid", reason: "trailing-tokens" },
+        source,
+        diagnostic
+      );
+    }
+    return { node: attachRootSpan(expression, trimmed, source), outcome: { kind: "native" } };
+  } catch (error) {
+    const failure = error instanceof ExpressionSyntaxError ? error.outcome : { kind: "unsupported", reason: "unclassified" };
+    const diagnostic = error instanceof ExpressionSyntaxError && error.diagnostic ? error.diagnostic : { message: `Invalid number: ${trimmed}` };
+    return errorParseResult(trimmed, failure, source, diagnostic);
+  }
+}
+function isReferenceExpressionNode(node) {
+  switch (node.type) {
+    case "identifier":
+    case "defineReference":
+    case "relativeReference":
+      return true;
+    case "member":
+    case "index":
+      return isReferenceExpressionNode(node.object);
+    case "binary":
+    case "call":
+    case "literal":
+    case "range":
+    case "raw":
+    case "string":
+    case "unary":
+    case "error":
+    case "sourceText":
+    case "template":
+      break;
+  }
+  return false;
+}
+function findTopLevelRange(input) {
+  let depth = 0;
+  let bracketDepth = 0;
+  let quote = "";
+  for (let i = 0; i < input.length - 1; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
+      continue;
+    }
+    if (quote) {
+      continue;
+    }
+    if (char === "(") {
+      depth++;
+      continue;
+    }
+    if (char === ")") {
+      depth--;
+      continue;
+    }
+    if (char === "[") {
+      bracketDepth++;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth--;
+      continue;
+    }
+    if (depth === 0 && bracketDepth === 0 && input.slice(i, i + 2) === "..") {
+      if (i === 0) {
+        continue;
+      }
+      return i;
+    }
+  }
+  return -1;
+}
+function skipWhitespace(input, index) {
+  let current = index;
+  while (current < input.length && /\s/.test(input[current])) {
+    current++;
+  }
+  return current;
+}
+function isUnaryOperator(value) {
+  return value === "<:" || value === "<" || value === ">" || value === "^" || value === "~" || value === "-" || value === "+";
+}
+function isQuote(value) {
+  return value === '"' || value === "'";
+}
+var binaryOperators2 = [
+  "**",
+  "<<",
+  ">>",
+  "<=",
+  ">=",
+  "==",
+  "=",
+  "!=",
+  "&&",
+  "||",
+  "*",
+  "/",
+  "%",
+  "+",
+  "-",
+  "&",
+  "|",
+  "^",
+  "<",
+  ">"
+];
+function tokenizeExpression(input, source, site = "public") {
+  const tokens = [];
+  let index = 0;
+  const provenance = (end) => source ? {
+    offset: index,
+    span: createTextSpan(
+      source.text,
+      source.offset + index,
+      source.offset + end,
+      source.line,
+      source.lineStarts
+    )
+  } : { offset: index };
+  const astProvenance = (end) => {
+    const { offset: _offset, ...location } = provenance(end);
+    return location;
+  };
+  while (index < input.length) {
+    const char = input[index];
+    if (/\s/.test(char)) {
+      index++;
+      continue;
+    }
+    const previousToken = tokens.at(-1);
+    const startsOperand = !previousToken || ["operator", "lparen", "lbracket", "comma"].includes(previousToken.type);
+    const relative4 = input.slice(index).match(/^([:?]?)(\++|-+)/);
+    if (relative4 && (relative4[1] || startsOperand && /^(?:\s*$|\s*[&)*,/<=>\]^|])/.test(input.slice(index + relative4[0].length)))) {
+      let stream = "relative";
+      if (relative4[1] === ":") {
+        stream = "unnamed";
+      }
+      if (relative4[1] === "?") {
+        stream = "macro";
+      }
+      const text2 = relative4[0];
+      tokens.push({
+        type: "expression",
+        node: {
+          type: "relativeReference",
+          text: text2,
+          stream,
+          direction: relative4[2][0] === "+" ? 1 : -1,
+          count: relative4[2].length,
+          ...astProvenance(index + text2.length)
+        },
+        offset: index
+      });
+      index += text2.length;
+      continue;
+    }
+    const placeholder = startsOperand ? input.slice(index).match(/^<(?:([A-Z_a-z]\w*)|(?:\.{3}|…)\[([^\]]+)])>/) : null;
+    if (placeholder) {
+      const text2 = placeholder[0];
+      const node = {
+        type: "template",
+        form: placeholder[1] ? "parameter" : "variadic",
+        text: text2,
+        ...astProvenance(index + text2.length)
+      };
+      if (placeholder[1]) {
+        node.name = placeholder[1];
+      } else {
+        node.index = parseExpressionAtSite(placeholder[2], site);
+      }
+      tokens.push({ type: "expression", node, offset: index });
+      index += text2.length;
+      continue;
+    }
+    if (char === "(") {
+      tokens.push({ type: "lparen", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ")") {
+      tokens.push({ type: "rparen", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ",") {
+      tokens.push({ type: "comma", offset: index });
+      index++;
+      continue;
+    }
+    if (char === ".") {
+      tokens.push({ type: "dot", ...provenance(index + 1) });
+      index++;
+      continue;
+    }
+    if (char === "[") {
+      tokens.push({ type: "lbracket", offset: index });
+      index++;
+      continue;
+    }
+    if (char === "]") {
+      tokens.push({ type: "rbracket", offset: index });
+      index++;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      const { value, nextIndex, quote } = readQuotedString(input, index);
+      tokens.push({ type: "string", value, quote, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    const previous = tokens.at(-1);
+    const operandExpected = !previous || previous.type === "operator" || previous.type === "lparen" || previous.type === "lbracket" || previous.type === "comma";
+    if (operandExpected && char === "%" && !/[01]/.test(input[index + 1] ?? "")) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "literal" },
+        { message: "Invalid number: NaN" }
+      );
+    }
+    if (char === "%" && operandExpected && /[01]/.test(input[index + 1] ?? "")) {
+      const literal = input.slice(index).match(/^%[01]+/)[0];
+      tokens.push({ type: "literal", value: literal, ...provenance(index + literal.length) });
+      index += literal.length;
+      continue;
+    }
+    if (char === "!" && !input.startsWith("!=", index) && !/[A-Z_a-z{]/.test(input[index + 1] ?? "")) {
+      tokens.push({ type: "operator", value: "~", offset: index });
+      index++;
+      continue;
+    }
+    if (char === "~") {
+      tokens.push({ type: "operator", value: "~", offset: index });
+      index++;
+      continue;
+    }
+    const operator = (input.startsWith("<:", index) ? "<:" : void 0) ?? binaryOperators2.find((candidate) => input.startsWith(candidate, index));
+    if (operator) {
+      tokens.push({ type: "operator", value: operator, offset: index });
+      index += operator.length;
+      continue;
+    }
+    if (char === "!") {
+      const { token, nextIndex } = readDefineReference(input, index);
+      tokens.push({ ...token, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    if (char === "@" || char === "?" || /[A-Z_a-z]/.test(char) || previousToken?.type === "dot" && /\d/.test(char)) {
+      const { value, nextIndex } = readIdentifier(input, index);
+      if (nextIndex === index + 1 && (char === "?" || char === "@")) {
+        throw new ExpressionSyntaxError({ kind: "unsupported", reason: "token" });
+      }
+      const open7 = skipWhitespace(input, nextIndex);
+      if (input[open7] === "(" && previousToken?.type !== "dot") {
+        const call = readCallSyntax(input, value, open7, site, source);
+        tokens.push({
+          type: "expression",
+          node: {
+            type: "call",
+            callee: { type: "identifier", name: value, ...astProvenance(nextIndex) },
+            arguments: call.arguments,
+            ...astProvenance(call.end)
+          },
+          offset: index
+        });
+        index = call.end;
+        continue;
+      }
+      tokens.push({ type: "identifier", value, ...provenance(nextIndex) });
+      index = nextIndex;
+      continue;
+    }
+    if (char === "$") {
+      const match = input.slice(index).match(/^\$[\dA-Fa-f]+/);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    if (char === "%") {
+      const match = input.slice(index).match(/^%[01]+/);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    if (/\d/.test(char)) {
+      if (/^0x/i.test(input.slice(index)) && !/[\dA-Fa-f]/.test(input[index + 2] ?? "")) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      const match = input.slice(index).match(/^(?:0x[\da-f]+|-?\d+(?:\.\d+)?)/i);
+      if (!match) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "literal" },
+          { message: "Invalid number: NaN" }
+        );
+      }
+      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
+      index += match[0].length;
+      continue;
+    }
+    throw new ExpressionSyntaxError({ kind: "unsupported", reason: "token" });
+  }
+  return tokens;
+}
+function readCallSyntax(input, name2, open7, site, source) {
+  const args = [];
+  let start = open7 + 1;
+  let depth = 0;
+  let quote = "";
+  const append3 = (end) => {
+    const raw = input.slice(start, end);
+    const text2 = raw.trim();
+    if (!text2) {
+      if (start > open7 + 1 && isSourceTextArgument(name2, args.length)) {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "operand" },
+          { message: `Missing function argument for '${name2}'.` }
+        );
+      }
+      return;
+    }
+    if (/^function\b/.test(text2)) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "operand" },
+        { message: `Missing function argument for '${name2}'.` }
+      );
+    }
+    const offset = start + raw.length - raw.trimStart().length;
+    const occurrence = source && { ...source, offset: source.offset + offset };
+    if (isSourceTextArgument(name2, args.length)) {
+      let value = text2;
+      if (text2.startsWith('"') || text2.startsWith("'")) {
+        const quoted = readQuotedString(text2, 0);
+        const trailing = text2.slice(quoted.nextIndex).trimStart();
+        if (trailing && /^["'A-Z_a-z]/.test(trailing)) {
+          throw new ExpressionSyntaxError(
+            { kind: "invalid", reason: "delimiter" },
+            {
+              message: `Expected ',' or ')' in function call arguments: ${input.slice(offset + quoted.nextIndex).trimStart()}`
+            }
+          );
+        }
+      }
+      if (text2.startsWith('"') && text2.endsWith('"') || text2.startsWith("'") && text2.endsWith("'")) {
+        value = text2.slice(1, -1);
+      }
+      args.push(attachRootSpan({ type: "sourceText", text: text2, value }, text2, occurrence));
+    } else {
+      args.push(parseExpressionAtSite(text2, site, occurrence));
+    }
+  };
+  for (let index = start; index < input.length; index++) {
+    const char = input[index];
+    if (quote) {
+      if (char === quote && input[index - 1] !== "\\") {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(" || char === "[") {
+      depth++;
+    } else if (char === "]") {
+      depth--;
+    } else if (char === ")") {
+      if (depth === 0) {
+        append3(index);
+        return { arguments: args, end: index + 1 };
+      }
+      depth--;
+    } else if (char === "," && depth === 0) {
+      append3(index);
+      start = index + 1;
+    }
+  }
+  let message = "Mismatched parentheses.";
+  if (depth === 0 && input.slice(start).trim()) {
+    message = "Expected ',' or ')' in function call arguments: ";
+  }
+  if (quote) {
+    message = "Unterminated string literal in function call.";
+  }
+  throw new ExpressionSyntaxError({ kind: "invalid", reason: "delimiter" }, { message });
+}
+function readQuotedString(input, start) {
+  const quote = input[start];
+  if (!isQuote(quote)) {
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "string" });
+  }
+  let value = "";
+  let index = start + 1;
+  while (index < input.length) {
+    const char = input[index];
+    if (char === quote && input[index - 1] !== "\\") {
+      return { value, nextIndex: index + 1, quote };
+    }
+    value += char;
+    index++;
+  }
+  throw new ExpressionSyntaxError({ kind: "invalid", reason: "string" });
+}
+function readIdentifier(input, start) {
+  let index = start;
+  if (input[index] === "?" && input[index + 1] === ".") {
+    index++;
+    while (input[index] === ".") {
+      index++;
+    }
+  }
+  if (input[index] === "@" || input[index] === "?") {
+    index++;
+  }
+  while (index < input.length && /\w/.test(input[index])) {
+    index++;
+  }
+  return { value: input.slice(start, index), nextIndex: index };
+}
+function readDefineReference(input, start) {
+  if (input[start + 1] === "{") {
+    let index = start + 2;
+    let braces = 1;
+    let content = "";
+    while (index < input.length) {
+      const char = input[index];
+      if (char === "{") {
+        braces++;
+      } else if (char === "}") {
+        braces--;
+        if (braces === 0) {
+          return {
+            token: { type: "defineReference", content, braced: true },
+            nextIndex: index + 1
+          };
+        }
+      }
+      content += char;
+      index++;
+    }
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "define" });
+  }
+  const { value, nextIndex } = readIdentifier(input, start + 1);
+  if (!value) {
+    throw new ExpressionSyntaxError({ kind: "invalid", reason: "define" });
+  }
+  return {
+    token: { type: "defineReference", name: value, braced: false },
+    nextIndex
+  };
+}
+var ExpressionParser = class {
+  constructor(tokens, sourceText) {
+    this.tokens = tokens;
+    this.sourceText = sourceText;
+  }
+  tokens;
+  sourceText;
+  index = 0;
+  parseExpression(minPrecedence = 0) {
+    let left = this.parsePrefix();
+    while (true) {
+      const token = this.peek();
+      if (!token || token.type !== "operator" || !isBinaryOperator(token.value)) {
+        break;
+      }
+      const precedence = binaryPrecedence[token.value];
+      if (precedence < minPrecedence) {
+        break;
+      }
+      this.consume();
+      const nextMinPrecedence = precedence + 1;
+      const next = this.peek();
+      if (this.isAtEnd() || next?.type === "identifier" && next.value === "function") {
+        throw new ExpressionSyntaxError(
+          { kind: "invalid", reason: "operand" },
+          { message: `Missing right operand for operator '${token.value}'.` }
+        );
+      }
+      const right = this.parseExpression(nextMinPrecedence);
+      left = {
+        type: "binary",
+        operator: token.value,
+        left,
+        right
+      };
+    }
+    return left;
+  }
+  isAtEnd() {
+    return this.index >= this.tokens.length;
+  }
+  parsePrefix() {
+    const token = this.peek();
+    if (!token) {
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" });
+    }
+    if (token.type === "operator" && isUnaryOperator(token.value)) {
+      this.consume();
+      return {
+        type: "unary",
+        operator: token.value,
+        argument: this.parsePrefix()
+      };
+    }
+    return this.parsePostfix(this.parsePrimary());
+  }
+  parsePrimary() {
+    if (this.peek()?.type === "dot") {
+      const firstSpan = this.peek()?.span;
+      let name2 = "";
+      while (this.match({ type: "dot" })) {
+        name2 += ".";
+      }
+      const token2 = this.consume();
+      if (token2?.type === "identifier") {
+        return {
+          type: "identifier",
+          name: name2 + token2.value,
+          ...firstSpan && {
+            span: createSourceSpan(firstSpan.start, token2.span.end, firstSpan.line)
+          }
+        };
+      }
+      if (token2?.type === "literal" && /^\d+$/.test(token2.value)) {
+        return {
+          type: "identifier",
+          name: name2 + token2.value,
+          ...firstSpan && {
+            span: createSourceSpan(firstSpan.start, token2.span.end, firstSpan.line)
+          }
+        };
+      }
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "member" });
+    }
+    const token = this.consume();
+    if (!token) {
+      throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" });
+    }
+    switch (token.type) {
+      case "expression":
+        return token.node;
+      case "literal": {
+        const numericValue = parseLiteralValue(token.value);
+        return {
+          type: "literal",
+          value: token.value,
+          ...Number.isFinite(numericValue) && { numericValue },
+          ...token.span && { span: token.span }
+        };
+      }
+      case "string":
+        return {
+          type: "string",
+          value: token.value,
+          quote: token.quote,
+          ...token.span && { span: token.span }
+        };
+      case "defineReference":
+        return token.braced ? {
+          type: "defineReference",
+          content: token.content,
+          braced: true,
+          ...token.span && { span: token.span }
+        } : {
+          type: "defineReference",
+          name: token.name,
+          braced: false,
+          ...token.span && { span: token.span }
+        };
+      case "identifier":
+        return { type: "identifier", name: token.value, ...token.span && { span: token.span } };
+      case "lparen": {
+        const next = this.peek();
+        if (next?.type === "identifier" && next.value === "function") {
+          throw new ExpressionSyntaxError(
+            { kind: "invalid", reason: "operand" },
+            { message: "Empty parenthesized expression." }
+          );
+        }
+        const expression = this.parseExpression();
+        this.expect("rparen");
+        return { ...expression, parenthesized: true };
+      }
+      case "comma":
+      case "dot":
+      case "lbracket":
+      case "operator":
+      case "rbracket":
+      case "rparen":
+        break;
+    }
+    throw new ExpressionSyntaxError(
+      { kind: "invalid", reason: "operand" },
+      { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` }
+    );
+  }
+  parsePostfix(expression) {
+    let current = expression;
+    while (true) {
+      if (this.match({ type: "lparen" })) {
+        if (current.type !== "identifier") {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        current = {
+          type: "call",
+          callee: current,
+          arguments: this.parseCallArguments()
+        };
+        continue;
+      }
+      if (this.match({ type: "dot" })) {
+        if (!isReferenceExpressionNode(current)) {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        const property = this.consume();
+        if (!property || property.type !== "identifier") {
+          throw new ExpressionSyntaxError({ kind: "invalid", reason: "member" });
+        }
+        current = {
+          type: "member",
+          object: current,
+          property: {
+            type: "identifier",
+            name: property.value,
+            ...property.span && { span: property.span }
+          }
+        };
+        continue;
+      }
+      if (this.match({ type: "lbracket" })) {
+        if (!isReferenceExpressionNode(current)) {
+          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
+        }
+        const indexExpression = this.parseExpression();
+        this.expect("rbracket");
+        current = {
+          type: "index",
+          object: current,
+          index: indexExpression
+        };
+        continue;
+      }
+      return current;
+    }
+  }
+  parseCallArguments() {
+    const args = [];
+    if (this.match({ type: "rparen" })) {
+      return args;
+    }
+    do {
+      args.push(this.parseExpression());
+    } while (this.match({ type: "comma" }));
+    this.expect("rparen");
+    return args;
+  }
+  /**
+   * Expects a value.
+   * @param {Token["type"]} type The type.
+   */
+  expect(type) {
+    const token = this.consume();
+    if (!token || token.type !== type) {
+      throw new ExpressionSyntaxError(
+        { kind: "invalid", reason: "delimiter" },
+        {
+          message: type === "rbracket" ? "Mismatched brackets in struct index" : "Mismatched parentheses."
+        }
+      );
+    }
+  }
+  match(expected) {
+    const token = this.peek();
+    if (token && token.type === expected.type) {
+      this.index++;
+      return true;
+    }
+    return false;
+  }
+  consume() {
+    const token = this.tokens[this.index];
+    this.index++;
+    return token;
+  }
+  peek() {
+    return this.tokens[this.index];
+  }
+};
+function isBinaryOperator(value) {
+  return value in binaryPrecedence;
+}
+
+// packages/core/src/ir/directive-arguments.ts
+function parseDirectiveExpression(text2, numeric2 = true, source) {
+  recordExecutionParser("directive");
+  if (/![\w{]/.test(text2)) {
+    return { type: "template", form: "source", text: text2 };
+  }
+  const node = parseExpressionAtSite(text2, "statement", source);
+  return numeric2 ? dataResolutionExpression(text2, node) : node;
+}
+function unquoteDirectiveText(text2) {
+  const quote = text2[0];
+  if ((quote === '"' || quote === "'") && text2.endsWith(quote) && text2.length > 1) {
+    return text2.slice(1, -1);
+  }
+  return text2;
+}
+function dataResolutionExpression(text2, node) {
+  if (node.parenthesized && (node.type === "member" || node.type === "index" || node.type === "literal" && node.value.includes("."))) {
+    return { type: "identifier", name: text2, ...node.span ? { span: node.span } : {} };
+  }
+  return node;
+}
+
+// packages/core/src/ir/source-syntax.ts
+function copySyntaxValue(value) {
+  return copySyntaxTree(value, false);
+}
+function copySyntaxTree(value, immutable) {
+  const ancestors = /* @__PURE__ */ new Set();
+  let nodes = 0;
+  const copy = (entry, depth) => {
+    if (++nodes > 1e6) {
+      throw new Error("Plugin syntax payload exceeds structural limits (1,000,000 values).");
+    }
+    if (depth > 128) {
+      throw new Error("Plugin syntax payload exceeds structural limits (128 nesting levels).");
+    }
+    if (entry === null || typeof entry === "string" || typeof entry === "boolean") {
+      return entry;
+    }
+    if (typeof entry === "number" && Number.isFinite(entry)) {
+      return entry;
+    }
+    if (typeof entry !== "object") {
+      throw new Error("Plugin syntax payload must be plain JSON data.");
+    }
+    if (ancestors.has(entry)) {
+      throw new Error("Plugin syntax payload must be acyclic.");
+    }
+    const prototype = Object.getPrototypeOf(entry);
+    if (!Array.isArray(entry) && prototype !== Object.prototype && prototype !== null) {
+      throw new Error("Plugin syntax payload must have a plain prototype.");
+    }
+    if (Object.getOwnPropertySymbols(entry).length) {
+      throw new Error("Plugin syntax payload cannot contain symbol properties.");
+    }
+    ancestors.add(entry);
+    try {
+      const keys = Object.getOwnPropertyNames(entry);
+      if (Array.isArray(entry)) {
+        const result2 = [];
+        for (let index = 0; index < entry.length; index++) {
+          const descriptor2 = Object.getOwnPropertyDescriptor(entry, index);
+          if (!descriptor2) {
+            throw new Error("Plugin syntax arrays must be dense.");
+          }
+          if (!("value" in descriptor2)) {
+            throw new Error("Plugin syntax payload cannot contain accessors.");
+          }
+          result2.push(copy(descriptor2.value, depth + 1));
+        }
+        if (keys.length !== entry.length + 1) {
+          throw new Error("Plugin syntax arrays cannot have custom properties.");
+        }
+        return immutable ? Object.freeze(result2) : result2;
+      }
+      const result = {};
+      for (const key3 of keys) {
+        const descriptor2 = Object.getOwnPropertyDescriptor(entry, key3);
+        if (!descriptor2 || !("value" in descriptor2)) {
+          throw new Error("Plugin syntax payload cannot contain accessors.");
+        }
+        const copied = copy(descriptor2.value, depth + 1);
+        if (Object.hasOwn(Object.prototype, key3)) {
+          Object.defineProperty(result, key3, {
+            value: copied,
+            enumerable: true,
+            writable: true,
+            configurable: true
+          });
+        } else {
+          result[key3] = copied;
+        }
+      }
+      return immutable ? Object.freeze(result) : result;
+    } finally {
+      ancestors.delete(entry);
+    }
+  };
+  return copy(value, 0);
+}
+
+// packages/core/src/ir/syntax-codec.ts
+var syntaxString = (value) => typeof value === "string";
+var syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
+var syntaxBoolean = (value) => typeof value === "boolean";
+function syntaxLiteral(literal) {
+  return (value) => value === literal;
+}
+function syntaxArray(guard) {
+  return (value) => Array.isArray(value) && value.every(guard);
+}
+function syntaxOptional(guard) {
+  return (value) => value === void 0 || guard(value);
+}
+function syntaxObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function syntaxRecord(shape) {
+  return (value) => {
+    if (!syntaxObject(value)) {
+      return false;
+    }
+    const fields2 = value;
+    return Object.keys(fields2).every((key3) => Object.hasOwn(shape, key3)) && Object.entries(shape).every(([key3, guard]) => guard(fields2[key3]));
+  };
+}
+function syntaxUnion(...guards) {
+  return (value) => guards.some((guard) => guard(value));
+}
+var syntaxSpan = syntaxRecord({
+  start: syntaxNumber,
+  end: syntaxNumber,
+  line: syntaxOptional(syntaxNumber),
+  columnStart: syntaxOptional(syntaxNumber),
+  columnEnd: syntaxOptional(syntaxNumber)
+});
+var identifier = (value) => syntaxExpression(value) && value.type === "identifier";
+var reference = (value) => syntaxExpression(value) && ["identifier", "defineReference", "relativeReference", "member", "index"].includes(value.type);
+var outcome = syntaxUnion(
+  syntaxRecord({ kind: syntaxLiteral("native") }),
+  syntaxRecord({
+    kind: syntaxLiteral("compatibility"),
+    reason: syntaxUnion(
+      syntaxLiteral("relative-label"),
+      syntaxLiteral("macro-argument"),
+      syntaxLiteral("variadic-template")
+    )
+  }),
+  syntaxRecord({
+    kind: syntaxLiteral("invalid"),
+    reason: syntaxUnion(
+      ...[
+        "empty",
+        "literal",
+        "string",
+        "define",
+        "operand",
+        "delimiter",
+        "member",
+        "trailing-tokens"
+      ].map(syntaxLiteral)
+    )
+  }),
+  syntaxRecord({
+    kind: syntaxLiteral("unsupported"),
+    reason: syntaxUnion(
+      syntaxLiteral("token"),
+      syntaxLiteral("postfix"),
+      syntaxLiteral("unclassified")
+    )
+  })
+);
+var syntaxExpression = (value) => {
+  if (!syntaxObject(value)) {
+    return false;
+  }
+  const node = value;
+  if (node.span !== void 0 && !syntaxSpan(node.span)) {
+    return false;
+  }
+  if (node.parenthesized !== void 0 && !syntaxBoolean(node.parenthesized)) {
+    return false;
+  }
+  switch (node.type) {
+    case "literal":
+      return syntaxString(node.value) && (node.numericValue === void 0 || syntaxNumber(node.numericValue));
+    case "identifier":
+      return syntaxString(node.name);
+    case "string":
+      return syntaxString(node.value) && (node.quote === '"' || node.quote === "'");
+    case "sourceText":
+      return syntaxString(node.text) && syntaxString(node.value);
+    case "defineReference":
+      return syntaxBoolean(node.braced) && (syntaxString(node.name) || syntaxString(node.content));
+    case "relativeReference":
+      return (node.direction === 1 || node.direction === -1) && syntaxNumber(node.count) && ["relative", "unnamed", "macro"].includes(String(node.stream));
+    case "member":
+      return reference(node.object) && identifier(node.property);
+    case "index":
+      return reference(node.object) && syntaxExpression(node.index);
+    case "call":
+      return identifier(node.callee) && syntaxArray(syntaxExpression)(node.arguments);
+    case "unary":
+      return ["<:", "<", ">", "^", "~", "-", "+"].includes(String(node.operator)) && syntaxExpression(node.argument);
+    case "binary":
+      return [
+        "**",
+        "*",
+        "/",
+        "%",
+        "+",
+        "-",
+        "<<",
+        ">>",
+        "&",
+        "|",
+        "^",
+        "<",
+        ">",
+        "<=",
+        ">=",
+        "==",
+        "=",
+        "!=",
+        "&&",
+        "||"
+      ].includes(String(node.operator)) && syntaxExpression(node.left) && syntaxExpression(node.right);
+    case "range":
+      return syntaxExpression(node.start) && syntaxExpression(node.end);
+    case "template":
+      return ["parameter", "variadic", "source"].includes(String(node.form)) && syntaxString(node.text) && (node.index === void 0 || syntaxExpression(node.index));
+    case "error":
+      return syntaxString(node.value) && syntaxString(node.message) && outcome(node.outcome);
+    default:
+      return false;
+  }
+};
+function syntaxCodec(version, parse4, guard) {
+  return {
+    version,
+    parse(input) {
+      return copySyntaxValue(JSON.parse(JSON.stringify(parse4(input))));
+    },
+    validate: guard,
+    read(payload) {
+      if (!guard(payload)) {
+        throw new Error("Invalid typed directive payload.");
+      }
+      return payload;
+    }
+  };
+}
+
+// packages/core/src/syntax-profile.ts
+var ASAR_SYNTAX_PROFILE = Object.freeze({
+  id: "asar",
+  preserveLeadingWhitespace: false,
+  splitColonStatements: true,
+  splitRelativeLabelStatements: true,
+  leadingDotLabels: true,
+  directivePrefixes: Object.freeze(["@"]),
+  cheapLocalPrefix: "",
+  fileLocalSymbols: false
+});
+var NATIVE_SYNTAX_PROFILE = Object.freeze({
+  id: "native",
+  preserveLeadingWhitespace: true,
+  splitColonStatements: false,
+  splitRelativeLabelStatements: false,
+  leadingDotLabels: true,
+  directivePrefixes: Object.freeze([]),
+  cheapLocalPrefix: "",
+  fileLocalSymbols: false
+});
+var CA65_SYNTAX_PROFILE = Object.freeze({
+  id: "ca65",
+  preserveLeadingWhitespace: true,
+  splitColonStatements: false,
+  splitRelativeLabelStatements: false,
+  leadingDotLabels: false,
+  directivePrefixes: Object.freeze(["."]),
+  cheapLocalPrefix: "@",
+  fileLocalSymbols: true
+});
+
+// packages/core/src/services/command-text-service.ts
+var splitRespectingFunctions = (input) => {
+  const result = [];
+  let current = "";
+  let parenDepth = 0;
+  let inQuotes = false;
+  let quoteChar = "";
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (char === quoteChar) {
+        inQuotes = false;
+      }
+    }
+    if (!inQuotes) {
+      if (char === "(") {
+        parenDepth++;
+      } else if (char === ")") {
+        parenDepth--;
+      } else if (char === "," && parenDepth === 0) {
+        result.push(current.trim());
+        current = "";
+        continue;
+      }
+    }
+    current += char;
+  }
+  if (current) {
+    result.push(current.trim());
+  }
+  return result;
+};
+
+// packages/core/src/ir/data-node.ts
+function parseDataOperand(text2) {
+  let value = text2.trim();
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    return { text: text2, expression: { type: "string", quote, value: value.slice(1, -1) } };
+  }
+  if (value.startsWith("#")) {
+    value = value.slice(1);
+  }
+  if (/![\w{]/.test(value)) {
+    return { text: text2, expression: { type: "template", form: "source", text: value } };
+  }
+  return {
+    text: text2,
+    expression: dataResolutionExpression(value, parseExpressionAtSite(value, "statement"))
+  };
+}
+function parseDataList(text2) {
+  return splitRespectingFunctions(text2).map(parseDataOperand);
+}
+
+// packages/core/src/ir/parsed-operand.ts
+function parseInstructionOperands(mnemonic, text2, grammar2) {
+  const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
+  let width;
+  if (suffix === "b") {
+    width = 1;
+  } else if (suffix === "w") {
+    width = 2;
+  } else if (suffix === "l") {
+    width = 3;
+  }
+  const mnemonicBit = grammar2.bitSelectors ? /^(?:bbs|bbc|set1|clr1)([0-7])$/i.exec(mnemonic)?.[1] : void 0;
+  const result = {
+    operands: []
+  };
+  if (width) {
+    result.width = width;
+  }
+  if (mnemonicBit !== void 0) {
+    result.mnemonicBit = Number(mnemonicBit);
+  }
+  if (!text2.trim()) {
+    return result;
+  }
+  if (grammar2.templates !== false && /![\w{]|<[^>]+>|\\[A-Z_a-z]/.test(text2)) {
+    result.operands.push({
+      kind: "template",
+      fragment: sourceFragment(text2, []),
+      structure: parseInstructionOperands(mnemonic, text2, { ...grammar2, templates: false }),
+      span: { start: 0, end: text2.length }
+    });
+    return result;
+  }
+  try {
+    const parts2 = operandParts(text2, ",");
+    for (let index = 0; index < parts2.length; index++) {
+      let part = parts2[index];
+      const next = parts2[index + 1];
+      if (grammar2.commaIndex && next && grammar2.indexRegisters.includes(next.text.toLowerCase())) {
+        part = { text: text2.slice(part.start, next.end), start: part.start, end: next.end };
+        index++;
+      }
+      result.operands.push(parseOperand(part.text, part.start, grammar2));
+    }
+  } catch (cause) {
+    result.operands = [
+      {
+        kind: "invalid",
+        message: cause instanceof Error ? cause.message : String(cause),
+        span: { start: 0, end: text2.length }
+      }
+    ];
+  }
+  return result;
+}
+function operandParts(text2, separator) {
+  const parts2 = [];
+  const stack = [];
+  let quote = "";
+  let start = 0;
+  const append3 = (end) => {
+    const raw = text2.slice(start, end);
+    const value = raw.trim();
+    const offset = start + raw.length - raw.trimStart().length;
+    parts2.push({ text: value, start: offset, end: offset + value.length });
+  };
+  for (let index = 0; index < text2.length; index++) {
+    const char = text2[index];
+    if (quote) {
+      if (char === "\\") {
+        index++;
+      } else if (char === quote) {
+        quote = "";
+      }
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if ("([{".includes(char)) {
+      stack.push(char);
+    } else if (")]}".includes(char)) {
+      const opening = { ")": "(", "]": "[", "}": "{" }[char];
+      if (stack.pop() !== opening) {
+        throw new Error("Mismatched operand delimiters.");
+      }
+    } else if (char === separator && stack.length === 0) {
+      append3(index);
+      start = index + 1;
+    }
+  }
+  if (quote || stack.length) {
+    throw new Error("Unclosed operand delimiter.");
+  }
+  append3(text2.length);
+  return parts2;
+}
+function scalar(text2, start, force) {
+  const expression = parseDirectiveExpression(text2, true, { text: text2, offset: 0, line: 0 });
+  let spelling = "expression";
+  let literalBytes;
+  const hex5 = /^\$([\da-f]+)$/i.exec(text2);
+  const binary = /^%([01]+)$/.exec(text2);
+  if (hex5) {
+    spelling = "hex";
+    literalBytes = Math.max(1, Math.ceil(hex5[1].length / 2));
+  } else if (binary) {
+    spelling = "binary";
+    literalBytes = Math.max(1, Math.ceil(binary[1].length / 8));
+  } else if (/^-?\d+(?:\.\d+)?$/.test(text2)) {
+    spelling = "decimal";
+  } else if (isReferenceExpressionNode(expression)) {
+    spelling = "symbol";
+  }
+  return {
+    expression,
+    ...expression.type === "template" ? {
+      referenceExpression: parseExpressionAtSite(text2, "statement", {
+        text: text2,
+        offset: 0,
+        line: 0
+      })
+    } : {},
+    width: {
+      spelling,
+      grouped: expression.parenthesized === true,
+      ...force ? { forcedBytes: force } : {},
+      ...literalBytes ? { literalBytes } : {}
+    },
+    span: { start, end: start + text2.length }
+  };
+}
+function parseOperand(text2, start, grammar2) {
+  const span = { start, end: start + text2.length };
+  if (!text2) {
+    return { kind: "invalid", message: "Missing operand.", span };
+  }
+  const name2 = text2.toLowerCase();
+  if (grammar2.registers.includes(name2)) {
+    return { kind: "register", name: name2, span };
+  }
+  if (text2.startsWith("#")) {
+    const value = text2.slice(1).trim();
+    return { kind: "immediate", value: scalar(value, start + text2.indexOf(value, 1)), span };
+  }
+  let body = text2;
+  let offset = start;
+  let force;
+  const prefix = grammar2.ca65Widths ? /^([afz]):\s*/i.exec(body) : void 0;
+  if (prefix) {
+    const code = prefix[1].toLowerCase();
+    if (code === "z") {
+      force = 1;
+    } else if (code === "a") {
+      force = 2;
+    } else {
+      force = 3;
+    }
+    body = body.slice(prefix[0].length);
+    offset += prefix[0].length;
+  }
+  let inverted = false;
+  if (grammar2.bitSelectors && body.startsWith("/")) {
+    inverted = true;
+    body = body.slice(1);
+    offset++;
+  }
+  let index;
+  const outside = grammar2.commaIndex ? operandParts(body, ",") : operandParts(body, "+");
+  if ((grammar2.commaIndex || grammar2.plusIndex) && outside.length > 1) {
+    const last = outside.at(-1);
+    if (grammar2.indexRegisters.includes(last.text.toLowerCase())) {
+      index = {
+        register: last.text.toLowerCase(),
+        position: "outside",
+        separator: grammar2.commaIndex ? "," : "+"
+      };
+      body = body.slice(0, last.start - 1).replace(/[+,]\s*$/, "").trimEnd();
+    }
+  }
+  let postIncrement = false;
+  if (grammar2.plusIndex && /\)\s*\+$/.test(body)) {
+    postIncrement = true;
+    body = body.slice(0, body.lastIndexOf("+")).trimEnd();
+  }
+  let delimiter = "none";
+  if (body.startsWith("(") && body.endsWith(")") || body.startsWith("[") && body.endsWith("]")) {
+    const inner = body.slice(1, -1);
+    try {
+      operandParts(inner, ",");
+      delimiter = body[0] === "(" ? "parentheses" : "brackets";
+      const trimmed = inner.trim();
+      offset += 1 + inner.length - inner.trimStart().length;
+      body = trimmed;
+    } catch {
+    }
+  }
+  if (delimiter !== "none" && grammar2.plusIndex && body.endsWith("+")) {
+    const candidate = body.slice(0, -1).trimEnd();
+    if (grammar2.registers.includes(candidate.toLowerCase())) {
+      postIncrement = true;
+      body = candidate;
+    }
+  }
+  if (delimiter !== "none") {
+    const inside = operandParts(body, grammar2.commaIndex ? "," : "+");
+    if (inside.length === 2 && grammar2.indexRegisters.includes(inside[1].text.toLowerCase())) {
+      if (index) {
+        const address4 = scalar(inside[0].text, offset + inside[0].start, force);
+        return {
+          kind: "memory",
+          address: address4,
+          delimiter,
+          index,
+          innerIndex: inside[1].text.toLowerCase(),
+          span
+        };
+      }
+      index = {
+        register: inside[1].text.toLowerCase(),
+        position: "inside",
+        separator: grammar2.commaIndex ? "," : "+"
+      };
+      body = inside[0].text;
+      offset += inside[0].start;
+    }
+  }
+  let bit;
+  const bitMatch = grammar2.bitSelectors ? /\.([0-7])$/.exec(body) : void 0;
+  if (bitMatch) {
+    bit = { selector: scalar(bitMatch[1], offset + body.length - 1), inverted };
+    body = body.slice(0, bitMatch.index).trimEnd();
+  }
+  const register2 = body.toLowerCase();
+  const address3 = delimiter !== "none" && grammar2.registers.includes(register2) ? {
+    kind: "register",
+    name: register2,
+    span: { start: offset, end: offset + body.length }
+  } : scalar(body, offset, force);
+  return {
+    kind: "memory",
+    address: address3,
+    delimiter,
+    span,
+    ...index ? { index } : {},
+    ...postIncrement ? { postIncrement } : {},
+    ...bit ? { bit } : {}
+  };
+}
+
+// packages/core/src/plugin/contracts.ts
+var PLUGIN_API_VERSION = 2;
+function definePlugin(plugin2) {
+  return plugin2;
+}
+
+// packages/core/src/plugin/diagnostics.ts
+var PluginError = class extends Error {
+  code;
+  pluginId;
+  pluginModule;
+  contributionId;
+  targetId;
+  cause;
+  constructor(message, context) {
+    super(message, { cause: context.cause });
+    this.name = "PluginError";
+    this.code = context.code;
+    this.pluginId = context.pluginId;
+    this.pluginModule = context.pluginModule;
+    this.contributionId = context.contributionId;
+    this.targetId = context.targetId;
+    this.cause = context.cause;
+  }
+};
+
+// packages/core/src/services/source-link-recipe.ts
+function addressedSourceLinkRecipe(options) {
+  const regions = [];
+  const placements = [];
+  const prefix = options.prefix ?? [];
+  let cursor = prefix.length;
+  if (prefix.length) {
+    regions.push({
+      name: "__source_header",
+      start: 0,
+      size: prefix.length,
+      outputOffset: 0,
+      initialBytes: [...prefix]
+    });
+  }
+  const entries = options.sections.map((section) => ({ ...section, outputOffset: options.outputOffset(section.loadAddress) })).toSorted((a, b) => a.outputOffset - b.outputOffset || a.size - b.size);
+  const gap = (end) => {
+    if (end > cursor) {
+      regions.push({
+        name: `__source_gap_${cursor}`,
+        start: 0,
+        size: end - cursor,
+        outputOffset: cursor,
+        fillByte: options.fillByte
+      });
+    }
+    cursor = Math.max(cursor, end);
+  };
+  for (const entry of entries) {
+    if (!Number.isSafeInteger(entry.outputOffset) || entry.outputOffset < prefix.length) {
+      throw new Error(`Source ORG for '${entry.section}' does not map to payload storage.`);
+    }
+    if (entry.size && entry.outputOffset < cursor) {
+      throw new Error(
+        `Source contributions overlap at '${entry.section}'; use the absolute patch workflow for overlapping writes.`
+      );
+    }
+    gap(entry.outputOffset);
+    const load = `${entry.section}:load`;
+    const run = entry.runAddress === entry.loadAddress ? load : `${entry.section}:run`;
+    regions.push({
+      name: load,
+      start: entry.loadAddress,
+      size: entry.size,
+      outputOffset: entry.outputOffset,
+      fillByte: options.fillByte
+    });
+    if (run !== load) {
+      regions.push({ name: run, start: entry.runAddress, size: entry.size });
+    }
+    placements.push({ section: entry.section, load, run });
+    cursor = Math.max(cursor, entry.outputOffset + entry.size);
+  }
+  if (options.outputSize !== void 0) {
+    if (cursor > options.outputSize) {
+      throw new Error("Source layout exceeds its configured container size.");
+    }
+    gap(options.outputSize);
+  }
+  return {
+    target: options.target,
+    targetOptions: options.targetOptions,
+    checksumPolicy: options.checksumPolicy ?? "preserve",
+    regions,
+    placements
+  };
+}
+
+// packages/core/src/ir/relocatable-instruction.ts
+var RelocatableInstruction = class {
+  constructor(frame, context) {
+    this.frame = frame;
+    this.context = context;
+  }
+  frame;
+  context;
+  parts = [];
+  size = 0;
+  /** Opcode bytes are completely known before placement; symbolic opcode/register choices are rejected. */
+  opcode(...values) {
+    for (const value of values) {
+      if (!Number.isInteger(value) || value < 0 || value > 255) {
+        throw this.frame.error(`Invalid opcode byte: ${value}`);
+      }
+      this.parts.push(value);
+      this.size++;
+    }
+    return this;
+  }
+  /** Retain an operand's pure expression and its target-owned encoding contract. */
+  field(value, encoding) {
+    this.parts.push({ value, encoding });
+    this.size += encoding.width;
+    return this;
+  }
+  /** Relative PC anchors are assigned after the entire instruction size is known. */
+  finish(form, state = null) {
+    this.frame.choose(form, this.size, state);
+    if (this.context) {
+      if (!this.context.emission.writeRelocation) {
+        throw this.frame.error("Encoder host does not support relocatable fields.");
+      }
+      for (const part of this.parts) {
+        if (typeof part === "number") {
+          this.context.emission.write1(part);
+        } else {
+          let encoding = part.encoding;
+          if (encoding.kind === "relative" && !encoding.pc) {
+            const start = this.frame.sectionPosition();
+            encoding = {
+              ...encoding,
+              pc: { section: start.section, offset: this.frame.instructionAddress + this.size }
+            };
+          }
+          const expression = "expression" in part.value ? this.frame.compileLink(part.value) : part.value;
+          this.context.emission.writeRelocation(expression, encoding);
+        }
+      }
+    }
+    return this.size;
+  }
+};
+
+// packages/disassembler/src/source-project/build-coverage.ts
+function isRecord20(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isSourceBuildCoverage(value) {
+  if (!isRecord20(value)) {
+    return false;
+  }
+  const record7 = value;
+  return typeof record7.romSha256 === "string" && /^[\da-f]{64}$/.test(record7.romSha256) && [record7.totalBytes, record7.remainingBytes, record7.convertedBytes].every(
+    (count3) => typeof count3 === "number" && Number.isSafeInteger(count3) && count3 >= 0
+  ) && Number(record7.remainingBytes) + Number(record7.convertedBytes) === record7.totalBytes;
+}
+
+// packages/vscode-extension/src/analysis/project-discovery.ts
 var import_vscode = require("vscode");
+var ANALYSIS_PROJECT_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
+var selectedSourceRoot;
+function initializeAnalysisProjectDiscovery(root) {
+  selectedSourceRoot = root;
+  return {
+    dispose() {
+      if (selectedSourceRoot === root) {
+        selectedSourceRoot = void 0;
+      }
+    }
+  };
+}
+var selectedAnalysisSourceRoot = () => selectedSourceRoot?.();
+var findAnalysisProjectDirectories = async () => {
+  const source = selectedSourceRoot?.();
+  if (source) {
+    return [readSourceProjectLocalInputs(source).evidence];
+  }
+  const configured = import_vscode.workspace.getConfiguration("asm").get("analysisProject", "").trim();
+  if (configured !== "") {
+    const folders = import_vscode.workspace.workspaceFolders ?? [];
+    const candidates = path17.isAbsolute(configured) ? [configured] : folders.map(({ uri }) => path17.resolve(uri.fsPath, configured));
+    return [
+      ...new Set(
+        candidates.map(
+          (candidate) => path17.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path17.dirname(candidate) : candidate
+        )
+      )
+    ].toSorted();
+  }
+  const manifests = await import_vscode.workspace.findFiles(
+    `**/${ANALYSIS_PROJECT_MANIFEST}`,
+    ANALYSIS_PROJECT_EXCLUDE,
+    32
+  );
+  return [
+    ...new Set(
+      manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path17.dirname(fsPath))
+    )
+  ].toSorted();
+};
+
+// packages/vscode-extension/src/analysis/debug-maps.ts
+var import_node_crypto17 = require("node:crypto");
+var fs14 = __toESM(require("node:fs"), 1);
+var path19 = __toESM(require("node:path"), 1);
+var import_vscode2 = require("vscode");
+
+// packages/vscode-extension/src/source/project-path.ts
+var import_promises9 = __toESM(require("node:fs/promises"), 1);
+var import_node_path16 = __toESM(require("node:path"), 1);
+async function findSourceRoot(directory) {
+  let current = import_node_path16.default.resolve(directory);
+  for (; ; ) {
+    try {
+      await import_promises9.default.access(import_node_path16.default.join(current, ".uttori/project.json"));
+      return current;
+    } catch {
+    }
+    try {
+      await import_promises9.default.access(import_node_path16.default.join(current, ".git"));
+      return void 0;
+    } catch {
+    }
+    const parent = import_node_path16.default.dirname(current);
+    if (parent === current) {
+      return void 0;
+    }
+    current = parent;
+  }
+}
+
+// packages/vscode-extension/src/analysis/debug-maps.ts
+var DEBUG_MAP_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
+var sortedUnique3 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
+function isRecord21(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStoredDebugMap2(value) {
+  return isRecord21(value) && isRecord21(value.fingerprint) && typeof value.fingerprint.algorithm === "string" && typeof value.fingerprint.value === "string" && isRecord21(value.output) && typeof value.output.size === "number" && typeof value.output.sha256 === "string" && typeof value.target === "string" && Array.isArray(value.sources) && Array.isArray(value.ranges) && (value.instructions === void 0 || Array.isArray(value.instructions)) && (value.assets === void 0 || Array.isArray(value.assets));
+}
+function isAcceptedDebugMap2(map) {
+  return map.format === DEBUG_MAP_FORMAT && map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION && map.fingerprint.algorithm === "sha256";
+}
+function isIdentityList(value) {
+  return Array.isArray(value);
+}
+var resolvedConfigurationPath = (value, root) => path19.isAbsolute(value) ? value : path19.resolve(root ?? process.cwd(), value);
+var analysisSourceSha256 = (file) => (0, import_node_crypto17.createHash)("sha256").update(fs14.readFileSync(file)).digest("hex");
+var sourcePaths = (source, candidate) => {
+  if (path19.isAbsolute(source.path)) {
+    return [source.path];
+  }
+  return sortedUnique3([
+    ...candidate.sourceRoots.map((root) => path19.resolve(root, source.path)),
+    path19.resolve(path19.dirname(candidate.file), source.path),
+    ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => path19.resolve(uri.fsPath, source.path))
+  ]);
+};
+var currentAnalysisSourcePath = (source, candidate, expectedFile) => sourcePaths(source, candidate).find((file) => {
+  if (expectedFile !== void 0 && path19.resolve(file) !== expectedFile) {
+    return false;
+  }
+  try {
+    return fs14.statSync(file).isFile() && analysisSourceSha256(file) === source.sha256;
+  } catch {
+    return false;
+  }
+});
+var findAnalysisDebugMapCandidates = async (identity2) => {
+  const identities = isIdentityList(identity2) ? identity2 : [identity2];
+  const candidates = [];
+  for (const descriptor2 of await discoverAnalysisDebugMapFiles()) {
+    try {
+      const parsed = JSON.parse(fs14.readFileSync(descriptor2.file, "utf8"));
+      if (!isStoredDebugMap2(parsed)) {
+        continue;
+      }
+      if (validateDebugMap(parsed).length > 0 || !isAcceptedDebugMap2(parsed) || !identities.some(
+        (candidate) => parsed.target === candidate.target && parsed.output.sha256 === candidate.romContentSha256 && parsed.output.size === candidate.romContentSize
+      )) {
+        continue;
+      }
+      candidates.push({ ...descriptor2, map: parsed });
+    } catch {
+    }
+  }
+  return candidates;
+};
+var discoverAnalysisDebugMapFiles = async () => {
+  const active = import_vscode2.debug.activeDebugSession;
+  const configuredMap = active?.type === "uttori-asm" && typeof active.configuration.debugMap === "string" ? resolvedConfigurationPath(active.configuration.debugMap, active.workspaceFolder?.uri.fsPath) : void 0;
+  const configuredRoot = active?.type === "uttori-asm" && typeof active.configuration.sourceRoot === "string" ? resolvedConfigurationPath(
+    active.configuration.sourceRoot,
+    active.workspaceFolder?.uri.fsPath
+  ) : active?.workspaceFolder?.uri.fsPath;
+  const discovered = await import_vscode2.workspace.findFiles("**/*.debug.json", DEBUG_MAP_EXCLUDE, 64);
+  const sourceRoots = [
+    ...new Set(
+      (await Promise.all(
+        (import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => findSourceRoot(uri.fsPath))
+      )).filter((root) => !!root)
+    )
+  ];
+  const selected = [];
+  for (const root of sourceRoots) {
+    try {
+      const directory = path19.join(root, ".uttori-local/builds");
+      const receiptFile = path19.join(directory, "current.json");
+      if ((await fs14.promises.stat(receiptFile)).size > 1024 * 1024) {
+        continue;
+      }
+      const receipt = JSON.parse(await fs14.promises.readFile(receiptFile, "utf8"));
+      if (!isRecord21(receipt) || typeof receipt.inputSha256 !== "string" || typeof receipt.debugMapFile !== "string" || !/^[\da-f]{64}$/.test(receipt.inputSha256)) {
+        continue;
+      }
+      const file = path19.join(directory, receipt.inputSha256, "program.sfc.debug.json");
+      if (receipt.debugMapFile === file) {
+        selected.push(file);
+      }
+    } catch {
+    }
+  }
+  const files = sortedUnique3([
+    ...configuredMap ? [configuredMap] : [],
+    ...selected,
+    ...discovered.filter(
+      ({ scheme, fsPath }) => scheme === "file" && !sourceRoots.some((root) => fsPath.startsWith(root + path19.sep))
+    ).map(({ fsPath }) => fsPath)
+  ]);
+  return files.map((file) => {
+    const containingWorkspace = import_vscode2.workspace.getWorkspaceFolder(import_vscode2.Uri.file(file));
+    const ancestors = [];
+    if (containingWorkspace) {
+      const root = containingWorkspace.uri.fsPath;
+      for (let directory = path19.dirname(file); directory !== root && directory.startsWith(`${root}${path19.sep}`); directory = path19.dirname(directory)) {
+        ancestors.push(directory);
+      }
+    }
+    return {
+      file,
+      sourceRoots: sortedUnique3([
+        ...file === configuredMap && configuredRoot ? [configuredRoot] : [],
+        ...sourceRoots.filter((root) => file.startsWith(root + path19.sep)),
+        ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => uri.fsPath),
+        ...ancestors
+      ])
+    };
+  });
+};
+var analysisDebugMapRanges = (map, location) => {
+  const ranges = [
+    ...debugMapRangesForAddress(map, location.addressSpace, location.address),
+    ...location.outputOffsets.flatMap(
+      (outputOffset) => debugMapRangesForAddress(map, location.addressSpace, location.address, { outputOffset })
+    )
+  ];
+  const unique2 = new Map(
+    ranges.map((range) => [
+      [
+        range.architecture,
+        range.addressSpace,
+        range.start,
+        range.end,
+        range.outputStart ?? "",
+        range.sourceId,
+        range.line
+      ].join(":"),
+      range
+    ])
+  );
+  const hints = new Set(location.architectureHints);
+  return [...unique2.values()].filter((range) => hints.size === 0 || hints.has(range.architecture));
+};
 
 // packages/vscode-extension/src/analysis/worker-client.ts
 var import_node_child_process2 = require("node:child_process");
-var path17 = __toESM(require("node:path"), 1);
+var path20 = __toESM(require("node:path"), 1);
 var AnalysisRequestCancelled = class extends Error {
 };
 var interactiveOperations = /* @__PURE__ */ new Set([
@@ -39488,7 +40518,7 @@ var initializeAnalysisWorker = (extensionRoot, options) => {
     client = void 0;
   }
   return client ??= new AnalysisWorkerClient(
-    path17.join(extensionRoot, "out", "analysis-worker.cjs"),
+    path20.join(extensionRoot, "out", "analysis-worker.cjs"),
     {
       ...options,
       isolateAnnotations: true
@@ -39502,521 +40532,16 @@ var analysisWorker = () => {
   return client;
 };
 
-// packages/vscode-extension/src/analysis/coverage-tree.ts
-var PAGE_SIZE = 200;
-var ANALYSIS_PROJECT_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
-var selectedSourceRoot;
-function initializeAnalysisProjectDiscovery(root) {
-  selectedSourceRoot = root;
-  return {
-    dispose() {
-      if (selectedSourceRoot === root) {
-        selectedSourceRoot = void 0;
-      }
-    }
-  };
-}
-function isRecord19(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isStringArray3(value) {
-  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
-}
-function isCoverageManifest(value) {
-  return isRecord19(value) && typeof value.target === "string" && isRecord19(value.mapping) && typeof value.mapping.mapper === "string" && isRecord19(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number";
-}
-var COVERAGE_CLASSIFICATIONS = ["opcode", "operand", "data", "asset", "unknown"];
-function isCountRecord(value, keys) {
-  return isRecord19(value) && keys.every((key3) => typeof value[key3] === "number");
-}
-function isCoverageSummary(value) {
-  if (!isRecord19(value) || typeof value.contentSize !== "number" || !isRecord19(value.summary)) {
-    return false;
-  }
-  const summary = value.summary;
-  return typeof summary.totalBytes === "number" && typeof summary.classifiedBytes === "number" && typeof summary.unknownBytes === "number" && typeof summary.conflictBytes === "number" && isCountRecord(summary.bytesByClassification, COVERAGE_CLASSIFICATIONS);
-}
-function isCoverageSegment(value) {
-  return isRecord19(value) && typeof value.start === "number" && typeof value.end === "number" && value.status === "conflict" && Array.isArray(value.classifications) && value.classifications.every(
-    (entry) => entry === "opcode" || entry === "operand" || entry === "data" || entry === "asset" || entry === "unknown"
-  ) && Array.isArray(value.runtime) && value.runtime.every(
-    (entry) => entry === "executed" || entry === "operand" || entry === "read" || entry === "written"
-  ) && isStringArray3(value.annotationIds) && isStringArray3(value.analysisIds) && isStringArray3(value.runtimeIds) && isStringArray3(value.conflictIds) && isStringArray3(value.regionIds);
-}
-function isEditTarget(value) {
-  return isRecord19(value) && typeof value.projectDirectory === "string" && typeof value.start === "number" && typeof value.end === "number" && isStringArray3(value.annotationIds) && isStringArray3(value.analysisIds) && isStringArray3(value.runtimeIds) && isStringArray3(value.conflictIds) && isStringArray3(value.regionIds);
-}
-var formatBytes = (bytes) => `${bytes.toLocaleString("en-US")} byte${bytes === 1 ? "" : "s"}`;
-var percentage = (bytes, total) => total === 0 ? "0.00%" : `${(bytes / total * 100).toFixed(2)}%`;
-var leaf = (id, label, description, icon = "circle-outline", tooltip) => ({
-  id,
-  label,
-  description,
-  tooltip,
-  icon,
-  state: import_vscode.TreeItemCollapsibleState.None
-});
-var group = (id, label, description, children, icon = "folder") => ({
-  id,
-  label,
-  description,
-  icon,
-  state: import_vscode.TreeItemCollapsibleState.Collapsed,
-  children
-});
-var summaryNode = (projectId, label, bytes, total, icon) => leaf(
-  `${projectId}:summary:${label}`,
-  label,
-  `${formatBytes(bytes)} \xB7 ${percentage(bytes, total)}`,
-  icon
-);
-var mapChildren = (projectId, projectDirectory, map) => {
-  const { summary } = map;
-  const summaryChildren = [
-    leaf(
-      `${projectId}:summary:total`,
-      "ROM content",
-      formatBytes(summary.totalBytes),
-      "file-binary"
-    ),
-    summaryNode(projectId, "Classified", summary.classifiedBytes, summary.totalBytes, "pass"),
-    summaryNode(projectId, "Unknown", summary.unknownBytes, summary.totalBytes, "question"),
-    {
-      ...summaryNode(projectId, "Conflict", summary.conflictBytes, summary.totalBytes, "warning"),
-      state: summary.conflictBytes > 0 ? import_vscode.TreeItemCollapsibleState.Collapsed : import_vscode.TreeItemCollapsibleState.None,
-      tooltip: "Expand to inspect conflicting ranges and edit the research that controls analysis.",
-      ...summary.conflictBytes > 0 ? { remotePage: { offset: 0 }, projectDirectory, contentSize: map.contentSize } : {}
-    }
-  ];
-  const classifications = ["opcode", "operand", "data", "asset", "unknown"].map(
-    (classification2) => summaryNode(
-      projectId,
-      classification2,
-      summary.bytesByClassification[classification2],
-      summary.totalBytes,
-      classification2 === "unknown" ? "question" : "symbol-color"
-    )
-  );
-  return [
-    group(
-      `${projectId}:summary`,
-      "Summary",
-      `${percentage(summary.classifiedBytes, summary.totalBytes)} classified`,
-      summaryChildren,
-      "pie-chart"
-    ),
-    group(
-      `${projectId}:classifications`,
-      "Classifications",
-      "overlaps remain visible",
-      classifications,
-      "symbol-color"
-    )
-  ];
-};
-var pageLabel = (start, end, width) => `${informationHex(start, width)}\u2013${informationHex(end, width)}`;
-var segmentNode = (parentId, segment, contentSize, projectDirectory) => {
-  const width = Math.max(6, Math.max(0, contentSize - 1).toString(16).length);
-  const classifications = segment.classifications.join(" + ");
-  const runtime = segment.runtime.length > 0 ? ` \xB7 runtime: ${segment.runtime.join(", ")}` : "";
-  const evidenceCount = segment.annotationIds.length + segment.analysisIds.length + segment.runtimeIds.length;
-  const tooltip = [
-    `ROM interval [${segment.start}, ${segment.end})`,
-    `Classification: ${classifications}`,
-    `Status: ${segment.status}`,
-    segment.runtime.length > 0 ? `Runtime: ${segment.runtime.join(", ")}` : void 0,
-    segment.conflictIds.length > 0 ? `Conflicts: ${segment.conflictIds.join(", ")}` : void 0,
-    segment.regionIds.length > 0 ? `Regions: ${segment.regionIds.join(", ")}` : void 0,
-    `Evidence records: ${evidenceCount}`
-  ].filter((value) => value !== void 0).join("\n");
-  const editTarget = {
-    projectDirectory,
-    start: segment.start,
-    end: segment.end,
-    annotationIds: segment.annotationIds,
-    analysisIds: segment.analysisIds,
-    runtimeIds: segment.runtimeIds,
-    conflictIds: segment.conflictIds,
-    regionIds: segment.regionIds
-  };
-  const id = `${parentId}:${segment.start}:${segment.end}`;
-  const actions = [
-    ["Explain conflicting evidence", "asm.coverage.explainEvidence", "info"],
-    ["Classify range\u2026", "asm.coverage.classifyRange", "edit"],
-    ["Set CPU state / entry point\u2026", "asm.coverage.setStateEntryPoint", "symbol-variable"],
-    ["Resolve control-flow target\u2026", "asm.coverage.resolveTarget", "references"]
-  ].map(
-    ([label, command, actionIcon]) => Object.assign(leaf(`${id}:${command}`, label, "", actionIcon), {
-      command: { command, title: label, arguments: [{ editTarget }] }
-    })
-  );
-  return {
-    id,
-    label: pageLabel(segment.start, segment.end, width),
-    description: `${formatBytes(segment.end - segment.start)} \xB7 ${classifications}${runtime}`,
-    tooltip,
-    icon: "warning",
-    state: import_vscode.TreeItemCollapsibleState.Collapsed,
-    editTarget,
-    children: actions
-  };
-};
-var findAnalysisProjectDirectories = async () => {
-  const source = selectedSourceRoot?.();
-  if (source) {
-    return [readSourceProjectLocalInputs(source).evidence];
-  }
-  const configured = import_vscode.workspace.getConfiguration("asm").get("analysisProject", "").trim();
-  if (configured !== "") {
-    const folders = import_vscode.workspace.workspaceFolders ?? [];
-    const candidates = path18.isAbsolute(configured) ? [configured] : folders.map(({ uri }) => path18.resolve(uri.fsPath, configured));
-    return [
-      ...new Set(
-        candidates.map(
-          (candidate) => path18.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path18.dirname(candidate) : candidate
-        )
-      )
-    ].toSorted();
-  }
-  const manifests = await import_vscode.workspace.findFiles(
-    `**/${ANALYSIS_PROJECT_MANIFEST}`,
-    ANALYSIS_PROJECT_EXCLUDE,
-    32
-  );
-  return [
-    ...new Set(
-      manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path18.dirname(fsPath))
-    )
-  ].toSorted();
-};
-var AnalysisCoverageProvider = class {
-  static viewId = "uttori-asm.analysisCoverage";
-  #onDidChangeTreeData = new import_vscode.EventEmitter();
-  onDidChangeTreeData = this.#onDidChangeTreeData.event;
-  refresh() {
-    this.#onDidChangeTreeData.fire();
-  }
-  getTreeItem(element) {
-    const item = new import_vscode.TreeItem(element.label, element.state);
-    item.id = element.id;
-    item.description = element.description;
-    item.tooltip = element.tooltip ?? element.label;
-    item.iconPath = new import_vscode.ThemeIcon(element.icon);
-    item.command = element.command;
-    item.contextValue = element.editTarget ? "analysisCoverageSegment" : "analysisCoverage";
-    if (element.resourceUri) {
-      item.resourceUri = element.resourceUri;
-      item.command = {
-        command: "vscode.open",
-        title: "Open analysis manifest",
-        arguments: [element.resourceUri]
-      };
-    }
-    return item;
-  }
-  async getChildren(element) {
-    if (!element) {
-      return this.loadProjects();
-    }
-    if (element.loadProject) {
-      try {
-        const map = await analysisWorker().request(element.projectDirectory, "coverage");
-        if (!isCoverageSummary(map)) {
-          throw new Error("Analysis coverage is unavailable.");
-        }
-        return [...mapChildren(element.id, element.projectDirectory, map)];
-      } catch (error) {
-        return [leaf(`${element.id}:error`, "Could not load coverage", String(error), "error")];
-      }
-    }
-    if (element.remotePage) {
-      const { offset } = element.remotePage;
-      let count3 = element.remotePage.count;
-      if (count3 === void 0 || count3 <= PAGE_SIZE) {
-        try {
-          const page = await analysisWorker().request(
-            element.projectDirectory,
-            "coverageConflicts",
-            { offset }
-          );
-          if (!isRecord19(page) || typeof page.count !== "number" || !Array.isArray(page.segments) || !page.segments.every(isCoverageSegment)) {
-            throw new Error("Analysis conflicts are unavailable.");
-          }
-          count3 ??= page.count;
-          if (count3 <= PAGE_SIZE) {
-            return page.segments.slice(0, count3).map(
-              (segment) => segmentNode(element.id, segment, element.contentSize, element.projectDirectory)
-            );
-          }
-        } catch (error) {
-          return [leaf(`${element.id}:error`, "Could not load conflicts", String(error), "error")];
-        }
-      }
-      let stride = PAGE_SIZE;
-      while (Math.ceil(count3 / stride) > PAGE_SIZE) {
-        stride *= PAGE_SIZE;
-      }
-      const pages = [];
-      for (let index = 0; index < count3; index += stride) {
-        pages.push({
-          id: `${element.id}:page:${offset + index}`,
-          label: `Items ${offset + index + 1}\u2013${offset + Math.min(index + stride, count3)}`,
-          icon: "list-selection",
-          state: import_vscode.TreeItemCollapsibleState.Collapsed,
-          projectDirectory: element.projectDirectory,
-          contentSize: element.contentSize,
-          remotePage: { offset: offset + index, count: Math.min(stride, count3 - index) }
-        });
-      }
-      return pages;
-    }
-    return [...element.children ?? []];
-  }
-  editTarget(element) {
-    if (!isRecord19(element) || !isEditTarget(element.editTarget)) {
-      return void 0;
-    }
-    return element.editTarget;
-  }
-  async loadProjects() {
-    const directories = await findAnalysisProjectDirectories();
-    const result = [];
-    for (const directory of directories) {
-      const manifestUri = import_vscode.Uri.file(path18.join(directory, ANALYSIS_PROJECT_MANIFEST));
-      const projectId = `analysis:${directory}`;
-      try {
-        const manifest = await analysisWorker().request(directory, "manifest");
-        if (!isCoverageManifest(manifest)) {
-          throw new Error("Analysis manifest is unavailable.");
-        }
-        result.push({
-          id: projectId,
-          label: path18.basename(directory),
-          description: `${manifest.target} \xB7 ${manifest.mapping.mapper} \xB7 ${manifest.rom.contentSha256.slice(0, 12)}`,
-          tooltip: `${directory}
-${formatBytes(manifest.rom.contentSize)} ROM content`,
-          icon: "database",
-          state: import_vscode.TreeItemCollapsibleState.Collapsed,
-          resourceUri: manifestUri,
-          loadProject: true,
-          projectDirectory: directory
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        result.push({
-          id: `${projectId}:error`,
-          label: path18.basename(directory),
-          // Loading can fail because a worker timed out or the database is busy. That is not corruption.
-          description: "could not load analysis project",
-          tooltip: `${directory}
-${message}`,
-          icon: "error",
-          state: import_vscode.TreeItemCollapsibleState.None,
-          resourceUri: manifestUri
-        });
-      }
-    }
-    return result;
-  }
-};
-
-// packages/vscode-extension/src/analysis/debug-maps.ts
-var import_node_crypto15 = require("node:crypto");
-var fs14 = __toESM(require("node:fs"), 1);
-var path20 = __toESM(require("node:path"), 1);
-var import_vscode2 = require("vscode");
-
-// packages/vscode-extension/src/source/project-path.ts
-var import_promises9 = __toESM(require("node:fs/promises"), 1);
-var import_node_path16 = __toESM(require("node:path"), 1);
-async function findSourceRoot(directory) {
-  let current = import_node_path16.default.resolve(directory);
-  for (; ; ) {
-    try {
-      await import_promises9.default.access(import_node_path16.default.join(current, ".uttori/project.json"));
-      return current;
-    } catch {
-    }
-    try {
-      await import_promises9.default.access(import_node_path16.default.join(current, ".git"));
-      return void 0;
-    } catch {
-    }
-    const parent = import_node_path16.default.dirname(current);
-    if (parent === current) {
-      return void 0;
-    }
-    current = parent;
-  }
-}
-async function findEvidenceSourceRoot(evidenceDirectory, selected) {
-  const evidence = await import_promises9.default.realpath(evidenceDirectory);
-  const matches = async (root2) => await import_promises9.default.realpath(readSourceProjectLocalInputs(root2).evidence) === evidence;
-  if (selected && await matches(selected)) {
-    return selected;
-  }
-  const root = await findSourceRoot(evidence);
-  if (root && !await matches(root)) {
-    throw new Error(
-      "This source project is bound to a different evidence store. Select the source project for this evidence first."
-    );
-  }
-  return root;
-}
-
-// packages/vscode-extension/src/analysis/debug-maps.ts
-var DEBUG_MAP_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
-var sortedUnique3 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
-function isRecord20(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isStoredDebugMap2(value) {
-  return isRecord20(value) && isRecord20(value.fingerprint) && typeof value.fingerprint.algorithm === "string" && typeof value.fingerprint.value === "string" && isRecord20(value.output) && typeof value.output.size === "number" && typeof value.output.sha256 === "string" && typeof value.target === "string" && Array.isArray(value.sources) && Array.isArray(value.ranges) && (value.instructions === void 0 || Array.isArray(value.instructions)) && (value.assets === void 0 || Array.isArray(value.assets));
-}
-function isAcceptedDebugMap2(map) {
-  return map.format === DEBUG_MAP_FORMAT && map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION && map.fingerprint.algorithm === "sha256";
-}
-function isIdentityList(value) {
-  return Array.isArray(value);
-}
-var resolvedConfigurationPath = (value, root) => path20.isAbsolute(value) ? value : path20.resolve(root ?? process.cwd(), value);
-var analysisSourceSha256 = (file) => (0, import_node_crypto15.createHash)("sha256").update(fs14.readFileSync(file)).digest("hex");
-var sourcePaths = (source, candidate) => {
-  if (path20.isAbsolute(source.path)) {
-    return [source.path];
-  }
-  return sortedUnique3([
-    ...candidate.sourceRoots.map((root) => path20.resolve(root, source.path)),
-    path20.resolve(path20.dirname(candidate.file), source.path),
-    ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => path20.resolve(uri.fsPath, source.path))
-  ]);
-};
-var currentAnalysisSourcePath = (source, candidate, expectedFile) => sourcePaths(source, candidate).find((file) => {
-  if (expectedFile !== void 0 && path20.resolve(file) !== expectedFile) {
-    return false;
-  }
-  try {
-    return fs14.statSync(file).isFile() && analysisSourceSha256(file) === source.sha256;
-  } catch {
-    return false;
-  }
-});
-var findAnalysisDebugMapCandidates = async (identity2) => {
-  const identities = isIdentityList(identity2) ? identity2 : [identity2];
-  const candidates = [];
-  for (const descriptor2 of await discoverAnalysisDebugMapFiles()) {
-    try {
-      const parsed = JSON.parse(fs14.readFileSync(descriptor2.file, "utf8"));
-      if (!isStoredDebugMap2(parsed)) {
-        continue;
-      }
-      if (validateDebugMap(parsed).length > 0 || !isAcceptedDebugMap2(parsed) || !identities.some(
-        (candidate) => parsed.target === candidate.target && parsed.output.sha256 === candidate.romContentSha256 && parsed.output.size === candidate.romContentSize
-      )) {
-        continue;
-      }
-      candidates.push({ ...descriptor2, map: parsed });
-    } catch {
-    }
-  }
-  return candidates;
-};
-var discoverAnalysisDebugMapFiles = async () => {
-  const active = import_vscode2.debug.activeDebugSession;
-  const configuredMap = active?.type === "uttori-asm" && typeof active.configuration.debugMap === "string" ? resolvedConfigurationPath(active.configuration.debugMap, active.workspaceFolder?.uri.fsPath) : void 0;
-  const configuredRoot = active?.type === "uttori-asm" && typeof active.configuration.sourceRoot === "string" ? resolvedConfigurationPath(
-    active.configuration.sourceRoot,
-    active.workspaceFolder?.uri.fsPath
-  ) : active?.workspaceFolder?.uri.fsPath;
-  const discovered = await import_vscode2.workspace.findFiles("**/*.debug.json", DEBUG_MAP_EXCLUDE, 64);
-  const sourceRoots = [
-    ...new Set(
-      (await Promise.all(
-        (import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => findSourceRoot(uri.fsPath))
-      )).filter((root) => !!root)
-    )
-  ];
-  const selected = [];
-  for (const root of sourceRoots) {
-    try {
-      const directory = path20.join(root, ".uttori-local/builds");
-      const receiptFile = path20.join(directory, "current.json");
-      if ((await fs14.promises.stat(receiptFile)).size > 1024 * 1024) {
-        continue;
-      }
-      const receipt = JSON.parse(await fs14.promises.readFile(receiptFile, "utf8"));
-      if (!isRecord20(receipt) || typeof receipt.inputSha256 !== "string" || typeof receipt.debugMapFile !== "string" || !/^[\da-f]{64}$/.test(receipt.inputSha256)) {
-        continue;
-      }
-      const file = path20.join(directory, receipt.inputSha256, "program.sfc.debug.json");
-      if (receipt.debugMapFile === file) {
-        selected.push(file);
-      }
-    } catch {
-    }
-  }
-  const files = sortedUnique3([
-    ...configuredMap ? [configuredMap] : [],
-    ...selected,
-    ...discovered.filter(
-      ({ scheme, fsPath }) => scheme === "file" && !sourceRoots.some((root) => fsPath.startsWith(root + path20.sep))
-    ).map(({ fsPath }) => fsPath)
-  ]);
-  return files.map((file) => {
-    const containingWorkspace = import_vscode2.workspace.getWorkspaceFolder(import_vscode2.Uri.file(file));
-    const ancestors = [];
-    if (containingWorkspace) {
-      const root = containingWorkspace.uri.fsPath;
-      for (let directory = path20.dirname(file); directory !== root && directory.startsWith(`${root}${path20.sep}`); directory = path20.dirname(directory)) {
-        ancestors.push(directory);
-      }
-    }
-    return {
-      file,
-      sourceRoots: sortedUnique3([
-        ...file === configuredMap && configuredRoot ? [configuredRoot] : [],
-        ...sourceRoots.filter((root) => file.startsWith(root + path20.sep)),
-        ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => uri.fsPath),
-        ...ancestors
-      ])
-    };
-  });
-};
-var analysisDebugMapRanges = (map, location) => {
-  const ranges = [
-    ...debugMapRangesForAddress(map, location.addressSpace, location.address),
-    ...location.outputOffsets.flatMap(
-      (outputOffset) => debugMapRangesForAddress(map, location.addressSpace, location.address, { outputOffset })
-    )
-  ];
-  const unique2 = new Map(
-    ranges.map((range) => [
-      [
-        range.architecture,
-        range.addressSpace,
-        range.start,
-        range.end,
-        range.outputStart ?? "",
-        range.sourceId,
-        range.line
-      ].join(":"),
-      range
-    ])
-  );
-  const hints = new Set(location.architectureHints);
-  return [...unique2.values()].filter((range) => hints.size === 0 || hints.has(range.architecture));
-};
-
 // packages/vscode-extension/src/analysis/annotation-controller.ts
 function isInformationPreset(value) {
   return value === "compact" || value === "authoring" || value === "disassembly";
 }
-function isRecord21(value) {
+function isRecord22(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isEditorProjectManifest(value) {
-  return isRecord21(value) && typeof value.target === "string" && isRecord21(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number" && Array.isArray(value.addressSpaces) && value.addressSpaces.every(
-    (space) => isRecord21(space) && typeof space.id === "string" && typeof space.kind === "string"
+  return isRecord22(value) && typeof value.target === "string" && isRecord22(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number" && Array.isArray(value.addressSpaces) && value.addressSpaces.every(
+    (space) => isRecord22(space) && typeof space.id === "string" && typeof space.kind === "string"
   );
 }
 function cancellationRequested(token) {
@@ -40484,10 +41009,340 @@ ${content.slice(start, start + 120).join("\n")}`
   }
 };
 
-// packages/vscode-extension/src/analysis/evidence-inspector.ts
-var path22 = __toESM(require("node:path"), 1);
-init_canonical_json();
+// packages/vscode-extension/src/analysis/coverage-tree.ts
+var path24 = __toESM(require("node:path"), 1);
 var import_vscode4 = require("vscode");
+
+// packages/vscode-extension/src/analysis/build-coverage.ts
+var import_promises11 = __toESM(require("node:fs/promises"), 1);
+var import_node_path18 = __toESM(require("node:path"), 1);
+
+// packages/vscode-extension/src/source/build-inputs.ts
+var import_promises10 = __toESM(require("node:fs/promises"), 1);
+var import_node_path17 = __toESM(require("node:path"), 1);
+async function captureBuildControls(root) {
+  const projectBytes = await import_promises10.default.readFile(import_node_path17.default.join(root, ".uttori/project.json"));
+  const configuration = parseSourceProject(JSON.parse(projectBytes.toString("utf8")));
+  const files = [
+    configuration.layout,
+    configuration.buildConfig,
+    import_node_path17.default.posix.join(import_node_path17.default.posix.dirname(configuration.buildConfig), "source-raw.json")
+  ];
+  const controls = await Promise.all(
+    files.map(async (file) => ({
+      path: file,
+      sha256: sourceContentHash(await import_promises10.default.readFile(import_node_path17.default.resolve(root, file)))
+    }))
+  );
+  return [{ path: ".uttori/project.json", sha256: sourceContentHash(projectBytes) }, ...controls];
+}
+async function changedBuildInputs(root, inputs) {
+  const changed2 = [];
+  for (let start = 0; start < inputs.length; start += 8) {
+    const results = await Promise.all(
+      inputs.slice(start, start + 8).map(async (input) => {
+        try {
+          return sourceContentHash(await import_promises10.default.readFile(import_node_path17.default.resolve(root, input.path))) !== input.sha256;
+        } catch (error) {
+          if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+            return true;
+          }
+          throw error;
+        }
+      })
+    );
+    for (const [index, different] of results.entries()) {
+      if (different) {
+        changed2.push(inputs[start + index].path);
+      }
+    }
+  }
+  return [...new Set(changed2)].toSorted();
+}
+
+// packages/vscode-extension/src/analysis/build-coverage.ts
+function isRecord23(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+async function readJson(file, limit) {
+  const stat3 = await import_promises11.default.stat(file);
+  if (!stat3.isFile() || stat3.size > limit) {
+    throw new Error("Build metadata exceeds its size budget.");
+  }
+  return JSON.parse(await import_promises11.default.readFile(file, "utf8"));
+}
+async function readBuildCoverage(root) {
+  const file = import_node_path18.default.join(root, ".uttori-local/builds/summary.json");
+  let value;
+  try {
+    value = await readJson(file, 4096);
+  } catch (error) {
+    if (isRecord23(error) && error.code === "ENOENT") {
+      return void 0;
+    }
+    throw error;
+  }
+  if (!isRecord23(value) || value.version !== 1 || typeof value.inputSha256 !== "string" || !/^[\da-f]{64}$/.test(value.inputSha256) || value.coverage !== void 0 && !isSourceBuildCoverage(value.coverage)) {
+    throw new Error("Invalid build coverage summary. Build Current Source to replace it.");
+  }
+  if (!value.coverage) {
+    return void 0;
+  }
+  const project = parseSourceProject(
+    await readJson(import_node_path18.default.join(root, ".uttori/project.json"), 65536)
+  );
+  if (project.romSha256 !== value.coverage.romSha256) {
+    throw new Error(
+      "Coverage belongs to a different original ROM. Build Current Source to update it."
+    );
+  }
+  return {
+    summary: { version: 1, inputSha256: value.inputSha256, coverage: value.coverage },
+    builtAt: (await import_promises11.default.stat(file)).mtimeMs
+  };
+}
+async function checkBuildCoverageFreshness(root, summary) {
+  try {
+    const file = import_node_path18.default.join(root, ".uttori-local/builds/current.json");
+    const receipt = await readJson(file, 16 * 1024 * 1024);
+    if (!isRecord23(receipt) || receipt.inputSha256 !== summary.inputSha256) {
+      return { status: "stale", reason: "A different build is selected. Refresh coverage." };
+    }
+    const coverage = receipt.coverage;
+    const expected = summary.coverage;
+    if (!isSourceBuildCoverage(coverage) || !expected || coverage.romSha256 !== expected.romSha256 || coverage.totalBytes !== expected.totalBytes || coverage.remainingBytes !== expected.remainingBytes || coverage.convertedBytes !== expected.convertedBytes || !Array.isArray(receipt.inputs) || receipt.inputs.length > 65536 || !receipt.inputs.every(
+      (input) => isRecord23(input) && typeof input.path === "string" && typeof input.sha256 === "string" && /^[\da-f]{64}$/.test(input.sha256)
+    ) || !receipt.inputs.some((input) => input.path === ".uttori/project.json")) {
+      return {
+        status: "unknown",
+        reason: "Build Current Source to record complete saved-input identities."
+      };
+    }
+    const changed2 = await changedBuildInputs(root, receipt.inputs);
+    if (changed2.length) {
+      return {
+        status: "stale",
+        reason: `Saved inputs changed: ${changed2.slice(0, 5).join(", ")}. Build Current Source to update coverage.`
+      };
+    }
+    const current = await readJson(file, 16 * 1024 * 1024);
+    if (!isRecord23(current) || current.inputSha256 !== summary.inputSha256) {
+      return {
+        status: "stale",
+        reason: "The build changed during verification. Refresh coverage."
+      };
+    }
+    return {
+      status: "current",
+      reason: "Saved source and assets match the last successful build."
+    };
+  } catch (error) {
+    return { status: "unknown", reason: `Could not verify saved inputs: ${String(error)}` };
+  }
+}
+
+// packages/vscode-extension/src/analysis/coverage-tree.ts
+var formatBytes = (bytes) => `${bytes.toLocaleString("en-US")} byte${bytes === 1 ? "" : "s"}`;
+var percentage = (bytes, total) => total === 0 ? "0.00%" : `${(bytes / total * 100).toFixed(2)}%`;
+var leaf = (id, label, description, icon) => ({
+  id,
+  label,
+  description,
+  icon,
+  state: import_vscode4.TreeItemCollapsibleState.None
+});
+var summaryNode = (projectId, label, bytes, total, icon) => leaf(
+  `${projectId}:summary:${label}`,
+  label,
+  `${formatBytes(bytes)} \xB7 ${percentage(bytes, total)}`,
+  icon
+);
+var AnalysisCoverageProvider = class {
+  /** Exact in-session draft/build state overrides the slower saved-file verification. */
+  constructor(staleBuild) {
+    this.staleBuild = staleBuild;
+  }
+  staleBuild;
+  #freshness = /* @__PURE__ */ new Map();
+  #revision = 0;
+  #disposed = false;
+  #sourceRoots = /* @__PURE__ */ new Set();
+  #inputTimer;
+  dispose() {
+    this.#disposed = true;
+    clearTimeout(this.#inputTimer);
+    this.#revision++;
+    this.#freshness.clear();
+    this.#onDidChangeTreeData.dispose();
+  }
+  static viewId = "uttori-asm.analysisCoverage";
+  #onDidChangeTreeData = new import_vscode4.EventEmitter();
+  onDidChangeTreeData = this.#onDidChangeTreeData.event;
+  /** External writes also invalidate persisted checks for source projects not currently selected. */
+  inputChanged(uri) {
+    if (uri.scheme !== "file") {
+      return;
+    }
+    for (const root of this.#sourceRoots) {
+      const relative4 = path24.relative(root, uri.fsPath);
+      if (relative4 === ".." || relative4.startsWith(`..${path24.sep}`) || path24.isAbsolute(relative4)) {
+        continue;
+      }
+      const first = relative4.split(path24.sep)[0];
+      if (first === ".git" || first === ".uttori-local") {
+        continue;
+      }
+      clearTimeout(this.#inputTimer);
+      this.#inputTimer = setTimeout(() => this.refresh(), 150);
+      break;
+    }
+  }
+  refresh() {
+    this.#revision++;
+    this.#freshness.clear();
+    this.#onDidChangeTreeData.fire();
+  }
+  getTreeItem(element) {
+    const item = new import_vscode4.TreeItem(element.label, element.state);
+    item.id = element.id;
+    item.description = element.description;
+    item.tooltip = element.tooltip ?? element.label;
+    item.iconPath = new import_vscode4.ThemeIcon(element.icon);
+    item.command = element.command;
+    return item;
+  }
+  async getChildren(element) {
+    if (!element) {
+      return this.loadProjects();
+    }
+    return [...element.children ?? []];
+  }
+  /** Saved counts render independently of the asynchronous dependency verification. */
+  async buildProject(root) {
+    const id = `source-coverage:${root}`;
+    const children = [];
+    let description = "Build Current Source to measure remaining bytes";
+    let tooltip = root;
+    let icon = "pie-chart";
+    try {
+      const snapshot = await readBuildCoverage(root);
+      if (snapshot?.summary.coverage) {
+        const { summary, builtAt } = snapshot;
+        const coverage = summary.coverage;
+        const key3 = `${root}:${summary.inputSha256}`;
+        let freshness = this.#freshness.get(key3);
+        const stale = this.staleBuild?.(root, summary.inputSha256);
+        if (stale !== void 0) {
+          freshness = {
+            status: stale ? "stale" : "current",
+            reason: stale ? "Source or asset edits have not been built. Build Current Source to update coverage." : "Current source matches this successful build."
+          };
+        } else if (!freshness) {
+          freshness = {
+            status: "checking",
+            reason: "Checking saved source and assets in the background."
+          };
+          this.#freshness.set(key3, freshness);
+          const revision = this.#revision;
+          void checkBuildCoverageFreshness(root, summary).then((checked2) => {
+            if (!this.#disposed && revision === this.#revision) {
+              this.#freshness.set(key3, checked2);
+              this.#onDidChangeTreeData.fire();
+            }
+            return void 0;
+          });
+        }
+        const freshnessLabels = {
+          current: "current",
+          stale: "stale",
+          checking: "checking saved inputs",
+          unknown: "freshness unverified"
+        };
+        const status = freshnessLabels[freshness.status];
+        description = `${formatBytes(coverage.remainingBytes)} remaining \xB7 ${percentage(coverage.remainingBytes, coverage.totalBytes)} \xB7 ${status}`;
+        tooltip = `${root}
+${freshness.reason}`;
+        if (freshness.status === "stale" || freshness.status === "unknown") {
+          icon = "warning";
+        }
+        children.push(
+          summaryNode(
+            id,
+            "Bytes remaining",
+            coverage.remainingBytes,
+            coverage.totalBytes,
+            "question"
+          ),
+          summaryNode(id, "Converted", coverage.convertedBytes, coverage.totalBytes, "pass"),
+          leaf(`${id}:total`, "Original ROM", formatBytes(coverage.totalBytes), "file-binary"),
+          {
+            ...leaf(
+              `${id}:build`,
+              "Last successful build",
+              `${new Date(builtAt).toLocaleString()} \xB7 ${status}`,
+              "history"
+            ),
+            tooltip: freshness.reason
+          }
+        );
+      }
+    } catch (error) {
+      description = "Build summary unavailable";
+      tooltip = `${root}
+${String(error)}`;
+      icon = "warning";
+    }
+    children.push({
+      ...leaf(`${id}:rebuild`, "Build Current Source", "Update conversion progress", "tools"),
+      command: {
+        command: "asm.source.buildProject",
+        title: "Build Current Source",
+        arguments: [import_vscode4.Uri.file(root)]
+      }
+    });
+    return {
+      id,
+      label: path24.basename(root),
+      description,
+      tooltip,
+      icon,
+      state: import_vscode4.TreeItemCollapsibleState.Collapsed,
+      children
+    };
+  }
+  async loadProjects() {
+    const selected = selectedAnalysisSourceRoot();
+    this.#sourceRoots.clear();
+    if (selected) {
+      this.#sourceRoots.add(selected);
+      return [await this.buildProject(selected)];
+    }
+    const configurations = await import_vscode4.workspace.findFiles(
+      "**/.uttori/project.json",
+      ANALYSIS_PROJECT_EXCLUDE,
+      32
+    );
+    const roots = [
+      ...new Set(
+        configurations.filter(
+          ({ scheme, fsPath }) => scheme === "file" && fsPath.endsWith(`${path24.sep}.uttori${path24.sep}project.json`)
+        ).map(({ fsPath }) => path24.dirname(path24.dirname(fsPath)))
+      )
+    ].toSorted();
+    if (roots.length) {
+      for (const root of roots) {
+        this.#sourceRoots.add(root);
+      }
+      return Promise.all(roots.map((root) => this.buildProject(root)));
+    }
+    return [];
+  }
+};
+
+// packages/vscode-extension/src/analysis/evidence-inspector.ts
+var path25 = __toESM(require("node:path"), 1);
+init_canonical_json();
+var import_vscode5 = require("vscode");
 var EVIDENCE_SHARDS = [
   "analysis",
   "annotations",
@@ -40498,14 +41353,14 @@ var EVIDENCE_SHARDS = [
   "evidence",
   "imports"
 ];
-function isRecord22(value) {
+function isRecord24(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isIdRecord(value) {
-  return isRecord22(value) && typeof value.id === "string";
+  return isRecord24(value) && typeof value.id === "string";
 }
 function isEvidenceChoices(value) {
-  if (!isRecord22(value) || !isRecord22(value.shards)) {
+  if (!isRecord24(value) || !isRecord24(value.shards)) {
     return false;
   }
   const shards = value.shards;
@@ -40514,44 +41369,30 @@ function isEvidenceChoices(value) {
   );
 }
 function isEvidenceExplanation(value) {
-  return isRecord22(value) && typeof value.shard === "string" && typeof value.record === "object" && value.record !== null && Array.isArray(value.evidence) && Array.isArray(value.referencedBy) && value.referencedBy.every((reference2) => typeof reference2 === "string") && Array.isArray(value.conflicts) && (value.referencedByTotal === void 0 || typeof value.referencedByTotal === "number");
+  return isRecord24(value) && typeof value.shard === "string" && typeof value.record === "object" && value.record !== null && Array.isArray(value.evidence) && Array.isArray(value.referencedBy) && value.referencedBy.every((reference2) => typeof reference2 === "string") && Array.isArray(value.conflicts) && (value.referencedByTotal === void 0 || typeof value.referencedByTotal === "number");
 }
 var indentedJson = (value) => canonicalJson(value).trimEnd().split("\n").map((line) => `    ${line}`).join("\n");
 var AnalysisEvidenceInspector = class {
-  async explainEvidence(target) {
+  async explainEvidence() {
     try {
-      const projectDirectory = await this.chooseProject(
-        target?.projectDirectory,
-        "Explain Analysis Evidence"
-      );
+      const projectDirectory = await this.chooseProject("Explain Analysis Evidence");
       if (!projectDirectory) {
         return;
       }
-      const snapshot = await analysisWorker().request(
-        projectDirectory,
-        "evidenceChoices",
-        target ? {
-          evidenceSelection: {
-            annotations: target.annotationIds,
-            analysis: [...target.analysisIds, ...target.conflictIds],
-            runtime: target.runtimeIds,
-            regions: target.regionIds
-          }
-        } : {}
-      );
+      const snapshot = await analysisWorker().request(projectDirectory, "evidenceChoices");
       if (!isEvidenceChoices(snapshot)) {
         throw new Error("Analysis evidence choices are unavailable.");
       }
       const choices = this.evidenceChoices(snapshot.shards);
       if (choices.length === 0) {
-        await import_vscode4.window.showInformationMessage(
-          target ? "This conflict range has no persisted record with explainable evidence." : "The selected project has no persisted record to explain."
+        await import_vscode5.window.showInformationMessage(
+          "The selected project has no persisted record to explain."
         );
         return;
       }
-      const selected = await import_vscode4.window.showQuickPick(choices, {
+      const selected = await import_vscode5.window.showQuickPick(choices, {
         title: "Explain Analysis Evidence",
-        placeHolder: "Choose a record (up to 200 per collection). Expand a conflict range to narrow the list"
+        placeHolder: "Choose a record (up to 200 per collection)"
       });
       if (!selected) {
         return;
@@ -40563,28 +41404,25 @@ var AnalysisEvidenceInspector = class {
         throw new Error("Analysis evidence explanation is unavailable.");
       }
       const content = this.renderEvidenceExplanation(projectDirectory, explanation);
-      const document = await import_vscode4.workspace.openTextDocument({ language: "markdown", content });
-      await import_vscode4.window.showTextDocument(document, { preview: true });
+      const document = await import_vscode5.workspace.openTextDocument({ language: "markdown", content });
+      await import_vscode5.window.showTextDocument(document, { preview: true });
     } catch (error) {
       await this.showFailure("Could not explain analysis evidence", error);
     }
   }
-  /** A selected coverage row keeps its exact store identity; otherwise use current project discovery. */
-  async chooseProject(preferred, title) {
-    if (preferred) {
-      return preferred;
-    }
+  /** Resolve evidence independently of the build conversion sidebar. */
+  async chooseProject(title) {
     const directories = await findAnalysisProjectDirectories();
     if (!directories.length) {
-      await import_vscode4.window.showErrorMessage("No native analysis project was found.");
+      await import_vscode5.window.showErrorMessage("No native analysis project was found.");
       return void 0;
     }
     if (directories.length === 1) {
       return directories[0];
     }
-    return (await import_vscode4.window.showQuickPick(
+    return (await import_vscode5.window.showQuickPick(
       directories.map((directory) => ({
-        label: path22.basename(directory),
+        label: path25.basename(directory),
         description: directory,
         directory
       })),
@@ -40594,12 +41432,12 @@ var AnalysisEvidenceInspector = class {
   evidenceChoices(shards) {
     const kinds = EVIDENCE_SHARDS;
     return kinds.flatMap(
-      (shard) => shards[shard].map((record6) => ({
-        label: record6.id,
+      (shard) => shards[shard].map((record7) => ({
+        label: record7.id,
         description: shard,
-        key: `${shard}:${record6.id}`,
+        key: `${shard}:${record7.id}`,
         shard,
-        recordId: record6.id
+        recordId: record7.id
       }))
     );
   }
@@ -40636,18 +41474,18 @@ var AnalysisEvidenceInspector = class {
   }
   async showFailure(prefix, error) {
     const message = error instanceof Error ? error.message : String(error);
-    await import_vscode4.window.showErrorMessage(`${prefix}: ${message}`);
+    await import_vscode5.window.showErrorMessage(`${prefix}: ${message}`);
   }
 };
 
 // packages/vscode-extension/src/analysis/navigation-target.ts
-var isStringArray4 = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
+var isStringArray3 = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
 var isAnalysisNavigationTarget = (value) => {
   if (!value || typeof value !== "object") {
     return false;
   }
   const target = value;
-  return typeof target.projectDirectory === "string" && target.projectDirectory.length > 0 && typeof target.target === "string" && target.target.length > 0 && typeof target.romContentSha256 === "string" && /^[\da-f]{64}$/u.test(target.romContentSha256) && Number.isSafeInteger(target.romContentSize) && target.romContentSize >= 0 && typeof target.addressSpace === "string" && target.addressSpace.length > 0 && Number.isSafeInteger(target.address) && target.address >= 0 && Array.isArray(target.outputOffsets) && target.outputOffsets.every((offset) => Number.isSafeInteger(offset) && offset >= 0) && isStringArray4(target.architectureHints) && isStringArray4(target.recordIds);
+  return typeof target.projectDirectory === "string" && target.projectDirectory.length > 0 && typeof target.target === "string" && target.target.length > 0 && typeof target.romContentSha256 === "string" && /^[\da-f]{64}$/u.test(target.romContentSha256) && Number.isSafeInteger(target.romContentSize) && target.romContentSize >= 0 && typeof target.addressSpace === "string" && target.addressSpace.length > 0 && Number.isSafeInteger(target.address) && target.address >= 0 && Array.isArray(target.outputOffsets) && target.outputOffsets.every((offset) => Number.isSafeInteger(offset) && offset >= 0) && isStringArray3(target.architectureHints) && isStringArray3(target.recordIds);
 };
 var parseAnalysisNavigationTarget = (value) => {
   if (!value || typeof value !== "object") {
@@ -40658,7 +41496,7 @@ var parseAnalysisNavigationTarget = (value) => {
 };
 
 // packages/vscode-extension/src/analysis/navigation.ts
-var path25 = __toESM(require("node:path"), 1);
+var path28 = __toESM(require("node:path"), 1);
 
 // packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
@@ -40669,7 +41507,7 @@ var MAX_EXPRESSION_DEPTH = 32;
 var MAX_SHIFT = 255n;
 var MAX_EXPONENT = 255n;
 var MAX_MAGNITUDE = (1n << 256n) - 1n;
-var binaryPrecedence = Object.freeze({
+var binaryPrecedence2 = Object.freeze({
   "||": 0,
   "&&": 1,
   "=": 2,
@@ -40828,7 +41666,7 @@ var DebugExpressionParser = class {
       if (token.type !== "operator") {
         break;
       }
-      const precedence = binaryPrecedence[token.value];
+      const precedence = binaryPrecedence2[token.value];
       if (precedence === void 0 || precedence < minimumPrecedence) {
         break;
       }
@@ -40962,10 +41800,10 @@ var formatDebugExpressionValue = (value) => value < 0n ? `-0x${(-value).toString
 
 // packages/debug-adapter/src/dap.ts
 var import_node_async_hooks = require("node:async_hooks");
-var import_node_path17 = __toESM(require("node:path"), 1);
+var import_node_path19 = __toESM(require("node:path"), 1);
 init_src();
 var numeric = (value, fallback = 0) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
-var isRecord23 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord25 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var records = (value) => Array.isArray(value) ? value.filter(
   (entry) => entry !== null && typeof entry === "object"
 ) : [];
@@ -41119,7 +41957,7 @@ var DebugAdapterSession = class {
   constructor(options) {
     this.#backend = options.backend;
     this.#map = options.debugMap;
-    this.#sourceRoot = import_node_path17.default.resolve(options.sourceRoot ?? process.cwd());
+    this.#sourceRoot = import_node_path19.default.resolve(options.sourceRoot ?? process.cwd());
     this.#sourceBreakpointAddresses = options.sourceBreakpointAddresses;
     this.#sourceOutputOffset = options.sourceOutputOffset;
     this.#instructionAnnotation = options.instructionAnnotation;
@@ -41443,13 +42281,13 @@ var DebugAdapterSession = class {
         if (range && this.#map) {
           const source = this.#map.sources.find((candidate) => candidate.id === range.sourceId);
           if (source) {
-            const sourcePath = import_node_path17.default.isAbsolute(source.path) ? source.path : import_node_path17.default.resolve(this.#sourceRoot, source.path);
+            const sourcePath = import_node_path19.default.isAbsolute(source.path) ? source.path : import_node_path19.default.resolve(this.#sourceRoot, source.path);
             return {
               id: frame.id,
               name: frame.currentOnly ? `${frame.name} (current frame only)` : frame.name,
               line: range.line,
               column: 1,
-              source: { name: import_node_path17.default.basename(sourcePath), path: sourcePath },
+              source: { name: import_node_path19.default.basename(sourcePath), path: sourcePath },
               instructionPointerReference: formatDebugAddress(frame.pc)
             };
           }
@@ -41491,10 +42329,10 @@ var DebugAdapterSession = class {
     const scopes = [];
     const registers = capabilities.registers ? await this.#backend.registers(frameId) : [];
     const groups2 = [...new Set(registers.map((register2) => register2.group ?? "Registers"))];
-    for (const group2 of groups2) {
+    for (const group of groups2) {
       scopes.push({
-        name: `${processorLabel(frame.pc.architecture)} ${group2}`,
-        variablesReference: this.#addVariableContainer({ kind: "registers", registers, group: group2 }),
+        name: `${processorLabel(frame.pc.architecture)} ${group}`,
+        variablesReference: this.#addVariableContainer({ kind: "registers", registers, group }),
         expensive: false,
         presentationHint: "registers"
       });
@@ -41699,7 +42537,7 @@ var DebugAdapterSession = class {
     if (!this.#map) {
       throw new Error("Source breakpoints require a debug map.");
     }
-    const source = isRecord23(args.source) ? args.source : void 0;
+    const source = isRecord25(args.source) ? args.source : void 0;
     const sourcePath = typeof source?.path === "string" ? source.path : "";
     if (!sourcePath) {
       throw new Error("Source breakpoint request requires source.path.");
@@ -41752,7 +42590,7 @@ var DebugAdapterSession = class {
     if (!this.#map) {
       throw new Error("Breakpoint locations require a debug map.");
     }
-    const source = isRecord23(args.source) ? args.source : void 0;
+    const source = isRecord25(args.source) ? args.source : void 0;
     const sourcePath = typeof source?.path === "string" ? source.path : "";
     if (!sourcePath) {
       throw new Error("Breakpoint location request requires source.path.");
@@ -41889,7 +42727,7 @@ var DebugAdapterSession = class {
     if (!this.#map) {
       return [];
     }
-    const normalized = sourcePath.split(import_node_path17.default.sep).join("/");
+    const normalized = sourcePath.split(import_node_path19.default.sep).join("/");
     const sourceIds = new Set(
       this.#map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
     );
@@ -42254,7 +43092,7 @@ var createDebugMapReplayScript = (map, output) => {
 var import_node_child_process3 = require("node:child_process");
 
 // packages/debug-adapter/src/sidecar-protocol.ts
-var import_node_crypto16 = require("node:crypto");
+var import_node_crypto18 = require("node:crypto");
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
 var DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -42294,30 +43132,30 @@ var DEFAULT_DEBUG_SIDECAR_LIMITS = Object.freeze({
   maxQueuedMessages: 1024,
   maxQueuedBytes: 8388608
 });
-var isRecord24 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord26 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var listed = (values, value) => typeof value === "string" && values.some((item) => item === value);
 var positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 var nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 var sessionPattern = /^[\w-]{32,128}$/;
-var createDebugSidecarSessionToken = () => (0, import_node_crypto16.randomBytes)(32).toString("base64url");
+var createDebugSidecarSessionToken = () => (0, import_node_crypto18.randomBytes)(32).toString("base64url");
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value)) {
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
   }
 }
 var assertRequestBounds = (command, args, limits) => {
-  const record6 = args ?? {};
-  if (!isRecord24(record6)) {
+  const record7 = args ?? {};
+  if (!isRecord26(record7)) {
     throw new Error("Sidecar request arguments must be an object.");
   }
   if (command === "readMemory") {
-    const count3 = record6.count;
+    const count3 = record7.count;
     if (!nonNegativeInteger(count3) || count3 > limits.maxMemoryReadBytes) {
       throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
     }
   }
   if (command === "disassemble") {
-    const count3 = record6.count;
+    const count3 = record7.count;
     if (!nonNegativeInteger(count3) || count3 > limits.maxDisassemblyInstructions) {
       throw new Error(
         `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
@@ -42325,20 +43163,20 @@ var assertRequestBounds = (command, args, limits) => {
     }
   }
   if (command === "setBreakpoints") {
-    const breakpoints = record6.breakpoints;
+    const breakpoints = record7.breakpoints;
     if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
       throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
     }
   }
   if (command === "readTrace") {
-    const maxEvents = record6.maxEvents;
+    const maxEvents = record7.maxEvents;
     if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
       throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
     }
   }
 };
 function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-  if (!isRecord24(value)) {
+  if (!isRecord26(value)) {
     throw new Error("Sidecar message must be an object.");
   }
   if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
@@ -42374,7 +43212,7 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
     if (!listed(DEBUG_SIDECAR_EVENTS, value.event)) {
       throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
     }
-    if (!isRecord24(value.body)) {
+    if (!isRecord26(value.body)) {
       throw new Error("Sidecar event body must be an object.");
     }
     return;
@@ -43139,7 +43977,7 @@ var ReplayDebugBackend = class {
 function isUnknownArray5(value) {
   return Array.isArray(value);
 }
-function isRecord25(value) {
+function isRecord27(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function assertInstructionBytes(bytes) {
@@ -43153,7 +43991,7 @@ function assertInstructionBytes(bytes) {
   }
 }
 function assertInstructionState(state) {
-  if (!isRecord25(state)) {
+  if (!isRecord27(state)) {
     throw new Error("Invalid trace instruction state.");
   }
   for (const [key3, entry] of Object.entries(state)) {
@@ -43163,7 +44001,7 @@ function assertInstructionState(state) {
   }
 }
 function assertBusAccess(access) {
-  if (!isRecord25(access)) {
+  if (!isRecord27(access)) {
     throw new Error("Invalid trace bus operation.");
   }
   const actor = access.actor === void 0 ? "cpu" : access.actor;
@@ -43177,7 +44015,7 @@ function assertTraceDetails(value) {
   }
 }
 function assertTraceDetail(detail) {
-  if (!isRecord25(detail)) {
+  if (!isRecord27(detail)) {
     throw new Error("Invalid trace instruction bytes.");
   }
   assertInstructionBytes(detail.bytes);
@@ -43210,9 +44048,9 @@ var isStopReason = (value) => value === "entry" || value === "pause" || value ==
 var stepKindNames = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
 var isStepKind = (value) => stepKindNames.has(value);
 var isOutputCategory = (value) => value === "console" || value === "stdout" || value === "stderr";
-var isRecord26 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-var record4 = (value, context) => {
-  if (!isRecord26(value)) {
+var isRecord28 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var record5 = (value, context) => {
+  if (!isRecord28(value)) {
     throw new Error(`${context} must be an object.`);
   }
   return value;
@@ -43249,26 +44087,26 @@ var boolean = (value, context) => {
   }
   return value;
 };
-var integer2 = (value, context, minimum = 0) => {
+var integer3 = (value, context, minimum = 0) => {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
     throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
   }
   return value;
 };
-var positiveInteger4 = (value, context) => integer2(value, context, 1);
+var positiveInteger4 = (value, context) => integer3(value, context, 1);
 var address = (value, context) => {
-  const candidate = record4(value, context);
-  const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer2(candidate.outputOffset, `${context}.outputOffset`);
+  const candidate = record5(value, context);
+  const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer3(candidate.outputOffset, `${context}.outputOffset`);
   return {
     architecture: string2(candidate.architecture, `${context}.architecture`),
     addressSpace: string2(candidate.addressSpace, `${context}.addressSpace`),
-    address: integer2(candidate.address, `${context}.address`),
+    address: integer3(candidate.address, `${context}.address`),
     ...outputOffset === void 0 ? {} : { outputOffset }
   };
 };
 var addressesEqual2 = (left, right) => left.architecture === right.architecture && left.addressSpace === right.addressSpace && left.address === right.address && left.outputOffset === right.outputOffset;
 var architectureCapabilities = (value, context) => {
-  const candidate = record4(value, context);
+  const candidate = record5(value, context);
   const addressSpaces = array(candidate.addressSpaces, `${context}.addressSpaces`).map(
     (entry, index) => string2(entry, `${context}.addressSpaces[${index}]`)
   );
@@ -43276,7 +44114,7 @@ var architectureCapabilities = (value, context) => {
     throw new Error(`${context}.addressSpaces must be unique.`);
   }
   const memorySpaces = array(candidate.memorySpaces, `${context}.memorySpaces`).map((entry, index) => {
-    const memorySpace = record4(entry, `${context}.memorySpaces[${index}]`);
+    const memorySpace = record5(entry, `${context}.memorySpaces[${index}]`);
     return {
       addressSpace: string2(
         memorySpace.addressSpace,
@@ -43303,7 +44141,7 @@ var architectureCapabilities = (value, context) => {
     if (candidate.trace === null) {
       return null;
     }
-    const traceRecord = record4(candidate.trace, `${context}.trace`);
+    const traceRecord = record5(candidate.trace, `${context}.trace`);
     const traceAddressSpaces = array(traceRecord.addressSpaces, `${context}.trace.addressSpaces`).map((entry, index) => string2(entry, `${context}.trace.addressSpaces[${index}]`)).toSorted();
     if (traceAddressSpaces.length === 0) {
       throw new Error(`${context}.trace.addressSpaces must not be empty.`);
@@ -43352,7 +44190,7 @@ var architectureCapabilities = (value, context) => {
   };
 };
 var backendCapabilities = (value, context) => {
-  const candidate = record4(value, context);
+  const candidate = record5(value, context);
   const architectures = array(candidate.architectures, `${context}.architectures`).map((entry, index) => architectureCapabilities(entry, `${context}.architectures[${index}]`)).toSorted((left, right) => left.architecture.localeCompare(right.architecture));
   if (new Set(architectures.map(({ architecture }) => architecture)).size !== architectures.length) {
     throw new Error(`${context}.architectures must use unique architecture identifiers.`);
@@ -43391,7 +44229,7 @@ var backendCapabilities = (value, context) => {
 };
 var capabilityIdentity = (capabilities) => JSON.stringify(capabilities);
 var thread = (value, context) => {
-  const candidate = record4(value, context);
+  const candidate = record5(value, context);
   return {
     id: positiveInteger4(candidate.id, `${context}.id`),
     name: string2(candidate.name, `${context}.name`),
@@ -43399,7 +44237,7 @@ var thread = (value, context) => {
   };
 };
 var stackFrame = (value, context) => {
-  const candidate = record4(value, context);
+  const candidate = record5(value, context);
   const currentOnly = candidate.currentOnly === void 0 ? void 0 : boolean(candidate.currentOnly, `${context}.currentOnly`);
   return {
     id: positiveInteger4(candidate.id, `${context}.id`),
@@ -43410,17 +44248,17 @@ var stackFrame = (value, context) => {
   };
 };
 var register = (value, context) => {
-  const candidate = record4(value, context);
-  const group2 = candidate.group === void 0 ? void 0 : string2(candidate.group, `${context}.group`);
+  const candidate = record5(value, context);
+  const group = candidate.group === void 0 ? void 0 : string2(candidate.group, `${context}.group`);
   return {
     name: string2(candidate.name, `${context}.name`),
     value: string2(candidate.value, `${context}.value`),
     bits: positiveInteger4(candidate.bits, `${context}.bits`),
-    ...group2 === void 0 ? {} : { group: group2 }
+    ...group === void 0 ? {} : { group }
   };
 };
 var breakpoint = (value, context) => {
-  const candidate = record4(value, context);
+  const candidate = record5(value, context);
   const message = candidate.message === void 0 ? void 0 : string2(candidate.message, `${context}.message`);
   return {
     id: positiveInteger4(candidate.id, `${context}.id`),
@@ -43430,14 +44268,14 @@ var breakpoint = (value, context) => {
   };
 };
 var byte = (value, context) => {
-  const result = integer2(value, context);
+  const result = integer3(value, context);
   if (result > 255) {
     throw new Error(`${context} must be an unsigned byte.`);
   }
   return result;
 };
 var instruction = (value, context) => {
-  const candidate = record4(value, context);
+  const candidate = record5(value, context);
   const symbol = candidate.symbol === void 0 ? void 0 : string2(candidate.symbol, `${context}.symbol`);
   return {
     address: address(candidate.address, `${context}.address`),
@@ -43449,9 +44287,9 @@ var instruction = (value, context) => {
   };
 };
 var traceBatch = (value, context) => {
-  const candidate = record4(value, context);
+  const candidate = record5(value, context);
   const addresses = array(candidate.addresses, `${context}.addresses`).map(
-    (entry, index) => integer2(entry, `${context}.addresses[${index}]`)
+    (entry, index) => integer3(entry, `${context}.addresses[${index}]`)
   );
   return {
     architecture: string2(candidate.architecture, `${context}.architecture`),
@@ -43460,12 +44298,12 @@ var traceBatch = (value, context) => {
     addresses,
     ...candidate.details === void 0 ? {} : { details: validateDebugTraceDetails(candidate.details, addresses.length) },
     ...candidate.unattributedMemoryAccesses === void 0 ? {} : {
-      unattributedMemoryAccesses: integer2(
+      unattributedMemoryAccesses: integer3(
         candidate.unattributedMemoryAccesses,
         "Trace unattributed memory accesses"
       )
     },
-    droppedEvents: integer2(candidate.droppedEvents, `${context}.droppedEvents`),
+    droppedEvents: integer3(candidate.droppedEvents, `${context}.droppedEvents`),
     active: boolean(candidate.active, `${context}.active`)
   };
 };
@@ -43486,7 +44324,7 @@ var uniqueIds = (values, context) => {
   return values;
 };
 var backendEvent2 = (message) => {
-  const body = record4(message.body, `Sidecar '${message.event}' event body`);
+  const body = record5(message.body, `Sidecar '${message.event}' event body`);
   if (message.event === "stopped") {
     const reason = string2(body.reason, "Stopped event reason");
     if (!isStopReason(reason)) {
@@ -43554,7 +44392,7 @@ var SidecarDebugBackend = class {
       throw new Error("Debug backend is already connected.");
     }
     const client2 = await this.#ensureClient();
-    const response = record4(
+    const response = record5(
       await client2.request("connect", { reset: options.reset ?? true }),
       "Sidecar connect response"
     );
@@ -43649,7 +44487,7 @@ var SidecarDebugBackend = class {
   /** @inheritdoc */
   async readMemory(requestedAddress, count3) {
     const checkedAddress = address(requestedAddress, "Memory address");
-    const checkedCount = integer2(count3, "Memory count");
+    const checkedCount = integer3(count3, "Memory count");
     const readable = this.capabilities.architectures.find(({ architecture }) => architecture === checkedAddress.architecture)?.memorySpaces.some(
       (memorySpace) => memorySpace.addressSpace === checkedAddress.addressSpace
     );
@@ -43658,7 +44496,7 @@ var SidecarDebugBackend = class {
         `Memory address space '${checkedAddress.architecture}/${checkedAddress.addressSpace}' is not readable.`
       );
     }
-    const result = record4(
+    const result = record5(
       await this.#requireConnected().request("readMemory", {
         address: checkedAddress,
         count: checkedCount
@@ -43675,7 +44513,7 @@ var SidecarDebugBackend = class {
         `Memory response returned ${bytes.length} byte(s), expected ${checkedCount}.`
       );
     }
-    const unreadableBytes = integer2(result.unreadableBytes, "Memory response.unreadableBytes");
+    const unreadableBytes = integer3(result.unreadableBytes, "Memory response.unreadableBytes");
     if (unreadableBytes > checkedCount) {
       throw new Error("Memory response unreadableBytes exceeds the requested count.");
     }
@@ -43700,7 +44538,7 @@ var SidecarDebugBackend = class {
   /** @inheritdoc */
   async disassemble(requestedAddress, count3) {
     const checkedAddress = address(requestedAddress, "Disassembly address");
-    const checkedCount = integer2(count3, "Disassembly count");
+    const checkedCount = integer3(count3, "Disassembly count");
     const result = array(
       await this.#requireConnected().request("disassemble", {
         address: checkedAddress,
@@ -43791,7 +44629,7 @@ var SidecarDebugBackend = class {
     return client2;
   }
   async #initialize(client2) {
-    const result = record4(
+    const result = record5(
       await client2.request("initialize", {
         backend: this.#backend,
         backendProtocolVersion: this.protocolVersion
@@ -43801,7 +44639,7 @@ var SidecarDebugBackend = class {
     if (string2(result.backend, "Sidecar initialize backend") !== this.#backend) {
       throw new Error("Sidecar initialize response named a different backend.");
     }
-    if (integer2(result.backendProtocolVersion, "Sidecar backend protocol version", 1) !== this.protocolVersion) {
+    if (integer3(result.backendProtocolVersion, "Sidecar backend protocol version", 1) !== this.protocolVersion) {
       throw new Error(
         `Unsupported debug backend protocol '${String(result.backendProtocolVersion)}'.`
       );
@@ -44047,20 +44885,20 @@ var DebugSidecarClient = class {
 };
 
 // packages/debug-adapter/src/capture-file.ts
-var import_promises11 = require("node:fs/promises");
+var import_promises13 = require("node:fs/promises");
 init_src();
 
 // packages/debug-adapter/src/capture-context.ts
-var import_node_crypto17 = require("node:crypto");
+var import_node_crypto19 = require("node:crypto");
 var import_node_fs12 = require("node:fs");
-var import_promises10 = require("node:fs/promises");
-var import_node_path18 = __toESM(require("node:path"), 1);
-var isRecord27 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var import_promises12 = require("node:fs/promises");
+var import_node_path20 = __toESM(require("node:path"), 1);
+var isRecord29 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var digestFile2 = async (file, signal) => {
-  const hash4 = (0, import_node_crypto17.createHash)("sha256");
+  const hash4 = (0, import_node_crypto19.createHash)("sha256");
   for await (const bytes of (0, import_node_fs12.createReadStream)(file, { signal })) {
     if (!Buffer.isBuffer(bytes)) {
-      throw new Error(`Expected binary capture context data in ${import_node_path18.default.basename(file)}.`);
+      throw new Error(`Expected binary capture context data in ${import_node_path20.default.basename(file)}.`);
     }
     hash4.update(bytes);
   }
@@ -44148,25 +44986,25 @@ var CaptureContextRecorder = class {
    */
   async finish(summary) {
     const boundaries = JSON.parse(
-      await (0, import_promises10.readFile)(import_node_path18.default.join(this.directory, "boundaries.json"), "utf8")
+      await (0, import_promises12.readFile)(import_node_path20.default.join(this.directory, "boundaries.json"), "utf8")
     );
-    if (!isRecord27(boundaries)) {
+    if (!isRecord29(boundaries)) {
       throw new Error("Capture context boundaries must be an object.");
     }
-    const boundaryEnd = isRecord27(boundaries.end) ? boundaries.end.eventThrough : void 0;
+    const boundaryEnd = isRecord29(boundaries.end) ? boundaries.end.eventThrough : void 0;
     if (boundaries.session !== summary.position.session || boundaryEnd !== summary.position.producedThrough) {
       throw new Error("Capture context boundary does not match the completed ACT2 archive.");
     }
     const nes = this.#metadata.architecture === "65xx.2a03";
     const files = {};
-    for (const name2 of (await (0, import_promises10.readdir)(this.directory)).toSorted()) {
+    for (const name2 of (await (0, import_promises12.readdir)(this.directory)).toSorted()) {
       if (!/^(?:identity\.txt|machine\.json|start-extra\.bin|end-state\.bin|ram-(?:start|end)\.bin|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
         name2
       )) {
         throw new Error(`Unexpected capture context artifact: ${name2}.`);
       }
-      const file = import_node_path18.default.join(this.directory, name2);
-      const stat3 = await (0, import_promises10.lstat)(file);
+      const file = import_node_path20.default.join(this.directory, name2);
+      const stat3 = await (0, import_promises12.lstat)(file);
       if (!stat3.isFile() || stat3.isSymbolicLink()) {
         throw new Error("Capture context artifacts must be regular files.");
       }
@@ -44177,7 +45015,7 @@ var CaptureContextRecorder = class {
         throw new Error("Controller evidence has an incomplete row.");
       }
       const sha2564 = await digestFile2(file);
-      const handle2 = await (0, import_promises10.open)(file, "r+");
+      const handle2 = await (0, import_promises12.open)(file, "r+");
       try {
         await handle2.sync();
       } finally {
@@ -44206,8 +45044,8 @@ var CaptureContextRecorder = class {
       throw new Error("Capture context requires full-capture graphics from the native runtime.");
     }
     const graphicsScope = nes ? "nes.cpu-bus-ppu" : "snes.cpu-bus-ppu";
-    const manifest = import_node_path18.default.join(this.directory, "manifest.json");
-    const handle = await (0, import_promises10.open)(`${manifest}.partial`, "wx");
+    const manifest = import_node_path20.default.join(this.directory, "manifest.json");
+    const handle = await (0, import_promises12.open)(`${manifest}.partial`, "wx");
     try {
       await handle.writeFile(
         `${JSON.stringify(
@@ -44215,7 +45053,7 @@ var CaptureContextRecorder = class {
             format: "uttori-capture-context",
             version: 1,
             ...this.#metadata,
-            archive: import_node_path18.default.basename(summary.archive),
+            archive: import_node_path20.default.basename(summary.archive),
             scope: summary.scope,
             boundaries,
             ...nes ? {
@@ -44244,7 +45082,7 @@ var CaptureContextRecorder = class {
               scope: summary.scope,
               windowFrames: null,
               file: null,
-              primaryArchive: import_node_path18.default.basename(summary.archive)
+              primaryArchive: import_node_path20.default.basename(summary.archive)
             },
             files
           },
@@ -44257,8 +45095,8 @@ var CaptureContextRecorder = class {
     } finally {
       await handle.close();
     }
-    await (0, import_promises10.link)(`${manifest}.partial`, manifest);
-    await (0, import_promises10.unlink)(`${manifest}.partial`);
+    await (0, import_promises12.link)(`${manifest}.partial`, manifest);
+    await (0, import_promises12.unlink)(`${manifest}.partial`);
   }
   async #request(request, expected) {
     const result = await this.#native(request);
@@ -44369,10 +45207,10 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
     const context = options.context === false ? void 0 : new CaptureContextRecorder(archive, options, options.transport);
     const transport = context?.transport ?? options.transport;
     if (format2 === "json") {
-      const destination = await (0, import_promises11.open)(options.file, "wx");
+      const destination = await (0, import_promises13.open)(options.file, "wx");
       await destination.close();
     } else {
-      const existing = await (0, import_promises11.lstat)(archive).catch((error) => {
+      const existing = await (0, import_promises13.lstat)(archive).catch((error) => {
         if (error.code !== "ENOENT") {
           throw error;
         }
@@ -44385,7 +45223,7 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
     let handle;
     let position;
     try {
-      handle = await (0, import_promises11.open)(`${archive}.partial`, "wx");
+      handle = await (0, import_promises13.open)(`${archive}.partial`, "wx");
       position = validateCapturePosition(
         await transport({
           operation: "start",
@@ -44436,7 +45274,7 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
       }
       await handle?.close().catch(() => void 0);
       if (format2 === "json") {
-        await (0, import_promises11.unlink)(options.file).catch(() => void 0);
+        await (0, import_promises13.unlink)(options.file).catch(() => void 0);
       }
       throw error;
     }
@@ -44572,8 +45410,8 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
       await this.#handle.sync();
       await this.#handle.close();
       const archive = this.#archive;
-      await (0, import_promises11.link)(this.#partial, archive);
-      await (0, import_promises11.unlink)(this.#partial);
+      await (0, import_promises13.link)(this.#partial, archive);
+      await (0, import_promises13.unlink)(this.#partial);
       if (this.#format === "json") {
         await exportCaptureJson(archive, this.#file, true);
       }
@@ -44760,15 +45598,15 @@ var NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
 };
 
 // packages/vscode-extension/src/analysis/navigation.ts
-var import_vscode5 = require("vscode");
-function isRecord28(value) {
+var import_vscode6 = require("vscode");
+function isRecord30(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isNavigationManifest(value) {
-  return isRecord28(value) && typeof value.target === "string" && isRecord28(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number";
+  return isRecord30(value) && typeof value.target === "string" && isRecord30(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number";
 }
 function isNavigationProjection(value) {
-  return isRecord28(value) && typeof value.capturedRam === "boolean" && Array.isArray(value.lines) && value.lines.every((line) => typeof line === "string");
+  return isRecord30(value) && typeof value.capturedRam === "boolean" && Array.isArray(value.lines) && value.lines.every((line) => typeof line === "string");
 }
 var sortedUnique4 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 var findDebugMapSources = async (target) => {
@@ -44815,9 +45653,9 @@ var openSourceLocation = async (locations) => {
   if (locations.length === 0) {
     return false;
   }
-  const selected = locations.length === 1 ? locations[0] : (await import_vscode5.window.showQuickPick(
+  const selected = locations.length === 1 ? locations[0] : (await import_vscode6.window.showQuickPick(
     locations.map((location) => ({
-      label: `${path25.basename(location.file)}:${location.line}`,
+      label: `${path28.basename(location.file)}:${location.line}`,
       description: `${location.architecture} \xB7 ${location.addressSpace} \xB7 ${location.mapFile}`,
       location
     })),
@@ -44829,11 +45667,11 @@ var openSourceLocation = async (locations) => {
   if (!selected) {
     return true;
   }
-  const document = await import_vscode5.workspace.openTextDocument(import_vscode5.Uri.file(selected.file));
-  const editor = await import_vscode5.window.showTextDocument(document, { preview: true });
-  const position = new import_vscode5.Position(Math.max(0, selected.line - 1), 0);
-  editor.selection = new import_vscode5.Selection(position, position);
-  editor.revealRange(editor.selection, import_vscode5.TextEditorRevealType.InCenterIfOutsideViewport);
+  const document = await import_vscode6.workspace.openTextDocument(import_vscode6.Uri.file(selected.file));
+  const editor = await import_vscode6.window.showTextDocument(document, { preview: true });
+  const position = new import_vscode6.Position(Math.max(0, selected.line - 1), 0);
+  editor.selection = new import_vscode6.Selection(position, position);
+  editor.revealRange(editor.selection, import_vscode6.TextEditorRevealType.InCenterIfOutsideViewport);
   return true;
 };
 var chooseArchitecture = async (architectures) => {
@@ -44843,13 +45681,13 @@ var chooseArchitecture = async (architectures) => {
   if (architectures.length === 1) {
     return architectures[0];
   }
-  return import_vscode5.window.showQuickPick(architectures, {
+  return import_vscode6.window.showQuickPick(architectures, {
     title: "Open Virtual Disassembly",
     placeHolder: "Choose the persisted architecture identity"
   });
 };
 var openLiveDisassembly = async (target, architectures) => {
-  const session = import_vscode5.debug.activeDebugSession;
+  const session = import_vscode6.debug.activeDebugSession;
   if (!session || session.type !== "uttori-asm") {
     return false;
   }
@@ -44868,8 +45706,8 @@ var openLiveDisassembly = async (target, architectures) => {
       instructionOffset: 0,
       instructionCount: 32
     });
-    const instructions = isRecord28(response) && Array.isArray(response.instructions) ? response.instructions : [];
-    if (instructions.length === 0 || !instructions.every(isRecord28)) {
+    const instructions = isRecord30(response) && Array.isArray(response.instructions) ? response.instructions : [];
+    if (instructions.length === 0 || !instructions.every(isRecord30)) {
       return false;
     }
     const lines = instructions.map((instruction2) => {
@@ -44879,13 +45717,13 @@ var openLiveDisassembly = async (target, architectures) => {
       const symbol = typeof instruction2.symbol === "string" ? ` ; ${instruction2.symbol}` : "";
       return `${address3.padEnd(42)} ${bytes.padEnd(16)} ${text2}${symbol}`;
     });
-    const document = await import_vscode5.workspace.openTextDocument({
+    const document = await import_vscode6.workspace.openTextDocument({
       language: "uttori-snes",
       content: `; Live virtual disassembly from the active Uttori ASM debug backend
 ${lines.join("\n")}
 `
     });
-    await import_vscode5.window.showTextDocument(document, { preview: true });
+    await import_vscode6.window.showTextDocument(document, { preview: true });
     return true;
   } catch {
     return false;
@@ -44902,15 +45740,15 @@ var openPersistedDisassembly = async (target, projection) => {
   const content = `${header.join("\n")}
 ${lines.length > 0 ? lines.join("\n") : "; No accepted CFG node exists near this address."}
 `;
-  const document = await import_vscode5.workspace.openTextDocument({ language: "uttori-snes", content });
-  const editor = await import_vscode5.window.showTextDocument(document, { preview: true });
+  const document = await import_vscode6.workspace.openTextDocument({ language: "uttori-snes", content });
+  const editor = await import_vscode6.window.showTextDocument(document, { preview: true });
   const matchingLine = lines.findIndex(
     (line) => line.startsWith(`${target.addressSpace}|0x${target.address.toString(16)} `)
   );
   if (matchingLine >= 0) {
-    const position = new import_vscode5.Position(header.length + matchingLine, 0);
-    editor.selection = new import_vscode5.Selection(position, position);
-    editor.revealRange(editor.selection, import_vscode5.TextEditorRevealType.InCenterIfOutsideViewport);
+    const position = new import_vscode6.Position(header.length + matchingLine, 0);
+    editor.selection = new import_vscode6.Selection(position, position);
+    editor.revealRange(editor.selection, import_vscode6.TextEditorRevealType.InCenterIfOutsideViewport);
   }
 };
 var navigateToAnalysisLocation = async (target) => {
@@ -44940,50 +45778,50 @@ var navigateToAnalysisLocation = async (target) => {
       return;
     }
     if (search.staleSources > 0) {
-      await import_vscode5.window.showWarningMessage(
+      await import_vscode6.window.showWarningMessage(
         `Found ${search.staleSources} stale source mapping(s). Opening persisted analysis disassembly instead.`
       );
     }
     await openPersistedDisassembly(target, projection);
   } catch (error) {
-    await import_vscode5.window.showErrorMessage(
+    await import_vscode6.window.showErrorMessage(
       `Could not open analysis location: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 };
 
 // packages/vscode-extension/src/analysis/sources-tree.ts
-var path26 = __toESM(require("node:path"), 1);
+var path29 = __toESM(require("node:path"), 1);
 init_src2();
-var import_vscode6 = require("vscode");
-function isRecord29(value) {
+var import_vscode7 = require("vscode");
+function isRecord31(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function isStringArray5(value) {
+function isStringArray4(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 function isNumberRecord2(value) {
-  return isRecord29(value) && Object.values(value).every((entry) => typeof entry === "number");
+  return isRecord31(value) && Object.values(value).every((entry) => typeof entry === "number");
 }
 function isEvidenceKind(value) {
   return value === "manual" || value === "import" || value === "detector" || value === "static" || value === "runtime";
 }
 function isImportReport2(value) {
-  return isRecord29(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && isNumberRecord2(value.imported) && isStringArray5(value.warnings) && Array.isArray(value.unsupported) && value.unsupported.every(
-    (loss) => isRecord29(loss) && typeof loss.field === "string" && typeof loss.reason === "string" && typeof loss.count === "number"
+  return isRecord31(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && isNumberRecord2(value.imported) && isStringArray4(value.warnings) && Array.isArray(value.unsupported) && value.unsupported.every(
+    (loss) => isRecord31(loss) && typeof loss.field === "string" && typeof loss.reason === "string" && typeof loss.count === "number"
   );
 }
 function isEvidenceSource(value) {
-  return isRecord29(value) && typeof value.id === "string" && typeof value.name === "string" && isStringArray5(value.names) && Array.isArray(value.kinds) && value.kinds.every(isEvidenceKind) && isStringArray5(value.evidenceIds) && Array.isArray(value.reports) && value.reports.every(isImportReport2) && (value.format === void 0 || typeof value.format === "string") && (value.sha256 === void 0 || typeof value.sha256 === "string") && (value.lastImportedAt === void 0 || typeof value.lastImportedAt === "number");
+  return isRecord31(value) && typeof value.id === "string" && typeof value.name === "string" && isStringArray4(value.names) && Array.isArray(value.kinds) && value.kinds.every(isEvidenceKind) && isStringArray4(value.evidenceIds) && Array.isArray(value.reports) && value.reports.every(isImportReport2) && (value.format === void 0 || typeof value.format === "string") && (value.sha256 === void 0 || typeof value.sha256 === "string") && (value.lastImportedAt === void 0 || typeof value.lastImportedAt === "number");
 }
 function isSourceCatalog(value) {
-  return isRecord29(value) && Array.isArray(value.sources) && value.sources.every(isEvidenceSource) && isRecord29(value.manifest) && typeof value.manifest.target === "string" && isRecord29(value.manifest.rom) && typeof value.manifest.rom.contentSha256 === "string" && typeof value.manifest.rom.contentSize === "number";
+  return isRecord31(value) && Array.isArray(value.sources) && value.sources.every(isEvidenceSource) && isRecord31(value.manifest) && typeof value.manifest.target === "string" && isRecord31(value.manifest.rom) && typeof value.manifest.rom.contentSha256 === "string" && typeof value.manifest.rom.contentSize === "number";
 }
 var count = (value) => value.toLocaleString("en-US");
-var PAGE_SIZE2 = 200;
+var PAGE_SIZE = 200;
 var AnalysisSourcesProvider = class {
   static viewId = "uttori-asm.sources";
-  #changed = new import_vscode6.EventEmitter();
+  #changed = new import_vscode7.EventEmitter();
   onDidChangeTreeData = this.#changed.event;
   #children = /* @__PURE__ */ new Map();
   #epoch = 0;
@@ -44996,14 +45834,14 @@ var AnalysisSourcesProvider = class {
     this.#changed.fire();
   }
   getTreeItem(element) {
-    const item = new import_vscode6.TreeItem(
+    const item = new import_vscode7.TreeItem(
       element.label,
-      element.load ? import_vscode6.TreeItemCollapsibleState.Collapsed : import_vscode6.TreeItemCollapsibleState.None
+      element.load ? import_vscode7.TreeItemCollapsibleState.Collapsed : import_vscode7.TreeItemCollapsibleState.None
     );
     item.id = element.id;
     item.description = element.description;
     item.tooltip = element.tooltip ?? element.label;
-    item.iconPath = new import_vscode6.ThemeIcon(element.icon);
+    item.iconPath = new import_vscode7.ThemeIcon(element.icon);
     item.contextValue = element.sourceTarget ? "analysisSource" : "analysisSourceEntry";
     item.command = element.command;
     return item;
@@ -45045,7 +45883,7 @@ var AnalysisSourcesProvider = class {
           }
           return {
             id: directory,
-            label: path26.basename(directory),
+            label: path29.basename(directory),
             description: `${count(catalog.sources.length)} sources`,
             tooltip: directory,
             icon: "database",
@@ -45054,7 +45892,7 @@ var AnalysisSourcesProvider = class {
         } catch (error) {
           return {
             id: `${directory}:error`,
-            label: path26.basename(directory),
+            label: path29.basename(directory),
             description: "could not read sources",
             icon: "error",
             tooltip: `${directory}
@@ -45118,12 +45956,12 @@ ${String(error)}`
     return roots;
   }
   #localPages(id, entries) {
-    if (entries.length <= PAGE_SIZE2) {
+    if (entries.length <= PAGE_SIZE) {
       return entries;
     }
-    let stride = PAGE_SIZE2;
-    while (Math.ceil(entries.length / stride) > PAGE_SIZE2) {
-      stride *= PAGE_SIZE2;
+    let stride = PAGE_SIZE;
+    while (Math.ceil(entries.length / stride) > PAGE_SIZE) {
+      stride *= PAGE_SIZE;
     }
     const pages = [];
     for (let start = 0; start < entries.length; start += stride) {
@@ -45223,7 +46061,7 @@ ${String(error)}`
 };
 
 // packages/vscode-extension/src/asset-preview-controller.ts
-var import_vscode7 = require("vscode");
+var import_vscode8 = require("vscode");
 function escapeHtml(value) {
   return value.replace(/["&'<>]/g, (character) => {
     const replacements = {
@@ -45236,17 +46074,17 @@ function escapeHtml(value) {
     return replacements[character];
   });
 }
-function isRecord30(value) {
+function isRecord32(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isPaletteUser(value) {
-  if (!isRecord30(value) || typeof value.atlas !== "string" || !Array.isArray(value.segments)) {
+  if (!isRecord32(value) || typeof value.atlas !== "string" || !Array.isArray(value.segments)) {
     return false;
   }
   return value.segments.every((segment) => typeof segment === "string");
 }
 function isAssetPreviewRequest(value) {
-  return isRecord30(value) && typeof value.uri === "string" && value.uri.startsWith("file:") && typeof value.version === "number" && typeof value.line === "number" && Number.isSafeInteger(value.line) && value.line >= 0;
+  return isRecord32(value) && typeof value.uri === "string" && value.uri.startsWith("file:") && typeof value.version === "number" && typeof value.line === "number" && Number.isSafeInteger(value.line) && value.line >= 0;
 }
 function openLink(request) {
   return `command:asm.assetPreview.open?${encodeURIComponent(JSON.stringify([request]))}`;
@@ -45288,7 +46126,7 @@ var AssetPreviewController = class {
    */
   async request(document, line, token) {
     const active = this.client(document.uri);
-    if (!active || document.uri.scheme !== "file" || !import_vscode7.workspace.isTrusted || !["uttori-snes", "uttori-65xx"].includes(document.languageId)) {
+    if (!active || document.uri.scheme !== "file" || !import_vscode8.workspace.isTrusted || !["uttori-snes", "uttori-65xx"].includes(document.languageId)) {
       return void 0;
     }
     const version = document.version;
@@ -45323,11 +46161,11 @@ var AssetPreviewController = class {
     if (!response) {
       return void 0;
     }
-    const markdown = new import_vscode7.MarkdownString();
+    const markdown = new import_vscode8.MarkdownString();
     markdown.isTrusted = { enabledCommands: ["asm.assetPreview.open"] };
     if (!response.ok) {
       markdown.appendText(response.message);
-      return new import_vscode7.Hover(markdown);
+      return new import_vscode8.Hover(markdown);
     }
     const preview = response.preview;
     markdown.appendMarkdown(
@@ -45359,7 +46197,7 @@ var AssetPreviewController = class {
         })})`
       );
     }
-    return new import_vscode7.Hover(markdown);
+    return new import_vscode8.Hover(markdown);
   }
   /** Open media only from a fresh trusted command, never from arbitrary command URI payloads.
    * @param {unknown} argument Parsed command URI argument.
@@ -45370,7 +46208,7 @@ var AssetPreviewController = class {
       return;
     }
     const request = argument;
-    const document = import_vscode7.workspace.textDocuments.find((item) => item.uri.toString() === request.uri);
+    const document = import_vscode8.workspace.textDocuments.find((item) => item.uri.toString() === request.uri);
     if (!document || !["uttori-snes", "uttori-65xx"].includes(document.languageId) || document.version !== request.version || request.line >= document.lineCount) {
       return;
     }
@@ -45383,11 +46221,11 @@ var AssetPreviewController = class {
       return;
     }
     this.#panel?.dispose();
-    const panel = import_vscode7.window.createWebviewPanel(
+    const panel = import_vscode8.window.createWebviewPanel(
       "asm.assetPreview",
       "Asset Preview",
       {
-        viewColumn: import_vscode7.window.activeTextEditor?.viewColumn ?? import_vscode7.ViewColumn.Active,
+        viewColumn: import_vscode8.window.activeTextEditor?.viewColumn ?? import_vscode8.ViewColumn.Active,
         preserveFocus: false
       },
       { enableScripts: false, retainContextWhenHidden: false }
@@ -45452,10 +46290,10 @@ var AssetPreviewController = class {
 };
 
 // packages/vscode-extension/src/assets/binary-drafts.ts
-var import_vscode8 = require("vscode");
+var import_vscode9 = require("vscode");
 var BinaryDrafts = class {
   documents = /* @__PURE__ */ new Set();
-  #changed = new import_vscode8.EventEmitter();
+  #changed = new import_vscode9.EventEmitter();
   onDidChange = this.#changed.event;
   changed(uri) {
     this.#changed.fire(uri);
@@ -45467,12 +46305,12 @@ var BinaryDrafts = class {
 };
 
 // packages/vscode-extension/src/assets/palette-editor.ts
-var import_vscode10 = require("vscode");
+var import_vscode11 = require("vscode");
 
 // packages/vscode-extension/src/webview-template.ts
-var import_node_crypto18 = require("node:crypto");
+var import_node_crypto20 = require("node:crypto");
 var import_node_fs13 = require("node:fs");
-var import_vscode9 = require("vscode");
+var import_vscode10 = require("vscode");
 var htmlCache = /* @__PURE__ */ new Map();
 var escapeAttribute = (value) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
 var readTemplate = (file) => {
@@ -45485,10 +46323,10 @@ var readTemplate = (file) => {
   return html;
 };
 var renderWebviewTemplate = (webview, extensionUri, name2) => {
-  const asset = (file) => import_vscode9.Uri.joinPath(extensionUri, "media", file);
+  const asset = (file) => import_vscode10.Uri.joinPath(extensionUri, "media", file);
   const values = {
     cspSource: escapeAttribute(webview.cspSource),
-    nonce: escapeAttribute((0, import_node_crypto18.randomBytes)(18).toString("base64")),
+    nonce: escapeAttribute((0, import_node_crypto20.randomBytes)(18).toString("base64")),
     styleUri: escapeAttribute(webview.asWebviewUri(asset(`${name2}.css`)).toString()),
     scriptUri: escapeAttribute(webview.asWebviewUri(asset(`${name2}.js`)).toString())
   };
@@ -45522,12 +46360,12 @@ function paletteRecord(catalog, id) {
   return palette;
 }
 function spritePaletteBytes(catalog, id, { wordOffset = 0, wordCount } = {}) {
-  const record6 = paletteRecord(catalog, id);
-  const count3 = wordCount ?? record6.words.length - wordOffset;
-  if (!Number.isSafeInteger(wordOffset) || !Number.isSafeInteger(count3) || wordOffset < 0 || count3 < 1 || wordOffset + count3 > record6.words.length) {
+  const record7 = paletteRecord(catalog, id);
+  const count3 = wordCount ?? record7.words.length - wordOffset;
+  if (!Number.isSafeInteger(wordOffset) || !Number.isSafeInteger(count3) || wordOffset < 0 || count3 < 1 || wordOffset + count3 > record7.words.length) {
     throw new Error(`Invalid ROM palette word slice ${id}.`);
   }
-  const words = record6.words.slice(wordOffset, wordOffset + count3);
+  const words = record7.words.slice(wordOffset, wordOffset + count3);
   const bytes = new Uint8Array(words.length * 2);
   for (const [index, raw] of words.entries()) {
     const word = Number.parseInt(raw, 16);
@@ -46033,11 +46871,11 @@ function parseTree(text2, errors = [], options = ParseOptions.DEFAULT) {
       onValue({ type: getNodeType(value), offset, length, parent: currentParent, value });
       ensurePropertyComplete(offset + length);
     },
-    onSeparator: (sep4, offset, length) => {
+    onSeparator: (sep5, offset, length) => {
       if (currentParent.type === "property") {
-        if (sep4 === ":") {
+        if (sep5 === ":") {
           currentParent.colonOffset = offset;
-        } else if (sep4 === ",") {
+        } else if (sep5 === ",") {
           ensurePropertyComplete(offset);
         }
       }
@@ -46053,12 +46891,12 @@ function parseTree(text2, errors = [], options = ParseOptions.DEFAULT) {
   }
   return result;
 }
-function findNodeAtLocation(root, path46) {
+function findNodeAtLocation(root, path51) {
   if (!root) {
     return void 0;
   }
   let node = root;
-  for (let segment of path46) {
+  for (let segment of path51) {
     if (typeof segment === "string") {
       if (node.type !== "object" || !Array.isArray(node.children)) {
         return void 0;
@@ -46513,20 +47351,20 @@ function parse2(text2) {
 }
 function paletteView(text2) {
   const { catalog } = parse2(text2);
-  return Object.entries(catalog.palettes).map(([id, record6]) => ({
+  return Object.entries(catalog.palettes).map(([id, record7]) => ({
     id,
-    name: "name" in record6 && typeof record6.name === "string" ? record6.name : "",
-    firstIndex: record6.firstIndex,
-    words: record6.words
+    name: "name" in record7 && typeof record7.name === "string" ? record7.name : "",
+    firstIndex: record7.firstIndex,
+    words: record7.words
   }));
 }
 function paletteWordEdit(text2, id, index, word) {
   const { tree, catalog } = parse2(text2);
-  const record6 = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : void 0;
-  if (!record6 || !Number.isSafeInteger(index) || index < record6.firstIndex || index >= record6.firstIndex + record6.words.length || !/^[\dA-Fa-f]{4}$/.test(word)) {
+  const record7 = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : void 0;
+  if (!record7 || !Number.isSafeInteger(index) || index < record7.firstIndex || index >= record7.firstIndex + record7.words.length || !/^[\dA-Fa-f]{4}$/.test(word)) {
     throw new Error("Select a stored palette slot and a four-digit BGR555 word.");
   }
-  const node = findNodeAtLocation2(tree, ["palettes", id, "words", index - record6.firstIndex]);
+  const node = findNodeAtLocation2(tree, ["palettes", id, "words", index - record7.firstIndex]);
   if (!node || node.type !== "string") {
     throw new Error("Palette slot changed; reload the view.");
   }
@@ -46534,7 +47372,7 @@ function paletteWordEdit(text2, id, index, word) {
 }
 
 // packages/vscode-extension/src/assets/palette-editor.ts
-function isRecord31(value) {
+function isRecord33(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isPaletteEdit(value) {
@@ -46553,20 +47391,20 @@ var PaletteEditor = class {
       );
     }
     const edit = paletteWordEdit(document.getText(), message.id, message.index, message.word);
-    const changes = new import_vscode10.WorkspaceEdit();
+    const changes = new import_vscode11.WorkspaceEdit();
     changes.replace(
       document.uri,
-      new import_vscode10.Range(document.positionAt(edit.offset), document.positionAt(edit.offset + edit.length)),
+      new import_vscode11.Range(document.positionAt(edit.offset), document.positionAt(edit.offset + edit.length)),
       edit.text
     );
-    if (!await import_vscode10.workspace.applyEdit(changes)) {
+    if (!await import_vscode11.workspace.applyEdit(changes)) {
       throw new Error("VS Code could not apply the palette edit.");
     }
   }
   resolveCustomTextEditor(document, panel) {
     panel.webview.options = {
       enableScripts: true,
-      localResourceRoots: [import_vscode10.Uri.joinPath(this.extensionUri, "media")]
+      localResourceRoots: [import_vscode11.Uri.joinPath(this.extensionUri, "media")]
     };
     const update = () => {
       try {
@@ -46580,13 +47418,13 @@ var PaletteEditor = class {
       }
     };
     const receive = panel.webview.onDidReceiveMessage((message) => {
-      if (!isRecord31(message)) {
+      if (!isRecord33(message)) {
         return;
       }
       if (message.type === "ready") {
         update();
       } else if (message.type === "text") {
-        void import_vscode10.commands.executeCommand("vscode.openWith", document.uri, "default");
+        void import_vscode11.commands.executeCommand("vscode.openWith", document.uri, "default");
       } else if (isPaletteEdit(message)) {
         void this.edit(document, message).then(update).catch((error) => {
           update();
@@ -46594,7 +47432,7 @@ var PaletteEditor = class {
         });
       }
     });
-    const changed2 = import_vscode10.workspace.onDidChangeTextDocument((event) => {
+    const changed2 = import_vscode11.workspace.onDidChangeTextDocument((event) => {
       if (event.document.uri.toString() === document.uri.toString()) {
         update();
       }
@@ -46608,14 +47446,14 @@ var PaletteEditor = class {
 };
 function registerPaletteEditor(context) {
   context.subscriptions.push(
-    import_vscode10.window.registerCustomEditorProvider("uttori.palette", new PaletteEditor(context.extensionUri), {
+    import_vscode11.window.registerCustomEditorProvider("uttori.palette", new PaletteEditor(context.extensionUri), {
       supportsMultipleEditorsPerDocument: true
     })
   );
 }
 
 // packages/assets/src/validation.ts
-function integer3(value, label, minimum, maximum) {
+function integer4(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
   }
@@ -46647,7 +47485,7 @@ var ASSET_LIMITS = Object.freeze({
 var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
 
 // packages/vscode-extension/src/assets/png-editor.ts
-var import_vscode12 = require("vscode");
+var import_vscode13 = require("vscode");
 
 // packages/vscode-extension/src/assets/png-codec.ts
 var import_node_worker_threads2 = require("node:worker_threads");
@@ -46703,14 +47541,14 @@ var PngCodec = class {
 };
 
 // packages/vscode-extension/src/assets/png-document.ts
-var import_node_crypto20 = require("node:crypto");
-var import_promises13 = __toESM(require("node:fs/promises"), 1);
-var import_node_path19 = __toESM(require("node:path"), 1);
-var import_vscode11 = require("vscode");
+var import_node_crypto22 = require("node:crypto");
+var import_promises15 = __toESM(require("node:fs/promises"), 1);
+var import_node_path21 = __toESM(require("node:path"), 1);
+var import_vscode12 = require("vscode");
 
 // packages/vscode-extension/src/assets/png-guidance.ts
-var import_node_crypto19 = require("node:crypto");
-var import_promises12 = __toESM(require("node:fs/promises"), 1);
+var import_node_crypto21 = require("node:crypto");
+var import_promises14 = __toESM(require("node:fs/promises"), 1);
 
 // node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
@@ -53798,11 +54636,11 @@ function validateOrientation(value) {
   }
 }
 function expandIndexedGrid(block) {
-  integer3(block.columns, "Grid columns", 1, 65536);
-  integer3(block.cellWidth, "Grid cell width", 1, 1 << 20);
-  integer3(block.cellHeight, "Grid cell height", 1, 1 << 20);
-  integer3(block.x, "Grid x", -(1 << 20), 1 << 20);
-  integer3(block.y, "Grid y", -(1 << 20), 1 << 20);
+  integer4(block.columns, "Grid columns", 1, 65536);
+  integer4(block.cellWidth, "Grid cell width", 1, 1 << 20);
+  integer4(block.cellHeight, "Grid cell height", 1, 1 << 20);
+  integer4(block.x, "Grid x", -(1 << 20), 1 << 20);
+  integer4(block.y, "Grid y", -(1 << 20), 1 << 20);
   validateOrientation(block);
   if (typeof block.id !== "string" || !block.id || block.cells.length < 1 || block.cells.length > 65536 || block.cells.length % block.columns !== 0) {
     throw new Error("Grid requires an identity and complete bounded rows.");
@@ -54007,8 +54845,8 @@ function validateNativeFrame(frame) {
       if (typeof address3 !== "number" || !Number.isSafeInteger(address3)) {
         throw new Error(`Body tiles require ROM addresses: ${frame.id}.`);
       }
-      const relative3 = decoded2.tileOffsets[index * 4 + quadrant];
-      const base = address3 & 16711680 | address3 - relative3 & 65535;
+      const relative4 = decoded2.tileOffsets[index * 4 + quadrant];
+      const base = address3 & 16711680 | address3 - relative4 & 65535;
       graphicsBase ??= base;
       if (base !== graphicsBase) {
         throw new Error(`Native tile references disagree: ${frame.id}/${block.id}.`);
@@ -54085,14 +54923,17 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   if (!isKnownTileSource(layout2.tileSources)) {
     throw new Error("Unknown atlas tile source mode.");
   }
-  if (Array.isArray(layout2.frames)) for (const frame of layout2.frames) {
-    if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
-      throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
-    }
-    if (Array.isArray(frame.blocks)) for (const block of frame.blocks) {
-      if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
-        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+  if (Array.isArray(layout2.frames)) {
+    for (const frame of layout2.frames) {
+      if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
+        throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
       }
+      if (Array.isArray(frame.blocks))
+        for (const block of frame.blocks) {
+          if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
+            throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+          }
+        }
     }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
@@ -54164,13 +55005,13 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
       ids.add(frame.id);
       rectangle(frame.bounds, layout2.width, layout2.height, `frame ${frame.id}`);
       validateFrameComposition(layout2, frame);
-      const record6 = frame.nativeFrame;
-      if (record6?.bytes) {
-        const previous = nativeRecords.get(record6.address);
-        if (previous && JSON.stringify(previous) !== JSON.stringify(record6)) {
+      const record7 = frame.nativeFrame;
+      if (record7?.bytes) {
+        const previous = nativeRecords.get(record7.address);
+        if (previous && JSON.stringify(previous) !== JSON.stringify(record7)) {
           throw new Error(`Shared native frame records disagree: ${frame.id}.`);
         }
-        nativeRecords.set(record6.address, record6);
+        nativeRecords.set(record7.address, record7);
       }
     }
     const ordered = [...nativeRecords.values()].toSorted((a, b) => a.address - b.address);
@@ -54204,7 +55045,7 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
 }
 
 // packages/vscode-extension/src/assets/png-guidance.ts
-var hash2 = (bytes) => (0, import_node_crypto19.createHash)("sha256").update(bytes).digest("hex");
+var hash2 = (bytes) => (0, import_node_crypto21.createHash)("sha256").update(bytes).digest("hex");
 function errorCode3(error) {
   return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : void 0;
 }
@@ -54212,11 +55053,11 @@ function isFrameLayout(value) {
   return typeof value === "object" && value !== null && "segments" in value && "paletteRefs" in value;
 }
 async function read(file) {
-  const stat3 = await import_promises12.default.lstat(file);
+  const stat3 = await import_promises14.default.lstat(file);
   if (!stat3.isFile() || stat3.size > 2 * 1024 * 1024) {
     throw new Error("PNG layout must be a regular file of at most 2 MiB.");
   }
-  return import_promises12.default.readFile(file);
+  return import_promises14.default.readFile(file);
 }
 async function readPngGuidance(file, image) {
   const sidecar = file.replace(/\.png$/i, ".layout.json");
@@ -54291,8 +55132,8 @@ async function assertPngGuidanceCurrent(guidance) {
 }
 
 // packages/vscode-extension/src/assets/png-document.ts
-var hash3 = (bytes) => (0, import_node_crypto20.createHash)("sha256").update(bytes).digest("hex");
-function isRecord32(value) {
+var hash3 = (bytes) => (0, import_node_crypto22.createHash)("sha256").update(bytes).digest("hex");
+function isRecord34(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 var PngDocument = class _PngDocument {
@@ -54313,11 +55154,11 @@ var PngDocument = class _PngDocument {
   codec;
   drafts;
   guidance;
-  #changed = new import_vscode11.EventEmitter();
+  #changed = new import_vscode12.EventEmitter();
   onDidChange = this.#changed.event;
-  #edited = new import_vscode11.EventEmitter();
+  #edited = new import_vscode12.EventEmitter();
   onDidEdit = this.#edited.event;
-  #disposed = new import_vscode11.EventEmitter();
+  #disposed = new import_vscode12.EventEmitter();
   onDidDispose = this.#disposed.event;
   #savedIndexes;
   #diskHash;
@@ -54348,7 +55189,7 @@ var PngDocument = class _PngDocument {
         throw new Error("PNG backup exceeds its size budget.");
       }
       const value = JSON.parse(Buffer.from(backup).toString("utf8"));
-      if (!isRecord32(value) || value.version !== 1 || value.uri !== uri.toString() || typeof value.bytes !== "string" || typeof value.indexes !== "string" || typeof value.saved !== "string" || typeof value.diskHash !== "string" || !/^[\da-f]{64}$/.test(value.diskHash)) {
+      if (!isRecord34(value) || value.version !== 1 || value.uri !== uri.toString() || typeof value.bytes !== "string" || typeof value.indexes !== "string" || typeof value.saved !== "string" || typeof value.diskHash !== "string" || !/^[\da-f]{64}$/.test(value.diskHash)) {
         throw new Error("Invalid PNG editor backup.");
       }
       bytes = Buffer.from(value.bytes, "base64");
@@ -54393,11 +55234,11 @@ var PngDocument = class _PngDocument {
   }
   /** Stat before reading prevents unbounded allocation even for malformed containers or external replacements. */
   static async read(uri) {
-    const stat3 = await import_promises13.default.lstat(uri.fsPath);
+    const stat3 = await import_promises15.default.lstat(uri.fsPath);
     if (!stat3.isFile() || stat3.size > ASSET_LIMITS.pngBytes) {
       throw new Error("PNG editing requires a regular file of at most 32 MiB.");
     }
-    return import_promises13.default.readFile(uri.fsPath);
+    return import_promises15.default.readFile(uri.fsPath);
   }
   get version() {
     return this.#version;
@@ -54503,8 +55344,8 @@ var PngDocument = class _PngDocument {
           "PNG changed on disk. Revert to review the external version, or use Save As to retain this draft."
         );
       }
-      temporary = import_node_path19.default.join(import_node_path19.default.dirname(file), `.${import_node_path19.default.basename(file)}.${(0, import_node_crypto20.randomUUID)()}.tmp`);
-      const handle = await import_promises13.default.open(temporary, "wx", 384);
+      temporary = import_node_path21.default.join(import_node_path21.default.dirname(file), `.${import_node_path21.default.basename(file)}.${(0, import_node_crypto22.randomUUID)()}.tmp`);
+      const handle = await import_promises15.default.open(temporary, "wx", 384);
       try {
         await handle.writeFile(encoded);
         await handle.sync();
@@ -54522,9 +55363,9 @@ var PngDocument = class _PngDocument {
       }
       if (same) {
         await assertPngGuidanceCurrent(this.guidance);
-        await import_promises13.default.chmod(temporary, (await import_promises13.default.stat(file)).mode & 511);
+        await import_promises15.default.chmod(temporary, (await import_promises15.default.stat(file)).mode & 511);
       }
-      await import_promises13.default.rename(temporary, file);
+      await import_promises15.default.rename(temporary, file);
       temporary = void 0;
       if (same) {
         this.#diskHash = hash3(encoded);
@@ -54535,7 +55376,7 @@ var PngDocument = class _PngDocument {
     } finally {
       this.#saving = false;
       if (temporary) {
-        await import_promises13.default.rm(temporary, { force: true });
+        await import_promises15.default.rm(temporary, { force: true });
       }
       if (this.#externalPending) {
         this.#externalPending = false;
@@ -54620,11 +55461,11 @@ var PngDocument = class _PngDocument {
 };
 
 // packages/vscode-extension/src/assets/png-editor.ts
-function isRecord33(value) {
+function isRecord35(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isPixelStroke(value) {
-  return isRecord33(value) && value.type === "paint" && typeof value.version === "number" && typeof value.index === "number" && Array.isArray(value.pixels) && value.pixels.every((pixel) => typeof pixel === "number");
+  return isRecord35(value) && value.type === "paint" && typeof value.version === "number" && typeof value.index === "number" && Array.isArray(value.pixels) && value.pixels.every((pixel) => typeof pixel === "number");
 }
 function cancellationRequested2(token) {
   return token.isCancellationRequested;
@@ -54638,16 +55479,16 @@ var PngEditor = class {
   extensionUri;
   codec;
   drafts;
-  #edited = new import_vscode12.EventEmitter();
+  #edited = new import_vscode13.EventEmitter();
   onDidChangeCustomDocument = this.#edited.event;
   async openCustomDocument(uri, context, token) {
     let backup;
     if (context.backupId) {
-      const location = import_vscode12.Uri.parse(context.backupId);
-      if ((await import_vscode12.workspace.fs.stat(location)).size > PNG_EDITOR_BACKUP_BYTES) {
+      const location = import_vscode13.Uri.parse(context.backupId);
+      if ((await import_vscode13.workspace.fs.stat(location)).size > PNG_EDITOR_BACKUP_BYTES) {
         throw new Error("PNG backup exceeds its size budget.");
       }
-      backup = await import_vscode12.workspace.fs.readFile(location);
+      backup = await import_vscode13.workspace.fs.readFile(location);
     }
     const document = await PngDocument.open(uri, this.codec, this.drafts, backup);
     if (token.isCancellationRequested) {
@@ -54655,8 +55496,8 @@ var PngEditor = class {
       throw new Error("PNG open cancelled.");
     }
     const edit = document.onDidEdit((event) => this.#edited.fire(event));
-    const watcher = import_vscode12.workspace.createFileSystemWatcher(
-      new import_vscode12.RelativePattern(import_vscode12.Uri.joinPath(uri, ".."), "*")
+    const watcher = import_vscode13.workspace.createFileSystemWatcher(
+      new import_vscode13.RelativePattern(import_vscode13.Uri.joinPath(uri, ".."), "*")
     );
     const changed2 = (changedUri) => {
       if (changedUri.toString() === uri.toString()) {
@@ -54683,7 +55524,7 @@ var PngEditor = class {
   resolveCustomEditor(document, panel) {
     panel.webview.options = {
       enableScripts: true,
-      localResourceRoots: [import_vscode12.Uri.joinPath(this.extensionUri, "media")]
+      localResourceRoots: [import_vscode13.Uri.joinPath(this.extensionUri, "media")]
     };
     const update = () => {
       void panel.webview.postMessage({
@@ -54699,7 +55540,7 @@ var PngEditor = class {
     };
     const changed2 = document.onDidChange(update);
     const received = panel.webview.onDidReceiveMessage((value) => {
-      if (!isRecord33(value)) {
+      if (!isRecord35(value)) {
         return;
       }
       if (value.type === "ready") {
@@ -54739,15 +55580,15 @@ var PngEditor = class {
     if (token.isCancellationRequested) {
       throw new Error("PNG backup cancelled.");
     }
-    await import_vscode12.workspace.fs.writeFile(context.destination, document.backup());
+    await import_vscode13.workspace.fs.writeFile(context.destination, document.backup());
     if (cancellationRequested2(token)) {
-      await import_vscode12.workspace.fs.delete(context.destination);
+      await import_vscode13.workspace.fs.delete(context.destination);
       throw new Error("PNG backup cancelled.");
     }
     return {
       id: context.destination.toString(),
       delete: async () => {
-        await import_vscode12.workspace.fs.delete(context.destination);
+        await import_vscode13.workspace.fs.delete(context.destination);
       }
     };
   }
@@ -54761,16 +55602,16 @@ function registerPngEditor(context, drafts) {
   context.subscriptions.push(
     codec,
     editor,
-    import_vscode12.window.registerCustomEditorProvider("uttori.indexedPng", editor, {
+    import_vscode13.window.registerCustomEditorProvider("uttori.indexedPng", editor, {
       supportsMultipleEditorsPerDocument: true
     })
   );
 }
 
 // packages/vscode-extension/src/debug/session.ts
-var import_node_crypto23 = require("node:crypto");
-var fs18 = __toESM(require("node:fs"), 1);
-var path33 = __toESM(require("node:path"), 1);
+var import_node_crypto25 = require("node:crypto");
+var fs20 = __toESM(require("node:fs"), 1);
+var path36 = __toESM(require("node:path"), 1);
 init_src();
 
 // packages/debug-sidecar-ares/src/profile.ts
@@ -54899,10 +55740,10 @@ var ARES_NES_CAPABILITIES = Object.freeze({
 
 // packages/debug-sidecar-ares/src/ares-process-host.ts
 var import_node_child_process4 = require("node:child_process");
-var import_node_crypto21 = require("node:crypto");
+var import_node_crypto23 = require("node:crypto");
 var import_node_fs14 = require("node:fs");
 var import_node_net2 = __toESM(require("node:net"), 1);
-var import_node_path20 = __toESM(require("node:path"), 1);
+var import_node_path22 = __toESM(require("node:path"), 1);
 
 // packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 var import_node_net = __toESM(require("node:net"), 1);
@@ -55061,7 +55902,7 @@ var checkedRevision = (value, name2) => {
   return value.toLowerCase();
 };
 var checkedResourcePath = (value) => {
-  if (value === "." || value.includes("\\") || import_node_path20.default.posix.isAbsolute(value) || import_node_path20.default.posix.normalize(value) !== value || value.split("/").includes("..")) {
+  if (value === "." || value.includes("\\") || import_node_path22.default.posix.isAbsolute(value) || import_node_path22.default.posix.normalize(value) !== value || value.split("/").includes("..")) {
     throw new Error(`Ares resource path '${value}' must be normalized and relative.`);
   }
   return value;
@@ -55107,7 +55948,7 @@ var NodeAresProcessHandle = class {
   }
 };
 var nodeSha256 = async (file) => {
-  const digest2 = (0, import_node_crypto21.createHash)("sha256");
+  const digest2 = (0, import_node_crypto23.createHash)("sha256");
   for await (const chunk of (0, import_node_fs14.createReadStream)(file)) {
     if (!Buffer.isBuffer(chunk)) {
       throw new Error(`Expected binary bytes while hashing ${file}.`);
@@ -55154,9 +55995,9 @@ var nodeAresProcessRuntime = Object.freeze({
     timer.unref();
   })
 });
-var isRecord34 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord36 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var manifestRecord = (value) => {
-  if (!isRecord34(value)) {
+  if (!isRecord36(value)) {
     throw new Error("Ares runtime manifest must be an object.");
   }
   return value;
@@ -55261,17 +56102,17 @@ var parseAresRuntimeManifest = (value) => {
 
 // packages/vscode-extension/src/debug/session.ts
 init_src2();
-var import_vscode16 = require("vscode");
+var import_vscode17 = require("vscode");
 
 // packages/vscode-extension/src/runtime/binding.ts
-var path29 = __toESM(require("node:path"), 1);
-function isRecord35(value) {
+var path32 = __toESM(require("node:path"), 1);
+function isRecord37(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 var runtimeBindingFromLaunch = (configurations, root) => {
   const bindings = /* @__PURE__ */ new Map();
   for (const configuration of configurations) {
-    if (!isRecord35(configuration)) {
+    if (!isRecord37(configuration)) {
       continue;
     }
     const config = configuration;
@@ -55283,7 +56124,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
         return void 0;
       }
       const expanded = value.replaceAll("${workspaceFolder}", root);
-      return expanded.includes("${") ? void 0 : path29.resolve(root, expanded);
+      return expanded.includes("${") ? void 0 : path32.resolve(root, expanded);
     };
     const runtimeManifest = resolve9(config.runtimeManifest);
     const emulator = resolve9(config.emulator);
@@ -55310,9 +56151,9 @@ var runtimeBindingFromLaunch = (configurations, root) => {
 };
 
 // packages/vscode-extension/src/runtime/capture-state.ts
-var import_vscode13 = require("vscode");
+var import_vscode14 = require("vscode");
 var phase = "idle";
-var changed = new import_vscode13.EventEmitter();
+var changed = new import_vscode14.EventEmitter();
 var onDidChangeRuntimeCapture = changed.event;
 var runtimeCapturePhase = () => phase;
 function setRuntimeCapturePhase(next) {
@@ -55450,7 +56291,7 @@ var acquireTraceLease = () => {
 };
 
 // packages/vscode-extension/src/runtime/trace-recorder.ts
-var import_promises14 = require("node:fs/promises");
+var import_promises16 = require("node:fs/promises");
 var resolveEditorTraceDetail = (requested, instructionDetails) => {
   if (requested === "full" && !instructionDetails) {
     throw new Error(
@@ -55505,7 +56346,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
     if (!Number.isSafeInteger(options.maxBatchEvents) || options.maxBatchEvents < 1) {
       throw new Error("Trace batch maximum must be a positive safe integer.");
     }
-    const handle = await (0, import_promises14.open)(options.file, "w");
+    const handle = await (0, import_promises16.open)(options.file, "w");
     const header = {
       format: "uttori-asm-instruction-trace",
       schemaVersion: 1,
@@ -55644,16 +56485,16 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
 };
 
 // packages/vscode-extension/src/source/evidence-selection.ts
-var import_node_path21 = __toESM(require("node:path"), 1);
-var import_vscode14 = require("vscode");
-function isRecord36(value) {
+var import_node_path23 = __toESM(require("node:path"), 1);
+var import_vscode15 = require("vscode");
+function isRecord38(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isRomManifest(value) {
-  return isRecord36(value) && isRecord36(value.rom) && typeof value.rom.contentSha256 === "string";
+  return isRecord38(value) && isRecord38(value.rom) && typeof value.rom.contentSha256 === "string";
 }
 async function chooseLiveBusProject(romContentSha256) {
-  if (!import_vscode14.workspace.isTrusted) {
+  if (!import_vscode15.workspace.isTrusted) {
     throw new Error("Live bus analysis requires a trusted workspace.");
   }
   const choices = [];
@@ -55663,7 +56504,7 @@ async function chooseLiveBusProject(romContentSha256) {
       throw new Error("Analysis manifest is unavailable.");
     }
     if (manifest.rom.contentSha256 === romContentSha256) {
-      choices.push({ label: import_node_path21.default.basename(directory), description: directory, directory });
+      choices.push({ label: import_node_path23.default.basename(directory), description: directory, directory });
     }
   }
   if (choices.length === 1) {
@@ -55672,19 +56513,19 @@ async function chooseLiveBusProject(romContentSha256) {
   if (!choices.length) {
     return void 0;
   }
-  return (await import_vscode14.window.showQuickPick(choices, { title: "Choose the matching evidence project" }))?.directory;
+  return (await import_vscode15.window.showQuickPick(choices, { title: "Choose the matching evidence project" }))?.directory;
 }
 
 // packages/vscode-extension/src/debug/analysis-annotations.ts
 var locationKey2 = (addressSpace, address3) => `${addressSpace}:${address3}`;
-function isRecord37(value) {
+function isRecord39(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isDebugManifest(value) {
-  return isRecord37(value) && typeof value.target === "string" && isRecord37(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number";
+  return isRecord39(value) && typeof value.target === "string" && isRecord39(value.rom) && typeof value.rom.contentSha256 === "string" && typeof value.rom.contentSize === "number";
 }
 function isDebugAnnotation(value) {
-  return isRecord37(value) && typeof value.addressSpace === "string" && typeof value.address === "number" && typeof value.text === "string" && Array.isArray(value.outputOffsets) && value.outputOffsets.every((offset) => typeof offset === "number") && Array.isArray(value.architectures) && value.architectures.every((architecture) => typeof architecture === "string");
+  return isRecord39(value) && typeof value.addressSpace === "string" && typeof value.address === "number" && typeof value.text === "string" && Array.isArray(value.outputOffsets) && value.outputOffsets.every((offset) => typeof offset === "number") && Array.isArray(value.architectures) && value.architectures.every((architecture) => typeof architecture === "string");
 }
 var append2 = (map, key3, value) => {
   const entries = map.get(key3);
@@ -55786,1608 +56627,9 @@ var createDebugInstructionAnnotation = async (map) => {
 };
 
 // packages/vscode-extension/src/debug/nes-ppu.ts
-var import_node_crypto22 = require("node:crypto");
-var import_promises15 = require("node:fs/promises");
-var import_node_path22 = __toESM(require("node:path"), 1);
-
-// packages/core/src/source-location.ts
-function createSourceSpan(start, end, line) {
-  return {
-    start,
-    end,
-    // Operand-local spans omit physical lines so cached syntax remains plain JSON data.
-    ...line === void 0 ? {} : { line },
-    columnStart: start,
-    columnEnd: end
-  };
-}
-function createTextSpan(text2, start, end, line, lineStarts = sourceLineStarts(text2)) {
-  let low = 0;
-  let high = lineStarts.length;
-  while (low + 1 < high) {
-    const middle = low + high >>> 1;
-    if (lineStarts[middle] <= start) {
-      low = middle;
-    } else {
-      high = middle;
-    }
-  }
-  const column = start - lineStarts[low];
-  return createSourceSpan(column, column + end - start, line + low);
-}
-function sourceLineStarts(text2) {
-  const starts = [0];
-  for (let at = text2.indexOf("\n"); at >= 0; at = text2.indexOf("\n", at + 1)) {
-    starts.push(at + 1);
-  }
-  return starts;
-}
-
-// packages/core/src/ir/expression-parse-state.ts
-var rawOutcomes = /* @__PURE__ */ new WeakMap();
-function setRawExpressionOutcome(node, outcome2) {
-  rawOutcomes.set(node, outcome2);
-}
-function expressionOutcomeKey(outcome2) {
-  return outcome2.kind === "native" ? "native" : `${outcome2.kind}:${outcome2.reason}`;
-}
-
-// packages/core/src/internal-instrumentation.ts
-var activeInstrumentation;
-function recordExpressionParse(site, outcome2) {
-  if (syntaxOwner === "execution") {
-    recordSyntaxBoundary("execution-expression-parse");
-  }
-  const metrics = activeInstrumentation;
-  if (!metrics) {
-    return;
-  }
-  metrics.counters.expressionParserCalls++;
-  if (site === "instrumentation") {
-    metrics.counters.expressionInstrumentationParses++;
-  }
-  const key3 = `${site}:${expressionOutcomeKey(outcome2)}`;
-  metrics.expressionBoundaries.parses[key3] = (metrics.expressionBoundaries.parses[key3] ?? 0) + 1;
-}
-var migrationGuard;
-function recordSyntaxBoundary(boundary) {
-  if (migrationGuard?.forbidden.has(boundary)) {
-    migrationGuard.violations.add(boundary);
-  }
-  const metrics = activeInstrumentation;
-  if (metrics) {
-    metrics.syntaxBoundaries[boundary] = (metrics.syntaxBoundaries[boundary] ?? 0) + 1;
-  }
-}
-var syntaxOwner = "source";
-function recordExecutionParser(kind) {
-  if (syntaxOwner === "execution") {
-    recordSyntaxBoundary(`execution-${kind}-parse`);
-  }
-}
-
-// packages/core/src/ir/source-fragment.ts
-function sourceFragment(text2, origins = []) {
-  return { segments: [{ text: text2, origins }] };
-}
-
-// packages/core/src/ir/define-template.ts
-function parseDefineTemplate(text2, escapes = "basic") {
-  const parse4 = (start, end) => {
-    const parts2 = [];
-    for (let index = start; index < end; index++) {
-      const next = text2.at(index + 1);
-      if (text2[index] === "\\" && next !== void 0 && escapes !== "none" && (escapes === "string" || next === "\\" || next === "!")) {
-        parts2.push({ kind: "escape", start: index, end: index + 2, value: next });
-        index++;
-        continue;
-      }
-      if (text2[index] !== "!") {
-        continue;
-      }
-      if (next === "{") {
-        let cursor = index + 2;
-        let depth = 1;
-        for (; cursor < end && depth > 0; cursor++) {
-          if (text2[cursor] === "{") {
-            depth++;
-          } else if (text2[cursor] === "}") {
-            depth--;
-          }
-        }
-        if (depth !== 0) {
-          parts2.push({ kind: "error", start: index, end });
-          break;
-        }
-        parts2.push({
-          kind: "define",
-          start: index,
-          end: cursor,
-          name: text2.slice(index + 2, cursor - 1),
-          braced: true,
-          children: parse4(index + 2, cursor - 1)
-        });
-        index = cursor - 1;
-      } else if (next && /\w/.test(next)) {
-        let cursor = index + 2;
-        while (cursor < end && /\w/.test(text2[cursor])) {
-          cursor++;
-        }
-        parts2.push({
-          kind: "define",
-          start: index,
-          end: cursor,
-          name: text2.slice(index + 1, cursor),
-          braced: false,
-          children: []
-        });
-        index = cursor - 1;
-      }
-    }
-    return parts2;
-  };
-  return { text: text2, parts: parse4(0, text2.length) };
-}
-
-// packages/core/src/ir/expression-call-contracts.ts
-var firstSourceArgument = /* @__PURE__ */ new Set([
-  "countof",
-  "bytesof",
-  "startof",
-  "endof",
-  "defined",
-  "sizeof",
-  "objectsize",
-  "datasize",
-  "filesize",
-  "getfilestatus"
-]);
-function isSourceTextArgument(name2, index) {
-  if (name2 === "stringsequal" || name2 === "stringsequalnocase") {
-    return index < 2;
-  }
-  return index === 0 && (firstSourceArgument.has(name2) || /^(?:canreadfile|readfile)\d?$/.test(name2));
-}
-
-// packages/core/src/ir/expression-operators.ts
-var binaryPrecedence2 = {
-  "||": 0,
-  "&&": 1,
-  "==": 2,
-  "=": 2,
-  "!=": 2,
-  "<": 2,
-  ">": 2,
-  "<=": 2,
-  ">=": 2,
-  "|": 3,
-  "^": 3,
-  "&": 3,
-  "<<": 3,
-  ">>": 3,
-  "+": 4,
-  "-": 4,
-  "*": 5,
-  "/": 5,
-  "%": 5,
-  "**": 6
-};
-
-// packages/core/src/ir/expression-node.ts
-function attachRootSpan(node, text2, source) {
-  node.span ??= source ? createTextSpan(
-    source.text,
-    source.offset,
-    source.offset + text2.length,
-    source.line,
-    source.lineStarts
-  ) : createSourceSpan(0, text2.length);
-  return node;
-}
-function parseExpressionNode(input, source) {
-  return parseExpressionAtSite(input, "public", source);
-}
-function parseExpressionAtSite(input, site, source) {
-  return parseExpressionResult(input, site, source).node;
-}
-function parseExpressionResult(input, site = "public", source) {
-  const result = parseExpressionInput(input, site, source);
-  recordExpressionParse(site, result.outcome);
-  return result;
-}
-var ExpressionSyntaxError = class extends Error {
-  constructor(outcome2, diagnostic) {
-    super(outcome2.reason);
-    this.outcome = outcome2;
-    this.diagnostic = diagnostic;
-  }
-  outcome;
-  diagnostic;
-};
-function errorParseResult(text2, outcome2, source, diagnostic) {
-  if (text2.includes("!")) {
-    const defines = parseDefineTemplate(text2);
-    if (defines.parts.some((part) => part.kind === "define") && !defines.parts.some((part) => part.kind === "error")) {
-      return {
-        node: attachRootSpan({ type: "template", form: "source", text: text2, defines }, text2, source),
-        outcome: { kind: "native" }
-      };
-    }
-  }
-  const node = attachRootSpan(
-    {
-      type: "error",
-      value: text2,
-      outcome: outcome2,
-      ...diagnostic ?? { message: `Invalid number: ${text2}` }
-    },
-    text2,
-    source
-  );
-  setRawExpressionOutcome(node, outcome2);
-  return { node, outcome: outcome2 };
-}
-function parseLiteralValue(value) {
-  if (/^\$[\dA-Fa-f]+$/.test(value)) {
-    return Number.parseInt(value.slice(1), 16);
-  }
-  if (/^0x[\da-f]+$/i.test(value)) {
-    return Number.parseInt(value.slice(2), 16);
-  }
-  if (/^%[01]+$/.test(value)) {
-    return Number.parseInt(value.slice(1), 2);
-  }
-  if (/^-?\d+(?:\.\d+)?$/.test(value)) {
-    return Number(value);
-  }
-  throw new Error(`Unsupported literal expression: ${value}`);
-}
-function parseExpressionInput(input, site, source) {
-  const trimmed = input.trim();
-  if (source) {
-    source = { ...source, offset: source.offset + input.length - input.trimStart().length };
-  }
-  if (!trimmed) {
-    return errorParseResult(trimmed, { kind: "invalid", reason: "empty" }, source, {
-      code: "MATH_INVALID_INPUT",
-      message: "Invalid input: empty expression."
-    });
-  }
-  if (trimmed.startsWith("#") && trimmed.length > 1) {
-    return parseExpressionResult(
-      trimmed.slice(1),
-      site,
-      source && { ...source, offset: source.offset + 1 }
-    );
-  }
-  const rangeIndex = findTopLevelRange(trimmed);
-  if (rangeIndex !== -1) {
-    const start = parseExpressionResult(trimmed.slice(0, rangeIndex), site, source);
-    const end = parseExpressionResult(
-      trimmed.slice(rangeIndex + 2),
-      site,
-      source && { ...source, offset: source.offset + rangeIndex + 2 }
-    );
-    const outcome2 = start.outcome.kind === "native" ? end.outcome : start.outcome;
-    return {
-      node: attachRootSpan({ type: "range", start: start.node, end: end.node }, trimmed, source),
-      outcome: outcome2
-    };
-  }
-  try {
-    const parser = new ExpressionParser(tokenizeExpression(trimmed, source, site), trimmed);
-    const expression = parser.parseExpression();
-    if (!parser.isAtEnd()) {
-      const offset = parser.peek()?.offset ?? trimmed.length;
-      const rest = trimmed.slice(offset);
-      const diagnostic = rest.startsWith(",") ? { code: "MATH_INVALID_INPUT", message: `Invalid input: ${rest}` } : { code: "MATH_MISMATCHED_PARENTHESES", message: "Mismatched parentheses." };
-      return errorParseResult(
-        trimmed,
-        { kind: "invalid", reason: "trailing-tokens" },
-        source,
-        diagnostic
-      );
-    }
-    return { node: attachRootSpan(expression, trimmed, source), outcome: { kind: "native" } };
-  } catch (error) {
-    const failure = error instanceof ExpressionSyntaxError ? error.outcome : { kind: "unsupported", reason: "unclassified" };
-    const diagnostic = error instanceof ExpressionSyntaxError && error.diagnostic ? error.diagnostic : { message: `Invalid number: ${trimmed}` };
-    return errorParseResult(trimmed, failure, source, diagnostic);
-  }
-}
-function isReferenceExpressionNode(node) {
-  switch (node.type) {
-    case "identifier":
-    case "defineReference":
-    case "relativeReference":
-      return true;
-    case "member":
-    case "index":
-      return isReferenceExpressionNode(node.object);
-    case "binary":
-    case "call":
-    case "literal":
-    case "range":
-    case "raw":
-    case "string":
-    case "unary":
-    case "error":
-    case "sourceText":
-    case "template":
-      break;
-  }
-  return false;
-}
-function findTopLevelRange(input) {
-  let depth = 0;
-  let bracketDepth = 0;
-  let quote = "";
-  for (let i = 0; i < input.length - 1; i++) {
-    const char = input[i];
-    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
-      quote = quote === char ? "" : quote || char;
-      continue;
-    }
-    if (quote) {
-      continue;
-    }
-    if (char === "(") {
-      depth++;
-      continue;
-    }
-    if (char === ")") {
-      depth--;
-      continue;
-    }
-    if (char === "[") {
-      bracketDepth++;
-      continue;
-    }
-    if (char === "]") {
-      bracketDepth--;
-      continue;
-    }
-    if (depth === 0 && bracketDepth === 0 && input.slice(i, i + 2) === "..") {
-      if (i === 0) {
-        continue;
-      }
-      return i;
-    }
-  }
-  return -1;
-}
-function skipWhitespace(input, index) {
-  let current = index;
-  while (current < input.length && /\s/.test(input[current])) {
-    current++;
-  }
-  return current;
-}
-function isUnaryOperator(value) {
-  return value === "<:" || value === "<" || value === ">" || value === "^" || value === "~" || value === "-" || value === "+";
-}
-function isQuote(value) {
-  return value === '"' || value === "'";
-}
-var binaryOperators = [
-  "**",
-  "<<",
-  ">>",
-  "<=",
-  ">=",
-  "==",
-  "=",
-  "!=",
-  "&&",
-  "||",
-  "*",
-  "/",
-  "%",
-  "+",
-  "-",
-  "&",
-  "|",
-  "^",
-  "<",
-  ">"
-];
-function tokenizeExpression(input, source, site = "public") {
-  const tokens = [];
-  let index = 0;
-  const provenance = (end) => source ? {
-    offset: index,
-    span: createTextSpan(
-      source.text,
-      source.offset + index,
-      source.offset + end,
-      source.line,
-      source.lineStarts
-    )
-  } : { offset: index };
-  const astProvenance = (end) => {
-    const { offset: _offset, ...location } = provenance(end);
-    return location;
-  };
-  while (index < input.length) {
-    const char = input[index];
-    if (/\s/.test(char)) {
-      index++;
-      continue;
-    }
-    const previousToken = tokens.at(-1);
-    const startsOperand = !previousToken || ["operator", "lparen", "lbracket", "comma"].includes(previousToken.type);
-    const relative3 = input.slice(index).match(/^([:?]?)(\++|-+)/);
-    if (relative3 && (relative3[1] || startsOperand && /^(?:\s*$|\s*[&)*,/<=>\]^|])/.test(input.slice(index + relative3[0].length)))) {
-      let stream = "relative";
-      if (relative3[1] === ":") {
-        stream = "unnamed";
-      }
-      if (relative3[1] === "?") {
-        stream = "macro";
-      }
-      const text2 = relative3[0];
-      tokens.push({
-        type: "expression",
-        node: {
-          type: "relativeReference",
-          text: text2,
-          stream,
-          direction: relative3[2][0] === "+" ? 1 : -1,
-          count: relative3[2].length,
-          ...astProvenance(index + text2.length)
-        },
-        offset: index
-      });
-      index += text2.length;
-      continue;
-    }
-    const placeholder = startsOperand ? input.slice(index).match(/^<(?:([A-Z_a-z]\w*)|(?:\.{3}|…)\[([^\]]+)])>/) : null;
-    if (placeholder) {
-      const text2 = placeholder[0];
-      const node = {
-        type: "template",
-        form: placeholder[1] ? "parameter" : "variadic",
-        text: text2,
-        ...astProvenance(index + text2.length)
-      };
-      if (placeholder[1]) {
-        node.name = placeholder[1];
-      } else {
-        node.index = parseExpressionAtSite(placeholder[2], site);
-      }
-      tokens.push({ type: "expression", node, offset: index });
-      index += text2.length;
-      continue;
-    }
-    if (char === "(") {
-      tokens.push({ type: "lparen", offset: index });
-      index++;
-      continue;
-    }
-    if (char === ")") {
-      tokens.push({ type: "rparen", offset: index });
-      index++;
-      continue;
-    }
-    if (char === ",") {
-      tokens.push({ type: "comma", offset: index });
-      index++;
-      continue;
-    }
-    if (char === ".") {
-      tokens.push({ type: "dot", ...provenance(index + 1) });
-      index++;
-      continue;
-    }
-    if (char === "[") {
-      tokens.push({ type: "lbracket", offset: index });
-      index++;
-      continue;
-    }
-    if (char === "]") {
-      tokens.push({ type: "rbracket", offset: index });
-      index++;
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      const { value, nextIndex, quote } = readQuotedString(input, index);
-      tokens.push({ type: "string", value, quote, ...provenance(nextIndex) });
-      index = nextIndex;
-      continue;
-    }
-    const previous = tokens.at(-1);
-    const operandExpected = !previous || previous.type === "operator" || previous.type === "lparen" || previous.type === "lbracket" || previous.type === "comma";
-    if (operandExpected && char === "%" && !/[01]/.test(input[index + 1] ?? "")) {
-      throw new ExpressionSyntaxError(
-        { kind: "invalid", reason: "literal" },
-        { message: "Invalid number: NaN" }
-      );
-    }
-    if (char === "%" && operandExpected && /[01]/.test(input[index + 1] ?? "")) {
-      const literal = input.slice(index).match(/^%[01]+/)[0];
-      tokens.push({ type: "literal", value: literal, ...provenance(index + literal.length) });
-      index += literal.length;
-      continue;
-    }
-    if (char === "!" && !input.startsWith("!=", index) && !/[A-Z_a-z{]/.test(input[index + 1] ?? "")) {
-      tokens.push({ type: "operator", value: "~", offset: index });
-      index++;
-      continue;
-    }
-    if (char === "~") {
-      tokens.push({ type: "operator", value: "~", offset: index });
-      index++;
-      continue;
-    }
-    const operator = (input.startsWith("<:", index) ? "<:" : void 0) ?? binaryOperators.find((candidate) => input.startsWith(candidate, index));
-    if (operator) {
-      tokens.push({ type: "operator", value: operator, offset: index });
-      index += operator.length;
-      continue;
-    }
-    if (char === "!") {
-      const { token, nextIndex } = readDefineReference(input, index);
-      tokens.push({ ...token, ...provenance(nextIndex) });
-      index = nextIndex;
-      continue;
-    }
-    if (char === "@" || char === "?" || /[A-Z_a-z]/.test(char) || previousToken?.type === "dot" && /\d/.test(char)) {
-      const { value, nextIndex } = readIdentifier(input, index);
-      if (nextIndex === index + 1 && (char === "?" || char === "@")) {
-        throw new ExpressionSyntaxError({ kind: "unsupported", reason: "token" });
-      }
-      const open7 = skipWhitespace(input, nextIndex);
-      if (input[open7] === "(" && previousToken?.type !== "dot") {
-        const call = readCallSyntax(input, value, open7, site, source);
-        tokens.push({
-          type: "expression",
-          node: {
-            type: "call",
-            callee: { type: "identifier", name: value, ...astProvenance(nextIndex) },
-            arguments: call.arguments,
-            ...astProvenance(call.end)
-          },
-          offset: index
-        });
-        index = call.end;
-        continue;
-      }
-      tokens.push({ type: "identifier", value, ...provenance(nextIndex) });
-      index = nextIndex;
-      continue;
-    }
-    if (char === "$") {
-      const match = input.slice(index).match(/^\$[\dA-Fa-f]+/);
-      if (!match) {
-        throw new ExpressionSyntaxError(
-          { kind: "invalid", reason: "literal" },
-          { message: "Invalid number: NaN" }
-        );
-      }
-      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
-      index += match[0].length;
-      continue;
-    }
-    if (char === "%") {
-      const match = input.slice(index).match(/^%[01]+/);
-      if (!match) {
-        throw new ExpressionSyntaxError(
-          { kind: "invalid", reason: "literal" },
-          { message: "Invalid number: NaN" }
-        );
-      }
-      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
-      index += match[0].length;
-      continue;
-    }
-    if (/\d/.test(char)) {
-      if (/^0x/i.test(input.slice(index)) && !/[\dA-Fa-f]/.test(input[index + 2] ?? "")) {
-        throw new ExpressionSyntaxError(
-          { kind: "invalid", reason: "literal" },
-          { message: "Invalid number: NaN" }
-        );
-      }
-      const match = input.slice(index).match(/^(?:0x[\da-f]+|-?\d+(?:\.\d+)?)/i);
-      if (!match) {
-        throw new ExpressionSyntaxError(
-          { kind: "invalid", reason: "literal" },
-          { message: "Invalid number: NaN" }
-        );
-      }
-      tokens.push({ type: "literal", value: match[0], ...provenance(index + match[0].length) });
-      index += match[0].length;
-      continue;
-    }
-    throw new ExpressionSyntaxError({ kind: "unsupported", reason: "token" });
-  }
-  return tokens;
-}
-function readCallSyntax(input, name2, open7, site, source) {
-  const args = [];
-  let start = open7 + 1;
-  let depth = 0;
-  let quote = "";
-  const append3 = (end) => {
-    const raw = input.slice(start, end);
-    const text2 = raw.trim();
-    if (!text2) {
-      if (start > open7 + 1 && isSourceTextArgument(name2, args.length)) {
-        throw new ExpressionSyntaxError(
-          { kind: "invalid", reason: "operand" },
-          { message: `Missing function argument for '${name2}'.` }
-        );
-      }
-      return;
-    }
-    if (/^function\b/.test(text2)) {
-      throw new ExpressionSyntaxError(
-        { kind: "invalid", reason: "operand" },
-        { message: `Missing function argument for '${name2}'.` }
-      );
-    }
-    const offset = start + raw.length - raw.trimStart().length;
-    const occurrence = source && { ...source, offset: source.offset + offset };
-    if (isSourceTextArgument(name2, args.length)) {
-      let value = text2;
-      if (text2.startsWith('"') || text2.startsWith("'")) {
-        const quoted = readQuotedString(text2, 0);
-        const trailing = text2.slice(quoted.nextIndex).trimStart();
-        if (trailing && /^["'A-Z_a-z]/.test(trailing)) {
-          throw new ExpressionSyntaxError(
-            { kind: "invalid", reason: "delimiter" },
-            {
-              message: `Expected ',' or ')' in function call arguments: ${input.slice(offset + quoted.nextIndex).trimStart()}`
-            }
-          );
-        }
-      }
-      if (text2.startsWith('"') && text2.endsWith('"') || text2.startsWith("'") && text2.endsWith("'")) {
-        value = text2.slice(1, -1);
-      }
-      args.push(attachRootSpan({ type: "sourceText", text: text2, value }, text2, occurrence));
-    } else {
-      args.push(parseExpressionAtSite(text2, site, occurrence));
-    }
-  };
-  for (let index = start; index < input.length; index++) {
-    const char = input[index];
-    if (quote) {
-      if (char === quote && input[index - 1] !== "\\") {
-        quote = "";
-      }
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      quote = char;
-      continue;
-    }
-    if (char === "(" || char === "[") {
-      depth++;
-    } else if (char === "]") {
-      depth--;
-    } else if (char === ")") {
-      if (depth === 0) {
-        append3(index);
-        return { arguments: args, end: index + 1 };
-      }
-      depth--;
-    } else if (char === "," && depth === 0) {
-      append3(index);
-      start = index + 1;
-    }
-  }
-  let message = "Mismatched parentheses.";
-  if (depth === 0 && input.slice(start).trim()) {
-    message = "Expected ',' or ')' in function call arguments: ";
-  }
-  if (quote) {
-    message = "Unterminated string literal in function call.";
-  }
-  throw new ExpressionSyntaxError({ kind: "invalid", reason: "delimiter" }, { message });
-}
-function readQuotedString(input, start) {
-  const quote = input[start];
-  if (!isQuote(quote)) {
-    throw new ExpressionSyntaxError({ kind: "invalid", reason: "string" });
-  }
-  let value = "";
-  let index = start + 1;
-  while (index < input.length) {
-    const char = input[index];
-    if (char === quote && input[index - 1] !== "\\") {
-      return { value, nextIndex: index + 1, quote };
-    }
-    value += char;
-    index++;
-  }
-  throw new ExpressionSyntaxError({ kind: "invalid", reason: "string" });
-}
-function readIdentifier(input, start) {
-  let index = start;
-  if (input[index] === "?" && input[index + 1] === ".") {
-    index++;
-    while (input[index] === ".") {
-      index++;
-    }
-  }
-  if (input[index] === "@" || input[index] === "?") {
-    index++;
-  }
-  while (index < input.length && /\w/.test(input[index])) {
-    index++;
-  }
-  return { value: input.slice(start, index), nextIndex: index };
-}
-function readDefineReference(input, start) {
-  if (input[start + 1] === "{") {
-    let index = start + 2;
-    let braces = 1;
-    let content = "";
-    while (index < input.length) {
-      const char = input[index];
-      if (char === "{") {
-        braces++;
-      } else if (char === "}") {
-        braces--;
-        if (braces === 0) {
-          return {
-            token: { type: "defineReference", content, braced: true },
-            nextIndex: index + 1
-          };
-        }
-      }
-      content += char;
-      index++;
-    }
-    throw new ExpressionSyntaxError({ kind: "invalid", reason: "define" });
-  }
-  const { value, nextIndex } = readIdentifier(input, start + 1);
-  if (!value) {
-    throw new ExpressionSyntaxError({ kind: "invalid", reason: "define" });
-  }
-  return {
-    token: { type: "defineReference", name: value, braced: false },
-    nextIndex
-  };
-}
-var ExpressionParser = class {
-  constructor(tokens, sourceText) {
-    this.tokens = tokens;
-    this.sourceText = sourceText;
-  }
-  tokens;
-  sourceText;
-  index = 0;
-  parseExpression(minPrecedence = 0) {
-    let left = this.parsePrefix();
-    while (true) {
-      const token = this.peek();
-      if (!token || token.type !== "operator" || !isBinaryOperator(token.value)) {
-        break;
-      }
-      const precedence = binaryPrecedence2[token.value];
-      if (precedence < minPrecedence) {
-        break;
-      }
-      this.consume();
-      const nextMinPrecedence = precedence + 1;
-      const next = this.peek();
-      if (this.isAtEnd() || next?.type === "identifier" && next.value === "function") {
-        throw new ExpressionSyntaxError(
-          { kind: "invalid", reason: "operand" },
-          { message: `Missing right operand for operator '${token.value}'.` }
-        );
-      }
-      const right = this.parseExpression(nextMinPrecedence);
-      left = {
-        type: "binary",
-        operator: token.value,
-        left,
-        right
-      };
-    }
-    return left;
-  }
-  isAtEnd() {
-    return this.index >= this.tokens.length;
-  }
-  parsePrefix() {
-    const token = this.peek();
-    if (!token) {
-      throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" });
-    }
-    if (token.type === "operator" && isUnaryOperator(token.value)) {
-      this.consume();
-      return {
-        type: "unary",
-        operator: token.value,
-        argument: this.parsePrefix()
-      };
-    }
-    return this.parsePostfix(this.parsePrimary());
-  }
-  parsePrimary() {
-    if (this.peek()?.type === "dot") {
-      const firstSpan = this.peek()?.span;
-      let name2 = "";
-      while (this.match({ type: "dot" })) {
-        name2 += ".";
-      }
-      const token2 = this.consume();
-      if (token2?.type === "identifier") {
-        return {
-          type: "identifier",
-          name: name2 + token2.value,
-          ...firstSpan && {
-            span: createSourceSpan(firstSpan.start, token2.span.end, firstSpan.line)
-          }
-        };
-      }
-      if (token2?.type === "literal" && /^\d+$/.test(token2.value)) {
-        return {
-          type: "identifier",
-          name: name2 + token2.value,
-          ...firstSpan && {
-            span: createSourceSpan(firstSpan.start, token2.span.end, firstSpan.line)
-          }
-        };
-      }
-      throw new ExpressionSyntaxError({ kind: "invalid", reason: "member" });
-    }
-    const token = this.consume();
-    if (!token) {
-      throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" });
-    }
-    switch (token.type) {
-      case "expression":
-        return token.node;
-      case "literal": {
-        const numericValue = parseLiteralValue(token.value);
-        return {
-          type: "literal",
-          value: token.value,
-          ...Number.isFinite(numericValue) && { numericValue },
-          ...token.span && { span: token.span }
-        };
-      }
-      case "string":
-        return {
-          type: "string",
-          value: token.value,
-          quote: token.quote,
-          ...token.span && { span: token.span }
-        };
-      case "defineReference":
-        return token.braced ? {
-          type: "defineReference",
-          content: token.content,
-          braced: true,
-          ...token.span && { span: token.span }
-        } : {
-          type: "defineReference",
-          name: token.name,
-          braced: false,
-          ...token.span && { span: token.span }
-        };
-      case "identifier":
-        return { type: "identifier", name: token.value, ...token.span && { span: token.span } };
-      case "lparen": {
-        const next = this.peek();
-        if (next?.type === "identifier" && next.value === "function") {
-          throw new ExpressionSyntaxError(
-            { kind: "invalid", reason: "operand" },
-            { message: "Empty parenthesized expression." }
-          );
-        }
-        const expression = this.parseExpression();
-        this.expect("rparen");
-        return { ...expression, parenthesized: true };
-      }
-      case "comma":
-      case "dot":
-      case "lbracket":
-      case "operator":
-      case "rbracket":
-      case "rparen":
-        break;
-    }
-    throw new ExpressionSyntaxError(
-      { kind: "invalid", reason: "operand" },
-      { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` }
-    );
-  }
-  parsePostfix(expression) {
-    let current = expression;
-    while (true) {
-      if (this.match({ type: "lparen" })) {
-        if (current.type !== "identifier") {
-          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
-        }
-        current = {
-          type: "call",
-          callee: current,
-          arguments: this.parseCallArguments()
-        };
-        continue;
-      }
-      if (this.match({ type: "dot" })) {
-        if (!isReferenceExpressionNode(current)) {
-          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
-        }
-        const property = this.consume();
-        if (!property || property.type !== "identifier") {
-          throw new ExpressionSyntaxError({ kind: "invalid", reason: "member" });
-        }
-        current = {
-          type: "member",
-          object: current,
-          property: {
-            type: "identifier",
-            name: property.value,
-            ...property.span && { span: property.span }
-          }
-        };
-        continue;
-      }
-      if (this.match({ type: "lbracket" })) {
-        if (!isReferenceExpressionNode(current)) {
-          throw new ExpressionSyntaxError({ kind: "unsupported", reason: "postfix" });
-        }
-        const indexExpression = this.parseExpression();
-        this.expect("rbracket");
-        current = {
-          type: "index",
-          object: current,
-          index: indexExpression
-        };
-        continue;
-      }
-      return current;
-    }
-  }
-  parseCallArguments() {
-    const args = [];
-    if (this.match({ type: "rparen" })) {
-      return args;
-    }
-    do {
-      args.push(this.parseExpression());
-    } while (this.match({ type: "comma" }));
-    this.expect("rparen");
-    return args;
-  }
-  /**
-   * Expects a value.
-   * @param {Token["type"]} type The type.
-   */
-  expect(type) {
-    const token = this.consume();
-    if (!token || token.type !== type) {
-      throw new ExpressionSyntaxError(
-        { kind: "invalid", reason: "delimiter" },
-        {
-          message: type === "rbracket" ? "Mismatched brackets in struct index" : "Mismatched parentheses."
-        }
-      );
-    }
-  }
-  match(expected) {
-    const token = this.peek();
-    if (token && token.type === expected.type) {
-      this.index++;
-      return true;
-    }
-    return false;
-  }
-  consume() {
-    const token = this.tokens[this.index];
-    this.index++;
-    return token;
-  }
-  peek() {
-    return this.tokens[this.index];
-  }
-};
-function isBinaryOperator(value) {
-  return value in binaryPrecedence2;
-}
-
-// packages/core/src/ir/directive-arguments.ts
-function parseDirectiveExpression(text2, numeric2 = true, source) {
-  recordExecutionParser("directive");
-  if (/![\w{]/.test(text2)) {
-    return { type: "template", form: "source", text: text2 };
-  }
-  const node = parseExpressionAtSite(text2, "statement", source);
-  return numeric2 ? dataResolutionExpression(text2, node) : node;
-}
-function unquoteDirectiveText(text2) {
-  const quote = text2[0];
-  if ((quote === '"' || quote === "'") && text2.endsWith(quote) && text2.length > 1) {
-    return text2.slice(1, -1);
-  }
-  return text2;
-}
-function dataResolutionExpression(text2, node) {
-  if (node.parenthesized && (node.type === "member" || node.type === "index" || node.type === "literal" && node.value.includes("."))) {
-    return { type: "identifier", name: text2, ...node.span ? { span: node.span } : {} };
-  }
-  return node;
-}
-
-// packages/core/src/ir/source-syntax.ts
-function copySyntaxValue(value) {
-  return copySyntaxTree(value, false);
-}
-function copySyntaxTree(value, immutable) {
-  const ancestors = /* @__PURE__ */ new Set();
-  let nodes = 0;
-  const copy = (entry, depth) => {
-    if (++nodes > 1e6) {
-      throw new Error("Plugin syntax payload exceeds structural limits (1,000,000 values).");
-    }
-    if (depth > 128) {
-      throw new Error("Plugin syntax payload exceeds structural limits (128 nesting levels).");
-    }
-    if (entry === null || typeof entry === "string" || typeof entry === "boolean") {
-      return entry;
-    }
-    if (typeof entry === "number" && Number.isFinite(entry)) {
-      return entry;
-    }
-    if (typeof entry !== "object") {
-      throw new Error("Plugin syntax payload must be plain JSON data.");
-    }
-    if (ancestors.has(entry)) {
-      throw new Error("Plugin syntax payload must be acyclic.");
-    }
-    const prototype = Object.getPrototypeOf(entry);
-    if (!Array.isArray(entry) && prototype !== Object.prototype && prototype !== null) {
-      throw new Error("Plugin syntax payload must have a plain prototype.");
-    }
-    if (Object.getOwnPropertySymbols(entry).length) {
-      throw new Error("Plugin syntax payload cannot contain symbol properties.");
-    }
-    ancestors.add(entry);
-    try {
-      const keys = Object.getOwnPropertyNames(entry);
-      if (Array.isArray(entry)) {
-        const result2 = [];
-        for (let index = 0; index < entry.length; index++) {
-          const descriptor2 = Object.getOwnPropertyDescriptor(entry, index);
-          if (!descriptor2) {
-            throw new Error("Plugin syntax arrays must be dense.");
-          }
-          if (!("value" in descriptor2)) {
-            throw new Error("Plugin syntax payload cannot contain accessors.");
-          }
-          result2.push(copy(descriptor2.value, depth + 1));
-        }
-        if (keys.length !== entry.length + 1) {
-          throw new Error("Plugin syntax arrays cannot have custom properties.");
-        }
-        return immutable ? Object.freeze(result2) : result2;
-      }
-      const result = {};
-      for (const key3 of keys) {
-        const descriptor2 = Object.getOwnPropertyDescriptor(entry, key3);
-        if (!descriptor2 || !("value" in descriptor2)) {
-          throw new Error("Plugin syntax payload cannot contain accessors.");
-        }
-        const copied = copy(descriptor2.value, depth + 1);
-        if (Object.hasOwn(Object.prototype, key3)) {
-          Object.defineProperty(result, key3, {
-            value: copied,
-            enumerable: true,
-            writable: true,
-            configurable: true
-          });
-        } else {
-          result[key3] = copied;
-        }
-      }
-      return immutable ? Object.freeze(result) : result;
-    } finally {
-      ancestors.delete(entry);
-    }
-  };
-  return copy(value, 0);
-}
-
-// packages/core/src/ir/syntax-codec.ts
-var syntaxString = (value) => typeof value === "string";
-var syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
-var syntaxBoolean = (value) => typeof value === "boolean";
-function syntaxLiteral(literal) {
-  return (value) => value === literal;
-}
-function syntaxArray(guard) {
-  return (value) => Array.isArray(value) && value.every(guard);
-}
-function syntaxOptional(guard) {
-  return (value) => value === void 0 || guard(value);
-}
-function syntaxObject(value) {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-function syntaxRecord(shape) {
-  return (value) => {
-    if (!syntaxObject(value)) {
-      return false;
-    }
-    const fields2 = value;
-    return Object.keys(fields2).every((key3) => Object.hasOwn(shape, key3)) && Object.entries(shape).every(([key3, guard]) => guard(fields2[key3]));
-  };
-}
-function syntaxUnion(...guards) {
-  return (value) => guards.some((guard) => guard(value));
-}
-var syntaxSpan = syntaxRecord({
-  start: syntaxNumber,
-  end: syntaxNumber,
-  line: syntaxOptional(syntaxNumber),
-  columnStart: syntaxOptional(syntaxNumber),
-  columnEnd: syntaxOptional(syntaxNumber)
-});
-var identifier = (value) => syntaxExpression(value) && value.type === "identifier";
-var reference = (value) => syntaxExpression(value) && ["identifier", "defineReference", "relativeReference", "member", "index"].includes(value.type);
-var outcome = syntaxUnion(
-  syntaxRecord({ kind: syntaxLiteral("native") }),
-  syntaxRecord({
-    kind: syntaxLiteral("compatibility"),
-    reason: syntaxUnion(
-      syntaxLiteral("relative-label"),
-      syntaxLiteral("macro-argument"),
-      syntaxLiteral("variadic-template")
-    )
-  }),
-  syntaxRecord({
-    kind: syntaxLiteral("invalid"),
-    reason: syntaxUnion(
-      ...[
-        "empty",
-        "literal",
-        "string",
-        "define",
-        "operand",
-        "delimiter",
-        "member",
-        "trailing-tokens"
-      ].map(syntaxLiteral)
-    )
-  }),
-  syntaxRecord({
-    kind: syntaxLiteral("unsupported"),
-    reason: syntaxUnion(
-      syntaxLiteral("token"),
-      syntaxLiteral("postfix"),
-      syntaxLiteral("unclassified")
-    )
-  })
-);
-var syntaxExpression = (value) => {
-  if (!syntaxObject(value)) {
-    return false;
-  }
-  const node = value;
-  if (node.span !== void 0 && !syntaxSpan(node.span)) {
-    return false;
-  }
-  if (node.parenthesized !== void 0 && !syntaxBoolean(node.parenthesized)) {
-    return false;
-  }
-  switch (node.type) {
-    case "literal":
-      return syntaxString(node.value) && (node.numericValue === void 0 || syntaxNumber(node.numericValue));
-    case "identifier":
-      return syntaxString(node.name);
-    case "string":
-      return syntaxString(node.value) && (node.quote === '"' || node.quote === "'");
-    case "sourceText":
-      return syntaxString(node.text) && syntaxString(node.value);
-    case "defineReference":
-      return syntaxBoolean(node.braced) && (syntaxString(node.name) || syntaxString(node.content));
-    case "relativeReference":
-      return (node.direction === 1 || node.direction === -1) && syntaxNumber(node.count) && ["relative", "unnamed", "macro"].includes(String(node.stream));
-    case "member":
-      return reference(node.object) && identifier(node.property);
-    case "index":
-      return reference(node.object) && syntaxExpression(node.index);
-    case "call":
-      return identifier(node.callee) && syntaxArray(syntaxExpression)(node.arguments);
-    case "unary":
-      return ["<:", "<", ">", "^", "~", "-", "+"].includes(String(node.operator)) && syntaxExpression(node.argument);
-    case "binary":
-      return [
-        "**",
-        "*",
-        "/",
-        "%",
-        "+",
-        "-",
-        "<<",
-        ">>",
-        "&",
-        "|",
-        "^",
-        "<",
-        ">",
-        "<=",
-        ">=",
-        "==",
-        "=",
-        "!=",
-        "&&",
-        "||"
-      ].includes(String(node.operator)) && syntaxExpression(node.left) && syntaxExpression(node.right);
-    case "range":
-      return syntaxExpression(node.start) && syntaxExpression(node.end);
-    case "template":
-      return ["parameter", "variadic", "source"].includes(String(node.form)) && syntaxString(node.text) && (node.index === void 0 || syntaxExpression(node.index));
-    case "error":
-      return syntaxString(node.value) && syntaxString(node.message) && outcome(node.outcome);
-    default:
-      return false;
-  }
-};
-function syntaxCodec(version, parse4, guard) {
-  return {
-    version,
-    parse(input) {
-      return copySyntaxValue(JSON.parse(JSON.stringify(parse4(input))));
-    },
-    validate: guard,
-    read(payload) {
-      if (!guard(payload)) {
-        throw new Error("Invalid typed directive payload.");
-      }
-      return payload;
-    }
-  };
-}
-
-// packages/core/src/syntax-profile.ts
-var ASAR_SYNTAX_PROFILE = Object.freeze({
-  id: "asar",
-  preserveLeadingWhitespace: false,
-  splitColonStatements: true,
-  splitRelativeLabelStatements: true,
-  leadingDotLabels: true,
-  directivePrefixes: Object.freeze(["@"]),
-  cheapLocalPrefix: "",
-  fileLocalSymbols: false
-});
-var NATIVE_SYNTAX_PROFILE = Object.freeze({
-  id: "native",
-  preserveLeadingWhitespace: true,
-  splitColonStatements: false,
-  splitRelativeLabelStatements: false,
-  leadingDotLabels: true,
-  directivePrefixes: Object.freeze([]),
-  cheapLocalPrefix: "",
-  fileLocalSymbols: false
-});
-var CA65_SYNTAX_PROFILE = Object.freeze({
-  id: "ca65",
-  preserveLeadingWhitespace: true,
-  splitColonStatements: false,
-  splitRelativeLabelStatements: false,
-  leadingDotLabels: false,
-  directivePrefixes: Object.freeze(["."]),
-  cheapLocalPrefix: "@",
-  fileLocalSymbols: true
-});
-
-// packages/core/src/services/command-text-service.ts
-var splitRespectingFunctions = (input) => {
-  const result = [];
-  let current = "";
-  let parenDepth = 0;
-  let inQuotes = false;
-  let quoteChar = "";
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-    if ((char === '"' || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
-      if (!inQuotes) {
-        inQuotes = true;
-        quoteChar = char;
-      } else if (char === quoteChar) {
-        inQuotes = false;
-      }
-    }
-    if (!inQuotes) {
-      if (char === "(") {
-        parenDepth++;
-      } else if (char === ")") {
-        parenDepth--;
-      } else if (char === "," && parenDepth === 0) {
-        result.push(current.trim());
-        current = "";
-        continue;
-      }
-    }
-    current += char;
-  }
-  if (current) {
-    result.push(current.trim());
-  }
-  return result;
-};
-
-// packages/core/src/ir/data-node.ts
-function parseDataOperand(text2) {
-  let value = text2.trim();
-  const quote = value[0];
-  if (quote === '"' || quote === "'") {
-    return { text: text2, expression: { type: "string", quote, value: value.slice(1, -1) } };
-  }
-  if (value.startsWith("#")) {
-    value = value.slice(1);
-  }
-  if (/![\w{]/.test(value)) {
-    return { text: text2, expression: { type: "template", form: "source", text: value } };
-  }
-  return {
-    text: text2,
-    expression: dataResolutionExpression(value, parseExpressionAtSite(value, "statement"))
-  };
-}
-function parseDataList(text2) {
-  return splitRespectingFunctions(text2).map(parseDataOperand);
-}
-
-// packages/core/src/ir/parsed-operand.ts
-function parseInstructionOperands(mnemonic, text2, grammar2) {
-  const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
-  let width;
-  if (suffix === "b") {
-    width = 1;
-  } else if (suffix === "w") {
-    width = 2;
-  } else if (suffix === "l") {
-    width = 3;
-  }
-  const mnemonicBit = grammar2.bitSelectors ? /^(?:bbs|bbc|set1|clr1)([0-7])$/i.exec(mnemonic)?.[1] : void 0;
-  const result = {
-    operands: []
-  };
-  if (width) {
-    result.width = width;
-  }
-  if (mnemonicBit !== void 0) {
-    result.mnemonicBit = Number(mnemonicBit);
-  }
-  if (!text2.trim()) {
-    return result;
-  }
-  if (grammar2.templates !== false && /![\w{]|<[^>]+>|\\[A-Z_a-z]/.test(text2)) {
-    result.operands.push({
-      kind: "template",
-      fragment: sourceFragment(text2, []),
-      structure: parseInstructionOperands(mnemonic, text2, { ...grammar2, templates: false }),
-      span: { start: 0, end: text2.length }
-    });
-    return result;
-  }
-  try {
-    const parts2 = operandParts(text2, ",");
-    for (let index = 0; index < parts2.length; index++) {
-      let part = parts2[index];
-      const next = parts2[index + 1];
-      if (grammar2.commaIndex && next && grammar2.indexRegisters.includes(next.text.toLowerCase())) {
-        part = { text: text2.slice(part.start, next.end), start: part.start, end: next.end };
-        index++;
-      }
-      result.operands.push(parseOperand(part.text, part.start, grammar2));
-    }
-  } catch (cause) {
-    result.operands = [
-      {
-        kind: "invalid",
-        message: cause instanceof Error ? cause.message : String(cause),
-        span: { start: 0, end: text2.length }
-      }
-    ];
-  }
-  return result;
-}
-function operandParts(text2, separator) {
-  const parts2 = [];
-  const stack = [];
-  let quote = "";
-  let start = 0;
-  const append3 = (end) => {
-    const raw = text2.slice(start, end);
-    const value = raw.trim();
-    const offset = start + raw.length - raw.trimStart().length;
-    parts2.push({ text: value, start: offset, end: offset + value.length });
-  };
-  for (let index = 0; index < text2.length; index++) {
-    const char = text2[index];
-    if (quote) {
-      if (char === "\\") {
-        index++;
-      } else if (char === quote) {
-        quote = "";
-      }
-    } else if (char === '"' || char === "'") {
-      quote = char;
-    } else if ("([{".includes(char)) {
-      stack.push(char);
-    } else if (")]}".includes(char)) {
-      const opening = { ")": "(", "]": "[", "}": "{" }[char];
-      if (stack.pop() !== opening) {
-        throw new Error("Mismatched operand delimiters.");
-      }
-    } else if (char === separator && stack.length === 0) {
-      append3(index);
-      start = index + 1;
-    }
-  }
-  if (quote || stack.length) {
-    throw new Error("Unclosed operand delimiter.");
-  }
-  append3(text2.length);
-  return parts2;
-}
-function scalar(text2, start, force) {
-  const expression = parseDirectiveExpression(text2, true, { text: text2, offset: 0, line: 0 });
-  let spelling = "expression";
-  let literalBytes;
-  const hex5 = /^\$([\da-f]+)$/i.exec(text2);
-  const binary = /^%([01]+)$/.exec(text2);
-  if (hex5) {
-    spelling = "hex";
-    literalBytes = Math.max(1, Math.ceil(hex5[1].length / 2));
-  } else if (binary) {
-    spelling = "binary";
-    literalBytes = Math.max(1, Math.ceil(binary[1].length / 8));
-  } else if (/^-?\d+(?:\.\d+)?$/.test(text2)) {
-    spelling = "decimal";
-  } else if (isReferenceExpressionNode(expression)) {
-    spelling = "symbol";
-  }
-  return {
-    expression,
-    ...expression.type === "template" ? {
-      referenceExpression: parseExpressionAtSite(text2, "statement", {
-        text: text2,
-        offset: 0,
-        line: 0
-      })
-    } : {},
-    width: {
-      spelling,
-      grouped: expression.parenthesized === true,
-      ...force ? { forcedBytes: force } : {},
-      ...literalBytes ? { literalBytes } : {}
-    },
-    span: { start, end: start + text2.length }
-  };
-}
-function parseOperand(text2, start, grammar2) {
-  const span = { start, end: start + text2.length };
-  if (!text2) {
-    return { kind: "invalid", message: "Missing operand.", span };
-  }
-  const name2 = text2.toLowerCase();
-  if (grammar2.registers.includes(name2)) {
-    return { kind: "register", name: name2, span };
-  }
-  if (text2.startsWith("#")) {
-    const value = text2.slice(1).trim();
-    return { kind: "immediate", value: scalar(value, start + text2.indexOf(value, 1)), span };
-  }
-  let body = text2;
-  let offset = start;
-  let force;
-  const prefix = grammar2.ca65Widths ? /^([afz]):\s*/i.exec(body) : void 0;
-  if (prefix) {
-    const code = prefix[1].toLowerCase();
-    if (code === "z") {
-      force = 1;
-    } else if (code === "a") {
-      force = 2;
-    } else {
-      force = 3;
-    }
-    body = body.slice(prefix[0].length);
-    offset += prefix[0].length;
-  }
-  let inverted = false;
-  if (grammar2.bitSelectors && body.startsWith("/")) {
-    inverted = true;
-    body = body.slice(1);
-    offset++;
-  }
-  let index;
-  const outside = grammar2.commaIndex ? operandParts(body, ",") : operandParts(body, "+");
-  if ((grammar2.commaIndex || grammar2.plusIndex) && outside.length > 1) {
-    const last = outside.at(-1);
-    if (grammar2.indexRegisters.includes(last.text.toLowerCase())) {
-      index = {
-        register: last.text.toLowerCase(),
-        position: "outside",
-        separator: grammar2.commaIndex ? "," : "+"
-      };
-      body = body.slice(0, last.start - 1).replace(/[+,]\s*$/, "").trimEnd();
-    }
-  }
-  let postIncrement = false;
-  if (grammar2.plusIndex && /\)\s*\+$/.test(body)) {
-    postIncrement = true;
-    body = body.slice(0, body.lastIndexOf("+")).trimEnd();
-  }
-  let delimiter = "none";
-  if (body.startsWith("(") && body.endsWith(")") || body.startsWith("[") && body.endsWith("]")) {
-    const inner = body.slice(1, -1);
-    try {
-      operandParts(inner, ",");
-      delimiter = body[0] === "(" ? "parentheses" : "brackets";
-      const trimmed = inner.trim();
-      offset += 1 + inner.length - inner.trimStart().length;
-      body = trimmed;
-    } catch {
-    }
-  }
-  if (delimiter !== "none" && grammar2.plusIndex && body.endsWith("+")) {
-    const candidate = body.slice(0, -1).trimEnd();
-    if (grammar2.registers.includes(candidate.toLowerCase())) {
-      postIncrement = true;
-      body = candidate;
-    }
-  }
-  if (delimiter !== "none") {
-    const inside = operandParts(body, grammar2.commaIndex ? "," : "+");
-    if (inside.length === 2 && grammar2.indexRegisters.includes(inside[1].text.toLowerCase())) {
-      if (index) {
-        const address4 = scalar(inside[0].text, offset + inside[0].start, force);
-        return {
-          kind: "memory",
-          address: address4,
-          delimiter,
-          index,
-          innerIndex: inside[1].text.toLowerCase(),
-          span
-        };
-      }
-      index = {
-        register: inside[1].text.toLowerCase(),
-        position: "inside",
-        separator: grammar2.commaIndex ? "," : "+"
-      };
-      body = inside[0].text;
-      offset += inside[0].start;
-    }
-  }
-  let bit;
-  const bitMatch = grammar2.bitSelectors ? /\.([0-7])$/.exec(body) : void 0;
-  if (bitMatch) {
-    bit = { selector: scalar(bitMatch[1], offset + body.length - 1), inverted };
-    body = body.slice(0, bitMatch.index).trimEnd();
-  }
-  const register2 = body.toLowerCase();
-  const address3 = delimiter !== "none" && grammar2.registers.includes(register2) ? {
-    kind: "register",
-    name: register2,
-    span: { start: offset, end: offset + body.length }
-  } : scalar(body, offset, force);
-  return {
-    kind: "memory",
-    address: address3,
-    delimiter,
-    span,
-    ...index ? { index } : {},
-    ...postIncrement ? { postIncrement } : {},
-    ...bit ? { bit } : {}
-  };
-}
-
-// packages/core/src/plugin/contracts.ts
-var PLUGIN_API_VERSION = 2;
-function definePlugin(plugin2) {
-  return plugin2;
-}
+var import_node_crypto24 = require("node:crypto");
+var import_promises17 = require("node:fs/promises");
+var import_node_path24 = __toESM(require("node:path"), 1);
 
 // packages/plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
@@ -59611,13 +58853,13 @@ var mutableForms = decoded.map((entry, opcode) => {
 var groups = /* @__PURE__ */ new Map();
 for (const form of mutableForms) {
   const key3 = `${form.mnemonic}:${form.mode}`;
-  const group2 = groups.get(key3) ?? [];
-  group2.push(form);
-  groups.set(key3, group2);
+  const group = groups.get(key3) ?? [];
+  group.push(form);
+  groups.set(key3, group);
 }
-for (const group2 of groups.values()) {
-  const documented = group2.find((form) => form.documented);
-  const fallback = group2.length > 0 ? group2[0] : void 0;
+for (const group of groups.values()) {
+  const documented = group.find((form) => form.documented);
+  const fallback = group.length > 0 ? group[0] : void 0;
   const preferred = documented ?? fallback;
   if (preferred) {
     preferred.canonical = true;
@@ -60104,7 +59346,7 @@ function nesPPUHtml(snapshot, identity2 = {}) {
 }
 
 // packages/vscode-extension/src/debug/nes-ppu.ts
-var import_vscode15 = require("vscode");
+var import_vscode16 = require("vscode");
 async function saveNesPPUSnapshot(session, metadata, root) {
   if (metadata.architecture !== "65xx.2a03" || !metadata.romFileSha256) {
     throw new Error("NES PPU snapshot requires a complete cartridge identity.");
@@ -60124,28 +59366,28 @@ async function saveNesPPUSnapshot(session, metadata, root) {
   const snapshot = decodeNesPPUSnapshot(bytes);
   const identity2 = {
     ...metadata,
-    snapshotSha256: (0, import_node_crypto22.createHash)("sha256").update(bytes).digest("hex")
+    snapshotSha256: (0, import_node_crypto24.createHash)("sha256").update(bytes).digest("hex")
   };
-  const directory = import_node_path22.default.join(root, ".uttori-local", "graphics", "snapshots");
-  await (0, import_promises15.mkdir)(directory, { recursive: true });
-  const staging = await (0, import_promises15.mkdtemp)(import_node_path22.default.join(directory, ".pending-"));
-  const destination = import_node_path22.default.join(
+  const directory = import_node_path24.default.join(root, ".uttori-local", "graphics", "snapshots");
+  await (0, import_promises17.mkdir)(directory, { recursive: true });
+  const staging = await (0, import_promises17.mkdtemp)(import_node_path24.default.join(directory, ".pending-"));
+  const destination = import_node_path24.default.join(
     directory,
-    import_node_path22.default.basename(staging).replace(".pending-", `ppu-${Date.now()}-`)
+    import_node_path24.default.basename(staging).replace(".pending-", `ppu-${Date.now()}-`)
   );
   const html = nesPPUHtml(snapshot, identity2);
   try {
-    await (0, import_promises15.writeFile)(import_node_path22.default.join(staging, "ppu.bin"), bytes, { flag: "wx" });
-    await (0, import_promises15.writeFile)(import_node_path22.default.join(staging, "identity.json"), JSON.stringify(identity2, null, 2) + "\n", {
+    await (0, import_promises17.writeFile)(import_node_path24.default.join(staging, "ppu.bin"), bytes, { flag: "wx" });
+    await (0, import_promises17.writeFile)(import_node_path24.default.join(staging, "identity.json"), JSON.stringify(identity2, null, 2) + "\n", {
       flag: "wx"
     });
-    await (0, import_promises15.writeFile)(import_node_path22.default.join(staging, "index.html"), html, { flag: "wx" });
-    await (0, import_promises15.rename)(staging, destination);
+    await (0, import_promises17.writeFile)(import_node_path24.default.join(staging, "index.html"), html, { flag: "wx" });
+    await (0, import_promises17.rename)(staging, destination);
   } catch (error) {
-    await (0, import_promises15.rm)(staging, { recursive: true, force: true });
+    await (0, import_promises17.rm)(staging, { recursive: true, force: true });
     throw error;
   }
-  const panel = import_vscode15.window.createWebviewPanel("uttori.nes.ppu", "NES PPU evidence", import_vscode15.ViewColumn.Beside, {
+  const panel = import_vscode16.window.createWebviewPanel("uttori.nes.ppu", "NES PPU evidence", import_vscode16.ViewColumn.Beside, {
     enableScripts: true,
     localResourceRoots: []
   });
@@ -60447,6 +59689,16 @@ function closeActiveSegment(session, state) {
     state.currentSegment = null;
     return;
   }
+  if (session.module) {
+    if (segment.define) {
+      for (const suffix of ["LOAD", "RUN", "SIZE", "RUN_END"]) {
+        session.module.declare(`__${segment.name}_${suffix}__`, "import");
+      }
+    }
+    state.currentSegment = null;
+    state.currentLoadMemory = null;
+    return;
+  }
   const size = session.currentTargetBaseAddress - state.segmentLoadStart;
   state.memoryCursors[segment.load] = session.currentTargetBaseAddress;
   if (segment.define) {
@@ -60468,12 +59720,23 @@ function closeActiveSegment(session, state) {
 }
 function applyLinkerSymbols(session, state) {
   for (const symbol of state.linker.symbols) {
+    if (session.module) {
+      session.module.declare(symbol.name, "import");
+      continue;
+    }
     session.globalSymbols.add(symbol.name);
     const value = session.operandResolver.getnum(symbol.valueExpr);
     session.symbolScope.setLabel(symbol.name, value, true);
   }
 }
 function openSegment(session, state, segment) {
+  if (session.module) {
+    const kind = segment.type === "bss" || segment.type === "zp" ? "bss" : "code";
+    session.module.selectSection({ name: segment.name, kind });
+    state.currentSegment = segment.name;
+    state.currentLoadMemory = segment.load;
+    return;
+  }
   const loadMemory = state.linker.memories.get(segment.load);
   const runMemory = state.linker.memories.get(segment.run);
   if (!loadMemory || !runMemory) {
@@ -60522,6 +59785,70 @@ function handlePopseg(state) {
 }
 
 // packages/plugin-65xx/src/linker-config.ts
+function ld65LinkRecipe(config, target = "65xx.nes") {
+  const symbols = [];
+  for (const segment of config.segments.values()) {
+    if (!segment.define) {
+      continue;
+    }
+    for (const [suffix, property] of [
+      ["LOAD", "load"],
+      ["RUN", "run"],
+      ["SIZE", "size"],
+      ["RUN_END", "runEnd"]
+    ]) {
+      symbols.push({ name: `__${segment.name}_${suffix}__`, section: segment.name, property });
+    }
+  }
+  for (const symbol of config.symbols) {
+    symbols.push({
+      name: symbol.name,
+      expression: compileLinkExpression(parseExpressionNode(symbol.valueExpr), {
+        reference: (node) => {
+          if (node.type !== "identifier") {
+            throw new Error("Linker-config symbols require global names.");
+          }
+          return { kind: "symbol", name: node.name };
+        },
+        current: () => {
+          throw new Error("Linker-config symbols have no implicit section cursor.");
+        },
+        literal: (node) => {
+          if (node.type !== "literal") {
+            throw new Error("Linker-config expressions require integer literals.");
+          }
+          const text2 = node.value;
+          if (text2.startsWith("$")) {
+            return Number.parseInt(text2.slice(1), 16);
+          }
+          if (text2.startsWith("%")) {
+            return Number.parseInt(text2.slice(1), 2);
+          }
+          return Number(text2);
+        }
+      })
+    });
+  }
+  return {
+    target,
+    regions: [...config.memories.values()].map((region) => ({
+      name: region.name,
+      start: region.start,
+      size: region.size,
+      ...region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
+      ...region.fill ? { fillByte: region.fillval } : {},
+      addressSpace: "65xx.ines-address-space"
+    })),
+    placements: [...config.segments.values()].map((segment) => ({
+      section: segment.name,
+      load: segment.load,
+      run: segment.run,
+      ...segment.start !== void 0 ? { start: segment.start } : {}
+    })),
+    // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
+    symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()]
+  };
+}
 var DEFAULT_LINKER_CONFIG = `MEMORY {
     ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
 }
@@ -60718,11 +60045,11 @@ var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
 var NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
 var INES_MAGIC = [78, 69, 83, 26];
-function isRecord38(value) {
+function isRecord40(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function createNes65xxTargetOptions(configured) {
-  const value = isRecord38(configured) ? configured : {};
+  const value = isRecord40(configured) ? configured : {};
   const sourceStyle = value.sourceStyle ?? "ca65";
   if (sourceStyle !== "asar" && sourceStyle !== "ca65") {
     throw new Error("NES sourceStyle must be 'asar' or 'ca65'.");
@@ -60839,6 +60166,13 @@ function createNesLifecycle({ state }) {
     const nes = state.get(nes65xxSessionStateKey);
     resetNes65xxStageState(nes);
     session.outputFillByte = nes.fillByte;
+    if (session.module) {
+      for (const name2 of linkerDefinedSymbolNames(nes.linker)) {
+        session.module.declare(name2, "import");
+      }
+      session.bytes = 0;
+      return;
+    }
     const total = nes.header.length + nes.linker.imageSize;
     const image = Array.from({ length: total }, () => nes.fillByte);
     for (let index = 0; index < nes.header.length; index++) {
@@ -61049,7 +60383,7 @@ function parse3(id, { words }) {
   }
   throw new Error(`Missing typed ca65 directive grammar '${id}'.`);
 }
-function execute(node, { session, state, targetId }) {
+function execute(node, { session, state, targetId }, id) {
   const profile = state.get(ca65SessionStateKey);
   switch (node.operation) {
     case "error":
@@ -61070,6 +60404,7 @@ function execute(node, { session, state, targetId }) {
       return;
     case "segment": {
       if (targetId !== NES_65XX_TARGET_ID) {
+        session.module?.selectSection({ name: node.name });
         profile.currentFlatSegment = node.name;
         return;
       }
@@ -61093,7 +60428,15 @@ function execute(node, { session, state, targetId }) {
     }
     case "symbols":
       for (const name2 of node.names) {
-        markGlobalSymbol(session, name2);
+        if (session.module) {
+          if (id.endsWith(".export")) {
+            session.module.exportSymbol(name2);
+          } else {
+            session.module.declare(name2, "import");
+          }
+        } else {
+          markGlobalSymbol(session, name2);
+        }
       }
       return;
     case "data":
@@ -61102,6 +60445,21 @@ function execute(node, { session, state, targetId }) {
     case "mapped":
       if (session.isDefinitionCollectionStage) {
         session.step(node.values.length * (node.mode === "big" ? 2 : 1));
+        return;
+      }
+      if (session.module) {
+        for (const value of node.values) {
+          const expression = node.mode === "big" ? value : {
+            type: "unary",
+            operator: node.mode === "low" ? "<" : ">",
+            argument: value
+          };
+          session.module.write(
+            expression,
+            node.mode === "big" ? 2 : 1,
+            node.mode === "big" ? "big" : "little"
+          );
+        }
         return;
       }
       for (const expression of node.values) {
@@ -61122,6 +60480,14 @@ function execute(node, { session, state, targetId }) {
         throw new Error(
           node.operation === "align" ? ".align boundary must be a positive integer." : ".res count must be non-negative."
         );
+      }
+      if (session.module) {
+        if (node.operation === "align") {
+          session.module.align(value, fill);
+        } else {
+          session.module.reserve(value, node.fill ? fill : void 0);
+        }
+        return;
       }
       const count3 = node.operation === "reserve" ? value : (value - session.currentTargetAddress % value) % value;
       if (session.isDefinitionCollectionStage) {
@@ -61169,7 +60535,7 @@ function ca65DirectiveSyntax(id) {
       if ((id === "65xx.directive.incbin" || id === "65xx.directive.assert") && context.session.targetOptions.sourceStyle === "asar") {
         return void 0;
       }
-      return { execute: (payload) => execute(codec.read(payload), context) };
+      return { execute: (payload) => execute(codec.read(payload), context, id) };
     }
   };
 }
@@ -61367,7 +60733,7 @@ function plan(input, start) {
   const expressionText = suffix ? suffix[1].trim() : body;
   const numeric2 = scalar2(expressionText, start + text2.indexOf(expressionText), force);
   const mathematicalScalar = numeric2;
-  const relative3 = /^(?:\?[+-]|:?\++|:?-+)$/.test(text2);
+  const relative4 = /^(?:\?[+-]|:?\++|:?-+)$/.test(text2);
   const mathematical = /^[A-Z_a-z]\w*\s*\(/.test(body) || /[&*+/^|-]|<<|>>/.test(body);
   let probeText = body;
   if (text2.startsWith("[") && text2.endsWith("]")) {
@@ -61388,7 +60754,7 @@ function plan(input, start) {
     hexWidth = Math.max(1, Math.ceil(atom.length / 2));
   }
   const groupedAtom = numeric2.expression.parenthesized && (isReferenceExpressionNode(numeric2.expression) || numeric2.expression.type === "literal" && numeric2.expression.value.includes("."));
-  const native = !relative3 && !/^[([]/.test(text2) && !/^[aq]$/i.test(text2) && numeric2.expression.type !== "error" && numeric2.expression.type !== "range" && numeric2.expression.type !== "template" && !containsCall(numeric2.expression) && !groupedAtom;
+  const native = !relative4 && !/^[([]/.test(text2) && !/^[aq]$/i.test(text2) && numeric2.expression.type !== "error" && numeric2.expression.type !== "range" && numeric2.expression.type !== "template" && !containsCall(numeric2.expression) && !groupedAtom;
   let numericScalar = numeric2;
   if (groupedAtom && expressionText.includes(".") && !mathematical) {
     numericScalar = { ...numeric2, expression: { type: "identifier", name: expressionText } };
@@ -61399,13 +60765,13 @@ function plan(input, start) {
     display: expressionText,
     ...suffix ? { index: suffix[2].toLowerCase() } : {},
     immediate,
-    relative: relative3,
+    relative: relative4,
     directHex: body.startsWith("$"),
     native,
     ...force ? { force } : {},
     ...hexWidth ? { hexWidth } : {},
     ...probe ? { probe } : {},
-    ...mathematical && !relative3 ? { math: mathematicalScalar } : {}
+    ...mathematical && !relative4 ? { math: mathematicalScalar } : {}
   };
 }
 function parse65xxOperands(mnemonic, text2) {
@@ -61466,15 +60832,64 @@ function has65xxPolicy(syntax2) {
   return "policy65xx" in syntax2 && typeof syntax2.policy65xx === "object" && syntax2.policy65xx !== null && "kind" in syntax2.policy65xx && syntax2.policy65xx.kind === "65xx-v1";
 }
 
+// packages/plugin-65xx/src/target/link-target.ts
+function createNesSourceLinkRecipe(context, sections) {
+  if (context.options.sourceStyle !== "asar") {
+    throw new Error("The NES Asar adapter requires sourceStyle: asar in target configuration.");
+  }
+  const state = context.state.get(nes65xxSessionStateKey);
+  return addressedSourceLinkRecipe({
+    target: context.targetId,
+    sections,
+    outputOffset: (address3) => state.header.length + address3,
+    prefix: state.header,
+    outputSize: state.header.length + state.linker.imageSize,
+    fillByte: state.fillByte
+  });
+}
+function createNesLinkTarget() {
+  return {
+    target: "65xx.nes",
+    revision: "nes-link-v1",
+    validate(modules, recipe, allocations) {
+      const header = recipe.regions.find(
+        (region) => region.outputOffset === 0 && region.initialBytes
+      )?.initialBytes;
+      if (!header || header.length !== 16 || header[0] !== 78 || header[1] !== 69 || header[2] !== 83 || header[3] !== 26) {
+        throw new LinkError("ines-header", "Link recipe requires a complete iNES header.");
+      }
+      for (const module2 of modules) {
+        const declared = module2.targetOptions.header;
+        if (!Array.isArray(declared) || declared.length !== header.length || declared.some((byte2, index) => byte2 !== header[index])) {
+          throw new LinkError(
+            "ines-header",
+            `Module '${module2.id}' declares an incompatible iNES header.`
+          );
+        }
+      }
+      for (const allocation of allocations) {
+        if (allocation.runAddress < 0 || allocation.runAddress + allocation.size > 65536) {
+          throw new LinkError(
+            "nes-address",
+            `Section '${allocation.module}:${allocation.section}' exceeds the 16-bit run address space.`
+          );
+        }
+      }
+    },
+    finalize() {
+    }
+  };
+}
+
 // packages/plugin-65xx/src/operands/resolution.ts
 function valueWidth(value) {
   if (!Number.isFinite(value)) {
     return 4;
   }
-  let integer5 = Math.floor(Math.abs(value));
+  let integer6 = Math.floor(Math.abs(value));
   let digits = 1;
-  while (integer5 >= 16) {
-    integer5 = Math.floor(integer5 / 16);
+  while (integer6 >= 16) {
+    integer6 = Math.floor(integer6 / 16);
     digits++;
   }
   if (value < 0) {
@@ -61491,6 +60906,14 @@ function valueWidth(value) {
   return Math.max(1, Math.ceil(digits / 2));
 }
 function expand(plan2, frame) {
+  if (frame.isRelocatable && (frame.sourceAdapter !== "asar" || frame.previewSource(plan2.scalar) === void 0)) {
+    return {
+      length: plan2.force ?? plan2.hexWidth ?? 2,
+      generated: false,
+      value: 0,
+      flattened: false
+    };
+  }
   let length = plan2.hexWidth ?? 2;
   let value = 0;
   let generated = false;
@@ -61740,6 +61163,7 @@ var TypedArch65xx = class {
     }
   }
   cpu;
+  supportsRelocatable = true;
   deferOperandBindingErrors = true;
   forms;
   catalog;
@@ -61884,6 +61308,9 @@ var TypedArch65xx = class {
     const form = this.resolveForm(frame, syntax2, state);
     if (!form) {
       return false;
+    }
+    if (frame.isRelocatable) {
+      return this.encodeModule(frame, context, syntax2, form);
     }
     frame.choose(form.mnemonic + ":" + form.mode, modeSize(form), {
       cpu: this.cpu.id,
@@ -62067,6 +61494,73 @@ var TypedArch65xx = class {
     }
     return true;
   }
+  /** Form tables supply every field's width/order, including vendor and prefixed instructions. */
+  encodeModule(frame, context, syntax2, form) {
+    const instruction2 = new RelocatableInstruction(frame, context).opcode(...form.encoding);
+    const parts2 = syntax2.policy65xx.parts;
+    const scalar3 = selectedScalar(syntax2);
+    let fields2 = [scalar3];
+    switch (form.codec) {
+      case "none":
+        fields2 = [];
+        break;
+      case "accumulator-relative8":
+        fields2 = [parts2[1].scalar];
+        break;
+      case "zero-page-relative8":
+      case "zero-page-immediate8":
+      case "three-unsigned16-le":
+      case "immediate-unsigned8":
+      case "immediate-unsigned16":
+        fields2 = parts2.slice(0, form.operands.length).map((part) => part.scalar);
+        break;
+      case "relative16":
+      case "relative8":
+      case "special-page":
+      case "unsigned16-le":
+      case "unsigned24-le":
+      case "unsigned8":
+        if (!syntax2.policy65xx.hasOperand && form.mnemonic === "BRK") {
+          fields2 = [linkConstant(0)];
+        }
+        break;
+    }
+    if (fields2.length !== form.operands.length || fields2.some((field) => !field)) {
+      throw frame.error(`${form.mnemonic} requires ${form.operands.length} encoded operands.`);
+    }
+    for (let index = 0; index < fields2.length; index++) {
+      const field = form.operands[index];
+      const relative4 = field.relative === true || form.codec === "relative8" || form.codec === "relative16" || form.codec === "zero-page-relative8" && index === 1 || form.codec === "accumulator-relative8";
+      const encoding = {
+        width: field.width,
+        kind: relative4 ? "relative" : "absolute",
+        addressWidth: 16,
+        wrapWidth: 16
+      };
+      if (relative4) {
+        const start = frame.sectionPosition();
+        instruction2.field(fields2[index], {
+          ...encoding,
+          signed: true,
+          pc: {
+            section: start.section,
+            offset: frame.instructionAddress + (form.relativeBaseOffset ?? modeSize(form))
+          }
+        });
+      } else if (form.codec === "special-page") {
+        instruction2.field(fields2[index], { ...encoding, minimum: 65280, maximum: 65535 });
+      } else {
+        const immediate = form.mode === "immediate" || form.codec.startsWith("immediate-") && index === 0 || form.codec === "zero-page-immediate8" && index === 1;
+        instruction2.field(fields2[index], {
+          ...encoding,
+          minimum: immediate ? -(2 ** (8 * field.width - 1)) : 0,
+          constraint: form.operandConstraint === "power-of-two" ? "powerOfTwo" : void 0
+        });
+      }
+    }
+    instruction2.finish(`${form.mnemonic}:${form.mode}`, { cpu: this.cpu.id, mode: form.mode });
+    return true;
+  }
   /** Validate before writing, retaining a classification value only when its evaluation schedule requires it. */
   readValue(frame, scalar3, width, description, immediate = false, prepared, displayText, unbound = false) {
     let value;
@@ -62151,7 +61645,7 @@ function createRaw65xxTargetOptions(configured) {
   }
   return { origin: value };
 }
-var descriptor = (keyword, summary, syntax2, group2) => ({ keyword, summary, syntax: syntax2, group: group2 });
+var descriptor = (keyword, summary, syntax2, group) => ({ keyword, summary, syntax: syntax2, group });
 var ca65Tooling = [
   descriptor("setcpu", "Select a 65xx CPU.", '.setcpu "CPU"', "architecture"),
   descriptor("cpu", "Alias for .setcpu.", '.cpu "CPU"', "architecture"),
@@ -62476,7 +61970,34 @@ function register65xxContributions(context) {
     syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
     createSyntaxProfile: (options) => options.sourceStyle === "asar" ? ASAR_SYNTAX_PROFILE : CA65_65XX_SYNTAX_PROFILE,
     defaultOutputExtension: ".nes",
-    createOptions: createNes65xxTargetOptions
+    createOptions: createNes65xxTargetOptions,
+    createLinkTarget: createNesLinkTarget,
+    createSourceLinkRecipe: createNesSourceLinkRecipe,
+    createLinkRecipe: ({ state }) => {
+      const nes = state.get(nes65xxSessionStateKey);
+      const recipe = ld65LinkRecipe(nes.linker, NES_65XX_TARGET_ID);
+      return {
+        ...recipe,
+        regions: [
+          {
+            name: "__ines_header",
+            start: 0,
+            size: nes.header.length,
+            outputOffset: 0,
+            initialBytes: [...nes.header]
+          },
+          // The flat NES lifecycle fills the complete cartridge with the target byte, including MEMORY gaps.
+          // Keep its established output here; ld65LinkRecipe remains available for explicit per-region policies.
+          ...recipe.regions.map((region) => ({
+            ...region,
+            ...region.outputOffset !== void 0 ? {
+              outputOffset: region.outputOffset + nes.header.length,
+              fillByte: nes.fillByte
+            } : {}
+          }))
+        ]
+      };
+    }
   });
 }
 function validate65xxPluginOptions(configured) {
@@ -63218,14 +62739,14 @@ var createSnesDebugAddressResolvers = (map, output) => {
 
 // packages/vscode-extension/src/debug/source-root.ts
 var import_node_fs15 = __toESM(require("node:fs"), 1);
-var import_node_path23 = __toESM(require("node:path"), 1);
+var import_node_path25 = __toESM(require("node:path"), 1);
 var sourceMatches = (root, source) => {
-  if (import_node_path23.default.isAbsolute(source.path)) {
+  if (import_node_path25.default.isAbsolute(source.path)) {
     return false;
   }
-  const resolved = import_node_path23.default.resolve(root, source.path);
-  const relative3 = import_node_path23.default.relative(root, resolved);
-  if (!relative3 || relative3.startsWith(`..${import_node_path23.default.sep}`) || import_node_path23.default.isAbsolute(relative3)) {
+  const resolved = import_node_path25.default.resolve(root, source.path);
+  const relative4 = import_node_path25.default.relative(root, resolved);
+  if (!relative4 || relative4.startsWith(`..${import_node_path25.default.sep}`) || import_node_path25.default.isAbsolute(relative4)) {
     return false;
   }
   try {
@@ -63236,18 +62757,18 @@ var sourceMatches = (root, source) => {
   }
 };
 var resolveDebugSourceRoot = (options) => {
-  const configuredRoot = import_node_path23.default.resolve(options.configuredRoot);
+  const configuredRoot = import_node_path25.default.resolve(options.configuredRoot);
   const candidates = [
     configuredRoot,
-    ...options.workspaceRoot ? [import_node_path23.default.resolve(options.workspaceRoot)] : [],
-    import_node_path23.default.dirname(import_node_path23.default.resolve(options.debugMapFile)),
+    ...options.workspaceRoot ? [import_node_path25.default.resolve(options.workspaceRoot)] : [],
+    import_node_path25.default.dirname(import_node_path25.default.resolve(options.debugMapFile)),
     // Generated ROMs/maps commonly live in build/, with mapped sources in its parent.
-    import_node_path23.default.dirname(import_node_path23.default.dirname(import_node_path23.default.resolve(options.debugMapFile))),
-    import_node_path23.default.dirname(import_node_path23.default.resolve(options.programFile)),
-    import_node_path23.default.dirname(import_node_path23.default.dirname(import_node_path23.default.resolve(options.programFile)))
+    import_node_path25.default.dirname(import_node_path25.default.dirname(import_node_path25.default.resolve(options.debugMapFile))),
+    import_node_path25.default.dirname(import_node_path25.default.resolve(options.programFile)),
+    import_node_path25.default.dirname(import_node_path25.default.dirname(import_node_path25.default.resolve(options.programFile)))
   ];
   const unique2 = [...new Set(candidates)];
-  const relativeSources = options.map.sources.filter((source) => !import_node_path23.default.isAbsolute(source.path)).slice(0, 128);
+  const relativeSources = options.map.sources.filter((source) => !import_node_path25.default.isAbsolute(source.path)).slice(0, 128);
   if (relativeSources.length === 0) {
     return configuredRoot;
   }
@@ -63272,7 +62793,7 @@ var UTTORI_TRACE_STOP_COMMAND = "asm.trace.stop";
 var UTTORI_TRACE_STOP_ANALYZE_COMMAND = "asm.trace.stopAnalyze";
 var IMPORT_CAPTURE_COMMAND = "asm.source.importCapture";
 var EMULATOR_RUNTIME_BINDINGS_KEY = "uttoriAsm.emulatorRuntimeBindings.v1";
-var runtimeWorkspace = (resource) => (resource ? import_vscode16.workspace.getWorkspaceFolder(resource) : void 0) ?? import_vscode16.workspace.workspaceFolders?.[0];
+var runtimeWorkspace = (resource) => (resource ? import_vscode17.workspace.getWorkspaceFolder(resource) : void 0) ?? import_vscode17.workspace.workspaceFolders?.[0];
 var runtimeWorkspaceKey = (folder) => folder.uri.toString();
 var configuredEmulatorRuntime = (context, resource) => {
   const folder = runtimeWorkspace(resource);
@@ -63281,7 +62802,7 @@ var configuredEmulatorRuntime = (context, resource) => {
   }
   const saved = context.globalState.get(EMULATOR_RUNTIME_BINDINGS_KEY, {})[runtimeWorkspaceKey(folder)];
   const launch = runtimeBindingFromLaunch(
-    import_vscode16.workspace.getConfiguration("launch", folder.uri).get("configurations", []),
+    import_vscode17.workspace.getConfiguration("launch", folder.uri).get("configurations", []),
     folder.uri.fsPath
   );
   if (saved && !saved.saveDirectory && launch?.saveDirectory) {
@@ -63290,7 +62811,7 @@ var configuredEmulatorRuntime = (context, resource) => {
   return saved ?? launch;
 };
 var chooseLocalPath = async (title, options) => {
-  const selected = await import_vscode16.window.showOpenDialog({
+  const selected = await import_vscode17.window.showOpenDialog({
     title,
     canSelectMany: false,
     canSelectFiles: options.files,
@@ -63307,14 +62828,14 @@ var chooseLocalPath = async (title, options) => {
   return uri.fsPath;
 };
 var configureEmulatorRuntime = async (context, resource) => {
-  if (!import_vscode16.workspace.isTrusted) {
+  if (!import_vscode17.workspace.isTrusted) {
     throw new Error("Configuring an emulator runtime requires a trusted workspace.");
   }
   const folder = runtimeWorkspace(resource);
   if (!folder) {
     throw new Error("Open a workspace folder before configuring an emulator runtime.");
   }
-  const selectedBackend = await import_vscode16.window.showQuickPick(
+  const selectedBackend = await import_vscode17.window.showQuickPick(
     [
       {
         label: "ares",
@@ -63349,7 +62870,7 @@ var configureEmulatorRuntime = async (context, resource) => {
   if (!runtimeDirectory) {
     return void 0;
   }
-  const manifest = JSON.parse(fs18.readFileSync(runtimeManifest, "utf8"));
+  const manifest = JSON.parse(fs20.readFileSync(runtimeManifest, "utf8"));
   parseAresRuntimeManifest(manifest);
   const saveDirectory = configuredEmulatorRuntime(context, folder.uri)?.saveDirectory;
   const binding = {
@@ -63369,7 +62890,7 @@ var configureEmulatorRuntime = async (context, resource) => {
     ...bindings,
     [runtimeWorkspaceKey(folder)]: binding
   });
-  void import_vscode16.window.showInformationMessage(
+  void import_vscode17.window.showInformationMessage(
     `Assembly: ${selectedBackend.label} runtime configured for ${folder.name}.`
   );
   return binding;
@@ -63383,7 +62904,7 @@ var liveDebugConfiguration = (binding, artifacts, folder) => ({
   debugMap: artifacts.debugMapPath,
   ...artifacts.outputSha256 ? { outputSha256: artifacts.outputSha256 } : {},
   ...artifacts.debugMapFingerprint ? { debugMapFingerprint: artifacts.debugMapFingerprint } : {},
-  sourceRoot: folder?.uri.fsPath ?? path33.dirname(artifacts.outputPath),
+  sourceRoot: folder?.uri.fsPath ?? path36.dirname(artifacts.outputPath),
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
   runtimeDirectory: binding.runtimeDirectory,
@@ -63395,7 +62916,7 @@ var activeTraceRecording;
 var debuggingExtensionRoot = "";
 var liveAnalyses = /* @__PURE__ */ new Set();
 var sessionContexts = /* @__PURE__ */ new Map();
-var resolvedPath = (value, folder) => path33.isAbsolute(value) ? value : path33.resolve(folder?.uri.fsPath ?? process.cwd(), value);
+var resolvedPath = (value, folder) => path36.isAbsolute(value) ? value : path36.resolve(folder?.uri.fsPath ?? process.cwd(), value);
 var requiredLivePath = (value, name2, folder) => {
   if (!value) {
     throw new Error(`Live Uttori ASM debugging requires '${name2}'.`);
@@ -63408,7 +62929,7 @@ var stringField = (value, name2) => {
   }
   return value;
 };
-function isRecord39(value) {
+function isRecord41(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function optionalString2(value) {
@@ -63435,23 +62956,23 @@ function parsedReplayScript(text2) {
   return value;
 }
 function isTraceCapability(value) {
-  return isRecord39(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.maxBufferedEvents === "number" && typeof value.maxBatchEvents === "number" && (value.instructionDetails === void 0 || typeof value.instructionDetails === "boolean");
+  return isRecord41(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.maxBufferedEvents === "number" && typeof value.maxBatchEvents === "number" && (value.instructionDetails === void 0 || typeof value.instructionDetails === "boolean");
 }
 function isNativeFilePosition(value) {
-  return isRecord39(value) && (value.fileState === "preparing" || value.fileState === "writing" || value.fileState === "complete" || value.fileState === "incomplete") && typeof value.fileBytes === "string" && typeof value.fileBatches === "string";
+  return isRecord41(value) && (value.fileState === "preparing" || value.fileState === "writing" || value.fileState === "complete" || value.fileState === "incomplete") && typeof value.fileBytes === "string" && typeof value.fileBatches === "string";
 }
 function isEditorTraceBatch(value) {
-  return isRecord39(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.sequenceStart === "number" && Array.isArray(value.addresses) && value.addresses.every((address3) => typeof address3 === "number") && typeof value.droppedEvents === "number" && typeof value.active === "boolean" && (value.details === void 0 || Array.isArray(value.details)) && (value.unattributedMemoryAccesses === void 0 || typeof value.unattributedMemoryAccesses === "number");
+  return isRecord41(value) && typeof value.architecture === "string" && typeof value.addressSpace === "string" && typeof value.sequenceStart === "number" && Array.isArray(value.addresses) && value.addresses.every((address3) => typeof address3 === "number") && typeof value.droppedEvents === "number" && typeof value.active === "boolean" && (value.details === void 0 || Array.isArray(value.details)) && (value.unattributedMemoryAccesses === void 0 || typeof value.unattributedMemoryAccesses === "number");
 }
 function isReplayScript(value) {
-  if (!isRecord39(value) || !Array.isArray(value.snapshots)) {
+  if (!isRecord41(value) || !Array.isArray(value.snapshots)) {
     return false;
   }
   if (value.architectures !== void 0 && !Array.isArray(value.architectures)) {
     return false;
   }
   return value.snapshots.every(
-    (snapshot) => isRecord39(snapshot) && Array.isArray(snapshot.threads) && Array.isArray(snapshot.frames) && isRecord39(snapshot.registers) && Array.isArray(snapshot.memory)
+    (snapshot) => isRecord41(snapshot) && Array.isArray(snapshot.threads) && Array.isArray(snapshot.frames) && isRecord41(snapshot.registers) && Array.isArray(snapshot.memory)
   );
 }
 var traceMetadata = (session, trace) => {
@@ -63482,8 +63003,8 @@ var traceProducer = (session, map) => {
     };
   }
   const manifestFile = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
-  const parsed = JSON.parse(fs18.readFileSync(manifestFile, "utf8"));
-  const manifest = isRecord39(parsed) ? parsed : {};
+  const parsed = JSON.parse(fs20.readFileSync(manifestFile, "utf8"));
+  const manifest = isRecord41(parsed) ? parsed : {};
   const patch = stringField(manifest.patchSha256, "runtimeManifest.patchSha256");
   const revision = stringField(manifest.forkRevision, "runtimeManifest.forkRevision");
   const executable = stringField(manifest.executableSha256, "runtimeManifest.executableSha256");
@@ -63491,14 +63012,14 @@ var traceProducer = (session, map) => {
 };
 var chooseTrace = async (session) => {
   const result = await session.customRequest("uttori/traceCapabilities");
-  const traces = isRecord39(result) && Array.isArray(result.traces) ? result.traces : [];
+  const traces = isRecord41(result) && Array.isArray(result.traces) ? result.traces : [];
   if (!traces.every(isTraceCapability) || traces.length === 0) {
     throw new Error("The active backend has no instruction trace stream.");
   }
   if (traces.length === 1) {
     return traces[0];
   }
-  const selected = await import_vscode16.window.showQuickPick(
+  const selected = await import_vscode17.window.showQuickPick(
     traces.map((trace) => ({
       label: `${trace.architecture} / ${trace.addressSpace}`,
       description: `${trace.maxBufferedEvents} buffered, ${trace.maxBatchEvents} per pull`,
@@ -63509,19 +63030,19 @@ var chooseTrace = async (session) => {
   return selected?.trace;
 };
 var defaultTraceUri = (session, extension, bus) => {
-  const root = session.workspaceFolder?.uri.fsPath ?? import_vscode16.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const root = session.workspaceFolder?.uri.fsPath ?? import_vscode17.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!root) {
     return void 0;
   }
   const timestamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(":", "-");
   const prefix = bus ? "bus-trace" : "instruction-trace";
-  return import_vscode16.Uri.file(path33.join(root, `${prefix}-${timestamp}.${extension}`));
+  return import_vscode17.Uri.file(path36.join(root, `${prefix}-${timestamp}.${extension}`));
 };
 var startRuntimeTraceWithLease = async () => {
   if (activeTraceRecording) {
     throw new Error("A trace recording is already active.");
   }
-  const session = import_vscode16.debug.activeDebugSession;
+  const session = import_vscode17.debug.activeDebugSession;
   if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE) {
     throw new Error("Start an Uttori ASM debug session before recording a trace.");
   }
@@ -63529,16 +63050,16 @@ var startRuntimeTraceWithLease = async () => {
   if (!trace) {
     return;
   }
-  const traceMode = import_vscode16.workspace.getConfiguration("asm", session.workspaceFolder?.uri).get("debug.traceMode", "lossless-instructions");
+  const traceMode = import_vscode17.workspace.getConfiguration("asm", session.workspaceFolder?.uri).get("debug.traceMode", "lossless-instructions");
   const ppu = traceMode === "lossless-bus-ppu";
   const transfers = ppu || traceMode === "lossless-bus-transfers";
   const bus = transfers || traceMode === "lossless-bus";
   const lossless = bus || traceMode === "lossless-instructions";
   const detail = lossless ? "full" : resolveEditorTraceDetail(
-    import_vscode16.workspace.getConfiguration("asm", session.workspaceFolder?.uri).get("debug.traceDetail", "full"),
+    import_vscode17.workspace.getConfiguration("asm", session.workspaceFolder?.uri).get("debug.traceDetail", "full"),
     trace.instructionDetails
   );
-  const destination = await import_vscode16.window.showSaveDialog({
+  const destination = await import_vscode17.window.showSaveDialog({
     defaultUri: defaultTraceUri(session, lossless ? "act2" : "json", bus),
     filters: { "Uttori ASM trace": [lossless ? "act2" : "json"] },
     saveLabel: "Start Recording"
@@ -63567,9 +63088,9 @@ var startRuntimeTraceWithLease = async () => {
     if (ppu) {
       captureScope2 = nes ? "nes.cpu-bus-ppu" : "snes.cpu-bus-ppu";
     }
-    const nativeFile = import_vscode16.workspace.getConfiguration("asm", session.workspaceFolder?.uri).get("debug.captureSink", "stream") === "native-file";
+    const nativeFile = import_vscode17.workspace.getConfiguration("asm", session.workspaceFolder?.uri).get("debug.captureSink", "stream") === "native-file";
     const recorderType = nativeFile ? NativeCaptureFileRecorder : LosslessCaptureFileRecorder;
-    const settings = import_vscode16.workspace.getConfiguration("asm", session.workspaceFolder?.uri);
+    const settings = import_vscode17.workspace.getConfiguration("asm", session.workspaceFolder?.uri);
     const liveEnabled = !nes && nativeFile && bus && settings.get("debug.liveBusAnalysis", false);
     if (liveEnabled && liveAnalyses.size > 0) {
       throw new Error(
@@ -63590,14 +63111,14 @@ var startRuntimeTraceWithLease = async () => {
     });
     let live;
     if (liveProject && recorder2 instanceof NativeCaptureFileRecorder) {
-      const analysisSettings = import_vscode16.workspace.getConfiguration("asm", import_vscode16.Uri.file(liveProject));
-      const status = import_vscode16.window.createStatusBarItem(import_vscode16.StatusBarAlignment.Left, 10);
+      const analysisSettings = import_vscode17.workspace.getConfiguration("asm", import_vscode17.Uri.file(liveProject));
+      const status = import_vscode17.window.createStatusBarItem(import_vscode17.StatusBarAlignment.Left, 10);
       status.command = "asm.trace.cancelLiveAnalysis";
       status.text = "$(sync~spin) Bus analysis: waiting for capture";
       status.show();
       try {
         live = new LiveBusAnalysis(
-          path33.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
+          path36.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
           {
             file: destination.fsPath,
             projectDirectory: liveProject,
@@ -63636,14 +63157,14 @@ var startRuntimeTraceWithLease = async () => {
         );
         void analysis.completion.then(
           (result) => {
-            void import_vscode16.window.showInformationMessage(
+            void import_vscode17.window.showInformationMessage(
               `Assembly: live bus analysis published ${result.added.runtime.toLocaleString()} new facts from ${result.observedEvents.toLocaleString()} accesses.`
             );
-            void import_vscode16.commands.executeCommand("asm.sources.refresh");
+            void import_vscode17.commands.executeCommand("asm.sources.refresh");
             return;
           },
           (error) => {
-            void import_vscode16.window.showWarningMessage(
+            void import_vscode17.window.showWarningMessage(
               `Assembly live analysis stopped: ${error instanceof Error ? error.message : String(error)} The ACT2 recording remains available for offline import.`
             );
             return;
@@ -63665,11 +63186,11 @@ var startRuntimeTraceWithLease = async () => {
         activeTraceRecording = void 0;
         setRuntimeCapturePhase("idle");
       }
-      void import_vscode16.window.showErrorMessage(
+      void import_vscode17.window.showErrorMessage(
         `Assembly lossless capture failed: ${error instanceof Error ? error.message : String(error)}. The partial ACT2 archive retains committed evidence. Emulation remains stopped on producer failure.`
       );
     });
-    void import_vscode16.window.showInformationMessage(
+    void import_vscode17.window.showInformationMessage(
       bus ? "Assembly: recording lossless CPU/DMA/HDMA bus accesses to ACT2. Emulation slows when storage falls behind. Instruction bytes and registers are not recorded in this mode." : "Assembly: recording lossless 65816 instructions with fetched bytes and CPU state. Emulation slows when storage falls behind. Bus events are outside this capture scope."
     );
     return;
@@ -63710,11 +63231,11 @@ var startRuntimeTraceWithLease = async () => {
     }
     activeTraceRecording = void 0;
     setRuntimeCapturePhase("idle");
-    void import_vscode16.window.showErrorMessage(
+    void import_vscode17.window.showErrorMessage(
       `Assembly trace recording failed: ${error instanceof Error ? error.message : String(error)}`
     );
   });
-  void import_vscode16.window.showInformationMessage(
+  void import_vscode17.window.showInformationMessage(
     `Assembly: recording ${trace.architecture} instructions (${detail === "full" ? "full execution details" : "PC-only"}).`
   );
 };
@@ -63741,7 +63262,7 @@ var markRuntimeCapture = async () => {
   if (!active || active.recorder instanceof RuntimeTraceFileRecorder) {
     throw new Error("Start a lossless capture before adding a milestone.");
   }
-  const label = await import_vscode16.window.showInputBox({
+  const label = await import_vscode17.window.showInputBox({
     prompt: "Capture milestone",
     placeHolder: "Accepted payment / refund / Sprite joins"
   });
@@ -63759,11 +63280,11 @@ var restoreRuntimeCapture = async (replay) => {
   if (activeTraceRecording) {
     throw new Error("Stop the active recording before restoring a capture.");
   }
-  const session = import_vscode16.debug.activeDebugSession;
+  const session = import_vscode17.debug.activeDebugSession;
   if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE) {
     throw new Error("Start a matching ares debug session first.");
   }
-  const selected = await import_vscode16.window.showOpenDialog({
+  const selected = await import_vscode17.window.showOpenDialog({
     canSelectFolders: true,
     canSelectFiles: false,
     canSelectMany: false,
@@ -63785,7 +63306,7 @@ var restoreRuntimeCapture = async (replay) => {
     romContentSha256: metadata.romContentSha256,
     producer: metadata.producer
   });
-  void import_vscode16.window.showInformationMessage(
+  void import_vscode17.window.showInformationMessage(
     replay ? "Assembly: capture replay is armed. Continue to replay recorded inputs and pause at the saved endpoint." : "Assembly: pre-action state restored. Start a new capture before trying an alternative action."
   );
 };
@@ -63798,9 +63319,9 @@ var stopRuntimeTrace = async (analyze = false) => {
   setRuntimeCapturePhase("finalizing");
   const finalize = async () => {
     try {
-      return await import_vscode16.window.withProgress(
+      return await import_vscode17.window.withProgress(
         {
-          location: import_vscode16.ProgressLocation.Notification,
+          location: import_vscode17.ProgressLocation.Notification,
           title: "Assembly: stopping recording and finalizing capture\u2026",
           cancellable: false
         },
@@ -63820,35 +63341,35 @@ var stopRuntimeTrace = async (analyze = false) => {
       }
     }
     if (analyze) {
-      await import_vscode16.commands.executeCommand(IMPORT_CAPTURE_COMMAND, import_vscode16.Uri.file(summary.file));
+      await import_vscode17.commands.executeCommand(IMPORT_CAPTURE_COMMAND, import_vscode17.Uri.file(summary.file));
       return;
     }
-    const action2 = await import_vscode16.window.showInformationMessage(
+    const action2 = await import_vscode17.window.showInformationMessage(
       `Assembly: ${summary.observedEvents.toLocaleString()} bus capture event(s) retained. Zero dropped. Wrote ${summary.file}.`,
       "Import Bus Activity"
     );
     if (action2 === "Import Bus Activity") {
-      await import_vscode16.commands.executeCommand(IMPORT_CAPTURE_COMMAND, import_vscode16.Uri.file(summary.file));
+      await import_vscode17.commands.executeCommand(IMPORT_CAPTURE_COMMAND, import_vscode17.Uri.file(summary.file));
     }
     return;
   }
   const total = summary.observedEvents + summary.droppedEvents;
   const scope = "archive" in summary ? ". Lossless instruction archive saved (bus events excluded)" : "";
   const counts = `${summary.observedEvents.toLocaleString()} instruction event(s) retained. ${summary.droppedEvents.toLocaleString()} dropped${total > 0 ? ` (${(summary.droppedEvents / total * 100).toFixed(1)}%)` : ""}${scope}`;
-  const notify = summary.droppedEvents > 0 ? import_vscode16.window.showWarningMessage : import_vscode16.window.showInformationMessage;
+  const notify = summary.droppedEvents > 0 ? import_vscode17.window.showWarningMessage : import_vscode17.window.showInformationMessage;
   if (analyze) {
     void notify(`Assembly: ${counts}. Importing evidence into the selected source project\u2026`);
-    await import_vscode16.commands.executeCommand(IMPORT_CAPTURE_COMMAND, import_vscode16.Uri.file(summary.file));
+    await import_vscode17.commands.executeCommand(IMPORT_CAPTURE_COMMAND, import_vscode17.Uri.file(summary.file));
     return;
   }
   const action = await notify(`Assembly: ${counts}. Wrote ${summary.file}.`, "Import Capture");
   if (action === "Import Capture") {
-    await import_vscode16.commands.executeCommand(IMPORT_CAPTURE_COMMAND, import_vscode16.Uri.file(summary.file));
+    await import_vscode17.commands.executeCommand(IMPORT_CAPTURE_COMMAND, import_vscode17.Uri.file(summary.file));
   }
 };
 var runTraceCommand = (command) => {
   void command().catch(
-    (error) => import_vscode16.window.showErrorMessage(
+    (error) => import_vscode17.window.showErrorMessage(
       `Assembly trace: ${error instanceof Error ? error.message : String(error)}`
     )
   );
@@ -63862,17 +63383,17 @@ var debugSessionTerminated = (session) => {
   activeTraceRecording = void 0;
   setRuntimeCapturePhase("finalizing");
   void active.recorder.finishIncomplete().finally(() => setRuntimeCapturePhase("idle")).then(
-    (summary) => import_vscode16.window.showWarningMessage(
+    (summary) => import_vscode17.window.showWarningMessage(
       `Assembly: debug session ended. Preserved an incomplete ${summary.observedEvents}-event trace at ${summary.file}.`
     )
   ).catch(
-    (error) => import_vscode16.window.showErrorMessage(
+    (error) => import_vscode17.window.showErrorMessage(
       `Assembly trace finalization failed: ${error instanceof Error ? error.message : String(error)}`
     )
   );
 };
 var createLiveBackend = (configuration, folder, extensionRoot, program, romSha256, target, log) => {
-  if (!import_vscode16.workspace.isTrusted) {
+  if (!import_vscode17.workspace.isTrusted) {
     throw new Error("Live Uttori ASM debugging requires a trusted workspace.");
   }
   if (configuration.backend !== "ares") {
@@ -63885,7 +63406,7 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
     "runtimeDirectory",
     folder
   );
-  const bundledSidecar = path33.join(extensionRoot, "sidecars", "ares.mjs");
+  const bundledSidecar = path36.join(extensionRoot, "sidecars", "ares.mjs");
   const sidecar = configuration.sidecar ? resolvedPath(configuration.sidecar, folder) : bundledSidecar;
   return new SidecarDebugBackend({
     backend: ARES_RSP_BACKEND_ID,
@@ -63936,8 +63457,8 @@ var loadConfiguration = (session, extensionRoot, log) => {
   const folder = session.workspaceFolder;
   const program = resolvedPath(configuration.program, folder);
   const mapFile = resolvedPath(configuration.debugMap, folder);
-  const output = new Uint8Array(fs18.readFileSync(program));
-  const parsedMap = JSON.parse(fs18.readFileSync(mapFile, "utf8"));
+  const output = new Uint8Array(fs20.readFileSync(program));
+  const parsedMap = JSON.parse(fs20.readFileSync(mapFile, "utf8"));
   if (!isStoredDebugMap2(parsedMap)) {
     throw new Error("Invalid debug map.");
   }
@@ -63965,7 +63486,7 @@ var loadConfiguration = (session, extensionRoot, log) => {
         log
       );
     }
-    const script = configuration.replay ? parsedReplayScript(fs18.readFileSync(resolvedPath(configuration.replay, folder), "utf8")) : createDebugMapReplayScript(map, output);
+    const script = configuration.replay ? parsedReplayScript(fs20.readFileSync(resolvedPath(configuration.replay, folder), "utf8")) : createDebugMapReplayScript(map, output);
     return new ReplayDebugBackend(script);
   })();
   const configuredSourceRoot = resolvedPath(configuration.sourceRoot ?? ".", folder);
@@ -63987,7 +63508,7 @@ var loadConfiguration = (session, extensionRoot, log) => {
   };
 };
 var InlineDebugAdapter = class {
-  #emitter = new import_vscode16.EventEmitter();
+  #emitter = new import_vscode17.EventEmitter();
   #session;
   #backend;
   onDidSendMessage = this.#emitter.event;
@@ -64006,7 +63527,7 @@ var InlineDebugAdapter = class {
         if (message.type === "response" && !message.success) {
           log(`${message.command} failed: ${message.message}`);
           if (message.command === "launch" || message.command === "attach") {
-            void import_vscode16.window.showErrorMessage(`Assembly debugger: ${message.message}`);
+            void import_vscode17.window.showErrorMessage(`Assembly debugger: ${message.message}`);
           }
         } else if (message.type === "event" && message.event === "stopped") {
           log(
@@ -64041,10 +63562,10 @@ var UttoriDebugConfigurationProvider = class {
    */
   async resolveDebugConfiguration(folder, configuration) {
     if (configuration.sourceProject === true) {
-      if (!folder || !import_vscode16.workspace.isTrusted) {
+      if (!folder || !import_vscode17.workspace.isTrusted) {
         throw new Error("Select and trust a Git source workspace before debugging it.");
       }
-      const built = await import_vscode16.commands.executeCommand(
+      const built = await import_vscode17.commands.executeCommand(
         "asm.source.buildProject",
         folder.uri
       );
@@ -64067,7 +63588,7 @@ var UttoriDebugConfigurationProvider = class {
     const configuredProgram = typeof configuration.program === "string" ? configuration.program : void 0;
     const configuredMap = typeof configuration.debugMap === "string" ? configuration.debugMap : void 0;
     const configuredSourceRoot = typeof configuration.sourceRoot === "string" ? configuration.sourceRoot : void 0;
-    const program = configuredProgram ?? path33.join(root, "build", "rebuilt-content.sfc");
+    const program = configuredProgram ?? path36.join(root, "build", "rebuilt-content.sfc");
     return {
       ...configuration,
       type: typeof configuration.type === "string" ? configuration.type : UTTORI_ASM_DEBUG_TYPE,
@@ -64100,7 +63621,7 @@ var UttoriDebugAdapterFactory = class {
     try {
       if (session.configuration.backend === "ares") {
         const runtimeManifest = typeof session.configuration.runtimeManifest === "string" ? session.configuration.runtimeManifest : void 0;
-        const manifestText = fs18.readFileSync(
+        const manifestText = fs20.readFileSync(
           requiredLivePath(runtimeManifest, "runtimeManifest", session.workspaceFolder),
           "utf8"
         );
@@ -64113,14 +63634,14 @@ var UttoriDebugAdapterFactory = class {
       loaded = loadConfiguration(session, this.#extensionRoot, log);
     } catch (error) {
       log(`Launch failed: ${String(error)}`);
-      void import_vscode16.window.showErrorMessage(
+      void import_vscode17.window.showErrorMessage(
         `Assembly debugger: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
     }
     sessionContexts.set(session.id, {
       map: loaded.map,
-      romContentSha256: (0, import_node_crypto23.createHash)("sha256").update(loaded.map.target === "65xx.nes" ? loaded.output.subarray(16) : loaded.output).digest("hex"),
+      romContentSha256: (0, import_node_crypto25.createHash)("sha256").update(loaded.map.target === "65xx.nes" ? loaded.output.subarray(16) : loaded.output).digest("hex"),
       producer: traceProducer(session, loaded.map)
     });
     let instructionAnnotation;
@@ -64134,16 +63655,16 @@ var UttoriDebugAdapterFactory = class {
       (error) => log(`Optional annotations unavailable: ${String(error)}`)
     );
     log("Artifacts valid. Connecting debugger. It will stop at entry\u2026");
-    return new import_vscode16.DebugAdapterInlineImplementation(
+    return new import_vscode17.DebugAdapterInlineImplementation(
       new InlineDebugAdapter(loaded, (address3) => instructionAnnotation?.(address3), log)
     );
   }
 };
-var updateCaptureContext = () => import_vscode16.commands.executeCommand("setContext", "uttori.capturePhase", runtimeCapturePhase());
+var updateCaptureContext = () => import_vscode17.commands.executeCommand("setContext", "uttori.capturePhase", runtimeCapturePhase());
 var registerDebugging = (extensionRoot) => {
   debuggingExtensionRoot = extensionRoot;
   void updateCaptureContext();
-  const output = import_vscode16.window.createOutputChannel("Uttori Emulator");
+  const output = import_vscode17.window.createOutputChannel("Uttori Emulator");
   return [
     onDidChangeRuntimeCapture(() => void updateCaptureContext()),
     {
@@ -64154,16 +63675,16 @@ var registerDebugging = (extensionRoot) => {
       }
     },
     output,
-    import_vscode16.debug.registerDebugConfigurationProvider(
+    import_vscode17.debug.registerDebugConfigurationProvider(
       UTTORI_ASM_DEBUG_TYPE,
       new UttoriDebugConfigurationProvider()
     ),
-    import_vscode16.debug.registerDebugAdapterDescriptorFactory(
+    import_vscode17.debug.registerDebugAdapterDescriptorFactory(
       UTTORI_ASM_DEBUG_TYPE,
       new UttoriDebugAdapterFactory(extensionRoot, output)
     ),
-    import_vscode16.commands.registerCommand("asm.nes.ppuSnapshot", async () => {
-      const session = import_vscode16.debug.activeDebugSession;
+    import_vscode17.commands.registerCommand("asm.nes.ppuSnapshot", async () => {
+      const session = import_vscode17.debug.activeDebugSession;
       if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE) {
         throw new Error("Start and pause a Famicom debug session first.");
       }
@@ -64177,35 +63698,729 @@ var registerDebugging = (extensionRoot) => {
         session.workspaceFolder.uri.fsPath
       );
     }),
-    import_vscode16.commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
-    import_vscode16.commands.registerCommand("asm.trace.mark", () => runTraceCommand(markRuntimeCapture)),
-    import_vscode16.commands.registerCommand(
+    import_vscode17.commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
+    import_vscode17.commands.registerCommand("asm.trace.mark", () => runTraceCommand(markRuntimeCapture)),
+    import_vscode17.commands.registerCommand(
       "asm.trace.replay",
       () => runTraceCommand(() => restoreRuntimeCapture(true))
     ),
-    import_vscode16.commands.registerCommand(
+    import_vscode17.commands.registerCommand(
       "asm.trace.restore",
       () => runTraceCommand(() => restoreRuntimeCapture(false))
     ),
-    import_vscode16.commands.registerCommand("asm.trace.cancelLiveAnalysis", () => {
+    import_vscode17.commands.registerCommand("asm.trace.cancelLiveAnalysis", () => {
       for (const analysis of liveAnalyses) {
         analysis.cancel();
       }
     }),
-    import_vscode16.commands.registerCommand(
+    import_vscode17.commands.registerCommand(
       UTTORI_TRACE_STOP_COMMAND,
       () => runTraceCommand(() => stopRuntimeTrace(false))
     ),
-    import_vscode16.commands.registerCommand(
+    import_vscode17.commands.registerCommand(
       UTTORI_TRACE_STOP_ANALYZE_COMMAND,
       () => runTraceCommand(() => stopRuntimeTrace(true))
     ),
-    import_vscode16.debug.onDidTerminateDebugSession(debugSessionTerminated)
+    import_vscode17.debug.onDidTerminateDebugSession(debugSessionTerminated)
   ];
 };
 
+// packages/vscode-extension/src/linked-build.ts
+var import_node_path28 = __toESM(require("node:path"), 1);
+
+// packages/plugin-loader-node/src/configuration.ts
+var import_node_fs16 = require("node:fs");
+var import_node_path26 = __toESM(require("node:path"), 1);
+var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
+var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
+  "$schema",
+  "plugins",
+  "target",
+  "architecture",
+  "includePaths",
+  "entryPoints",
+  "buildOutput",
+  "linkProject",
+  "baseImage"
+]);
+var PLUGIN_KEYS = /* @__PURE__ */ new Set(["module", "options"]);
+var isRecord42 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var configurationError = (message, cause) => new PluginError(message, {
+  code: "PLUGIN_CONFIGURATION_INVALID",
+  cause
+});
+var optionalText = (value, field) => {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    throw configurationError(`Configuration field '${field}' must be a non-empty string.`);
+  }
+  return value;
+};
+var isNonEmptyStringArray = (value) => Array.isArray(value) && value.every((item) => typeof item === "string" && item.trim() !== "");
+var optionalStringArray = (value, field) => {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!isNonEmptyStringArray(value)) {
+    throw configurationError(`Configuration field '${field}' must be an array of strings.`);
+  }
+  return value;
+};
+var validatePluginEntry = (value, index) => {
+  const entry = `plugins[${index}]`;
+  if (!isRecord42(value)) {
+    throw configurationError(`Configuration entry '${entry}' must be an object.`);
+  }
+  const unknown = Object.keys(value).filter((key3) => !PLUGIN_KEYS.has(key3));
+  if (unknown.length > 0) {
+    throw configurationError(
+      `Configuration entry '${entry}' has unknown field(s): ${unknown.join(", ")}.`
+    );
+  }
+  if (typeof value.module !== "string" || value.module.trim() === "") {
+    throw configurationError(`Configuration entry '${entry}.module' must be a non-empty string.`);
+  }
+  if (value.options !== void 0 && !isRecord42(value.options)) {
+    throw configurationError(`Configuration entry '${entry}.options' must be an object.`);
+  }
+  return {
+    module: value.module,
+    ...value.options === void 0 ? {} : { options: value.options }
+  };
+};
+var validateProjectConfiguration = (value) => {
+  if (!isRecord42(value)) {
+    throw configurationError("Project configuration must be a JSON object.");
+  }
+  const unknown = Object.keys(value).filter((key3) => !TOP_LEVEL_KEYS.has(key3));
+  if (unknown.length > 0) {
+    throw configurationError(`Project configuration has unknown field(s): ${unknown.join(", ")}.`);
+  }
+  if (value.plugins !== void 0 && !Array.isArray(value.plugins)) {
+    throw configurationError("Configuration field 'plugins' must be an array.");
+  }
+  const schema2 = optionalText(value.$schema, "$schema");
+  const target = optionalText(value.target, "target");
+  const architecture = optionalText(value.architecture, "architecture");
+  const includePaths = optionalStringArray(value.includePaths, "includePaths");
+  const entryPoints = optionalStringArray(value.entryPoints, "entryPoints");
+  const buildOutput = optionalText(value.buildOutput, "buildOutput");
+  const linkProject = optionalText(value.linkProject, "linkProject");
+  const baseImage = optionalText(value.baseImage, "baseImage");
+  return {
+    ...schema2 === void 0 ? {} : { $schema: schema2 },
+    ...value.plugins === void 0 ? {} : { plugins: value.plugins.map((entry, index) => validatePluginEntry(entry, index)) },
+    ...target === void 0 ? {} : { target },
+    ...architecture === void 0 ? {} : { architecture },
+    ...includePaths === void 0 ? {} : { includePaths },
+    ...entryPoints === void 0 ? {} : { entryPoints },
+    ...buildOutput === void 0 ? {} : { buildOutput },
+    ...linkProject === void 0 ? {} : { linkProject },
+    ...baseImage === void 0 ? {} : { baseImage }
+  };
+};
+var discoverProjectConfigurationPath = (cwd, configuredPath) => {
+  if (configuredPath) {
+    return import_node_path26.default.resolve(cwd, configuredPath);
+  }
+  const candidate = import_node_path26.default.resolve(cwd, PROJECT_CONFIG_FILENAME);
+  return (0, import_node_fs16.existsSync)(candidate) ? candidate : void 0;
+};
+
+// packages/workflows/src/build-contracts.ts
+function assertBuildResult(value) {
+  if (!isRecord43(value) || !isText(value.outputFile)) {
+    throw new Error("Invalid assembly build receipt.");
+  }
+  if (value.kind === "object" || value.kind === "library") {
+    if (value.linkRecipe !== void 0) {
+      assertLinkRecipe(value.linkRecipe);
+    }
+    if (typeof value.bytes === "number" && Number.isSafeInteger(value.bytes) && value.bytes >= 0 && isHash(value.sha256)) {
+      return;
+    }
+  } else if (value.kind === "linked") {
+    const strings3 = ["debugMapFile", "symbolsFile", "allocationFile", "target", "architecture"];
+    if (strings3.every((key3) => isText(value[key3])) && (value.recipeFile === void 0 || isText(value.recipeFile)) && [value.inputSha256, value.outputSha256, value.debugMapFingerprint].every(isHash) && typeof value.outputSize === "number" && Number.isSafeInteger(value.outputSize) && value.outputSize > 0 && typeof value.outputChanged === "boolean" && typeof value.debugMapChanged === "boolean" && Array.isArray(value.inputs) && value.inputs.length <= 65536 && value.inputs.every(
+      (input) => isRecord43(input) && isText(input.path) && isHash(input.sha256)
+    )) {
+      return;
+    }
+  }
+  throw new Error("Invalid assembly build receipt.");
+}
+function readAssemblyBuildResult(value) {
+  assertBuildResult(value);
+  return structuredClone(value);
+}
+var isRecord43 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isText = (value) => typeof value === "string" && value.trim().length > 0 && !value.includes("\0");
+var isHash = (value) => typeof value === "string" && /^[\da-f]{64}$/.test(value);
+
+// packages/workflows/src/build-selection.ts
+var import_node_fs17 = __toESM(require("node:fs"), 1);
+var import_node_path27 = __toESM(require("node:path"), 1);
+async function resolveAssemblyBuildSelection(directory, configFile, override) {
+  if (override) {
+    return { manifest: import_node_path27.default.resolve(directory, override) };
+  }
+  const file = discoverProjectConfigurationPath(directory, configFile);
+  if (!file) {
+    return {};
+  }
+  if (import_node_fs17.default.statSync(file).size > 16 * 1024 * 1024) {
+    throw new Error("Build selection configuration exceeds 16 MiB.");
+  }
+  const bytes = await import_node_fs17.default.promises.readFile(file);
+  if (bytes.length > 16 * 1024 * 1024) {
+    throw new Error("Build selection configuration exceeds 16 MiB.");
+  }
+  const config = validateProjectConfiguration(JSON.parse(bytes.toString("utf8")));
+  const manifest = config.linkProject;
+  return {
+    configurationFile: file,
+    configurationSha256: artifactHash(bytes),
+    ...manifest ? { manifest: import_node_path27.default.resolve(import_node_path27.default.dirname(file), manifest) } : {}
+  };
+}
+
+// packages/vscode-extension/src/linked-build.ts
+var import_vscode18 = require("vscode");
+
+// packages/vscode-extension/src/source/process-client.ts
+var import_node_child_process6 = require("node:child_process");
+var SourceProcessClient = class {
+  constructor(file, log = () => {
+  }, limits = {}) {
+    this.file = file;
+    this.log = log;
+    this.#slots = new WorkerRequestSlots(limits.maxConcurrent ?? 2);
+    this.#timeoutMs = workerTimeout(limits.timeoutMs, 30 * 6e4);
+  }
+  file;
+  log;
+  #children = /* @__PURE__ */ new Set();
+  #slots;
+  #timeoutMs;
+  #disposed = false;
+  run(operation2, options) {
+    options.signal?.throwIfAborted();
+    if (this.#disposed) {
+      return Promise.reject(new Error("Source worker has been disposed."));
+    }
+    if (!Number.isSafeInteger(options.maxMemoryMiB) || options.maxMemoryMiB < 128) {
+      return Promise.reject(new Error("Source worker heap budget must be at least 128 MiB."));
+    }
+    let requestId;
+    try {
+      requestId = this.#slots.acquire();
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+    return new Promise((resolve9, reject2) => {
+      const started = Date.now();
+      let lastUpdate = started;
+      let lastStage = "Waiting for worker startup.";
+      let label = `Source ${operation2.action}: ${operation2.directory}`;
+      if ("capture" in operation2 && operation2.capture) {
+        label += `; capture ${operation2.capture}`;
+      }
+      this.log(`${label}: started.`);
+      if ("captures" in operation2 && operation2.captures) {
+        for (const [index, capture] of operation2.captures.entries()) {
+          this.log(`Queued capture ${index + 1}/${operation2.captures.length}: ${capture}`);
+        }
+      } else if ("capture" in operation2 && operation2.capture) {
+        this.log(`Importing capture: ${operation2.capture}`);
+        lastStage = `Starting import of ${operation2.capture}.`;
+      }
+      let child;
+      try {
+        child = (0, import_node_child_process6.fork)(this.file, [], {
+          execArgv: [`--max-old-space-size=${options.maxMemoryMiB}`],
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+          serialization: "advanced",
+          stdio: ["ignore", "ignore", "pipe", "ipc"]
+        });
+      } catch (error) {
+        this.#slots.release(requestId);
+        reject2(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
+      this.#children.add(child);
+      let response;
+      let finished = false;
+      let stderr = "";
+      let cancellationTimer;
+      let deadline;
+      const report = (message) => {
+        const progress = `${((Date.now() - started) / 1e3).toFixed(1)}s: ${message}`;
+        this.log(progress);
+        options.onProgress?.(progress);
+      };
+      const heartbeat = setInterval(() => {
+        if (finished || response || options.signal?.aborted || Date.now() - lastUpdate < 1e4) {
+          return;
+        }
+        report(
+          `Waiting for worker ${child.pid}; last progress update ${((Date.now() - lastUpdate) / 1e3).toFixed(0)}s ago. ${lastStage}`
+        );
+      }, 1e4);
+      heartbeat.unref();
+      const finish = (error, value) => {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        this.#slots.release(requestId);
+        clearInterval(heartbeat);
+        clearTimeout(cancellationTimer);
+        clearTimeout(deadline);
+        options.signal?.removeEventListener("abort", cancel);
+        const seconds = ((Date.now() - started) / 1e3).toFixed(1);
+        if (error) {
+          this.log(`${label}: failed after ${seconds}s. Last stage: ${lastStage} ${error.message}`);
+          reject2(error);
+        } else {
+          this.log(`${label}: completed in ${seconds}s. Last stage: ${lastStage}`);
+          resolve9(value);
+        }
+      };
+      const cancel = () => {
+        if (finished || cancellationTimer) {
+          return;
+        }
+        clearInterval(heartbeat);
+        report(
+          `Cancelling ${label}; last stage: ${lastStage}. The next status check will reconcile native Git state.`
+        );
+        if (child.connected) {
+          child.send({ type: "cancel" }, () => {
+          });
+        }
+        cancellationTimer = setTimeout(() => child.kill("SIGTERM"), 1500);
+      };
+      deadline = setTimeout(() => {
+        report(
+          `Worker made no progress for ${this.#timeoutMs} ms; reconciling publication is required if termination interrupts the response.`
+        );
+        cancel();
+      }, this.#timeoutMs);
+      deadline.unref();
+      options.signal?.addEventListener("abort", cancel, { once: true });
+      child.stderr?.on("data", (bytes) => {
+        stderr = (stderr + bytes.toString()).slice(-8192);
+        this.log(bytes.toString());
+      });
+      child.on("message", (payload) => {
+        if (finished || response) {
+          return;
+        }
+        if (typeof payload !== "object" || payload === null || !("type" in payload) || typeof payload.type !== "string" || !["progress", "result", "error", "publish-check"].includes(payload.type)) {
+          child.kill();
+          finish(
+            new Error("Malformed source worker response; check Source status before retrying.")
+          );
+          return;
+        }
+        const message = {
+          type: payload.type,
+          message: "message" in payload ? payload.message : void 0,
+          value: "value" in payload ? payload.value : void 0,
+          paths: "paths" in payload ? payload.paths : void 0,
+          code: "code" in payload ? payload.code : void 0
+        };
+        if (message.type === "progress" && typeof message.message === "string") {
+          lastStage = message.message;
+          lastUpdate = Date.now();
+          deadline.refresh();
+          report(lastStage);
+        } else if (message.type === "result") {
+          clearTimeout(deadline);
+          if (!Object.hasOwn(payload, "value")) {
+            child.kill();
+            finish(
+              new Error("Source worker omitted its result; check Source status before retrying.")
+            );
+            return;
+          }
+          try {
+            response = {
+              value: options.readResult ? options.readResult(message.value) : message.value
+            };
+          } catch (error) {
+            response = { error: error instanceof Error ? error : new Error(String(error)) };
+          }
+        } else if (message.type === "error") {
+          clearTimeout(deadline);
+          response = {
+            error: Object.assign(
+              new Error(
+                typeof message.message === "string" ? message.message : "Source operation failed."
+              ),
+              {
+                code: typeof message.code === "string" && [
+                  "unsupported",
+                  "stale",
+                  "conflict",
+                  "cancelled",
+                  "committed-with-warning",
+                  "failed"
+                ].includes(message.code) ? message.code : "failed"
+              }
+            )
+          };
+        } else if (message.type === "publish-check") {
+          void Promise.resolve().then(async () => {
+            options.signal?.throwIfAborted();
+            if (!options.onBeforePublish || !Array.isArray(message.paths) || message.paths.length > 65536 || message.paths.some((item) => typeof item !== "string")) {
+              throw new Error("Invalid or uncoordinated asset publication check.");
+            }
+            let bytes = 0;
+            const paths = message.paths.map((item) => {
+              if (typeof item !== "string") {
+                throw new Error("Invalid asset publication path.");
+              }
+              bytes += Buffer.byteLength(item, "utf8");
+              if (bytes > 16 * 1024 * 1024) {
+                throw new Error("Asset publication metadata exceeds its byte budget.");
+              }
+              return item;
+            });
+            await options.onBeforePublish(paths);
+            options.signal?.throwIfAborted();
+            return;
+          }).then(
+            () => {
+              if (child.connected) {
+                child.send({ type: "publish-confirm" }, () => {
+                });
+              }
+              return;
+            },
+            (error) => {
+              if (child.connected) {
+                child.send(
+                  {
+                    type: "publish-confirm",
+                    error: error instanceof Error ? error.message : String(error)
+                  },
+                  () => {
+                  }
+                );
+              }
+            }
+          );
+        }
+      });
+      child.on("error", (error) => finish(error));
+      child.on("exit", (code, signal) => {
+        this.#children.delete(child);
+        if (code === 0 && response) {
+          if ("error" in response) {
+            finish(response.error);
+          } else {
+            finish(void 0, response.value);
+          }
+        } else {
+          finish(
+            new Error(
+              `Source operation exited (${signal ?? code}). Check Source status before retrying.${stderr ? `
+${stderr}` : ""}`
+            )
+          );
+        }
+      });
+      child.send({ type: "run", operation: operation2 }, (error) => {
+        if (error) {
+          child.kill();
+          finish(error);
+        }
+      });
+    });
+  }
+  dispose() {
+    this.#disposed = true;
+    this.#slots.dispose();
+    for (const child of this.#children) {
+      child.kill();
+    }
+    this.#children.clear();
+  }
+};
+
+// packages/vscode-extension/src/linked-build.ts
+var LinkedBuildController = class {
+  constructor(context, output, binaryDrafts) {
+    this.output = output;
+    this.binaryDrafts = binaryDrafts;
+    this.#worker = new SourceProcessClient(
+      context.asAbsolutePath("out/source-process.mjs"),
+      (message) => output.info(message)
+    );
+    const files = import_vscode18.workspace.createFileSystemWatcher("**/*");
+    const changed2 = (uri) => {
+      if (this.tracks(uri.fsPath)) {
+        this.#changed.fire(uri);
+      }
+    };
+    this.#commands = [
+      files,
+      files.onDidChange(changed2),
+      files.onDidCreate(changed2),
+      files.onDidDelete(changed2),
+      binaryDrafts.onDidChange(changed2),
+      import_vscode18.commands.registerCommand(
+        "asm.object.assemble",
+        (uri) => this.guard(() => this.assemble(uri))
+      ),
+      import_vscode18.commands.registerCommand("asm.library.create", () => this.guard(() => this.library())),
+      import_vscode18.commands.registerCommand(
+        "asm.link",
+        (uri) => this.guard(() => this.manifest("link", uri))
+      ),
+      import_vscode18.commands.registerCommand(
+        "asm.linked.build",
+        (uri) => this.guard(() => this.manifest("build-linked", uri))
+      )
+    ];
+  }
+  output;
+  binaryDrafts;
+  #worker;
+  #commands;
+  #inputs = /* @__PURE__ */ new Set();
+  #builds = /* @__PURE__ */ new Map();
+  #changed = new import_vscode18.EventEmitter();
+  onDidChangeInput = this.#changed.event;
+  #busy = false;
+  /** Watch reacts to consumed sources, resources, recipes, configuration and serialized inputs. */
+  tracks(file) {
+    return this.#inputs.has(import_node_path28.default.resolve(file));
+  }
+  /** An absent manifest preserves the existing build route; an invalid opted-in build fails without falling back. */
+  async buildConfigured(uri) {
+    const folder = uri ? import_vscode18.workspace.getWorkspaceFolder(uri) : import_vscode18.workspace.workspaceFolders?.[0];
+    if (!folder) {
+      return void 0;
+    }
+    const settings = import_vscode18.workspace.getConfiguration("asm", uri ?? folder.uri);
+    const selection = await resolveAssemblyBuildSelection(
+      folder.uri.fsPath,
+      settings.get("configFile", "") || void 0,
+      settings.get("linkProject", "")
+    );
+    const manifest = selection.manifest;
+    if (selection.configurationFile) {
+      this.#inputs.add(selection.configurationFile);
+    }
+    if (!manifest) {
+      return void 0;
+    }
+    this.#inputs.add(manifest);
+    const result = await this.run({
+      action: "build-linked",
+      directory: import_node_path28.default.dirname(manifest),
+      manifest,
+      ...selection.configurationFile && selection.configurationSha256 ? {
+        selection: { file: selection.configurationFile, sha256: selection.configurationSha256 }
+      } : {}
+    });
+    if (result.kind !== "linked") {
+      throw new Error("Expected a linked ROM build.");
+    }
+    const previous = this.#builds.get(manifest);
+    const build = {
+      ...result,
+      outputChanged: previous?.outputSha256 !== result.outputSha256,
+      debugMapChanged: previous?.debugMapFingerprint !== result.debugMapFingerprint
+    };
+    this.#builds.set(manifest, build);
+    this.#inputs.clear();
+    for (const input of result.inputs) {
+      this.#inputs.add(input.path);
+    }
+    return build;
+  }
+  /** Capture versions before spawning; neither dirty inputs nor mid-build edits may authorize publication. */
+  async run(operation2) {
+    if (!import_vscode18.workspace.isTrusted) {
+      throw new Error("Trust this workspace before running assembly tools or plugins.");
+    }
+    if (this.#busy) {
+      throw new Error("An assembly build operation is already running.");
+    }
+    const versions = new Map(
+      import_vscode18.workspace.textDocuments.map((document) => [document.uri.fsPath, document.version])
+    );
+    const binaryVersions = new Map(
+      [...this.binaryDrafts.documents].map((document) => [document.uri.fsPath, document.version])
+    );
+    this.#busy = true;
+    try {
+      return await import_vscode18.window.withProgress(
+        { location: import_vscode18.ProgressLocation.Notification, title: "Assembly build", cancellable: true },
+        async (progress, token) => {
+          const cancellation = new AbortController();
+          const listener = token.onCancellationRequested(() => cancellation.abort());
+          try {
+            return await this.#worker.run(operation2, {
+              maxMemoryMiB: import_vscode18.workspace.getConfiguration("asm").get("analysis.maxMemoryMiB", 4096),
+              signal: cancellation.signal,
+              onProgress: (message) => progress.report({ message }),
+              readResult: readAssemblyBuildResult,
+              onBeforePublish: (paths) => {
+                const consumed = new Set(paths.map((file) => import_node_path28.default.resolve(file)));
+                for (const file of consumed) {
+                  this.#inputs.add(file);
+                }
+                for (const document of import_vscode18.workspace.textDocuments) {
+                  if (consumed.has(document.uri.fsPath) && (document.isDirty || versions.has(document.uri.fsPath) && versions.get(document.uri.fsPath) !== document.version)) {
+                    throw new Error(`Save changed build input and rebuild: ${document.uri.fsPath}`);
+                  }
+                }
+                for (const document of this.binaryDrafts.documents) {
+                  if (consumed.has(document.uri.fsPath) && (document.dirty || binaryVersions.has(document.uri.fsPath) && binaryVersions.get(document.uri.fsPath) !== document.version)) {
+                    throw new Error(`Save changed build asset and rebuild: ${document.uri.fsPath}`);
+                  }
+                }
+                for (const group of import_vscode18.window.tabGroups.all) {
+                  for (const tab of group.tabs) {
+                    if (tab.isDirty && tab.input instanceof import_vscode18.TabInputCustom && consumed.has(tab.input.uri.fsPath)) {
+                      throw new Error(
+                        `Save changed build asset and rebuild: ${tab.input.uri.fsPath}`
+                      );
+                    }
+                  }
+                }
+              }
+            });
+          } finally {
+            listener.dispose();
+          }
+        }
+      );
+    } finally {
+      this.#busy = false;
+    }
+  }
+  async assemble(uri) {
+    const source = uri ?? import_vscode18.window.activeTextEditor?.document.uri;
+    if (!source || source.scheme !== "file") {
+      throw new Error("Open a saved assembly source file first.");
+    }
+    const root = import_vscode18.workspace.getWorkspaceFolder(source)?.uri.fsPath ?? import_node_path28.default.dirname(source.fsPath);
+    const module2 = await import_vscode18.window.showInputBox({
+      title: "Stable module ID",
+      value: import_node_path28.default.relative(root, source.fsPath).replace(/\.[^.]+$/, "")
+    });
+    if (!module2) {
+      return;
+    }
+    const adapter = await import_vscode18.window.showQuickPick(
+      [
+        {
+          label: "Native sections",
+          description: "Use explicit sections and a link recipe",
+          sourceAdapter: void 0
+        },
+        {
+          label: "Asar source",
+          description: "Adapt ORG/BASE layout to relocatable contributions",
+          sourceAdapter: "asar"
+        },
+        {
+          label: "ca65 source",
+          description: "Reuse segments and configured linker layout",
+          sourceAdapter: "ca65"
+        }
+      ],
+      { title: "Object source style" }
+    );
+    if (!adapter) {
+      return;
+    }
+    const output = await import_vscode18.window.showSaveDialog({
+      defaultUri: import_vscode18.Uri.file(source.fsPath.replace(/\.[^.]+$/, "") + ".uobj"),
+      filters: { "Uttori object": ["uobj"] }
+    });
+    if (!output) {
+      return;
+    }
+    const config = import_vscode18.workspace.getConfiguration("asm", source).get("configFile", "");
+    await this.run({
+      action: "assemble-object",
+      directory: root,
+      source: source.fsPath,
+      output: output.fsPath,
+      module: module2,
+      ...adapter.sourceAdapter ? { sourceAdapter: adapter.sourceAdapter } : {},
+      ...config ? { config } : {}
+    });
+    void import_vscode18.window.showInformationMessage(`Assembly: object written to ${output.fsPath}.`);
+  }
+  async library() {
+    const inputs = await import_vscode18.window.showOpenDialog({
+      canSelectMany: true,
+      filters: { "Uttori objects": ["uobj"] },
+      openLabel: "Choose library members"
+    });
+    if (!inputs?.length) {
+      return;
+    }
+    const output = await import_vscode18.window.showSaveDialog({
+      defaultUri: import_vscode18.Uri.file(import_node_path28.default.join(import_node_path28.default.dirname(inputs[0].fsPath), "library.ulib")),
+      filters: { "Uttori library": ["ulib"] }
+    });
+    if (!output) {
+      return;
+    }
+    await this.run({
+      action: "library",
+      directory: import_node_path28.default.dirname(output.fsPath),
+      output: output.fsPath,
+      objects: inputs.map((input) => input.fsPath)
+    });
+    void import_vscode18.window.showInformationMessage(`Assembly: library written to ${output.fsPath}.`);
+  }
+  async manifest(action, uri) {
+    const selected = uri ?? (await import_vscode18.window.showOpenDialog({
+      filters: { "Build manifest": ["json"] },
+      openLabel: "Choose build manifest"
+    }))?.[0];
+    if (!selected) {
+      return;
+    }
+    const result = await this.run({
+      action,
+      directory: import_node_path28.default.dirname(selected.fsPath),
+      manifest: selected.fsPath
+    });
+    void import_vscode18.window.showInformationMessage(`Assembly: built ${result.outputFile}.`);
+  }
+  /** Command errors remain visible without escaping as unhandled extension-host rejections. */
+  async guard(operation2) {
+    try {
+      await operation2();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.output.error(message);
+      void import_vscode18.window.showErrorMessage(`Assembly: ${message}`);
+    }
+  }
+  dispose() {
+    this.#worker.dispose();
+    this.#changed.dispose();
+    for (const command of this.#commands) {
+      command.dispose();
+    }
+  }
+};
+
 // packages/vscode-extension/src/project/index-tree.ts
-var import_vscode17 = require("vscode");
+var import_vscode19 = require("vscode");
 var count2 = (value) => value.toLocaleString("en-US");
 var IndexDetailsProvider = class {
   constructor(snapshot) {
@@ -64213,7 +64428,7 @@ var IndexDetailsProvider = class {
   }
   snapshot;
   static viewId = "uttori-asm.indexDetails";
-  #changed = new import_vscode17.EventEmitter();
+  #changed = new import_vscode19.EventEmitter();
   onDidChangeTreeData = this.#changed.event;
   refresh() {
     this.#changed.fire();
@@ -64222,12 +64437,12 @@ var IndexDetailsProvider = class {
     this.#changed.dispose();
   }
   getTreeItem(row) {
-    const item = new import_vscode17.TreeItem(row.label, import_vscode17.TreeItemCollapsibleState.None);
+    const item = new import_vscode19.TreeItem(row.label, import_vscode19.TreeItemCollapsibleState.None);
     item.id = row.label;
     item.description = row.description;
     item.tooltip = row.tooltip ?? `${row.label}: ${row.description}`;
     if (row.problems) {
-      item.iconPath = new import_vscode17.ThemeIcon("error");
+      item.iconPath = new import_vscode19.ThemeIcon("error");
       item.command = { command: "workbench.actions.view.problems", title: "Show Problems" };
     }
     return item;
@@ -64261,9 +64476,9 @@ var IndexDetailsProvider = class {
 };
 
 // packages/vscode-extension/src/project/outline-tree.ts
-var import_vscode18 = require("vscode");
+var import_vscode20 = require("vscode");
 
-// node_modules/vscode-languageserver-types/lib/esm/main.js
+// packages/vscode-extension/node_modules/vscode-languageserver-types/lib/esm/main.js
 var DocumentUri;
 (function(DocumentUri2) {
   function is(value) {
@@ -64278,15 +64493,15 @@ var URI;
   }
   URI2.is = is;
 })(URI || (URI = {}));
-var integer4;
-(function(integer5) {
-  integer5.MIN_VALUE = -2147483648;
-  integer5.MAX_VALUE = 2147483647;
+var integer5;
+(function(integer6) {
+  integer6.MIN_VALUE = -2147483648;
+  integer6.MAX_VALUE = 2147483647;
   function is(value) {
-    return typeof value === "number" && integer5.MIN_VALUE <= value && value <= integer5.MAX_VALUE;
+    return typeof value === "number" && integer6.MIN_VALUE <= value && value <= integer6.MAX_VALUE;
   }
-  integer5.is = is;
-})(integer4 || (integer4 = {}));
+  integer6.is = is;
+})(integer5 || (integer5 = {}));
 var uinteger;
 (function(uinteger2) {
   uinteger2.MIN_VALUE = 0;
@@ -64400,7 +64615,7 @@ var ColorPresentation;
   ColorPresentation2.create = create;
   function is(value) {
     const candidate = value;
-    return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.undefined(candidate.textEdit) || TextEdit.is(candidate)) && (Is.undefined(candidate.additionalTextEdits) || Is.typedArray(candidate.additionalTextEdits, TextEdit.is));
+    return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.undefined(candidate.textEdit) || TextEdit.is(candidate.textEdit)) && (Is.undefined(candidate.additionalTextEdits) || Is.typedArray(candidate.additionalTextEdits, TextEdit.is));
   }
   ColorPresentation2.is = is;
 })(ColorPresentation || (ColorPresentation = {}));
@@ -64434,7 +64649,7 @@ var FoldingRange;
   FoldingRange2.create = create;
   function is(value) {
     const candidate = value;
-    return Is.objectLiteral(candidate) && Is.uinteger(candidate.startLine) && Is.uinteger(candidate.startLine) && (Is.undefined(candidate.startCharacter) || Is.uinteger(candidate.startCharacter)) && (Is.undefined(candidate.endCharacter) || Is.uinteger(candidate.endCharacter)) && (Is.undefined(candidate.kind) || Is.string(candidate.kind));
+    return Is.objectLiteral(candidate) && Is.uinteger(candidate.startLine) && Is.uinteger(candidate.endLine) && (Is.undefined(candidate.startCharacter) || Is.uinteger(candidate.startCharacter)) && (Is.undefined(candidate.endCharacter) || Is.uinteger(candidate.endCharacter)) && (Is.undefined(candidate.kind) || Is.string(candidate.kind));
   }
   FoldingRange2.is = is;
 })(FoldingRange || (FoldingRange = {}));
@@ -65532,10 +65747,10 @@ var Is;
     return toString2.call(value) === "[object Number]" && min <= value && value <= max;
   }
   Is2.numberRange = numberRange;
-  function integer5(value) {
+  function integer6(value) {
     return toString2.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
   }
-  Is2.integer = integer5;
+  Is2.integer = integer6;
   function uinteger2(value) {
     return toString2.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
   }
@@ -65561,15 +65776,15 @@ var ProjectOutlineProvider = class {
   }
   getClient;
   static viewId = "uttori-asm.projectOutline";
-  #onDidChangeTreeData = new import_vscode18.EventEmitter();
+  #onDidChangeTreeData = new import_vscode20.EventEmitter();
   onDidChangeTreeData = this.#onDidChangeTreeData.event;
   refresh() {
     this.#onDidChangeTreeData.fire();
   }
   getTreeItem(element) {
-    const item = new import_vscode18.TreeItem(
+    const item = new import_vscode20.TreeItem(
       element.label,
-      element.collapsible ? import_vscode18.TreeItemCollapsibleState.Collapsed : import_vscode18.TreeItemCollapsibleState.None
+      element.collapsible ? import_vscode20.TreeItemCollapsibleState.Collapsed : import_vscode20.TreeItemCollapsibleState.None
     );
     item.id = element.id;
     item.description = element.description;
@@ -65577,7 +65792,7 @@ var ProjectOutlineProvider = class {
     item.iconPath = element.icon;
     item.contextValue = element.symbolUri ? "file" : "symbol";
     if (element.uri) {
-      const uri = import_vscode18.Uri.parse(element.uri);
+      const uri = import_vscode20.Uri.parse(element.uri);
       item.resourceUri = uri;
       item.command = {
         command: "vscode.open",
@@ -65585,7 +65800,7 @@ var ProjectOutlineProvider = class {
         arguments: element.range ? [
           uri,
           {
-            selection: new import_vscode18.Range(
+            selection: new import_vscode20.Range(
               element.range.start.line,
               element.range.start.character,
               element.range.end.line,
@@ -65667,38 +65882,38 @@ function symbolToItem(symbol, uri, id) {
 function iconForKind(kind) {
   switch (kind) {
     case "entry":
-      return new import_vscode18.ThemeIcon("folder-library");
+      return new import_vscode20.ThemeIcon("folder-library");
     case "orphanGroup":
-      return new import_vscode18.ThemeIcon("folder");
+      return new import_vscode20.ThemeIcon("folder");
     case "include":
-      return new import_vscode18.ThemeIcon("link");
+      return new import_vscode20.ThemeIcon("link");
     case "file":
     default:
-      return new import_vscode18.ThemeIcon("file");
+      return new import_vscode20.ThemeIcon("file");
   }
 }
 function iconForSymbolKind(kind) {
   switch (kind) {
     case SymbolKind.Namespace:
-      return new import_vscode18.ThemeIcon("symbol-namespace");
+      return new import_vscode20.ThemeIcon("symbol-namespace");
     case SymbolKind.Function:
-      return new import_vscode18.ThemeIcon("symbol-method");
+      return new import_vscode20.ThemeIcon("symbol-method");
     case SymbolKind.Constant:
-      return new import_vscode18.ThemeIcon("symbol-constant");
+      return new import_vscode20.ThemeIcon("symbol-constant");
     case SymbolKind.Struct:
-      return new import_vscode18.ThemeIcon("symbol-struct");
+      return new import_vscode20.ThemeIcon("symbol-struct");
     case SymbolKind.Field:
-      return new import_vscode18.ThemeIcon("symbol-field");
+      return new import_vscode20.ThemeIcon("symbol-field");
     case SymbolKind.Variable:
-      return new import_vscode18.ThemeIcon("symbol-variable");
+      return new import_vscode20.ThemeIcon("symbol-variable");
     default:
-      return new import_vscode18.ThemeIcon("symbol-misc");
+      return new import_vscode20.ThemeIcon("symbol-misc");
   }
 }
 
 // packages/vscode-extension/src/project/panel.ts
-var path34 = __toESM(require("node:path"), 1);
-var import_vscode19 = require("vscode");
+var path40 = __toESM(require("node:path"), 1);
+var import_vscode21 = require("vscode");
 var ProjectPanelProvider = class {
   constructor(extensionUri, getClient, initConfig2) {
     this.extensionUri = extensionUri;
@@ -65721,7 +65936,7 @@ var ProjectPanelProvider = class {
     this.#view = webviewView;
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [import_vscode19.Uri.joinPath(this.extensionUri, "media")]
+      localResourceRoots: [import_vscode21.Uri.joinPath(this.extensionUri, "media")]
     };
     webviewView.webview.html = renderWebviewTemplate(
       webviewView.webview,
@@ -65754,7 +65969,7 @@ var ProjectPanelProvider = class {
     void this.#view.webview.postMessage({
       type: "snapshot",
       ...snapshot,
-      trusted: import_vscode19.workspace.isTrusted
+      trusted: import_vscode21.workspace.isTrusted
     });
   }
   /**
@@ -65821,9 +66036,9 @@ var ProjectPanelProvider = class {
   /** Opens the effective project configuration, initializing the default file when none is configured. */
   async openConfiguration() {
     const { status } = await this.snapshot();
-    const root = import_vscode19.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const root = import_vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (root && status.configFile) {
-      await import_vscode19.window.showTextDocument(import_vscode19.Uri.file(path34.resolve(root, status.configFile)));
+      await import_vscode21.window.showTextDocument(import_vscode21.Uri.file(path40.resolve(root, status.configFile)));
       return;
     }
     if (!status.configFile) {
@@ -65836,7 +66051,7 @@ var ProjectPanelProvider = class {
    * @returns {Promise<{ status: ProjectStatus; metadata?: ProjectMetadata; indexReady: boolean }>} A promise that resolves with the snapshot.
    */
   async snapshot() {
-    const config = import_vscode19.workspace.getConfiguration("asm");
+    const config = import_vscode21.workspace.getConfiguration("asm");
     const fallback = {
       fileCount: 0,
       symbolCount: 0,
@@ -65873,7 +66088,7 @@ var ProjectPanelProvider = class {
    * @param {boolean} folders Whether to add folders.
    */
   async addPath(key3, folders) {
-    const picked = await import_vscode19.window.showOpenDialog({
+    const picked = await import_vscode21.window.showOpenDialog({
       canSelectFiles: !folders,
       canSelectFolders: folders,
       canSelectMany: true,
@@ -65882,12 +66097,12 @@ var ProjectPanelProvider = class {
     if (!picked?.length) {
       return;
     }
-    const current = import_vscode19.workspace.getConfiguration("asm").get(key3, []);
+    const current = import_vscode21.workspace.getConfiguration("asm").get(key3, []);
     const next = [...current];
     for (const uri of picked) {
-      const folder = import_vscode19.workspace.workspaceFolders?.[0];
-      const relative3 = folder ? path34.relative(folder.uri.fsPath, uri.fsPath) : void 0;
-      const value = relative3 && !relative3.startsWith("..") ? relative3 : uri.fsPath;
+      const folder = import_vscode21.workspace.workspaceFolders?.[0];
+      const relative4 = folder ? path40.relative(folder.uri.fsPath, uri.fsPath) : void 0;
+      const value = relative4 && !relative4.startsWith("..") ? relative4 : uri.fsPath;
       if (!next.includes(value)) {
         next.push(value);
       }
@@ -65900,7 +66115,7 @@ var ProjectPanelProvider = class {
    * @param {string} value The value of the path to remove.
    */
   async removePath(key3, value) {
-    const current = import_vscode19.workspace.getConfiguration("asm").get(key3, []);
+    const current = import_vscode21.workspace.getConfiguration("asm").get(key3, []);
     await this.updateSetting(
       key3,
       current.filter((entry) => entry !== value)
@@ -65912,14 +66127,14 @@ var ProjectPanelProvider = class {
    * @param {string} targetId Canonical target contribution ID.
    */
   async setTarget(targetId) {
-    const config = import_vscode19.workspace.getConfiguration("asm");
+    const config = import_vscode21.workspace.getConfiguration("asm");
     const target = this.#metadata?.targets.find((entry) => entry.id === targetId);
-    await config.update("target", targetId, import_vscode19.ConfigurationTarget.Workspace);
+    await config.update("target", targetId, import_vscode21.ConfigurationTarget.Workspace);
     if (target?.defaultArchitecture) {
       await config.update(
         "architecture",
         target.defaultArchitecture,
-        import_vscode19.ConfigurationTarget.Workspace
+        import_vscode21.ConfigurationTarget.Workspace
       );
     }
     if (target?.defaultOutputExtension) {
@@ -65928,7 +66143,7 @@ var ProjectPanelProvider = class {
         const suffix = target.defaultOutputExtension.startsWith(".") ? target.defaultOutputExtension : `.${target.defaultOutputExtension}`;
         const next = current.replace(/\.[^.]+$/, suffix);
         if (next !== current) {
-          await config.update("buildOutput", next, import_vscode19.ConfigurationTarget.Workspace);
+          await config.update("buildOutput", next, import_vscode21.ConfigurationTarget.Workspace);
         }
       }
     }
@@ -65940,7 +66155,7 @@ var ProjectPanelProvider = class {
    * @param {unknown} value The value of the setting to update.
    */
   async updateSetting(key3, value) {
-    await import_vscode19.workspace.getConfiguration("asm").update(key3, value, import_vscode19.ConfigurationTarget.Workspace);
+    await import_vscode21.workspace.getConfiguration("asm").update(key3, value, import_vscode21.ConfigurationTarget.Workspace);
     await this.refresh();
   }
 };
@@ -65952,32 +66167,32 @@ function asString(value) {
 }
 
 // packages/vscode-extension/src/source/controller.ts
-var import_promises20 = __toESM(require("node:fs/promises"), 1);
-var import_node_path33 = __toESM(require("node:path"), 1);
-var import_vscode30 = require("vscode");
+var import_promises21 = __toESM(require("node:fs/promises"), 1);
+var import_node_path37 = __toESM(require("node:path"), 1);
+var import_vscode32 = require("vscode");
 
 // packages/vscode-extension/src/source/analysis-editor.ts
-var import_node_path25 = __toESM(require("node:path"), 1);
+var import_node_path30 = __toESM(require("node:path"), 1);
 init_src2();
-var import_vscode21 = require("vscode");
+var import_vscode23 = require("vscode");
 
 // packages/vscode-extension/src/source/research-editor.ts
-var import_node_path24 = __toESM(require("node:path"), 1);
-var import_vscode20 = require("vscode");
+var import_node_path29 = __toESM(require("node:path"), 1);
+var import_vscode22 = require("vscode");
 
 // packages/vscode-extension/src/source/result-readers.ts
-function record5(value) {
+function record6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function strings(value) {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 function records2(value) {
-  return Array.isArray(value) && value.every(record5);
+  return Array.isArray(value) && value.every(record6);
 }
 var textFields = (value, fields2) => fields2.every((field) => typeof value[field] === "string");
 function isResearchResult(value) {
-  if (!record5(value)) {
+  if (!record6(value)) {
     return false;
   }
   if (value.kind === "edit") {
@@ -65994,7 +66209,7 @@ function isResearchResult(value) {
   return value.documents.every((document) => textFields(document, ["path", "sha256"])) && value.addressSpaces.every(
     (space) => textFields(space, ["id", "name"]) && typeof space.addressBits === "number" && ["file", "cpu", "memory"].includes(String(space.kind))
   ) && value.records.every((item) => {
-    if (typeof item.path !== "string" || !["annotations", "analysis"].includes(String(item.collection)) || !record5(item.value) || !textFields(item.value, ["id", "addressSpace"]) || !strings(item.value.evidence)) {
+    if (typeof item.path !== "string" || !["annotations", "analysis"].includes(String(item.collection)) || !record6(item.value) || !textFields(item.value, ["id", "addressSpace"]) || !strings(item.value.evidence)) {
       return false;
     }
     if (item.collection === "annotations") {
@@ -66016,7 +66231,7 @@ function readResearchResult(value) {
   return value;
 }
 function isStatus(value) {
-  return record5(value) && ["idle", "merging", "checkpoint", "committed", "verified", "diverged"].includes(
+  return record6(value) && ["idle", "merging", "checkpoint", "committed", "verified", "diverged"].includes(
     String(value.phase)
   ) && typeof value.head === "string" && strings(value.conflicts) && ["dirty", "unstaged", "candidateAccepted", "candidateStale", "analysisReady"].every(
     (field) => typeof value[field] === "boolean"
@@ -66025,7 +66240,7 @@ function isStatus(value) {
   );
 }
 function readSourceStatus(value) {
-  if (!record5(value)) {
+  if (!record6(value)) {
     throw new Error("Invalid source status response.");
   }
   const projection = { ...value };
@@ -66036,12 +66251,12 @@ function readSourceStatus(value) {
   return projection;
 }
 function isCapture(value) {
-  return record5(value) && textFields(value, ["sha256", "sourceName", "profile"]) && typeof value.observedEvents === "number" && typeof value.droppedEvents === "number" && records2(value.archives) && value.archives.every(
+  return record6(value) && textFields(value, ["sha256", "sourceName", "profile"]) && typeof value.observedEvents === "number" && typeof value.droppedEvents === "number" && records2(value.archives) && value.archives.every(
     (archive) => textFields(archive, ["name", "sha256"]) && typeof archive.bytes === "number" && (archive.companionSha256 === void 0 || typeof archive.companionSha256 === "string")
   );
 }
 function readGraphicsSelection(value) {
-  if (!record5(value) || !Array.isArray(value.captures) || !value.captures.every(isCapture)) {
+  if (!record6(value) || !Array.isArray(value.captures) || !value.captures.every(isCapture)) {
     throw new Error("Invalid graphics capture selection.");
   }
   return { captures: value.captures };
@@ -66050,7 +66265,7 @@ function readSourceRepresentation(value) {
   if (value === void 0) {
     return void 0;
   }
-  if (!record5(value) || typeof value.representation !== "string") {
+  if (!record6(value) || typeof value.representation !== "string") {
     throw new Error("Invalid source representation.");
   }
   if (value.inputs !== void 0 && (!records2(value.inputs) || value.inputs.length > 65536 || !value.inputs.every(
@@ -66076,7 +66291,7 @@ function readSourceRepresentation(value) {
   };
 }
 function isConversionPlan(value) {
-  return record5(value) && textFields(value, ["source", "destination", "outputSha256"]) && (value.transaction === void 0 || typeof value.transaction === "string") && records2(value.changes) && value.changes.every(
+  return record6(value) && textFields(value, ["source", "destination", "outputSha256"]) && (value.transaction === void 0 || typeof value.transaction === "string") && records2(value.changes) && value.changes.every(
     (change) => typeof change.path === "string" && (change.before === null || change.before instanceof Uint8Array) && (change.after === null || change.after instanceof Uint8Array)
   ) && records2(value.snapshots) && value.snapshots.every((snapshot) => textFields(snapshot, ["path", "sha256"])) && records2(value.affected) && value.affected.every(
     (item) => textFields(item, ["file", "format"]) && typeof item.line === "number"
@@ -66091,7 +66306,7 @@ function readConversionPlan(value) {
 
 // packages/vscode-extension/src/source/research-editor.ts
 async function editSourceResearch(worker, context, request) {
-  if (!import_vscode20.workspace.isTrusted) {
+  if (!import_vscode22.workspace.isTrusted) {
     throw new Error("Research edits require a trusted workspace.");
   }
   const initial = context();
@@ -66112,7 +66327,7 @@ async function editSourceResearch(worker, context, request) {
     if (result2.kind !== "symbols") {
       throw new Error("Research service returned an invalid symbol list.");
     }
-    const choice = await import_vscode20.window.showQuickPick(
+    const choice = await import_vscode22.window.showQuickPick(
       result2.symbols.map((symbol2) => ({
         label: symbol2.name,
         description: `${symbol2.addressSpace}:$${symbol2.address.toString(16).toUpperCase()} \xB7 ${symbol2.id}`,
@@ -66125,7 +66340,7 @@ async function editSourceResearch(worker, context, request) {
       return void 0;
     }
     const symbol = choice.symbol;
-    const action = await import_vscode20.window.showQuickPick(
+    const action = await import_vscode22.window.showQuickPick(
       [
         {
           label: "Rename Source Symbol\u2026",
@@ -66159,16 +66374,16 @@ async function editSourceResearch(worker, context, request) {
       return void 0;
     }
     if (action.action === "rename") {
-      const matches = (await import_vscode20.commands.executeCommand(
+      const matches = (await import_vscode22.commands.executeCommand(
         "vscode.executeWorkspaceSymbolProvider",
         symbol.name
       ) ?? []).filter(
-        (item) => item.name === symbol.name && item.location.uri.scheme === "file" && item.location.uri.fsPath.startsWith(initial.root + import_node_path24.default.sep)
+        (item) => item.name === symbol.name && item.location.uri.scheme === "file" && item.location.uri.fsPath.startsWith(initial.root + import_node_path29.default.sep)
       );
-      const selected = matches.length === 1 ? matches[0] : (await import_vscode20.window.showQuickPick(
+      const selected = matches.length === 1 ? matches[0] : (await import_vscode22.window.showQuickPick(
         matches.map((item) => ({
           label: item.name,
-          description: import_node_path24.default.relative(initial.root, item.location.uri.fsPath),
+          description: import_node_path29.default.relative(initial.root, item.location.uri.fsPath),
           item
         })),
         { title: "Source declaration to rename" }
@@ -66181,7 +66396,7 @@ async function editSourceResearch(worker, context, request) {
         }
         return void 0;
       }
-      const name2 = await import_vscode20.window.showInputBox({
+      const name2 = await import_vscode22.window.showInputBox({
         title: `Rename ${symbol.name}`,
         value: symbol.name,
         validateInput: (value) => /^[A-Z_a-z]\w*$/.test(value) ? void 0 : "Enter an assembly identifier."
@@ -66189,8 +66404,8 @@ async function editSourceResearch(worker, context, request) {
       if (name2 === void 0 || name2 === symbol.name) {
         return void 0;
       }
-      await import_vscode20.workspace.openTextDocument(selected.location.uri);
-      const edit2 = await import_vscode20.commands.executeCommand(
+      await import_vscode22.workspace.openTextDocument(selected.location.uri);
+      const edit2 = await import_vscode22.commands.executeCommand(
         "vscode.executeDocumentRenameProvider",
         selected.location.uri,
         selected.location.range.start,
@@ -66201,18 +66416,18 @@ async function editSourceResearch(worker, context, request) {
           "The selected project changed or its declaration cannot be renamed. Refresh and retry."
         );
       }
-      if (!await import_vscode20.workspace.applyEdit(edit2)) {
+      if (!await import_vscode22.workspace.applyEdit(edit2)) {
         throw new Error("The editor rejected the source rename. Refresh and retry.");
       }
-      await import_vscode20.window.showTextDocument(selected.location.uri);
+      await import_vscode22.window.showTextDocument(selected.location.uri);
       return result2;
     }
     if (action.action === "open") {
-      await import_vscode20.window.showTextDocument(import_vscode20.Uri.file(import_node_path24.default.join(initial.root, symbol.path)));
+      await import_vscode22.window.showTextDocument(import_vscode22.Uri.file(import_node_path29.default.join(initial.root, symbol.path)));
       return result2;
     }
     if (action.action === "aliases") {
-      const aliases2 = await import_vscode20.window.showInputBox({
+      const aliases2 = await import_vscode22.window.showInputBox({
         title: `Aliases for ${symbol.name}`,
         prompt: "Comma-separated names; leave empty to remove aliases.",
         value: symbol.aliases.join(", ")
@@ -66243,20 +66458,20 @@ async function editSourceResearch(worker, context, request) {
   if (result.kind !== "edit") {
     throw new Error("Research service did not produce an edit.");
   }
-  const document = await import_vscode20.workspace.openTextDocument(import_vscode20.Uri.file(import_node_path24.default.join(initial.root, result.path)));
+  const document = await import_vscode22.workspace.openTextDocument(import_vscode22.Uri.file(import_node_path29.default.join(initial.root, result.path)));
   if (context()?.root !== initial.root || sourceContentHash(document.getText()) !== result.beforeSha256) {
     throw new Error("The selected project or research changed. Prepare the edit again.");
   }
-  const edit = new import_vscode20.WorkspaceEdit();
+  const edit = new import_vscode22.WorkspaceEdit();
   edit.replace(
     document.uri,
-    new import_vscode20.Range(document.positionAt(0), document.positionAt(document.getText().length)),
+    new import_vscode22.Range(document.positionAt(0), document.positionAt(document.getText().length)),
     result.after
   );
-  if (!await import_vscode20.workspace.applyEdit(edit)) {
+  if (!await import_vscode22.workspace.applyEdit(edit)) {
     throw new Error("The editor rejected the research edit. Refresh the declaration and retry.");
   }
-  await import_vscode20.window.showTextDocument(document);
+  await import_vscode22.window.showTextDocument(document);
   return result;
 }
 
@@ -66287,7 +66502,7 @@ function isRegisterKey(key3) {
   return key3 === "programBank" || key3 === "dataBank" || key3 === "directPage" || key3 === "stackPointer";
 }
 async function address2(title, initial, maximum) {
-  const text2 = await import_vscode21.window.showInputBox({
+  const text2 = await import_vscode23.window.showInputBox({
     title,
     value: hex4(initial),
     prompt: "Original address: $hex, 0xhex, or decimal.",
@@ -66298,16 +66513,16 @@ async function address2(title, initial, maximum) {
   });
   return text2 === void 0 ? void 0 : parseResearchAddress(text2);
 }
-async function editState(record6) {
-  const field = await import_vscode21.window.showQuickPick(CPU_STATE_FIELDS, {
-    title: `CPU assumption \xB7 ${record6.id}`
+async function editState(record7) {
+  const field = await import_vscode23.window.showQuickPick(CPU_STATE_FIELDS, {
+    title: `CPU assumption \xB7 ${record7.id}`
   });
   if (!field) {
     return void 0;
   }
-  const payload = readAnalysisTargetState(record6.architecture, record6.state);
-  if (record6.architecture !== "snes.65816") {
-    await import_vscode21.window.showInformationMessage(
+  const payload = readAnalysisTargetState(record7.architecture, record7.state);
+  if (record7.architecture !== "snes.65816") {
+    await import_vscode23.window.showInformationMessage(
       "CPU assumption editing currently supports 65816 annotations."
     );
     return void 0;
@@ -66321,7 +66536,7 @@ async function editState(record6) {
     } else if (key3 === "m" || key3 === "x") {
       labels = ["8-bit", "16-bit"];
     }
-    const choice = await import_vscode21.window.showQuickPick(
+    const choice = await import_vscode23.window.showQuickPick(
       [
         { label: labels[0], value: true },
         { label: labels[1], value: false },
@@ -66345,7 +66560,7 @@ async function editState(record6) {
   } else if (isRegisterKey(field.key)) {
     const register2 = field.key;
     const maximum = register2 === "programBank" || register2 === "dataBank" ? 255 : 65535;
-    const value = await import_vscode21.window.showInputBox({
+    const value = await import_vscode23.window.showInputBox({
       title: field.label,
       value: state[register2] === void 0 ? "" : hex4(state[register2]),
       prompt: `Value from $0 through ${hex4(maximum)}; empty removes the assumption.`,
@@ -66367,9 +66582,9 @@ async function editState(record6) {
       state[register2] = parsed;
     }
   }
-  return { ...record6, state };
+  return { ...record7, state };
 }
-async function classification(record6) {
+async function classification(record7) {
   const choices = [
     "opcode",
     "data8",
@@ -66388,17 +66603,17 @@ async function classification(record6) {
     "unreached",
     "operand"
   ];
-  const selected = await import_vscode21.window.showQuickPick(
+  const selected = await import_vscode23.window.showQuickPick(
     choices.map((label) => ({
       label,
-      description: label === record6.classification ? "current" : void 0
+      description: label === record7.classification ? "current" : void 0
     })),
-    { title: `Classification \xB7 ${hex4(record6.start)}\u2013${hex4(record6.end)} (exclusive)` }
+    { title: `Classification \xB7 ${hex4(record7.start)}\u2013${hex4(record7.end)} (exclusive)` }
   );
-  return selected ? { ...record6, classification: selected.label } : void 0;
+  return selected ? { ...record7, classification: selected.label } : void 0;
 }
 async function mappingSelection(initial) {
-  const text2 = await import_vscode21.window.showInputBox({
+  const text2 = await import_vscode23.window.showInputBox({
     title: "Original NES mapper selection",
     value: initial ? JSON.stringify(initial) : "",
     prompt: 'Use mapper state, for example {"state":{"prgMode":0,"r6":2,"r7":3}}. Optional fileOffset is headerless.',
@@ -66420,17 +66635,15 @@ async function mappingSelection(initial) {
   return mapping;
 }
 async function newRecord(selection, kind, hint) {
-  const document = await import_vscode21.window.showQuickPick(
+  const document = await import_vscode23.window.showQuickPick(
     selection.documents.map((item) => item.path),
     { title: "Research document" }
   );
   if (!document) {
     return void 0;
   }
-  const spaces = selection.addressSpaces.filter(
-    (item) => kind !== "range" || !hint?.range || item.kind === "file"
-  );
-  const space = await import_vscode21.window.showQuickPick(
+  const spaces = selection.addressSpaces;
+  const space = await import_vscode23.window.showQuickPick(
     spaces.map((item) => ({ label: item.name, description: item.id, item })),
     { title: "Original address space" }
   );
@@ -66440,7 +66653,7 @@ async function newRecord(selection, kind, hint) {
   const maximum = 2 ** space.item.addressBits - 1;
   const start = await address2(
     kind === "range" ? "Range start" : "Indirect instruction address",
-    kind === "range" ? hint?.range?.start ?? 0 : 0,
+    0,
     maximum
   );
   if (start === void 0) {
@@ -66468,11 +66681,11 @@ async function newRecord(selection, kind, hint) {
       }
     };
   }
-  const end = await address2("Range end (exclusive)", hint?.range?.end ?? start + 1, maximum + 1);
+  const end = await address2("Range end (exclusive)", start + 1, maximum + 1);
   if (end === void 0) {
     return void 0;
   }
-  const architecture = await import_vscode21.window.showInputBox({
+  const architecture = await import_vscode23.window.showInputBox({
     title: "Architecture",
     value: space.item.id.startsWith("nes.") ? "65xx.2a03" : "snes.65816",
     prompt: "Architecture identifier used by this range.",
@@ -66500,7 +66713,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
     return editSourceResearch(worker, context, { kind: "analysis", change });
   }
   const initial = context();
-  if (!initial || !import_vscode21.workspace.isTrusted) {
+  if (!initial || !import_vscode23.workspace.isTrusted) {
     throw new Error("Select a Git source project in a trusted workspace first.");
   }
   const selection = await worker.run(
@@ -66516,16 +66729,16 @@ async function editAnalysisResearch(worker, context, change, hint) {
     throw new Error("Research service returned an invalid analysis selection.");
   }
   const relevant = selection.records.filter(
-    (record7) => !hint || "classification" in record7.value !== (hint.action === "targets") && (!(hint.range ?? hint.ids.length) || hint.ids.includes(record7.value.id))
+    (record8) => !hint || "classification" in record8.value !== (hint.action === "targets")
   );
-  const options = relevant.map((record7) => ({
-    label: record7.value.id,
-    description: record7.value.addressSpace + (record7.value.mapping ? ` \xB7 ${JSON.stringify(record7.value.mapping)}` : ""),
-    detail: record7.path,
-    record: record7,
+  const options = relevant.map((record8) => ({
+    label: record8.value.id,
+    description: record8.value.addressSpace + (record8.value.mapping ? ` \xB7 ${JSON.stringify(record8.value.mapping)}` : ""),
+    detail: record8.path,
+    record: record8,
     create: void 0
   }));
-  const choice = hint && options.length === 1 ? options[0] : await import_vscode21.window.showQuickPick(
+  const choice = hint && options.length === 1 ? options[0] : await import_vscode23.window.showQuickPick(
     [
       {
         label: "Classify a Range\u2026",
@@ -66554,32 +66767,32 @@ async function editAnalysisResearch(worker, context, change, hint) {
   if (!selected) {
     return void 0;
   }
-  let record6 = selected.value;
+  let record7 = selected.value;
   const expectedDocumentSha256 = selection.documents.find(
     (item) => item.path === selected.path
   ).sha256;
-  if (choice.create && selection.records.some((item) => item.value.id === record6.id)) {
+  if (choice.create && selection.records.some((item) => item.value.id === record7.id)) {
     throw new Error(
       "This range or target already has a declaration. Select it from the research list."
     );
   }
   let action = hint?.action ?? (choice.create === "range" ? "classification" : "targets");
-  const rangeRecord = "classification" in record6;
+  const rangeRecord = "classification" in record7;
   if (hint && rangeRecord === (hint.action === "targets")) {
     throw new Error("This declaration does not support the requested evidence action.");
   }
   if (!choice.create && !hint) {
-    const edits = "classification" in record6 ? ["classification", "state"] : ["targets"];
-    if (record6.addressSpace.startsWith("nes.")) {
+    const edits = "classification" in record7 ? ["classification", "state"] : ["targets"];
+    if (record7.addressSpace.startsWith("nes.")) {
       const state = edits.indexOf("state");
       if (state !== -1) {
         edits.splice(state, 1);
       }
-      if (record6.addressSpace === "nes.cpu") {
+      if (record7.addressSpace === "nes.cpu") {
         edits.push("mapping");
       }
     }
-    const picked = await import_vscode21.window.showQuickPick(
+    const picked = await import_vscode23.window.showQuickPick(
       [
         ...edits.map((item) => ({
           label: item === "state" ? "Change CPU Assumption" : `Edit ${item}`,
@@ -66592,7 +66805,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
           detail: "Restores imported observations after saving; keeps evidence."
         }
       ],
-      { title: record6.id }
+      { title: record7.id }
     );
     if (!picked) {
       return void 0;
@@ -66600,45 +66813,45 @@ async function editAnalysisResearch(worker, context, change, hint) {
     action = picked.action;
   }
   if (action === "open") {
-    await import_vscode21.window.showTextDocument(import_vscode21.Uri.file(import_node_path25.default.join(initial.root, selected.path)));
+    await import_vscode23.window.showTextDocument(import_vscode23.Uri.file(import_node_path30.default.join(initial.root, selected.path)));
     return selection;
   }
   if (action === "remove") {
     change = {
       kind: "remove",
       expectedDocumentSha256,
-      collection: "classification" in record6 ? "annotations" : "analysis",
-      id: record6.id
+      collection: "classification" in record7 ? "annotations" : "analysis",
+      id: record7.id
     };
   } else {
-    if (action === "mapping" || action === "state" && record6.addressSpace === "nes.cpu") {
-      const mapping = await mappingSelection(record6.mapping);
+    if (action === "mapping" || action === "state" && record7.addressSpace === "nes.cpu") {
+      const mapping = await mappingSelection(record7.mapping);
       if (!mapping) {
         return void 0;
       }
-      record6 = { ...record6, mapping };
-    } else if ("classification" in record6) {
-      const edited = action === "state" ? await editState(record6) : await classification(record6);
+      record7 = { ...record7, mapping };
+    } else if ("classification" in record7) {
+      const edited = action === "state" ? await editState(record7) : await classification(record7);
       if (!edited) {
         return void 0;
       }
-      record6 = edited;
+      record7 = edited;
     } else {
-      const targets = await import_vscode21.window.showInputBox({
-        title: `Indirect targets \xB7 ${record6.id}`,
-        value: record6.targets.map(hex4).join(", "),
+      const targets = await import_vscode23.window.showInputBox({
+        title: `Indirect targets \xB7 ${record7.id}`,
+        value: record7.targets.map(hex4).join(", "),
         prompt: "Comma-separated original addresses. Empty records no known targets.",
         validateInput: (value) => value.trim() && value.split(",").some((item) => parseResearchAddress(item) === void 0) ? "Enter comma-separated $hex, 0xhex or decimal addresses." : void 0
       });
       if (targets === void 0) {
         return void 0;
       }
-      record6 = {
-        ...record6,
+      record7 = {
+        ...record7,
         targets: targets.trim() ? targets.split(",").map((item) => parseResearchAddress(item)) : []
       };
     }
-    const reason = await import_vscode21.window.showInputBox({
+    const reason = await import_vscode23.window.showInputBox({
       title: "Reason for the research decision",
       prompt: "Evidence or reasoning retained in Git beside this declaration.",
       validateInput: (value) => value.trim() ? void 0 : "Describe the evidence or reasoning."
@@ -66646,13 +66859,13 @@ async function editAnalysisResearch(worker, context, change, hint) {
     if (reason === void 0) {
       return void 0;
     }
-    if ("classification" in record6) {
+    if ("classification" in record7) {
       change = {
         kind: "put",
         expectedDocumentSha256,
         collection: "annotations",
         path: selected.path,
-        value: record6,
+        value: record7,
         reason
       };
     } else {
@@ -66661,7 +66874,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
         expectedDocumentSha256,
         collection: "analysis",
         path: selected.path,
-        value: record6,
+        value: record7,
         reason
       };
     }
@@ -66673,8 +66886,8 @@ async function editAnalysisResearch(worker, context, change, hint) {
 }
 
 // packages/vscode-extension/src/source/asset-coordinator.ts
-var import_promises18 = __toESM(require("node:fs/promises"), 1);
-var import_node_path30 = __toESM(require("node:path"), 1);
+var import_promises19 = __toESM(require("node:fs/promises"), 1);
+var import_node_path34 = __toESM(require("node:path"), 1);
 
 // packages/workflows/src/asset-interchange/public-records.ts
 function isObject2(value) {
@@ -66824,17 +67037,17 @@ function readAssetOperation(value) {
 }
 
 // packages/vscode-extension/src/source/asset-coordinator.ts
-var import_vscode24 = require("vscode");
+var import_vscode26 = require("vscode");
 
 // packages/workflows/src/asset-interchange/paths.ts
-var import_node_fs16 = __toESM(require("node:fs"), 1);
-var import_node_path26 = __toESM(require("node:path"), 1);
+var import_node_fs18 = __toESM(require("node:fs"), 1);
+var import_node_path31 = __toESM(require("node:path"), 1);
 function assetPath(file) {
-  const absolute = import_node_path26.default.resolve(file);
+  const absolute = import_node_path31.default.resolve(file);
   if (process.platform === "darwin") {
     for (const alias of ["/var", "/tmp"]) {
       if (absolute === alias || absolute.startsWith(alias + "/")) {
-        return import_node_path26.default.join(import_node_fs16.default.realpathSync(alias), import_node_path26.default.relative(alias, absolute));
+        return import_node_path31.default.join(import_node_fs18.default.realpathSync(alias), import_node_path31.default.relative(alias, absolute));
       }
     }
   }
@@ -66858,58 +67071,15 @@ function assertAssetEditorVersions(before, current, relevant) {
   }
 }
 
-// packages/vscode-extension/src/source/build-inputs.ts
-var import_promises16 = __toESM(require("node:fs/promises"), 1);
-var import_node_path27 = __toESM(require("node:path"), 1);
-async function captureBuildControls(root) {
-  const projectBytes = await import_promises16.default.readFile(import_node_path27.default.join(root, ".uttori/project.json"));
-  const configuration = parseSourceProject(JSON.parse(projectBytes.toString("utf8")));
-  const files = [
-    configuration.layout,
-    configuration.buildConfig,
-    import_node_path27.default.posix.join(import_node_path27.default.posix.dirname(configuration.buildConfig), "source-raw.json")
-  ];
-  const controls = await Promise.all(
-    files.map(async (file) => ({
-      path: file,
-      sha256: sourceContentHash(await import_promises16.default.readFile(import_node_path27.default.resolve(root, file)))
-    }))
-  );
-  return [{ path: ".uttori/project.json", sha256: sourceContentHash(projectBytes) }, ...controls];
-}
-async function changedBuildInputs(root, inputs) {
-  const changed2 = [];
-  for (let start = 0; start < inputs.length; start += 8) {
-    const results = await Promise.all(
-      inputs.slice(start, start + 8).map(async (input) => {
-        try {
-          return sourceContentHash(await import_promises16.default.readFile(import_node_path27.default.resolve(root, input.path))) !== input.sha256;
-        } catch (error) {
-          if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-            return true;
-          }
-          throw error;
-        }
-      })
-    );
-    for (const [index, different] of results.entries()) {
-      if (different) {
-        changed2.push(inputs[start + index].path);
-      }
-    }
-  }
-  return [...new Set(changed2)].toSorted();
-}
-
 // packages/vscode-extension/src/source/conversion-editor.ts
-var import_promises17 = __toESM(require("node:fs/promises"), 1);
-var import_node_path29 = __toESM(require("node:path"), 1);
+var import_promises18 = __toESM(require("node:fs/promises"), 1);
+var import_node_path33 = __toESM(require("node:path"), 1);
 
 // packages/workflows/src/source-requests.ts
 var fields = {
   init: ["rom", "dizRawFile", "mapper"],
   status: ["candidate"],
-  prepare: [],
+  prepare: ["assembly"],
   preview: ["candidate"],
   apply: ["candidate"],
   finish: ["message"],
@@ -66926,11 +67096,11 @@ var fields = {
   research: ["research"],
   import: ["capture", "captures", "recoverPartial"]
 };
-var isRecord40 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord44 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var isAction = (value) => typeof value === "string" && Object.hasOwn(fields, value);
-var isText = (value) => typeof value === "string" && value.length > 0 && !value.includes("\0");
+var isText2 = (value) => typeof value === "string" && value.length > 0 && !value.includes("\0");
 function assertRequest(value) {
-  if (!isRecord40(value) || !isAction(value.action) || !isText(value.directory)) {
+  if (!isRecord44(value) || !isAction(value.action) || !isText2(value.directory)) {
     throw new Error("Source operation requires a known action and project directory.");
   }
   const allowed = /* @__PURE__ */ new Set([
@@ -66955,7 +67125,7 @@ function assertRequest(value) {
     "capture",
     "objectId"
   ]) {
-    if (value[key3] !== void 0 && !isText(value[key3])) {
+    if (value[key3] !== void 0 && !isText2(value[key3])) {
       throw new Error(`Invalid source ${key3}.`);
     }
   }
@@ -66966,17 +67136,20 @@ function assertRequest(value) {
     throw new Error("Invalid source progress callback.");
   }
   if (value.overlays !== void 0 && (!Array.isArray(value.overlays) || value.overlays.length > 65536 || !value.overlays.every(
-    (item) => isRecord40(item) && isText(item.path) && item.bytes instanceof Uint8Array
+    (item) => isRecord44(item) && isText2(item.path) && item.bytes instanceof Uint8Array
   ))) {
     throw new Error("Invalid source overlays.");
   }
-  if (value.action === "init" && !isText(value.rom)) {
+  if (value.assembly !== void 0 && value.assembly !== "linked") {
+    throw new Error("Source preparation supports only explicit linked migration.");
+  }
+  if (value.action === "init" && !isText2(value.rom)) {
     throw new Error("Initialization requires an original ROM path.");
   }
-  if (["preview", "apply", "discard"].includes(value.action) && !isText(value.candidate)) {
+  if (["preview", "apply", "discard"].includes(value.action) && !isText2(value.candidate)) {
     throw new Error("Source operation requires a generation commit.");
   }
-  if (value.action === "relocate" && !isText(value.objectId)) {
+  if (value.action === "relocate" && !isText2(value.objectId)) {
     throw new Error("Relocation requires a declared object ID.");
   }
   if (value.action === "expand" && (typeof value.expansionSize !== "number" || !Number.isSafeInteger(value.expansionSize) || value.expansionSize < 1)) {
@@ -66986,15 +67159,15 @@ function assertRequest(value) {
     if (value.recoverPartial !== void 0 && typeof value.recoverPartial !== "boolean") {
       throw new Error("Invalid partial capture recovery selection.");
     }
-    const single = isText(value.capture);
-    const batch = Array.isArray(value.captures) && value.captures.length > 0 && value.captures.length <= 65536 && value.captures.every(isText);
+    const single = isText2(value.capture);
+    const batch = Array.isArray(value.captures) && value.captures.length > 0 && value.captures.length <= 65536 && value.captures.every(isText2);
     if (single === batch || value.capture !== void 0 && !single || value.captures !== void 0 && !batch) {
       throw new Error("Import requires one archive or one nonempty capture queue, exclusively.");
     }
   }
   if (value.graphicsQuery !== void 0) {
     const query = value.graphicsQuery;
-    if (!isRecord40(query) || !isText(query.captureSha256)) {
+    if (!isRecord44(query) || !isText2(query.captureSha256)) {
       throw new Error("Invalid source graphics selection.");
     }
     for (const key3 of ["pc", "physicalOffset", "limit"]) {
@@ -67005,27 +67178,27 @@ function assertRequest(value) {
   }
   if (value.research !== void 0) {
     const request = value.research;
-    if (!isRecord40(request) || request.kind !== void 0 && request.kind !== "symbols" && request.kind !== "analysis" || request.symbolId !== void 0 && !isText(request.symbolId)) {
+    if (!isRecord44(request) || request.kind !== void 0 && request.kind !== "symbols" && request.kind !== "analysis" || request.symbolId !== void 0 && !isText2(request.symbolId)) {
       throw new Error("Invalid research request.");
     }
     const change = request.change;
     if (change !== void 0) {
-      if (!isRecord40(change)) {
+      if (!isRecord44(change)) {
         throw new Error("Invalid research change.");
       }
       if (request.kind === "analysis") {
-        if (!isText(change.expectedDocumentSha256) || !["annotations", "analysis"].includes(String(change.collection))) {
+        if (!isText2(change.expectedDocumentSha256) || !["annotations", "analysis"].includes(String(change.collection))) {
           throw new Error("Invalid research analysis identity.");
         }
         if (change.kind === "remove") {
-          if (!isText(change.id)) {
+          if (!isText2(change.id)) {
             throw new Error("Research removal requires a record ID.");
           }
-        } else if (change.kind !== "put" || !isText(change.path) || !isText(change.reason) || !isRecord40(change.value)) {
+        } else if (change.kind !== "put" || !isText2(change.path) || !isText2(change.reason) || !isRecord44(change.value)) {
           throw new Error("Invalid research analysis edit.");
         }
       } else if (change.kind === "aliases") {
-        if (!Array.isArray(change.aliases) || !change.aliases.every(isText)) {
+        if (!Array.isArray(change.aliases) || !change.aliases.every(isText2)) {
           throw new Error("Invalid research aliases.");
         }
       } else if (change.kind === "suppression") {
@@ -67044,12 +67217,12 @@ function readSourceOperation(value) {
 }
 
 // packages/workflows/src/asset-source-conversion.ts
-var import_node_fs17 = __toESM(require("node:fs"), 1);
-var import_node_path28 = __toESM(require("node:path"), 1);
+var import_node_fs19 = __toESM(require("node:fs"), 1);
+var import_node_path32 = __toESM(require("node:path"), 1);
 function assetSourceAssemblyInventory(root) {
-  const absoluteRoot = import_node_fs17.default.realpathSync(root);
+  const absoluteRoot = import_node_fs19.default.realpathSync(root);
   const project = parseSourceProject(
-    JSON.parse(import_node_fs17.default.readFileSync(import_node_path28.default.join(absoluteRoot, ".uttori/project.json"), "utf8"))
+    JSON.parse(import_node_fs19.default.readFileSync(import_node_path32.default.join(absoluteRoot, ".uttori/project.json"), "utf8"))
   );
   const files = [];
   let visited = 0;
@@ -67057,11 +67230,11 @@ function assetSourceAssemblyInventory(root) {
     if (depth > 64) {
       throw new Error("Source conversion assembly discovery exceeds its directory depth budget.");
     }
-    for (const entry of import_node_fs17.default.readdirSync(directory, { withFileTypes: true })) {
+    for (const entry of import_node_fs19.default.readdirSync(directory, { withFileTypes: true })) {
       if (++visited > 65536) {
         throw new Error("Source conversion assembly discovery exceeds its file budget.");
       }
-      const file = import_node_path28.default.join(directory, entry.name);
+      const file = import_node_path32.default.join(directory, entry.name);
       if (entry.isSymbolicLink()) {
         files.push(file);
       } else if (entry.isDirectory()) {
@@ -67072,32 +67245,32 @@ function assetSourceAssemblyInventory(root) {
     }
   };
   for (const sourceRoot of project.sourceRoots) {
-    visit2(import_node_path28.default.resolve(absoluteRoot, sourceRoot));
+    visit2(import_node_path32.default.resolve(absoluteRoot, sourceRoot));
   }
   return files.toSorted();
 }
 
 // packages/vscode-extension/src/source/conversion-editor.ts
-var import_vscode22 = require("vscode");
+var import_vscode24 = require("vscode");
 async function applyAssetSourceEdit(root, plan2, validateEditors) {
   const paths = [
-    ...plan2.snapshots.map((item) => import_node_path29.default.resolve(root, item.path)),
-    ...plan2.changes.map((item) => import_node_path29.default.resolve(root, item.path))
+    ...plan2.snapshots.map((item) => import_node_path33.default.resolve(root, item.path)),
+    ...plan2.changes.map((item) => import_node_path33.default.resolve(root, item.path))
   ];
-  const edit = new import_vscode22.WorkspaceEdit();
+  const edit = new import_vscode24.WorkspaceEdit();
   const documents = [];
   for (const snapshot of plan2.snapshots) {
-    if (sourceContentHash(await import_promises17.default.readFile(import_node_path29.default.resolve(root, snapshot.path))) !== snapshot.sha256) {
+    if (sourceContentHash(await import_promises18.default.readFile(import_node_path33.default.resolve(root, snapshot.path))) !== snapshot.sha256) {
       throw new Error(
         `Source changed before editor publication: ${snapshot.path}. Recover the staged conversion.`
       );
     }
   }
   for (const change of plan2.changes) {
-    const uri = import_vscode22.Uri.file(import_node_path29.default.resolve(root, change.path));
+    const uri = import_vscode24.Uri.file(import_node_path33.default.resolve(root, change.path));
     let current = null;
     try {
-      current = await import_promises17.default.readFile(uri.fsPath);
+      current = await import_promises18.default.readFile(uri.fsPath);
     } catch (error) {
       if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") {
         throw error;
@@ -67116,11 +67289,11 @@ async function applyAssetSourceEdit(root, plan2, validateEditors) {
       if (!/\.(asm|s|inc|json)$/i.test(change.path)) {
         throw new Error(`Native editor publication cannot replace opaque file '${change.path}'.`);
       }
-      const document = await import_vscode22.workspace.openTextDocument(uri);
+      const document = await import_vscode24.workspace.openTextDocument(uri);
       const text2 = new TextDecoder("utf-8", { fatal: true }).decode(change.after);
       edit.replace(
         uri,
-        new import_vscode22.Range(document.positionAt(0), document.positionAt(document.getText().length)),
+        new import_vscode24.Range(document.positionAt(0), document.positionAt(document.getText().length)),
         text2
       );
       documents.push(document);
@@ -67132,7 +67305,7 @@ async function applyAssetSourceEdit(root, plan2, validateEditors) {
     );
   }
   validateEditors(paths);
-  if (!await import_vscode22.workspace.applyEdit(edit, { isRefactoring: true })) {
+  if (!await import_vscode24.workspace.applyEdit(edit, { isRefactoring: true })) {
     throw new Error("Native source conversion edit was declined. Recover the staged conversion.");
   }
   for (const document of documents) {
@@ -67143,41 +67316,41 @@ async function applyAssetSourceEdit(root, plan2, validateEditors) {
 }
 
 // packages/vscode-extension/src/source/ui-contracts.ts
-var import_vscode23 = require("vscode");
-function isRecord41(value) {
+var import_vscode25 = require("vscode");
+function isRecord45(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSnesMapper2(value) {
   return value === "lorom" || value === "hirom" || value === "exlorom" || value === "exhirom" || value === "sfxrom" || value === "sa1rom" || value === "bigsa1rom" || value === "norom";
 }
 function isLayoutObject(value) {
-  return isRecord41(value) && typeof value.id === "string" && typeof value.kind === "string";
+  return isRecord45(value) && typeof value.id === "string" && typeof value.kind === "string";
 }
 function isSnesSourceBuild(value) {
-  return isRecord41(value) && typeof value.outputFile === "string" && typeof value.debugMapFile === "string" && typeof value.inputSha256 === "string" && Array.isArray(value.inputs) && value.inputs.every(
-    (input) => isRecord41(input) && typeof input.path === "string" && typeof input.sha256 === "string"
-  ) && typeof value.outputSize === "number" && typeof value.debugMapFingerprint === "string" && isRecord41(value.verification) && typeof value.verification.outputSha256 === "string" && typeof value.verification.debugMapSha256 === "string" && typeof value.verification.toolchainSha256 === "string" && Array.isArray(value.verification.checks) && value.verification.checks.every((check) => typeof check === "string") && isRecord41(value.contracts) && typeof value.contracts.cpuStates === "number" && typeof value.contracts.fixedExtents === "number" && (value.cacheWarnings === void 0 || Array.isArray(value.cacheWarnings) && value.cacheWarnings.every((warning) => typeof warning === "string"));
+  return isRecord45(value) && typeof value.outputFile === "string" && typeof value.debugMapFile === "string" && typeof value.inputSha256 === "string" && Array.isArray(value.inputs) && value.inputs.every(
+    (input) => isRecord45(input) && typeof input.path === "string" && typeof input.sha256 === "string"
+  ) && typeof value.outputSize === "number" && typeof value.debugMapFingerprint === "string" && isRecord45(value.verification) && typeof value.verification.outputSha256 === "string" && typeof value.verification.debugMapSha256 === "string" && typeof value.verification.toolchainSha256 === "string" && Array.isArray(value.verification.checks) && value.verification.checks.every((check) => typeof check === "string") && isRecord45(value.contracts) && typeof value.contracts.cpuStates === "number" && typeof value.contracts.fixedExtents === "number" && (value.cacheWarnings === void 0 || Array.isArray(value.cacheWarnings) && value.cacheWarnings.every((warning) => typeof warning === "string"));
 }
 function isSourceMergePreview(value) {
-  return isRecord41(value) && typeof value.head === "string" && typeof value.sourceTree === "string" && typeof value.candidate === "string" && typeof value.base === "string" && typeof value.resultTree === "string" && typeof value.messages === "string" && Array.isArray(value.conflicts) && value.conflicts.every((conflict) => typeof conflict === "string") && (value.ref === void 0 || typeof value.ref === "string");
+  return isRecord45(value) && typeof value.head === "string" && typeof value.sourceTree === "string" && typeof value.candidate === "string" && typeof value.base === "string" && typeof value.resultTree === "string" && typeof value.messages === "string" && Array.isArray(value.conflicts) && value.conflicts.every((conflict) => typeof conflict === "string") && (value.ref === void 0 || typeof value.ref === "string");
 }
 function isGenerationCommit(value) {
-  return isRecord41(value) && isRecord41(value.generation) && typeof value.generation.commit === "string" && value.generation.commit.length > 0;
+  return isRecord45(value) && isRecord45(value.generation) && typeof value.generation.commit === "string" && value.generation.commit.length > 0;
 }
 function isRelocationEdit(value) {
-  return isRecord41(value) && typeof value.path === "string" && typeof value.beforeSha256 === "string" && typeof value.before === "string" && typeof value.after === "string";
+  return isRecord45(value) && typeof value.path === "string" && typeof value.beforeSha256 === "string" && typeof value.before === "string" && typeof value.after === "string";
 }
 function relocationEdits(value) {
-  if (!isRecord41(value) || !Array.isArray(value.edits) || !value.edits.every(isRelocationEdit)) {
+  if (!isRecord45(value) || !Array.isArray(value.edits) || !value.edits.every(isRelocationEdit)) {
     throw new Error("Invalid source relocation.");
   }
   return value.edits;
 }
-var SourceRow = class extends import_vscode23.TreeItem {
+var SourceRow = class extends import_vscode25.TreeItem {
   constructor(label, children = [], command, args) {
     super(
       label,
-      children.length ? import_vscode23.TreeItemCollapsibleState.Expanded : import_vscode23.TreeItemCollapsibleState.None
+      children.length ? import_vscode25.TreeItemCollapsibleState.Expanded : import_vscode25.TreeItemCollapsibleState.None
     );
     this.children = children;
     if (command) {
@@ -67186,7 +67359,7 @@ var SourceRow = class extends import_vscode23.TreeItem {
   }
   children;
 };
-var chooseAssetFile = async (title, extensions) => (await import_vscode23.window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } }))?.[0]?.fsPath;
+var chooseAssetFile = async (title, extensions) => (await import_vscode25.window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } }))?.[0]?.fsPath;
 
 // packages/vscode-extension/src/source/asset-coordinator.ts
 var SourceAssetCoordinator = class {
@@ -67203,9 +67376,9 @@ var SourceAssetCoordinator = class {
   #menuRequest;
   /** Hide stale menu actions immediately; evaluated paths and continued calls come from the normal build worker. */
   scheduleAssetContext() {
-    const editor = import_vscode24.window.activeTextEditor;
+    const editor = import_vscode26.window.activeTextEditor;
     const document = editor?.document;
-    const eligible = import_vscode24.workspace.isTrusted && !this.session.busy && document && !document.isDirty && document.uri.scheme === "file" && /^(uttori-|asm)/.test(document.languageId);
+    const eligible = import_vscode26.workspace.isTrusted && !this.session.busy && document && !document.isDirty && document.uri.scheme === "file" && /^(uttori-|asm)/.test(document.languageId);
     const key3 = JSON.stringify([
       this.session.root,
       this.session.selectionRevision,
@@ -67222,13 +67395,13 @@ var SourceAssetCoordinator = class {
     clearTimeout(this.session.assetContextTimer);
     this.session.assetContextAbort?.abort();
     const version = ++this.session.assetContextVersion;
-    void import_vscode24.commands.executeCommand("setContext", "asm.assetSourceRepresentation", "");
+    void import_vscode26.commands.executeCommand("setContext", "asm.assetSourceRepresentation", "");
     if (!eligible) {
       return;
     }
     this.session.assetContextTimer = setTimeout(() => {
       void (async () => {
-        if (!import_vscode24.workspace.isTrusted || this.session.busy || editor.document.isDirty || editor.document.uri.scheme !== "file" || !/^(uttori-|asm)/.test(editor.document.languageId)) {
+        if (!import_vscode26.workspace.isTrusted || this.session.busy || editor.document.isDirty || editor.document.uri.scheme !== "file" || !/^(uttori-|asm)/.test(editor.document.languageId)) {
           return;
         }
         const root = await findSourceRoot(editor.document.uri.fsPath);
@@ -67238,7 +67411,7 @@ var SourceAssetCoordinator = class {
         const abort = new AbortController();
         this.session.assetContextAbort = abort;
         try {
-          const worker = sourceContentHash(await import_promises18.default.readFile(this.session.worker.file));
+          const worker = sourceContentHash(await import_promises19.default.readFile(this.session.worker.file));
           let cached = this.#menuResults.get(key3);
           const index = this.#menuIndex;
           if (!cached && index?.root === root && index.epoch === this.session.epoch && index.selection === this.session.selectionRevision) {
@@ -67248,14 +67421,14 @@ var SourceAssetCoordinator = class {
             if (version === this.session.assetContextVersion && !abort.signal.aborted) {
               let representation = cached.representation;
               if (cached.menus) {
-                const relative3 = import_node_path30.default.relative(root, editor.document.uri.fsPath).split(import_node_path30.default.sep).join("/");
+                const relative4 = import_node_path34.default.relative(root, editor.document.uri.fsPath).split(import_node_path34.default.sep).join("/");
                 const line = editor.selection.active.line + 1;
                 const matches = cached.menus.filter(
-                  (row) => row.file === relative3 && row.line <= line && row.endLine >= line
+                  (row) => row.file === relative4 && row.line <= line && row.endLine >= line
                 );
                 representation = matches.length === 1 ? matches[0].representation : "";
               }
-              await import_vscode24.commands.executeCommand(
+              await import_vscode26.commands.executeCommand(
                 "setContext",
                 "asm.assetSourceRepresentation",
                 representation
@@ -67275,7 +67448,7 @@ var SourceAssetCoordinator = class {
           );
           if (version === this.session.assetContextVersion && !editor.document.isDirty) {
             if (result?.inputs) {
-              if (worker !== sourceContentHash(await import_promises18.default.readFile(this.session.worker.file)) || (await changedBuildInputs(root, result.inputs)).length) {
+              if (worker !== sourceContentHash(await import_promises19.default.readFile(this.session.worker.file)) || (await changedBuildInputs(root, result.inputs)).length) {
                 return;
               }
               const checked2 = {
@@ -67300,7 +67473,7 @@ var SourceAssetCoordinator = class {
             if (version === this.session.assetContextVersion && !abort.signal.aborted && // Saved state can change while dependency hashing awaits filesystem reads.
             // oxlint-disable-next-line typescript/no-unnecessary-condition
             !editor.document.isDirty) {
-              await import_vscode24.commands.executeCommand(
+              await import_vscode26.commands.executeCommand(
                 "setContext",
                 "asm.assetSourceRepresentation",
                 result?.representation ?? ""
@@ -67317,23 +67490,23 @@ var SourceAssetCoordinator = class {
   }
   /** One clean command stages validated recovery bytes, publishes a native undo unit, then verifies the saved ROM. */
   async assetConvert(representation, request) {
-    if (!import_vscode24.workspace.isTrusted) {
+    if (!import_vscode26.workspace.isTrusted) {
       throw new Error("Trust this workspace before converting source assets.");
     }
     if (this.session.busy) {
       throw new Error(`Source operation already running: ${this.session.busy}.`);
     }
-    const editor = import_vscode24.window.activeTextEditor;
+    const editor = import_vscode26.window.activeTextEditor;
     let file = editor?.document.uri.fsPath;
     let line = editor ? editor.selection.active.line + 1 : void 0;
     let destination;
-    if (request instanceof import_vscode24.Uri) {
+    if (request instanceof import_vscode26.Uri) {
       if (editor?.document.uri.toString() !== request.toString()) {
         throw new Error(
           "The selected editor changed before conversion. Invoke the command on the intended include again."
         );
       }
-    } else if (isRecord41(request)) {
+    } else if (isRecord45(request)) {
       if (typeof request.file !== "string" || !Number.isSafeInteger(request.line) || Number(request.line) < 1 || request.destination !== void 0 && typeof request.destination !== "string") {
         throw new Error("Conversion needs a file and one-based cursor line.");
       }
@@ -67400,19 +67573,19 @@ var SourceAssetCoordinator = class {
         savedVersions
       );
       this.session.assetReview = void 0;
-      const document = await import_vscode24.workspace.openTextDocument(import_vscode24.Uri.file(file));
-      await import_vscode24.window.showTextDocument(document, {
-        selection: new import_vscode24.Range(line - 1, 0, line - 1, 0),
+      const document = await import_vscode26.workspace.openTextDocument(import_vscode26.Uri.file(file));
+      await import_vscode26.window.showTextDocument(document, {
+        selection: new import_vscode26.Range(line - 1, 0, line - 1, 0),
         preview: false
       });
-      const destinationUri = import_vscode24.Uri.file(import_node_path30.default.resolve(root, result.destination));
-      await import_vscode24.commands.executeCommand("revealInExplorer", destinationUri);
+      const destinationUri = import_vscode26.Uri.file(import_node_path34.default.resolve(root, result.destination));
+      await import_vscode26.commands.executeCommand("revealInExplorer", destinationUri);
       const retained = result.retained.length ? ` Retained other source references: ${result.retained.join(", ")}.` : "";
       const unresolved = result.unresolvedDeclarations.length ? ` ${result.unresolvedDeclarations.length} declarations are outside the current build.` : "";
-      void import_vscode24.window.showInformationMessage(
+      void import_vscode26.window.showInformationMessage(
         `Converted ${result.destination}; complete ROM verified. Updated ${result.affected.length} includes.${retained}${unresolved}`,
         "Open in Associated Editor"
-      ).then((choice) => choice ? import_vscode24.env.openExternal(destinationUri) : void 0);
+      ).then((choice) => choice ? import_vscode26.env.openExternal(destinationUri) : void 0);
       return result;
     } finally {
       this.session.busy = void 0;
@@ -67430,7 +67603,7 @@ var SourceAssetCoordinator = class {
   }
   /** Saved-source export/review/apply share the existing source worker, busy state and live editor-version checks. */
   async assetFile(action, request) {
-    if (!import_vscode24.workspace.isTrusted) {
+    if (!import_vscode26.workspace.isTrusted) {
       throw new Error("Trust this workspace before editing source assets.");
     }
     if (this.session.busy) {
@@ -67446,17 +67619,17 @@ var SourceAssetCoordinator = class {
     let operation2;
     if (request !== void 0) {
       const selected = readAssetOperation(request);
-      if (selected.action !== `asset-${action}` || import_node_path30.default.resolve(selected.directory) !== root || selected.action === "asset-cleanup" || selected.action === "asset-recover") {
+      if (selected.action !== `asset-${action}` || import_node_path34.default.resolve(selected.directory) !== root || selected.action === "asset-cleanup" || selected.action === "asset-recover") {
         throw new Error(
           "Asset command request does not match the selected source project and action."
         );
       }
       operation2 = selected;
-      if (selected.action === "asset-apply" && (!this.session.assetReview || selected.review !== this.session.assetReview.summary.id || import_node_path30.default.resolve(selected.document) !== import_node_path30.default.resolve(this.session.assetReview.document) || import_node_path30.default.resolve(selected.manifest) !== import_node_path30.default.resolve(this.session.assetReview.manifest))) {
+      if (selected.action === "asset-apply" && (!this.session.assetReview || selected.review !== this.session.assetReview.summary.id || import_node_path34.default.resolve(selected.document) !== import_node_path34.default.resolve(this.session.assetReview.document) || import_node_path34.default.resolve(selected.manifest) !== import_node_path34.default.resolve(this.session.assetReview.manifest))) {
         throw new Error("Apply the saved asset review shown in this editor.");
       }
     } else if (action === "export") {
-      const adapter = await import_vscode24.window.showQuickPick(
+      const adapter = await import_vscode26.window.showQuickPick(
         [
           { label: "Secret of Mana sprite", id: "som.sprite.native" },
           { label: "Secret of Mana room", id: "som.room.native" }
@@ -67472,7 +67645,7 @@ var SourceAssetCoordinator = class {
       if (!selection) {
         return void 0;
       }
-      const presentation = await import_vscode24.window.showQuickPick(
+      const presentation = await import_vscode26.window.showQuickPick(
         [
           {
             label: "Aseprite tilemaps",
@@ -67496,7 +67669,7 @@ var SourceAssetCoordinator = class {
         return void 0;
       }
       const filters = presentation.id === "indexed-png" ? { PNG: ["png"] } : { Aseprite: ["aseprite"] };
-      const document = (await import_vscode24.window.showSaveDialog({ title: "Export editable asset", filters }))?.fsPath;
+      const document = (await import_vscode26.window.showSaveDialog({ title: "Export editable asset", filters }))?.fsPath;
       if (!document) {
         return void 0;
       }
@@ -67562,7 +67735,7 @@ var SourceAssetCoordinator = class {
         }
         const summary = readAssetImportReview(result);
         assertAssetEditorVersions(versions, this.host.assetEditorVersions(), [
-          ...summary.files.map((file) => import_node_path30.default.resolve(root, file.path)),
+          ...summary.files.map((file) => import_node_path34.default.resolve(root, file.path)),
           operation2.document
         ]);
         this.session.assetReview = {
@@ -67573,27 +67746,27 @@ var SourceAssetCoordinator = class {
           epoch,
           versions
         };
-        const reviewDocument = await import_vscode24.workspace.openTextDocument({
+        const reviewDocument = await import_vscode26.workspace.openTextDocument({
           language: "json",
           content: JSON.stringify(summary, null, 2)
         });
-        await import_vscode24.window.showTextDocument(reviewDocument, { preview: true });
-        void import_vscode24.window.showInformationMessage(
+        await import_vscode26.window.showTextDocument(reviewDocument, { preview: true });
+        void import_vscode26.window.showInformationMessage(
           `Asset review: ${summary.files.length} source files. Apply Reviewed Asset uses this exact plan.`
         );
       } else if (action === "apply") {
-        if (!isRecord41(result) || !isRecord41(result.review)) {
+        if (!isRecord45(result) || !isRecord45(result.review)) {
           throw new Error("Invalid asset publication result.");
         }
         readAssetImportReview(result.review);
         published = typeof result.transaction === "string";
         this.session.assetReview = void 0;
-        void import_vscode24.window.showInformationMessage(
+        void import_vscode26.window.showInformationMessage(
           published ? "Asset edits applied. Re-export for the next editing round." : "No asset changes; source files are unchanged."
         );
       } else {
         const instruction2 = operation2.action === "asset-export" && (operation2.presentation ?? "tilemap") === "tilemap" ? "Select the Tiles layer, use Draw Pixels and Manual in Aseprite's toolbar (hold Space and press 1), paint and save." : "Edit pixels or palette colors in the fixed inventory and save.";
-        void import_vscode24.window.showInformationMessage(
+        void import_vscode26.window.showInformationMessage(
           `Asset exported. ${instruction2} Then Review Saved Asset.`
         );
       }
@@ -67612,9 +67785,9 @@ var SourceAssetCoordinator = class {
   /** All asset workers use the same cancellation and final live-buffer gate, including explicit journal recovery. */
   async runAssetOperation(operation2, epoch, versions, reviewedVersions = versions) {
     const root = operation2.directory;
-    return import_vscode24.window.withProgress(
+    return import_vscode26.window.withProgress(
       {
-        location: import_vscode24.ProgressLocation.Notification,
+        location: import_vscode26.ProgressLocation.Notification,
         title: `Asset: ${operation2.action.slice(6)}`,
         cancellable: true
       },
@@ -67623,11 +67796,11 @@ var SourceAssetCoordinator = class {
         try {
           return await this.session.worker.run(operation2, {
             signal: abort.signal,
-            maxMemoryMiB: import_vscode24.workspace.getConfiguration("asm", import_vscode24.Uri.file(root)).get("analysis.maxMemoryMiB", 4096),
+            maxMemoryMiB: import_vscode26.workspace.getConfiguration("asm", import_vscode26.Uri.file(root)).get("analysis.maxMemoryMiB", 4096),
             onProgress: (message) => reporter.report({ message }),
             onBeforePublish: (paths) => {
               if (this.session.root !== root || operation2.action !== "asset-convert" && operation2.action !== "asset-conversion-finish" && this.session.epoch !== epoch) {
-                const input = this.session.epochInput ? ` (${import_node_path30.default.relative(root, this.session.epochInput)}; ${this.session.epochEvent} event)` : "";
+                const input = this.session.epochInput ? ` (${import_node_path34.default.relative(root, this.session.epochInput)}; ${this.session.epochEvent} event)` : "";
                 throw new Error(
                   `Source/editor state changed during asset validation${input}. Review again.`
                 );
@@ -67643,7 +67816,7 @@ var SourceAssetCoordinator = class {
   }
   /** Recovery is an explicit journal direction; unknown external bytes and relevant drafts remain protected by the worker. */
   async assetRecovery() {
-    if (!import_vscode24.workspace.isTrusted) {
+    if (!import_vscode26.workspace.isTrusted) {
       throw new Error("Trust this workspace before recovering asset edits.");
     }
     if (this.session.busy) {
@@ -67656,7 +67829,7 @@ var SourceAssetCoordinator = class {
     if (!root) {
       return;
     }
-    const direction = await import_vscode24.window.showQuickPick(
+    const direction = await import_vscode26.window.showQuickPick(
       [
         { label: "Complete staged asset edit", id: "after" },
         { label: "Restore bytes from before the asset edit", id: "before" }
@@ -67685,9 +67858,9 @@ var SourceAssetCoordinator = class {
         epoch,
         versions
       );
-      recovered = isRecord41(result) && result.state === "completed";
+      recovered = isRecord45(result) && result.state === "completed";
       this.session.assetReview = void 0;
-      void import_vscode24.window.showInformationMessage(
+      void import_vscode26.window.showInformationMessage(
         recovered ? "Asset publication recovered. Re-export before editing again." : "No interrupted asset publication to recover."
       );
     } finally {
@@ -67704,12 +67877,12 @@ var SourceAssetCoordinator = class {
 };
 
 // packages/vscode-extension/src/source/build-coordinator.ts
-var import_promises19 = __toESM(require("node:fs/promises"), 1);
-var import_node_path31 = __toESM(require("node:path"), 1);
-var import_vscode26 = require("vscode");
+var import_promises20 = __toESM(require("node:fs/promises"), 1);
+var import_node_path35 = __toESM(require("node:path"), 1);
+var import_vscode28 = require("vscode");
 
 // packages/vscode-extension/src/source/capture-coordinator.ts
-var import_vscode25 = require("vscode");
+var import_vscode27 = require("vscode");
 var SourceCaptureCoordinator = class {
   constructor(session) {
     this.session = session;
@@ -67720,12 +67893,12 @@ var SourceCaptureCoordinator = class {
     let selected;
     if (Array.isArray(captureUri)) {
       selected = captureUri;
-    } else if (captureUri instanceof import_vscode25.Uri) {
+    } else if (captureUri instanceof import_vscode27.Uri) {
       selected = [captureUri];
     } else if (captureUri !== void 0) {
       throw new Error("Capture import requires a local file URI.");
     }
-    selected ??= await import_vscode25.window.showOpenDialog({
+    selected ??= await import_vscode27.window.showOpenDialog({
       title: "Import captures into source project",
       canSelectMany: true,
       canSelectFiles: true,
@@ -67735,7 +67908,7 @@ var SourceCaptureCoordinator = class {
     if (!selected?.length) {
       return void 0;
     }
-    if (selected.some((uri) => !(uri instanceof import_vscode25.Uri) || uri.scheme !== "file")) {
+    if (selected.some((uri) => !(uri instanceof import_vscode27.Uri) || uri.scheme !== "file")) {
       throw new Error("Capture import requires local file URIs.");
     }
     if (root !== this.session.root) {
@@ -67818,8 +67991,8 @@ var SourceBuildCoordinator = class {
    * Run against the selected project while retaining its busy state through worker settlement.
    * Explicit capture URIs bypass the picker; queues retain completed per-file commits on interruption.
    */
-  async perform(action, cancellation, progress, captureUri) {
-    if (!import_vscode26.workspace.isTrusted) {
+  async perform(action, cancellation, progress, captureUri, assembly) {
+    if (!import_vscode28.workspace.isTrusted) {
       throw new Error("Trust this workspace before running source tools or plugins.");
     }
     if (!this.session.root) {
@@ -67834,7 +68007,7 @@ var SourceBuildCoordinator = class {
     const root = this.session.root;
     if (["apply", "preview", "discard"].includes(action) && !this.session.candidate) {
       this.host.output.info("No pending regeneration. Prepare a generation first.");
-      void import_vscode26.window.showInformationMessage("No pending regeneration. Prepare a generation first.");
+      void import_vscode28.window.showInformationMessage("No pending regeneration. Prepare a generation first.");
       return void 0;
     }
     const epoch = this.session.epoch;
@@ -67844,8 +68017,8 @@ var SourceBuildCoordinator = class {
     if (action === "build" && (buffers.length || binaryBuffers.length || opaqueBuffers.length)) {
       const files = [
         ...buffers.map((buffer) => buffer.path),
-        ...binaryBuffers.map((document) => import_node_path31.default.relative(root, document.uri.fsPath)),
-        ...opaqueBuffers.map((file) => import_node_path31.default.relative(root, file))
+        ...binaryBuffers.map((document) => import_node_path35.default.relative(root, document.uri.fsPath)),
+        ...opaqueBuffers.map((file) => import_node_path35.default.relative(root, file))
       ];
       throw this.host.changedBuildError(files);
     }
@@ -67866,12 +68039,12 @@ var SourceBuildCoordinator = class {
     let objectId;
     let expansionSize;
     if (action === "expand") {
-      const layoutText = await import_promises19.default.readFile(
-        import_node_path31.default.join(root, this.session.configuration.layout),
+      const layoutText = await import_promises20.default.readFile(
+        import_node_path35.default.join(root, this.session.configuration.layout),
         "utf8"
       );
       const layoutValue = JSON.parse(layoutText);
-      if (!isRecord41(layoutValue)) {
+      if (!isRecord45(layoutValue)) {
         throw new Error("Layout contract is missing a numeric ROM size.");
       }
       const romSize = layoutValue.size;
@@ -67886,7 +68059,7 @@ var SourceBuildCoordinator = class {
       if (!capacities.length) {
         throw new Error("This ROM has no supported larger LoROM/HiROM capacity (maximum 4 MiB).");
       }
-      expansionSize = (await import_vscode26.window.showQuickPick(capacities, {
+      expansionSize = (await import_vscode28.window.showQuickPick(capacities, {
         title: "Expand ROM capacity",
         placeHolder: "Apply reviewable source, layout and build configuration edits"
       }))?.size;
@@ -67895,13 +68068,13 @@ var SourceBuildCoordinator = class {
       }
     }
     if (action === "relocate") {
-      const file = import_node_path31.default.join(root, this.session.configuration.layout);
-      if ((await import_promises19.default.stat(file)).size > 8 * 1024 * 1024) {
+      const file = import_node_path35.default.join(root, this.session.configuration.layout);
+      if ((await import_promises20.default.stat(file)).size > 8 * 1024 * 1024) {
         throw new Error("Layout contract exceeds its size budget.");
       }
-      const layoutText = await import_promises19.default.readFile(file, "utf8");
+      const layoutText = await import_promises20.default.readFile(file, "utf8");
       const layoutValue = JSON.parse(layoutText);
-      const objects = isRecord41(layoutValue) && Array.isArray(layoutValue.objects) ? layoutValue.objects.filter(isLayoutObject) : [];
+      const objects = isRecord45(layoutValue) && Array.isArray(layoutValue.objects) ? layoutValue.objects.filter(isLayoutObject) : [];
       const choices = objects.map((object2) => ({
         label: object2.id,
         description: object2.kind
@@ -67911,7 +68084,7 @@ var SourceBuildCoordinator = class {
           "Declare a movable object and proven free-space block in the project layout first."
         );
       }
-      objectId = (await import_vscode26.window.showQuickPick(choices, {
+      objectId = (await import_vscode28.window.showQuickPick(choices, {
         title: "Relocate a source object",
         placeHolder: "Compute placement, validate references, and apply ordinary undoable source edits"
       }))?.label;
@@ -67939,7 +68112,7 @@ var SourceBuildCoordinator = class {
       if (action === "preview") {
         for (const document of binaryBuffers) {
           overlays.push({
-            path: import_node_path31.default.relative(root, document.uri.fsPath).split(import_node_path31.default.sep).join("/"),
+            path: import_node_path35.default.relative(root, document.uri.fsPath).split(import_node_path35.default.sep).join("/"),
             bytes: Buffer.from(await document.snapshot())
           });
         }
@@ -67951,6 +68124,7 @@ var SourceBuildCoordinator = class {
         readSourceOperation({
           action,
           directory: root,
+          ...assembly ? { assembly } : {},
           candidate: ["status", "preview", "apply", "discard"].includes(action) ? this.session.candidate : void 0,
           capture,
           captures,
@@ -67961,13 +68135,13 @@ var SourceBuildCoordinator = class {
         {
           signal,
           onProgress,
-          maxMemoryMiB: import_vscode26.workspace.getConfiguration("asm", import_vscode26.Uri.file(root)).get("analysis.maxMemoryMiB", 4096)
+          maxMemoryMiB: import_vscode28.workspace.getConfiguration("asm", import_vscode28.Uri.file(root)).get("analysis.maxMemoryMiB", 4096)
         }
       );
       const result = cancellation ? await run(cancellation, progress ?? (() => {
-      })) : await import_vscode26.window.withProgress(
+      })) : await import_vscode28.window.withProgress(
         {
-          location: import_vscode26.ProgressLocation.Notification,
+          location: import_vscode28.ProgressLocation.Notification,
           title: `Source: ${action}`,
           cancellable: true
         },
@@ -68012,9 +68186,9 @@ var SourceBuildCoordinator = class {
         }
         const message = `${summary} Review ${review.files.length} changed files in Generation Preview. ${next} After applying, review/resolve and stage changes, then Finish; Finish builds and commits the merge.`;
         this.host.output.info(message);
-        void import_vscode26.window.showInformationMessage(message, "Review Generation", "Show Analysis Output").then((choice) => {
+        void import_vscode28.window.showInformationMessage(message, "Review Generation", "Show Analysis Output").then((choice) => {
           if (choice === "Review Generation") {
-            void import_vscode26.commands.executeCommand("uttori-asm.sourceProject.focus");
+            void import_vscode28.commands.executeCommand("uttori-asm.sourceProject.focus");
           }
           if (choice === "Show Analysis Output") {
             this.host.output.show(true);
@@ -68028,8 +68202,8 @@ var SourceBuildCoordinator = class {
         const changed2 = await changedBuildInputs(root, [...buildControls, ...result.inputs]);
         const unsaved = [
           ...this.host.buffers().map((buffer) => buffer.path),
-          ...this.host.binaryBuffers().map((document) => import_node_path31.default.relative(root, document.uri.fsPath)),
-          ...this.host.opaqueBinaryBuffers().map((file) => import_node_path31.default.relative(root, file))
+          ...this.host.binaryBuffers().map((document) => import_node_path35.default.relative(root, document.uri.fsPath)),
+          ...this.host.opaqueBinaryBuffers().map((file) => import_node_path35.default.relative(root, file))
         ];
         if (this.session.root !== root) {
           throw new Error(
@@ -68047,14 +68221,14 @@ var SourceBuildCoordinator = class {
       } else if (action === "relocate" || action === "expand") {
         const edits = relocationEdits(result);
         const documents = await Promise.all(
-          edits.map((edit2) => import_vscode26.workspace.openTextDocument(import_vscode26.Uri.file(import_node_path31.default.join(root, edit2.path))))
+          edits.map((edit2) => import_vscode28.workspace.openTextDocument(import_vscode28.Uri.file(import_node_path35.default.join(root, edit2.path))))
         );
         if (this.session.root !== root || this.session.epoch !== epoch || this.host.buffers().length || this.host.binaryBuffers().length) {
           throw new Error(
             "Source changed during placement inspection. Prepare it again before applying edits."
           );
         }
-        const edit = new import_vscode26.WorkspaceEdit();
+        const edit = new import_vscode28.WorkspaceEdit();
         for (const [index, change] of edits.entries()) {
           const document = documents[index];
           if (sourceContentHash(document.getText()) !== change.beforeSha256) {
@@ -68062,23 +68236,23 @@ var SourceBuildCoordinator = class {
           }
           edit.replace(
             document.uri,
-            new import_vscode26.Range(document.positionAt(0), document.positionAt(document.getText().length)),
+            new import_vscode28.Range(document.positionAt(0), document.positionAt(document.getText().length)),
             change.after
           );
         }
-        if (!await import_vscode26.workspace.applyEdit(edit)) {
+        if (!await import_vscode28.workspace.applyEdit(edit)) {
           throw new Error("The editor rejected stale placement edits. Prepare them again.");
         }
         this.session.buildStale = true;
-        await import_vscode26.commands.executeCommand("workbench.view.scm");
+        await import_vscode28.commands.executeCommand("workbench.view.scm");
       } else if (action === "apply") {
-        await import_vscode26.commands.executeCommand("workbench.view.scm");
-        void import_vscode26.window.showInformationMessage(
+        await import_vscode28.commands.executeCommand("workbench.view.scm");
+        void import_vscode28.window.showInformationMessage(
           "Generation applied. Resolve conflicts and stage the intended changes in Source Control, then Validate and Finish Regeneration. Finish builds and creates the merge commit."
         );
       } else if (action === "import" || action === "analyze") {
         let message = "Capture imported. Next: Analyze Evidence, then Prepare Regeneration. Current source has not changed.";
-        if (captures && isRecord41(result) && Array.isArray(result.imports)) {
+        if (captures && isRecord45(result) && Array.isArray(result.imports)) {
           message = `${result.imports.length} captures imported. Next: Analyze Evidence, then Prepare Regeneration. Current source has not changed.`;
         }
         let button = "Analyze Evidence";
@@ -68089,9 +68263,9 @@ var SourceBuildCoordinator = class {
           command = "asm.source.prepare";
         }
         let loggedResult = result;
-        if (isRecord41(result) && Array.isArray(result.addedCode)) {
+        if (isRecord45(result) && Array.isArray(result.addedCode)) {
           const addedBytes = result.addedCode.reduce((total, range) => {
-            if (!isRecord41(range) || typeof range.start !== "number" || typeof range.end !== "number") {
+            if (!isRecord45(range) || typeof range.start !== "number" || typeof range.end !== "number") {
               return total;
             }
             return total + range.end - range.start;
@@ -68102,15 +68276,15 @@ var SourceBuildCoordinator = class {
           };
         }
         this.host.output.info(JSON.stringify(loggedResult, null, 2));
-        void import_vscode26.window.showInformationMessage(message, button).then((choice) => {
+        void import_vscode28.window.showInformationMessage(message, button).then((choice) => {
           if (choice === button) {
-            void import_vscode26.commands.executeCommand(command);
+            void import_vscode28.commands.executeCommand(command);
           }
           return void 0;
         });
       } else if (action === "catalog") {
         this.host.output.info(JSON.stringify(result, null, 2));
-        void import_vscode26.window.showInformationMessage(
+        void import_vscode28.window.showInformationMessage(
           "Capture catalog refreshed. Follow Next in Source Project to analyze or prepare regeneration. Review the catalog change with your checkpoint."
         );
       } else if (action === "abort") {
@@ -68128,7 +68302,7 @@ var SourceBuildCoordinator = class {
       const changedPrefix = "Source dependency changed during assembly: ";
       if (action === "build" && error instanceof Error && error.message.startsWith(changedPrefix)) {
         const file = error.message.slice(changedPrefix.length);
-        failure = this.host.changedBuildError([import_node_path31.default.relative(root, file)]);
+        failure = this.host.changedBuildError([import_node_path35.default.relative(root, file)]);
       }
       if (action === "build" || action === "finish") {
         this.host.publishDiagnostics(failure);
@@ -68173,9 +68347,9 @@ var SourceBuildCoordinator = class {
   }
   buildTask(root, folder) {
     const definition = { type: "uttori-source", action: "build", project: root };
-    const scope = folder ?? import_vscode26.workspace.getWorkspaceFolder(import_vscode26.Uri.file(root)) ?? import_vscode26.workspace.workspaceFolders?.[0];
-    const execution = new import_vscode26.CustomExecution(() => {
-      const write = new import_vscode26.EventEmitter(), close = new import_vscode26.EventEmitter();
+    const scope = folder ?? import_vscode28.workspace.getWorkspaceFolder(import_vscode28.Uri.file(root)) ?? import_vscode28.workspace.workspaceFolders?.[0];
+    const execution = new import_vscode28.CustomExecution(() => {
+      const write = new import_vscode28.EventEmitter(), close = new import_vscode28.EventEmitter();
       const abort = new AbortController();
       const terminal = {
         onDidWrite: write.event,
@@ -68203,7 +68377,7 @@ var SourceBuildCoordinator = class {
       };
       return Promise.resolve(terminal);
     });
-    const task = new import_vscode26.Task(
+    const task = new import_vscode28.Task(
       definition,
       scope ?? 2,
       "Build and Check",
@@ -68211,16 +68385,16 @@ var SourceBuildCoordinator = class {
       execution,
       []
     );
-    task.group = import_vscode26.TaskGroup.Build;
+    task.group = import_vscode28.TaskGroup.Build;
     return task;
   }
 };
 
 // packages/vscode-extension/src/source/code-actions.ts
-var import_node_path32 = __toESM(require("node:path"), 1);
-var import_vscode27 = require("vscode");
+var import_node_path36 = __toESM(require("node:path"), 1);
+var import_vscode29 = require("vscode");
 function registerSourceCodeActions(context) {
-  return import_vscode27.languages.registerCodeActionsProvider(
+  return import_vscode29.languages.registerCodeActionsProvider(
     { scheme: "file" },
     {
       provideCodeActions(document, _range, requested) {
@@ -68228,8 +68402,8 @@ function registerSourceCodeActions(context) {
         if (!project) {
           return [];
         }
-        const relative3 = import_node_path32.default.relative(project.root, document.uri.fsPath);
-        if (relative3 === ".." || relative3.startsWith(`..${import_node_path32.default.sep}`) || import_node_path32.default.isAbsolute(relative3)) {
+        const relative4 = import_node_path36.default.relative(project.root, document.uri.fsPath);
+        if (relative4 === ".." || relative4.startsWith(`..${import_node_path36.default.sep}`) || import_node_path36.default.isAbsolute(relative4)) {
           return [];
         }
         const diagnostics = requested.diagnostics.filter((item) => item.source === "Uttori source");
@@ -68238,10 +68412,10 @@ function registerSourceCodeActions(context) {
         }
         const actions = [];
         const append3 = (title, command, args = []) => {
-          const action = new import_vscode27.CodeAction(title, import_vscode27.CodeActionKind.QuickFix);
+          const action = new import_vscode29.CodeAction(title, import_vscode29.CodeActionKind.QuickFix);
           action.command = { title, command, arguments: args };
           action.diagnostics = diagnostics;
-          if (!import_vscode27.workspace.isTrusted && command !== "vscode.open") {
+          if (!import_vscode29.workspace.isTrusted && command !== "vscode.open") {
             action.disabled = {
               reason: "Trust this workspace before executing source operations."
             };
@@ -68267,291 +68441,29 @@ function registerSourceCodeActions(context) {
           "expansion"
         ].some((code) => codes.has(code))) {
           append3("Open layout and reference contracts", "vscode.open", [
-            import_vscode27.Uri.file(import_node_path32.default.join(project.root, project.layout))
+            import_vscode29.Uri.file(import_node_path36.default.join(project.root, project.layout))
           ]);
         }
         append3("Build and check source again", "asm.source.build");
         return actions;
       }
     },
-    { providedCodeActionKinds: [import_vscode27.CodeActionKind.QuickFix] }
+    { providedCodeActionKinds: [import_vscode29.CodeActionKind.QuickFix] }
   );
 }
 
-// packages/vscode-extension/src/source/process-client.ts
-var import_node_child_process6 = require("node:child_process");
-var SourceProcessClient = class {
-  constructor(file, log = () => {
-  }, limits = {}) {
-    this.file = file;
-    this.log = log;
-    this.#slots = new WorkerRequestSlots(limits.maxConcurrent ?? 2);
-    this.#timeoutMs = workerTimeout(limits.timeoutMs, 30 * 6e4);
-  }
-  file;
-  log;
-  #children = /* @__PURE__ */ new Set();
-  #slots;
-  #timeoutMs;
-  #disposed = false;
-  run(operation2, options) {
-    options.signal?.throwIfAborted();
-    if (this.#disposed) {
-      return Promise.reject(new Error("Source worker has been disposed."));
-    }
-    if (!Number.isSafeInteger(options.maxMemoryMiB) || options.maxMemoryMiB < 128) {
-      return Promise.reject(new Error("Source worker heap budget must be at least 128 MiB."));
-    }
-    let requestId;
-    try {
-      requestId = this.#slots.acquire();
-    } catch (error) {
-      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
-    }
-    return new Promise((resolve9, reject2) => {
-      const started = Date.now();
-      let lastUpdate = started;
-      let lastStage = "Waiting for worker startup.";
-      let label = `Source ${operation2.action}: ${operation2.directory}`;
-      if ("capture" in operation2 && operation2.capture) {
-        label += `; capture ${operation2.capture}`;
-      }
-      this.log(`${label}: started.`);
-      if ("captures" in operation2 && operation2.captures) {
-        for (const [index, capture] of operation2.captures.entries()) {
-          this.log(`Queued capture ${index + 1}/${operation2.captures.length}: ${capture}`);
-        }
-      } else if ("capture" in operation2 && operation2.capture) {
-        this.log(`Importing capture: ${operation2.capture}`);
-        lastStage = `Starting import of ${operation2.capture}.`;
-      }
-      let child;
-      try {
-        child = (0, import_node_child_process6.fork)(this.file, [], {
-          execArgv: [`--max-old-space-size=${options.maxMemoryMiB}`],
-          env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
-          serialization: "advanced",
-          stdio: ["ignore", "ignore", "pipe", "ipc"]
-        });
-      } catch (error) {
-        this.#slots.release(requestId);
-        reject2(error instanceof Error ? error : new Error(String(error)));
-        return;
-      }
-      this.#children.add(child);
-      let response;
-      let finished = false;
-      let stderr = "";
-      let cancellationTimer;
-      let deadline;
-      const report = (message) => {
-        const progress = `[${((Date.now() - started) / 1e3).toFixed(1)}s] ${message}`;
-        this.log(progress);
-        options.onProgress?.(progress);
-      };
-      const heartbeat = setInterval(() => {
-        if (finished || response || options.signal?.aborted || Date.now() - lastUpdate < 1e4) {
-          return;
-        }
-        report(
-          `Waiting for worker ${child.pid}; last progress update ${((Date.now() - lastUpdate) / 1e3).toFixed(0)}s ago. ${lastStage}`
-        );
-      }, 1e4);
-      heartbeat.unref();
-      const finish = (error, value) => {
-        if (finished) {
-          return;
-        }
-        finished = true;
-        this.#slots.release(requestId);
-        clearInterval(heartbeat);
-        clearTimeout(cancellationTimer);
-        clearTimeout(deadline);
-        options.signal?.removeEventListener("abort", cancel);
-        const seconds = ((Date.now() - started) / 1e3).toFixed(1);
-        if (error) {
-          this.log(`${label}: failed after ${seconds}s. Last stage: ${lastStage} ${error.message}`);
-          reject2(error);
-        } else {
-          this.log(`${label}: completed in ${seconds}s. Last stage: ${lastStage}`);
-          resolve9(value);
-        }
-      };
-      const cancel = () => {
-        if (finished || cancellationTimer) {
-          return;
-        }
-        clearInterval(heartbeat);
-        report(
-          `Cancelling ${label}; last stage: ${lastStage}. The next status check will reconcile native Git state.`
-        );
-        if (child.connected) {
-          child.send({ type: "cancel" }, () => {
-          });
-        }
-        cancellationTimer = setTimeout(() => child.kill("SIGTERM"), 1500);
-      };
-      deadline = setTimeout(() => {
-        report(
-          `Worker made no progress for ${this.#timeoutMs} ms; reconciling publication is required if termination interrupts the response.`
-        );
-        cancel();
-      }, this.#timeoutMs);
-      deadline.unref();
-      options.signal?.addEventListener("abort", cancel, { once: true });
-      child.stderr?.on("data", (bytes) => {
-        stderr = (stderr + bytes.toString()).slice(-8192);
-        this.log(bytes.toString());
-      });
-      child.on("message", (payload) => {
-        if (finished || response) {
-          return;
-        }
-        if (typeof payload !== "object" || payload === null || !("type" in payload) || typeof payload.type !== "string" || !["progress", "result", "error", "publish-check"].includes(payload.type)) {
-          child.kill();
-          finish(
-            new Error("Malformed source worker response; check Source status before retrying.")
-          );
-          return;
-        }
-        const message = {
-          type: payload.type,
-          message: "message" in payload ? payload.message : void 0,
-          value: "value" in payload ? payload.value : void 0,
-          paths: "paths" in payload ? payload.paths : void 0,
-          code: "code" in payload ? payload.code : void 0
-        };
-        if (message.type === "progress" && typeof message.message === "string") {
-          lastStage = message.message;
-          lastUpdate = Date.now();
-          deadline.refresh();
-          report(lastStage);
-        } else if (message.type === "result") {
-          clearTimeout(deadline);
-          if (!Object.hasOwn(payload, "value")) {
-            child.kill();
-            finish(
-              new Error("Source worker omitted its result; check Source status before retrying.")
-            );
-            return;
-          }
-          try {
-            response = {
-              value: options.readResult ? options.readResult(message.value) : message.value
-            };
-          } catch (error) {
-            response = { error: error instanceof Error ? error : new Error(String(error)) };
-          }
-        } else if (message.type === "error") {
-          clearTimeout(deadline);
-          response = {
-            error: Object.assign(
-              new Error(
-                typeof message.message === "string" ? message.message : "Source operation failed."
-              ),
-              {
-                code: typeof message.code === "string" && [
-                  "unsupported",
-                  "stale",
-                  "conflict",
-                  "cancelled",
-                  "committed-with-warning",
-                  "failed"
-                ].includes(message.code) ? message.code : "failed"
-              }
-            )
-          };
-        } else if (message.type === "publish-check") {
-          void Promise.resolve().then(async () => {
-            options.signal?.throwIfAborted();
-            if (!options.onBeforePublish || !Array.isArray(message.paths) || message.paths.length > 65536 || message.paths.some((item) => typeof item !== "string")) {
-              throw new Error("Invalid or uncoordinated asset publication check.");
-            }
-            let bytes = 0;
-            const paths = message.paths.map((item) => {
-              if (typeof item !== "string") {
-                throw new Error("Invalid asset publication path.");
-              }
-              bytes += Buffer.byteLength(item, "utf8");
-              if (bytes > 16 * 1024 * 1024) {
-                throw new Error("Asset publication metadata exceeds its byte budget.");
-              }
-              return item;
-            });
-            await options.onBeforePublish(paths);
-            options.signal?.throwIfAborted();
-            return;
-          }).then(
-            () => {
-              if (child.connected) {
-                child.send({ type: "publish-confirm" }, () => {
-                });
-              }
-              return;
-            },
-            (error) => {
-              if (child.connected) {
-                child.send(
-                  {
-                    type: "publish-confirm",
-                    error: error instanceof Error ? error.message : String(error)
-                  },
-                  () => {
-                  }
-                );
-              }
-            }
-          );
-        }
-      });
-      child.on("error", (error) => finish(error));
-      child.on("exit", (code, signal) => {
-        this.#children.delete(child);
-        if (code === 0 && response) {
-          if ("error" in response) {
-            finish(response.error);
-          } else {
-            finish(void 0, response.value);
-          }
-        } else {
-          finish(
-            new Error(
-              `Source operation exited (${signal ?? code}). Check Source status before retrying.${stderr ? `
-${stderr}` : ""}`
-            )
-          );
-        }
-      });
-      child.send({ type: "run", operation: operation2 }, (error) => {
-        if (error) {
-          child.kill();
-          finish(error);
-        }
-      });
-    });
-  }
-  dispose() {
-    this.#disposed = true;
-    this.#slots.dispose();
-    for (const child of this.#children) {
-      child.kill();
-    }
-    this.#children.clear();
-  }
-};
-
 // packages/vscode-extension/src/source/session.ts
-var import_vscode29 = require("vscode");
+var import_vscode31 = require("vscode");
 
 // packages/vscode-extension/src/source/git-files.ts
-var import_vscode28 = require("vscode");
+var import_vscode30 = require("vscode");
 var SourceGitFiles = class {
-  changes = new import_vscode28.EventEmitter();
+  changes = new import_vscode30.EventEmitter();
   onDidChangeFile = this.changes.event;
   roots = /* @__PURE__ */ new Set();
   uri(root, revision, file) {
     this.roots.add(root);
-    return import_vscode28.Uri.from({
+    return import_vscode30.Uri.from({
       scheme: "uttori-source",
       path: `/${file}`,
       query: new URLSearchParams({ root, revision: revision ?? "", file }).toString()
@@ -68561,7 +68473,7 @@ var SourceGitFiles = class {
     const values = new URLSearchParams(uri.query);
     const root = values.get("root"), revision = values.get("revision"), file = values.get("file");
     if (!this.roots.has(root)) {
-      throw import_vscode28.FileSystemError.NoPermissions("Select this source project before opening its history.");
+      throw import_vscode30.FileSystemError.NoPermissions("Select this source project before opening its history.");
     }
     assertSourcePath(file);
     if (!revision) {
@@ -68571,7 +68483,7 @@ var SourceGitFiles = class {
     return (await sourceGit(root, ["show", `${revision}:${file}`], { maxOutputBytes: 32 * 1024 * 1024 })).stdout;
   }
   async stat(uri) {
-    return { type: import_vscode28.FileType.File, ctime: 0, mtime: 0, size: (await this.readFile(uri)).length };
+    return { type: import_vscode30.FileType.File, ctime: 0, mtime: 0, size: (await this.readFile(uri)).length };
   }
   readDirectory() {
     return [];
@@ -68581,16 +68493,16 @@ var SourceGitFiles = class {
     } };
   }
   createDirectory() {
-    throw import_vscode28.FileSystemError.NoPermissions("Git history is immutable.");
+    throw import_vscode30.FileSystemError.NoPermissions("Git history is immutable.");
   }
   writeFile() {
-    throw import_vscode28.FileSystemError.NoPermissions("Git history is immutable.");
+    throw import_vscode30.FileSystemError.NoPermissions("Git history is immutable.");
   }
   delete() {
-    throw import_vscode28.FileSystemError.NoPermissions("Git history is immutable.");
+    throw import_vscode30.FileSystemError.NoPermissions("Git history is immutable.");
   }
   rename() {
-    throw import_vscode28.FileSystemError.NoPermissions("Git history is immutable.");
+    throw import_vscode30.FileSystemError.NoPermissions("Git history is immutable.");
   }
   dispose() {
     this.changes.dispose();
@@ -68599,14 +68511,14 @@ var SourceGitFiles = class {
 
 // packages/vscode-extension/src/source/session.ts
 var SourceProjectSession = class {
-  changed = new import_vscode29.EventEmitter();
-  built = new import_vscode29.EventEmitter();
-  researchChanged = new import_vscode29.EventEmitter();
-  savedInput = new import_vscode29.EventEmitter();
-  selected = new import_vscode29.EventEmitter();
+  changed = new import_vscode31.EventEmitter();
+  built = new import_vscode31.EventEmitter();
+  researchChanged = new import_vscode31.EventEmitter();
+  savedInput = new import_vscode31.EventEmitter();
+  selected = new import_vscode31.EventEmitter();
   worker;
   files = new SourceGitFiles();
-  diagnostics = import_vscode29.languages.createDiagnosticCollection("uttori-source");
+  diagnostics = import_vscode31.languages.createDiagnosticCollection("uttori-source");
   root;
   /** Advances for every selection request so delayed filesystem/worker replies cannot select an old project. */
   selectionRevision = 0;
@@ -68790,69 +68702,73 @@ var SourceController = class {
       registerSourceCodeActions(
         () => this.session.root && this.session.configuration ? { root: this.session.root, layout: this.session.configuration.layout } : void 0
       ),
-      import_vscode30.window.registerTreeDataProvider("uttori-asm.sourceProject", this),
-      import_vscode30.workspace.registerFileSystemProvider("uttori-source", this.session.files, {
+      import_vscode32.window.registerTreeDataProvider("uttori-asm.sourceProject", this),
+      import_vscode32.workspace.registerFileSystemProvider("uttori-source", this.session.files, {
         isReadonly: true,
         isCaseSensitive: true
       }),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand(
         "asm.source.select",
         (folder) => this.guard(() => this.select(typeof folder === "string" ? folder : folder?.fsPath))
       ),
       // F5 must select and build atomically: a rejected selection cannot launch another project.
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand(
         "asm.source.buildProject",
         (folder) => this.guard(async () => {
           await this.select(folder.fsPath);
           return this.perform("build");
         })
       ),
-      import_vscode30.commands.registerCommand("asm.source.init", () => this.guard(() => this.create())),
-      import_vscode30.commands.registerCommand("asm.source.initDiz", () => this.guard(() => this.create(true))),
-      import_vscode30.commands.registerCommand("asm.source.refresh", () => this.guard(() => this.refresh())),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand("asm.source.init", () => this.guard(() => this.create())),
+      import_vscode32.commands.registerCommand("asm.source.initDiz", () => this.guard(() => this.create(true))),
+      import_vscode32.commands.registerCommand(
+        "asm.source.migrate",
+        () => this.guard(() => this.builds.perform("prepare", void 0, void 0, void 0, "linked"))
+      ),
+      import_vscode32.commands.registerCommand("asm.source.refresh", () => this.guard(() => this.refresh())),
+      import_vscode32.commands.registerCommand(
         "asm.asset.export",
         (request) => this.guard(() => this.assetFile("export", request))
       ),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand(
         "asm.asset.review",
         (request) => this.guard(() => this.assetFile("review", request))
       ),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand(
         "asm.asset.apply",
         (request) => this.guard(() => this.assetFile("apply", request))
       ),
-      import_vscode30.commands.registerCommand("asm.asset.recover", () => this.guard(() => this.assetRecovery())),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand("asm.asset.recover", () => this.guard(() => this.assetRecovery())),
+      import_vscode32.commands.registerCommand(
         "asm.asset.convertToAseprite",
         (request) => this.guard(() => this.assetConvert("aseprite", request))
       ),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand(
         "asm.asset.convertToPng",
         (request) => this.guard(() => this.assetConvert("indexed-png", request))
       ),
-      import_vscode30.window.onDidChangeActiveTextEditor(() => this.scheduleAssetContext()),
-      import_vscode30.window.onDidChangeTextEditorSelection((event) => {
-        if (event.textEditor === import_vscode30.window.activeTextEditor) {
+      import_vscode32.window.onDidChangeActiveTextEditor(() => this.scheduleAssetContext()),
+      import_vscode32.window.onDidChangeTextEditorSelection((event) => {
+        if (event.textEditor === import_vscode32.window.activeTextEditor) {
           this.scheduleAssetContext();
         }
       }),
-      import_vscode30.workspace.onDidChangeTextDocument((event) => {
-        if (event.document.uri.scheme === "file" && (event.document === import_vscode30.window.activeTextEditor?.document || this.authoringFile(event.document.uri.fsPath))) {
+      import_vscode32.workspace.onDidChangeTextDocument((event) => {
+        if (event.document.uri.scheme === "file" && (event.document === import_vscode32.window.activeTextEditor?.document || this.authoringFile(event.document.uri.fsPath))) {
           this.scheduleAssetContext();
         }
       }),
-      import_vscode30.workspace.onDidSaveTextDocument((document) => {
-        if (document.uri.scheme === "file" && (document === import_vscode30.window.activeTextEditor?.document || this.authoringFile(document.uri.fsPath))) {
+      import_vscode32.workspace.onDidSaveTextDocument((document) => {
+        if (document.uri.scheme === "file" && (document === import_vscode32.window.activeTextEditor?.document || this.authoringFile(document.uri.fsPath))) {
           this.scheduleAssetContext();
         }
       }),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand(
         "asm.source.diff",
-        (left, right, title) => import_vscode30.commands.executeCommand("vscode.diff", left, right, title)
+        (left, right, title) => import_vscode32.commands.executeCommand("vscode.diff", left, right, title)
       ),
-      import_vscode30.commands.registerCommand("asm.source.research", () => this.openResearch()),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand("asm.source.research", () => this.openResearch()),
+      import_vscode32.commands.registerCommand(
         "asm.source.editResearch",
         (request) => this.guard(
           () => editSourceResearch(
@@ -68867,7 +68783,7 @@ var SourceController = class {
           )
         )
       ),
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand(
         "asm.source.editAnalysis",
         (change) => this.guard(
           () => editAnalysisResearch(
@@ -68882,7 +68798,7 @@ var SourceController = class {
           )
         )
       ),
-      import_vscode30.workspace.onDidChangeTextDocument((event) => {
+      import_vscode32.workspace.onDidChangeTextDocument((event) => {
         if (event.document.uri.scheme === "file" && event.contentChanges.length > 0 && this.authoringFile(event.document.uri.fsPath)) {
           this.session.epoch++;
           this.session.epochInput = event.document.uri.fsPath;
@@ -68904,14 +68820,14 @@ var SourceController = class {
           this.session.changed.fire(void 0);
         }
       }),
-      import_vscode30.window.tabGroups.onDidChangeTabs((event) => {
+      import_vscode32.window.tabGroups.onDidChangeTabs((event) => {
         const known = new Set(
           [...binaryDrafts.documents].map((document) => document.uri.toString())
         );
         const dirtyTab = [...event.changed, ...event.closed].find(
-          (tab) => tab.isDirty && tab.input instanceof import_vscode30.TabInputCustom && tab.input.uri.scheme === "file" && !known.has(tab.input.uri.toString()) && this.authoringFile(tab.input.uri.fsPath)
+          (tab) => tab.isDirty && tab.input instanceof import_vscode32.TabInputCustom && tab.input.uri.scheme === "file" && !known.has(tab.input.uri.toString()) && this.authoringFile(tab.input.uri.fsPath)
         );
-        if (dirtyTab && dirtyTab.input instanceof import_vscode30.TabInputCustom) {
+        if (dirtyTab && dirtyTab.input instanceof import_vscode32.TabInputCustom) {
           this.session.epoch++;
           this.session.epochInput = dirtyTab.input.uri.fsPath;
           this.session.epochEvent = "opaque";
@@ -68920,7 +68836,7 @@ var SourceController = class {
           this.session.changed.fire(void 0);
         }
       }),
-      import_vscode30.tasks.registerTaskProvider("uttori-source", {
+      import_vscode32.tasks.registerTaskProvider("uttori-source", {
         provideTasks: () => this.session.root ? [this.buildTask(this.session.root)] : [],
         resolveTask: (task) => {
           const root = task.definition.project;
@@ -68949,18 +68865,18 @@ var SourceController = class {
       "expand"
     ]) {
       this.#disposables.push(
-        import_vscode30.commands.registerCommand(
+        import_vscode32.commands.registerCommand(
           `asm.source.${action === "import" ? "importCapture" : action}`,
           (capture) => this.guard(() => this.perform(action, void 0, void 0, capture))
         )
       );
     }
     this.#disposables.push(
-      import_vscode30.commands.registerCommand(
+      import_vscode32.commands.registerCommand(
         "asm.source.graphics",
         (captureSha256) => this.guard(async () => {
           const root = this.session.root;
-          if (!root || !import_vscode30.workspace.isTrusted) {
+          if (!root || !import_vscode32.workspace.isTrusted) {
             throw new Error("Select a trusted NES source project first.");
           }
           const selection = await this.session.worker.run(
@@ -68968,7 +68884,7 @@ var SourceController = class {
             { maxMemoryMiB: 512, readResult: readGraphicsSelection }
           );
           if (!selection.captures.length) {
-            await import_vscode30.window.showInformationMessage(
+            await import_vscode32.window.showInformationMessage(
               "Import NES graphics captures to inspect their CPU evidence links."
             );
             return;
@@ -68986,7 +68902,7 @@ var SourceController = class {
               throw new Error("Select an imported graphics capture identity.");
             }
           } else {
-            selected = await import_vscode30.window.showQuickPick(choices, {
+            selected = await import_vscode32.window.showQuickPick(choices, {
               title: "NES Graphics Evidence",
               matchOnDetail: true
             });
@@ -69005,8 +68921,8 @@ var SourceController = class {
             },
             { maxMemoryMiB: 512 }
           );
-          await import_vscode30.window.showTextDocument(
-            await import_vscode30.workspace.openTextDocument({
+          await import_vscode32.window.showTextDocument(
+            await import_vscode32.workspace.openTextDocument({
               language: "json",
               content: JSON.stringify(report, null, 2) + "\n"
             })
@@ -69037,31 +68953,22 @@ var SourceController = class {
   }
   /** The selected build contract also identifies Watch when no source editor is open. */
   get buildUri() {
-    return this.session.root && this.session.configuration ? import_vscode30.Uri.file(import_node_path33.default.join(this.session.root, this.session.configuration.buildConfig)).toString() : void 0;
+    return this.session.root && this.session.configuration ? import_vscode32.Uri.file(import_node_path37.default.join(this.session.root, this.session.configuration.buildConfig)).toString() : void 0;
   }
-  /** Route an evidence action only after proving which worktree owns that evidence store. */
-  async editEvidence(action, target) {
-    const handled = await this.guard(async () => {
-      const root = target ? await findEvidenceSourceRoot(target.projectDirectory, this.session.root) : this.session.root;
+  /** Command-palette research edits always use the explicitly selected source project. */
+  async editEvidence(action) {
+    await this.guard(async () => {
+      const root = this.session.root;
       if (!root) {
-        return false;
-      }
-      if (root !== this.session.root) {
-        await this.select(root);
+        return;
       }
       const context = () => this.session.root === root ? { root, buffers: this.buffers() } : void 0;
       if (action === "symbols") {
         await editSourceResearch(this.session.worker, context);
       } else {
-        await editAnalysisResearch(this.session.worker, context, void 0, {
-          action,
-          ids: action === "targets" ? target?.analysisIds ?? [] : target?.annotationIds ?? [],
-          range: target && action !== "targets" ? { start: target.start, end: target.end } : void 0
-        });
+        await editAnalysisResearch(this.session.worker, context, void 0, { action });
       }
-      return true;
     });
-    return handled ?? true;
   }
   getTreeItem(row) {
     return row;
@@ -69077,7 +68984,7 @@ var SourceController = class {
       ];
     }
     const source = new SourceRow(
-      `Source \xB7 ${this.session.branch || import_node_path33.default.basename(this.session.root)}`,
+      `Source \xB7 ${this.session.branch || import_node_path37.default.basename(this.session.root)}`,
       [],
       "workbench.view.scm"
     );
@@ -69085,7 +68992,7 @@ var SourceController = class {
     if (this.session.status) {
       source.description = this.session.status.dirty ? "uncommitted changes" : "clean";
     }
-    source.iconPath = new import_vscode30.ThemeIcon("git-branch");
+    source.iconPath = new import_vscode32.ThemeIcon("git-branch");
     const unsaved = this.buffers().length > 0 || this.binaryBuffers().length > 0 || this.opaqueBinaryBuffers().length > 0;
     const workflow = sourceWorkflow({
       ...this.session.status,
@@ -69115,7 +69022,7 @@ var SourceController = class {
         `${reviewLabel} \xB7 ${this.session.incoming.length} files`,
         this.session.incoming
       );
-      incoming.collapsibleState = previewed ? import_vscode30.TreeItemCollapsibleState.Expanded : import_vscode30.TreeItemCollapsibleState.Collapsed;
+      incoming.collapsibleState = previewed ? import_vscode32.TreeItemCollapsibleState.Expanded : import_vscode32.TreeItemCollapsibleState.Collapsed;
       incoming.tooltip = "Click a file to review its diff. Preview leaves working files unchanged.";
       steps.unshift(incoming);
     }
@@ -69130,18 +69037,18 @@ var SourceController = class {
     const captureRows = [];
     if (capturePhase === "idle") {
       const start = new SourceRow("Start Capture", [], "asm.trace.start");
-      start.iconPath = new import_vscode30.ThemeIcon("record");
+      start.iconPath = new import_vscode32.ThemeIcon("record");
       start.tooltip = "Launch an ares debug session first. Choose a capture file, then Continue (F5) to record execution.";
       captureRows.push(start);
     } else if (capturePhase === "recording") {
       const stop = new SourceRow("Stop Capture", [], "asm.trace.stop");
-      stop.iconPath = new import_vscode30.ThemeIcon("debug-stop");
+      stop.iconPath = new import_vscode32.ThemeIcon("debug-stop");
       const stopImport = new SourceRow(
         "Stop Capture and Import Evidence",
         [],
         "asm.trace.stopAnalyze"
       );
-      stopImport.iconPath = new import_vscode30.ThemeIcon("database");
+      stopImport.iconPath = new import_vscode32.ThemeIcon("database");
       captureRows.push(stop, stopImport);
     }
     captureRows.push(new SourceRow("Import Captures", [], "asm.source.importCapture"));
@@ -69173,13 +69080,13 @@ var SourceController = class {
   }
   /** Create in a worker and select only a completely verified new repository. */
   async create(importDiz = false) {
-    if (!import_vscode30.workspace.isTrusted) {
+    if (!import_vscode32.workspace.isTrusted) {
       throw new Error("Trust this workspace before creating a source project.");
     }
     if (this.session.busy) {
       throw new Error("Wait for the current source operation before creating a project.");
     }
-    const rom = (await import_vscode30.window.showOpenDialog({
+    const rom = (await import_vscode32.window.showOpenDialog({
       canSelectMany: false,
       title: "Original SNES or NES ROM",
       filters: { "Cartridge ROM": ["sfc", "smc", "nes"] }
@@ -69189,7 +69096,7 @@ var SourceController = class {
     }
     let dizRawFile;
     if (importDiz) {
-      dizRawFile = (await import_vscode30.window.showOpenDialog({
+      dizRawFile = (await import_vscode32.window.showOpenDialog({
         canSelectMany: false,
         title: "DiztinGUIsh research",
         filters: { "Uncompressed DiztinGUIsh XML": ["dizraw"] }
@@ -69198,18 +69105,18 @@ var SourceController = class {
         return;
       }
     }
-    const destination = await import_vscode30.window.showSaveDialog({
+    const destination = await import_vscode32.window.showSaveDialog({
       title: "New Git source project folder",
       saveLabel: "Create Project",
-      defaultUri: import_vscode30.Uri.file(
-        import_node_path33.default.join(import_node_path33.default.dirname(rom.fsPath), `${import_node_path33.default.parse(rom.fsPath).name}-source`)
+      defaultUri: import_vscode32.Uri.file(
+        import_node_path37.default.join(import_node_path37.default.dirname(rom.fsPath), `${import_node_path37.default.parse(rom.fsPath).name}-source`)
       )
     });
     if (!destination) {
       return;
     }
-    const nes = import_node_path33.default.extname(rom.fsPath).toLowerCase() === ".nes";
-    const mapper = nes ? "Detect automatically" : await import_vscode30.window.showQuickPick(["Detect automatically", ...SNES_MAPPERS], {
+    const nes = import_node_path37.default.extname(rom.fsPath).toLowerCase() === ".nes";
+    const mapper = nes ? "Detect automatically" : await import_vscode32.window.showQuickPick(["Detect automatically", ...SNES_MAPPERS], {
       title: "SNES cartridge mapping"
     });
     if (!mapper || mapper !== "Detect automatically" && !isSnesMapper2(mapper)) {
@@ -69218,9 +69125,9 @@ var SourceController = class {
     this.session.busy = "init";
     this.session.changed.fire(void 0);
     try {
-      await import_vscode30.window.withProgress(
+      await import_vscode32.window.withProgress(
         {
-          location: import_vscode30.ProgressLocation.Notification,
+          location: import_vscode32.ProgressLocation.Notification,
           title: "Create Git Source Project",
           cancellable: true
         },
@@ -69239,7 +69146,7 @@ var SourceController = class {
               {
                 signal: abort.signal,
                 onProgress: (message) => reporter.report({ message }),
-                maxMemoryMiB: import_vscode30.workspace.getConfiguration("asm").get("analysis.maxMemoryMiB", 4096)
+                maxMemoryMiB: import_vscode32.workspace.getConfiguration("asm").get("analysis.maxMemoryMiB", 4096)
               }
             );
           } finally {
@@ -69252,9 +69159,9 @@ var SourceController = class {
       this.session.changed.fire(void 0);
     }
     await this.select(destination.fsPath);
-    await import_vscode30.commands.executeCommand(
+    await import_vscode32.commands.executeCommand(
       "revealInExplorer",
-      import_vscode30.Uri.file(import_node_path33.default.join(destination.fsPath, "source/main.asm"))
+      import_vscode32.Uri.file(import_node_path37.default.join(destination.fsPath, "source/main.asm"))
     );
   }
   /** Selected context persists across active-editor changes; multi-root workspaces select explicitly. */
@@ -69268,16 +69175,16 @@ var SourceController = class {
       const options = [
         ...new Set(
           (await Promise.all(
-            (import_vscode30.workspace.workspaceFolders ?? []).map((folder) => findSourceRoot(folder.uri.fsPath))
+            (import_vscode32.workspace.workspaceFolders ?? []).map((folder) => findSourceRoot(folder.uri.fsPath))
           )).filter((value) => !!value)
         )
       ];
       const choices = options.map((value) => ({
-        label: import_node_path33.default.basename(value),
+        label: import_node_path37.default.basename(value),
         description: value,
         root: value
       }));
-      const choice = await import_vscode30.window.showQuickPick(
+      const choice = await import_vscode32.window.showQuickPick(
         [...choices, { label: "Choose Project Folder\u2026", description: "", root: "" }],
         { title: "Select Git Source Project" }
       );
@@ -69286,7 +69193,7 @@ var SourceController = class {
       }
       selected = choice.root;
       if (!selected) {
-        selected = (await import_vscode30.window.showOpenDialog({
+        selected = (await import_vscode32.window.showOpenDialog({
           canSelectFiles: false,
           canSelectFolders: true,
           canSelectMany: false,
@@ -69302,7 +69209,7 @@ var SourceController = class {
       throw new Error("This folder has no .uttori/project.json source project.");
     }
     const configuration = parseSourceProject(
-      JSON.parse(await import_promises20.default.readFile(import_node_path33.default.join(resolved, ".uttori/project.json"), "utf8"))
+      JSON.parse(await import_promises21.default.readFile(import_node_path37.default.join(resolved, ".uttori/project.json"), "utf8"))
     );
     if (selectionRevision !== this.session.selectionRevision) {
       return;
@@ -69322,18 +69229,18 @@ var SourceController = class {
     this.session.build = void 0;
     this.session.buildInputs = [];
     this.session.watcher?.dispose();
-    const watcher = import_vscode30.workspace.createFileSystemWatcher(new import_vscode30.RelativePattern(resolved, "**/*"));
+    const watcher = import_vscode32.workspace.createFileSystemWatcher(new import_vscode32.RelativePattern(resolved, "**/*"));
     const changed2 = (uri) => {
       if (uri.scheme !== "file") {
         return;
       }
-      const relative3 = import_node_path33.default.relative(resolved, uri.fsPath).split(import_node_path33.default.sep).join("/");
-      const gitEvent = relative3 === ".git" || relative3.startsWith(".git/");
+      const relative4 = import_node_path37.default.relative(resolved, uri.fsPath).split(import_node_path37.default.sep).join("/");
+      const gitEvent = relative4 === ".git" || relative4.startsWith(".git/");
       const authoring = this.authoringFile(uri.fsPath);
       if (!authoring && !gitEvent) {
         return;
       }
-      const openDocument = import_vscode30.workspace.textDocuments.some(
+      const openDocument = import_vscode32.workspace.textDocuments.some(
         (document) => document.uri.scheme === "file" && document.uri.fsPath === uri.fsPath && !document.isClosed
       );
       const openBinary = [...this.binaryDrafts.documents].some(
@@ -69344,7 +69251,7 @@ var SourceController = class {
         this.session.epochInput = uri.fsPath;
         this.session.epochEvent = "saved";
         const build = this.session.build;
-        const inputs = this.session.buildInputs.filter((input) => input.path === relative3);
+        const inputs = this.session.buildInputs.filter((input) => input.path === relative4);
         if (!build) {
           this.session.buildStale = true;
         } else if (inputs.length) {
@@ -69359,7 +69266,7 @@ var SourceController = class {
             (error) => {
               if (this.session.build === build) {
                 this.session.buildStale = true;
-                this.output.warn(`Unable to check saved build input ${relative3}: ${String(error)}`);
+                this.output.warn(`Unable to check saved build input ${relative4}: ${String(error)}`);
                 this.session.changed.fire(void 0);
               }
               return void 0;
@@ -69376,8 +69283,8 @@ var SourceController = class {
         }
       }
       const researchRoots = this.session.configuration?.researchRoots ?? [];
-      if (relative3.startsWith(".uttori/") || relative3.startsWith(".git/") || researchRoots.some(
-        (researchRoot) => relative3 === researchRoot || relative3.startsWith(`${researchRoot}/`)
+      if (relative4.startsWith(".uttori/") || relative4.startsWith(".git/") || researchRoots.some(
+        (researchRoot) => relative4 === researchRoot || relative4.startsWith(`${researchRoot}/`)
       )) {
         this.session.researchChanged.fire();
       }
@@ -69411,12 +69318,12 @@ var SourceController = class {
     return this.builds.build();
   }
   async refresh() {
-    if (!this.session.root || this.session.busy || !import_vscode30.workspace.isTrusted) {
+    if (!this.session.root || this.session.busy || !import_vscode32.workspace.isTrusted) {
       return;
     }
     const root = this.session.root;
     const configuration = parseSourceProject(
-      JSON.parse(await import_promises20.default.readFile(import_node_path33.default.join(root, ".uttori/project.json"), "utf8"))
+      JSON.parse(await import_promises21.default.readFile(import_node_path37.default.join(root, ".uttori/project.json"), "utf8"))
     );
     const status = await this.session.worker.run(
       { directory: root, action: "status", candidate: this.session.candidate },
@@ -69459,7 +69366,7 @@ var SourceController = class {
   assetEditorVersions() {
     const binary = [...this.binaryDrafts.documents], known = new Set(binary.map((document) => document.uri.toString()));
     return [
-      ...import_vscode30.workspace.textDocuments.filter((document) => document.uri.scheme === "file" && !document.isClosed).map((document) => ({
+      ...import_vscode32.workspace.textDocuments.filter((document) => document.uri.scheme === "file" && !document.isClosed).map((document) => ({
         path: document.uri.fsPath,
         version: document.version,
         dirty: document.isDirty,
@@ -69471,9 +69378,9 @@ var SourceController = class {
         dirty: document.dirty,
         opaque: false
       })),
-      ...import_vscode30.window.tabGroups.all.flatMap(
-        (group2) => group2.tabs.flatMap((tab) => {
-          if (!(tab.input instanceof import_vscode30.TabInputCustom) || tab.input.uri.scheme !== "file" || known.has(tab.input.uri.toString())) {
+      ...import_vscode32.window.tabGroups.all.flatMap(
+        (group) => group.tabs.flatMap((tab) => {
+          if (!(tab.input instanceof import_vscode32.TabInputCustom) || tab.input.uri.scheme !== "file" || known.has(tab.input.uri.toString())) {
             return [];
           }
           return [{ path: tab.input.uri.fsPath, version: 0, dirty: tab.isDirty, opaque: true }];
@@ -69506,9 +69413,9 @@ var SourceController = class {
     const known = new Set(
       [...this.binaryDrafts.documents].map((document) => document.uri.toString())
     );
-    return import_vscode30.window.tabGroups.all.flatMap(
-      (group2) => group2.tabs.flatMap((tab) => {
-        if (!tab.isDirty || !(tab.input instanceof import_vscode30.TabInputCustom) || !this.authoringFile(tab.input.uri.fsPath) || tab.input.viewType === "uttori.indexedPng" && known.has(tab.input.uri.toString())) {
+    return import_vscode32.window.tabGroups.all.flatMap(
+      (group) => group.tabs.flatMap((tab) => {
+        if (!tab.isDirty || !(tab.input instanceof import_vscode32.TabInputCustom) || !this.authoringFile(tab.input.uri.fsPath) || tab.input.viewType === "uttori.indexedPng" && known.has(tab.input.uri.toString())) {
           return [];
         }
         return [tab.input.uri.fsPath];
@@ -69522,19 +69429,19 @@ var SourceController = class {
       ...this.session.configuration?.researchRoots ?? [],
       ".uttori"
     ];
-    return import_vscode30.workspace.textDocuments.filter(
+    return import_vscode32.workspace.textDocuments.filter(
       (document) => document.isDirty && document.uri.scheme === "file" && this.contains(document.uri.fsPath)
     ).flatMap((document) => {
-      const relative3 = import_node_path33.default.relative(this.session.root, document.uri.fsPath).split(import_node_path33.default.sep).join("/");
+      const relative4 = import_node_path37.default.relative(this.session.root, document.uri.fsPath).split(import_node_path37.default.sep).join("/");
       if (!this.authoringFile(document.uri.fsPath)) {
         return [];
       }
-      if (!roots.some((root) => relative3 === root || relative3.startsWith(`${root}/`))) {
+      if (!roots.some((root) => relative4 === root || relative4.startsWith(`${root}/`))) {
         return [];
       }
       return [
         {
-          path: relative3,
+          path: relative4,
           bytes: Buffer.from(document.getText()),
           version: document.version,
           uri: document.uri
@@ -69561,12 +69468,12 @@ var SourceController = class {
     const diagnostics = /* @__PURE__ */ new Map();
     for (const line of message.split("\n").slice(0, 30)) {
       const match = /^(.*):(\d+): ([\w-]+): (.*)$/.exec(line);
-      const file = match?.[1] ?? import_node_path33.default.join(this.session.root, this.session.configuration.buildConfig);
+      const file = match?.[1] ?? import_node_path37.default.join(this.session.root, this.session.configuration.buildConfig);
       const row = Math.max(0, Number(match?.[2] ?? 1) - 1);
-      const diagnostic = new import_vscode30.Diagnostic(
-        new import_vscode30.Range(row, 0, row, 1),
+      const diagnostic = new import_vscode32.Diagnostic(
+        new import_vscode32.Range(row, 0, row, 1),
         match?.[4] ?? line,
-        import_vscode30.DiagnosticSeverity.Error
+        import_vscode32.DiagnosticSeverity.Error
       );
       diagnostic.source = "Uttori source";
       diagnostic.code = match?.[3];
@@ -69576,31 +69483,31 @@ var SourceController = class {
     }
     this.session.diagnostics.clear();
     this.session.diagnostics.set(
-      [...diagnostics].map(([file, values]) => [import_vscode30.Uri.file(file), values])
+      [...diagnostics].map(([file, values]) => [import_vscode32.Uri.file(file), values])
     );
   }
   contains(file) {
     if (!this.session.root) {
       return false;
     }
-    const relative3 = import_node_path33.default.relative(this.session.root, file);
-    return relative3 === "" || !relative3.startsWith(`..${import_node_path33.default.sep}`) && relative3 !== ".." && !import_node_path33.default.isAbsolute(relative3);
+    const relative4 = import_node_path37.default.relative(this.session.root, file);
+    return relative4 === "" || !relative4.startsWith(`..${import_node_path37.default.sep}`) && relative4 !== ".." && !import_node_path37.default.isAbsolute(relative4);
   }
   /** Ignore local evidence, verification reports and caches even when they share the repository root. */
   authoringFile(file) {
     if (!this.session.root || !this.session.configuration || !this.contains(file)) {
       return false;
     }
-    const relative3 = import_node_path33.default.relative(this.session.root, file).split(import_node_path33.default.sep).join("/");
+    const relative4 = import_node_path37.default.relative(this.session.root, file).split(import_node_path37.default.sep).join("/");
     if (
       // Finder metadata may change when browsing assets; it never contributes build bytes.
-      import_node_path33.default.basename(relative3) === ".DS_Store" || // These conventional subdirectories hold analysis/capture evidence or golden outputs,
+      import_node_path37.default.basename(relative4) === ".DS_Store" || // These conventional subdirectories hold analysis/capture evidence or golden outputs,
       // not editable source. Consumed files are still checked by the build receipt.
       this.session.configuration.sourceRoots.some(
         (root) => ["analysis", "build", "captures"].some(
-          (directory) => relative3 === `${root}/${directory}` || relative3.startsWith(`${root}/${directory}/`)
+          (directory) => relative4 === `${root}/${directory}` || relative4.startsWith(`${root}/${directory}/`)
         )
-      ) || relative3.includes("analysis.sqlite") || relative3.split("/").some((part) => [".uttori-local", ".uttori-asm", "node_modules"].includes(part))
+      ) || relative4.includes("analysis.sqlite") || relative4.split("/").some((part) => [".uttori-local", ".uttori-asm", "node_modules"].includes(part))
     ) {
       return false;
     }
@@ -69609,15 +69516,15 @@ var SourceController = class {
       ...this.session.configuration.researchRoots,
       ".uttori"
     ];
-    return roots.some((root) => relative3 === root || relative3.startsWith(`${root}/`));
+    return roots.some((root) => relative4 === root || relative4.startsWith(`${root}/`));
   }
   async openResearch() {
     if (!this.session.root || !this.session.configuration) {
       return;
     }
-    await import_vscode30.commands.executeCommand(
+    await import_vscode32.commands.executeCommand(
       "revealInExplorer",
-      import_vscode30.Uri.file(import_node_path33.default.join(this.session.root, this.session.configuration.researchRoots[0]))
+      import_vscode32.Uri.file(import_node_path37.default.join(this.session.root, this.session.configuration.researchRoots[0]))
     );
   }
   async restore() {
@@ -69630,7 +69537,7 @@ var SourceController = class {
     const roots = [
       ...new Set(
         (await Promise.all(
-          (import_vscode30.workspace.workspaceFolders ?? []).map((folder) => findSourceRoot(folder.uri.fsPath))
+          (import_vscode32.workspace.workspaceFolders ?? []).map((folder) => findSourceRoot(folder.uri.fsPath))
         )).filter((value) => !!value)
       )
     ];
@@ -69659,13 +69566,13 @@ var SourceController = class {
       if (buildChanged) {
         buttons.unshift("Save All and Rebuild");
       }
-      void import_vscode30.window.showErrorMessage(`Source: ${message}`, ...buttons).then(async (choice) => {
+      void import_vscode32.window.showErrorMessage(`Source: ${message}`, ...buttons).then(async (choice) => {
         if (choice === "Show Analysis Output") {
           this.output.show(true);
         }
         if (choice === "Save All and Rebuild") {
           await this.guard(async () => {
-            await import_vscode30.commands.executeCommand("workbench.action.files.saveAll");
+            await import_vscode32.commands.executeCommand("workbench.action.files.saveAll");
             return this.perform("build");
           });
         }
@@ -69688,11 +69595,11 @@ var SourceController = class {
 };
 
 // packages/vscode-extension/src/extension.ts
-function isRecord42(value) {
+function isRecord46(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isBuildResult(value) {
-  if (!isRecord42(value) || typeof value.ok !== "boolean") {
+  if (!isRecord46(value) || typeof value.ok !== "boolean") {
     return false;
   }
   const strings3 = [
@@ -69710,14 +69617,15 @@ function isBuildResult(value) {
 }
 var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var languageClients = /* @__PURE__ */ new Map();
-function languageClientFor(uri = import_vscode31.window.activeTextEditor?.document.uri) {
-  const folder = uri ? import_vscode31.workspace.getWorkspaceFolder(uri) : import_vscode31.workspace.workspaceFolders?.[0];
+function languageClientFor(uri = import_vscode33.window.activeTextEditor?.document.uri) {
+  const folder = uri ? import_vscode33.workspace.getWorkspaceFolder(uri) : import_vscode33.workspace.workspaceFolders?.[0];
   return languageClients.get(folder?.uri.toString() ?? "");
 }
 var editorInformationController;
 var outputChannel;
 var extensionContext;
 var sourceController;
+var linkedBuildController;
 var watchEpoch = 0;
 var watchBuildRunning = false;
 var watchEnabled = false;
@@ -69731,9 +69639,10 @@ var saveListener;
 var watchTimer;
 var statusItem;
 function serverInitializationOptions(resource) {
-  const config = import_vscode31.workspace.getConfiguration("asm", resource ?? null);
+  const config = import_vscode33.workspace.getConfiguration("asm", resource ?? null);
   return {
     configFile: config.get("configFile", ""),
+    linkProject: config.get("linkProject", ""),
     plugins: config.get("plugins", []),
     target: config.get("target", ""),
     entryPoints: config.get("entryPoints", []),
@@ -69741,12 +69650,12 @@ function serverInitializationOptions(resource) {
     architecture: config.get("architecture", ""),
     buildOutput: config.get("buildOutput", ""),
     baseImage: config.get("baseImage", ""),
-    workspaceTrusted: import_vscode31.workspace.isTrusted
+    workspaceTrusted: import_vscode33.workspace.isTrusted
   };
 }
 var analysisConfigurationIdentity = () => JSON.stringify(
-  (import_vscode31.workspace.workspaceFolders ?? []).map(({ uri }) => {
-    const config = import_vscode31.workspace.getConfiguration("asm", uri);
+  (import_vscode33.workspace.workspaceFolders ?? []).map(({ uri }) => {
+    const config = import_vscode33.workspace.getConfiguration("asm", uri);
     return Object.assign({}, config, {
       editorInfo: void 0,
       analysis: Object.assign({}, config.get("analysis", {}), {
@@ -69762,16 +69671,16 @@ function activate(context) {
   const binaryDrafts = new BinaryDrafts();
   context.subscriptions.push(binaryDrafts);
   registerPngEditor(context, binaryDrafts);
-  const analysisOutputChannel = import_vscode31.window.createOutputChannel("Uttori Analysis", { log: true });
+  const analysisOutputChannel = import_vscode33.window.createOutputChannel("Uttori Analysis", { log: true });
   context.subscriptions.push(analysisOutputChannel);
   analysisOutputChannel.info("Git source operations and analysis diagnostics are ready.");
   const worker = initializeAnalysisWorker(context.extensionPath, {
     log: (level, message) => analysisOutputChannel[level](message),
     sourceRoot: () => sourceController?.root,
-    maxMemoryMiB: (directory) => import_vscode31.workspace.getConfiguration("asm", import_vscode31.Uri.file(directory)).get("analysis.maxMemoryMiB", 4096)
+    maxMemoryMiB: (directory) => import_vscode33.workspace.getConfiguration("asm", import_vscode33.Uri.file(directory)).get("analysis.maxMemoryMiB", 4096)
   });
   context.subscriptions.push(worker);
-  const serverModule = context.asAbsolutePath(path45.join("server", "server.mjs"));
+  const serverModule = context.asAbsolutePath(path50.join("server", "server.mjs"));
   const assetPreviewController = new AssetPreviewController(languageClientFor);
   context.subscriptions.push(assetPreviewController);
   const serverOptions = {
@@ -69788,12 +69697,14 @@ function activate(context) {
       options: { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" } }
     }
   };
-  outputChannel = import_vscode31.window.createOutputChannel("Uttori Assembly Language Server", {
+  outputChannel = import_vscode33.window.createOutputChannel("Uttori Assembly Language Server", {
     log: true
   });
   sourceController = new SourceController(context, analysisOutputChannel, binaryDrafts);
+  linkedBuildController = new LinkedBuildController(context, analysisOutputChannel, binaryDrafts);
   context.subscriptions.push(
     sourceController,
+    linkedBuildController,
     initializeAnalysisProjectDiscovery(() => sourceController?.root)
   );
   const clientOptions = {
@@ -69816,7 +69727,7 @@ function activate(context) {
         if (!information && !assetPreview) {
           return instruction2;
         }
-        return new import_vscode31.Hover(
+        return new import_vscode33.Hover(
           [
             ...instruction2?.contents ?? [],
             ...information?.contents ?? [],
@@ -69830,7 +69741,7 @@ function activate(context) {
     outputChannel,
     traceOutputChannel: outputChannel
   };
-  statusItem = import_vscode31.window.createStatusBarItem(import_vscode31.StatusBarAlignment.Left, 0);
+  statusItem = import_vscode33.window.createStatusBarItem(import_vscode33.StatusBarAlignment.Left, 0);
   statusItem.command = "asm.toggleWatch";
   updateStatusItem();
   statusItem.show();
@@ -69845,7 +69756,19 @@ function activate(context) {
     indexProvider.refresh();
   };
   const outlineProvider = new ProjectOutlineProvider(() => languageClientFor());
-  const coverageProvider = new AnalysisCoverageProvider();
+  const coverageProvider = new AnalysisCoverageProvider((root, inputSha256) => {
+    const controller = sourceController;
+    if (!controller || controller.root !== root) {
+      return void 0;
+    }
+    if (controller.buffers().length || controller.binaryBuffers().length || controller.opaqueBinaryBuffers().length) {
+      return true;
+    }
+    if (controller.session.build?.inputSha256 !== inputSha256) {
+      return void 0;
+    }
+    return controller.session.buildStale;
+  });
   const sourcesProvider = new AnalysisSourcesProvider();
   const analysisAnnotationController = new AnalysisAnnotationController(
     void 0,
@@ -69853,10 +69776,17 @@ function activate(context) {
   );
   editorInformationController = analysisAnnotationController;
   context.subscriptions.push(
-    sourceController.onDidBuild(
-      ({ root, build }) => analysisAnnotationController.buildCompleted(build.debugMapFile, root)
-    ),
+    sourceController.onDidBuild(({ root, build }) => {
+      analysisAnnotationController.buildCompleted(build.debugMapFile, root);
+      coverageProvider.refresh();
+    }),
+    sourceController.onDidChangeTreeData(() => coverageProvider.refresh()),
     sourceController.onDidChangeSavedInput(scheduleWatchBuild),
+    linkedBuildController.onDidChangeInput(() => {
+      if (!sourceController?.root) {
+        scheduleWatchBuild();
+      }
+    }),
     sourceController.onDidSelectProject(() => {
       stopWatch();
       analysisAnnotationController.configurationChanged();
@@ -69880,130 +69810,143 @@ function activate(context) {
     sourceController.onDidSelectProject(refreshAnalysisViews)
   );
   const evidenceInspector = new AnalysisEvidenceInspector();
-  const analysisManifestWatcher = import_vscode31.workspace.createFileSystemWatcher("**/analysis.json");
-  const analysisShardWatcher = import_vscode31.workspace.createFileSystemWatcher("**/analysis/**/*.json");
+  const analysisManifestWatcher = import_vscode33.workspace.createFileSystemWatcher("**/analysis.json");
+  const analysisShardWatcher = import_vscode33.workspace.createFileSystemWatcher("**/analysis/**/*.json");
+  const coverageInputWatcher = import_vscode33.workspace.createFileSystemWatcher("**/*");
+  const buildSummaryWatcher = import_vscode33.workspace.createFileSystemWatcher(
+    "**/.uttori-local/builds/{summary,current}.json"
+  );
   context.subscriptions.push(
     ...registerDebugging(context.extensionPath),
     outputChannel,
     statusItem,
     analysisAnnotationController,
     sourcesProvider,
+    coverageProvider,
     indexProvider,
-    import_vscode31.window.createTreeView(IndexDetailsProvider.viewId, { treeDataProvider: indexProvider }),
-    import_vscode31.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
+    import_vscode33.window.createTreeView(IndexDetailsProvider.viewId, { treeDataProvider: indexProvider }),
+    import_vscode33.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
       webviewOptions: { retainContextWhenHidden: true }
     }),
-    import_vscode31.window.createTreeView(ProjectOutlineProvider.viewId, {
+    import_vscode33.window.createTreeView(ProjectOutlineProvider.viewId, {
       treeDataProvider: outlineProvider,
       showCollapseAll: true
     }),
-    import_vscode31.window.createTreeView(AnalysisCoverageProvider.viewId, {
+    import_vscode33.window.createTreeView(AnalysisCoverageProvider.viewId, {
       treeDataProvider: coverageProvider,
       showCollapseAll: true
     }),
-    import_vscode31.window.createTreeView(AnalysisSourcesProvider.viewId, {
+    import_vscode33.window.createTreeView(AnalysisSourcesProvider.viewId, {
       treeDataProvider: sourcesProvider,
       showCollapseAll: true
     }),
     analysisManifestWatcher,
     analysisShardWatcher,
+    buildSummaryWatcher,
+    coverageInputWatcher,
+    coverageInputWatcher.onDidCreate((uri) => coverageProvider.inputChanged(uri)),
+    coverageInputWatcher.onDidChange((uri) => coverageProvider.inputChanged(uri)),
+    coverageInputWatcher.onDidDelete((uri) => coverageProvider.inputChanged(uri)),
+    buildSummaryWatcher.onDidCreate(() => coverageProvider.refresh()),
+    buildSummaryWatcher.onDidChange(() => coverageProvider.refresh()),
+    buildSummaryWatcher.onDidDelete(() => coverageProvider.refresh()),
     analysisManifestWatcher.onDidCreate(refreshAnalysisViews),
     analysisManifestWatcher.onDidChange(refreshAnalysisViews),
     analysisManifestWatcher.onDidDelete(refreshAnalysisViews),
     analysisShardWatcher.onDidCreate(refreshAnalysisViews),
     analysisShardWatcher.onDidChange(refreshAnalysisViews),
     analysisShardWatcher.onDidDelete(refreshAnalysisViews),
-    import_vscode31.window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
-    import_vscode31.window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
+    import_vscode33.window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
+    import_vscode33.window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
       analysisAnnotationController.refresh(textEditor);
     }),
-    import_vscode31.window.onDidChangeTextEditorOptions(({ textEditor }) => {
+    import_vscode33.window.onDidChangeTextEditorOptions(({ textEditor }) => {
       analysisAnnotationController.refresh(textEditor);
     }),
-    import_vscode31.workspace.onDidChangeTextDocument(
+    import_vscode33.workspace.onDidChangeTextDocument(
       ({ document }) => analysisAnnotationController.documentChanged(document)
     ),
-    import_vscode31.workspace.onDidSaveTextDocument(() => analysisAnnotationController.invalidate()),
-    import_vscode31.workspace.onDidCloseTextDocument((document) => {
+    import_vscode33.workspace.onDidSaveTextDocument(() => analysisAnnotationController.invalidate()),
+    import_vscode33.workspace.onDidCloseTextDocument((document) => {
       if (document.uri.scheme === "file" && analysisAnnotationController.provider.tracks(document.uri.fsPath)) {
         analysisAnnotationController.invalidate();
       }
     }),
-    import_vscode31.debug.onDidStartDebugSession((session) => {
+    import_vscode33.debug.onDidStartDebugSession((session) => {
       if (session.configuration.uttoriRunAndWatch === true) {
         watchedDebugSession = session;
       }
       analysisAnnotationController.refresh();
     }),
-    import_vscode31.debug.onDidTerminateDebugSession((session) => {
+    import_vscode33.debug.onDidTerminateDebugSession((session) => {
       if (watchedDebugSession?.id === session.id) {
         watchedDebugSession = void 0;
       }
       analysisAnnotationController.refresh();
     }),
-    import_vscode31.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
+    import_vscode33.commands.registerCommand(
       "asm.assetPreview.open",
       (request) => assetPreviewController.open(request)
     ),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand(
       TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
       () => analysisAnnotationController.toggle()
     ),
-    import_vscode31.commands.registerCommand("asm.toggleWatch", toggleWatch),
-    import_vscode31.commands.registerCommand("asm.runEmulator", () => buildAndLaunch(context, true)),
-    import_vscode31.commands.registerCommand("asm.debugEmulator", () => buildAndLaunch(context, false)),
-    import_vscode31.commands.registerCommand("asm.runAndWatch", () => runAndWatch(context)),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand("asm.toggleWatch", toggleWatch),
+    import_vscode33.commands.registerCommand("asm.runEmulator", () => buildAndLaunch(context, true)),
+    import_vscode33.commands.registerCommand("asm.debugEmulator", () => buildAndLaunch(context, false)),
+    import_vscode33.commands.registerCommand("asm.runAndWatch", () => runAndWatch(context)),
+    import_vscode33.commands.registerCommand(
       "asm.configureEmulatorRuntime",
-      () => configureEmulatorRuntime(context, import_vscode31.window.activeTextEditor?.document.uri)
+      () => configureEmulatorRuntime(context, import_vscode33.window.activeTextEditor?.document.uri)
     ),
-    import_vscode31.commands.registerCommand("asm.initConfig", () => initConfig()),
-    import_vscode31.commands.registerCommand("asm.openConfig", () => panelProvider.openConfiguration()),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand("asm.initConfig", () => initConfig()),
+    import_vscode33.commands.registerCommand("asm.openConfig", () => panelProvider.openConfiguration()),
+    import_vscode33.commands.registerCommand(
       "asm.openPanel",
-      () => import_vscode31.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
+      () => import_vscode33.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
     ),
-    import_vscode31.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
-    import_vscode31.commands.registerCommand("asm.coverage.refresh", refreshAnalysisViews),
-    import_vscode31.commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
-    import_vscode31.commands.registerCommand("asm.analysis.navigate", (element) => {
+    import_vscode33.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
+    import_vscode33.commands.registerCommand("asm.coverage.refresh", () => coverageProvider.refresh()),
+    import_vscode33.commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
+    import_vscode33.commands.registerCommand("asm.analysis.navigate", (element) => {
       const target = parseAnalysisNavigationTarget(element);
       if (target) {
         void navigateToAnalysisLocation(target);
       }
     }),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand(
       "asm.coverage.classifyRange",
-      (element) => sourceController?.editEvidence("classification", coverageProvider.editTarget(element))
+      () => sourceController?.editEvidence("classification")
     ),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand(
       "asm.coverage.setStateEntryPoint",
-      (element) => sourceController?.editEvidence("state", coverageProvider.editTarget(element))
+      () => sourceController?.editEvidence("state")
     ),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand(
       "asm.coverage.resolveTarget",
-      (element) => sourceController?.editEvidence("targets", coverageProvider.editTarget(element))
+      () => sourceController?.editEvidence("targets")
     ),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand(
       "asm.coverage.renameLabel",
-      (element) => sourceController?.editEvidence("symbols", coverageProvider.editTarget(element))
+      () => sourceController?.editEvidence("symbols")
     ),
-    import_vscode31.commands.registerCommand(
+    import_vscode33.commands.registerCommand(
       "asm.coverage.explainEvidence",
-      (element) => evidenceInspector.explainEvidence(coverageProvider.editTarget(element))
+      () => evidenceInspector.explainEvidence()
     ),
-    import_vscode31.workspace.onDidGrantWorkspaceTrust(() => {
+    import_vscode33.workspace.onDidGrantWorkspaceTrust(() => {
       refreshProjectViews();
       for (const [key3, languageClient] of languageClients) {
         void languageClient.sendNotification("workspace/didChangeConfiguration", {
-          settings: { asm: serverInitializationOptions(key3 ? import_vscode31.Uri.parse(key3) : void 0) }
+          settings: { asm: serverInitializationOptions(key3 ? import_vscode33.Uri.parse(key3) : void 0) }
         });
       }
     }),
-    import_vscode31.workspace.onDidChangeConfiguration((event) => {
+    import_vscode33.workspace.onDidChangeConfiguration((event) => {
       for (const [key3, languageClient] of languageClients) {
-        const resource = key3 ? import_vscode31.Uri.parse(key3) : void 0;
+        const resource = key3 ? import_vscode33.Uri.parse(key3) : void 0;
         if (event.affectsConfiguration("asm", resource)) {
           void languageClient.sendNotification("workspace/didChangeConfiguration", {
             settings: { asm: serverInitializationOptions(resource) }
@@ -70035,10 +69978,10 @@ function activate(context) {
       return;
     }
     const owned = [];
-    const owns = (uri) => (import_vscode31.workspace.getWorkspaceFolder(uri)?.uri.toString() ?? "") === key3;
+    const owns = (uri) => (import_vscode33.workspace.getWorkspaceFolder(uri)?.uri.toString() ?? "") === key3;
     const watch = (pattern) => {
-      const watcher = import_vscode31.workspace.createFileSystemWatcher(
-        folder ? new import_vscode31.RelativePattern(folder, pattern) : pattern
+      const watcher = import_vscode33.workspace.createFileSystemWatcher(
+        folder ? new import_vscode33.RelativePattern(folder, pattern) : pattern
       );
       owned.push(watcher);
       return watcher;
@@ -70111,15 +70054,15 @@ function activate(context) {
         return;
       }
       outputChannel?.info(`Language server ready for ${key3 || "standalone files"}.`);
-      if (context.extensionMode === import_vscode31.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
+      if (context.extensionMode === import_vscode33.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
         void client2.setTrace(import_node.Trace.Verbose);
       }
       refreshProjectViews();
       owned.push(
         client2.onRequest("asm/researchBuffers", ({ root }) => {
-          const buffers = import_vscode31.workspace.textDocuments.filter((document) => {
-            const relative3 = path45.relative(root, document.uri.fsPath);
-            return document.uri.scheme === "file" && document.uri.fsPath.endsWith(".json") && relative3 !== ".." && !relative3.startsWith(`..${path45.sep}`) && !path45.isAbsolute(relative3);
+          const buffers = import_vscode33.workspace.textDocuments.filter((document) => {
+            const relative4 = path50.relative(root, document.uri.fsPath);
+            return document.uri.scheme === "file" && document.uri.fsPath.endsWith(".json") && relative4 !== ".." && !relative4.startsWith(`..${path50.sep}`) && !path50.isAbsolute(relative4);
           }).map((document) => ({
             uri: document.uri.toString(),
             version: document.version,
@@ -70154,7 +70097,7 @@ function activate(context) {
     });
   };
   const reconcileClients = () => {
-    const folders = import_vscode31.workspace.workspaceFolders?.length ? import_vscode31.workspace.workspaceFolders : [void 0];
+    const folders = import_vscode33.workspace.workspaceFolders?.length ? import_vscode33.workspace.workspaceFolders : [void 0];
     const retained = new Set(folders.map((folder) => folder?.uri.toString() ?? ""));
     for (const [key3, languageClient] of languageClients) {
       if (retained.has(key3)) {
@@ -70172,8 +70115,8 @@ function activate(context) {
     }
   };
   context.subscriptions.push(
-    import_vscode31.workspace.onDidChangeWorkspaceFolders(reconcileClients),
-    import_vscode31.window.onDidChangeActiveTextEditor(() => {
+    import_vscode33.workspace.onDidChangeWorkspaceFolders(reconcileClients),
+    import_vscode33.window.onDidChangeActiveTextEditor(() => {
       reconcileClients();
       refreshProjectViews();
       outlineProvider.refresh();
@@ -70210,14 +70153,14 @@ function toggleWatch() {
     watchEntryUri = resolveBuildEntryUri();
     if (!watchEntryUri) {
       stopWatch();
-      void import_vscode31.window.showErrorMessage(
+      void import_vscode33.window.showErrorMessage(
         "Assembly: open a source file (or set asm.entryPoints) before watching."
       );
       return;
     }
-    saveListener = import_vscode31.workspace.onDidSaveTextDocument(onDocumentSaved);
-    void import_vscode31.window.showInformationMessage(
-      `Assembly: watching ${path45.basename(import_vscode31.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+    saveListener = import_vscode33.workspace.onDidSaveTextDocument(onDocumentSaved);
+    void import_vscode33.window.showInformationMessage(
+      `Assembly: watching ${path50.basename(import_vscode33.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   }
   updateStatusItem();
@@ -70244,25 +70187,25 @@ var completeArtifacts = (result) => result.ok && result.outputPath && result.deb
 async function launchLiveBuild(context, result, noDebug, watched) {
   const artifacts = completeArtifacts(result);
   if (!artifacts) {
-    void import_vscode31.window.showErrorMessage(
+    void import_vscode33.window.showErrorMessage(
       "Assembly: successful build did not return a debug artifact pair."
     );
     return false;
   }
-  const resource = import_vscode31.Uri.file(artifacts.outputPath);
-  const folder = import_vscode31.workspace.getWorkspaceFolder(resource) ?? import_vscode31.workspace.workspaceFolders?.[0];
+  const resource = import_vscode33.Uri.file(artifacts.outputPath);
+  const folder = import_vscode33.workspace.getWorkspaceFolder(resource) ?? import_vscode33.workspace.workspaceFolders?.[0];
   const binding = configuredEmulatorRuntime(context, resource) ?? await configureEmulatorRuntime(context, resource);
   if (!binding) {
     return false;
   }
   if (watched && watchedDebugSession) {
-    await import_vscode31.debug.stopDebugging(watchedDebugSession);
+    await import_vscode33.debug.stopDebugging(watchedDebugSession);
   }
   const configuration = {
     ...liveDebugConfiguration(binding, artifacts, folder),
     ...watched ? { uttoriRunAndWatch: true } : {}
   };
-  return import_vscode31.debug.startDebugging(folder, configuration, { noDebug });
+  return import_vscode33.debug.startDebugging(folder, configuration, { noDebug });
 }
 async function buildAndLaunch(context, noDebug) {
   const epoch = watchEpoch;
@@ -70278,7 +70221,7 @@ async function runAndWatch(context) {
   }
   const entry = resolveBuildEntryUri();
   if (!entry) {
-    void import_vscode31.window.showErrorMessage(
+    void import_vscode33.window.showErrorMessage(
       "Assembly: open a source file (or set asm.entryPoints) before running and watching."
     );
     return;
@@ -70286,7 +70229,7 @@ async function runAndWatch(context) {
   watchEnabled = true;
   watchMode = "emulator";
   watchEntryUri = entry;
-  saveListener = import_vscode31.workspace.onDidSaveTextDocument(onDocumentSaved);
+  saveListener = import_vscode33.workspace.onDidSaveTextDocument(onDocumentSaved);
   updateStatusItem();
   const epoch = watchEpoch;
   watchBuildRunning = true;
@@ -70304,7 +70247,7 @@ async function runAndWatch(context) {
     return;
   }
   if (!result?.ok) {
-    void import_vscode31.window.showWarningMessage(
+    void import_vscode33.window.showWarningMessage(
       "Assembly: Run and Watch is active. Fix the build error and save to launch the emulator."
     );
     return;
@@ -70317,20 +70260,20 @@ function resolveBuildEntryUri() {
   if (sourceController?.buildUri) {
     return sourceController.buildUri;
   }
-  const activeUri = import_vscode31.window.activeTextEditor?.document.uri;
-  const entryPoints = import_vscode31.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
-  const folder = activeUri ? import_vscode31.workspace.getWorkspaceFolder(activeUri) : import_vscode31.workspace.workspaceFolders?.[0];
+  const activeUri = import_vscode33.window.activeTextEditor?.document.uri;
+  const entryPoints = import_vscode33.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
+  const folder = activeUri ? import_vscode33.workspace.getWorkspaceFolder(activeUri) : import_vscode33.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    const resolved = path45.isAbsolute(first) ? import_vscode31.Uri.file(first).toString() : import_vscode31.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path50.isAbsolute(first) ? import_vscode33.Uri.file(first).toString() : import_vscode33.Uri.joinPath(folder.uri, first).toString();
     outputChannel?.info(
-      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode31.Uri.parse(resolved).fsPath}`
+      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode33.Uri.parse(resolved).fsPath}`
     );
     return resolved;
   }
-  const active = import_vscode31.window.activeTextEditor?.document.uri.toString();
+  const active = import_vscode33.window.activeTextEditor?.document.uri.toString();
   if (active) {
-    outputChannel?.info(`Build entry from active editor: ${import_vscode31.Uri.parse(active).fsPath}`);
+    outputChannel?.info(`Build entry from active editor: ${import_vscode33.Uri.parse(active).fsPath}`);
   }
   return active;
 }
@@ -70338,7 +70281,7 @@ function onDocumentSaved(document) {
   if (sourceController?.root) {
     return;
   }
-  const relevant = isAssemblyDocument(document);
+  const relevant = isAssemblyDocument(document) || linkedBuildController?.tracks(document.uri.fsPath);
   if (relevant) {
     scheduleWatchBuild();
   }
@@ -70384,19 +70327,19 @@ function isAssemblyDocument(document) {
   return ASSEMBLY_LANGUAGE_IDS.includes(document.languageId) || /\.(asm|src|s|inc)$/i.test(document.fileName);
 }
 async function initConfig() {
-  const folder = import_vscode31.workspace.workspaceFolders?.[0];
+  const folder = import_vscode33.workspace.workspaceFolders?.[0];
   if (!folder) {
-    void import_vscode31.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
+    void import_vscode33.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
     return;
   }
-  const configUri = import_vscode31.Uri.joinPath(folder.uri, "uttori-asm.config.json");
-  const config = import_vscode31.workspace.getConfiguration("asm");
+  const configUri = import_vscode33.Uri.joinPath(folder.uri, "uttori-asm.config.json");
+  const config = import_vscode33.workspace.getConfiguration("asm");
   let entryPoints = config.get("entryPoints", []);
-  const active = import_vscode31.window.activeTextEditor?.document;
+  const active = import_vscode33.window.activeTextEditor?.document;
   if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
-    const relative3 = path45.relative(folder.uri.fsPath, active.fileName);
+    const relative4 = path50.relative(folder.uri.fsPath, active.fileName);
     entryPoints = [
-      relative3 && !relative3.startsWith("..") ? relative3 : path45.basename(active.fileName)
+      relative4 && !relative4.startsWith("..") ? relative4 : path50.basename(active.fileName)
     ];
   }
   const includePaths = config.get("includePaths", []);
@@ -70432,18 +70375,18 @@ async function initConfig() {
     body.baseImage = baseImage;
   }
   try {
-    await import_vscode31.workspace.fs.stat(configUri);
-    const existing = await import_vscode31.workspace.openTextDocument(configUri);
-    await import_vscode31.window.showTextDocument(existing);
-    void import_vscode31.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
+    await import_vscode33.workspace.fs.stat(configUri);
+    const existing = await import_vscode33.workspace.openTextDocument(configUri);
+    await import_vscode33.window.showTextDocument(existing);
+    void import_vscode33.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
     return;
   } catch {
   }
-  await import_vscode31.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
+  await import_vscode33.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
 `));
-  await config.update("configFile", "uttori-asm.config.json", import_vscode31.ConfigurationTarget.Workspace);
-  const document = await import_vscode31.workspace.openTextDocument(configUri);
-  await import_vscode31.window.showTextDocument(document);
+  await config.update("configFile", "uttori-asm.config.json", import_vscode33.ConfigurationTarget.Workspace);
+  const document = await import_vscode33.workspace.openTextDocument(configUri);
+  await import_vscode33.window.showTextDocument(document);
 }
 async function runBuild(documentUri, transient = false) {
   outputChannel?.show(true);
@@ -70467,25 +70410,59 @@ async function runBuild(documentUri, transient = false) {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       outputChannel?.error(message);
-      void import_vscode31.window.showErrorMessage(`Source build: ${message}`);
+      void import_vscode33.window.showErrorMessage(`Source build: ${message}`);
       return { ok: false, message };
     }
   }
-  const client2 = languageClientFor(documentUri ? import_vscode31.Uri.parse(documentUri) : void 0);
+  try {
+    const linked = await linkedBuildController?.buildConfigured(
+      documentUri ? import_vscode33.Uri.parse(documentUri) : void 0
+    );
+    if (linked) {
+      const root = import_vscode33.workspace.getWorkspaceFolder(import_vscode33.Uri.file(linked.outputFile))?.uri.fsPath ?? path50.dirname(linked.outputFile);
+      editorInformationController?.buildCompleted(linked.debugMapFile, root);
+      const message = `Assembly: linked ${linked.outputSize} bytes + debug map \u2192 ${linked.outputFile}.`;
+      outputChannel?.info(message);
+      if (transient) {
+        import_vscode33.window.setStatusBarMessage(message, 4e3);
+      } else {
+        void import_vscode33.window.showInformationMessage(message);
+      }
+      return {
+        ok: true,
+        outputPath: linked.outputFile,
+        debugMapPath: linked.debugMapFile,
+        outputSha256: linked.outputSha256,
+        debugMapFingerprint: linked.debugMapFingerprint,
+        outputChanged: linked.outputChanged,
+        debugMapChanged: linked.debugMapChanged,
+        bytes: linked.outputSize,
+        outputSize: linked.outputSize,
+        target: linked.target,
+        architecture: linked.architecture
+      };
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    outputChannel?.error(message);
+    void import_vscode33.window.showErrorMessage(`Assembly: ${message}`);
+    return { ok: false, message };
+  }
+  const client2 = languageClientFor(documentUri ? import_vscode33.Uri.parse(documentUri) : void 0);
   if (!client2) {
     const message = "Language server is not running.";
     outputChannel?.error(message);
-    void import_vscode31.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode33.window.showErrorMessage(`Assembly: ${message}`);
     return void 0;
   }
   if (!documentUri) {
     const message = "Open a source file or set asm.entryPoints before building.";
     outputChannel?.error(message);
-    void import_vscode31.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode33.window.showErrorMessage(`Assembly: ${message}`);
     return void 0;
   }
-  const document = import_vscode31.Uri.parse(documentUri);
-  const config = import_vscode31.workspace.getConfiguration("asm", document);
+  const document = import_vscode33.Uri.parse(documentUri);
+  const config = import_vscode33.workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get("buildOutput", ""), document);
   const baseImage = resolveConfiguredPath(config.get("baseImage", ""), document);
   outputChannel?.info(`  file: ${document.fsPath}`);
@@ -70502,27 +70479,27 @@ async function runBuild(documentUri, transient = false) {
       if (result.debugMapPath) {
         editorInformationController?.buildCompleted(
           result.debugMapPath,
-          import_vscode31.workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path45.dirname(document.fsPath)
+          import_vscode33.workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path50.dirname(document.fsPath)
         );
       }
       const changed2 = result.outputChanged === false && result.debugMapChanged === false ? " (unchanged)" : "";
       const message = `Assembly: built ${result.bytes ?? 0} bytes + debug map \u2192 ${result.outputPath ?? "output"}${changed2}.`;
       outputChannel?.info(message);
       if (transient) {
-        import_vscode31.window.setStatusBarMessage(message, 4e3);
+        import_vscode33.window.setStatusBarMessage(message, 4e3);
       } else {
-        void import_vscode31.window.showInformationMessage(message);
+        void import_vscode33.window.showInformationMessage(message);
       }
     } else {
       const detail = result?.message ?? "unknown error";
       outputChannel?.error(`Build failed: ${detail}`);
-      void import_vscode31.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+      void import_vscode33.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     }
     return result;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     outputChannel?.error(`Build request failed: ${detail}`);
-    void import_vscode31.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+    void import_vscode33.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     return void 0;
   }
 }
@@ -70530,11 +70507,11 @@ function resolveConfiguredPath(configuredPath, document) {
   if (!configuredPath) {
     return void 0;
   }
-  if (path45.isAbsolute(configuredPath)) {
-    return path45.normalize(configuredPath);
+  if (path50.isAbsolute(configuredPath)) {
+    return path50.normalize(configuredPath);
   }
-  const folder = import_vscode31.workspace.getWorkspaceFolder(document);
-  return path45.resolve(folder?.uri.fsPath ?? path45.dirname(document.fsPath), configuredPath);
+  const folder = import_vscode33.workspace.getWorkspaceFolder(document);
+  return path50.resolve(folder?.uri.fsPath ?? path50.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
   if (!watchEnabled) {

@@ -980,10 +980,10 @@ test("context restore/replay accepts a recorded build while authenticating its c
     original = client.request.bind(client);
   const sent: string[] = [];
   client.request = async (command) => {
-    if (!command.startsWith("qUttoriContext:")) return original(command);
+    if (!command.startsWith("qUttoriContext:")) {return original(command);}
     sent.push(command);
-    if (command.startsWith("qUttoriContext:restore:")) return "restored";
-    if (command.startsWith("qUttoriContext:replay:")) return "replaying";
+    if (command.startsWith("qUttoriContext:restore:")) {return "restored";}
+    if (command.startsWith("qUttoriContext:replay:")) {return "replaying";}
     return "aborted";
   };
   const backend = new AresRspDebugBackend({

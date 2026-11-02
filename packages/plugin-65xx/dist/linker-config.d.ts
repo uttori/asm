@@ -1,9 +1,10 @@
 /**
  * Minimal ld65 linker-config parser for the NES iNES target.
  *
- * Enough of MEMORY / SEGMENTS / SYMBOLS to assemble ca65 sources that emit a
- * flat image (Zelda 1's `Z.cfg`) without producing relocatable objects.
+ * MEMORY / SEGMENTS / SYMBOLS support is shared by the flat NES assembler
+ * and the portable link-recipe adapter. Parsing itself never places sections.
  */
+import { type AssemblyLinkRecipe } from "@uttori/asm-core";
 export type Ld65MemoryRegion = {
     readonly name: string;
     readonly start: number;
@@ -35,6 +36,8 @@ export type Ld65Config = {
     /** Total size of `file = %O` regions, in order of MEMORY declaration. */
     readonly imageSize: number;
 };
+/** Preserve declaration order and RAM/load/run distinctions without assigning object contributions. */
+export declare function ld65LinkRecipe(config: Ld65Config, target?: string): AssemblyLinkRecipe;
 /**
  * Returns the built-in 32 KiB `$8000` layout used when a target omits `linkerConfig`.
  * @returns {string} A minimal ld65 config.

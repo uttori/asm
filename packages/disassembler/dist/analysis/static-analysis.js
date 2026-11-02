@@ -1,15 +1,66 @@
+import { createHash } from "node:crypto";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
+import { EvidencePool } from "../model/evidence-pool.js";
 import { matchesResearchMapping } from "../model/research-mapping.js";
 /** Default work-item budget when `analyzeStaticControlFlow` omits `maxWorkItems`. */
 export const DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1_000_000;
 /** Default call-context depth when `analyzeStaticControlFlow` omits `maxCallDepth`. */
 export const DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
+/** Expand iteratively so long paths do not overflow the stack; callers own the returned array. */
+const materializeEvidencePath = (path) => {
+    const values = [];
+    values.length = path?.length ?? 0;
+    for (let current = path; current; current = current.parent) {
+        values[current.length - 1] = current.id;
+    }
+    return values;
+};
+/** Weak ownership lets completed/abandoned results release their shared ancestry with their nodes. */
+const evidencePaths = new WeakMap();
+/** Shared accessor avoids allocating and retaining a distinct getter closure for every instruction. */
+function readEvidencePath() {
+    return materializeEvidencePath(evidencePaths.get(this));
+}
+/** Attach enumerable, lazily expanded ancestry without capturing the traversal's work-item scope. */
+const withEvidencePath = (record, path) => {
+    evidencePaths.set(record, path);
+    Object.defineProperty(record, "evidencePath", { enumerable: true, get: readEvidencePath });
+    // Object.defineProperty installs this exact accessor, but its declaration returns only T.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    return record;
+};
 const hexAddress = (address) => address.toString(16).padStart(6, "0");
-const contextKey = (context) => context
-    .map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}${frame.executionContext ?? ""}`)
-    .join("/");
+/** Immutable call stacks are shared by many instructions and heap comparisons. Cache their views. */
+const callContexts = new WeakMap();
+const emptyCallContext = { key: "", sites: [] };
+const describeCallContext = (context) => {
+    if (context.length === 0) {
+        return emptyCallContext;
+    }
+    let value = callContexts.get(context);
+    if (!value) {
+        value = {
+            key: context
+                .map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}${frame.executionContext ?? ""}`)
+                .join("/"),
+            sites: context.map((frame) => frame.callSite),
+        };
+        callContexts.set(context, value);
+    }
+    return value;
+};
+const contextKey = (context) => describeCallContext(context).key;
+const compactContextKeys = new WeakMap();
+/** Hash the complete, mapping-qualified context once, without changing work-queue priority. */
+const compactContextKey = (context) => {
+    let key = compactContextKeys.get(context);
+    if (key === undefined) {
+        key = createHash("sha256").update(contextKey(context)).digest("hex");
+        compactContextKeys.set(context, key);
+    }
+    return key;
+};
 const nodeIdFor = (address, context) => `cfg:${hexAddress(address)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
-const sortedUnique = (values) => [...new Set(values)].toSorted();
 /**
  * Semantic priority shared by the work heap and historical deterministic traversal.
  * Do not add insertion order here: the heap supplies it only as a final stability tie-breaker, so
@@ -44,6 +95,10 @@ class StaticWorkQueue {
     }
     peek() {
         return this.#values[0]?.item;
+    }
+    /** Release an unexplored frontier after a deterministic work limit has been reported. */
+    clear() {
+        this.#values.length = 0;
     }
     push(item) {
         const queued = { item, sequence: this.#nextSequence++ };
@@ -126,6 +181,10 @@ const overriddenTargetKind = (flow) => {
  * @returns {StaticAnalysisResult<State>} Accepted CFG plus conflicts, unresolved flow, coverage, and completion status.
  */
 export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
+    // Successors often consume no new provenance. Share their exact unions instead of retaining
+    // another capture-sized array at every node, edge, work item and function candidate.
+    const evidencePool = new EvidencePool();
+    const sortedUnique = (values) => evidencePool.sorted(values);
     const maxWorkItems = options.maxWorkItems ?? DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS;
     const maxCallDepth = options.maxCallDepth ?? DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH;
     if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
@@ -157,7 +216,6 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         context: [],
         entryPoint: seed.id,
         evidence: sortedUnique(seed.evidence),
-        path: [],
     })));
     const states = new Map();
     const nodes = new Map();
@@ -218,7 +276,16 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         }
         const enteredState = adapter.enterAddress?.(item.state, item.address) ?? item.state;
         const suffix = executionSuffix(item.address, enteredState);
-        const nodeId = nodeIdFor(item.address, item.context) + suffix;
+        let identity;
+        if (options.compactContextIds && item.context.length > 0) {
+            // The complete stack can be kilobytes long and repeats in every node/edge ID. Its digest
+            // preserves deterministic context separation while the node retains the full call-site list.
+            identity = `cfg:${hexAddress(item.address)}:context:${compactContextKey(item.context)}`;
+        }
+        else {
+            identity = nodeIdFor(item.address, item.context);
+        }
+        const nodeId = identity + suffix;
         const previousState = states.get(nodeId);
         const incomingState = previousState ? adapter.join(previousState, enteredState) : enteredState;
         if (previousState && adapter.stateKey(previousState) === adapter.stateKey(incomingState)) {
@@ -314,8 +381,14 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction, incomingState);
-        const path = [...item.path, nodeId];
-        nodes.set(nodeId, {
+        const path = {
+            id: nodeId,
+            parent: item.path,
+            length: (item.path?.length ?? 0) + 1,
+        };
+        // Never cache expanded paths on every node: selected paths remain readable without retaining
+        // all prefixes, which would turn a linear instruction stream into quadratic memory.
+        nodes.set(nodeId, withEvidencePath({
             id: nodeId,
             address: instruction.address,
             fileOffset: instruction.fileOffset,
@@ -324,14 +397,13 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             specificationId: instruction.specificationId,
             mnemonic: instruction.mnemonic,
             mode: instruction.mode,
-            context: item.context.map((frame) => frame.callSite),
+            context: describeCallContext(item.context).sites,
             incomingState,
             outgoingState,
             effectiveAddresses: instruction.effectiveAddresses ?? [],
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            evidencePath: path,
-        });
+        }, path));
         if (item.predecessor && item.edgeKind) {
             const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override) + suffix;
             edges.set(edgeId, {
@@ -407,13 +479,13 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             if (kind === "call" || kind === "interrupt") {
                 const functionId = `function:${hexAddress(target.address)}${executionSuffix(target.address, outgoingState)}`;
                 if (!functions.has(functionId)) {
-                    functions.set(functionId, {
+                    functions.set(functionId, withEvidencePath({
                         id: functionId,
                         address: target.address,
                         source: kind === "call" ? "call" : "interrupt",
                         evidence: targetEvidence,
-                        evidencePath: path,
-                    });
+                        evidencePredecessor: nodeId,
+                    }, path));
                 }
             }
         };
@@ -485,7 +557,7 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
     }
     const sortedNodes = [...nodes.values()].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id));
     const sortedFunctions = [...functions.values()].toSorted((left, right) => left.address - right.address || left.id.localeCompare(right.id));
-    return {
+    const result = {
         status: incompleteReasons.size === 0 ? "complete" : "incomplete",
         nodes: sortedNodes,
         edges: [...edges.values()].toSorted((left, right) => left.fromAddress - right.fromAddress || left.id.localeCompare(right.id)),
@@ -504,5 +576,17 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         incompleteReasons: [...incompleteReasons.values()].toSorted((left, right) => left.address - right.address || left.kind.localeCompare(right.kind)),
         processedWorkItems,
     };
+    // No publication consumer needs the join/byte-ownership indexes or a capped frontier. Release
+    // those large containers before projecting the result into native storage records.
+    states.clear();
+    nodes.clear();
+    edges.clear();
+    functions.clear();
+    conflicts.clear();
+    unresolved.clear();
+    ownership.clear();
+    ownedByNode.clear();
+    queue.clear();
+    return result;
 };
 //# sourceMappingURL=static-analysis.js.map

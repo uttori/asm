@@ -273,10 +273,11 @@ export interface AnalysisControlFlowNodeRecord {
   readonly outgoingState: Readonly<Record<string, unknown>>;
   readonly effectiveAddresses: readonly Readonly<Record<string, unknown>>[];
   readonly entryPoint: string;
-  /** Unambiguous owning function's CFG node. Runtime graphs use this instead of copying every path prefix. */
+  /** Unambiguous owning function's CFG node. Compact graphs use this instead of copying every path prefix. */
   readonly functionEntry?: string;
   /** Previous CFG node on a discovery path within functionEntry, permitting lazy path reconstruction. */
   readonly evidencePredecessor?: string;
+  /** Legacy explicit discovery path, or just this node's ID when compact ownership is present. */
   readonly evidencePath: readonly string[];
   readonly evidence: readonly string[];
 }
@@ -305,6 +306,7 @@ export interface AnalysisFunctionRecord {
   readonly addressSpace: string;
   readonly address: number;
   readonly source: string;
+  /** Discovery call site, a legacy explicit ancestry path, or empty for seed functions. */
   readonly evidencePath: readonly string[];
   readonly evidence: readonly string[];
 }

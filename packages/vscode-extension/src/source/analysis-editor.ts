@@ -17,12 +17,9 @@ import { readResearchResult } from "./result-readers.js";
 
 type AnalysisSelection = Extract<SourceResearchResult, { kind: "analysis" }>;
 
-/** Evidence-view context narrows the picker without treating observations as editable declarations. */
+/** Command-palette shortcuts limit the picker to the requested kind of research edit. */
 export interface AnalysisResearchHint {
   readonly action: "classification" | "state" | "targets";
-  readonly ids: readonly string[];
-  /** Original file offsets from the ROM coverage map; never reuse these as CPU addresses. */
-  readonly range?: { start: number; end: number };
 }
 
 /** Accept assembly-style hexadecimal or explicit decimal; never silently treat an invalid address as zero. */
@@ -226,9 +223,7 @@ async function newRecord(
   if (!document) {
     return undefined;
   }
-  const spaces = selection.addressSpaces.filter(
-    (item) => kind !== "range" || !hint?.range || item.kind === "file",
-  );
+  const spaces = selection.addressSpaces;
   const space = await window.showQuickPick(
     spaces.map((item) => ({ label: item.name, description: item.id, item })),
     { title: "Original address space" },
@@ -239,7 +234,7 @@ async function newRecord(
   const maximum = 2 ** space.item.addressBits - 1;
   const start = await address(
     kind === "range" ? "Range start" : "Indirect instruction address",
-    kind === "range" ? (hint?.range?.start ?? 0) : 0,
+    0,
     maximum,
   );
   if (start === undefined) {
@@ -267,7 +262,7 @@ async function newRecord(
       },
     };
   }
-  const end = await address("Range end (exclusive)", hint?.range?.end ?? start + 1, maximum + 1);
+  const end = await address("Range end (exclusive)", start + 1, maximum + 1);
   if (end === undefined) {
     return undefined;
   }
@@ -322,10 +317,7 @@ export async function editAnalysisResearch(
     throw new Error("Research service returned an invalid analysis selection.");
   }
   const relevant = selection.records.filter(
-    (record) =>
-      !hint ||
-      ("classification" in record.value !== (hint.action === "targets") &&
-        (!(hint.range ?? hint.ids.length) || hint.ids.includes(record.value.id))),
+    (record) => !hint || "classification" in record.value !== (hint.action === "targets"),
   );
   const options: {
     readonly label: string;

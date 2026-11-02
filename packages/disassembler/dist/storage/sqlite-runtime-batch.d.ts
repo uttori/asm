@@ -22,7 +22,8 @@ export declare function assertTraceRecordNamespace(record: RuntimeEvidenceRecord
  */
 export declare class SqliteRuntimeTraceBatch implements RuntimeTracePublicationSink {
     #private;
-    constructor(db: DatabaseSync, source: string, intern: (table: string, value: string) => number);
+    /** An omitted source is reserved for a validated multi-capture retention rebuild. */
+    constructor(db: DatabaseSync, source: string | undefined, intern: (table: string, value: string) => number);
     /** Accept only the importer's adjacent code/state pairs; validate equality before sharing storage. */
     add(record: RuntimeEvidenceRecord): boolean;
     finish(): void;

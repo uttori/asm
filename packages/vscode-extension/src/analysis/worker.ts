@@ -29,8 +29,6 @@ import { readAnalysisSourceCatalog } from "./sources-data.js";
 export type AnalysisWorkerOperation =
   | "clear"
   | "manifest"
-  | "coverage"
-  | "coverageConflicts"
   | "annotationSummary"
   | "annotations"
   | "debugAnnotations"
@@ -53,9 +51,7 @@ export interface AnalysisWorkerRequest {
   readonly operation: string;
   readonly navigationTarget?: AnalysisNavigationTarget;
   readonly sourceId?: string;
-  readonly evidenceSelection?: Partial<Record<ShardKind, readonly string[]>>;
   readonly evidenceRecord?: { kind: ShardKind; id: string };
-  readonly offset?: number;
   readonly ranges?: readonly unknown[];
 }
 
@@ -122,7 +118,7 @@ const projectRequest = (message: AnalysisWorkerRequest): unknown => {
     return store.transaction(
       () => ({
         manifest: store.manifest(),
-        shards: store.evidenceChoices(message.evidenceSelection),
+        shards: store.evidenceChoices(),
       }),
       false,
     );
@@ -262,12 +258,6 @@ const projectRequest = (message: AnalysisWorkerRequest): unknown => {
       );
     }, false);
   }
-  if (message.operation === "coverage") {
-    return store.coverageSummary();
-  }
-  if (message.operation === "coverageConflicts") {
-    return store.coverageConflicts(message.offset);
-  }
   throw new Error("Unknown analysis worker operation.");
 };
 
@@ -296,11 +286,7 @@ const request = (message: AnalysisWorkerRequest): unknown => {
       store.writePointer(message.directory);
     }
   }
-  if (
-    ["coverage", "coverageConflicts", "annotations", "debugAnnotations", "navigation"].includes(
-      message.operation,
-    )
-  ) {
+  if (["annotations", "debugAnnotations", "navigation"].includes(message.operation)) {
     // Captured observations remain queryable while new classification/CPU/target declarations
     // await analysis. Graph-derived views must not display an earlier branch's interpretation.
     store.assertCurrentAnalysis();

@@ -5,7 +5,7 @@ import { ASAR_SYNTAX_PROFILE } from "../syntax-profile.js";
 import { OverlayFileProvider } from "./overlay-file-provider.js";
 import { hashBytes, RootAnalysisCache } from "./root-analysis-cache.js";
 /** Shared by worker producers, transport validation and snapshot hydration. */
-export const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION = 3;
+export const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION = 5;
 /**
  * Indexes one or more assembly projects for editor tooling.
  *
@@ -43,6 +43,9 @@ export class WorkspaceIndex {
     includePaths;
     architecture;
     targetOptions;
+    module;
+    /** Owned per-root selections also participate in persistent cache and worker-snapshot identity. */
+    moduleRoots;
     environment;
     target;
     toolingCatalog;
@@ -100,6 +103,8 @@ export class WorkspaceIndex {
         this.architecture =
             options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
         this.targetOptions = Object.freeze({ ...options.targetOptions });
+        this.module = options.module ? Object.freeze({ ...options.module }) : undefined;
+        this.moduleRoots = normalizeModuleRoots(options.moduleRoots);
         this.directiveCatalog = this.toolingCatalog.getDirectives();
         const target = this.environment.getTarget(this.target);
         const normalizedOptions = target?.createOptions?.(this.targetOptions) ?? this.targetOptions;
@@ -113,6 +118,8 @@ export class WorkspaceIndex {
     snapshot() {
         return structuredClone({
             version: WORKSPACE_ANALYSIS_SNAPSHOT_VERSION,
+            ...(this.module ? { module: this.module } : {}),
+            ...(Object.keys(this.moduleRoots).length ? { moduleRoots: this.moduleRoots } : {}),
             target: this.target,
             architecture: this.architecture,
             roots: [...this.rootAnalyses],
@@ -131,6 +138,9 @@ export class WorkspaceIndex {
     static fromSnapshot(options, snapshot, overlays) {
         const index = new WorkspaceIndex(options);
         if (snapshot.version !== WORKSPACE_ANALYSIS_SNAPSHOT_VERSION ||
+            JSON.stringify(snapshot.module ?? null) !== JSON.stringify(options.module ?? null) ||
+            JSON.stringify(normalizeModuleRoots(snapshot.moduleRoots)) !==
+                JSON.stringify(index.moduleRoots) ||
             snapshot.target !== index.target ||
             snapshot.architecture !== index.architecture) {
             throw new Error("Analysis snapshot belongs to a different environment.");
@@ -163,6 +173,12 @@ export class WorkspaceIndex {
      * @param {WorkspaceIndexOptions} options The configuration to apply.
      */
     configure(options) {
+        if (Object.hasOwn(options, "module")) {
+            this.module = options.module ? Object.freeze({ ...options.module }) : undefined;
+        }
+        if (Object.hasOwn(options, "moduleRoots")) {
+            this.moduleRoots = normalizeModuleRoots(options.moduleRoots);
+        }
         if (options.entryPoints) {
             this.entryPoints = options.entryPoints.map((entry) => path.resolve(entry));
         }
@@ -495,6 +511,7 @@ export class WorkspaceIndex {
         try {
             assembler = measureInternalPhase("lspAssemblerConstruct", () => new Assembler({
                 environment: this.environment,
+                module: this.moduleRoots[path.resolve(root)] ?? this.module,
                 target: this.target,
                 architecture: this.architecture,
                 targetOptions: this.targetOptions,
@@ -672,7 +689,11 @@ export class WorkspaceIndex {
             architecture: this.architecture,
             includePaths: this.includePaths,
             converterIdentity: JSON.stringify([formats, transforms]),
-            targetOptionsIdentity: JSON.stringify(this.targetOptions),
+            targetOptionsIdentity: JSON.stringify({
+                targetOptions: this.targetOptions,
+                module: this.module ?? null,
+                moduleRoots: this.moduleRoots,
+            }),
         };
     }
     /**
@@ -770,5 +791,14 @@ export class WorkspaceIndex {
         this.#includeTargets = includeTargets;
         this.#coverageByRoot = coverageByRoot;
     }
+}
+/** Normalize once so insertion order and path spelling cannot change an otherwise identical module selection. */
+function normalizeModuleRoots(value) {
+    return Object.freeze(Object.fromEntries(Object.entries(value ?? {})
+        .map(([file, module]) => [
+        path.resolve(file),
+        Object.freeze({ ...module }),
+    ])
+        .toSorted(([a], [b]) => (a < b ? -1 : Number(a > b)))));
 }
 //# sourceMappingURL=workspace-index.js.map

@@ -392,6 +392,12 @@ export interface TargetContribution {
     defaultOutputExtension: string;
     /** Validate/default Assembler targetOptions. Output is shallow-copied and frozen per session. */
     createOptions?(configured: unknown): Readonly<Record<string, unknown>>;
+    /** Lower target configuration into portable linker inputs without running assembly or allocating output. */
+    createLinkRecipe?(context: TargetFactoryContext): import("../relocatable.js").AssemblyLinkRecipe;
+    /** Optional link capability. Hosts must reject missing policies rather than silently skipping target checks. */
+    createLinkTarget?(): import("../linker/types.js").LinkTargetPolicy;
+    /** Lower explicit source-layout hints using current mapper/container state; the resulting recipe remains replaceable. */
+    createSourceLinkRecipe?(context: TargetFactoryContext, sections: readonly import("../relocatable.js").AddressedAssemblySection[]): import("../relocatable.js").AssemblyLinkRecipe;
 }
 /**
  * Registration capability valid only until activate resolves. Contributions are frozen in place

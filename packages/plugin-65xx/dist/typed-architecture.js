@@ -1,3 +1,4 @@
+import { RelocatableInstruction, linkConstant } from "@uttori/asm-core";
 import { buildInstructionCatalog } from "./instructions/catalog.js";
 import { getCpuAssemblyForms, nmos6502DecodeTable } from "./instructions/opcodes.js";
 import { matchesFeatures, } from "./instructions/schema.js";
@@ -89,6 +90,7 @@ const modeSize = (form) => form.encoding.length + form.operands.reduce((size, op
 /** All shipped 65xx forms use this selector for both layout and emission. */
 export class TypedArch65xx {
     cpu;
+    supportsRelocatable = true;
     deferOperandBindingErrors = true;
     forms;
     catalog;
@@ -261,6 +263,9 @@ export class TypedArch65xx {
         if (!form) {
             return false;
         }
+        if (frame.isRelocatable) {
+            return this.encodeModule(frame, context, syntax, form);
+        }
         frame.choose(form.mnemonic + ":" + form.mode, modeSize(form), {
             cpu: this.cpu.id,
             mode: form.mode,
@@ -354,6 +359,81 @@ export class TypedArch65xx {
             const mask = 2 ** (width * 8) - 1;
             context.emission.writeValue(values[i] & mask, width, "little");
         }
+        return true;
+    }
+    /** Form tables supply every field's width/order, including vendor and prefixed instructions. */
+    encodeModule(frame, context, syntax, form) {
+        const instruction = new RelocatableInstruction(frame, context).opcode(...form.encoding);
+        const parts = syntax.policy65xx.parts;
+        const scalar = selectedScalar(syntax);
+        let fields = [scalar];
+        switch (form.codec) {
+            case "none":
+                fields = [];
+                break;
+            case "accumulator-relative8":
+                fields = [parts[1].scalar];
+                break;
+            case "zero-page-relative8":
+            case "zero-page-immediate8":
+            case "three-unsigned16-le":
+            case "immediate-unsigned8":
+            case "immediate-unsigned16":
+                fields = parts.slice(0, form.operands.length).map((part) => part.scalar);
+                break;
+            case "relative16":
+            case "relative8":
+            case "special-page":
+            case "unsigned16-le":
+            case "unsigned24-le":
+            case "unsigned8":
+                if (!syntax.policy65xx.hasOperand && form.mnemonic === "BRK") {
+                    fields = [linkConstant(0)];
+                }
+                break;
+        }
+        if (fields.length !== form.operands.length || fields.some((field) => !field)) {
+            throw frame.error(`${form.mnemonic} requires ${form.operands.length} encoded operands.`);
+        }
+        for (let index = 0; index < fields.length; index++) {
+            const field = form.operands[index];
+            const relative = field.relative === true ||
+                form.codec === "relative8" ||
+                form.codec === "relative16" ||
+                (form.codec === "zero-page-relative8" && index === 1) ||
+                form.codec === "accumulator-relative8";
+            const encoding = {
+                width: field.width,
+                kind: relative ? "relative" : "absolute",
+                addressWidth: 16,
+                wrapWidth: 16,
+            };
+            if (relative) {
+                const start = frame.sectionPosition();
+                instruction.field(fields[index], {
+                    ...encoding,
+                    signed: true,
+                    pc: {
+                        section: start.section,
+                        offset: frame.instructionAddress + (form.relativeBaseOffset ?? modeSize(form)),
+                    },
+                });
+            }
+            else if (form.codec === "special-page") {
+                instruction.field(fields[index], { ...encoding, minimum: 0xff00, maximum: 0xffff });
+            }
+            else {
+                const immediate = form.mode === "immediate" ||
+                    (form.codec.startsWith("immediate-") && index === 0) ||
+                    (form.codec === "zero-page-immediate8" && index === 1);
+                instruction.field(fields[index], {
+                    ...encoding,
+                    minimum: immediate ? -(2 ** (8 * field.width - 1)) : 0,
+                    constraint: form.operandConstraint === "power-of-two" ? "powerOfTwo" : undefined,
+                });
+            }
+        }
+        instruction.finish(`${form.mnemonic}:${form.mode}`, { cpu: this.cpu.id, mode: form.mode });
         return true;
     }
     /** Validate before writing, retaining a classification value only when its evaluation schedule requires it. */

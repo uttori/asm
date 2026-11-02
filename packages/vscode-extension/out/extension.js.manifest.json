@@ -4,8 +4,8 @@
   "source": "packages/vscode-extension/src/extension.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/extension.js.licenses.txt",
-  "sha256": "11dd18ef5c09845aa18b5a1ad3736a0625b6738b15de0316c085897d268b515f",
-  "noticesSha256": "9e176beb20715d855f5c46052f87e7b1137bf0bc6b00271be22eb777eed79acd",
+  "sha256": "d714170b5db5c055f9e4b5189054d3672efbe51673155e4e5b31c782ad8197bf",
+  "noticesSha256": "0b16fb4cc9a53d20b085cb660735e70c5c50a2a67326fcc8f3f37fc1c229534c",
   "inputs": [
     {
       "file": "node_modules/@uttori/data-tools/dist/audio/audio-wav.js",
@@ -284,70 +284,6 @@
       "sha256": "5ef6f995af801868925940cf8df5735d565ebabb090b068695cae65218bcd3ac"
     },
     {
-      "file": "node_modules/vscode-jsonrpc/lib/common/api.js",
-      "sha256": "0d8ccd38514f3994256d0c271b9b6e288174e13847ed2c8561abd5f005bdeb76"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/cancellation.js",
-      "sha256": "b851c4246fa5a644bcebe56b1fb74048948eab0886d706e59e2090fa7e41550b"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/connection.js",
-      "sha256": "421934733f3449fd2af9c1ff376a0318f1d6b1bb75aa204cb434e09ed2018987"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/disposable.js",
-      "sha256": "ad43f37a324cf41af376ea66004063ac5867a2e3dfce81b47ab617b9105a0a7d"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/events.js",
-      "sha256": "d521b1fc2887c04a2d3f4d4403b5bd9fa734ef83e6f53e99bcc781d791db1508"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/is.js",
-      "sha256": "db07129f8322e52c81034004a1a1eb9b1be743c9ec55f5f6a5b33da48cb8a2a8"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/linkedMap.js",
-      "sha256": "9c2041c8828be66893ba5f97933cc7d3698a1bad2f34b742761e6f2a3e615346"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/messageBuffer.js",
-      "sha256": "27beae232413871d20551178d3342ee0bc927e8b05862883c75ce021291f11cc"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/messageReader.js",
-      "sha256": "5f912919f4b2584a38812535e7894c851a13b8f51a7ad6b769f2b5e35beffaef"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/messageWriter.js",
-      "sha256": "cd9cd263bdd57b32eac86a0dd83ac7241aa95ffb7a43af1e680b65449799afbc"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/messages.js",
-      "sha256": "7a06cfd7456c2f2471dc6aab3fb69683a62245d2a91859b337e03e0e66fa0b26"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/ral.js",
-      "sha256": "9b4736fe0168adf1dff8a1f41cf76dc8e9f380684cbb39056403e81a05a51cb3"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/semaphore.js",
-      "sha256": "9a7afb92b0ae8d9c341373fdecfb0133b4ba7414455110408809c2f4a05af1d1"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js",
-      "sha256": "91a1128bc09e21d95be67dd441e13a0373af7c97d6ccf912b7b4168d11190efa"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/node/main.js",
-      "sha256": "2f812c8af5fca06d0b69c4953d2394c1d76c68845149d80c66e2e40f8858e577"
-    },
-    {
-      "file": "node_modules/vscode-jsonrpc/lib/node/ril.js",
-      "sha256": "b05099278ce67ce95c1b87ff3297c670d178969553b6b49e0e97083e0805ac94"
-    },
-    {
       "file": "node_modules/vscode-languageclient/lib/common/api.js",
       "sha256": "d1c71ecf25777c39117fa2dbae04a813fbae171a23e73c04b2dfb99cc8d38b34"
     },
@@ -357,11 +293,11 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/client.js",
-      "sha256": "457cf63d6aff5f6dea29aec63cb473ed2802fde98661a34070551c2ef0146ac6"
+      "sha256": "32b44113ca065871b2b195b1abc460a8c70fc61cedca0d0fa5ec43564a05b8bd"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/codeAction.js",
-      "sha256": "a7843504fcafa3e058970095ad5babdad83b2a4f624294f2427cbc161dbd7a9a"
+      "sha256": "3723c943406814eeacccea120fc22710595d9b105bd5dabab9907e1bf2a2b239"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/codeConverter.js",
@@ -369,7 +305,7 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/codeLens.js",
-      "sha256": "d6223c93cc1a2508ad86ba2ea7443c3cead9de597fca685655a7e8f75ff2ab00"
+      "sha256": "e48e1db643a7bb3bfdcac61f8e35be89806e34ffca9d5f4b95bc7186a9345349"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/colorProvider.js",
@@ -377,11 +313,11 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/completion.js",
-      "sha256": "f7b536668c7e63e97b3ae93a763c9500b6c0712839da2ca3e70931769c2e4bd7"
+      "sha256": "e673d3a73c842de90191375018b64b85693d77524b71965d04e91e69a491e0c7"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/configuration.js",
-      "sha256": "b6667633b30afb7b2172fb743bc90fedc748d308b1ac6e0a23a7b78dd60a1ebe"
+      "sha256": "4b8d608d719002c0a9ece92018fe6cc16c6d2014d14e5cdf3b2504229bada443"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/declaration.js",
@@ -389,39 +325,39 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/definition.js",
-      "sha256": "3c315de2be435d91d5582f845bef42c39575356c5cbb933219f1599a3bd8d7ac"
+      "sha256": "918bbeadcfc08a2e9ada50f5aef9594c0ccd3f9a4cf004857a40a0d4940ffb21"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/diagnostic.js",
-      "sha256": "596319e5a30bdd0453576bcc350c77d58a10ccb3723f67cd92494686b4059c52"
+      "sha256": "6515c5583d357fadcbe677da34977521d34c0fbf6a4ae7a67d7b5887d4ebe698"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/documentHighlight.js",
-      "sha256": "0b4ac35f1eabb3b161081f66417e77c5ff4f791fe8f78015db293e21b60d1c6e"
+      "sha256": "6bc29fa7ea11e3bde1abbb90fc3c40edd0d7bf2903c564a3c57bac174c6a73bc"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/documentLink.js",
-      "sha256": "c831043d36a9ef50ae9c5aa311518d1677721ee15477e110361cb5ac0bb7dc2d"
+      "sha256": "601da83eb2ee47aa3176ca5cac81923e1cead522cac334e009426b4b41b8ac94"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/documentSymbol.js",
-      "sha256": "89de166613074ab965c0a7f39f2899292358f5621c2b151e2592371a4f683f2b"
+      "sha256": "ec75bdd691cf25d761b4bc907ef21f6d039307708f633718dc545a3355ab48c0"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/executeCommand.js",
-      "sha256": "9d60141d53f0648af0a2d2f46f618883b98c609cd6bb9df987fd47f78de29233"
+      "sha256": "fda3994e8eee29b1f59c2cd59b38af3e33f8ba50014e96d3f33293abf11b738c"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/features.js",
-      "sha256": "9a23c22c824adc0da637c570095d90dd103a24c484c25142346432d21544ddf3"
+      "sha256": "0c3beb7aadb81ddc9ca81983975bb54822a526e80f7b243d713d9e0a3629f36c"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/fileOperations.js",
-      "sha256": "27021d92f7e2bb0094f0044d9516bfb3d76427e350b9a0945dac00e294f88f01"
+      "sha256": "5d38e3f825f80f4e72fd931c50d014cc86f636218b724740377fc7bc9023f907"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js",
-      "sha256": "2b24026e7b2e34233ef2d278db87a6e479d9292c7c93a2291d8aac22bd44a6df"
+      "sha256": "780d0932ad443ade16fa58f01759d9cc5150720454ad815b83e4684c44f95f7e"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/foldingRange.js",
@@ -429,11 +365,11 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/formatting.js",
-      "sha256": "340298ceec2b0ac278c27e2263876e5fa97d2e1c36821d3a08d9c57891447b6c"
+      "sha256": "7ffed4def0332cf87ed4cae14f49774463c04093a3a83d3d99a1ce9e6220d300"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/hover.js",
-      "sha256": "a3d1171ce491d73d726a3ef9a3cf7becdea4a634769ccd06c6b51c38f765745a"
+      "sha256": "696e4c14d08669b3b9ef15a5952e1de913dcb9b38832725de5900ddc45080a78"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/implementation.js",
@@ -445,7 +381,7 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/inlineCompletion.js",
-      "sha256": "4dfe8a2ee959ad0770fb2b8e4fb44bb553df3b893c3b0fc2a05f5c411ff7e026"
+      "sha256": "5ba9875958ed363b229024efa0a821d675d5aa2ef328b0c7e2dcfd293ec417e6"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/inlineValue.js",
@@ -457,7 +393,7 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/notebook.js",
-      "sha256": "29eee44a9149b8130559424e5a41b44b5bf8c88341676bb1bdda87f15bea6c18"
+      "sha256": "7b13c74fca5bc48306ccc861fdfb797b85f7d5046c9866728c3cbae3042fb8c9"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/progress.js",
@@ -509,11 +445,11 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/reference.js",
-      "sha256": "c141f3f17436b2a1de946e12c7eb778ada720b36d1af7ca4c1776030f077d128"
+      "sha256": "e49f6080100e0d2a0eb13ed393a2ad7248b76a8c58f18840587a149852543cb0"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/rename.js",
-      "sha256": "8a221246bac8ab7aeef0e9f09c9c173ba8679aa053f8c7f3878085f16cfe01db"
+      "sha256": "10cf75e4a72576016398bdee798c7dcdeef54fef823e1075530c2c5edf9f1730"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/selectionRange.js",
@@ -525,15 +461,15 @@
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/signatureHelp.js",
-      "sha256": "8429cff4e3bc181576e379c9efcb461c9f076a8b012cd0edcf4fb7008ca0e1f7"
+      "sha256": "df0168430b65d749b3b1a738e317f989a4121f17199e220506d9c97de8c2300d"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/textDocumentContent.js",
-      "sha256": "9658572a9536d06dab3dcb9aa8665748e3f3b6c4abdc0d5fedbd149f864019a1"
+      "sha256": "b6fd4cb2d29d11975b5c391b57513b504bbca5a714824ccb9fa48da9b03544a7"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/textSynchronization.js",
-      "sha256": "606096922fea8be0cfb9361380ad232de5d3b44444b5fb5b52dfe5d49d89a84a"
+      "sha256": "b4704b29f4234a1e1b0b0c1657c3911c189edaf5a1a2fda28e631322e6d1e03e"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/typeDefinition.js",
@@ -556,152 +492,208 @@
       "sha256": "7410c64978409e70bbde7e2786fd6dc86019196ebf26d41ad0fb2454c19cf1c5"
     },
     {
-      "file": "node_modules/vscode-languageclient/lib/common/utils/uuid.js",
-      "sha256": "2b32566659bdc61a8997f0ff924ef93dcf86464df4dff7dcc14072d3dc507a3e"
-    },
-    {
       "file": "node_modules/vscode-languageclient/lib/common/workspaceFolder.js",
-      "sha256": "8205587f2ff814c486e2bef0bd1c5511328fc51ad3b99aa1e30680f919620e68"
+      "sha256": "6760ee130b9274075306a99c507ca0fe2da0d67f0ee176da10587a55d8b66d40"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/common/workspaceSymbol.js",
-      "sha256": "58892fdd945b351f2ce0ab0ab470f1284df9468dfffcf158e1388ad9000e4dab"
+      "sha256": "0d4e5bfecad70c3405db8b7c87dea98ed3736a94209426f253f3f730b3d79254"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/node/main.js",
-      "sha256": "2a9a3df022e76edff94023c12af6559eb04adf9adc113ab48a798c127226ebff"
+      "sha256": "c18b182bdc48665165b77436c37d14edc9de651e5d9352ff8fda5cce31f5b430"
     },
     {
       "file": "node_modules/vscode-languageclient/lib/node/processes.js",
       "sha256": "fcbebfc164974332f16b91b5fa872d70cc6d482813382702557d528fae1f2a16"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/api.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js",
+      "sha256": "0d8ccd38514f3994256d0c271b9b6e288174e13847ed2c8561abd5f005bdeb76"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js",
+      "sha256": "b851c4246fa5a644bcebe56b1fb74048948eab0886d706e59e2090fa7e41550b"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js",
+      "sha256": "d08ceacf8a54d95bff3218898228ed08d83b5d718a317189452421bcde356e3b"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js",
+      "sha256": "ad43f37a324cf41af376ea66004063ac5867a2e3dfce81b47ab617b9105a0a7d"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js",
+      "sha256": "d521b1fc2887c04a2d3f4d4403b5bd9fa734ef83e6f53e99bcc781d791db1508"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js",
+      "sha256": "db07129f8322e52c81034004a1a1eb9b1be743c9ec55f5f6a5b33da48cb8a2a8"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js",
+      "sha256": "9c2041c8828be66893ba5f97933cc7d3698a1bad2f34b742761e6f2a3e615346"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js",
+      "sha256": "27beae232413871d20551178d3342ee0bc927e8b05862883c75ce021291f11cc"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js",
+      "sha256": "5f912919f4b2584a38812535e7894c851a13b8f51a7ad6b769f2b5e35beffaef"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js",
+      "sha256": "cd9cd263bdd57b32eac86a0dd83ac7241aa95ffb7a43af1e680b65449799afbc"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js",
+      "sha256": "7a06cfd7456c2f2471dc6aab3fb69683a62245d2a91859b337e03e0e66fa0b26"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js",
+      "sha256": "9b4736fe0168adf1dff8a1f41cf76dc8e9f380684cbb39056403e81a05a51cb3"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js",
+      "sha256": "9a7afb92b0ae8d9c341373fdecfb0133b4ba7414455110408809c2f4a05af1d1"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js",
+      "sha256": "91a1128bc09e21d95be67dd441e13a0373af7c97d6ccf912b7b4168d11190efa"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js",
+      "sha256": "58dd36ef24c704a5ae59b742f7034d09aa2b86394770bb82ece964eb30c4da2f"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js",
+      "sha256": "ab9e2cbffb2d4060f21bd151e97cf05de9b7190550994e85b0686c1c24dfade9"
+    },
+    {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js",
       "sha256": "9e6a38c7fa9e9c895a9def3b2782aa6d237478fcb9ca50fe2bf7a8e01a30ae52"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/connection.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js",
       "sha256": "a7b55f520671b542393beee973efbf243fc47db28c7e175bc46068adf4710759"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/messages.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js",
       "sha256": "491e071f4da94a5b4bbfb7d573c8194745597f761a9d0fbe6da3cdcb068c7cdc"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js",
       "sha256": "92f7bb30800e725bb687335cb3d19c088ae15f447e202f9db00b0df0c9a6b2b1"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js",
       "sha256": "2ca2588634b72e9dd03b174f52313da6f1cade1cfe53438321dd0937dc107573"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js",
       "sha256": "e87abad3e9be4e839070faba1e6c9457fcf6abac29c8c985e50759289271782b"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js",
       "sha256": "b094e776b11137cb606f34e74ef2e462a84c60e581ea4a55224279bff3242a1d"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js",
       "sha256": "52a3e4d87d094fc07aa76d555e7c676850ab1d03aff6fae9275815e371e7f1eb"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js",
       "sha256": "bae3899e7183f24d0ea4c1c688cb8061f093a426f9b335465b24871259938780"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js",
       "sha256": "baeecc15cc5d76bbfba6f1096c767034afa9554c353c077fa028e0ddcdb69f4a"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js",
       "sha256": "fc5ca87fb2c2b3af88df91ae568f0b7ba64377dc82332defbbc77d84e3b7a0c7"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js",
       "sha256": "d891eb86bde82dee8c44580adfae8aa1a5c81a45bb57d1fb08b98eb4d171fc49"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js",
       "sha256": "51e1126ff547dd732a937dd7cf2fb97f2aa0931e6839ccd8b81139bb9f92a452"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js",
       "sha256": "754720f427104773bc0fa70313ec575e05ef3dad34c6bfb758ec32bb22e466c3"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js",
       "sha256": "07f8786a8f601e519fd1034118d282b3c4b65256ebb7a621073255bfb347b8ea"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js",
       "sha256": "f3b76181d8c4c9afeed9be946fa0a723e138757a47891ad48adcdf1009e3c94a"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js",
       "sha256": "ea27088811886c348580c6e61447739627e4f4ee755d285e4a81fcd43cde2d68"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js",
       "sha256": "f5b46409ff764edab300aedf107bede6d1f194e8b89902c49c0cabf3bf905ab6"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js",
       "sha256": "79bd7aa21988af048003de7376b9130e34951ca7b1c94eb007c4c98b0523ecab"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js",
       "sha256": "030b6d71857f4ac1ebc4c6ccbc4c00ab5b0329f022ef2db7964154e4d84f807b"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js",
       "sha256": "90b7b9a28126b7fc3bf3248bca9829c512a2e28f76d7fb8be7932b17ca4765a0"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js",
       "sha256": "1ea7e9adbe3807d7086641fc3585add72779b230734858dfe3930977bad8f844"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js",
       "sha256": "316f2f26d5f2a2a248d6c2fa856ecae0b3dea694d1ffbca7281aaae75c4a9775"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js",
       "sha256": "d36018325431765a055d70627e34b13836077c58250dd7f2603876558b0e7a80"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js",
       "sha256": "a28b4ba2c95ccc41d87c541b9ed48b1224aa2711b8a05b9ead589e4dda513c2e"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js",
       "sha256": "cb140890bd30cafa74f6feeb1c3333077dbc4af12c871ca29facd4623ad96a66"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/common/utils/is.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js",
       "sha256": "90686a238bf35cff10f2fbdb397f383a74a1de6067ac95576368547088fa296c"
     },
     {
-      "file": "node_modules/vscode-languageserver-protocol/lib/node/main.js",
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js",
       "sha256": "b1dd0a87ab774610e2eca260e27ab91c3ca7e21f9247bd98889f4bea4d9f9483"
     },
     {
+      "file": "node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js",
+      "sha256": "5e0ed93be118240c68968d45337b5a737e232078d2a5da7f2077b484d955b94b"
+    },
+    {
       "file": "node_modules/vscode-languageserver-textdocument/lib/umd/main.js",
-      "sha256": "2bfe6cf4c5e9778310b5adc710247ae1777d69a795554b73606daa5619a96059"
-    },
-    {
-      "file": "node_modules/vscode-languageserver-types/lib/esm/main.js",
-      "sha256": "a3b917f6fee370fa0393caf96803d2c13e05ed2713c4bbf2e35f758d4530b3a2"
-    },
-    {
-      "file": "node_modules/vscode-languageserver-types/lib/umd/main.js",
-      "sha256": "f1b6bb37ec0d620440ef31bbe9b79ebb7a3e8f80626455a3b9002523e5718ec3"
+      "sha256": "292fab6bd4872b3174625aa9c8c38ca9a15a90f026517f2fc6d3787e347e2e23"
     },
     {
       "file": "package-lock.json",
-      "sha256": "ef7ff681a371fe39ce0c313e49b99f50640cf625078571711b7d2a293b1eaeca"
+      "sha256": "6c51bc05ebd03b6c8012aa08bb62754be4c635bb138490124e59e34cf92671bc"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",
@@ -809,11 +801,11 @@
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-atlas.ts",
-      "sha256": "a167db7aafe9e408d2c156597bd24822577aa65e70b7c04a262c30c0082ecbe3"
+      "sha256": "606008b36b56e7dd0a4cde1f520e89c0a5754e62c2957ea467130e146ed5829e"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-frame-composition.ts",
-      "sha256": "76266b1a324c87bbca3ad58d8bb32ff2285c0984359e75d8fe0ecf2e47eaa9b7"
+      "sha256": "013b255f2976b551ded62be34d504d815c6018c3461dcae28923dba220c6e723"
     },
     {
       "file": "packages/assets/src/secret-of-mana/som-sprite-palettes.ts",
@@ -881,7 +873,7 @@
     },
     {
       "file": "packages/core/src/addressToLine.ts",
-      "sha256": "5e4c47f4d3f6edd5128068b5b322ea378326d086585f66287d7b5e00b4afd2c1"
+      "sha256": "f913e835613b2c0cf9a3bdbe2536067e51274725c0a0753d25f8438f9634c329"
     },
     {
       "file": "packages/core/src/architecture-registry.ts",
@@ -889,11 +881,11 @@
     },
     {
       "file": "packages/core/src/architecture-types.ts",
-      "sha256": "888fe046fbc83abba8a7ec65f15c185b584c7bf47eb1e715c3f1a6eddaecf385"
+      "sha256": "c548823805f437d071f8376e31fdba342ac96433bf68cc687c7f3d46e644de92"
     },
     {
       "file": "packages/core/src/assembler.ts",
-      "sha256": "b4547735db5d5609a57da806628b49c0706b7bc545964901c5c48647cc211c40"
+      "sha256": "b585b32dcfb62e52c9478906aad0d52eb006491e506cc16044252e09e34728be"
     },
     {
       "file": "packages/core/src/canonical-json.ts",
@@ -905,7 +897,7 @@
     },
     {
       "file": "packages/core/src/debug-map.ts",
-      "sha256": "a5db5b6f7963b7ac4b04d3e0d8f132f3728e4465fb36082bbce296e8ab75ad4f"
+      "sha256": "bb21e686f144deb80a0f753cfce2132d5008ede551f9a04a448cc951dfc18ed2"
     },
     {
       "file": "packages/core/src/decoder-types.ts",
@@ -913,7 +905,7 @@
     },
     {
       "file": "packages/core/src/diagnostics.ts",
-      "sha256": "5be55c393885562212c86df61078a180464ae9e548dd43ae30f8a6a3acbfbc4f"
+      "sha256": "b057c8c58e278da9323e98b0a77296e293d0617bba8f9e9d77fc0b2defbabbbc"
     },
     {
       "file": "packages/core/src/directive-groups.ts",
@@ -965,7 +957,7 @@
     },
     {
       "file": "packages/core/src/index.ts",
-      "sha256": "2d82411d088432b5b4dd6e9027006c886cbc747c308e363e9a66fdab2c51a820"
+      "sha256": "0e7cd6eab0c461db3eea9603d9a64c2c2b40977a2e35352a33b81303ba309057"
     },
     {
       "file": "packages/core/src/internal-instrumentation.ts",
@@ -1028,6 +1020,10 @@
       "sha256": "457e0d8edf774c41c1aa5086dea29a1fbd06e6926867d808ca52be52607b984f"
     },
     {
+      "file": "packages/core/src/ir/link-expression.ts",
+      "sha256": "077060eb23d770df023388a5aaa932372a41ce48debebdf9961be1940c2384ec"
+    },
+    {
       "file": "packages/core/src/ir/macro-arguments.ts",
       "sha256": "d212bf868371a17574ce58e62756dfe31af9ec7db227b24d6c9b26a15bc51b90"
     },
@@ -1052,8 +1048,12 @@
       "sha256": "b712b014ea21ae686fb7d13c6882817fd96cd3698293185572a46b24bba9bab6"
     },
     {
+      "file": "packages/core/src/ir/relocatable-instruction.ts",
+      "sha256": "e1cffb5c30d4199d5af8580bf3e9ef3f64150a82f7ada1442fe618e6cae82243"
+    },
+    {
       "file": "packages/core/src/ir/resolved-instruction.ts",
-      "sha256": "960457626f95ee493e0564a3557490b7c4595cf029314076adc5ac0fd9a8d704"
+      "sha256": "e25ab0b001e95906bb75ff6b1535a4af4e7869de061b3099442b6274030bd7f9"
     },
     {
       "file": "packages/core/src/ir/source-fragment.ts",
@@ -1072,12 +1072,60 @@
       "sha256": "f023f7c6897a9e9af1066da6d3b63ac259918db6f78120b2b122b3e631cf6661"
     },
     {
+      "file": "packages/core/src/linker.ts",
+      "sha256": "e9cfffd3be0bb717a153291f0b9c1cbb9735ad2d5394708903ac0f062fba2f56"
+    },
+    {
+      "file": "packages/core/src/linker/driver.ts",
+      "sha256": "abaace5d4ae1a5b2f56e73c07e18a4e068fe54da85f7319827cdc8a2664f942d"
+    },
+    {
+      "file": "packages/core/src/linker/envelope.ts",
+      "sha256": "46ca65f8c5c9be186807f6843dae029370bd23a62baee2fa87f68df4526f8d80"
+    },
+    {
+      "file": "packages/core/src/linker/layout.ts",
+      "sha256": "d371c9d35a3a388a18d464322b82307cef614869a34309b0f10241d996b800f5"
+    },
+    {
+      "file": "packages/core/src/linker/library.ts",
+      "sha256": "465475ce9b03a18302ffeebf4e7035c007fb83dd87f30e4bb9455b6d9c7ce986"
+    },
+    {
+      "file": "packages/core/src/linker/object.ts",
+      "sha256": "82d5ad9b95de9580d4511fe0b684c3b76a7ce79100eb486c1152a0c0dbaeaae1"
+    },
+    {
+      "file": "packages/core/src/linker/recipe.ts",
+      "sha256": "de1703fc78df9152dacb52ae7e5ce9b06318207eea04c8c75040d423f103125c"
+    },
+    {
+      "file": "packages/core/src/linker/relocations.ts",
+      "sha256": "8ba8c37d0e01a31e7b1faa95623d97751c2a67b8a4e0d4fecb03220d2d99b7ec"
+    },
+    {
+      "file": "packages/core/src/linker/symbols.ts",
+      "sha256": "6ff034be96a97feaaad31671436628d18eccc5f32adb5e1373aa44abc2ad202a"
+    },
+    {
+      "file": "packages/core/src/linker/types.ts",
+      "sha256": "7ab318f6535ac9543d8acb91f8c2eaa7d1bd6a48d95cce7a71d59c2b9d37a72c"
+    },
+    {
+      "file": "packages/core/src/linker/validation.ts",
+      "sha256": "8b20046f9a4661297741253cafc180262af29587cbc3a29a303d578c818a7efb"
+    },
+    {
+      "file": "packages/core/src/linker/value.ts",
+      "sha256": "4831d8e2680cc743c9dfba9017ea083663b0a9843d1f82bfbe3b2a27a19087ef"
+    },
+    {
       "file": "packages/core/src/lsp/directive-catalog.ts",
       "sha256": "098d3115206c2fd46c470f5f155334a8eb7f9fb4dd9d1713f72610260b8d499d"
     },
     {
       "file": "packages/core/src/mathcore.ts",
-      "sha256": "ab38a6401860dc1e5ecac992cf3a5dace1990dc3e50cff269faca05535bcf5ba"
+      "sha256": "82327d59c533067519a2767add6f16a100464617d3f5a84676ab2e7a9373a954"
     },
     {
       "file": "packages/core/src/operand-resolver.ts",
@@ -1085,7 +1133,7 @@
     },
     {
       "file": "packages/core/src/plugin/contracts.ts",
-      "sha256": "b1532bfa2c8bc2910fad3cddfb75ea6a1f95d3f7883105e516a81efa54d35c21"
+      "sha256": "6759bb03584e8a250bba8e29af28a9423227f36c0d88dabb8608cf9c719b3636"
     },
     {
       "file": "packages/core/src/plugin/diagnostics.ts",
@@ -1110,6 +1158,14 @@
     {
       "file": "packages/core/src/plugin/syntax-snapshot.ts",
       "sha256": "aeb9c309c16016b11eb07d7646eb419edec83714965dcb9fc2a8c27b64dc3dca"
+    },
+    {
+      "file": "packages/core/src/relocatable.ts",
+      "sha256": "a3077e00f6b7bbe7ea525939fc84d22ab0d07ac48266d2ebe6f0885aff65c214"
+    },
+    {
+      "file": "packages/core/src/services/asar-module-layout.ts",
+      "sha256": "05a29e6bc1228d2dc253875061161651e5e290dd211fa5ba8bf4411c66709aff"
     },
     {
       "file": "packages/core/src/services/assembly-front-end-service.ts",
@@ -1137,7 +1193,7 @@
     },
     {
       "file": "packages/core/src/services/data-struct-engine.ts",
-      "sha256": "a61f87c6f20cc8288027c65880adfcb635a7d89a242bac83471e81b49b06d789"
+      "sha256": "40fcc755cb255dbf70981b1aad733a255caf1a058e2a4535903e2852bcb0fc62"
     },
     {
       "file": "packages/core/src/services/define-engine.ts",
@@ -1145,11 +1201,11 @@
     },
     {
       "file": "packages/core/src/services/directive-runtime-service.ts",
-      "sha256": "cbbf26494bba835fe77d1c93fe19c8b099d3a13b1641efafd28d98d6faf40068"
+      "sha256": "7601dfa11c171a6459f9d16edc7184c61ec4ec4b1c47e86a061a9cf2b4fb9712"
     },
     {
       "file": "packages/core/src/services/front-end-command-service.ts",
-      "sha256": "9baf43bf8e0404ab0dbb5826e5c52453cbde21859d6663209437e5fe6e2706b4"
+      "sha256": "12d5f0aade641f9837620c29a07407337631130abe450d7004b6fe634314ac01"
     },
     {
       "file": "packages/core/src/services/include-source-service.ts",
@@ -1160,20 +1216,32 @@
       "sha256": "8bde0c4dab3fa14655b165a248aa0bb64248fe87e70e9d2c6d571207801aee85"
     },
     {
+      "file": "packages/core/src/services/module-assembly.ts",
+      "sha256": "d182826037d05fa8c17141dd81748e95c19d50470c0f48b40e6212a00306e457"
+    },
+    {
+      "file": "packages/core/src/services/module-file-provider.ts",
+      "sha256": "41237438370b71f12b5d2f8a138bc86f11e2b8595043cd36bc8cfd8259e800b8"
+    },
+    {
       "file": "packages/core/src/services/occurrence-syntax-cache.ts",
       "sha256": "b2dcefed1e1e41dc6dd8da2d96d54157eb7380434c7ef53b29cfa45ee97867a1"
     },
     {
       "file": "packages/core/src/services/output-writer-service.ts",
-      "sha256": "94b4417d4fff56d07381ae4b30b00aafb9ec9812152d16f2611aac3c08d20ae9"
+      "sha256": "aeecb315632414ee753566ef82bf62051017f1a67b90c24595140af65742fa46"
     },
     {
       "file": "packages/core/src/services/plugin-session-capabilities.ts",
-      "sha256": "7ace99b7ebab284ce9090e8c84b8aee2603d4f32a7a669fb92d63359a7889e0c"
+      "sha256": "456160533abe07364908f5e546d830171ea98d1e30352e46acba8f4f0f7e9f2a"
     },
     {
       "file": "packages/core/src/services/program-model-builder.ts",
       "sha256": "f0ec0bffcecbf596e9b521e39a31ccb0e87168b8466c121fa1912fbe5a293273"
+    },
+    {
+      "file": "packages/core/src/services/source-link-recipe.ts",
+      "sha256": "0470e987344552ba18418b105311ece6c7506439e4203bb4a0786bfc8b85b393"
     },
     {
       "file": "packages/core/src/services/struct-engine.ts",
@@ -1189,7 +1257,7 @@
     },
     {
       "file": "packages/core/src/services/symbol-scope-service.ts",
-      "sha256": "8bcff6a85c1b70425fb2a6926bc1ba3bcf9d177e2238fc6e49d0b7b7ea078adf"
+      "sha256": "2a38d706a6489116a3e6c33f3faaf07b5489aad306099a3c7456f91f0068fe1b"
     },
     {
       "file": "packages/core/src/source-field-edits.ts",
@@ -1300,10 +1368,6 @@
       "sha256": "dd565ca49ed534a34f7cf1e159c0d49e73991f1d5a9690ce06a01c953ce82af5"
     },
     {
-      "file": "packages/disassembler/src/analysis/coverage-map.ts",
-      "sha256": "adb7f9bbc1c4b359e1074d8bc036fbe9b2195f200d225322d62859b726f036ed"
-    },
-    {
       "file": "packages/disassembler/src/analysis/instruction-annotations.ts",
       "sha256": "3e6b221916b509f8489ddc3dfee13dc3aee9231e1e7752110600ab4521e09b58"
     },
@@ -1313,11 +1377,11 @@
     },
     {
       "file": "packages/disassembler/src/analysis/static-analysis.ts",
-      "sha256": "12be44af58ede9dfff51cbb2aa759bc87a6926acdd3f2b28bb9d4d8011b353b7"
+      "sha256": "edab9317a84010c8e639fc7f1464806e572361356f7a85506b1d70a718a930d6"
     },
     {
       "file": "packages/disassembler/src/index.ts",
-      "sha256": "1f742f37c1ddd8488c78d431ff60068b76a9d48882bc496c897ab51f464d79a5"
+      "sha256": "a001a764bab75aaa5d97c8846f58471fad9458c524f542bb3df22c8c3d447e27"
     },
     {
       "file": "packages/disassembler/src/internal/capture-limits.ts",
@@ -1345,7 +1409,7 @@
     },
     {
       "file": "packages/disassembler/src/model/analysis-ownership.ts",
-      "sha256": "c108554886e61d0f80025494e4acb93f174c6f72cc38f87293720266f96ba0e7"
+      "sha256": "455b214cc1a6b5ca200d64f33eba7c45f74e9f09aee24cc2c5c03e1f4c7f6200"
     },
     {
       "file": "packages/disassembler/src/model/evidence-pool.ts",
@@ -1365,7 +1429,7 @@
     },
     {
       "file": "packages/disassembler/src/model/project-types.ts",
-      "sha256": "dc4cb0f31255376addd7e61fb13bde9fbf0a47e63aa76a58bf2bf949eaf15bf1"
+      "sha256": "4c12d8f6dac1ffc0d3ac1c10df8d89176bdab96ea1ef7933d681caa843757a05"
     },
     {
       "file": "packages/disassembler/src/model/project-validation.ts",
@@ -1493,7 +1557,7 @@
     },
     {
       "file": "packages/disassembler/src/source-project.ts",
-      "sha256": "df48662c77e59fcec8ab5190f9c94f3b916a4cc56e2dd5f0f7f11c22c2055dfb"
+      "sha256": "a107ee1ef5295eb465f602bc0ace321a261f759bc21ba7543c6fb310db21648d"
     },
     {
       "file": "packages/disassembler/src/source-project/blobs.ts",
@@ -1501,11 +1565,15 @@
     },
     {
       "file": "packages/disassembler/src/source-project/build-cache.ts",
-      "sha256": "7ac152fba1665cb9554decfbf827ce1a9cd411d149559979bad43947b9f1616e"
+      "sha256": "2a5523fa9d0716793c156a25e1bed9ff259064c188ab8e80e2bcb96d9a086397"
+    },
+    {
+      "file": "packages/disassembler/src/source-project/build-coverage.ts",
+      "sha256": "ac42bb65c4df1602037e748cbbee1487f0f4fb7343c57cdd2e4c0861565aa458"
     },
     {
       "file": "packages/disassembler/src/source-project/build-publication.ts",
-      "sha256": "c712d652ad65f3195a7169f3bc0b15949a78ca35b9ec91b54e17ca4abdd49dce"
+      "sha256": "ad3da2743168dc7b25deeff709dba55b0fde3a3c17d7c5d4dc13281ea28ef11b"
     },
     {
       "file": "packages/disassembler/src/source-project/captures.ts",
@@ -1525,7 +1593,7 @@
     },
     {
       "file": "packages/disassembler/src/source-project/generation.ts",
-      "sha256": "aa8ea4a0a602955cffed7f24fe77253948e9fb1d7710a7d6cc16f19cdb5b4368"
+      "sha256": "5a70d1b9c173505ed76097503a8c6cded5e096978b90ca5e2afac27cdcbf16ff"
     },
     {
       "file": "packages/disassembler/src/source-project/git.ts",
@@ -1534,6 +1602,10 @@
     {
       "file": "packages/disassembler/src/source-project/input-snapshot.ts",
       "sha256": "a566657eeb7fea27ed4c55ce13bbf8b03d771ceb20c603dd8cff13cbf2d5d5cb"
+    },
+    {
+      "file": "packages/disassembler/src/source-project/link-build.ts",
+      "sha256": "a1ab49a6329e44d8e6cb74dc67875064ef00c476d8c6cefda8a67043ad414c4e"
     },
     {
       "file": "packages/disassembler/src/source-project/merge.ts",
@@ -1560,16 +1632,16 @@
       "sha256": "a6c8c5359ddd8dcb4c5e88b53ec291fa0ef78be3b224c49aba33d9f674d2fcd5"
     },
     {
+      "file": "packages/disassembler/src/source-project/source-link.ts",
+      "sha256": "28ef0f41353b56b80fa0af81ec115136eff0166793a6c5df903d8dfb59824bc1"
+    },
+    {
       "file": "packages/disassembler/src/source/source-export.ts",
-      "sha256": "7d9332b5074f3cf47b83f5ddacc305876ef398b7b2ad87369b85203a1611ad9b"
+      "sha256": "7569a71d14d12cf4378a49679662ab426bb43ee756d22bc01ef40d542223a065"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-annotation-query.ts",
       "sha256": "e47eb37066a76909280b3eb2a0c11f76b9cb1eb63b0eda40c9093777f0168508"
-    },
-    {
-      "file": "packages/disassembler/src/storage/sqlite-coverage-query.ts",
-      "sha256": "0a1c918983cb76888821199916eda0dbb0baf48f6b15d4f84e4a07bc267a4d5a"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-graph-query.ts",
@@ -1629,11 +1701,11 @@
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-storage-policy.ts",
-      "sha256": "ab9277715c2cda849b9bf2680d698194a6dff79f7e485b2e2e043c7dc62552c9"
+      "sha256": "3a57bea3eefab94c13dac789b981cb3145db1daacb5169fb623bc07898a08f73"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-store.ts",
-      "sha256": "8b16b6a257705edd91f6d966f1a0c58d55852d3cbabcf1bb5693a3e55e96e150"
+      "sha256": "c3f08903deae0945c94734c559ef1fa8360b38aadfb3c86428c7675a1f90995b"
     },
     {
       "file": "packages/disassembler/src/storage/sqlite-trace-stage.ts",
@@ -1653,11 +1725,11 @@
     },
     {
       "file": "packages/plugin-65xx/src/directives/ca65-syntax.ts",
-      "sha256": "6b9de748cb5028b6f1a6a0aa05a3de21c1f9483cb49ddaa412b4d78d88b01c3b"
+      "sha256": "bce9dff7ebd2c02c51afa22d03370fecf5146a72e842da5388e919a4d61b0d4c"
     },
     {
       "file": "packages/plugin-65xx/src/directives/ca65.ts",
-      "sha256": "1f90e8717f6260263fb1121def908ca9bcf941efd2981884cad985c1d883c567"
+      "sha256": "6be81b9ea08ded1f3c59ff8039d54b34a8daf4be201e8b3d146923ce781b4451"
     },
     {
       "file": "packages/plugin-65xx/src/disassembler.ts",
@@ -1665,7 +1737,7 @@
     },
     {
       "file": "packages/plugin-65xx/src/index.ts",
-      "sha256": "66ce2f307f6ffbd5316e1cbc3c26cee30e216d938e9751e135593e1913e53be5"
+      "sha256": "cbcd3d42434ec8065e49db239786fc48b021cba2b6926d7557748ef8d673a44c"
     },
     {
       "file": "packages/plugin-65xx/src/instructions/catalog.ts",
@@ -1689,7 +1761,7 @@
     },
     {
       "file": "packages/plugin-65xx/src/linker-config.ts",
-      "sha256": "993afaf9db11bbead619a3237091a7daaceec1e555975e3d17978694236d9cee"
+      "sha256": "a4bafb3d838d2e9682aaf6af44cef783f2bb942a2061222d1d15bf663ec399c1"
     },
     {
       "file": "packages/plugin-65xx/src/nes/analysis.ts",
@@ -1733,7 +1805,7 @@
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-build.ts",
-      "sha256": "449b08ced1aebac5440b018dbc9a9d0d3232a2f50fe7f60ed2c3be989163060c"
+      "sha256": "8c4681aa949249c7fc7d362959818eb7825d9d2f92a3592e5eb44313ad12f89f"
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-data.ts",
@@ -1741,11 +1813,11 @@
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-export.ts",
-      "sha256": "8d1e77216c3b8b1168e5921ea8eac1f6f3e057424ec77b731c53c633d9012355"
+      "sha256": "1782575a86af20fd74c0bcea2a351fac72a4bb1949d0e2327fb7821ce64a17e7"
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-generation.ts",
-      "sha256": "dc0d85d29380097e7b680aacf4d57a911be0ce29701da600bd6566ad7f89ad6e"
+      "sha256": "cb8e815a084b6f43fef228a7f425f602458d58024924e8759c29b7764fdd93cd"
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-index.ts",
@@ -1757,11 +1829,11 @@
     },
     {
       "file": "packages/plugin-65xx/src/nes/source-target.ts",
-      "sha256": "3ddc457fc24a727b5db6635a90580075c7094b011aa21ed5fa037f04068ac7f1"
+      "sha256": "9920a96e5f6cfadf59b763dc76cd74be6ce8183d5b14ee98dc96b65edef603b8"
     },
     {
       "file": "packages/plugin-65xx/src/operands/resolution.ts",
-      "sha256": "7ef1cb5d01db2d7271b5c039d86a43bd5e612e67d511bd888dd8157403949162"
+      "sha256": "20b2e3140614a9413b96a09999ce8d07a814aef0fd801173ed144710555f8a47"
     },
     {
       "file": "packages/plugin-65xx/src/operands/syntax.ts",
@@ -1772,16 +1844,24 @@
       "sha256": "d6c459e963a65e85e3ba309f8a208e62c52e34e3528e9b02d2871f5018ec1917"
     },
     {
+      "file": "packages/plugin-65xx/src/target/link-target.ts",
+      "sha256": "be4596f713cc02bb94a19f57afff56d1c242d16545008edcc30ea534fab5d15e"
+    },
+    {
       "file": "packages/plugin-65xx/src/target/nes.ts",
-      "sha256": "ca2f129df0a411bb791b810d2031c8cdf9daccbb0c0dd238d4f7ca51b07ef13b"
+      "sha256": "94bd3f465d77919a18ebe0ca4e77e348f0ff4ece18e3865bc305308de750f81f"
     },
     {
       "file": "packages/plugin-65xx/src/typed-architecture.ts",
-      "sha256": "4fc55c58ce929130f025c0aa43f7f818bf1ace2cba9c89a12aa0b852c9d935c1"
+      "sha256": "d17ec148c4d7d6dea9247df33cd1e50c6a66ab7a45b8b94c377e53a710db18be"
+    },
+    {
+      "file": "packages/plugin-loader-node/src/build-configuration.ts",
+      "sha256": "9897004a9c7f51c61a787bf0f2aa8d37ef02d3015eecf462e44165565913c0b1"
     },
     {
       "file": "packages/plugin-loader-node/src/configuration.ts",
-      "sha256": "78b4a0ebb2d2c94ddca10f4dd97c80682ee30ff5643f32fd6ae119e3171430df"
+      "sha256": "76df6f5ff3143c4c81e810236995c8ccf5f8138894439066a19e0c66702da5ed"
     },
     {
       "file": "packages/plugin-loader-node/src/index.ts",
@@ -1861,15 +1941,15 @@
     },
     {
       "file": "packages/plugin-snes/src/architectures/typed-65816.ts",
-      "sha256": "e6829b714ea152ed40d4e37dd21d77fc73caf01f163d0e9511b915e9383b16b4"
+      "sha256": "0dbc92afb1968198c46384e23cb81df788cf361b4ff6b70b07efb790b1b9e0c2"
     },
     {
       "file": "packages/plugin-snes/src/architectures/typed-spc700.ts",
-      "sha256": "a6b858a8f20288e917b1a1396da48de2905f2a3899ef2f17d990705e652c0675"
+      "sha256": "08156eeb993c910a8edfae8794789da1e598ce2f66ddb65caf2c2e6716e3a5d5"
     },
     {
       "file": "packages/plugin-snes/src/architectures/typed-superfx.ts",
-      "sha256": "508c3ecce3fc2ebd5a737ea2d063cc0f88dc36792f1e0f469bc37d27dfd93791"
+      "sha256": "92b12e1a85bcbbb4d7144289bfde01ef99c29fa723145406a54c9249b013867e"
     },
     {
       "file": "packages/plugin-snes/src/asar/compatibility.ts",
@@ -1877,7 +1957,7 @@
     },
     {
       "file": "packages/plugin-snes/src/assembler.ts",
-      "sha256": "8492ea6a6e802e3e0a61cb00e3731e625fd9e56e7501dae4b0af6391a57fc0bd"
+      "sha256": "bb82c5cb05f0c3dc420b13840e002fcee8568e0d176b6ac55cefc4a8661fd218"
     },
     {
       "file": "packages/plugin-snes/src/assets/assembly-formats.ts",
@@ -1913,11 +1993,11 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler.ts",
-      "sha256": "89f208376d7626ef2e4c585bed5f7b1a46c6b5720710839b4f2c35a6aa0e2112"
+      "sha256": "5935b87e6f0290659e2e9f6afeb8ce6eeff78374f9797fe733bb4d82e2727a62"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/65816-analysis.ts",
-      "sha256": "c58a00c47ecfd860072add7dbbb598c93fe30971106f742b5209374612caf1de"
+      "sha256": "592a484b435b9ba4398840d6899546c8f3f047d386a41f3012b37ad8c1e6685c"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/65816-state.ts",
@@ -1933,7 +2013,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/asset-requirements.ts",
-      "sha256": "95b516f29025d5b3265c1e3410a3ed9033af13a62a41d8553c0bf5388816fce3"
+      "sha256": "6826d15de9e1c39422def4aa717e97be75de642e0eeca436abf4be1541acbb8d"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/code-preservation.ts",
@@ -1957,7 +2037,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/project-initializer.ts",
-      "sha256": "0237fb7bf7cb83070a41f86796d7cb41542375fe430f8abbb827e6cbc4e9cd8b"
+      "sha256": "1934eb5038a914cbcc066ed65fcd2ab35361ce1e321c85a9079abc66bccb849f"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/ram-map.ts",
@@ -2001,11 +2081,11 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-build.ts",
-      "sha256": "82452394c9b69fcc7955d5f71c587b44349daf40e59dce4ac0ac323dfcb5b802"
+      "sha256": "675487aafbc6b61f42fabdd2c7d783d2d690c84d640060205705d2d129b204a3"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-export.ts",
-      "sha256": "0c03b903aa8eeaf564d721c72c09089e5f0d41b92e88572090a1d4cb5cb70a66"
+      "sha256": "f9d17cef040458a428cc1b1a10fc15a3a9baf92675635d43718b3ef4ec8c8009"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-generation-blobs.ts",
@@ -2013,7 +2093,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-generation.ts",
-      "sha256": "2ccb9fcccb296b7d852c70e7e8367801d173da91f746061530bbd732be9c93ca"
+      "sha256": "4777e1c058fd364fc5e363819d3bac18dee27efc926667fd285899fc0da300a1"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-initialize.ts",
@@ -2025,7 +2105,7 @@
     },
     {
       "file": "packages/plugin-snes/src/disassembler/source-target.ts",
-      "sha256": "eca63da3e47ae52037f1fb94b36e5a85a0b75fc1151516604e83993eb3bd8778"
+      "sha256": "a6d33332527632fa4ef3ed7db1d8e8916f1ab4af0d391decae55111d091fd373"
     },
     {
       "file": "packages/plugin-snes/src/disassembler/spc700-address-space.ts",
@@ -2089,11 +2169,15 @@
     },
     {
       "file": "packages/plugin-snes/src/target.ts",
-      "sha256": "f5bf09950b32d1b2ad60f22e0462c70ed72c41e40f7068e0da0f34babf9c4abe"
+      "sha256": "ee238841c5da4a761c95622317b590316759a0423f69737fbcab9b6c96c7861d"
     },
     {
       "file": "packages/plugin-snes/src/target/address-space.ts",
       "sha256": "fc20539c447591dc696aeece2ac3a1c8972a39cfba17a204bfe252751a1b777a"
+    },
+    {
+      "file": "packages/plugin-snes/src/target/link-target.ts",
+      "sha256": "c1b81c6771af9112dff8c747023d0367a0b6ede28660813a7ce0cf730abd2481"
     },
     {
       "file": "packages/plugin-snes/src/tooling/directive-catalog.ts",
@@ -2108,12 +2192,20 @@
       "sha256": "b640ee4a290b4f884ff588b67ea2b3d7d6ba205686970f97ec9dbca3b54763fe"
     },
     {
+      "file": "packages/vscode-extension/node_modules/vscode-languageserver-types/lib/esm/main.js",
+      "sha256": "b19fb0b439f3a60cfeb0e623c0f8003263449ce4f989386eb8680ce75d13d91d"
+    },
+    {
       "file": "packages/vscode-extension/src/analysis/annotation-controller.ts",
-      "sha256": "09bbbe9e7d4870b98d64d49a715657097e75adf080debfbc46265f9c56db263c"
+      "sha256": "8b10694467dcce834accf814a9a123ae341baacadb4518cabf6f7d8fd91e6d95"
+    },
+    {
+      "file": "packages/vscode-extension/src/analysis/build-coverage.ts",
+      "sha256": "0c95db812477fc86e338fcece33b0a912d879a7e1db488bd8d600b32459ef637"
     },
     {
       "file": "packages/vscode-extension/src/analysis/coverage-tree.ts",
-      "sha256": "b202c05586b6ab1d589a1a84cce50a0767b3e5632098da230bb4937bd62c7386"
+      "sha256": "c46852cfcef361a6b44b7c8cafbc150686993d88b19b685128016012c6987465"
     },
     {
       "file": "packages/vscode-extension/src/analysis/debug-maps.ts",
@@ -2121,7 +2213,7 @@
     },
     {
       "file": "packages/vscode-extension/src/analysis/evidence-inspector.ts",
-      "sha256": "27ca71d7dab7d577b6cf169c43a6b29750a6b5a5a5ac2718b92e79f6580e92c8"
+      "sha256": "16bbbe2eba4a7bdc3103279634896c07deb0724b58b2422845cb2aea7316c728"
     },
     {
       "file": "packages/vscode-extension/src/analysis/navigation-target.ts",
@@ -2132,12 +2224,16 @@
       "sha256": "4ab55a0c51a8842f95b4845a0b3d57ef8e29a95e1cb14bda0ca7a41f1e5e91ca"
     },
     {
+      "file": "packages/vscode-extension/src/analysis/project-discovery.ts",
+      "sha256": "88fb7d768707820f6c3a3cd1bee7b81360b6495ffce4e3280e6049908e8aa894"
+    },
+    {
       "file": "packages/vscode-extension/src/analysis/sources-tree.ts",
-      "sha256": "96e94c45d0e213ed0062bf35235ee488c0ac214915affbca3c33ebccfd616f1a"
+      "sha256": "01fad8e98404aa5109cb6cc32c050706f07f848b101bdaf703478198facdcddf"
     },
     {
       "file": "packages/vscode-extension/src/analysis/worker-client.ts",
-      "sha256": "7b782b23356899b73f63c2d011a27b920a9223efc55d5a977e60faf81358371b"
+      "sha256": "1a5f5fd8c70281cb29e70ab19bdf811c6b8f2905376f2b1c6c0a963129cf0e75"
     },
     {
       "file": "packages/vscode-extension/src/asset-preview-controller.ts",
@@ -2173,7 +2269,7 @@
     },
     {
       "file": "packages/vscode-extension/src/debug/analysis-annotations.ts",
-      "sha256": "8c2a4cb54bfcd050c089a0063da44ef64964dff205cebc8c97c3aecf1462ce50"
+      "sha256": "2ddba60441ae8ff13361b78f5be5e1cbccc5883bcb660f58b6d6cbdd1e0a489a"
     },
     {
       "file": "packages/vscode-extension/src/debug/nes-ppu.ts",
@@ -2213,7 +2309,11 @@
     },
     {
       "file": "packages/vscode-extension/src/extension.ts",
-      "sha256": "c3a123dd33b753daa10462f94138a66c2001a0090fa81ed249557d7b1c1f4328"
+      "sha256": "6ba1ceaeee114699c245e59def3ec240d8786db23e117f21fa2014282a7b9049"
+    },
+    {
+      "file": "packages/vscode-extension/src/linked-build.ts",
+      "sha256": "2deaefd4ff986afb9d35292987b1de75daa545157fe1b754786ad3dd1598bd2f"
     },
     {
       "file": "packages/vscode-extension/src/project/index-tree.ts",
@@ -2249,7 +2349,7 @@
     },
     {
       "file": "packages/vscode-extension/src/source/analysis-editor.ts",
-      "sha256": "20460e3334cca2fd0ac515deb87ee11b15acec2f2a9e21ae5fccf28a39464c93"
+      "sha256": "d05e94a0b8849b6ab4db1b65e07cc4a38f2e35a999d58009c3cab79770c401ed"
     },
     {
       "file": "packages/vscode-extension/src/source/asset-coordinator.ts",
@@ -2261,7 +2361,7 @@
     },
     {
       "file": "packages/vscode-extension/src/source/build-coordinator.ts",
-      "sha256": "574bd66a45aea996b992e1ef006efc9be176f9a133f4fe238cdbee7c83df5b80"
+      "sha256": "a45ca954c679a9d4670b2a76eaf4d179752469aca2ec88f269bd135738368383"
     },
     {
       "file": "packages/vscode-extension/src/source/build-inputs.ts",
@@ -2277,7 +2377,7 @@
     },
     {
       "file": "packages/vscode-extension/src/source/controller.ts",
-      "sha256": "b0966c840f64ce244ee305cc5a10e60f22a883d73f3182693e76238f7e4fa3eb"
+      "sha256": "63435d739236b58dfd9f45f0c39abb4e74613bd5711370b85fca0f413885ac0b"
     },
     {
       "file": "packages/vscode-extension/src/source/conversion-editor.ts",
@@ -2285,7 +2385,7 @@
     },
     {
       "file": "packages/vscode-extension/src/source/evidence-selection.ts",
-      "sha256": "2b24bf448d2a32368bc15ba57fac3497af7adb37f08758c813cd1328c05e5ed2"
+      "sha256": "e4708cdfeb7f63987a29e98b5a1797011f84fda64207e4de57e44596a286ffac"
     },
     {
       "file": "packages/vscode-extension/src/source/generation-review.ts",
@@ -2297,11 +2397,11 @@
     },
     {
       "file": "packages/vscode-extension/src/source/process-client.ts",
-      "sha256": "3410510d79867b404ecd244e8bb5368c0d1b9c8f68304a3c04d71d9f82c954d6"
+      "sha256": "91d439d651a4f631c18c46c3a4c9be41d351aeb333511a433b79e9223c462f59"
     },
     {
       "file": "packages/vscode-extension/src/source/project-path.ts",
-      "sha256": "e6d0f4906d7de7fefb488a3f435c84b1c00bab7967af77e1acd81fc455a19931"
+      "sha256": "dd8be3534b8152d82c7ebe2a6e8330c0e84a97adae2f06359afd06043745ca03"
     },
     {
       "file": "packages/vscode-extension/src/source/research-editor.ts",
@@ -2372,6 +2472,14 @@
       "sha256": "a9470588d44ccc288380de00ac82b565fcf5fec628445b193a56d9ff86498341"
     },
     {
+      "file": "packages/workflows/src/build-contracts.ts",
+      "sha256": "c9e0a1208732a8a17b31566f4f571f9706e9763ac5fd16104b0ae0abb9cad29f"
+    },
+    {
+      "file": "packages/workflows/src/build-selection.ts",
+      "sha256": "eeb9422f6eb1eebf40b8f1f5883e993f72bc569b8cee1655d83f760d0f41743f"
+    },
+    {
       "file": "packages/workflows/src/source-builtins.ts",
       "sha256": "44ac54d49894a8b18106e440804457416a283f544b532719db3c4e20b98a3e57"
     },
@@ -2389,7 +2497,7 @@
     },
     {
       "file": "packages/workflows/src/source-requests.ts",
-      "sha256": "b3b55bc585467f378e9671c743b3191c8bef2cea0c65be35d589745d4ce44daa"
+      "sha256": "e4fb1d634a48b3b56954efe98bc7b1100ba11314f1996c7a7161d5a4dbfc9807"
     },
     {
       "file": "packages/workflows/src/source-research.ts",
@@ -2401,7 +2509,7 @@
     },
     {
       "file": "packages/workflows/src/source.ts",
-      "sha256": "9a435f519d7e26d775131cacc913b786514f8132d4d1ddffd056327308df8e2d"
+      "sha256": "51add9c2c44e4ae5ff697302e08fd73f6157f59df9e971fe6441e44fa7f2662f"
     },
     {
       "file": "scripts/bundle-notices.mjs",

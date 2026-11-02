@@ -1,4 +1,4 @@
-import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
+import { Uint8ArrayDecoderSource, } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { projectSourceLabelNames, HalfOpenIntervalIndex, } from "@uttori/asm-disassembler";
 import { Cpu6502Decoder, formatCpu6502Instruction } from "../decoder.js";
@@ -51,7 +51,7 @@ export function nesSourceSegments(rom, _nodes = []) {
     return segments;
 }
 /** Export every physical byte once; ambiguous instruction boundaries remain editable binary data. */
-export function exportNesSource(rom, nodes, romSha256, research = {}) {
+export function exportNesSource(rom, nodes, romSha256, research = {}, exportOptions = {}) {
     const segments = nesSourceSegments(rom, nodes);
     const files = [];
     const add = (path, value) => files.push({ path, bytes: typeof value === "string" ? Buffer.from(value) : value });
@@ -212,9 +212,12 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
             }
         }
         const lines = [
-            `; Physical ${segment.name} bank; org excludes the iNES header, base selects its logical origin.`,
-            `org ${nesSourceHex(start, 6)}`,
-            `base ${nesSourceHex(segment.origin)}`,
+            exportOptions.module
+                ? `; Physical ${segment.name} bank; the link recipe selects its load/run addresses.`
+                : `; Physical ${segment.name} bank; org excludes the iNES header, base selects its logical origin.`,
+            ...(exportOptions.module
+                ? [`section "${segment.name}", code`]
+                : [`org ${nesSourceHex(start, 6)}`, `base ${nesSourceHex(segment.origin)}`]),
             "",
             `${segment.name}_start:`,
         ];
@@ -384,6 +387,44 @@ export function exportNesSource(rom, nodes, romSha256, research = {}) {
     }
     add("source-code.json", canonicalJson({ format: "uttori-source-code", version: 1, romSha256, ranges }));
     add("main.asm", main.join("\n") + "\n");
+    if (exportOptions.module) {
+        if (!exportOptions.module.id.trim()) {
+            throw new Error("Module export requires a stable module identity.");
+        }
+        const linkRecipe = {
+            target: "65xx.nes",
+            checksumPolicy: "preserve",
+            regions: [
+                {
+                    name: "__ines_header",
+                    start: 0,
+                    size: 16,
+                    outputOffset: 0,
+                    initialBytes: [...rom.header()],
+                },
+                ...segments.map((segment) => ({
+                    name: segment.name,
+                    start: segment.origin,
+                    size: segment.size,
+                    outputOffset: segment.offset,
+                    addressSpace: "65xx.ines-address-space",
+                })),
+            ],
+            placements: segments.map((segment) => ({
+                section: segment.name,
+                load: segment.name,
+                run: segment.name,
+            })),
+        };
+        add("link-recipe.json", canonicalJson(linkRecipe));
+        return {
+            files,
+            segments,
+            codeBytes,
+            ranges,
+            relocatable: { moduleId: exportOptions.module.id, linkRecipe },
+        };
+    }
     return { files, segments, codeBytes, ranges };
 }
 //# sourceMappingURL=source-export.js.map

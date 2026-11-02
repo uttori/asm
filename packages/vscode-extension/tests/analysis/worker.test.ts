@@ -126,7 +126,7 @@ const request = (
   > = {},
 ): unknown => runAnalysisWorkerRequest({ id: 1, directory, operation, ...extra });
 
-test.serial("analysis worker projects catalog, coverage and bounded annotation ranges", (t) => {
+test.serial("analysis worker projects catalog and bounded runtime annotation ranges", (t) => {
   const directory = tempProject(t);
   t.is(request(directory, "clear"), undefined);
   const catalog = request(directory, "sources");
@@ -145,16 +145,9 @@ test.serial("analysis worker projects catalog, coverage and bounded annotation r
   }
   t.is(manifest.target, "fixture");
   t.is(manifest.rom.contentSize, 1024);
-  const coverage = request(directory, "coverage");
-  if (
-    !isRecord(coverage) ||
-    !isRecord(coverage.summary) ||
-    typeof coverage.summary.totalBytes !== "number"
-  ) {
-    throw new Error("expected coverage");
+  for (const operation of ["coverage", "coverageConflicts"]) {
+    t.throws(() => request(directory, operation), { message: /Unknown analysis worker operation/ });
   }
-  t.is(coverage.summary.totalBytes, 1024);
-  t.deepEqual(request(directory, "coverageConflicts"), { count: 0, segments: [] });
   t.deepEqual(request(directory, "annotations", { ranges: [] }), []);
   t.throws(
     () =>
@@ -323,7 +316,6 @@ test.serial(
     const readName = () => {
       const result = request(directory, "evidenceChoices", {
         sourceRoot: root,
-        evidenceSelection: { labels: ["entry"] },
       });
       if (
         !isRecord(result) ||
@@ -349,13 +341,7 @@ test.serial(
     changed.decisions[0].value.analysisEntryPoint = true;
     fs.writeFileSync(names, JSON.stringify(changed));
     t.is(readName(), "RandomByte", "Raw observations and their selected names remain queryable");
-    for (const operation of [
-      "coverage",
-      "coverageConflicts",
-      "annotations",
-      "debugAnnotations",
-      "navigation",
-    ] as const) {
+    for (const operation of ["annotations", "debugAnnotations", "navigation"] as const) {
       t.throws(() => request(directory, operation, { sourceRoot: root }), {
         message: /Analyze the selected inputs/,
       });

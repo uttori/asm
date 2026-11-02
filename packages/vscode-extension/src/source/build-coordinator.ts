@@ -81,6 +81,7 @@ export class SourceBuildCoordinator {
     cancellation?: AbortSignal,
     progress?: (message: string) => void,
     captureUri?: Uri | readonly Uri[],
+    assembly?: "linked",
   ): Promise<unknown> {
     if (!workspace.isTrusted) {
       throw new Error("Trust this workspace before running source tools or plugins.");
@@ -233,6 +234,7 @@ export class SourceBuildCoordinator {
           readSourceOperation({
             action,
             directory: root,
+            ...(assembly ? { assembly } : {}),
             candidate: ["status", "preview", "apply", "discard"].includes(action)
               ? this.session.candidate
               : undefined,

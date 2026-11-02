@@ -1,9 +1,18 @@
-import { type AssemblerEnvironment, type AddressToLineMapping } from "@uttori/asm-core";
-import { type SourceBuildVerification } from "@uttori/asm-disassembler/source-project";
+import { type AssemblyModuleOptions, type AssemblerEnvironment, type AddressToLineMapping } from "@uttori/asm-core";
+import { type SourceBuildCoverage, type SourceBuildVerification, type SourceLinkBuild, type SourceModuleInspection } from "@uttori/asm-disassembler/source-project";
 import { type SnesPlacementContract, type SnesFixedExtent, type SnesInstructionStateContract, type SnesLayoutDiagnostic } from "./rom-layout/check.js";
 import { type SnesRomExpansionPolicy } from "./rom-layout/expansion.js";
 /** Build normal editable source. Original-ROM equality is requested only for pure generations. */
 export interface BuildSnesSourceOptions {
+    /** Explicit generated-module selection; absence retains the absolute Asar pipeline. */
+    readonly link?: SourceLinkBuild;
+    /** Complete original container, including a copier prefix, for linked pristine verification. */
+    readonly originalContainer?: Uint8Array;
+    /** Exact host configuration snapshots, included in saved-input freshness checks. */
+    readonly controlInputs?: readonly {
+        readonly path: string;
+        readonly sha256: string;
+    }[];
     readonly root: string;
     readonly entrySource: string;
     readonly environment: AssemblerEnvironment;
@@ -34,6 +43,7 @@ export interface SnesSourceBuild {
     readonly outputFile: string;
     readonly debugMapFile: string;
     readonly inputSha256: string;
+    readonly coverage?: SourceBuildCoverage;
     /** Exact consumed saved files, relative to the source root; timestamps and editor events are not input identities. */
     readonly inputs: readonly {
         readonly path: string;
@@ -67,6 +77,15 @@ export interface SnesSourceInspection {
     readonly snapshots: ReadonlyMap<string, Uint8Array>;
     readonly diagnostics: readonly SnesLayoutDiagnostic[];
 }
+/** Module production borrows the same snapshot/overlay provider as ordinary source inspection. */
+export type InspectSnesModuleOptions = Pick<InspectSnesSourceOptions, "root" | "entrySource" | "environment" | "includePaths" | "targetOptions" | "overlays" | "signal" | "link"> & {
+    readonly module: AssemblyModuleOptions;
+    /** Shared source hosts provide their existing exact identities; bare embedding inspections may omit them. */
+    readonly toolchainSha256?: string;
+    readonly configurationSha256?: string;
+};
+/** Produce symbolic records without running layout checks that require a linked ROM or publishing artifacts. */
+export declare function inspectSnesSourceModule(options: InspectSnesModuleOptions): SourceModuleInspection;
 /** Assemble one immutable input snapshot; return diagnostics for placement previews without publishing output. */
 export declare function inspectSnesSource(options: InspectSnesSourceOptions): SnesSourceInspection;
 /**

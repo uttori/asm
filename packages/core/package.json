@@ -59,6 +59,11 @@
       "uttori-source": "./src/tooling.ts",
       "types": "./dist/tooling.d.ts",
       "import": "./dist/tooling.js"
+    },
+    "./linker": {
+      "uttori-source": "./src/linker.ts",
+      "types": "./dist/linker.d.ts",
+      "import": "./dist/linker.js"
     }
   },
   "publishConfig": {

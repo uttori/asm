@@ -43,3 +43,5 @@ export {
   type SnesRomAddressSpace,
   snesRomAddressSpace,
 } from "./target/address-space.js";
+
+export { createSnesLinkTarget } from "./target/link-target.js";

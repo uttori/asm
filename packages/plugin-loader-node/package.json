@@ -35,7 +35,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./asm-config.schema.json": "./asm-config.schema.json"
+    "./asm-config.schema.json": "./asm-config.schema.json",
+    "./build-configuration": {
+      "uttori-source": "./src/build-configuration.ts",
+      "types": "./dist/build-configuration.d.ts",
+      "import": "./dist/build-configuration.js"
+    }
   },
   "publishConfig": {
     "access": "public"

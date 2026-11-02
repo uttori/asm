@@ -9,6 +9,10 @@ import {
 import sinon from "sinon";
 
 import { test } from "../../../../tests/ava-helper.js";
+import {
+  readBuildCoverage,
+  checkBuildCoverageFreshness,
+} from "../../src/analysis/build-coverage.js";
 import { SourceProcessClient } from "../../src/source/process-client.js";
 import { readGenerationCommit, readMergePreview } from "../../src/source/result-readers.js";
 
@@ -24,10 +28,16 @@ test("bundled source worker prepares and previews a verified generation", async 
   }
   fs.writeFileSync(rom, bytes);
   const client = new SourceProcessClient(
-    path.resolve("packages/vscode-extension/out/source-process.mjs"),
+    process.env.UTTORI_TEST_SOURCE_WORKER ??
+      path.resolve("packages/vscode-extension/out/source-process.mjs"),
   );
   t.teardown(() => client.dispose());
   await client.run({ action: "init", directory, rom, mapper: "lorom" }, { maxMemoryMiB: 512 });
+  await client.run({ action: "build", directory }, { maxMemoryMiB: 512 });
+  const snapshot = await readBuildCoverage(directory);
+  t.truthy(snapshot?.summary.coverage);
+  t.true(fs.statSync(path.join(directory, ".uttori-local/builds/summary.json")).size < 1024);
+  t.is((await checkBuildCoverageFreshness(directory, snapshot!.summary)).status, "current");
   const prepared = await client.run(
     { action: "prepare", directory },
     {
@@ -164,7 +174,7 @@ test.serial(
       {
         maxMemoryMiB: 128,
         onProgress: (message) => {
-          if (message.includes("] Capture ")) {
+          if (message.includes(": Capture ")) {
             clock.tick(20 * 60_000);
           }
         },
@@ -215,7 +225,7 @@ test("source workers retain buffer bytes and report progress before a completed 
   );
   t.deepEqual(result, [0, 128, 255]);
   t.is(progress.length, 1);
-  t.regex(progress[0], /^\[\d+\.\d+s] Assembling$/);
+  t.regex(progress[0], /^\d+\.\d+s: Assembling$/);
 });
 
 test.serial(
@@ -241,7 +251,7 @@ test.serial(
         maxMemoryMiB: 128,
         onProgress: (message) => {
           progress.push(message);
-          if (message === "[0.0s] Import /captures/large.act2: Merging facts.") {
+          if (message === "0.0s: Import /captures/large.act2: Merging facts.") {
             clock.tick(30_000);
           }
         },
@@ -251,7 +261,7 @@ test.serial(
     t.is(progress.length, 4);
     t.regex(
       progress[3],
-      /^\[30.0s] Waiting for worker \d+; last progress update 30s ago. Import \/captures\/large.act2: Merging facts\.$/,
+      /^30\.0s: Waiting for worker \d+; last progress update 30s ago. Import \/captures\/large.act2: Merging facts\.$/,
     );
     t.true(
       logs.some(

@@ -3,6 +3,8 @@ import type { MathCore } from "../mathcore.js";
 import type { SourceSpan } from "../source-location.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
 export type FrontEndCommandHost = {
+    readonly moduleIdentity?: string;
+    assignModuleSymbol?(name: string, expression: import("../ir/expression-node.js").ExpressionNode): void;
     currentParentLabel: string;
     currentParentIsGlobal: boolean;
     currentGlobalParentLabel: string;

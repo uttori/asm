@@ -1,7 +1,7 @@
 /** Native analysis annotations supplied to the target-neutral inline DAP session. */
 import type { DebugAddress } from "@uttori/asm-debug-adapter";
 
-import { findAnalysisProjectDirectories } from "../analysis/coverage-tree.js";
+import { findAnalysisProjectDirectories } from "../analysis/project-discovery.js";
 import { analysisWorker } from "../analysis/worker-client.js";
 import { joinInformation } from "../editor-info/format.js";
 

@@ -220,18 +220,27 @@ export function validateFrameLayout(
   }
   // A shared tile stream can depict different actors with different runtime
   // colors. Validate display groups even when assembly selects one segment.
-  if (Array.isArray(layout.frames)) for (const frame of layout.frames) {
-    if (frame.paletteGroup !== undefined &&
-      (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 ||
-        frame.paletteGroup >= layout.paletteRefs.length)) {
-      throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
-    }
-    if (Array.isArray(frame.blocks)) for (const block of frame.blocks) {
-      if (block.paletteGroup !== undefined &&
-        (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 ||
-          block.paletteGroup >= layout.paletteRefs.length)) {
-        throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+  if (Array.isArray(layout.frames)) {
+    for (const frame of layout.frames) {
+      if (
+        frame.paletteGroup !== undefined &&
+        (!Number.isInteger(frame.paletteGroup) ||
+          frame.paletteGroup < 0 ||
+          frame.paletteGroup >= layout.paletteRefs.length)
+      ) {
+        throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
       }
+      if (Array.isArray(frame.blocks))
+        for (const block of frame.blocks) {
+          if (
+            block.paletteGroup !== undefined &&
+            (!Number.isInteger(block.paletteGroup) ||
+              block.paletteGroup < 0 ||
+              block.paletteGroup >= layout.paletteRefs.length)
+          ) {
+            throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
+          }
+        }
     }
   }
   const names = whole ? Object.keys(layout.segments) : [segmentName ?? ""];

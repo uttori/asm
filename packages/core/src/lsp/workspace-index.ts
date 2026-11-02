@@ -33,6 +33,10 @@ export type FileAnalysis = {
  * Configuration for a workspace index.
  */
 export type WorkspaceIndexOptions = {
+  /** Analyze module-authored roots using section-relative symbols and import declarations. */
+  module?: import("../relocatable.js").AssemblyModuleOptions;
+  /** Absolute source-root paths select independent module identities; other roots retain the fallback module/absolute mode. */
+  moduleRoots?: Readonly<Record<string, import("../relocatable.js").AssemblyModuleOptions>>;
   /** Frozen plugin environment used by every analysis session. */
   environment: AssemblerEnvironment;
   /** Target contribution ID or alias. */
@@ -56,11 +60,13 @@ export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environme
 export type RootAnalysis = CachedRootAnalysis;
 
 /** Shared by worker producers, transport validation and snapshot hydration. */
-export const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION = 3 as const;
+export const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION = 5 as const;
 
 /** Structured-clone payload from an isolated analyzer. It contains no plugin instances or file handles. */
 export interface WorkspaceAnalysisSnapshot {
-  /** Revision 2 carries typed operand occurrences; revision 1 ranges cannot be reused for rename. */
+  readonly module?: import("../relocatable.js").AssemblyModuleOptions;
+  readonly moduleRoots?: WorkspaceIndexOptions["moduleRoots"];
+  /** Revision 5 also binds source adapters so cached absolute/native interpretations cannot leak across selections. */
   readonly version: typeof WORKSPACE_ANALYSIS_SNAPSHOT_VERSION;
   readonly target: string;
   readonly architecture: string;
@@ -134,6 +140,9 @@ export class WorkspaceIndex {
   includePaths: string[];
   architecture: string;
   readonly targetOptions: Readonly<Record<string, unknown>>;
+  module?: import("../relocatable.js").AssemblyModuleOptions;
+  /** Owned per-root selections also participate in persistent cache and worker-snapshot identity. */
+  moduleRoots: NonNullable<WorkspaceIndexOptions["moduleRoots"]>;
   readonly environment: AssemblerEnvironment;
   readonly target: string;
   readonly toolingCatalog: ToolingCatalog;
@@ -201,6 +210,8 @@ export class WorkspaceIndex {
     this.architecture =
       options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
     this.targetOptions = Object.freeze({ ...options.targetOptions });
+    this.module = options.module ? Object.freeze({ ...options.module }) : undefined;
+    this.moduleRoots = normalizeModuleRoots(options.moduleRoots);
     this.directiveCatalog = this.toolingCatalog.getDirectives();
     const target = this.environment.getTarget(this.target);
     const normalizedOptions = target?.createOptions?.(this.targetOptions) ?? this.targetOptions;
@@ -215,6 +226,8 @@ export class WorkspaceIndex {
   snapshot(): WorkspaceAnalysisSnapshot {
     return structuredClone({
       version: WORKSPACE_ANALYSIS_SNAPSHOT_VERSION,
+      ...(this.module ? { module: this.module } : {}),
+      ...(Object.keys(this.moduleRoots).length ? { moduleRoots: this.moduleRoots } : {}),
       target: this.target,
       architecture: this.architecture,
       roots: [...this.rootAnalyses],
@@ -239,6 +252,9 @@ export class WorkspaceIndex {
     const index = new WorkspaceIndex(options);
     if (
       snapshot.version !== WORKSPACE_ANALYSIS_SNAPSHOT_VERSION ||
+      JSON.stringify(snapshot.module ?? null) !== JSON.stringify(options.module ?? null) ||
+      JSON.stringify(normalizeModuleRoots(snapshot.moduleRoots)) !==
+        JSON.stringify(index.moduleRoots) ||
       snapshot.target !== index.target ||
       snapshot.architecture !== index.architecture
     ) {
@@ -276,6 +292,12 @@ export class WorkspaceIndex {
    * @param {WorkspaceIndexOptions} options The configuration to apply.
    */
   configure(options: WorkspaceIndexConfiguration): void {
+    if (Object.hasOwn(options, "module")) {
+      this.module = options.module ? Object.freeze({ ...options.module }) : undefined;
+    }
+    if (Object.hasOwn(options, "moduleRoots")) {
+      this.moduleRoots = normalizeModuleRoots(options.moduleRoots);
+    }
     if (options.entryPoints) {
       this.entryPoints = options.entryPoints.map((entry) => path.resolve(entry));
     }
@@ -650,6 +672,7 @@ export class WorkspaceIndex {
         () =>
           new Assembler({
             environment: this.environment,
+            module: this.moduleRoots[path.resolve(root)] ?? this.module,
             target: this.target,
             architecture: this.architecture,
             targetOptions: this.targetOptions,
@@ -858,7 +881,11 @@ export class WorkspaceIndex {
       architecture: this.architecture,
       includePaths: this.includePaths,
       converterIdentity: JSON.stringify([formats, transforms]),
-      targetOptionsIdentity: JSON.stringify(this.targetOptions),
+      targetOptionsIdentity: JSON.stringify({
+        targetOptions: this.targetOptions,
+        module: this.module ?? null,
+        moduleRoots: this.moduleRoots,
+      }),
     };
   }
 
@@ -962,4 +989,20 @@ export class WorkspaceIndex {
     this.#includeTargets = includeTargets;
     this.#coverageByRoot = coverageByRoot;
   }
+}
+
+/** Normalize once so insertion order and path spelling cannot change an otherwise identical module selection. */
+function normalizeModuleRoots(
+  value: WorkspaceIndexOptions["moduleRoots"],
+): NonNullable<WorkspaceIndexOptions["moduleRoots"]> {
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(value ?? {})
+        .map(([file, module]): [string, import("../relocatable.js").AssemblyModuleOptions] => [
+          path.resolve(file),
+          Object.freeze({ ...module }),
+        ])
+        .toSorted(([a], [b]) => (a < b ? -1 : Number(a > b))),
+    ),
+  );
 }

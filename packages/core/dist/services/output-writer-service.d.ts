@@ -1,6 +1,9 @@
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 import type { AssemblyStageName, TargetAddressSpace, TargetOutputFormat } from "../plugin/contracts.js";
+import type { ModuleAssembly } from "./module-assembly.js";
 export interface OutputWriterHost {
+    readonly moduleAssembly?: ModuleAssembly;
+    recordModuleWrite?(): void;
     traceStage: AssemblyStageName;
     currentTargetAddress: number;
     currentTargetBaseAddress: number;

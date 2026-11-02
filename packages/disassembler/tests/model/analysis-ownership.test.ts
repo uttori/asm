@@ -1,6 +1,29 @@
 import { test } from "../../../../tests/ava-helper.js";
-import { validateAnalysisOwnership } from "../../src/model/analysis-ownership.js";
-import type { AnalysisControlFlowNodeRecord } from "../../src/model/project-types.js";
+import {
+  validateAnalysisOwnership,
+  withCompactAnalysisOwnership,
+} from "../../src/model/analysis-ownership.js";
+import type {
+  AnalysisControlFlowNodeRecord,
+  AnalysisControlFlowEdgeRecord,
+} from "../../src/model/project-types.js";
+
+/** Minimal graph edge; ownership must ignore unresolved targets and call/return transitions. */
+const edge = (
+  from: string,
+  to: string,
+  edgeKind = "fallthrough",
+): AnalysisControlFlowEdgeRecord => ({
+  id: `${from}:${to}`,
+  kind: "cfg-edge",
+  addressSpace: "snes.cpu",
+  from,
+  to,
+  fromAddress: 0,
+  edgeKind,
+  indirect: false,
+  evidence: [],
+});
 
 /** Only ownership fields participate here; ordinary record bounds are checked by project validation. */
 const node = (
@@ -26,6 +49,31 @@ const node = (
   evidencePredecessor,
   evidencePath: [],
   evidence: [],
+});
+
+test("compact ownership preserves caller continuations and leaves shared cyclic blocks unowned", (t) => {
+  const records = [
+    node("caller"),
+    node("callee"),
+    node("continuation"),
+    node("shared"),
+    node("loop"),
+    edge("caller", "callee", "call"),
+    edge("caller", "continuation"),
+    edge("callee", "continuation", "return"),
+    edge("continuation", "shared"),
+    edge("callee", "shared", "branch"),
+    edge("shared", "loop"),
+    edge("loop", "shared"),
+    edge("caller", "blocked"),
+  ];
+  const compact = withCompactAnalysisOwnership(records, new Set(["caller", "callee", "missing"]));
+  t.notThrows(() => validateAnalysisOwnership(compact));
+  const nodes = compact.filter((record) => record.kind === "cfg-node");
+  t.is(nodes.find((record) => record.id === "continuation")?.functionEntry, "caller");
+  t.is(nodes.find((record) => record.id === "shared")?.functionEntry, undefined);
+  t.is(nodes.find((record) => record.id === "loop")?.functionEntry, undefined);
+  t.is(records[0].functionEntry, undefined);
 });
 
 test("compact ownership validates long paths once and rejects dangling, cyclic or mixed owners", (t) => {

@@ -3,6 +3,10 @@ import type { ExpressionNode } from "../ir/expression-node.js";
 import type { OutputWriterService } from "./output-writer-service.js";
 import type { StructDefinition, StructEngine } from "./struct-engine.js";
 export interface DataStructHost {
+    readonly moduleIdentity?: string;
+    compileLinkExpression?(expression: ExpressionNode): import("../ir/link-expression.js").LinkExpression;
+    writeRelocation?(expression: import("../ir/link-expression.js").LinkExpression, encoding: import("../relocatable.js").RelocationEncoding): void;
+    recordModuleStructBase?(name: string, base: number): void;
     structs: Map<string, StructDefinition>;
     currentTargetBaseAddress: number;
     canEmitBytes: boolean;

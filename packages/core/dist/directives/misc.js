@@ -214,15 +214,15 @@ const empty = () => ({});
 export const registerMiscDirectives = (registry, context, enabledGroups = new Set(["table", "diagnostic"])) => {
     const emptySyntax = syntaxRecord({});
     if (enabledGroups.has("table")) {
-        registry.registerTyped("pulltable", empty, emptySyntax, () => handlePullTable(context.table));
-        registry.registerTyped("pushtable", empty, emptySyntax, () => handlePushTable(context.table));
-        registry.registerTyped("cleartable", empty, emptySyntax, () => handleClearTable(context.table));
-        registry.registerTyped("table", parseTable, syntaxRecord({ filename: syntaxString, rtl: syntaxBoolean }), (payload) => executeTable(context.table, payload));
+        registry.registerImmutableTyped("pulltable", empty, emptySyntax, () => handlePullTable(context.table));
+        registry.registerImmutableTyped("pushtable", empty, emptySyntax, () => handlePushTable(context.table));
+        registry.registerImmutableTyped("cleartable", empty, emptySyntax, () => handleClearTable(context.table));
+        registry.registerImmutableTyped("table", parseTable, syntaxRecord({ filename: syntaxString, rtl: syntaxBoolean }), (payload) => executeTable(context.table, payload));
     }
     if (enabledGroups.has("diagnostic")) {
-        registry.registerTyped("assert", parseAssert, syntaxRecord({ condition: syntaxExpression, message: syntaxOptional(syntaxString) }), (payload) => executeAssert(context, payload));
-        registry.registerTyped("error", parseError, syntaxRecord({ message: syntaxString }), (payload) => executeError(context, payload));
-        registry.registerTyped("warnpc", parseWarnpc, syntaxRecord({ address: syntaxExpression }), (payload) => executeWarnpc(context, payload));
+        registry.registerImmutableTyped("assert", parseAssert, syntaxRecord({ condition: syntaxExpression, message: syntaxOptional(syntaxString) }), (payload) => executeAssert(context, payload));
+        registry.registerImmutableTyped("error", parseError, syntaxRecord({ message: syntaxString }), (payload) => executeError(context, payload));
+        registry.registerImmutableTyped("warnpc", parseWarnpc, syntaxRecord({ address: syntaxExpression }), (payload) => executeWarnpc(context, payload));
     }
 };
 /** Shared source/public-entry grammar for `assert`. */

@@ -20,6 +20,7 @@ import { createSpcRuntime } from "./directives/spc.js";
 import { snesDirectiveSyntax } from "./directives/syntax.js";
 import { cloneSnesSessionState, SNES_SESSION_STATE_ID, snesSessionStateKey, } from "./session-state.js";
 import { snesRomAddressSpace } from "./target/address-space.js";
+import { createSnesLinkTarget, createSnesSourceLinkRecipe } from "./target/link-target.js";
 import { directiveCatalog } from "./tooling/directive-catalog.js";
 import { cpu65816Catalog, spc700Catalog, superFxCatalog } from "./tooling/instruction-catalog.js";
 /** Canonical SNES cartridge target id (`snes`, `sfc`, `snes-65816` are aliases). */
@@ -469,6 +470,8 @@ const plugin = definePlugin({
             syntaxProfile: ASAR_SYNTAX_PROFILE,
             defaultOutputExtension: ".sfc",
             createOptions: targetOptions,
+            createLinkTarget: createSnesLinkTarget,
+            createSourceLinkRecipe: createSnesSourceLinkRecipe,
         });
     },
 });

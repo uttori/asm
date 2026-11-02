@@ -9,6 +9,15 @@ import type { OutputWriterService } from "./output-writer-service.js";
 import type { StructDefinition, StructEngine, StructField } from "./struct-engine.js";
 
 export interface DataStructHost {
+  readonly moduleIdentity?: string;
+  compileLinkExpression?(
+    expression: ExpressionNode,
+  ): import("../ir/link-expression.js").LinkExpression;
+  writeRelocation?(
+    expression: import("../ir/link-expression.js").LinkExpression,
+    encoding: import("../relocatable.js").RelocationEncoding,
+  ): void;
+  recordModuleStructBase?(name: string, base: number): void;
   structs: Map<string, StructDefinition>;
   currentTargetBaseAddress: number;
   canEmitBytes: boolean;
@@ -173,6 +182,9 @@ export class DataStructEngine {
   executeRecord(node: Extract<DeclarationNode, { kind: "dataStruct" }>): void {
     const reference = node.reference.text;
     const { definition, index } = this.resolveRecord(node.reference);
+    const moduleBase =
+      this.host.currentTargetBaseAddress - index * (definition.size + definition.extensionSize);
+    this.host.recordModuleStructBase?.(definition.name, moduleBase);
     if (this.table?.next !== undefined && index !== this.table.next) {
       throw new Error(
         `Non-contiguous dataStructs index: expected ${this.table.next}, received ${index}.`,
@@ -187,6 +199,10 @@ export class DataStructEngine {
       }
     }
     const bytes: number[] = [];
+    const symbolic: {
+      expression: import("../ir/link-expression.js").LinkExpression;
+      width: 1 | 2 | 3 | 4;
+    }[] = [];
     const fields: { reference: string; expression: string; offset: number; width: number }[] = [];
     for (const field of layout) {
       const value = values.get(field.name);
@@ -208,6 +224,29 @@ export class DataStructEngine {
       }
       for (const [itemIndex, item] of items.entries()) {
         const expression = item.text;
+        if (this.host.moduleIdentity !== undefined && this.host.compileLinkExpression) {
+          const compiled = this.host.compileLinkExpression(item.expression);
+          if (
+            compiled.kind === "constant" &&
+            (compiled.value < 0 || compiled.value >= 2 ** (8 * field.width))
+          ) {
+            throw new Error(
+              `Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`,
+            );
+          }
+          if (field.width !== 1 && field.width !== 2 && field.width !== 3 && field.width !== 4) {
+            throw new Error("Symbolic struct fields require widths from 1 through 4.");
+          }
+          symbolic.push({ expression: compiled, width: field.width });
+          fields.push({
+            reference: field.array ? `${name}[${itemIndex}]` : name,
+            expression,
+            offset: bytes.length,
+            width: field.width,
+          });
+          bytes.push(...Array.from({ length: field.width }, () => 0));
+          continue;
+        }
         const number = this.host.operandResolver.getnum(item.expression);
         if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
           throw new Error(
@@ -229,7 +268,10 @@ export class DataStructEngine {
     }
     if (this.host.canEmitBytes) {
       const expected = definition.base + index * (definition.size + definition.extensionSize);
-      if (this.host.currentTargetBaseAddress !== expected) {
+      if (
+        this.host.moduleIdentity === undefined &&
+        this.host.currentTargetBaseAddress !== expected
+      ) {
         throw new Error(
           `dataStruct '${reference}' requires pc() == $${expected.toString(16).toUpperCase()}, received $${this.host.currentTargetBaseAddress.toString(16).toUpperCase()}.`,
         );
@@ -238,7 +280,13 @@ export class DataStructEngine {
       for (const field of fields) {
         this.host.recordStructField?.(field.reference, field.expression, field.offset, field.width);
       }
-      this.host.outputWriter.writeBytes(bytes);
+      if (this.host.moduleIdentity !== undefined && this.host.writeRelocation) {
+        for (const field of symbolic) {
+          this.host.writeRelocation(field.expression, { width: field.width, minimum: 0 });
+        }
+      } else {
+        this.host.outputWriter.writeBytes(bytes);
+      }
     } else {
       this.host.outputWriter.step(definition.size);
     }

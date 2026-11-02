@@ -8,7 +8,9 @@ import { createDirectiveRegistry } from "./directives/registry.js";
 import { NodeAssemblyFileProvider } from "./file-provider.js";
 import { withAstQualification, withSourceSyntax, withTypedExecution, incrementInternalCounter, measureInternalPhase, } from "./internal-instrumentation.js";
 import { assetCallGuard, parseAssetCall } from "./ir/asset-call.js";
-import { inheritExpressionOccurrence, isReferenceExpressionNode, parseExpressionAtSite, renderExpressionNode, } from "./ir/expression-node.js";
+import { parseDataList } from "./ir/data-node.js";
+import { inheritExpressionOccurrence, isReferenceExpressionNode, parseExpressionAtSite, parseExpressionNode, renderExpressionNode, } from "./ir/expression-node.js";
+import { compileLinkExpression, linkBinary, linkConstant, requireLinkConstant, } from "./ir/link-expression.js";
 import { cloneNormalizedCommand, createNormalizedCommand, classifyCommand, } from "./ir/normalized-command.js";
 import { bindInstructionOperands, OperandTemplateBindingError } from "./ir/parsed-operand.js";
 import { referencePath } from "./ir/reference-path.js";
@@ -16,12 +18,13 @@ import { ReferencePlanner } from "./ir/reference-plan.js";
 import { InstructionResolutionFrame } from "./ir/resolved-instruction.js";
 import { fragmentText, sourceFragment, sliceSourceFragment, } from "./ir/source-fragment.js";
 import { materializeNumericData } from "./ir/statement-node.js";
-import { syntaxExpression } from "./ir/syntax-codec.js";
+import { syntaxRecord, syntaxString, syntaxArray, syntaxOptional, syntaxExpression, } from "./ir/syntax-codec.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { PLUGIN_API_VERSION } from "./plugin/contracts.js";
 import { PluginError, PluginSessionStateStore, } from "./plugin/index.js";
 import { clonePluginSyntax } from "./plugin/syntax-snapshot.js";
+import { AsarModuleLayout } from "./services/asar-module-layout.js";
 import { AssemblyFrontEndService, } from "./services/assembly-front-end-service.js";
 import { AssemblyOutputBuffer } from "./services/assembly-output-buffer.js";
 import { AssetAssemblyService } from "./services/asset-assembly-service.js";
@@ -32,6 +35,8 @@ import { DirectiveRuntimeService, } from "./services/directive-runtime-service.j
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
 import { IncludeSourceService } from "./services/include-source-service.js";
 import { MacroEngine } from "./services/macro-engine.js";
+import { ModuleAssembly } from "./services/module-assembly.js";
+import { ModuleFileProvider } from "./services/module-file-provider.js";
 import { OutputWriterService } from "./services/output-writer-service.js";
 import { createPluginSessionCapabilities } from "./services/plugin-session-capabilities.js";
 import { StructEngine } from "./services/struct-engine.js";
@@ -48,6 +53,23 @@ const TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
  * Public runtime fields and service methods support directives and tooling and require stage invariants.
  */
 export class Assembler {
+    /** Section-relative output owner, absent for ordinary absolute assembly. */
+    moduleAssembly;
+    /** Source adapters are session-local and never participate in the absolute execution path. */
+    moduleOptions;
+    asarModuleLayout;
+    moduleFiles;
+    moduleRangeKind = "data";
+    moduleAssetRemaining = 0;
+    /** A synchronous assignment borrows the existing scope writer while replacing only its numeric binding. */
+    moduleAssignmentValue;
+    /** Stable symbol-scope identity, independent of include basenames or final placement. */
+    get moduleIdentity() {
+        return this.moduleAssembly?.id;
+    }
+    get moduleSection() {
+        return this.moduleAssembly?.position().section;
+    }
     /** The current logical target address. */
     currentTargetAddress = 0;
     /** The current logical target base address. */
@@ -243,6 +265,19 @@ export class Assembler {
         }
         const mapping = this.addressToLineMapping;
         mapping.registerDependencySnapshot(file, bytes);
+        if (this.moduleAssembly) {
+            this.moduleAssetRemaining = end - start;
+            this.moduleAssembly.assets.push({
+                ...this.moduleAssembly.position(),
+                size: end - start,
+                source: this.moduleSource(),
+                inputPath: file,
+                format: "raw",
+                part: "bytes",
+                inputStart: start,
+                inputEnd: end,
+            });
+        }
         // base changes label addresses without moving the physical load cursor used by source maps.
         const outputOffset = this.outputWriter.toOutputOffset(this.currentTargetBaseAddress);
         mapping.assets.push({
@@ -432,11 +467,27 @@ export class Assembler {
             return;
         }
         this.#symbolDefinitionKeys.add(dedupeKey);
+        let binding = this.moduleAssembly?.symbols.get(name)?.value;
+        if (this.moduleAssembly && !binding) {
+            const qualified = this.symbolScope.resolveLabelBinding(name)?.name;
+            if (qualified) {
+                binding = this.moduleAssembly.symbols.get(qualified)?.value;
+            }
+        }
+        const relocatable = binding?.kind === "section"
+            ? { section: binding.section, offset: binding.offset }
+            : undefined;
+        let value = options.value;
+        if (this.moduleAssembly && binding && binding.kind !== "constant") {
+            // Numeric compatibility placeholders are never final addresses in hover or outline metadata.
+            value = undefined;
+        }
         this.symbolDefinitions.push({
+            ...(relocatable ? { relocatable } : {}),
             name,
             kind,
             location: createAssemblySourceLocation(file, line, options.span, this.currentSourceOrigin),
-            value: options.value,
+            value,
             containerName: options.containerName,
         });
     }
@@ -841,6 +892,7 @@ export class Assembler {
     createToolingSession() {
         const session = measureInternalPhase("sessionConstruct", () => new Assembler({
             environment: this.environment,
+            ...(this.moduleOptions ? { module: this.moduleOptions } : {}),
             target: this.targetId,
             architecture: this.arch,
             targetOptions: this.targetOptions,
@@ -889,7 +941,7 @@ export class Assembler {
             table: { session },
             diagnostic: { session },
         }, session.coreDirectiveGroups, session.syntaxProfile.directivePrefixes);
-        registry.registerTyped("includeasset", ({ text }) => {
+        registry.registerImmutableTyped("includeasset", ({ text }) => {
             const call = parseAssetCall(text);
             if (!call) {
                 throw new Error("includeAsset requires call syntax: includeAsset(path, format, ...).");
@@ -905,6 +957,9 @@ export class Assembler {
                 return;
             }
             const bytes = active.assetAssembly.materialize(call);
+            if (active.moduleAssembly) {
+                active.moduleAssetRemaining = bytes.length;
+            }
             const startAddress = active.currentAddress;
             // Preserve the logical asset address, but locate its bytes through the physical load cursor.
             const startOutput = active.outputWriter.toOutputOffset(active.currentTargetBaseAddress);
@@ -915,6 +970,17 @@ export class Assembler {
                 active.write1(byte);
             }
             const asset = active.assetAssembly.lastEmission;
+            if (active.moduleAssembly && active.traceStage === "emitProgram" && asset) {
+                active.moduleAssembly.assets.push({
+                    ...active.moduleAssembly.position(startAddress),
+                    size: asset.size,
+                    source: active.moduleSource(),
+                    inputPath: asset.sourcePath,
+                    format: asset.format,
+                    part: asset.part,
+                    conversion: asset.conversion,
+                });
+            }
             if (active.traceStage === "emitProgram" && active.collectSourceMetadata && asset) {
                 active.addressToLineMapping.assets.push({
                     fileIdx: active.addressToLineMapping.getFileIndex(active.currentFile),
@@ -1105,6 +1171,17 @@ export class Assembler {
             });
         }
         this.targetId = targetId;
+        if (options.module) {
+            if (options.module.sourceAdapter !== undefined &&
+                !["asar", "ca65"].includes(options.module.sourceAdapter)) {
+                throw new Error("Unknown module source adapter.");
+            }
+            this.moduleOptions = Object.freeze({ ...options.module });
+            if (options.baseImage?.length) {
+                throw new Error("Relocatable modules cannot patch a base image.");
+            }
+            this.moduleAssembly = new ModuleAssembly(options.module.id, target.addressSpace);
+        }
         this.coreDirectiveGroups = target.coreDirectiveGroups ?? CORE_DIRECTIVE_GROUPS;
         const configuredTargetOptions = options.targetOptions;
         if (!target.createOptions && configuredTargetOptions !== undefined) {
@@ -1169,6 +1246,15 @@ export class Assembler {
                 cause,
             });
         }
+        if (options.module?.sourceAdapter === "asar") {
+            if (!target.createSourceLinkRecipe) {
+                throw new Error(`Target '${targetId}' does not support the Asar source-layout adapter.`);
+            }
+            this.asarModuleLayout = new AsarModuleLayout(this.moduleAssembly, this.pluginAddressSpace);
+        }
+        else if (options.module?.sourceAdapter === "ca65" && !target.createLinkRecipe) {
+            throw new Error(`Target '${targetId}' does not provide ca65 linker configuration.`);
+        }
         const requestedArchitecture = options.architecture ?? target.defaultArchitecture;
         const architectureId = this.environment.resolveArchitectureId(targetId, requestedArchitecture);
         if (!architectureId) {
@@ -1180,8 +1266,11 @@ export class Assembler {
         }
         this.arch = architectureId;
         this.baseImage = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
-        this.fileProvider = options.fileProvider ?? new NodeAssemblyFileProvider();
-        this.collectSourceMetadata = options.collectSourceMetadata ?? true;
+        const files = options.fileProvider ?? new NodeAssemblyFileProvider();
+        this.moduleFiles = options.module ? new ModuleFileProvider(files) : undefined;
+        this.fileProvider = this.moduleFiles ?? files;
+        this.collectSourceMetadata =
+            options.module !== undefined || (options.collectSourceMetadata ?? true);
         this.cursorAddress = {
             recordCurrentAddress: () => this.recordCurrentAddress(),
             setWritePosition: (address) => this.setWritePosition(address),
@@ -1190,6 +1279,9 @@ export class Assembler {
         };
         this.mathCore = new MathCore();
         this.mathCore.host = this.expressionHost;
+        if (this.moduleAssembly) {
+            this.mathCore.linkContext = () => this.linkExpressionContext();
+        }
         this.installExpressionFunctions(target.expressionSets);
         this.services = this.createServices();
         const readCurrentFile = () => this.currentFile;
@@ -1229,7 +1321,23 @@ export class Assembler {
         this.programModelBuilder = this.frontEndService.programModelBuilder;
         this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
         this.operandResolver = new OperandResolver({
-            resolveReference: (node) => this.resolveStructuredReference(node, this.requireStaticLabelLookup),
+            resolveReference: (node) => {
+                if (!this.moduleAssembly) {
+                    return this.resolveStructuredReference(node, this.requireStaticLabelLookup);
+                }
+                try {
+                    return {
+                        kind: "resolved",
+                        value: requireLinkConstant(this.compileLinkExpression(node), "Numeric assembly operand"),
+                    };
+                }
+                catch (cause) {
+                    return {
+                        kind: "error",
+                        error: cause instanceof Error ? cause : new Error(String(cause)),
+                    };
+                }
+            },
             evaluateMath: (input) => this.mathCore.math(input),
             shouldDeferExpressionEvaluation: () => !this.getActiveStageCapabilities().enforceResolvedLabels,
             getCurrentAddress: () => this.currentTargetAddress,
@@ -1286,6 +1394,9 @@ export class Assembler {
             }, [...(contribution.aliases ?? [])]);
         }
         this.directiveRegistry = measureInternalPhase("directiveRegistryClone", () => this.cloneDirectiveRegistryForSession(this));
+        if (this.moduleAssembly) {
+            this.registerModuleDirectives();
+        }
         this.commandLoweringService = new CommandLoweringService(this);
         this.services.frontEnd = this.frontEndService;
         this.services.lowering = this.commandLoweringService;
@@ -1316,6 +1427,403 @@ export class Assembler {
         this.selectArchitecture(this.arch, this.arch);
         measureInternalPhase("constructorActivateStage", () => this.activateStage("collectDefinitions"));
         incrementInternalCounter("assemblerConstructions");
+    }
+    /** Bind symbolic operands through the same local/namespace rules as numeric assembly. */
+    linkExpressionContext() {
+        const module = this.moduleAssembly;
+        if (!module) {
+            throw new Error("Assembler is not producing a relocatable module.");
+        }
+        return {
+            current: () => module.location(),
+            literal: (expression) => this.mathCore.evaluateExpressionNode(expression),
+            bind: (expression) => this.resolveExpressionInput(expression),
+            call: (expression, compile) => {
+                const expanded = this.mathCore.bindLinkFunction(expression.callee.name, expression.arguments);
+                if (expanded) {
+                    return compile(expanded);
+                }
+                const name = expression.callee.name.toLowerCase();
+                if (["defined", "sizeof", "objectsize", "datasize"].includes(name)) {
+                    const values = expression.arguments.map((argument) => {
+                        if (argument.type === "string" || argument.type === "sourceText") {
+                            return argument.value;
+                        }
+                        if (argument.type === "identifier") {
+                            return argument.name;
+                        }
+                        return requireLinkConstant(compile(argument), `${name} argument`);
+                    });
+                    return linkConstant(this.mathCore.callBuiltInFunction(name, values));
+                }
+                return undefined;
+            },
+            reference: (expression) => {
+                if (expression.type === "relativeReference") {
+                    const resolved = this.resolveStructuredReference(expression, false);
+                    if (resolved.kind === "error") {
+                        throw resolved.error;
+                    }
+                    if (resolved.kind !== "resolved") {
+                        throw new Error(`Unresolved relative label '${expression.text}'.`);
+                    }
+                    return module.location(resolved.value);
+                }
+                if (expression.type === "identifier") {
+                    const loopValue = this.activeLoopVariables.get(expression.name);
+                    if (loopValue !== undefined) {
+                        return linkConstant(loopValue);
+                    }
+                    const binding = this.symbolScope.resolveLabelBinding(expression.name);
+                    if (binding) {
+                        return module.reference(binding.name);
+                    }
+                    let name = this.symbolScope.qualifySymbolName(expression.name);
+                    if (name.startsWith(".") && this.currentParentLabel) {
+                        name = `${this.currentParentLabel}_${name.replace(/^\.+/, "")}`;
+                    }
+                    else if (this.currentNamespace && !this.globalSymbols.has(name)) {
+                        name = `${this.currentNamespace}_${name}`;
+                    }
+                    return module.reference(name);
+                }
+                // Structured members add a constant displacement to their section-owned base.
+                // Evaluating their numeric offset never discards the base's relocatable identity.
+                const root = (node) => {
+                    if (node.type === "identifier") {
+                        return node.name;
+                    }
+                    if (node.type === "index") {
+                        requireLinkConstant(this.compileLinkExpression(node.index), "Structure index");
+                    }
+                    if (node.type === "member" || node.type === "index") {
+                        return root(node.object);
+                    }
+                    return undefined;
+                };
+                const name = root(expression);
+                const binding = name ? this.symbolScope.resolveLabelBinding(name) : undefined;
+                const resolved = this.resolveStructuredReference(expression, false);
+                if (resolved.kind === "error") {
+                    throw resolved.error;
+                }
+                if (resolved.kind !== "resolved") {
+                    throw new Error("Structured link reference is not defined.");
+                }
+                if (binding) {
+                    return linkBinary("+", module.reference(binding.name), linkConstant(resolved.value - binding.entry.value));
+                }
+                if (name && module.symbols.has(name)) {
+                    const base = this.structs.get(name)?.base;
+                    if (base !== undefined) {
+                        return linkBinary("+", module.reference(name), linkConstant(resolved.value - base));
+                    }
+                }
+                return linkConstant(resolved.value);
+            },
+        };
+    }
+    /** Preserve pure expanded syntax; this API never substitutes an unresolved address with zero. */
+    compileLinkExpression(expression) {
+        return compileLinkExpression(expression, this.linkExpressionContext());
+    }
+    /** Authored addresses influence compatibility encoding choices, never the stored relocation expression. */
+    previewSourceExpression(expression) {
+        if (!this.asarModuleLayout) {
+            return undefined;
+        }
+        try {
+            return this.moduleAssembly.probe(() => this.asarModuleLayout.preview(this.compileLinkExpression(expression)));
+        }
+        catch {
+            // Unknown imports and expressions without an authored address retain normal native sizing.
+            return undefined;
+        }
+    }
+    moduleSource() {
+        return { file: this.currentFile, line: this.currentLine + 1, architecture: this.arch };
+    }
+    /** Called by symbol scopes after canonical qualification, including macro/namespace aliases. */
+    recordLabelBinding(name, entry) {
+        if (this.moduleAssignmentValue) {
+            this.moduleAssembly?.defineExpression(name, this.moduleAssignmentValue, this.moduleSource());
+        }
+        else {
+            this.moduleAssembly?.define(name, entry.value, entry.isStatic, this.moduleSource());
+        }
+    }
+    /** Record a source alias without losing a cross-section or external dependency. */
+    assignModuleSymbol(name, expression) {
+        if (!this.moduleAssembly) {
+            throw new Error("Symbolic assignments require module assembly.");
+        }
+        const value = this.compileLinkExpression(expression);
+        // Scope aliases must follow the same namespace, local-label, and macro rules as absolute equates.
+        // The callback records the symbolic value for every canonical name chosen by the scope writer.
+        this.moduleAssignmentValue = value;
+        try {
+            this.symbolScope.setLabel(name, value.kind === "constant" ? value.value : 0, true);
+        }
+        finally {
+            this.moduleAssignmentValue = undefined;
+        }
+        this.recordSymbolDefinition("label", name, {
+            ...(value.kind === "constant" ? { value: value.value } : {}),
+            containerName: this.currentNamespace || undefined,
+        });
+    }
+    /** Bind external visibility through the same module symbol table used by native declarations. */
+    declareModuleSymbol(name, visibility) {
+        if (!this.moduleAssembly) {
+            throw new Error("Import/export requires module assembly.");
+        }
+        this.globalSymbols.add(name);
+        this.moduleAssembly.declare(name, visibility, this.moduleSource());
+    }
+    /** Export a definition that was declared before its ca65 export directive qualified it globally. */
+    exportModuleSymbol(name) {
+        if (!this.moduleAssembly) {
+            throw new Error("Export requires module assembly.");
+        }
+        const local = this.symbolScope.resolveLabelBinding(name);
+        if (local && local.name !== name) {
+            const value = this.moduleAssembly.reference(local.name);
+            this.moduleAssembly.defineExpression(name, value, this.moduleSource());
+        }
+        this.declareModuleSymbol(name, "export");
+    }
+    /** Target adapters expose region/load/run policy independently of any new linker implementation. */
+    getLinkRecipe() {
+        const target = this.environment.getTarget(this.targetId);
+        const context = {
+            targetId: this.targetId,
+            options: this.targetOptions,
+            state: this.pluginState,
+        };
+        if (this.asarModuleLayout) {
+            return target?.createSourceLinkRecipe?.(context, this.asarModuleLayout.contributions());
+        }
+        return target?.createLinkRecipe?.(context);
+    }
+    /** Finalization is explicitly borrowed by a linker after it has applied every relocation. */
+    finalizeLinkedOutput(bytes) {
+        const output = bytes.slice();
+        this.pluginOutputFormat.finalize({ state: this.pluginState, outputBytes: output });
+        return this.pluginOutputFormat
+            .getOutput({ state: this.pluginState, outputBytes: output })
+            .slice();
+    }
+    /** Switch sections without applying ROM mapper normalization to their relative byte cursors. */
+    selectModuleSection(options) {
+        if (!this.moduleAssembly) {
+            throw new Error("Section declarations require relocatable module assembly.");
+        }
+        this.setWritePosition(this.moduleAssembly.selectSection(options));
+    }
+    /** BSS reservations never acquire initialized bytes; initialized sections can request explicit fill. */
+    reserveModuleBytes(count, fill) {
+        if (!this.moduleAssembly) {
+            throw new Error("Module reservation requires section-relative assembly.");
+        }
+        if (!Number.isSafeInteger(count) || count < 0 || count > 0x1000000) {
+            throw new Error("Invalid module reservation size.");
+        }
+        const start = this.currentTargetAddress;
+        if (this.moduleAssembly.sectionKind === "bss" || fill === undefined) {
+            this.step(count);
+        }
+        else {
+            for (let index = 0; index < count; index++) {
+                this.write1(fill);
+            }
+        }
+        this.moduleAssembly.recordRange(this.moduleSource(), "reservation", count, start);
+    }
+    alignModule(boundary, fill = 0) {
+        if (!this.moduleAssembly) {
+            throw new Error("Module alignment requires section-relative assembly.");
+        }
+        this.reserveModuleBytes(this.moduleAssembly.requireAlignment(boundary), fill);
+    }
+    /** Write a typed field through the ordinary byte writer, retaining an independent symbolic record. */
+    writeRelocation(expression, encoding) {
+        if (!this.moduleAssembly) {
+            throw new Error("Symbolic fields require relocatable module assembly.");
+        }
+        this.outputWriter.writeBytes(this.moduleAssembly.field(expression, encoding, this.moduleSource()));
+    }
+    /** Numeric scalar directives and struct fields share exactly the encoder relocation contract. */
+    writeExpression(expression, width, endianness = "little") {
+        if (this.moduleAssembly) {
+            this.writeRelocation(this.compileLinkExpression(expression), {
+                width,
+                endianness,
+                truncate: true,
+            });
+        }
+        else {
+            this.outputWriter.writeValue(this.operandResolver.getnum(expression), width, endianness);
+        }
+    }
+    recordModuleWrite() {
+        let kind = this.moduleRangeKind;
+        if (this.moduleAssetRemaining > 0) {
+            kind = "asset";
+            this.moduleAssetRemaining--;
+        }
+        this.moduleAssembly?.recordRange(this.moduleSource(), kind, 1, this.currentTargetAddress);
+    }
+    /** Addressed record layouts acquire a section base only when they are actually initialized there. */
+    recordModuleStructBase(name, base) {
+        const module = this.moduleAssembly;
+        if (!module) {
+            return;
+        }
+        const value = module.location(base);
+        const existing = module.symbols.get(name)?.value;
+        if (existing?.kind === "section" &&
+            (existing.section !== this.moduleSection || existing.offset !== base)) {
+            throw new Error(`Record '${name}' is initialized in conflicting sections.`);
+        }
+        // Repeated table rows share a base definition rather than defining a new module symbol.
+        if (!module.isDefinedThisStage(name)) {
+            module.defineExpression(name, value, this.moduleSource());
+        }
+    }
+    /** Module syntax is registered only for object sessions, preserving absolute grammar identities. */
+    registerModuleDirectives() {
+        for (const keyword of ["org", "base", "pushbase", "pullbase", "pushpc", "pullpc"]) {
+            if (this.asarModuleLayout) {
+                continue;
+            }
+            this.directiveRegistry.registerImmutableTyped(keyword, () => ({}), syntaxRecord({}), () => {
+                throw new Error(`${keyword.toUpperCase()} requires absolute placement; use relocatable sections and a link recipe.`);
+            });
+        }
+        if (this.asarModuleLayout) {
+            this.registerAsarModuleLayout();
+        }
+        this.directiveRegistry.registerImmutableTyped("section", ({ text }) => {
+            const entries = parseDataList(text.replace(/^\S+\s*/, ""));
+            const nameNode = entries[0]?.expression;
+            const kindNode = entries[1]?.expression;
+            if (entries.length > 3) {
+                throw new Error("SECTION accepts name, kind, and alignment.");
+            }
+            return {
+                name: sectionName(nameNode),
+                kind: kindNode ? sectionName(kindNode) : "code",
+                alignment: entries[2]?.expression,
+            };
+        }, syntaxRecord({
+            name: syntaxString,
+            kind: syntaxString,
+            alignment: syntaxOptional(syntaxExpression),
+        }), ({ name, kind, alignment }) => {
+            if (kind !== "code" && kind !== "data" && kind !== "bss") {
+                throw new Error(`Invalid section kind '${kind}'.`);
+            }
+            const count = alignment
+                ? requireLinkConstant(this.compileLinkExpression(alignment), "Section alignment")
+                : undefined;
+            this.selectModuleSection({ name, kind, alignment: count });
+        });
+        for (const visibility of ["import", "export"]) {
+            this.directiveRegistry.registerImmutableTyped(visibility, ({ text }) => ({
+                names: parseDataList(text.replace(/^\S+\s*/, "")).map(({ expression }) => {
+                    if (expression.type !== "identifier") {
+                        throw new Error(`${visibility} requires symbol names.`);
+                    }
+                    return expression.name;
+                }),
+            }), syntaxRecord({ names: syntaxArray(syntaxString) }), ({ names }) => {
+                for (const name of names) {
+                    if (visibility === "export") {
+                        this.exportModuleSymbol(name);
+                    }
+                    else {
+                        this.declareModuleSymbol(name, visibility);
+                    }
+                }
+            });
+        }
+        this.directiveRegistry.registerImmutableTyped("reserve", ({ text }) => ({ count: parseDataList(text.replace(/^\S+\s*/, ""))[0]?.expression }), syntaxRecord({ count: syntaxExpression }), ({ count }) => {
+            const bytes = requireLinkConstant(this.compileLinkExpression(count), "Reservation size");
+            const offset = this.currentTargetAddress;
+            this.step(bytes);
+            this.moduleAssembly.recordRange(this.moduleSource(), "reservation", bytes, offset);
+        });
+    }
+    /** ORG/BASE adaptation is registered only for explicitly opted-in object sessions. */
+    registerAsarModuleLayout() {
+        const layout = this.asarModuleLayout;
+        for (const keyword of ["org", "base"]) {
+            this.directiveRegistry.registerImmutableTyped(keyword, ({ words }) => {
+                if (words.length !== 2) {
+                    throw new Error(`${keyword.toUpperCase()} requires one address.`);
+                }
+                const off = keyword === "base" && words[1].toLowerCase() === "off";
+                return { expression: off ? undefined : parseExpressionNode(words[1]) };
+            }, syntaxRecord({ expression: syntaxOptional(syntaxExpression) }), ({ expression }) => {
+                const value = expression
+                    ? requireLinkConstant(this.compileLinkExpression(expression), `${keyword.toUpperCase()} address`)
+                    : undefined;
+                if (value !== undefined && (value < 0 || value >= 2 ** this.addressWidth)) {
+                    throw new Error(`Invalid ${keyword.toUpperCase()} address.`);
+                }
+                const cursor = keyword === "org" ? layout.org(value) : layout.base(value);
+                this.setWritePosition(cursor);
+            });
+        }
+        const actions = {
+            pushpc: () => layout.pushPc(),
+            pullpc: () => this.setWritePosition(layout.pullPc()),
+            pushbase: () => layout.pushBase(),
+            pullbase: () => this.setWritePosition(layout.pullBase()),
+        };
+        for (const [keyword, execute] of Object.entries(actions)) {
+            this.directiveRegistry.registerImmutableTyped(keyword, () => ({}), syntaxRecord({}), execute);
+        }
+        this.directiveRegistry.registerImmutableTyped("pad", ({ words }) => {
+            if (words.length > 2) {
+                throw new Error("PAD accepts at most one address.");
+            }
+            return { address: words[1] ? parseExpressionNode(words[1]) : undefined };
+        }, syntaxRecord({ address: syntaxOptional(syntaxExpression) }), ({ address }) => {
+            const current = layout.currentAddress("run");
+            let count = 0x10000 - (current & 0xffff);
+            if (address) {
+                const target = requireLinkConstant(this.compileLinkExpression(address), "PAD address");
+                const end = this.pluginAddressSpace.toOutputOffset(target);
+                const start = this.pluginAddressSpace.toOutputOffset(current);
+                if (start < 0 || end < 0) {
+                    throw new Error("PAD source addresses must map to ROM storage.");
+                }
+                count = Math.max(0, end - start);
+            }
+            if (!Number.isSafeInteger(count) || count > 0x1000000) {
+                throw new Error("PAD extent exceeds the module limit.");
+            }
+            for (let index = 0; index < count; index++) {
+                this.write1(this.padbyte[index % this.padUnit]);
+            }
+        });
+    }
+    /** Returns a detached producer result. No ROM finalizer or linker has run on its section bytes. */
+    getAssemblyModule() {
+        if (!this.moduleAssembly) {
+            throw new Error("Assembler is not producing a relocatable module.");
+        }
+        this.asarModuleLayout?.contributions();
+        // Metadata identities must describe the consumed snapshots, including virtual assets,
+        // rather than rereading paths after conversion or retaining files from an earlier build.
+        const paths = new Set(this.moduleFiles?.snapshots.keys());
+        for (const [file, bytes] of this.moduleFiles?.snapshots ?? []) {
+            this.addressToLineMapping.registerDependencySnapshot(file, bytes);
+        }
+        return this.moduleAssembly.snapshot(this.targetId, this.targetOptions, this.addressToLineMapping.fileList
+            .filter(({ name }) => paths.has(name))
+            .map(({ name, sha256, size, crc }) => ({ path: name, sha256, size, crc32: crc })));
     }
     runLifecycleHook(hookName, invoke) {
         for (const { record, instance } of this.activeLifecycles) {
@@ -1448,6 +1956,16 @@ export class Assembler {
     /** Record the actual typed field encoding without splitting or overlapping its row's byte ownership. */
     recordStructField(reference, expression, offset, width) {
         if (!this.collectSourceMetadata || !this.canEmitBytes) {
+            return;
+        }
+        if (this.moduleAssembly) {
+            this.moduleAssembly.fields.push({
+                ...this.moduleAssembly.position(this.currentTargetAddress + offset),
+                reference,
+                expression,
+                size: width,
+                source: this.moduleSource(),
+            });
             return;
         }
         const address = this.pluginAddressSpace.advance(this.currentTargetBaseAddress, offset);
@@ -2268,19 +2786,49 @@ export class Assembler {
         const identity = session.activeStageExecutionState ?? {};
         return new InstructionResolutionFrame(instruction, {
             bindingFailure,
+            sourceAdapter: session.moduleOptions?.sourceAdapter,
+            previewSource: (expression) => session.previewSourceExpression(expression),
+            withSourcePreview: (operation) => session.moduleAssembly.withPreviewCursor(operation),
+            ...(session.moduleAssembly
+                ? {
+                    compileLink: (expression) => session.compileLinkExpression(expression),
+                    sectionPosition: () => session.moduleAssembly.position(),
+                }
+                : {}),
             evaluate(expression) {
+                const preview = session.previewSourceExpression(expression);
+                if (preview !== undefined) {
+                    return preview;
+                }
                 return session.operandResolver.getnum(expression);
             },
             evaluateMath(expression) {
+                const preview = session.previewSourceExpression(expression);
+                if (preview !== undefined) {
+                    return preview;
+                }
                 return session.mathCore.math(expression);
             },
             reference(expression, address) {
-                return session.resolveStructuredReference(expression, session.requireStaticLabelLookup, address);
+                const resolved = session.resolveStructuredReference(expression, session.requireStaticLabelLookup, address);
+                const preview = session.previewSourceExpression(expression);
+                if (preview !== undefined && resolved.kind === "resolved") {
+                    return { ...resolved, value: preview };
+                }
+                return resolved;
             },
             error(message) {
                 return new Error(`${message} (${session.currentFile}:${session.currentLine + 1})`);
             },
             currentAddress() {
+                if (session.asarModuleLayout) {
+                    try {
+                        return session.asarModuleLayout.currentAddress("run");
+                    }
+                    catch {
+                        /* ORG may follow initial declarations. */
+                    }
+                }
                 return session.currentTargetAddress;
             },
             stage() {
@@ -2298,6 +2846,9 @@ export class Assembler {
         const grammar = definition?.operandGrammar;
         if (!encoder || !grammar) {
             throw new Error("Typed architecture has no operand grammar or encoder.");
+        }
+        if (this.moduleAssembly && !encoder.supportsRelocatable) {
+            throw new Error(`Architecture '${this.arch}' does not support relocatable operands.`);
         }
         let operands;
         let bindingFailure;
@@ -2321,6 +2872,8 @@ export class Assembler {
             ? this.outputWriter.toOutputOffset(this.currentTargetBaseAddress)
             : -1;
         const frame = this.createInstructionFrame({ ...node.instruction, operands }, node.prepared, bindingFailure);
+        const previousRangeKind = this.moduleRangeKind;
+        this.moduleRangeKind = "instruction";
         const assertLive = () => {
             frame.currentAddress();
         };
@@ -2339,6 +2892,10 @@ export class Assembler {
                 const session = this;
                 const handled = withTypedExecution(() => encoder.encode(frame, {
                     emission: {
+                        writeRelocation(expression, encoding) {
+                            assertLive();
+                            session.writeRelocation(expression, encoding);
+                        },
                         write1(value) {
                             assertLive();
                             session.write1(value);
@@ -2373,6 +2930,15 @@ export class Assembler {
                 }));
                 if (handled) {
                     node.resolved = frame.snapshot();
+                    if (this.moduleAssembly && this.canEmitBytes) {
+                        this.moduleAssembly.instructions.push({
+                            ...this.moduleAssembly.position(address),
+                            size: this.bytes - beforeBytes,
+                            source: this.moduleSource(),
+                            form: node.resolved.form,
+                            state: node.resolved.state,
+                        });
+                    }
                     if (capture) {
                         const operandText = node.command.parsed.opcodeOperands?.operandText ?? "";
                         // Match the legacy numeric observer: one finite value per displayed expression,
@@ -2407,6 +2973,7 @@ export class Assembler {
         }
         finally {
             frame.close();
+            this.moduleRangeKind = previousRangeKind;
         }
     }
     /**
@@ -2858,6 +3425,15 @@ export class Assembler {
      */
     activateStage(stage) {
         this.syncActiveStageExecutionState(stage);
+        if (this.moduleAssembly) {
+            if (stage === "collectDefinitions") {
+                this.moduleFiles?.beginBuild();
+            }
+            this.moduleAssembly.beginStage(stage);
+            this.asarModuleLayout?.beginStage();
+            this.moduleAssetRemaining = 0;
+            this.setWritePosition(0);
+        }
         this.structEngine.data.reset();
         if (stage === "resolveLayout") {
             // Rebuild relative-label tables from layout sizing only.
@@ -2895,7 +3471,7 @@ export class Assembler {
         }
         const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
         this.runLifecycleHook("onStageEnd", (lifecycle) => lifecycle.onStageEnd?.({ state: this.pluginState, session: this.#pluginCapabilities, stage }));
-        if (this.getActiveStageCapabilities().canFinalize) {
+        if (this.getActiveStageCapabilities().canFinalize && !this.moduleAssembly) {
             this.runLifecycleHook("beforeOutputFinalize", (lifecycle) => lifecycle.beforeOutputFinalize?.({
                 state: this.pluginState,
                 session: this.#pluginCapabilities,
@@ -2903,6 +3479,7 @@ export class Assembler {
             }));
         }
         this.outputWriter.finishPass();
+        this.moduleAssembly?.finish();
         if (this.getActiveStageCapabilities().canFinalize) {
             this.includeSource.endAssemblySnapshot();
             this.mathCore.endAssemblySnapshot();
@@ -3140,6 +3717,9 @@ export class Assembler {
         const layout = this.runStage("resolveLayout", program);
         layout.loweredProgram = null;
         this.runStage("emitProgram", program);
+        if (this.moduleAssembly && program.sourceText !== undefined) {
+            this.addressToLineMapping.registerDependencySnapshot(program.sourceFile, new TextEncoder().encode(program.sourceText));
+        }
     }
     /**
      * Parse and run all three assembly stages. Includes are read through the configured provider.
@@ -3152,6 +3732,9 @@ export class Assembler {
     assembleSource(source, sourceFile = this.currentFile, startLine = 0) {
         const program = this.buildProgramModel(source, sourceFile, startLine);
         this.assembleProgram(program);
+        if (this.moduleAssembly) {
+            this.moduleFiles?.recordSource(sourceFile, new TextEncoder().encode(source));
+        }
         return program;
     }
     /**
@@ -3161,6 +3744,9 @@ export class Assembler {
      * @param {number} [length] The length of the block to write.
      */
     writeOutputBytes(start, value, length = 1) {
+        if (this.moduleAssembly) {
+            throw new Error("ROM buffer patching requires linked output.");
+        }
         if (typeof start !== "number" || typeof value !== "number" || typeof length !== "number") {
             throw new Error("writeOutputBytes requires a number for start, value, and length");
         }
@@ -3172,6 +3758,9 @@ export class Assembler {
      * @param {number} fillByte The byte used for the new range.
      */
     expandOutput(newSize, fillByte) {
+        if (this.moduleAssembly) {
+            throw new Error("ROM expansion requires linked output.");
+        }
         if (typeof newSize !== "number" || typeof fillByte !== "number") {
             throw new Error("expandOutput requires a number for newSize and fillByte");
         }
@@ -3181,6 +3770,9 @@ export class Assembler {
     }
     /** Runs the active output-format finalizer. */
     finalizeOutput() {
+        if (this.moduleAssembly) {
+            throw new Error("ROM finalization requires linked output.");
+        }
         this.pluginOutputFormat.finalize({
             state: this.pluginState,
             outputBytes: this.outputBytes,
@@ -3191,6 +3783,9 @@ export class Assembler {
      * @returns {Uint8Array} Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
      */
     getBinaryOutput = () => {
+        if (this.moduleAssembly) {
+            throw new Error("Relocatable assembly produces a module; use getAssemblyModule() and link it before requesting ROM bytes.");
+        }
         return this.pluginOutputFormat.getOutput({
             state: this.pluginState,
             outputBytes: this.outputBytes,
@@ -3619,5 +4214,15 @@ export class Assembler {
             }
         }
     }
+}
+/** Section declarations accept literal strings or bare names, never layout-dependent expressions. */
+function sectionName(node) {
+    if (node?.type === "string") {
+        return node.value;
+    }
+    if (node?.type === "identifier") {
+        return node.name;
+    }
+    throw new Error("Section name and kind must be literal names.");
 }
 //# sourceMappingURL=assembler.js.map

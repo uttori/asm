@@ -154,7 +154,7 @@ registerHooks({
           export const StatusBarAlignment = { Left: 1, Right: 2 };
           export const ProgressLocation = { Notification: 15 };
           export const ViewColumn = { Beside: -2 };
-          // ESM validates the named imports of the coverage-tree dependency at module load.
+          // ESM validates the named imports of the project-discovery dependency at module load.
           export class ThemeIcon { constructor(id) { this.id = id; } }
           export class TreeItem { constructor(label) { this.label = label; } }
           export const TreeItemCollapsibleState = { None: 0, Collapsed: 1, Expanded: 2 };

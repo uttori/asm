@@ -16,8 +16,8 @@ registerHooks({
       typeof context.parentURL === "string" &&
       /[/\\]debug[/\\]analysis-annotations\.(ts|js|mts|mjs)/.test(context.parentURL)
     ) {
-      if (specifier === "../analysis/coverage-tree.js") {
-        return { shortCircuit: true, url: "debug-annotations-test:coverage-tree" };
+      if (specifier === "../analysis/project-discovery.js") {
+        return { shortCircuit: true, url: "debug-annotations-test:project-discovery" };
       }
       if (specifier === "../analysis/worker-client.js") {
         return { shortCircuit: true, url: "debug-annotations-test:worker-client" };
@@ -26,7 +26,7 @@ registerHooks({
     return nextResolve(specifier, context);
   },
   load(url, context, nextLoad) {
-    if (url === "debug-annotations-test:coverage-tree") {
+    if (url === "debug-annotations-test:project-discovery") {
       return {
         shortCircuit: true,
         format: "module",

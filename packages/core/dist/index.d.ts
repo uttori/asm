@@ -5,6 +5,10 @@
  * embedding APIs and retain their session/stage invariants.
  */
 export { Assembler, type AssemblerOptions, type ProgramAnalysisOptions } from "./assembler.js";
+export * from "./relocatable.js";
+export { addressedSourceLinkRecipe } from "./services/source-link-recipe.js";
+export * from "./ir/link-expression.js";
+export { RelocatableInstruction } from "./ir/relocatable-instruction.js";
 export type { AssemblyStageName } from "./plugin/contracts.js";
 export { type MathValue, type OperandResolutionContext, type EncoderEmissionContext, type EncoderSizingContext, type EncoderBranchContext, type EncoderDiagnosticContext, type ArchitectureEncoderContext, type ExpressionHost, type InstructionAddressingMode, type InstructionDescriptor, type ArchitectureEncoder, } from "./architecture-types.js";
 export { type DecoderByteSource, Uint8ArrayDecoderSource, type ArchitectureInstructionSpecification, type DecodedOperandKind, type DecodedOperand, type DecodedReferenceKind, type DecodedReference, type InstructionFlowKind, type InstructionFlow, type InstructionStateEffect, type DecodedInstruction, type ArchitectureDecodeContext, type ArchitectureDecodeErrorCode, type ArchitectureDecodeInstructionResult, type ArchitectureDecodeAmbiguousResult, type ArchitectureDecodeErrorResult, type ArchitectureDecodeResult, type ArchitectureDecoder, } from "./decoder-types.js";
@@ -32,4 +36,5 @@ export * from "./ir/resolved-instruction.js";
 export { runTypedEncoderEntry } from "./typed-encoder-entry.js";
 export { parseInstructionOperands, bindInstructionOperands } from "./ir/parsed-operand.js";
 export type { ParsedOperand, ParsedInstructionOperands, OperandGrammarOptions, OperandScalar, OperandWidthIntent, OperandRegister, } from "./ir/parsed-operand.js";
+export { LinkError, type LinkTargetPolicy } from "./linker/types.js";
 //# sourceMappingURL=index.d.ts.map

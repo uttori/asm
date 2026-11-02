@@ -5,6 +5,7 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { RomImage, openAnalysisProjectStore } from "@uttori/asm-disassembler";
 import {
   sourceFilePublicationEpoch,
+  readSourceLinkBuild,
   sourceProjectLocalInputs,
   sourceContentHash,
   assertSourcePath,
@@ -17,6 +18,7 @@ import {
 import {
   buildSnesSource,
   inspectSnesSource,
+  inspectSnesSourceModule,
   prepareSnesGeneration,
   snesGenerationOptionsHash,
   analyzeSnesProject,
@@ -112,6 +114,10 @@ async function withSourceBuild<T>(
   const root = project.repository.root;
   const environmentInputs = new Map<string, Uint8Array>();
   const readEnvironment = (file: string): Uint8Array => {
+    const captured = environmentInputs.get(file);
+    if (captured) {
+      return captured;
+    }
     const bytes = Uint8Array.from(fs.readFileSync(file));
     environmentInputs.set(file, bytes);
     return bytes;
@@ -149,6 +155,12 @@ async function withSourceBuild<T>(
     .split(path.sep)
     .join("/");
   assertSourcePath(entrySource);
+  const link = readSourceLinkBuild(
+    configuration,
+    configFile,
+    path.resolve(root, entrySource),
+    readEnvironment,
+  );
   const raw: unknown = JSON.parse(
     Buffer.from(readEnvironment(path.join(path.dirname(configFile), "source-raw.json"))).toString(
       "utf8",
@@ -218,7 +230,12 @@ async function withSourceBuild<T>(
     const result = run(
       {
         root,
+        controlInputs: [...environmentInputs].map(([file, bytes]) => ({
+          path: file,
+          sha256: sourceContentHash(bytes),
+        })),
         entrySource,
+        ...(link ? { link } : {}),
         environment: loaded.environment,
         includePaths: loaded.includePaths,
         targetOptions: loaded.targetOptions,
@@ -236,6 +253,7 @@ async function withSourceBuild<T>(
         toolchainSha256: toolchain.sha256,
         configurationSha256: sourceContentHash(
           canonicalJson({
+            ...(link ? { link: { module: link.module, recipe: link.recipe } } : {}),
             configuration: sourceContentHash(configurationBytes),
             project: project.configurationSha256,
             layout,
@@ -453,6 +471,10 @@ export const snesSourceTarget: SourceTargetDescriptor = {
   initialize: initializeSnesSourceProject,
   build: (project, host, signal) => withSourceBuild(project, host, signal, buildSnesSource),
   inspect: inspectBuiltinProject,
+  inspectModules: (project, host, module, overlays, signal) =>
+    withSourceBuild(project, host, signal, (options) =>
+      inspectSnesSourceModule({ ...options, module, overlays }),
+    ),
   generationOptionsHash: snesGenerationOptionsHash,
   prepare: prepareSnesGeneration,
   analyze: analyzeSnesProject,

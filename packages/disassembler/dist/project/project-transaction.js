@@ -169,15 +169,21 @@ export const commitAnalysisProjectViewUpdate = (directory, snapshot, updates) =>
  */
 export const publishAnalysisProject = (directory, project, expected) => publish(directory, project, expected);
 /**
- * Explicitly checkpoint and VACUUM the current SQLite file without changing its logical revision.
- * Requires temporary free space for a second database copy. Active readers can delay checkpoints.
+ * Explicitly checkpoint and VACUUM SQLite. Optional analysisOnly retention advances the revision
+ * after consolidating SNES snapshots; ordinary compaction preserves logical identity. Temporary
+ * space scales with live pages, and active readers can delay the final checkpoint.
  * @param {string} directory Existing SQLite project root.
- * @returns {CommittedAnalysisProjectTransaction} Unchanged logical identity and reclaimed byte count.
+ * @param {object} [options] Explicit retention selection and synchronous progress/cancellation hook.
+ * @returns {CommittedAnalysisProjectTransaction} Published identity and reclaimed main-file bytes.
  */
-export const compactAnalysisProject = (directory) => {
+export const compactAnalysisProject = (directory, options = {}) => {
     const store = openAnalysisProjectStore(directory);
     try {
         const before = fs.statSync(store.file).size;
+        if (options.analysisOnly) {
+            store.retainSnesAnalysisEvidence(options.onProgress);
+            store.writePointer(directory);
+        }
         store.compact();
         return {
             ...committed(store.manifest()),

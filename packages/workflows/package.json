@@ -22,6 +22,7 @@
   "files": [
     "dist",
     "src",
+    "build.schema.json",
     "*.md"
   ],
   "type": "module",
@@ -30,6 +31,21 @@
   "module": "./dist/source.js",
   "types": "dist/source.d.ts",
   "exports": {
+    "./build-selection": {
+      "uttori-source": "./src/build-selection.ts",
+      "types": "./dist/build-selection.d.ts",
+      "import": "./dist/build-selection.js"
+    },
+    "./build-contracts": {
+      "uttori-source": "./src/build-contracts.ts",
+      "types": "./dist/build-contracts.d.ts",
+      "import": "./dist/build-contracts.js"
+    },
+    "./build": {
+      "uttori-source": "./src/build.ts",
+      "types": "./dist/build.d.ts",
+      "import": "./dist/build.js"
+    },
     ".": {
       "uttori-source": "./src/source.ts",
       "types": "./dist/source.d.ts",

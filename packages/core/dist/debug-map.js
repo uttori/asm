@@ -58,6 +58,16 @@ export const createDebugMap = (options) => {
                     .filter((entry) => entry.sourceId >= 0),
             }
             : {}),
+        ...(options.mapping.structFields.length
+            ? {
+                fields: options.mapping.structFields
+                    .map(({ fileIdx, ...field }) => ({
+                    ...field,
+                    sourceId: sourceIdByOriginal.get(fileIdx) ?? -1,
+                }))
+                    .filter((field) => field.sourceId >= 0),
+            }
+            : {}),
         ...(options.mapping.assets.length
             ? {
                 assets: options.mapping.assets

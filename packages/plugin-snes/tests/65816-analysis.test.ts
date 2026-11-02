@@ -1,6 +1,15 @@
+import {
+  analyzeSnes65816,
+  applyCpu65816StateOverride,
+  joinCpu65816States,
+  resetCpu65816State,
+  transferCpu65816State,
+  unknownCpu65816State,
+} from "@uttori/asm-plugin-snes/disassembler";
+
 import { test } from "../../../tests/ava-helper.js";
 import { RomImage, type StaticInstruction } from "../../disassembler/src/index.js";
-import { analyzeSnes65816, applyCpu65816StateOverride, joinCpu65816States, resetCpu65816State, transferCpu65816State, unknownCpu65816State } from "@uttori/asm-plugin-snes/disassembler";
+import { validateAnalysisOwnership } from "../../disassembler/src/model/analysis-ownership.js";
 
 const loRom = (program: readonly number[], reset = 0x8000): RomImage => {
   const bytes = new Uint8Array(0x10000);
@@ -46,6 +55,21 @@ test("65816 analysis follows reset, calls, state effects, and hardware addresses
   t.true(result.annotations.some((annotation) => annotation.classification === "opcode"));
   t.true(result.records.some((record) => record.kind === "summary"));
   t.true(result.evidenceRecords.some((record) => record.id === "detector:vector:reset"));
+  t.notThrows(() => validateAnalysisOwnership(result.records));
+  const nodes = result.records.filter((record) => record.kind === "cfg-node");
+  const entry = nodes.find((node) => node.address === 0x8000)!;
+  const continuation = nodes.find((node) => node.address === 0x800f)!;
+  t.is(continuation.functionEntry, entry.id);
+  t.true(nodes.every((node) => node.evidencePath.length === 1));
+  const callee = nodes.find((node) => node.address === 0x8010)!;
+  t.is(callee.functionEntry, callee.id);
+  t.is(callee.evidencePredecessor, undefined);
+  const publication = analyzeSnes65816(rom, "lorom", { maxWorkItems: 100, retainGraph: false });
+  t.deepEqual(publication.records, result.records);
+  t.deepEqual(publication.annotations, result.annotations);
+  t.deepEqual(publication.coverage, result.coverage);
+  t.deepEqual(publication.nodes, []);
+  t.deepEqual(publication.edges, []);
 });
 
 test("65816 analysis stops at data and width conflicts without guessing", (t) => {

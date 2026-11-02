@@ -153,11 +153,6 @@ try {
     result.seeds = phase(`${label}: all execution seeds`, () =>
       fingerprint(store.runtimeExecutionSeeds(architecture, space)),
     );
-    result.coverage = phase(`${label}: coverage`, () => ({
-      summary: store.coverageSummary(),
-      segments: fingerprint(store.coveragePage("segments")),
-      details: fingerprint(store.coveragePage("details")),
-    }));
     result.graph = phase(`${label}: complete call graph`, () => fingerprint([store.callGraph()]));
     const addresses = [0xc0389c, 0xc22614, 0xc8e13e, 0xc8e2b5];
     result.navigation = addresses.map((address) =>
@@ -233,7 +228,6 @@ try {
         db.exec(`DROP TABLE query_source_links; DROP TABLE query_source_rows;
         DELETE FROM query_cache;
         DELETE FROM query_runtime_variant_sources; DELETE FROM query_runtime_variant_keys; DELETE FROM query_runtime_variant_pending;
-        DELETE FROM query_coverage_segments; DELETE FROM query_coverage_details;
         DELETE FROM meta WHERE k='annotation-query-layout';
         UPDATE analysis SET query_file_offset=NULL,query_size=NULL,query_data=NULL,query_ready=0 WHERE kind='cfg-node';
         UPDATE runtime_observations SET query_file_offset=NULL,query_size=NULL,query_data=NULL,query_ready=0

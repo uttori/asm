@@ -46,6 +46,12 @@ export class FrontEndCommandService {
     }
     /** Resolve each assignment in the current scope; the parsed expression never stores its value. */
     executeAssignmentStatement(statement) {
+        if (this.host.moduleIdentity !== undefined && this.host.assignModuleSymbol) {
+            const name = this.host.symbolScope.qualifySymbolName(statement.target);
+            this.host.assignModuleSymbol(name, statement.expression);
+            this.host.recordCurrentAddress();
+            return name;
+        }
         const value = this.host.mathCore.math(statement.expression);
         const assignedName = this.host.symbolScope.qualifySymbolName(statement.target);
         this.host.symbolScope.setLabel(assignedName, value, true);

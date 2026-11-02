@@ -87,7 +87,7 @@ registerHooks({
     }
     if (
       context.parentURL?.includes("/analysis/evidence-inspector.") &&
-      ["./coverage-tree.js", "./worker-client.js"].includes(specifier)
+      ["./project-discovery.js", "./worker-client.js"].includes(specifier)
     ) {
       return { shortCircuit: true, url: "w18-editor:evidence" };
     }

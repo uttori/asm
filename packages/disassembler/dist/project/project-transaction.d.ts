@@ -116,10 +116,15 @@ export declare const commitAnalysisProjectViewUpdate: (directory: string, snapsh
  */
 export declare const publishAnalysisProject: (directory: string, project: AnalysisProject, expected?: AnalysisProjectRevision) => CommittedAnalysisProjectTransaction;
 /**
- * Explicitly checkpoint and VACUUM the current SQLite file without changing its logical revision.
- * Requires temporary free space for a second database copy. Active readers can delay checkpoints.
+ * Explicitly checkpoint and VACUUM SQLite. Optional analysisOnly retention advances the revision
+ * after consolidating SNES snapshots; ordinary compaction preserves logical identity. Temporary
+ * space scales with live pages, and active readers can delay the final checkpoint.
  * @param {string} directory Existing SQLite project root.
- * @returns {CommittedAnalysisProjectTransaction} Unchanged logical identity and reclaimed byte count.
+ * @param {object} [options] Explicit retention selection and synchronous progress/cancellation hook.
+ * @returns {CommittedAnalysisProjectTransaction} Published identity and reclaimed main-file bytes.
  */
-export declare const compactAnalysisProject: (directory: string) => CommittedAnalysisProjectTransaction;
+export declare const compactAnalysisProject: (directory: string, options?: {
+    readonly analysisOnly?: boolean;
+    readonly onProgress?: (message: string) => void;
+}) => CommittedAnalysisProjectTransaction;
 //# sourceMappingURL=project-transaction.d.ts.map

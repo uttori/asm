@@ -25,6 +25,8 @@ export interface ProjectConfiguration {
   readonly entryPoints?: readonly string[];
   /** Host metadata: output path, not written by the loader. */
   readonly buildOutput?: string;
+  /** Explicit editor Build/Run/Debug opt-in to a native build manifest, relative to this config. */
+  readonly linkProject?: string;
   /** Host metadata: image path, not read by the loader. */
   readonly baseImage?: string;
 }

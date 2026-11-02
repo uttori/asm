@@ -593,6 +593,8 @@ export const analyzeSnesProject = (
   // The latter is much larger and has no consumers during captured decoding or SQLite publication.
   const result = (() => {
     const analysis = analyzeSnes65816(rom, mapper, {
+      retainGraph: false,
+      compactContextIds: true,
       onProgress: ({ processedWorkItems, queuedWorkItems, instructions }) => {
         throwIfCancelled(options.signal);
         progress(
@@ -610,9 +612,13 @@ export const analyzeSnesProject = (
       ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
     });
     throwIfCancelled(options.signal);
+    const staticConflicts = analysis.records.reduce(
+      (total, record) => total + Number(record.kind === "conflict"),
+      0,
+    );
     progress(
       "analyze",
-      `Static pass ${analysis.status}: ${count(analysis.processedWorkItems)} work items, ${count(analysis.nodes.length)} instructions, ${count(analysis.conflicts.length)} conflicts. Phase 5/6: decoding captured instruction variants.`,
+      `Static pass ${analysis.status}: ${count(analysis.processedWorkItems)} work items, ${count(analysis.coverage.instructionCount)} instructions, ${count(staticConflicts)} conflicts. Phase 5/6: decoding captured instruction variants.`,
     );
     const romBytes = rom.bytes();
     // recordsFor creates detached publication records owned by this analysis. Attach bytes to those

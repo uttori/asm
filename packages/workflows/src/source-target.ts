@@ -2,6 +2,7 @@ export type {
   SourceTargetDescriptor,
   SourceBuildResult,
   SourceProjectInspection,
+  SourceModuleInspection,
   SourceAnalysisOptions,
   SourceCaptureResult,
   SourceTargetCaptureOptions,

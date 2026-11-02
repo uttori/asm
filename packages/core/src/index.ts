@@ -5,6 +5,10 @@
  * embedding APIs and retain their session/stage invariants.
  */
 export { Assembler, type AssemblerOptions, type ProgramAnalysisOptions } from "./assembler.js";
+export * from "./relocatable.js";
+export { addressedSourceLinkRecipe } from "./services/source-link-recipe.js";
+export * from "./ir/link-expression.js";
+export { RelocatableInstruction } from "./ir/relocatable-instruction.js";
 export type { AssemblyStageName } from "./plugin/contracts.js";
 
 export {
@@ -215,3 +219,5 @@ export type {
   OperandWidthIntent,
   OperandRegister,
 } from "./ir/parsed-operand.js";
+
+export { LinkError, type LinkTargetPolicy } from "./linker/types.js";

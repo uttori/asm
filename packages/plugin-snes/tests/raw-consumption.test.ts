@@ -31,6 +31,11 @@ test("stable raw slices preserve consumed edits and reject bytes orphaned by new
   };
   const baseline = buildSnesSource(options);
   t.deepEqual([...fs.readFileSync(baseline.outputFile)], [1, 2, 3, 4]);
+  t.like(baseline.coverage, { totalBytes: 4, remainingBytes: 2, convertedBytes: 2 });
+  t.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(root, "build/summary.json"), "utf8")).coverage,
+    baseline.coverage,
+  );
   const debug = JSON.parse(fs.readFileSync(baseline.debugMapFile, "utf8"));
   t.is(debug.assets[0].inputStart, 0);
   t.is(debug.assets[0].inputEnd, 2);

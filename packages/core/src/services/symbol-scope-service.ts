@@ -13,6 +13,10 @@ export type LabelEntry = {
 };
 
 export interface SymbolScopeHost {
+  /** Present only for section-relative assembly; canonical bindings are retained with their module. */
+  readonly moduleIdentity?: string;
+  readonly moduleSection?: string;
+  recordLabelBinding?(name: string, entry: LabelEntry): void;
   mode: "layout" | "emit";
   enforceResolvedLabels: boolean;
   isDefinitionCollectionStage: boolean;
@@ -23,8 +27,12 @@ export interface SymbolScopeHost {
   inMacroExpansion: boolean;
   macroLabelInstance: number;
   labelTable: Map<string, LabelEntry>;
-  forwardLabels: { [depth: number]: { addr: number; macroInstance?: number; unit?: string }[] };
-  backwardLabels: { [depth: number]: { addr: number; macroInstance?: number; unit?: string }[] };
+  forwardLabels: {
+    [depth: number]: { addr: number; macroInstance?: number; unit?: string; section?: string }[];
+  };
+  backwardLabels: {
+    [depth: number]: { addr: number; macroInstance?: number; unit?: string; section?: string }[];
+  };
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   currentGlobalParentLabel: string;
@@ -50,7 +58,36 @@ function relativeLabelBucket(
 }
 
 export class SymbolScopeService {
+  private bindingObserver?: (name: string, entry: LabelEntry) => void;
   constructor(readonly host: SymbolScopeHost) {}
+
+  /** Canonical qualification is shared with numeric lookup; nested lookups restore their observer. */
+  resolveLabelBinding(label: string): { name: string; entry: LabelEntry } | undefined {
+    let result: { name: string; entry: LabelEntry } | undefined;
+    const previous = this.bindingObserver;
+    this.bindingObserver = (name, entry) => {
+      result = { name, entry };
+    };
+    try {
+      this.tryGetLabelValue(label, false);
+      return result;
+    } finally {
+      this.bindingObserver = previous;
+    }
+  }
+
+  private resolvedLabelValue(name: string, entry: LabelEntry): number {
+    this.bindingObserver?.(name, entry);
+    return entry.value;
+  }
+
+  /** Preserve every canonical alias, including labels synthesized inside macro and namespace scopes. */
+  private storeLabel(name: string, entry: LabelEntry): void {
+    if (this.host.moduleIdentity !== undefined) {
+      this.host.recordLabelBinding?.(name, entry);
+    }
+    this.host.labelTable.set(name, entry);
+  }
 
   /**
    * Returns the current ca65-style object file name (last `.asm` on the include stack).
@@ -83,7 +120,7 @@ export class SymbolScopeService {
     if (name.startsWith(".") || name.startsWith("@") || name.includes("::")) {
       return name;
     }
-    const unit = this.objectFileKey();
+    const unit = this.host.moduleIdentity ?? this.objectFileKey();
     return unit ? `${unit}::${name}` : name;
   }
 
@@ -267,10 +304,14 @@ export class SymbolScopeService {
       if (isMacroLocal && this.host.inMacroExpansion) {
         this.host.forwardLabels[depth].push({
           addr: targetAddress,
+          ...(this.host.moduleSection ? { section: this.host.moduleSection } : {}),
           macroInstance: this.host.macroLabelInstance,
         });
       } else {
-        this.host.forwardLabels[depth].push({ addr: targetAddress });
+        this.host.forwardLabels[depth].push({
+          addr: targetAddress,
+          ...(this.host.moduleSection ? { section: this.host.moduleSection } : {}),
+        });
       }
     } else {
       if (!relativeLabelBucket(this.host.backwardLabels, depth)) {
@@ -279,10 +320,14 @@ export class SymbolScopeService {
       if (isMacroLocal && this.host.inMacroExpansion) {
         this.host.backwardLabels[depth].push({
           addr: targetAddress,
+          ...(this.host.moduleSection ? { section: this.host.moduleSection } : {}),
           macroInstance: this.host.macroLabelInstance,
         });
       } else {
-        this.host.backwardLabels[depth].push({ addr: targetAddress });
+        this.host.backwardLabels[depth].push({
+          addr: targetAddress,
+          ...(this.host.moduleSection ? { section: this.host.moduleSection } : {}),
+        });
       }
     }
 
@@ -309,9 +354,17 @@ export class SymbolScopeService {
     if (!relativeLabelBucket(this.host.backwardLabels, 0)) {
       this.host.backwardLabels[0] = [];
     }
-    const entry = { addr: targetAddress, unit: this.objectFileKey() };
+    const entry = {
+      addr: targetAddress,
+      unit: this.host.moduleIdentity ?? this.objectFileKey(),
+      section: this.host.moduleSection,
+    };
     this.host.forwardLabels[0].push(entry);
-    this.host.backwardLabels[0].push({ addr: targetAddress, unit: entry.unit });
+    this.host.backwardLabels[0].push({
+      addr: targetAddress,
+      unit: entry.unit,
+      section: entry.section,
+    });
     return targetAddress;
   }
 
@@ -339,9 +392,13 @@ export class SymbolScopeService {
         `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`,
       );
     }
-    const unit = this.objectFileKey();
+    const unit = this.host.moduleIdentity ?? this.objectFileKey();
     const ordered = table
-      .filter((entry) => !entry.unit || entry.unit === unit)
+      .filter(
+        (entry) =>
+          (!entry.unit || entry.unit === unit) &&
+          (!this.host.moduleIdentity || entry.section === this.host.moduleSection),
+      )
       .filter((entry) =>
         parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress,
       )
@@ -370,11 +427,12 @@ export class SymbolScopeService {
           direction === 1 ? this.host.forwardLabels : this.host.backwardLabels,
           0,
         ) ?? [];
-      const unit = this.objectFileKey();
+      const unit = this.host.moduleIdentity ?? this.objectFileKey();
       const values = table
         .filter(
           (entry) =>
             (!entry.unit || entry.unit === unit) &&
+            (!this.host.moduleIdentity || entry.section === this.host.moduleSection) &&
             (direction === 1 ? entry.addr > address : entry.addr < address),
         )
         .map((entry) => entry.addr)
@@ -400,6 +458,10 @@ export class SymbolScopeService {
     const local = stream === "macro" && this.host.inMacroExpansion;
     let nearest: number | undefined;
     for (const entry of table) {
+      // Numeric offsets from different sections belong to different relative-label streams.
+      if (this.host.moduleIdentity && entry.section !== this.host.moduleSection) {
+        continue;
+      }
       if (
         local ? entry.macroInstance !== this.host.macroLabelInstance : Boolean(entry.macroInstance)
       ) {
@@ -448,6 +510,10 @@ export class SymbolScopeService {
 
     const possibleTargets = forwardLabels
       .filter((entry) => {
+        // Section offsets are comparable only within their own relative-label stream.
+        if (this.host.moduleIdentity && entry.section !== this.host.moduleSection) {
+          return false;
+        }
         if (isMacroLocal && this.host.inMacroExpansion) {
           return (
             entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance
@@ -491,6 +557,10 @@ export class SymbolScopeService {
 
     const possibleTargets = backwardLabels
       .filter((entry) => {
+        // Section offsets are comparable only within their own relative-label stream.
+        if (this.host.moduleIdentity && entry.section !== this.host.moduleSection) {
+          return false;
+        }
         if (isMacroLocal && this.host.inMacroExpansion) {
           return (
             entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance
@@ -555,7 +625,7 @@ export class SymbolScopeService {
             const subLabelWithoutDot = labelName.substring(1);
             const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
             const subAddr = value ?? this.host.currentTargetAddress;
-            this.host.labelTable.set(parentChildLabel, {
+            this.storeLabel(parentChildLabel, {
               value: subAddr,
               isStatic,
               isMacroLabel: true,
@@ -591,7 +661,7 @@ export class SymbolScopeService {
             const leafLabel = `${leafNamespace}_${label}`;
             const addr = value ?? this.host.currentTargetAddress;
 
-            this.host.labelTable.set(leafLabel, {
+            this.storeLabel(leafLabel, {
               value: addr,
               isStatic,
               isMacroLabel,
@@ -602,7 +672,7 @@ export class SymbolScopeService {
             for (let i = this.host.namespaceNestingPath.length - 2; i >= 0; i--) {
               const partialPath = this.host.namespaceNestingPath.slice(i);
               const partialLabel = `${partialPath.join("_")}_${label}`;
-              this.host.labelTable.set(partialLabel, {
+              this.storeLabel(partialLabel, {
                 value: addr,
                 isStatic,
                 isMacroLabel,
@@ -629,7 +699,7 @@ export class SymbolScopeService {
         this.host.currentParentIsGlobal = isGlobal;
       }
 
-      this.host.labelTable.set(fullLabel, {
+      this.storeLabel(fullLabel, {
         value: addr,
         isStatic,
         isMacroLabel,
@@ -642,7 +712,7 @@ export class SymbolScopeService {
       });
 
       if (directScopeLabel) {
-        this.host.labelTable.set(directScopeLabel, {
+        this.storeLabel(directScopeLabel, {
           value: addr,
           isStatic,
           isMacroLabel,
@@ -674,7 +744,7 @@ export class SymbolScopeService {
       this.host.currentParentIsGlobal = isGlobal;
     }
 
-    this.host.labelTable.set(fullLabel, {
+    this.storeLabel(fullLabel, {
       value: addr,
       isStatic,
       isMacroLabel,
@@ -687,7 +757,7 @@ export class SymbolScopeService {
     });
 
     if (directScopeLabel) {
-      this.host.labelTable.set(directScopeLabel, {
+      this.storeLabel(directScopeLabel, {
         value: addr,
         isStatic,
         isMacroLabel,
@@ -879,7 +949,7 @@ export class SymbolScopeService {
           if (requireStatic && !childEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return childEntry.value;
+          return this.resolvedLabelValue(childLabel, childEntry);
         }
 
         const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${parentPart}_${subPart}`;
@@ -888,7 +958,7 @@ export class SymbolScopeService {
           if (requireStatic && !parentChildEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return parentChildEntry.value;
+          return this.resolvedLabelValue(parentChildLabel, parentChildEntry);
         }
       }
 
@@ -898,7 +968,7 @@ export class SymbolScopeService {
         if (requireStatic && !macroEntry.isStatic) {
           throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
         }
-        return macroEntry.value;
+        return this.resolvedLabelValue(macroLabel, macroEntry);
       }
 
       if (labelName.startsWith(".")) {
@@ -908,7 +978,7 @@ export class SymbolScopeService {
           if (requireStatic && !macroNoDotEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return macroNoDotEntry.value;
+          return this.resolvedLabelValue(macroLabelNoDot, macroNoDotEntry);
         }
       }
     }
@@ -982,7 +1052,7 @@ export class SymbolScopeService {
           if (requireStatic && !combinedEntry.isStatic) {
             throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
           }
-          return combinedEntry.value;
+          return this.resolvedLabelValue(combinedLabel, combinedEntry);
         }
 
         const localEntry = this.host.labelTable.get(localLabel);
@@ -990,7 +1060,7 @@ export class SymbolScopeService {
           if (requireStatic && !localEntry.isStatic) {
             throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
           }
-          return localEntry.value;
+          return this.resolvedLabelValue(localLabel, localEntry);
         }
       }
     }
@@ -1003,7 +1073,7 @@ export class SymbolScopeService {
       throw new Error(`Error: Non-static label '${label}' used in conditional.`);
     }
 
-    return entry.value;
+    return this.resolvedLabelValue(label, entry);
   }
 
   /**

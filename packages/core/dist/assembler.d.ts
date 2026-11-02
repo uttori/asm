@@ -8,6 +8,7 @@ import { DirectiveRegistry } from "./directives/registry.js";
 import { type AssemblyFileProvider } from "./file-provider.js";
 import type { ConditionalBranchNode, ExecutableNode, LoopNode } from "./ir/assembly-tree.js";
 import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expression-node.js";
+import { type LinkExpression } from "./ir/link-expression.js";
 import { type NormalizedCommand } from "./ir/normalized-command.js";
 import { type ReferenceResolution } from "./ir/reference-path.js";
 import { type SourceFragment } from "./ir/source-fragment.js";
@@ -15,6 +16,7 @@ import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import type { AssemblyStageName } from "./plugin/contracts.js";
 import { type AssemblerEnvironment, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
+import type { AssemblyModule, AssemblyModuleOptions, AssemblySectionOptions, RelocationEncoding } from "./relocatable.js";
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
 import { AssetAssemblyService } from "./services/asset-assembly-service.js";
 import { CommandLoweringService, type LoweredCommand, type LoweredExecutableNode, type LoweredLoopNode, type LoweredProgram } from "./services/command-lowering-service.js";
@@ -23,6 +25,7 @@ import { DirectiveRuntimeService, type PushPcStackEntry } from "./services/direc
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
 import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
 import { MacroEngine, type MacroDefinition } from "./services/macro-engine.js";
+import { ModuleAssembly } from "./services/module-assembly.js";
 import { OutputWriterService } from "./services/output-writer-service.js";
 import { ProgramModelBuilder, type IncrementalProgramParseState, type ProgramModel } from "./services/program-model-builder.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
@@ -106,6 +109,8 @@ type WhileTracker = {
 };
 /** Required target selection plus host services for one mutable assembly session. */
 export type AssemblerOptions = {
+    /** Produce section-relative records without allocating or finalizing a ROM. Read them with getAssemblyModule(). */
+    module?: AssemblyModuleOptions;
     /** Frozen plugin environment shared by build and tooling sessions. */
     environment: AssemblerEnvironment;
     /** Target contribution ID or alias. */
@@ -138,6 +143,19 @@ export type ProgramAnalysisOptions = {
  */
 export declare class Assembler {
     #private;
+    /** Section-relative output owner, absent for ordinary absolute assembly. */
+    readonly moduleAssembly?: ModuleAssembly;
+    /** Source adapters are session-local and never participate in the absolute execution path. */
+    private readonly moduleOptions?;
+    private readonly asarModuleLayout?;
+    private readonly moduleFiles?;
+    private moduleRangeKind;
+    private moduleAssetRemaining;
+    /** A synchronous assignment borrows the existing scope writer while replacing only its numeric binding. */
+    private moduleAssignmentValue?;
+    /** Stable symbol-scope identity, independent of include basenames or final placement. */
+    get moduleIdentity(): string | undefined;
+    get moduleSection(): string | undefined;
     /** The current logical target address. */
     currentTargetAddress: number;
     /** The current logical target base address. */
@@ -498,6 +516,43 @@ export declare class Assembler {
     constructor(options: Omit<AssemblerOptions, "environment"> & {
         environment?: AssemblerOptions["environment"];
     });
+    /** Bind symbolic operands through the same local/namespace rules as numeric assembly. */
+    private linkExpressionContext;
+    /** Preserve pure expanded syntax; this API never substitutes an unresolved address with zero. */
+    compileLinkExpression(expression: ExpressionNode): LinkExpression;
+    /** Authored addresses influence compatibility encoding choices, never the stored relocation expression. */
+    private previewSourceExpression;
+    private moduleSource;
+    /** Called by symbol scopes after canonical qualification, including macro/namespace aliases. */
+    recordLabelBinding(name: string, entry: import("./services/symbol-scope-service.js").LabelEntry): void;
+    /** Record a source alias without losing a cross-section or external dependency. */
+    assignModuleSymbol(name: string, expression: ExpressionNode): void;
+    /** Bind external visibility through the same module symbol table used by native declarations. */
+    declareModuleSymbol(name: string, visibility: "import" | "export"): void;
+    /** Export a definition that was declared before its ca65 export directive qualified it globally. */
+    exportModuleSymbol(name: string): void;
+    /** Target adapters expose region/load/run policy independently of any new linker implementation. */
+    getLinkRecipe(): import("./relocatable.js").AssemblyLinkRecipe | undefined;
+    /** Finalization is explicitly borrowed by a linker after it has applied every relocation. */
+    finalizeLinkedOutput(bytes: Uint8Array): Uint8Array;
+    /** Switch sections without applying ROM mapper normalization to their relative byte cursors. */
+    selectModuleSection(options: AssemblySectionOptions): void;
+    /** BSS reservations never acquire initialized bytes; initialized sections can request explicit fill. */
+    reserveModuleBytes(count: number, fill?: number): void;
+    alignModule(boundary: number, fill?: number): void;
+    /** Write a typed field through the ordinary byte writer, retaining an independent symbolic record. */
+    writeRelocation(expression: LinkExpression, encoding: RelocationEncoding): void;
+    /** Numeric scalar directives and struct fields share exactly the encoder relocation contract. */
+    writeExpression(expression: ExpressionNode, width: 1 | 2 | 3 | 4, endianness?: "little" | "big"): void;
+    recordModuleWrite(): void;
+    /** Addressed record layouts acquire a section base only when they are actually initialized there. */
+    recordModuleStructBase(name: string, base: number): void;
+    /** Module syntax is registered only for object sessions, preserving absolute grammar identities. */
+    private registerModuleDirectives;
+    /** ORG/BASE adaptation is registered only for explicitly opted-in object sessions. */
+    private registerAsarModuleLayout;
+    /** Returns a detached producer result. No ROM finalizer or linker has run on its section bytes. */
+    getAssemblyModule(): AssemblyModule;
     runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void;
     runBeforeDirective(keyword: string, command: NormalizedCommand, syntax?: import("./ir/source-syntax.ts").DeclarationSyntax | {
         readonly kind: "label";

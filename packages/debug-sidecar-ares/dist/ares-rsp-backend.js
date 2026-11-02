@@ -1,8 +1,10 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { validateCaptureRequest, verifyCaptureContext, validateCapturePosition, validateCaptureCapabilities, } from "@uttori/asm-capture";
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { validateCaptureRequest, verifyCaptureContext, validateCapturePosition, validateCaptureCapabilities } from "@uttori/asm-capture";
-import { DEBUG_BACKEND_PROTOCOL_VERSION } from "@uttori/asm-debug-adapter";
+import { DEBUG_BACKEND_PROTOCOL_VERSION, } from "@uttori/asm-debug-adapter";
 import { Cpu6502Decoder, formatCpu6502Instruction, ricoh2a03Cpu } from "@uttori/asm-plugin-65xx";
-import { Cpu65816Decoder, formatCpu65816Instruction } from "@uttori/asm-plugin-snes";
+import { Cpu65816Decoder, formatCpu65816Instruction, } from "@uttori/asm-plugin-snes";
 import { ARES_65816_ADDRESS_SPACE, ARES_65816_ARCHITECTURE, ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE, ARES_65816_FRAME_ID, ARES_65816_THREAD_ID, ARES_65816_WRAM_ADDRESS_SPACE, ARES_RSP_CAPABILITIES, ARES_NES_CAPABILITIES, ARES_TRACE_BATCH_EVENTS, } from "./profile.js";
 import { parseAresTraceDetails } from "./trace-details.js";
 export * from "./profile.js";
@@ -596,18 +598,39 @@ export class AresRspDebugBackend {
             this.#requireStopped();
             const fields = ["qUttoriContext", request.action];
             if ("directory" in request) {
+                // Restore/replay carries the recording's producer identity so its companion can be
+                // authenticated. A different running build is admitted; native state loading and
+                // replay endpoint checks determine compatibility. New recordings still bind this runtime.
+                const restoringContext = request.action === "replay" || request.action === "restore";
+                const mismatchedRecordingBuild = !restoringContext &&
+                    request.producer.revision !== identity.executableSha256 &&
+                    request.producer.revision !== identity.producerRevision;
                 if (request.romContentSha256 !== identity.romSha256 ||
                     (this.#nes &&
                         (!request.romFileSha256 || request.romFileSha256 !== identity.romFileSha256)) ||
                     request.producer.id !== "ares" ||
-                    (request.producer.revision !== identity.executableSha256 &&
-                        request.producer.revision !== identity.producerRevision)) {
+                    mismatchedRecordingBuild) {
                     throw new Error("Capture context ROM/build does not match the verified runtime.");
                 }
-                if (request.action === "replay" || request.action === "restore") {
-                    await verifyCaptureContext(request.directory, request);
+                let contextProducer = request.producer;
+                if (restoringContext) {
+                    // Editor requests describe the running session. Forward the companion's own
+                    // producer revision only after its complete artifact hashes have been verified.
+                    const recordedIdentity = (await readFile(path.join(request.directory, "identity.txt"), "utf8"))
+                        .trimEnd()
+                        .split("\n");
+                    const recordedRevision = recordedIdentity[2];
+                    if (recordedIdentity.length !== (this.#nes ? 4 : 3) ||
+                        recordedIdentity[0] !== request.romContentSha256 ||
+                        recordedIdentity[1] !== request.producer.id ||
+                        !recordedRevision ||
+                        (this.#nes && recordedIdentity[3] !== request.romFileSha256)) {
+                        throw new Error("Capture context identity does not match the requested ROM and emulator.");
+                    }
+                    contextProducer = { id: request.producer.id, revision: recordedRevision };
+                    await verifyCaptureContext(request.directory, { ...request, producer: contextProducer });
                 }
-                fields.push(encode(request.directory), encode(request.romContentSha256), encode(request.producer.id), encode(request.producer.revision));
+                fields.push(encode(request.directory), encode(request.romContentSha256), encode(contextProducer.id), encode(contextProducer.revision));
                 if (this.#nes) {
                     fields.push(encode(request.romFileSha256));
                 }

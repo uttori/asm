@@ -3,6 +3,10 @@
  * filesystem-backed defaults are available from the regular Node entry point.
  */
 export { Assembler, type AssemblerOptions } from "./assembler.js";
+export * from "./relocatable.js";
+export { addressedSourceLinkRecipe } from "./services/source-link-recipe.js";
+export * from "./ir/link-expression.js";
+export { RelocatableInstruction } from "./ir/relocatable-instruction.js";
 export {
   MemoryAssemblyFileProvider,
   type AssemblyFileProvider,
@@ -59,3 +63,5 @@ export type {
   SessionStateKey,
   AssemblyStageName,
 } from "./plugin/index.js";
+
+export { LinkError, type LinkTargetPolicy } from "./linker/types.js";

@@ -1,4 +1,4 @@
-import { copySyntaxValue, } from "./source-syntax.js";
+import { copySyntaxValue, immutableSyntaxValue, } from "./source-syntax.js";
 export const syntaxString = (value) => typeof value === "string";
 export const syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
 export const syntaxBoolean = (value) => typeof value === "boolean";
@@ -141,6 +141,25 @@ export function syntaxCodec(version, parse, guard) {
             // Parser output is trusted local data. Drop absent optional fields before the bounded
             // transport validator; deserialized payloads never get this normalization step.
             return copySyntaxValue(JSON.parse(JSON.stringify(parse(input))));
+        },
+        validate: guard,
+        read(payload) {
+            if (!guard(payload)) {
+                throw new Error("Invalid typed directive payload.");
+            }
+            return payload;
+        },
+    };
+}
+/**
+ * Explicit read-only codec for built-ins. Guards must be pure and executors must not mutate payloads.
+ * Mutable plugins keep syntaxCodec; transported values still require bounded copying and validation.
+ */
+export function immutableSyntaxCodec(version, parse, guard) {
+    return {
+        version,
+        parse(input) {
+            return immutableSyntaxValue(JSON.parse(JSON.stringify(parse(input))));
         },
         validate: guard,
         read(payload) {

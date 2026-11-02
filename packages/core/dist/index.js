@@ -5,6 +5,10 @@
  * embedding APIs and retain their session/stage invariants.
  */
 export { Assembler } from "./assembler.js";
+export * from "./relocatable.js";
+export { addressedSourceLinkRecipe } from "./services/source-link-recipe.js";
+export * from "./ir/link-expression.js";
+export { RelocatableInstruction } from "./ir/relocatable-instruction.js";
 export { Uint8ArrayDecoderSource, } from "./decoder-types.js";
 export { ArchitectureRegistry } from "./architecture-registry.js";
 export { maximumAddressForWidth, normalizeAddressForWidth, formatAddressForWidth, } from "./address-width.js";
@@ -28,4 +32,5 @@ export { sourceOriginLocations, sourceOccurrenceRange, } from "./source-provenan
 export * from "./ir/resolved-instruction.js";
 export { runTypedEncoderEntry } from "./typed-encoder-entry.js";
 export { parseInstructionOperands, bindInstructionOperands } from "./ir/parsed-operand.js";
+export { LinkError } from "./linker/types.js";
 //# sourceMappingURL=index.js.map

@@ -1,15 +1,28 @@
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { RomImage, publishAnalysisProject, openAnalysisProjectStore, type AnalysisProject, type AnalysisControlFlowNodeRecord, type RuntimeInstructionRecord } from "@uttori/asm-disassembler";
+import { Assembler, NodeAssemblySnapshotProvider } from "@uttori/asm-core";
+import { encodeObject, linkObjects } from "@uttori/asm-core/linker";
+import {
+  RomImage,
+  publishAnalysisProject,
+  openAnalysisProjectStore,
+  type AnalysisProject,
+  type AnalysisControlFlowNodeRecord,
+  type RuntimeInstructionRecord,
+} from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
   renderSourceFixture,
   verifyRenderedFixture,
 } from "../../../tests/helpers/source-render-fixture.js";
+import { createSnesAssemblerEnvironment } from "../src/assembler.js";
 import { analyzeSnesRuntimeCode } from "../src/disassembler/runtime-code.js";
+import { buildSnesSource } from "../src/disassembler/source-build.js";
+import { createSnesLinkTarget } from "../src/target/link-target.js";
 
 /** A capture supplies only the state needed to reproduce data-address-dependent symbol names. */
 const capture = (
@@ -77,6 +90,161 @@ const structMap = {
   bindings: [{ name: "State", structure: "StateRecord", address: 0x7e0100, count: 1 }],
 };
 
+test("relocatable export produces module source, a bank recipe and byte-identical literal payloads", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-module-render-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const original = new Uint8Array(0x10000).fill(0xea);
+  const rom = new RomImage(original, { headerSize: 0 });
+  const project = projectFor(rom, [capture("observed", [0xea], {})]);
+  const manifest = renderSourceFixture(project, rom, directory, {
+    sourceProjectSha256: "1".repeat(64),
+    module: { id: "exported-rom" },
+  });
+  t.is(manifest.relocatable?.moduleId, "exported-rom");
+  t.deepEqual(
+    manifest.relocatable?.linkRecipe.placements.map((placement) => placement.section),
+    ["rom_bank_000", "rom_bank_001"],
+  );
+  t.notRegex(fs.readFileSync(path.join(directory, "banks/bank-000.asm"), "utf8"), /^org /m);
+  const assembler = new Assembler({
+    environment: await createSnesAssemblerEnvironment(),
+    target: "snes.sfc",
+    module: { id: "exported-rom" },
+    fileProvider: new NodeAssemblySnapshotProvider(),
+    targetOptions: { checksumEnabled: false },
+  });
+  try {
+    assembler.setIncludePaths([directory]);
+    const entry = path.join(directory, "main.asm");
+    assembler.assembleSource(fs.readFileSync(entry, "utf8"), entry);
+    const module = assembler.getAssemblyModule();
+    t.is(module.fixups.length, 0);
+    const bytes = Uint8Array.from(module.sections.flatMap((section) => [...section.bytes]));
+    t.deepEqual(bytes, original);
+    t.true(module.assets.length > 0);
+    t.true(module.dependencies.every((dependency) => /^[\da-f]{64}$/.test(dependency.sha256)));
+    t.deepEqual(
+      JSON.parse(fs.readFileSync(path.join(directory, "link-recipe.json"), "utf8")),
+      manifest.relocatable?.linkRecipe,
+    );
+  } finally {
+    assembler.dispose();
+  }
+});
+
+for (const headerSize of [0, 512] as const) {
+  test(`serialized exported modules link in a fresh process to an identical complete ROM (${headerSize}-byte container header)`, async (t) => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-object-rom-"));
+    t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const sourceDirectory = path.join(directory, "source");
+    const original = new Uint8Array(0x10000 + headerSize).fill(0xea);
+    for (let i = 0; i < headerSize; i++) {
+      original[i] = i & 255;
+    }
+    original.set([0x20, 0x10, 0x80], headerSize);
+    original[headerSize + 0x10] = 0x60;
+    const rom = new RomImage(original, { headerSize });
+    const project = projectFor(rom, [
+      capture("call", [0x20, 0x10, 0x80], {}),
+      capture("return", [0x60], {}, 0x808010),
+    ]);
+    const manifest = renderSourceFixture(project, rom, sourceDirectory, {
+      sourceProjectSha256: "1".repeat(64),
+      module: { id: "pristine" },
+    });
+    const recipe = manifest.relocatable!.linkRecipe;
+    const assembler = new Assembler({
+      environment: await createSnesAssemblerEnvironment(),
+      target: "snes.sfc",
+      module: { id: "pristine" },
+      targetOptions: { checksumEnabled: false },
+    });
+    try {
+      assembler.setIncludePaths([sourceDirectory]);
+      const entry = path.join(sourceDirectory, "main.asm");
+      assembler.assembleSource(fs.readFileSync(entry, "utf8"), entry);
+      const module = assembler.getAssemblyModule();
+      t.true(module.fixups.length > 0, "exported symbolic call must be resolved by the linker");
+      const object = encodeObject(module);
+      const linked = linkObjects({ objects: [object], recipe, target: createSnesLinkTarget() });
+      t.deepEqual(linked.output, original);
+      fs.writeFileSync(path.join(directory, "main.uobj"), object);
+      fs.writeFileSync(
+        path.join(directory, "link-input.json"),
+        JSON.stringify({ objects: ["main.uobj"], libraries: [], recipe }),
+      );
+    } finally {
+      assembler.dispose();
+    }
+    const buildOptions = {
+      root: sourceDirectory,
+      entrySource: "main.asm",
+      environment: await createSnesAssemblerEnvironment(),
+      targetOptions: { checksumEnabled: false },
+      link: { module: { id: "pristine" }, recipe },
+      expectedSize: rom.length,
+      originalContent: rom.read(0, rom.length)!,
+      originalContainer: original,
+      outputDirectory: path.join(directory, "source-build"),
+      toolchainSha256: "a".repeat(64),
+      configurationSha256: "b".repeat(64),
+    };
+    const build = buildSnesSource(buildOptions);
+    t.deepEqual(fs.readFileSync(build.outputFile), Buffer.from(original));
+    const debug = JSON.parse(fs.readFileSync(build.debugMapFile, "utf8"));
+    t.is(debug.instructions[0].outputOffset, headerSize);
+    if (headerSize) {
+      const changed = structuredClone(recipe);
+      const prefix = changed.regions.find((region) => region.initialBytes);
+      if (!prefix?.initialBytes) {
+        throw new Error("Missing copied container header.");
+      }
+      const initialBytes = Array.from(prefix.initialBytes);
+      initialBytes[0] ^= 1;
+      const modified = {
+        ...changed,
+        regions: changed.regions.map((region) =>
+          region === prefix ? { ...region, initialBytes } : region,
+        ),
+      };
+      const pointer = fs.readFileSync(path.join(buildOptions.outputDirectory, "current.json"));
+      t.throws(
+        () =>
+          buildSnesSource({
+            ...buildOptions,
+            link: { module: { id: "pristine" }, recipe: modified },
+          }),
+        { message: /complete original container/ },
+      );
+      t.deepEqual(
+        fs.readFileSync(path.join(buildOptions.outputDirectory, "current.json")),
+        pointer,
+      );
+    }
+    // Source and raw asset inputs are absent in the new process; only serialized objects remain.
+    fs.rmSync(sourceDirectory, { recursive: true, force: true });
+    const args = [
+      "--conditions=uttori-source",
+      "--import=tsx",
+      path.resolve("packages/plugin-snes/tests/fixtures/link-objects.mjs"),
+      directory,
+    ];
+    const first = spawnSync(process.execPath, args, { encoding: "utf8", timeout: 30000 });
+    t.is(first.status, 0, first.stderr);
+    const receipt = JSON.parse(first.stdout);
+    t.deepEqual(fs.readFileSync(receipt.outputFile), Buffer.from(original));
+    const second = spawnSync(process.execPath, args, { encoding: "utf8", timeout: 30000 });
+    t.is(second.status, 0, second.stderr);
+    t.is(
+      second.stdout,
+      first.stdout,
+      "repeated clean links select the same immutable artifact identity",
+    );
+    const map = JSON.parse(fs.readFileSync(receipt.debugMapFile, "utf8"));
+    t.true(map.instructions.length > 0);
+  });
+}
+
 test("immutable rendering reads recipes without publishing ownership or touching edited source", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-pure-render-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -89,7 +257,7 @@ test("immutable rendering reads recipes without publishing ownership or touching
   const project = projectFor(rom, [capture("observed", [0xea], {})]);
   const rendered = new Map<string, Uint8Array>();
   renderSourceFixture(
-    { manifest: { ...project.manifest, }, shards: project.shards },
+    { manifest: { ...project.manifest }, shards: project.shards },
     rom,
     directory,
     {
@@ -123,7 +291,7 @@ test("newly observed calls use the persistent preferred name at the original sym
   const rendered = new Map<string, Uint8Array>();
   renderSourceFixture(
     {
-      manifest: { ...project.manifest, },
+      manifest: { ...project.manifest },
       shards: {
         ...project.shards,
         labels: [
@@ -192,7 +360,7 @@ for (const scenario of [
     symbolic: "RAM_STATE",
   },
 ]) {
-  test(`unknown static state cannot erase captured ${scenario.name} names after reanalysis`, async (t) => {
+  test(`unknown static state cannot erase consistent ${scenario.name} names after reanalysis`, async (t) => {
     const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-export-reanalysis-"));
     t.teardown(() => fs.rmSync(workspace, { recursive: true, force: true }));
     const directory = path.join(workspace, "source");
@@ -315,17 +483,84 @@ for (const scenario of [
     );
     t.true(fs.readFileSync(bank, "utf8").includes(scenario.numeric));
 
-    // Inherited runtime evidence alone cannot promote a static node into an observation.
+    // An uncaptured branch can have a justified static mapping beside a seed with no DBR/DP.
+    // Naming that encoding must preserve both static identities without claiming an observation.
+    const knownStatic = { ...observed, id: "static:cfg:known" };
+    const staticOnly: AnalysisProject = {
+      ...project,
+      shards: { ...project.shards, runtime: [], analysis: [knownStatic, unknown] },
+    };
+    const inferred = renderSourceFixture(staticOnly, rom, directory, options);
+    t.true(fs.readFileSync(bank, "utf8").includes(scenario.symbolic));
+    t.deepEqual(
+      inferred.spans.find((span) => span.start === 0)?.nodeIds?.toSorted(),
+      [knownStatic.id, unknown.id].toSorted(),
+    );
+    t.deepEqual(
+      renderSourceFixture(
+        { ...staticOnly, shards: { ...staticOnly.shards, analysis: [unknown, knownStatic] } },
+        rom,
+        directory,
+        options,
+      ),
+      inferred,
+    );
+    t.true(
+      (await verifyRenderedFixture({ sourceDirectory: directory, romFile, emitDebugMap: false }))
+        .comparison.equal,
+    );
+
+    const staticDirectory = path.join(workspace, "static-analysis");
+    publishAnalysisProject(staticDirectory, staticOnly);
+    const staticStore = openAnalysisProjectStore(staticDirectory);
+    try {
+      staticStore.prepareAnnotationQueries();
+      const streamed = staticStore.transaction(
+        () =>
+          renderSourceFixture(staticStore.sourceExportView(), rom, directory, {
+            ...options,
+            instructionGroups: staticStore.instructionExportGroups(),
+          }),
+        false,
+      );
+      t.deepEqual(
+        streamed,
+        inferred,
+        "SQL export preserves inferred names without a captured CFG node",
+      );
+      t.true(fs.readFileSync(bank, "utf8").includes(scenario.symbolic));
+    } finally {
+      staticStore.close();
+    }
+
+    // Unknown state contributes no conflicting address, but a second known mapping still does.
     renderSourceFixture(
       {
-        ...project,
-        shards: { ...project.shards, analysis: [{ ...observed, id: "static:cfg:known" }, unknown] },
+        ...staticOnly,
+        shards: {
+          ...staticOnly.shards,
+          analysis: [
+            knownStatic,
+            { ...conflicting, id: "static:cfg:conflicting", evidence: observed.evidence },
+            unknown,
+          ],
+        },
       },
       rom,
       directory,
       options,
     );
     t.true(fs.readFileSync(bank, "utf8").includes(scenario.numeric));
+    renderSourceFixture(
+      { ...staticOnly, shards: { ...staticOnly.shards, analysis: [unknown] } },
+      rom,
+      directory,
+      options,
+    );
+    t.true(
+      fs.readFileSync(bank, "utf8").includes(scenario.numeric),
+      "unknown-only state cannot invent a name",
+    );
   });
 
   test(`export retains code and new gains when ${scenario.name} symbols vary across captures`, async (t) => {

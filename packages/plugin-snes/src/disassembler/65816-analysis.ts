@@ -4,6 +4,7 @@ import {
   analyzeStaticControlFlow,
   EvidencePool,
   HalfOpenIntervalIndex,
+  withCompactAnalysisOwnership,
   type AnalysisRecord,
   type AnalysisTargetOverrideRecord,
   type AnalysisTargetSetRecord,
@@ -99,6 +100,8 @@ export interface Snes65816EntryPoint {
  * as input (the run rewrites `static:65816:*` annotations on the way out).
  */
 export interface Snes65816AnalysisOptions extends StaticAnalysisLimits {
+  /** Default true. False consumes detailed worklist arrays during publication; records and coverage remain complete. */
+  readonly retainGraph?: boolean;
   /** Existing project intervals. `static:65816:*` ids are stripped then regenerated. */
   readonly annotations?: readonly IntervalAnnotation[];
   /** Named labels used as additional CFG seeds. */
@@ -113,7 +116,7 @@ export interface Snes65816AnalysisOptions extends StaticAnalysisLimits {
   readonly targetOverrides?: readonly AnalysisTargetOverrideRecord[];
 }
 
-/** Worklist CFG plus project-shaped records, opcode/operand intervals, and run evidence. */
+/** Worklist CFG plus native records and intervals. Detailed worklist arrays are empty when retainGraph is false. */
 export interface Snes65816AnalysisResult extends StaticAnalysisResult<Cpu65816AbstractState> {
   /** CFG nodes/edges, functions, conflicts, unresolved flows, and a run summary. */
   readonly records: readonly AnalysisRecord[];
@@ -315,6 +318,7 @@ const annotationState = (
 const recordsFor = (
   result: StaticAnalysisResult<Cpu65816AbstractState>,
   runEvidence: string,
+  retainGraph: boolean,
 ): readonly AnalysisRecord[] => {
   const evidencePool = new EvidencePool();
   const ids = new Map<string, string>();
@@ -328,8 +332,33 @@ const recordsFor = (
     }
     return value;
   };
-  return [
-    ...result.nodes.map((node): AnalysisRecord => ({
+  const functionAddresses = new Set(result.functions.map((fn) => fn.address));
+  const entries = new Set(
+    result.nodes
+      .filter((node) => functionAddresses.has(node.address))
+      .map((node) => staticId(node.id)),
+  );
+  /** Consume only this private run's arrays when the caller requests native records alone. */
+  const project = <T>(
+    values: readonly T[],
+    convert: (value: T) => AnalysisRecord,
+  ): AnalysisRecord[] => {
+    if (retainGraph) {
+      return values.map(convert);
+    }
+    // The worklist just allocated these arrays for this run; no external caller has received them.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    const owned = values as T[];
+    const output: AnalysisRecord[] = [];
+    output.length = owned.length;
+    while (owned.length > 0) {
+      const index = owned.length - 1;
+      output[index] = convert(owned.pop()!);
+    }
+    return output;
+  };
+  const records: AnalysisRecord[] = [
+    ...project(result.nodes, (node): AnalysisRecord => ({
       id: staticId(node.id),
       kind: "cfg-node",
       addressSpace: SNES_CPU_ADDRESS_SPACE,
@@ -345,10 +374,11 @@ const recordsFor = (
       outgoingState: cpu65816StateRecord(node.outgoingState),
       effectiveAddresses: effectiveAddressRecords(node.effectiveAddresses),
       entryPoint: node.entryPoint,
-      evidencePath: node.evidencePath.map((id) => staticId(id)),
+      // The ownership forest below retains navigation without expanding every shared path prefix.
+      evidencePath: [staticId(node.id)],
       evidence: evidencePool.sorted([...node.evidence, runEvidence]),
     })),
-    ...result.edges.map((edge): AnalysisRecord => ({
+    ...project(result.edges, (edge): AnalysisRecord => ({
       id: staticId(edge.id),
       kind: "cfg-edge",
       addressSpace: SNES_CPU_ADDRESS_SPACE,
@@ -362,16 +392,16 @@ const recordsFor = (
       ...(edge.explanation ? { explanation: edge.explanation } : {}),
       evidence: evidencePool.sorted([...edge.evidence, runEvidence]),
     })),
-    ...result.functions.map((fn): AnalysisRecord => ({
+    ...project(result.functions, (fn): AnalysisRecord => ({
       id: staticId(fn.id),
       kind: "function",
       addressSpace: SNES_CPU_ADDRESS_SPACE,
       address: fn.address,
       source: fn.source,
-      evidencePath: fn.evidencePath.map((id) => staticId(id)),
+      evidencePath: fn.evidencePredecessor ? [staticId(fn.evidencePredecessor)] : [],
       evidence: evidencePool.sorted([...fn.evidence, runEvidence]),
     })),
-    ...result.conflicts.map((conflict): AnalysisRecord => ({
+    ...project(result.conflicts, (conflict): AnalysisRecord => ({
       id: staticId(conflict.id),
       kind: "conflict",
       addressSpace: SNES_CPU_ADDRESS_SPACE,
@@ -381,7 +411,7 @@ const recordsFor = (
       nodes: conflict.nodes.map((id) => staticId(id)),
       evidence: evidencePool.sorted([...conflict.evidence, runEvidence]),
     })),
-    ...result.unresolved.map((flow): AnalysisRecord => ({
+    ...project(result.unresolved, (flow): AnalysisRecord => ({
       id: staticId(flow.id),
       kind: "unresolved",
       addressSpace: SNES_CPU_ADDRESS_SPACE,
@@ -402,6 +432,7 @@ const recordsFor = (
       evidence: [runEvidence],
     },
   ];
+  return withCompactAnalysisOwnership(records, entries);
 };
 
 const annotationsFor = (
@@ -776,13 +807,18 @@ export const analyzeSnes65816 = (
       ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
       targetOverrides,
       onProgress: options.onProgress,
+      compactContextIds: options.compactContextIds,
     },
   );
 
+  // Interval generation still consumes abstract states. Finish it before optionally draining the
+  // private CFG, so native publication never holds a second complete worklist graph in memory.
+  const annotationsResult = annotationsFor(result, runEvidence);
+  const records = recordsFor(result, runEvidence, options.retainGraph ?? true);
   return {
     ...result,
-    records: recordsFor(result, runEvidence),
-    annotations: annotationsFor(result, runEvidence),
+    records,
+    annotations: annotationsResult,
     evidenceRecords: [...evidenceRecords.values()].toSorted((left, right) =>
       left.id.localeCompare(right.id),
     ),

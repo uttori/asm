@@ -14,6 +14,15 @@ import { openSourceProject, sourceProjectLocalInputs, synchronizeSourceResearch,
 import { importSourceCaptures } from "./source-capture-imports.js";
 import { createSourceMergeProgress } from "./source-progress.js";
 import { prepareSourceResearch } from "./source-research.js";
+/** Shared CLI/editor host API for unlinked module previews. Unsupported targets fail before any mutation. */
+export async function inspectSourceModules(project, module, host = defaultSourceHost, overlays, signal) {
+    signal?.throwIfAborted();
+    const target = sourceTarget(host, project.configuration.target);
+    if (!target.inspectModules) {
+        throw new Error(`Target '${target.id}' does not support relocatable module inspection.`);
+    }
+    return target.inspectModules(project, host, module, overlays, signal);
+}
 /** Read compact contracts with explicit size limits before parsing untrusted workspace JSON. */
 function readJson(file) {
     if (fs.statSync(file).size > 8 * 1024 * 1024) {
@@ -138,7 +147,7 @@ function generationRecipe(project) {
     return recipe;
 }
 /** Resolve one complete generation snapshot. The target rechecks the evidence identity inside its read transaction. */
-async function generationInputs(project, host) {
+async function generationInputs(project, host, assembly) {
     const local = sourceProjectLocalInputs(project);
     const captureSnapshot = readSourceCaptureCatalog(project.repository.root, project.configuration.captures, project.configuration.romSha256);
     if (!captureSnapshot.fileSha256) {
@@ -161,6 +170,13 @@ async function generationInputs(project, host) {
         path: name,
         bytes: fs.readFileSync(path.join(project.repository.root, recipe.sourceRoot, name)),
     }));
+    // A migration intent is explicit before adoption; later generations inherit the reviewed build configuration.
+    const compiler = recipes.find((file) => file.path === "uttori-asm.config.json");
+    const configuration = compiler
+        ? JSON.parse(Buffer.from(compiler.bytes).toString("utf8"))
+        : undefined;
+    const linked = assembly === "linked" ||
+        (isRecord(configuration) && typeof configuration.linkProject === "string");
     const inputFiles = [
         ...recipes.map((file) => ({ ...file, path: `${recipe.sourceRoot}/${file.path}` })),
         ...project.research.files.map((file) => {
@@ -207,6 +223,7 @@ async function generationInputs(project, host) {
         store.close();
     }
     const render = {
+        ...(linked ? { assembly: "linked" } : {}),
         sourceRoot: recipe.sourceRoot,
         recipes,
         pristineAssets: recipe.pristineAssets,
@@ -220,6 +237,7 @@ async function generationInputs(project, host) {
         evidenceDirectory: local.evidence,
         romFile: local.rom,
         inputs: {
+            ...(linked ? { assembly: "linked" } : {}),
             project: project.configuration.id,
             romSha256: project.configuration.romSha256,
             evidenceSha256,
@@ -502,7 +520,7 @@ export async function executeSourceOperation(operation, host = defaultSourceHost
             if (selected?.kind === "instructions" &&
                 !target.companionArchive &&
                 !operation.recoverPartial) {
-                const retained = catalogSnapshot.catalog.captures.find((entry) => entry.profile === "full" &&
+                const retained = catalogSnapshot.catalog.captures.find((entry) => (entry.profile === "full" || entry.profile === "65816-analysis-v3") &&
                     entry.archives.some((prior) => prior.sha256 === archive.sha256 &&
                         prior.bytes === archive.bytes &&
                         prior.companionSha256 === archive.companionSha256));
@@ -555,7 +573,7 @@ export async function executeSourceOperation(operation, host = defaultSourceHost
                 result = graphicsResult;
             }
             else if (selected?.kind === "instructions") {
-                result = await importRuntimeTraceSourceIntoProject(selected.source, local.evidence, { ...context, indexMode: "full" }, {
+                result = await importRuntimeTraceSourceIntoProject(selected.source, local.evidence, { ...context, indexMode: "analysis" }, {
                     ...options,
                     storageStatistics: false,
                     recoverPartial: operation.recoverPartial,
@@ -660,7 +678,7 @@ export async function executeSourceOperation(operation, host = defaultSourceHost
         return prepareSourceGeneration(repository, async () => {
             operation.onProgress?.("Capturing immutable generation inputs.");
             const prepared = await target.prepare({
-                ...(await generationInputs(project, host)),
+                ...(await generationInputs(project, host, operation.assembly)),
                 signal: operation.signal,
                 onProgress: operation.onProgress,
             });
@@ -695,7 +713,7 @@ export async function executeSourceOperation(operation, host = defaultSourceHost
         }
         assertSourceMergePreview(preview);
         const candidate = await candidateGeneration(project, operation.candidate);
-        const current = await generationInputs(project, host);
+        const current = await generationInputs(project, host, candidate.descriptor.inputs.assembly);
         if (canonicalJson(current.inputs) !== canonicalJson(candidate.descriptor.inputs)) {
             throw new Error("Generation inputs changed since preparation. Prepare and preview again.");
         }

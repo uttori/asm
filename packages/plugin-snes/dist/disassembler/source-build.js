@@ -1,11 +1,68 @@
 import path from "node:path";
 import { Assembler, parseExpressionNode, isReferenceExpressionNode, NodeAssemblySnapshotProvider, createDebugMap, } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
-import { publishSourceBuild, assertSourcePath, sourceContentHash, } from "@uttori/asm-disassembler/source-project";
+import { publishSourceBuild, sourceBuildCoverage, assertSourcePath, sourceContentHash, linkSourceAssembly, sourceMappingFromLink, } from "@uttori/asm-disassembler/source-project";
 import { checkSnesSourceLayout, checkSnesPlacements, } from "./rom-layout/check.js";
 import { checkSnesCodeFlow } from "./rom-layout/code-flow.js";
 import { checkSnesRomExpansion } from "./rom-layout/expansion.js";
 import { checkRawBlockConsumption } from "./rom-layout/raw-consumption.js";
+/** Produce symbolic records without running layout checks that require a linked ROM or publishing artifacts. */
+export function inspectSnesSourceModule(options) {
+    options.signal?.throwIfAborted();
+    const root = path.resolve(options.root);
+    const entry = path.resolve(root, options.entrySource);
+    const overlays = new Map();
+    for (const [name, bytes] of options.overlays ?? []) {
+        assertSourcePath(name);
+        overlays.set(path.resolve(root, name), bytes);
+    }
+    const files = new NodeAssemblySnapshotProvider({ overlays });
+    const assembler = new Assembler({
+        environment: options.environment,
+        target: "snes.sfc",
+        targetOptions: options.targetOptions,
+        module: options.module,
+        fileProvider: files,
+    });
+    try {
+        assembler.setIncludePaths([...new Set([path.dirname(entry), ...(options.includePaths ?? [])])]);
+        assembler.assembleSource(files.readTextFile(entry), entry);
+        options.signal?.throwIfAborted();
+        files.assertUnchanged();
+        for (const [name, bytes] of overlays) {
+            if (bytes !== null && !files.snapshots.has(name)) {
+                throw new Error(`Module preview overlay is not consumed: ${name}`);
+            }
+        }
+        const module = assembler.getAssemblyModule();
+        const inputs = [...files.snapshots]
+            .map(([name, bytes]) => ({
+            path: path.relative(root, name).split(path.sep).join("/"),
+            sha256: sourceContentHash(bytes),
+        }))
+            .toSorted((a, b) => a.path.localeCompare(b.path));
+        const linkRecipe = options.link
+            ? structuredClone(options.link.recipe)
+            : assembler.getLinkRecipe();
+        return {
+            modules: [module],
+            inputs,
+            ...(linkRecipe ? { linkRecipe } : {}),
+            inputSha256: sourceContentHash(canonicalJson({
+                module: options.module,
+                target: "snes.sfc",
+                targetOptions: assembler.targetOptions,
+                inputs,
+                linkRecipe: linkRecipe ?? null,
+                toolchain: options.toolchainSha256 ?? null,
+                configuration: options.configurationSha256 ?? null,
+            })),
+        };
+    }
+    finally {
+        assembler.dispose();
+    }
+}
 /** Assemble one immutable input snapshot; return diagnostics for placement previews without publishing output. */
 export function inspectSnesSource(options) {
     options.signal?.throwIfAborted();
@@ -17,7 +74,14 @@ export function inspectSnesSource(options) {
         overlays.set(path.resolve(root, name), bytes);
     }
     const files = new NodeAssemblySnapshotProvider({ overlays });
+    // Bind the selected recipe/configuration bytes before assembly, then retain them in normal freshness checks.
+    for (const input of [...(options.controlInputs ?? []), ...(options.link?.dependencies ?? [])]) {
+        if (sourceContentHash(files.readFile(input.path)) !== input.sha256) {
+            throw new Error(`Source link input changed: ${input.path}`);
+        }
+    }
     const assembler = new Assembler({
+        module: options.link?.module,
         environment: options.environment,
         target: "snes.sfc",
         architecture: "snes.65816",
@@ -31,11 +95,33 @@ export function inspectSnesSource(options) {
         ]);
         assembler.setCurrentFile(entrySource);
         const source = files.readTextFile(entrySource);
-        const program = assembler.buildProgramModel(source, entrySource, 0);
-        assembler.assembleProgram(program);
+        if (options.link) {
+            // Module production records the entry text as an owned dependency through its source boundary.
+            // A prebuilt program alone would retain included files but omit bytes emitted by the entry itself.
+            assembler.assembleSource(source, entrySource);
+        }
+        else {
+            const program = assembler.buildProgramModel(source, entrySource, 0);
+            assembler.assembleProgram(program);
+        }
         options.signal?.throwIfAborted();
-        const output = Uint8Array.from(assembler.getBinaryOutput());
-        const mapping = assembler.addressToLineMapping;
+        const requestedSymbols = new Set([
+            ...(options.resolveSymbols ?? []),
+            ...(options.extents ?? []).flatMap((extent) => [extent.startSymbol, extent.endSymbol]),
+            ...(options.placements?.objects ?? []).flatMap((object) => [
+                object.startSymbol,
+                object.endSymbol,
+            ]),
+        ]);
+        const linked = options.link
+            ? linkSourceAssembly(assembler, options.link, options.signal, [...requestedSymbols])
+            : undefined;
+        const output = linked?.output ?? Uint8Array.from(assembler.getBinaryOutput());
+        const mapping = linked ? sourceMappingFromLink(linked, root) : assembler.addressToLineMapping;
+        const headerSize = options.link?.recipe.targetOptions?.headerSize === 512 ? 512 : 0;
+        const content = output.subarray(headerSize);
+        // Layout contracts use headerless original identities; published maps retain complete container offsets.
+        const layoutMapping = linked && headerSize ? sourceMappingFromLink(linked, root, headerSize) : mapping;
         const rawBlocks = [];
         const rawIssues = [];
         if (options.rawBlocks) {
@@ -58,17 +144,11 @@ export function inspectSnesSource(options) {
         for (const [file, bytes] of files.snapshots) {
             mapping.registerDependencySnapshot(file, bytes);
         }
-        const symbols = new Map([...assembler.labelTable].map(([name, symbol]) => [name, symbol.value]));
-        const requestedSymbols = new Set([
-            ...(options.resolveSymbols ?? []),
-            ...(options.extents ?? []).flatMap((extent) => [extent.startSymbol, extent.endSymbol]),
-            ...(options.placements?.objects ?? []).flatMap((object) => [
-                object.startSymbol,
-                object.endSymbol,
-            ]),
-        ]);
+        const symbols = new Map(linked
+            ? linked.symbols.map((symbol) => [symbol.name, symbol.value])
+            : [...assembler.labelTable].map(([name, symbol]) => [name, symbol.value]));
         for (const name of requestedSymbols) {
-            if (!symbols.has(name)) {
+            if (!symbols.has(name) && !linked) {
                 // dataStructs bases and members use the assembler's structured-reference resolver;
                 // they need not be ordinary labels. Missing names remain source-linked extent failures.
                 try {
@@ -83,7 +163,7 @@ export function inspectSnesSource(options) {
             }
         }
         const codeFlow = options.placements
-            ? checkSnesCodeFlow(output, mapping, options.placements, options.states)
+            ? checkSnesCodeFlow(content, layoutMapping, options.placements, options.states)
             : { diagnostics: [], states: [] };
         // Propagated leaf-block states prove widths for newly inserted instructions. Explicit interior
         // assumptions remain assertions and cannot override a contradictory predecessor path.
@@ -92,8 +172,8 @@ export function inspectSnesSource(options) {
             provenStates.set(state.offset, state);
         }
         const diagnostics = checkSnesSourceLayout({
-            output,
-            mapping,
+            output: content,
+            mapping: layoutMapping,
             expectedSize: options.expectedSize,
             states: [...provenStates.values()],
             extents: options.extents,
@@ -106,11 +186,11 @@ export function inspectSnesSource(options) {
             throw new Error("Expansion requires the immutable original raw-block contract and editable source.");
         }
         if (options.rawBlocks) {
-            diagnostics.push(...checkSnesRomExpansion(output, options.rawBlocks.original, options.expectedSize, options.expansion, options.placements?.objects));
+            diagnostics.push(...checkSnesRomExpansion(content, options.rawBlocks.original, options.expectedSize, options.expansion, options.placements?.objects));
         }
         diagnostics.push(...codeFlow.diagnostics, ...rawIssues.map((message) => ({ code: "raw-consumption", message })));
         if (options.placements) {
-            diagnostics.push(...checkSnesPlacements(output, symbols, options.placements));
+            diagnostics.push(...checkSnesPlacements(content, symbols, options.placements));
         }
         for (const [file, bytes] of overlays) {
             // A retired input must no longer be consumed. Reading it already fails in the provider;
@@ -121,8 +201,11 @@ export function inspectSnesSource(options) {
         }
         files.assertUnchanged();
         if (options.originalContent &&
-            sourceContentHash(options.originalContent) !== sourceContentHash(output)) {
+            sourceContentHash(options.originalContent) !== sourceContentHash(content)) {
             throw new Error("Pure generation does not reproduce the original ROM exactly.");
+        }
+        if (options.originalContainer && !Buffer.from(output).equals(options.originalContainer)) {
+            throw new Error("Linked pure generation does not reproduce the complete original container.");
         }
         return { output, mapping, symbols, snapshots: files.snapshots, diagnostics };
     }
@@ -165,6 +248,9 @@ export function buildSnesSource(options) {
     const outputSha256 = sourceContentHash(output);
     const inputSha256 = sourceContentHash(canonicalJson({
         sources,
+        ...(options.link
+            ? { link: { module: options.link.module, recipe: options.link.recipe } }
+            : {}),
         configuration: options.configurationSha256,
         toolchain: options.toolchainSha256,
         layout: {
@@ -193,6 +279,8 @@ export function buildSnesSource(options) {
         toolchainSha256: options.toolchainSha256,
         checks: [
             "assembly",
+            ...(options.link ? ["object-serialization", "link-placement-and-relocations"] : []),
+            ...(options.originalContainer ? ["complete-container-equality"] : []),
             "emitted-range-overlap",
             "declared-output-size",
             "program-bank-boundaries",
@@ -214,6 +302,9 @@ export function buildSnesSource(options) {
         outputFile,
         debugMapFile,
         inputSha256,
+        ...(options.rawBlocks
+            ? { coverage: sourceBuildCoverage(mapping, options.root, options.rawBlocks) }
+            : {}),
         inputs: sources,
         outputSize: output.length,
         debugMapFingerprint: map.fingerprint.value,

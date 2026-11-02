@@ -1,6 +1,8 @@
 import type { EncoderDiagnosticContext, EncoderEmissionContext } from "../architecture-types.js";
 import type { AssemblyStageName } from "../plugin/contracts.js";
+import type { SectionPosition } from "../relocatable.js";
 import type { ExpressionNode, ReferenceExpressionNode } from "./expression-node.js";
+import { type LinkExpression } from "./link-expression.js";
 import type { OperandScalar, ParsedInstructionOperands } from "./parsed-operand.js";
 import type { ReferenceResolution } from "./reference-path.js";
 import { type SyntaxValue } from "./source-syntax.js";
@@ -17,6 +19,15 @@ export type OperandBindingFailure = {
 };
 /** Narrow capabilities deliberately omit all string evaluation, expansion and operand classifiers. */
 export interface TypedOperandEvaluationContext {
+    /** Explicit module compatibility mode; omitted contexts retain their native encoding policy. */
+    readonly sourceAdapter?: "asar" | "ca65";
+    /** Optional authored-address preview used exclusively to preserve source encoding choices. */
+    previewSource?(expression: ExpressionNode): number | undefined;
+    /** Advance only a borrowed preview cursor while selecting a compatibility encoding. */
+    withSourcePreview?<T>(operation: (advance: (bytes: number) => void) => T): T;
+    /** Present only during section-relative assembly; never substitutes numeric placeholder addresses. */
+    compileLink?(expression: ExpressionNode): LinkExpression;
+    sectionPosition?(): SectionPosition;
     readonly bindingFailure?: OperandBindingFailure;
     evaluate(expression: ExpressionNode): number;
     /** Mathematical grouping can round differently from a numeric atom read. */
@@ -89,6 +100,22 @@ export declare class InstructionResolutionFrame {
     get stageName(): AssemblyStageName;
     error(message: string): Error;
     currentAddress(): number;
+    /** The invocation-start byte cursor is stable even after opcode writes advance the live cursor. */
+    get instructionAddress(): number;
+    /** Distinguishes object production from the existing absolute numeric encoding contract. */
+    get isRelocatable(): boolean;
+    /** Source policy belongs to this frame and cannot be inferred from operand spelling. */
+    get sourceAdapter(): "asar" | "ca65" | undefined;
+    /** Undefined means layout cannot determine this operand yet; the normal unresolved form remains authoritative. */
+    previewSource(scalar: OperandScalar): number | undefined;
+    /** Borrow an isolated numeric cursor so compatibility selection observes opcode-before-operand timing without emitting bytes. */
+    withSourcePreview<T>(operation: (advance: (bytes: number) => void) => T): T;
+    /** Preserve the operand's bound symbolic meaning at its actual evaluation cursor. */
+    compileLink(scalar: OperandScalar): LinkExpression;
+    /** Opcode/register/count decisions must be invariant under final placement. */
+    constant(scalar: OperandScalar, purpose: string): number;
+    /** Relative fields capture a section position rather than a guessed final program counter. */
+    sectionPosition(): SectionPosition;
     /** Release access even after failures; a retained frame can never act on the next instruction. */
     close(): void;
     /** Copy observations while retaining the immutable lexical width objects. */
@@ -97,6 +124,8 @@ export declare class InstructionResolutionFrame {
 }
 /** Typed encoders receive no legacy operand facade. Sizing and encoding must share their form selector. */
 export interface TypedArchitectureEncoder {
+    /** Opt-in contract: every supported instruction form can retain typed symbolic operand fields. */
+    readonly supportsRelocatable?: boolean;
     /** Opt in only with structural unresolved operands and explicit numeric-read diagnostic timing. */
     readonly deferOperandBindingErrors?: boolean;
     /** Observe stage-entry and refreshed-command classification at the original lowering points. */

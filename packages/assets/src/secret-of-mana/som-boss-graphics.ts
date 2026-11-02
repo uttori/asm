@@ -26,8 +26,11 @@ function validateSize(source: Uint8Array, size: number) {
  */
 export function expandBossMask(source: Uint8Array, size: number) {
   // A rounded graphics request can produce 65536 bytes from its valid 16-bit count.
-  if (size !== 65536) validateSize(source, size);
-  else if (!(source instanceof Uint8Array)) throw new Error("Boss mask source requires bytes.");
+  if (size !== 65536) {
+    validateSize(source, size);
+  } else if (!(source instanceof Uint8Array)) {
+    throw new Error("Boss mask source requires bytes.");
+  }
   const data = new Uint8Array(size);
   let cursor = 0;
   for (let output = 0; output < size;) {

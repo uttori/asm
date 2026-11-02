@@ -2,7 +2,7 @@
 const fields = {
     init: ["rom", "dizRawFile", "mapper"],
     status: ["candidate"],
-    prepare: [],
+    prepare: ["assembly"],
     preview: ["candidate"],
     apply: ["candidate"],
     finish: ["message"],
@@ -64,6 +64,9 @@ function assertRequest(value) {
             value.overlays.length > 65536 ||
             !value.overlays.every((item) => isRecord(item) && isText(item.path) && item.bytes instanceof Uint8Array))) {
         throw new Error("Invalid source overlays.");
+    }
+    if (value.assembly !== undefined && value.assembly !== "linked") {
+        throw new Error("Source preparation supports only explicit linked migration.");
     }
     if (value.action === "init" && !isText(value.rom)) {
         throw new Error("Initialization requires an original ROM path.");

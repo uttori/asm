@@ -11,6 +11,7 @@ export type PushPcStackEntry = {
     currentTargetBaseStartAddress: number;
 };
 export interface DirectiveRuntimeHost {
+    readonly moduleIdentity?: string;
     addressWidth: number;
     characterMappings: Map<string, number>;
     currentTargetAddress: number;
@@ -36,6 +37,8 @@ export interface DirectiveRuntimeHost {
     write2(value: number): void;
     write3(value: number): void;
     write4(value: number): void;
+    /** Module-aware scalar path; structural embedding hosts may retain their numeric-only contract. */
+    writeExpression?(expression: ExpressionNode, width: 1 | 2 | 3 | 4): void;
 }
 export declare class DirectiveRuntimeService {
     readonly host: DirectiveRuntimeHost;
@@ -74,6 +77,8 @@ export declare class DirectiveRuntimeService {
      * @param {number} value The value to write.
      */
     writeDataByLength(len: number, value: number): void;
+    /** Keep expression ownership until the writer can decide between an immediate scalar and a fixup. */
+    private writeDataExpression;
     /**
      * Estimates data size with the same expansion order as emission, without resolving final values.
      * @param {number} len Bytes per numeric item (1–4). String characters each occupy one item.

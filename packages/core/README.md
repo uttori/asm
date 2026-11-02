@@ -78,3 +78,29 @@ Execution receives the validated payload and detached occurrence metadata; lifec
 receives typed syntax and source provenance. API v1 `createEncoder`, `createHandler`, and operand
 classifier registrations are rejected. Analysis uses the same target operand tree, preserving
 repeated reference ranges and excluding register operands. See [API.md](API.md).
+
+## Native objects and linking
+
+The Node entry point `@uttori/asm-core/linker` exposes `encodeObject`, `decodeObject`, `encodeLibrary`, `decodeLibrary`, and `linkObjects`. Assemble with `module: { id: "main" }`, then pass `assembler.getAssemblyModule()` to `encodeObject`. Objects contain their own payloads and dependency receipts; linking does not reopen assembly or asset paths.
+
+```js
+import { encodeObject, encodeLibrary, linkObjects } from "@uttori/asm-core/linker";
+
+const mainObject = encodeObject(mainAssembler.getAssemblyModule());
+const library = encodeLibrary([
+  { name: "graphics.o", object: encodeObject(graphicsAssembler.getAssemblyModule()) },
+]);
+const linked = linkObjects({
+  objects: [mainObject],
+  libraries: [library],
+  recipe,
+  target: targetPolicy,
+});
+// linked.output, linked.debugMap, linked.symbols, linked.allocations
+```
+
+Recipes assign section contributions to ROM load and RAM run regions, retain container bytes, and provide symbols/assertions and bank/page assumptions. The supplied target policy validates mapper/container semantics; use `createSnesLinkTarget` from `@uttori/asm-plugin-snes/target` or `createNesLinkTarget` from `@uttori/asm-plugin-65xx`. A generic link without a policy performs generic field/layout checks only. Checksum recomputation requires a target finalizer.
+
+Library extraction reaches a fixed point across archives in input order. The first indexed provider wins; duplicate globals in selected members fail. Instruction forms stay fixed. Symbolic near data/direct-page fields require explicit runtime assumptions unless the source deliberately masks/extracts the encoded field.
+
+`buildLinkedObjects` from `@uttori/asm-disassembler/source-project` verifies an optional original ROM and atomically selects a complete ROM/debug-map/symbol/allocation set. Hosts supplying cached link operations should pass their exact `toolchainSha256`; target policy revisions and options also enter the input identity. Existing CLI/editor build commands continue to use their established source workflow.

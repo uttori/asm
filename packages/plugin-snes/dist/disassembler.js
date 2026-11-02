@@ -7,7 +7,7 @@ export { identifySnesHardwareRegister, SNES_HARDWARE_DEFINES_SOURCE, snesHardwar
 export { decodeFrameworkRelativePointerTable, deriveFrameworkAssetExtractionRanges, decodeFrameworkSamplePointers, deriveFrameworkSampleExtractionRanges, } from "./disassembler/framework-asset-helpers.js";
 export { SNES_MAPPERS, isSnesMapper, SNES_CPU_VECTOR_DEFINITIONS, snesInternalHeaderOffset, parseSnesInternalRomHeader, detectSnesRom, } from "./disassembler/rom-header.js";
 export { formatSnes65816SourceInstruction, snesSourceLabelNames, exportSnes65816Source, } from "./disassembler/source-export.js";
-export { inspectSnesSource, buildSnesSource, } from "./disassembler/source-build.js";
+export { inspectSnesSourceModule, inspectSnesSource, buildSnesSource, } from "./disassembler/source-build.js";
 export { snesGenerationOptionsHash, prepareSnesGeneration, } from "./disassembler/source-generation.js";
 export { checkSnesPlacements, checkSnesSourceLayout, } from "./disassembler/rom-layout/check.js";
 export { assertSnesSplitReferences, encodeSnesRelocationReference, planSnesRelocation, } from "./disassembler/rom-layout/relocate.js";

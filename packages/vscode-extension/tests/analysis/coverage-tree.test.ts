@@ -9,13 +9,6 @@ const host = {
   analysisProject: "",
   folders: undefined as { uri: { fsPath: string } }[] | undefined,
   files: [] as { fsPath: string; scheme: string }[],
-  request: async (
-    _directory: string,
-    _operation: string,
-    _options?: { offset?: number },
-  ): Promise<unknown> => {
-    throw new Error("unhandled");
-  },
 };
 
 Object.assign(globalThis, { __uttoriCoverageTreeTest: host });
@@ -24,13 +17,6 @@ registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === "vscode") {
       return { shortCircuit: true, url: "coverage-tree-test:vscode" };
-    }
-    if (
-      specifier === "./worker-client.js" &&
-      (context.parentURL?.includes("analysis/coverage-tree.ts") ||
-        context.parentURL?.includes("analysis/coverage-tree.js"))
-    ) {
-      return { shortCircuit: true, url: "coverage-tree-test:worker" };
     }
     return nextResolve(specifier, context);
   },
@@ -44,6 +30,7 @@ registerHooks({
           export class EventEmitter {
             event = () => {};
             fire() {}
+            dispose() {}
           }
           export class ThemeIcon {
             constructor(id) { this.id = id; }
@@ -68,67 +55,20 @@ registerHooks({
         `,
       };
     }
-    if (url === "coverage-tree-test:worker") {
-      return {
-        shortCircuit: true,
-        format: "module",
-        source: `
-          const host = globalThis.__uttoriCoverageTreeTest;
-          export const analysisWorker = () => ({
-            request: (...args) => host.request(...args),
-          });
-        `,
-      };
-    }
     return nextLoad(url, context);
   },
 });
 
-const {
-  AnalysisCoverageProvider,
-  findAnalysisProjectDirectories,
-  initializeAnalysisProjectDiscovery,
-} = await import("../../src/analysis/coverage-tree.js");
+const { AnalysisCoverageProvider } = await import("../../src/analysis/coverage-tree.js");
+const { findAnalysisProjectDirectories, initializeAnalysisProjectDiscovery } =
+  await import("../../src/analysis/project-discovery.js");
 
 const SHA = "ab".repeat(32);
-const manifest = {
-  target: "snes.sfc",
-  mapping: { mapper: "lorom" },
-  rom: { contentSha256: SHA, contentSize: 1024 },
-};
-
-const summary = (overrides: Record<string, unknown> = {}) => ({
-  totalBytes: 0,
-  classifiedBytes: 0,
-  unknownBytes: 0,
-  conflictBytes: 0,
-  segmentCount: 0,
-  bytesByClassification: { opcode: 0, operand: 0, data: 0, asset: 0, unknown: 0 },
-  bytesByRuntimeCoverage: { executed: 0, operand: 0, read: 0, written: 0 },
-  ...overrides,
-});
-
-const segment = (overrides: Record<string, unknown> = {}) => ({
-  start: 0,
-  end: 1,
-  status: "classified",
-  classifications: ["opcode"],
-  runtime: [] as string[],
-  annotationIds: ["ann"],
-  analysisIds: ["node"],
-  runtimeIds: ["run"],
-  conflictIds: [] as string[],
-  regionIds: ["reg"],
-  ...overrides,
-});
 
 test.beforeEach(() => {
   host.analysisProject = "";
   host.folders = undefined;
   host.files = [];
-  host.request = async () => {
-    throw new Error("unhandled");
-  };
 });
 
 test.serial("findAnalysisProjectDirectories uses configured paths and discovery", async (t) => {
@@ -179,170 +119,76 @@ test.serial(
   },
 );
 
+test.serial("legacy analysis stores do not create build-progress or evidence rows", async (t) => {
+  const provider = new AnalysisCoverageProvider();
+  t.teardown(() => provider.dispose());
+  host.analysisProject = "/fixture/legacy";
+  t.deepEqual(await provider.getChildren(), []);
+});
+
 test.serial(
-  "AnalysisCoverageProvider loads roots, errors, summaries and paged conflicts",
+  "source coverage renders compact totals and draft staleness without an evidence database",
   async (t) => {
-    const provider = new AnalysisCoverageProvider();
-    host.analysisProject = "/fixture/zero";
-    host.request = async (_directory, operation) => {
-      if (operation === "manifest") {
-        return { ...manifest, rom: { ...manifest.rom, contentSize: 0 } };
-      }
-      if (operation === "coverage") {
-        return {
-          contentSize: 0,
-          summary: summary({ totalBytes: 0, classifiedBytes: 4 }),
-          detailCount: 0,
-        };
-      }
-      throw new Error(operation);
-    };
-    const [zeroRoot] = await provider.getChildren();
-    const zeroChildren = await provider.getChildren(zeroRoot);
-    const classified = (await provider.getChildren(zeroChildren[0])).find(
-      (node) => node.label === "Classified",
-    );
-    t.true(classified?.description?.includes("0.00%"));
-    t.is(provider.getTreeItem(zeroRoot).command?.command, "vscode.open");
-
-    host.analysisProject = "/fixture/bad";
-    host.request = async () => {
-      // oxlint-disable-next-line typescript/only-throw-error
-      throw "busy";
-    };
-    const [errorRoot] = await provider.getChildren();
-    t.is(errorRoot.icon, "error");
-    t.is(errorRoot.description, "could not load analysis project");
-    t.true(errorRoot.tooltip?.includes("busy"));
-
-    host.analysisProject = "/fixture/ok";
-    const segments = [segment({ status: "conflict", conflictIds: ["c1"], runtime: ["executed"] })];
-    host.request = async (_directory, operation, options) => {
-      if (operation === "manifest") {
-        return manifest;
-      }
-      if (operation === "coverage") {
-        return {
-          contentSize: 16,
-          summary: summary({
-            totalBytes: 1,
-            classifiedBytes: 1,
-            segmentCount: 201,
-            conflictBytes: 1,
-            bytesByRuntimeCoverage: { executed: 1, operand: 0, read: 0, written: 0 },
-          }),
-          detailCount: 2,
-        };
-      }
-      if (operation === "coverageConflicts") {
-        return { count: 201, segments: options?.offset === 0 ? segments : [] };
-      }
-      throw new Error(operation);
-    };
-    const [root] = await provider.getChildren();
-    t.is(root.description, `snes.sfc · lorom · ${SHA.slice(0, 12)}`);
-    const groups = await provider.getChildren(root);
-    t.deepEqual(
-      groups.map((node) => node.label),
-      ["Summary", "Classifications"],
-    );
-    const romContent = (await provider.getChildren(groups[0])).find(
-      (node) => node.label === "ROM content",
-    );
-    t.is(romContent?.description, "1 byte");
-    const conflict = (await provider.getChildren(groups[0])).find(
-      (node) => node.label === "Conflict",
-    )!;
-    const pages = await provider.getChildren(conflict);
-    t.is(pages[0]?.label, "Items 1–200");
-    t.is(pages[1]?.label, "Items 201–201");
-    const loaded = await provider.getChildren(pages[0]);
-    t.deepEqual(
-      loaded.map((node) => {
-        const icon = provider.getTreeItem(node).iconPath;
-        if (!icon || typeof icon === "string" || !("id" in icon) || typeof icon.id !== "string") {
-          throw new Error("expected a theme icon");
-        }
-        return icon.id;
-      }),
-      ["warning"],
-    );
-    t.is(provider.getTreeItem(loaded[0]).contextValue, "analysisCoverageSegment");
-    t.deepEqual(provider.editTarget(loaded[0]), {
-      projectDirectory: "/fixture/ok",
-      start: 0,
-      end: 1,
-      annotationIds: ["ann"],
-      analysisIds: ["node"],
-      runtimeIds: ["run"],
-      conflictIds: ["c1"],
-      regionIds: ["reg"],
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-coverage-tree-"));
+    const discovery = initializeAnalysisProjectDiscovery(() => root);
+    let stale = false;
+    const provider = new AnalysisCoverageProvider(() => stale);
+    t.teardown(() => {
+      provider.dispose();
+      discovery.dispose();
+      fs.rmSync(root, { recursive: true, force: true });
     });
-    t.is(provider.editTarget(undefined), undefined);
-    t.is(provider.editTarget({}), undefined);
-    const actions = await provider.getChildren(loaded[0]);
-    t.is(provider.getTreeItem(actions[1]).command?.command, "asm.coverage.classifyRange");
+    fs.mkdirSync(path.join(root, ".uttori"));
+    fs.mkdirSync(path.join(root, ".uttori-local/builds"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, ".uttori/project.json"),
+      JSON.stringify({
+        format: "uttori-source-project",
+        version: 1,
+        id: "coverage",
+        target: "snes.sfc",
+        romSha256: SHA,
+        sourceRoots: ["source"],
+        researchRoots: ["research"],
+        buildConfig: "source/config.json",
+        layout: ".uttori/layout.json",
+        captures: ".uttori/captures.json",
+      }),
+    );
+    const summaryFile = path.join(root, ".uttori-local/builds/summary.json");
+    fs.writeFileSync(
+      summaryFile,
+      JSON.stringify({
+        version: 1,
+        inputSha256: "a".repeat(64),
+        coverage: { romSha256: SHA, totalBytes: 1024, remainingBytes: 256, convertedBytes: 768 },
+      }),
+    );
+    const [freshRoot] = await provider.getChildren();
+    t.true(freshRoot.description?.includes("256 bytes remaining · 25.00% · current"));
+    const rows = await provider.getChildren(freshRoot);
     t.deepEqual(
-      provider.editTarget(provider.getTreeItem(actions[1]).command?.arguments?.[0]),
-      provider.editTarget(loaded[0]),
+      rows.map((row) => row.label),
+      [
+        "Bytes remaining",
+        "Converted",
+        "Original ROM",
+        "Last successful build",
+        "Build Current Source",
+      ],
     );
-
-    host.analysisProject = "/fixture/huge";
-    host.request = async (_directory, operation) => {
-      if (operation === "manifest") {
-        return manifest;
-      }
-      if (operation === "coverage") {
-        return { contentSize: 1, summary: summary({ conflictBytes: 1 }), detailCount: 0 };
-      }
-      if (operation === "coverageConflicts") {
-        return { count: 40001, segments: [] };
-      }
-      throw new Error(operation);
-    };
-    const hugePages = await provider.getChildren(
-      (
-        await provider.getChildren(
-          (await provider.getChildren((await provider.getChildren())[0]))[0],
-        )
-      ).find((node) => node.label === "Conflict")!,
+    t.is(rows[0].description, "256 bytes · 25.00%");
+    stale = true;
+    provider.refresh();
+    t.true((await provider.getChildren())[0].description?.endsWith("stale"));
+    fs.unlinkSync(summaryFile);
+    const [missing] = await provider.getChildren();
+    t.true(missing.description?.includes("Build Current Source"));
+    t.is(
+      provider.getTreeItem((await provider.getChildren(missing))[0]).command?.command,
+      "asm.source.buildProject",
     );
-    t.is(hugePages[0]?.label, "Items 1–40000");
-    t.is(hugePages[1]?.label, "Items 40001–40001");
-
-    host.analysisProject = "/fixture/fail-expand";
-    host.request = async (_directory, operation) => {
-      if (operation === "manifest") {
-        return manifest;
-      }
-      throw new Error("coverage failed");
-    };
-    const failed = await provider.getChildren((await provider.getChildren())[0]);
-    t.is(failed[0]?.label, "Could not load coverage");
-    t.is(failed[0]?.icon, "error");
+    fs.writeFileSync(summaryFile, '{"version":1,"coverage":{}}');
+    t.is((await provider.getChildren())[0].description, "Build summary unavailable");
   },
 );
-
-test.serial("conflict pages surface worker errors", async (t) => {
-  const provider = new AnalysisCoverageProvider();
-  host.analysisProject = "/fixture/page";
-  host.request = async (_directory, operation) => {
-    if (operation === "manifest") {
-      return manifest;
-    }
-    if (operation === "coverage") {
-      return {
-        contentSize: 8,
-        summary: summary({ segmentCount: 2, conflictBytes: 1 }),
-        detailCount: 1,
-      };
-    }
-    throw new Error("page failed");
-  };
-  const groups = await provider.getChildren((await provider.getChildren())[0]);
-  const conflict = (await provider.getChildren(groups[0])).find(
-    (node) => node.label === "Conflict",
-  )!;
-  t.is((await provider.getChildren(conflict))[0]?.label, "Could not load conflicts");
-  provider.refresh();
-});

@@ -1,7 +1,7 @@
 import { type CoreDirectiveGroup } from "../directive-groups.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
 import { type ContributionSyntax, type SyntaxGrammar, type SyntaxValue, type SyntaxParseInput } from "../ir/source-syntax.js";
-import { type SyntaxGuard } from "../ir/syntax-codec.js";
+import { type ImmutableSyntax, type SyntaxGuard } from "../ir/syntax-codec.js";
 import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, NamespaceDirectiveContext, OrgDirectiveContext, RuntimeDirectiveContext, StructDirectiveContext, TableDirectiveContext, DiagnosticDirectiveContext } from "./types.js";
 type BoundDirectiveHandler = (words: readonly string[], raw: string, command?: NormalizedCommand) => void;
 export interface DirectiveRegistryContexts {
@@ -33,6 +33,12 @@ export declare class DirectiveRegistry {
     registerSyntax(keywords: readonly string[], id: string, grammar: SyntaxGrammar, execute: (payload: SyntaxValue, command: NormalizedCommand) => void): void;
     /** Core and target handlers share a versioned parser and checked, serializable execution payload. */
     registerTyped<T>(keywords: string | readonly string[], parse: (input: SyntaxParseInput) => T, validate: SyntaxGuard<T>, execute: (payload: T, command: NormalizedCommand) => void): void;
+    /**
+     * Built-in guards and executors borrow immutable syntax across passes and sessions.
+     * Guards must be pure; execution state belongs in the session, never in the payload.
+     * Plugin registration remains mutable; unknown/transported payloads are copied before validation.
+     */
+    registerImmutableTyped<T>(keywords: string | readonly string[], parse: (input: SyntaxParseInput) => T, validate: SyntaxGuard<T>, execute: (payload: ImmutableSyntax<T>, command: NormalizedCommand) => void): void;
     private syntaxKeyword;
     private syntaxHandler;
     /** Pure parsing catches diagnostics for deferred reporting, including inactive branches. */

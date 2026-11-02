@@ -1,7 +1,14 @@
 import * as fs from "node:fs";
 import path from "node:path";
 
-import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
+import {
+  Uint8ArrayDecoderSource,
+  type DecodedInstruction,
+  type AssemblyModuleOptions,
+  type AssemblyLinkRecipe,
+  type LinkMemoryRegion,
+  type LinkSectionPlacement,
+} from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import {
   SOURCE_EXPORT_FORMAT,
@@ -86,6 +93,8 @@ import {
 
 /** Options for `exportSnes65816Source`. `sourceProjectSha256` is required provenance. */
 export interface SnesSourceExportOptions {
+  /** Emit relocatable section declarations plus a link recipe for an object-producing host. */
+  readonly module?: AssemblyModuleOptions;
   /** Render immutable output to an owned sink. In this form directory supplies inputs only; no files are published or removed. */
   readonly emitFile: (file: { readonly path: string; readonly bytes: Uint8Array }) => void;
   /** Preferred dataStruct/row width, including indentation. Integer >= 40; defaults to 100. */
@@ -1115,21 +1124,73 @@ const planInstructions = (
   const runtimeEvidence = new Set(
     shards.evidence.filter((record) => record.source === "runtime").map((record) => record.id),
   );
-  const conflictNodes = new Set(
-    shards.analysis
-      .filter((record) => record.kind === "conflict")
-      .flatMap((record) => record.nodes),
+  const conflictNodes = new Set<string>();
+  const staticBoundaryConflicts = new Set<string>();
+  for (const record of shards.analysis) {
+    if (record.kind !== "conflict") {
+      continue;
+    }
+    // Only speculative static boundary collisions can yield to a reviewed encoding. Decode/state
+    // conflicts and contradictions between captured instructions remain blocking evidence.
+    const speculativeBoundary =
+      record.conflictKind === "instruction-boundary" &&
+      record.nodes.every((id) => id.startsWith("static:cfg:"));
+    const rejected = speculativeBoundary ? staticBoundaryConflicts : conflictNodes;
+    for (const id of record.nodes) {
+      rejected.add(id);
+    }
+  }
+  const manualEvidence = new Set(
+    shards.evidence
+      .filter((record) => record.source === "manual" && record.confidence === "certain")
+      .map((record) => record.id),
   );
+  const reviewedBoundaries = new HalfOpenIntervalIndex(
+    shards.annotations.filter(
+      (annotation) =>
+        annotation.addressSpace === SNES_FILE_ADDRESS_SPACE &&
+        (annotation.classification === "opcode" || annotation.classification === "operand") &&
+        annotation.evidence.some((id) => manualEvidence.has(id)),
+    ),
+  );
+  /** A reviewed opcode byte and exact operand span establish an encoding, not inherited evidence IDs. */
+  const hasReviewedExtent = (node: InstructionExportRecord): boolean => {
+    if (node.fileOffset === undefined) {
+      return false;
+    }
+    const start = node.fileOffset;
+    const opcode = reviewedBoundaries
+      .at(start)
+      .some(
+        (entry) =>
+          entry.classification === "opcode" && entry.start === start && entry.end === start + 1,
+      );
+    if (!opcode) {
+      return false;
+    }
+    return (
+      node.size === 1 ||
+      reviewedBoundaries
+        .at(start + 1)
+        .some(
+          (entry) =>
+            entry.classification === "operand" &&
+            entry.start === start + 1 &&
+            entry.end === start + node.size,
+        )
+    );
+  };
   const metadataOffsets = [...metadata.keys()].toSorted((left, right) => left - right);
   const explicitMetadataOffsets = metadataOffsets.filter((offset) =>
     metadata.get(offset)!.some((line) => !line.inferredFunction),
   );
   const hasInteriorMetadata = (node: InstructionExportRecord): boolean => {
-    // An imported entry bit may point inside an observed operand. Only inferred function
-    // markers yield here; explicit labels/comments still require their exact source boundary.
-    const offsets = isCapturedRomInstruction(node, runtimeEvidence)
-      ? explicitMetadataOffsets
-      : metadataOffsets;
+    // An inferred entry may point inside an observed or manually verified operand. Explicit
+    // labels/comments still require their exact source boundary, even for a reviewed instruction.
+    const offsets =
+      isCapturedRomInstruction(node, runtimeEvidence) || hasReviewedExtent(node)
+        ? explicitMetadataOffsets
+        : metadataOffsets;
     const start = node.fileOffset!;
     const end = start + node.size;
     // Binary search the first metadata offset after start. A linear scan here would multiply label,
@@ -1159,6 +1220,8 @@ const planInstructions = (
     return [...grouped].toSorted(([a], [b]) => a - b).map(([, records]) => records);
   };
   const candidates = new Map<number, PlannedInstruction>();
+  const reviewedCandidates = new Set<number>();
+  const capturedExtents = new Map<number, number>();
   const context = createSnesAddressContext(mapper);
   let previousOffset = -1;
   // SQL callers hold only the current offset's variants. In-memory callers retain the same semantic path.
@@ -1175,6 +1238,11 @@ const planInstructions = (
       throw new Error("Export instruction groups must have distinct, ascending file offsets.");
     }
     previousOffset = offset;
+    for (const record of group) {
+      if (isCapturedRomInstruction(record, runtimeEvidence) && offset + record.size <= rom.length) {
+        capturedExtents.set(offset, Math.max(capturedExtents.get(offset) ?? 0, record.size));
+      }
+    }
     const records = group.filter(
       (record) =>
         record.fileOffset !== undefined &&
@@ -1186,6 +1254,7 @@ const planInstructions = (
           structure.start < record.fileOffset + record.size
         ) &&
         !conflictNodes.has(record.id) &&
+        (!staticBoundaryConflicts.has(record.id) || hasReviewedExtent(record)) &&
         !rejectedByAnnotation(record, annotations, runtimeEvidence) &&
         !hasInteriorMetadata(record),
     );
@@ -1239,22 +1308,19 @@ const planInstructions = (
     ) {
       continue;
     }
-    // A rebuilt static CFG can add seed nodes with unknown DBR/DP beside an observed address.
-    // Unknown static state supplies no contradictory address evidence; it must not erase a
-    // captured name. Keep every runtime variant and every resolved static address in the vote.
-    const capturedDataAddress = resolved.some(
-      ({ record, instruction }) =>
-        isCapturedRomInstruction(record, runtimeEvidence) &&
-        instruction.references.some(
-          (reference) =>
-            reference.kind === "data" &&
-            reference.operandIndex === 0 &&
-            reference.address !== undefined,
-        ),
+    // Unknown static DBR/DP supplies no contrary address, even on an uncaptured branch. Keep every
+    // runtime variant and resolved static mapping in the vote so actual disagreements stay numeric.
+    const knownDataAddress = resolved.some(({ instruction }) =>
+      instruction.references.some(
+        (reference) =>
+          reference.kind === "data" &&
+          reference.operandIndex === 0 &&
+          reference.address !== undefined,
+      ),
     );
     const namingVariants = resolved.filter(
       ({ record, instruction }) =>
-        !capturedDataAddress ||
+        !knownDataAddress ||
         !record.id.startsWith("static:cfg:") ||
         !instruction.references.some(
           (reference) =>
@@ -1305,6 +1371,25 @@ const planInstructions = (
       flow: sourceFlowTarget(first.instruction, sourceAddress),
       ...(use ? { structComments: renderSnesStructUseComments(use) } : {}),
     });
+    if (resolved.some(({ record }) => hasReviewedExtent(record))) {
+      reviewedCandidates.add(offset);
+    }
+  }
+
+  // Manual boundaries cannot erase incompatible execution-time extents, including captured
+  // variants rejected by their own conflict records. Those ranges still require explicit review.
+  const capturedIndex = new HalfOpenIntervalIndex(
+    [...capturedExtents].map(([start, size]) => ({ start, end: start + size })),
+  );
+  for (const start of reviewedCandidates) {
+    const instruction = candidates.get(start)!;
+    if (
+      capturedIndex
+        .overlapping(start, instruction.end)
+        .some((entry) => entry.start !== start || entry.end !== instruction.end)
+    ) {
+      candidates.delete(start);
+    }
   }
 
   const owners = new Map<number, number[]>();
@@ -1577,6 +1662,9 @@ const planSnes65816Source = (
   directory: string,
   options: SnesSourceExportOptions,
 ) => {
+  if (options.module && !options.module.id.trim()) {
+    throw new Error("Module export requires a stable, nonempty module identity.");
+  }
   const commentLineWidth = options.commentLineWidth ?? 100;
   if (!Number.isSafeInteger(commentLineWidth) || commentLineWidth < 20) {
     throw new Error("commentLineWidth must be an integer of at least 20 columns.");
@@ -1863,10 +1951,36 @@ const emitSnes65816Source = (
   }
 
   const bankSources: string[] = [];
+  const moduleRegions: LinkMemoryRegion[] = [];
+  const modulePlacements: LinkSectionPlacement[] = [];
+  if (options.module && rom.identity.headerSize === 512) {
+    moduleRegions.push({
+      name: "copier-header",
+      start: 0,
+      size: 512,
+      outputOffset: 0,
+      initialBytes: [...rom.copierHeaderBytes()],
+      addressSpace: "rom.container",
+    });
+  }
   for (const [bank, bankSpans] of [...banks].toSorted(([left], [right]) => left - right)) {
     const bankPath = `banks/bank-${bank.toString(16).padStart(3, "0")}.asm`;
     bankSources.push(bankPath);
     const lines = [`; Generated bank ${bank.toString(16).toUpperCase().padStart(3, "0")}.`];
+    if (options.module) {
+      const name = `rom_bank_${bank.toString(16).padStart(3, "0")}`;
+      const start = bankSpans[0].start;
+      const size = bankSpans.at(-1)!.end - start;
+      lines.push(`section "${name}", code`);
+      moduleRegions.push({
+        name,
+        start: snesRomAddressSpace.fromOutputOffset(start, context),
+        size,
+        outputOffset: start + rom.identity.headerSize,
+        addressSpace: SNES_CPU_ADDRESS_SPACE,
+      });
+      modulePlacements.push({ section: name, load: name, run: name });
+    }
     let nextAddress: number | undefined;
     let table: { name: string; nextIndex: number } | undefined;
     for (const [spanIndex, span] of bankSpans.entries()) {
@@ -1892,7 +2006,13 @@ const emitSnes65816Source = (
         closedTable = true;
       }
       if (nextAddress !== address) {
-        lines.push("", `org ${hex(address)}`);
+        if (!options.module) {
+          lines.push("", `org ${hex(address)}`);
+        } else if (nextAddress !== undefined) {
+          throw new Error(
+            "Relocatable source spans must explicitly retain every intervening byte.",
+          );
+        }
       }
       // Separate declarations from adjacent code/data, but keep labels and comments attached
       // to their own data and keep consecutive rows inside the same table together.
@@ -2186,7 +2306,20 @@ const emitSnes65816Source = (
     "configuration",
     files,
   );
+  const linkRecipe: AssemblyLinkRecipe = {
+    target: project.manifest.target,
+    targetOptions: { mapper, headerSize: rom.identity.headerSize },
+    regions: moduleRegions,
+    placements: modulePlacements,
+    checksumPolicy: "preserve",
+  };
+  if (options.module) {
+    emitFile(directory, "link-recipe.json", canonicalJson(linkRecipe), "configuration", files);
+  }
   const manifest: SourceExportManifest = {
+    ...(options.module
+      ? { relocatable: { moduleId: options.module.id, entrySource: "main.asm", linkRecipe } }
+      : {}),
     format: SOURCE_EXPORT_FORMAT,
     schemaVersion: SOURCE_EXPORT_SCHEMA_VERSION,
     target: project.manifest.target,

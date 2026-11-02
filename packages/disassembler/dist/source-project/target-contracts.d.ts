@@ -1,11 +1,14 @@
+import type { AssemblyModule, AssemblyModuleOptions, AssemblyLinkRecipe } from "@uttori/asm-core";
 import type { StaticAnalysisIncompleteReason } from "../analysis/static-analysis.js";
 import type { completeCaptureImportNotes } from "../project/capture-notes.js";
 import type { ResearchSnapshot } from "../research-inputs/inputs.js";
+import type { SourceBuildCoverage } from "./build-coverage.js";
 import type { SourceGenerationOptions, PreparedSourceGeneration, SourceInspection } from "./generation-contracts.js";
 import type { SourceBuildVerification } from "./merge.js";
 import type { SourceProject } from "./project.js";
 /** Host and target-independent fields shared by every published build receipt. */
 export interface SourceBuildResult {
+    readonly coverage?: SourceBuildCoverage;
     readonly outputFile: string;
     readonly debugMapFile: string;
     readonly inputSha256: string;
@@ -18,6 +21,16 @@ export interface SourceProjectInspection extends SourceInspection {
     readonly toolchainSha256: string;
     /** True only when the worker bundle contains every selected plugin; external code disables advisory menu caching. */
     readonly bundledToolchain?: boolean;
+}
+/** Unlinked producer evidence. It has no publication receipt and cannot replace a successful ROM build. */
+export interface SourceModuleInspection {
+    readonly modules: readonly AssemblyModule[];
+    readonly linkRecipe?: AssemblyLinkRecipe;
+    readonly inputSha256: string;
+    readonly inputs: readonly {
+        readonly path: string;
+        readonly sha256: string;
+    }[];
 }
 /** Research identity must be rechecked under the target's publication lock. */
 export interface SourceAnalysisOptions {
@@ -60,13 +73,15 @@ export interface SourceTargetCaptureOptions {
  * methods reject before indexing or other mutations; registering a target adds no dispatcher case.
  */
 export interface SourceTargetDescriptor {
+    /** Inspect module-authored source without publishing ROMs or claiming a link has succeeded. */
+    inspectModules?(this: void, project: SourceProject, host: SourceWorkflowHost, module: AssemblyModuleOptions, overlays?: ReadonlyMap<string, Uint8Array | null>, signal?: AbortSignal): Promise<SourceModuleInspection>;
     readonly id: string;
     readonly recipeFormat: string;
     matchesRom(this: void, prefix: Uint8Array): boolean;
     initialize(this: void, options: InitializeSourceOptions): Promise<SourceInitializationResult>;
     build(this: void, project: SourceProject, host: SourceWorkflowHost, signal?: AbortSignal): Promise<SourceBuildResult>;
     inspect(this: void, project: SourceProject, host: SourceWorkflowHost, overlays?: ReadonlyMap<string, Uint8Array | null>, signal?: AbortSignal): Promise<SourceProjectInspection>;
-    generationOptionsHash(this: void, options: Pick<SourceGenerationOptions, "sourceRoot" | "recipes" | "pristineAssets" | "codeWithdrawals">): string;
+    generationOptionsHash(this: void, options: Pick<SourceGenerationOptions, "sourceRoot" | "recipes" | "pristineAssets" | "codeWithdrawals" | "assembly">): string;
     prepare(this: void, options: SourceGenerationOptions): Promise<PreparedSourceGeneration>;
     analyze(this: void, options: SourceAnalysisOptions): {
         readonly status: "complete" | "incomplete";

@@ -5,6 +5,9 @@ export, review, application and interrupted-edit recovery.
 
 Multiple target assembly, disassembly, ROM analysis, and debugging in VS Code. Currently supports SNES and 65xx (NES, 6502-likes).
 
+For native object/library/link commands and opt-in Build/Run/Debug manifests, see the
+[linked build guide](../workflows/LINKED-BUILDS.md). Existing absolute Asar projects keep their current workflow.
+
 ## Requirements & Installation
 
 Use the latest stable VS Code release. The current extension API floor is 1.140.0;
@@ -55,6 +58,16 @@ This records their identities without reimporting captures or regenerating sourc
 It requires no Git commit and does not incorporate new evidence. If an input changes during a build,
 the error names the affected files, offers **Save All and Rebuild**, and links to **Uttori Analysis**
 output for details. Unchanged save notifications and unrelated evidence/output files do not reject a build.
+
+**Analysis Coverage** shows the original ROM bytes still consumed from raw blocks and their percentage,
+using a compact summary from the last successful build. It counts only included slices, including
+repeated or relocated slices once; retaining a whole raw block file does not make the whole block
+unconverted. Instructions, typed data, headers and converted assets account for the remaining bytes.
+Added ROM capacity does not change the original-ROM denominator. Build Current Source updates the
+summary. The view checks saved input hashes in the background and marks source or asset drafts as
+stale; unavailable verification is labeled explicitly. Older builds need one rebuild to record totals.
+Runtime annotations, **Sources**, and the command-palette **Explain Analysis Evidence** action remain
+independent of build conversion progress.
 
 Assembly and assets are ordinary editable files. F2 updates supported symbol uses and their tracked research identity. **Edit Symbol
 Research** and **Edit Analysis Research** open normal JSON documents with native undo, save and Git diffs.
@@ -164,3 +177,5 @@ Document formatting is unsupported in v1.0.0.
 - [65xx Manual](https://github.com/uttori/asm/blob/master/packages/plugin-65xx/MANUAL.md)
 
 [Report an issue](https://github.com/uttori/asm/issues). Licensed under [MIT](https://github.com/uttori/asm/blob/master/LICENSE).
+
+**Prepare Migration to Linked Sources** prepares an explicitly linked disassembly candidate without changing the working source. Preview and adopt it through Source Project, then ordinary regeneration retains linked mode. See [Disassembly Migration](../workflows/DISASSEMBLY-MIGRATION.md).

@@ -6,7 +6,50 @@ export function createPluginSessionCapabilities(
   session: Assembler,
   assertBorrowed: () => void,
 ): PluginSessionCapabilities {
+  const moduleCapabilities = Object.freeze({
+    apiVersion: 1 as const,
+    get id() {
+      assertBorrowed();
+      return session.moduleIdentity!;
+    },
+    selectSection(options: import("../relocatable.js").AssemblySectionOptions) {
+      assertBorrowed();
+      session.selectModuleSection(options);
+    },
+    declare(name: string, visibility: "import" | "export") {
+      assertBorrowed();
+      session.declareModuleSymbol(name, visibility);
+    },
+    exportSymbol(name: string) {
+      assertBorrowed();
+      session.exportModuleSymbol(name);
+    },
+    compile(expression: import("../ir/expression-node.js").ExpressionNode) {
+      assertBorrowed();
+      return session.compileLinkExpression(expression);
+    },
+    write(
+      expression: import("../ir/expression-node.js").ExpressionNode,
+      width: 1 | 2 | 3 | 4,
+      endianness?: "little" | "big",
+    ) {
+      assertBorrowed();
+      session.writeExpression(expression, width, endianness);
+    },
+    reserve(count: number, fill?: number) {
+      assertBorrowed();
+      session.reserveModuleBytes(count, fill);
+    },
+    align(boundary: number, fill?: number) {
+      assertBorrowed();
+      session.alignModule(boundary, fill);
+    },
+  });
   return Object.freeze({
+    get module() {
+      assertBorrowed();
+      return session.moduleAssembly ? moduleCapabilities : undefined;
+    },
     get targetOptions() {
       assertBorrowed();
       return session.targetOptions;
