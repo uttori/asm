@@ -11235,11 +11235,11 @@ var require_commonjs3 = __commonJS({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    var path51 = {
+    var path52 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    exports2.sep = defaultPlatform === "win32" ? path51.win32.sep : path51.posix.sep;
+    exports2.sep = defaultPlatform === "win32" ? path52.win32.sep : path52.posix.sep;
     exports2.minimatch.sep = exports2.sep;
     exports2.GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     exports2.minimatch.GLOBSTAR = exports2.GLOBSTAR;
@@ -14096,13 +14096,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path51) {
+        function ensurePath(config, path52) {
           let current = config;
-          for (let i = 0; i < path51.length - 1; i++) {
-            let obj = current[path51[i]];
+          for (let i = 0; i < path52.length - 1; i++) {
+            let obj = current[path52[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path51[i]] = obj;
+              current[path52[i]] = obj;
             }
             current = obj;
           }
@@ -14120,8 +14120,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key3);
           }
           if (config) {
-            const path51 = keys[i].split(".");
-            ensurePath(result, path51)[path51[path51.length - 1]] = toJSONObject(config);
+            const path52 = keys[i].split(".");
+            ensurePath(result, path52)[path52[path52.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -17570,13 +17570,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path51 = uri.fsPath.replace(/\\/g, "/");
+          const path52 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path51)) {
+              if (filter.matcher.match(path52)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -17590,7 +17590,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path51}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path52}/`)) {
                   return true;
                 }
               }
@@ -20238,7 +20238,7 @@ var require_main3 = __commonJS({
     exports2.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path51 = __importStar(require("path"));
+    var path52 = __importStar(require("path"));
     var os3 = __importStar(require("os"));
     var fs29 = __importStar(require("fs"));
     var crypto_1 = require("crypto");
@@ -20390,7 +20390,7 @@ var require_main3 = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path51.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path52.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -20524,9 +20524,9 @@ var require_main4 = __commonJS({
 var require_debug = __commonJS({
   "node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
-    var debug6 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
+    var debug7 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
-    module2.exports = debug6;
+    module2.exports = debug7;
   }
 });
 
@@ -20540,6 +20540,33 @@ var require_constants = __commonJS({
     9007199254740991;
     var MAX_SAFE_COMPONENT_LENGTH = 16;
     var MAX_SAFE_BUILD_LENGTH = MAX_LENGTH - 6;
+    var WHITESPACE_CHARACTERS = [
+      "	",
+      "\n",
+      "\v",
+      "\f",
+      "\r",
+      " ",
+      "\xA0",
+      "\u1680",
+      "\u2000",
+      "\u2001",
+      "\u2002",
+      "\u2003",
+      "\u2004",
+      "\u2005",
+      "\u2006",
+      "\u2007",
+      "\u2008",
+      "\u2009",
+      "\u200A",
+      "\u2028",
+      "\u2029",
+      "\u202F",
+      "\u205F",
+      "\u3000",
+      "\uFEFF"
+    ];
     var RELEASE_TYPES = [
       "major",
       "premajor",
@@ -20554,6 +20581,7 @@ var require_constants = __commonJS({
       MAX_SAFE_COMPONENT_LENGTH,
       MAX_SAFE_BUILD_LENGTH,
       MAX_SAFE_INTEGER,
+      WHITESPACE_CHARACTERS,
       RELEASE_TYPES,
       SEMVER_SPEC_VERSION,
       FLAG_INCLUDE_PRERELEASE: 1,
@@ -20571,7 +20599,7 @@ var require_re = __commonJS({
       MAX_SAFE_BUILD_LENGTH,
       MAX_LENGTH
     } = require_constants();
-    var debug6 = require_debug();
+    var debug7 = require_debug();
     exports2 = module2.exports = {};
     var re = exports2.re = [];
     var safeRe = exports2.safeRe = [];
@@ -20594,7 +20622,7 @@ var require_re = __commonJS({
     var createToken = (name2, value, isGlobal) => {
       const safe = makeSafeRegex(value);
       const index = R++;
-      debug6(name2, index, value);
+      debug7(name2, index, value);
       t[name2] = index;
       src[index] = value;
       safeSrc[index] = safe;
@@ -20698,7 +20726,7 @@ var require_identifiers = __commonJS({
 var require_semver = __commonJS({
   "node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
-    var debug6 = require_debug();
+    var debug7 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
     var { safeRe: re, t } = require_re();
     var parseOptions = require_parse_options();
@@ -20732,7 +20760,7 @@ var require_semver = __commonJS({
             `version is longer than ${MAX_LENGTH} characters`
           );
         }
-        debug6("SemVer", version, options);
+        debug7("SemVer", version, options);
         this.options = options;
         this.loose = !!options.loose;
         this.includePrerelease = !!options.includePrerelease;
@@ -20780,7 +20808,7 @@ var require_semver = __commonJS({
         return this.version;
       }
       compare(other) {
-        debug6("SemVer.compare", this.version, this.options, other);
+        debug7("SemVer.compare", this.version, this.options, other);
         if (!(other instanceof _SemVer)) {
           if (typeof other === "string" && other === this.version) {
             return 0;
@@ -20831,7 +20859,7 @@ var require_semver = __commonJS({
         do {
           const a = this.prerelease[i];
           const b = other.prerelease[i];
-          debug6("prerelease compare", i, a, b);
+          debug7("prerelease compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -20853,7 +20881,7 @@ var require_semver = __commonJS({
         do {
           const a = this.build[i];
           const b = other.build[i];
-          debug6("build compare", i, a, b);
+          debug7("build compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -21185,7 +21213,7 @@ var require_comparator = __commonJS({
           }
         }
         comp = comp.trim().split(/\s+/).join(" ");
-        debug6("comparator", comp, options);
+        debug7("comparator", comp, options);
         this.options = options;
         this.loose = !!options.loose;
         this.parse(comp);
@@ -21194,7 +21222,7 @@ var require_comparator = __commonJS({
         } else {
           this.value = this.operator + this.semver.version;
         }
-        debug6("comp", this);
+        debug7("comp", this);
       }
       parse(comp) {
         const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
@@ -21216,7 +21244,7 @@ var require_comparator = __commonJS({
         return this.value;
       }
       test(version) {
-        debug6("Comparator.test", version, this.options.loose);
+        debug7("Comparator.test", version, this.options.loose);
         if (this.semver === ANY || version === ANY) {
           return true;
         }
@@ -21273,9 +21301,200 @@ var require_comparator = __commonJS({
     var parseOptions = require_parse_options();
     var { safeRe: re, t } = require_re();
     var cmp = require_cmp();
-    var debug6 = require_debug();
+    var debug7 = require_debug();
     var SemVer = require_semver();
     var Range10 = require_range();
+  }
+});
+
+// node_modules/semver/internal/trim-comparator-whitespace.js
+var require_trim_comparator_whitespace = __commonJS({
+  "node_modules/semver/internal/trim-comparator-whitespace.js"(exports2, module2) {
+    "use strict";
+    var {
+      MAX_LENGTH,
+      MAX_SAFE_BUILD_LENGTH,
+      WHITESPACE_CHARACTERS
+    } = require_constants();
+    var whitespace = new Uint8Array(65536);
+    for (const char of WHITESPACE_CHARACTERS) {
+      whitespace[char.charCodeAt(0)] = 1;
+    }
+    var isWhitespace = (char) => char !== void 0 && whitespace[char.charCodeAt(0)] === 1;
+    var isVersionPrefix = (char) => char === "v" || char === "=" || isWhitespace(char);
+    var isDigit2 = (char) => char !== void 0 && char >= "0" && char <= "9";
+    var isLetter = (char) => char !== void 0 && (char >= "a" && char <= "z" || char >= "A" && char <= "Z");
+    var isIdentifierCharacter = (char) => isDigit2(char) || isLetter(char) || char === "-";
+    var isVersionStart = (char) => isDigit2(char) || char === "x" || char === "X" || char === "*";
+    var findDigitsEndIndex = (range, start, limit, digitRuns) => {
+      if (!isDigit2(range[start])) {
+        return start;
+      }
+      if (start >= digitRuns.start && start < digitRuns.end) {
+        return Math.min(start + limit, digitRuns.end);
+      }
+      if (start >= digitRuns.previousStart && start < digitRuns.previousEnd) {
+        return Math.min(start + limit, digitRuns.previousEnd);
+      }
+      let end = start + 1;
+      while (isDigit2(range[end])) {
+        end++;
+      }
+      digitRuns.previousStart = digitRuns.start;
+      digitRuns.previousEnd = digitRuns.end;
+      digitRuns.start = start;
+      digitRuns.end = end;
+      return Math.min(start + limit, end);
+    };
+    var findVersionNumberEndIndex = (range, start, loose, digitRuns) => {
+      if (!loose && range[start] === "0") {
+        return start + 1;
+      }
+      return findDigitsEndIndex(range, start, loose ? MAX_LENGTH : MAX_LENGTH + 1, digitRuns);
+    };
+    var findPrereleaseIdentifierEndIndex = (range, start, loose, digitRuns) => {
+      const digitsEnd = findDigitsEndIndex(range, start, MAX_LENGTH, digitRuns);
+      if (isLetter(range[digitsEnd]) || range[digitsEnd] === "-") {
+        let end = digitsEnd + 1;
+        const limit = end + MAX_SAFE_BUILD_LENGTH;
+        while (end < limit && isIdentifierCharacter(range[end])) {
+          end++;
+        }
+        return end;
+      }
+      return findVersionNumberEndIndex(range, start, loose, digitRuns);
+    };
+    var findPrereleaseEndIndex = (range, start, loose, digitRuns) => {
+      const hyphen = range[start] === "-";
+      if (!loose && !hyphen) {
+        return start;
+      }
+      const identifierStart = start + (hyphen ? 1 : 0);
+      let end = findPrereleaseIdentifierEndIndex(range, identifierStart, loose, digitRuns);
+      if (end === identifierStart) {
+        if (!loose || !hyphen) {
+          return start;
+        }
+        end = findPrereleaseIdentifierEndIndex(range, start, loose, digitRuns);
+      }
+      while (range[end] === ".") {
+        const next = findPrereleaseIdentifierEndIndex(range, end + 1, loose, digitRuns);
+        if (next === end + 1) {
+          break;
+        }
+        end = next;
+      }
+      return end;
+    };
+    var findBuildIdentifierEndIndex = (range, start) => {
+      let end = start;
+      while (end - start < MAX_SAFE_BUILD_LENGTH && isIdentifierCharacter(range[end])) {
+        end++;
+      }
+      return end;
+    };
+    var findBuildEndIndex = (range, start) => {
+      if (range[start] !== "+") {
+        return start;
+      }
+      let end = findBuildIdentifierEndIndex(range, start + 1);
+      if (end === start + 1) {
+        return start;
+      }
+      while (range[end] === ".") {
+        const next = findBuildIdentifierEndIndex(range, end + 1);
+        if (next === end + 1) {
+          break;
+        }
+        end = next;
+      }
+      return end;
+    };
+    var findLooseFullVersionEndIndex = (range, start, digitRuns) => {
+      let end = start;
+      for (let component = 0; component < 3; component++) {
+        const next = findVersionNumberEndIndex(range, end, true, digitRuns);
+        if (next === end) {
+          return start;
+        }
+        end = next;
+        if (component < 2) {
+          if (range[end] !== ".") {
+            return start;
+          }
+          end++;
+        }
+      }
+      const prereleaseEnd = findPrereleaseEndIndex(range, end, true, digitRuns);
+      return findBuildEndIndex(range, prereleaseEnd);
+    };
+    var findPartialVersionComponentEndIndex = (range, start, digitRuns) => {
+      if (isDigit2(range[start])) {
+        return findVersionNumberEndIndex(range, start, false, digitRuns);
+      }
+      return isVersionStart(range[start]) ? start + 1 : start;
+    };
+    var findPartialVersionEndIndex = (range, start, digitRuns) => {
+      let end = findPartialVersionComponentEndIndex(range, start, digitRuns);
+      for (let component = 0; component < 2; component++) {
+        if (range[end] !== ".") {
+          return end;
+        }
+        const next = findPartialVersionComponentEndIndex(range, end + 1, digitRuns);
+        if (next === end + 1) {
+          return end;
+        }
+        end = next;
+      }
+      const prereleaseEnd = findPrereleaseEndIndex(range, end, false, digitRuns);
+      return findBuildEndIndex(range, prereleaseEnd);
+    };
+    var findVersionEndIndex = (range, start, digitRuns) => {
+      const fullVersionEnd = findLooseFullVersionEndIndex(range, start, digitRuns);
+      return fullVersionEnd !== start ? fullVersionEnd : findPartialVersionEndIndex(range, start, digitRuns);
+    };
+    var findRemovableWhitespaceIndex = (range, matchStart) => {
+      let position = matchStart;
+      if (isWhitespace(range[position])) {
+        position++;
+      }
+      if (range[position] === "<" || range[position] === ">") {
+        position++;
+      }
+      if (range[position] === "=") {
+        position++;
+      }
+      return isWhitespace(range[position]) ? position : -1;
+    };
+    var trimComparatorWhitespace = (range) => {
+      let result = "";
+      let copyFrom = 0;
+      let cursor = 0;
+      const digitRuns = { start: -1, end: -1, previousStart: -1, previousEnd: -1 };
+      while (cursor < range.length) {
+        const matchStart = cursor;
+        if (range[cursor] === "<" || range[cursor] === ">") {
+          cursor++;
+        } else if (!isVersionPrefix(range[cursor]) && !isVersionStart(range[cursor])) {
+          cursor++;
+          continue;
+        }
+        while (cursor < range.length && isVersionPrefix(range[cursor])) {
+          cursor++;
+        }
+        if (!isVersionStart(range[cursor])) {
+          continue;
+        }
+        const whitespacePosition = findRemovableWhitespaceIndex(range, matchStart);
+        if (whitespacePosition !== -1) {
+          result += range.slice(copyFrom, whitespacePosition);
+          copyFrom = whitespacePosition + 1;
+        }
+        cursor = findVersionEndIndex(range, cursor, digitRuns);
+      }
+      return result + range.slice(copyFrom);
+    };
+    module2.exports = trimComparatorWhitespace;
   }
 });
 
@@ -21359,21 +21578,21 @@ var require_range = __commonJS({
         const loose = this.options.loose;
         const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
         range = range.replace(hr, hyphenReplace(this.options.includePrerelease));
-        debug6("hyphen replace", range);
-        range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
-        debug6("comparator trim", range);
+        debug7("hyphen replace", range);
+        range = trimComparatorWhitespace(range);
+        debug7("comparator trim", range);
         range = range.replace(re[t.TILDETRIM], tildeTrimReplace);
-        debug6("tilde trim", range);
+        debug7("tilde trim", range);
         range = range.replace(re[t.CARETTRIM], caretTrimReplace);
-        debug6("caret trim", range);
+        debug7("caret trim", range);
         let rangeList = range.split(" ").map((comp) => parseComparator(comp, this.options)).join(" ").split(/\s+/).map((comp) => replaceGTE0(comp, this.options));
         if (loose) {
           rangeList = rangeList.filter((comp) => {
-            debug6("loose invalid filter", comp, this.options);
+            debug7("loose invalid filter", comp, this.options);
             return !!comp.match(re[t.COMPARATORLOOSE]);
           });
         }
-        debug6("range list", rangeList);
+        debug7("range list", rangeList);
         const rangeMap = /* @__PURE__ */ new Map();
         const comparators = rangeList.map((comp) => new Comparator(comp, this.options));
         for (const comp of comparators) {
@@ -21428,13 +21647,13 @@ var require_range = __commonJS({
     var cache = new LRU();
     var parseOptions = require_parse_options();
     var Comparator = require_comparator();
-    var debug6 = require_debug();
+    var debug7 = require_debug();
     var SemVer = require_semver();
+    var trimComparatorWhitespace = require_trim_comparator_whitespace();
     var {
       safeRe: re,
       src,
       t,
-      comparatorTrimReplace,
       tildeTrimReplace,
       caretTrimReplace
     } = require_re();
@@ -21456,15 +21675,15 @@ var require_range = __commonJS({
     };
     var parseComparator = (comp, options) => {
       comp = comp.replace(re[t.BUILD], "");
-      debug6("comp", comp, options);
+      debug7("comp", comp, options);
       comp = replaceCarets(comp, options);
-      debug6("caret", comp);
+      debug7("caret", comp);
       comp = replaceTildes(comp, options);
-      debug6("tildes", comp);
+      debug7("tildes", comp);
       comp = replaceXRanges(comp, options);
-      debug6("xrange", comp);
+      debug7("xrange", comp);
       comp = replaceStars(comp, options);
-      debug6("stars", comp);
+      debug7("stars", comp);
       return comp;
     };
     var isX = (id) => !id || id.toLowerCase() === "x" || id === "*";
@@ -21476,7 +21695,7 @@ var require_range = __commonJS({
       const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug6("tilde", comp, _, M, m, p, pr);
+        debug7("tilde", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -21485,12 +21704,12 @@ var require_range = __commonJS({
         } else if (isX(p)) {
           ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
         } else if (pr) {
-          debug6("replaceTilde pr", pr);
+          debug7("replaceTilde pr", pr);
           ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
         } else {
           ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
         }
-        debug6("tilde return", ret);
+        debug7("tilde return", ret);
         return ret;
       });
     };
@@ -21498,11 +21717,11 @@ var require_range = __commonJS({
       return comp.trim().split(/\s+/).map((c) => replaceCaret(c, options)).join(" ");
     };
     var replaceCaret = (comp, options) => {
-      debug6("caret", comp, options);
+      debug7("caret", comp, options);
       const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug6("caret", comp, _, M, m, p, pr);
+        debug7("caret", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -21515,7 +21734,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
           }
         } else if (pr) {
-          debug6("replaceCaret pr", pr);
+          debug7("replaceCaret pr", pr);
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p}-${pr} <${M}.${m}.${+p + 1}-0`;
@@ -21526,7 +21745,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p}-${pr} <${+M + 1}.0.0-0`;
           }
         } else {
-          debug6("no pr");
+          debug7("no pr");
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p} <${M}.${m}.${+p + 1}-0`;
@@ -21537,19 +21756,19 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p} <${+M + 1}.0.0-0`;
           }
         }
-        debug6("caret return", ret);
+        debug7("caret return", ret);
         return ret;
       });
     };
     var replaceXRanges = (comp, options) => {
-      debug6("replaceXRanges", comp, options);
+      debug7("replaceXRanges", comp, options);
       return comp.split(/\s+/).map((c) => replaceXRange(c, options)).join(" ");
     };
     var replaceXRange = (comp, options) => {
       comp = comp.trim();
       const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
       return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
-        debug6("xRange", comp, ret, gtlt, M, m, p, pr);
+        debug7("xRange", comp, ret, gtlt, M, m, p, pr);
         if (invalidXRangeOrder(M, m, p)) {
           return comp;
         }
@@ -21599,16 +21818,16 @@ var require_range = __commonJS({
         } else if (xp) {
           ret = `>=${M}.${m}.0${pr} <${M}.${+m + 1}.0-0`;
         }
-        debug6("xRange return", ret);
+        debug7("xRange return", ret);
         return ret;
       });
     };
     var replaceStars = (comp, options) => {
-      debug6("replaceStars", comp, options);
+      debug7("replaceStars", comp, options);
       return comp.trim().replace(re[t.STAR], "");
     };
     var replaceGTE0 = (comp, options) => {
-      debug6("replaceGTE0", comp, options);
+      debug7("replaceGTE0", comp, options);
       return comp.trim().replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], "");
     };
     var hyphenReplace = (incPr) => ($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr) => {
@@ -21646,7 +21865,7 @@ var require_range = __commonJS({
       }
       if (version.prerelease.length && !options.includePrerelease) {
         for (let i = 0; i < set.length; i++) {
-          debug6(set[i].semver);
+          debug7(set[i].semver);
           if (set[i].semver === Comparator.ANY) {
             continue;
           }
@@ -21764,7 +21983,7 @@ var require_main5 = __commonJS({
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = __importStar(require("child_process"));
     var fs29 = __importStar(require("fs"));
-    var path51 = __importStar(require("path"));
+    var path52 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
     var Is2 = __importStar(require_is());
@@ -22206,18 +22425,18 @@ var require_main5 = __commonJS({
         }
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path51.isAbsolute(runtime)) {
+        if (path52.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path51.join(mainRootPath, runtime);
+          const result = path52.join(mainRootPath, runtime);
           if (fs29.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path51.join(serverWorkingDirectory, runtime);
+          const result = path52.join(serverWorkingDirectory, runtime);
           if (fs29.existsSync(result)) {
             return result;
           }
@@ -22457,13 +22676,13 @@ var init_evidence_pool = __esm({
 function withCompactAnalysisOwnership(records3, entries) {
   const outgoing = /* @__PURE__ */ new Map();
   const nodes = /* @__PURE__ */ new Set();
-  for (const record7 of records3) {
-    if (record7.kind === "cfg-node") {
-      nodes.add(record7.id);
-    } else if (record7.kind === "cfg-edge" && record7.to && ["branch", "fallthrough", "jump"].includes(record7.edgeKind)) {
-      const targets = outgoing.get(record7.from) ?? [];
-      targets.push(record7.to);
-      outgoing.set(record7.from, targets);
+  for (const record8 of records3) {
+    if (record8.kind === "cfg-node") {
+      nodes.add(record8.id);
+    } else if (record8.kind === "cfg-edge" && record8.to && ["branch", "fallthrough", "jump"].includes(record8.edgeKind)) {
+      const targets = outgoing.get(record8.from) ?? [];
+      targets.push(record8.to);
+      outgoing.set(record8.from, targets);
     }
   }
   const owners = /* @__PURE__ */ new Map();
@@ -22494,27 +22713,27 @@ function withCompactAnalysisOwnership(records3, entries) {
       }
     }
   }
-  return records3.map((record7) => {
-    if (record7.kind !== "cfg-node") {
-      return record7;
+  return records3.map((record8) => {
+    if (record8.kind !== "cfg-node") {
+      return record8;
     }
-    const owner2 = owners.get(record7.id);
+    const owner2 = owners.get(record8.id);
     return {
-      ...record7,
-      ...owner2 ? { functionEntry: owner2, evidencePredecessor: predecessors.get(record7.id) } : {}
+      ...record8,
+      ...owner2 ? { functionEntry: owner2, evidencePredecessor: predecessors.get(record8.id) } : {}
     };
   });
 }
 function validateAnalysisOwnership(records3, scope = "complete") {
   if (!records3.some(
-    (record7) => record7.kind === "cfg-node" && (record7.functionEntry !== void 0 || record7.evidencePredecessor !== void 0)
+    (record8) => record8.kind === "cfg-node" && (record8.functionEntry !== void 0 || record8.evidencePredecessor !== void 0)
   )) {
     return;
   }
   const nodes = /* @__PURE__ */ new Map();
-  for (const record7 of records3) {
-    if (record7.kind === "cfg-node") {
-      nodes.set(record7.id, record7);
+  for (const record8 of records3) {
+    if (record8.kind === "cfg-node") {
+      nodes.set(record8.id, record8);
     }
   }
   const complete = /* @__PURE__ */ new Set();
@@ -22605,13 +22824,13 @@ var init_project_labels = __esm({
 });
 
 // packages/disassembler/src/model/rom-image.ts
-var import_node_crypto3, fs, sha2562, detectCopierHeaderSize, RomImage;
+var import_node_crypto4, fs3, sha2562, detectCopierHeaderSize, RomImage;
 var init_rom_image = __esm({
   "packages/disassembler/src/model/rom-image.ts"() {
     "use strict";
-    import_node_crypto3 = require("node:crypto");
-    fs = __toESM(require("node:fs"), 1);
-    sha2562 = (bytes) => (0, import_node_crypto3.createHash)("sha256").update(bytes).digest("hex");
+    import_node_crypto4 = require("node:crypto");
+    fs3 = __toESM(require("node:fs"), 1);
+    sha2562 = (bytes) => (0, import_node_crypto4.createHash)("sha256").update(bytes).digest("hex");
     detectCopierHeaderSize = (fileSize) => {
       if (fileSize < 0) {
         throw new Error("ROM size cannot be negative.");
@@ -22635,8 +22854,9 @@ var init_rom_image = __esm({
       #fileBytes;
       #contentBytes;
       /**
-       * @param {Uint8Array} bytes Complete file bytes. Copied immediately.
-       * @param {RomLoadOptions & { readonly sourcePath?: string }} [options] Header override and optional origin path.
+       * Copy file bytes and split off the copier and container headers.
+       * @param bytes Complete file bytes. Copied immediately.
+       * @param [options] Header override and optional origin path.
        */
       constructor(bytes, options = {}) {
         this.#fileBytes = Uint8Array.from(bytes);
@@ -22662,31 +22882,33 @@ var init_rom_image = __esm({
       }
       /**
        * Reads a ROM from disk and records `sourcePath`.
-       * @param {string} file Path to the ROM file.
-       * @param {RomLoadOptions} [options] Optional explicit copier-header size.
-       * @returns {RomImage} Loaded image.
+       * @param file Path to the ROM file.
+       * @param [options] Optional explicit copier-header size.
+       * @returns Loaded image.
        */
       static load(file, options = {}) {
-        return new _RomImage(fs.readFileSync(file), { ...options, sourcePath: file });
+        return new _RomImage(fs3.readFileSync(file), { ...options, sourcePath: file });
       }
       /**
        * Headerless cartridge length in bytes.
-       * @returns {number} The headerless cartridge length in bytes.
+       * @returns The headerless cartridge length in bytes.
        */
       get length() {
         return this.#contentBytes.length;
       }
       /**
-       * @param {number} offset Headerless file offset.
-       * @returns {number | undefined} Byte value, or `undefined` when out of range.
+       * Read one content byte without throwing on invalid offsets.
+       * @param offset Headerless file offset.
+       * @returns Byte value, or `undefined` when out of range.
        */
       readByte(offset) {
         return Number.isInteger(offset) && offset >= 0 && offset < this.length ? this.#contentBytes[offset] : void 0;
       }
       /**
-       * @param {number} offset Headerless file offset.
-       * @param {number} length Number of bytes to copy.
-       * @returns {Uint8Array | undefined} A copy of the slice, or `undefined` when out of range.
+       * Copy a content range; partial ranges are rejected rather than truncated.
+       * @param offset Headerless file offset.
+       * @param length Number of bytes to copy.
+       * @returns A copy of the slice, or `undefined` when out of range.
        */
       read(offset, length) {
         if (!Number.isInteger(offset) || !Number.isInteger(length) || offset < 0 || length < 0 || offset + length > this.length) {
@@ -22696,21 +22918,21 @@ var init_rom_image = __esm({
       }
       /**
        * Returns a defensive copy. Callers cannot mutate the loaded image.
-       * @returns {Uint8Array} The headerless ROM content.
+       * @returns The headerless ROM content.
        */
       bytes() {
         return this.#contentBytes.slice();
       }
       /**
        * Returns a defensive copy of the optional 512-byte copier header.
-       * @returns {Uint8Array} The copier header bytes.
+       * @returns The copier header bytes.
        */
       copierHeaderBytes() {
         return this.#fileBytes.slice(0, this.identity.headerSize);
       }
       /**
        * Returns a defensive copy of the complete file, including any copier header.
-       * @returns {Uint8Array} The complete file bytes.
+       * @returns The complete file bytes.
        */
       fileBytes() {
         return this.#fileBytes.slice();
@@ -22720,7 +22942,7 @@ var init_rom_image = __esm({
 });
 
 // packages/disassembler/src/model/trace-detail.ts
-function isRecord5(value) {
+function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isUnknownArray(value) {
@@ -22736,7 +22958,7 @@ function isStateValue(value) {
   return typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value);
 }
 function isMemoryAccess(entry) {
-  if (!isRecord5(entry)) {
+  if (!isRecord6(entry)) {
     return false;
   }
   const addressSpace = entry.addressSpace;
@@ -22760,7 +22982,7 @@ var init_trace_detail = __esm({
       let previousKeys = [];
       let sortedKeys = [];
       return value.map((entry) => {
-        if (!isRecord5(entry)) {
+        if (!isRecord6(entry)) {
           throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
         }
         const rawBytes = entry.bytes;
@@ -22775,7 +22997,7 @@ var init_trace_detail = __esm({
           bytes.push(byte2);
         }
         const rawState = entry.state;
-        if (!isRecord5(rawState)) {
+        if (!isRecord6(rawState)) {
           throw new Error("Trace instruction state contains an invalid register value.");
         }
         const state = {};
@@ -23061,8 +23283,8 @@ var init_instruction_annotations = __esm({
       }
       return target;
     };
-    numberField = (record7, name2) => {
-      const value = record7[name2];
+    numberField = (record8, name2) => {
+      const value = record8[name2];
       return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
     };
     effectiveAddress = (value) => {
@@ -23085,7 +23307,7 @@ var init_instruction_annotations = __esm({
       };
     };
     annotationState = (annotation) => annotation.state;
-    runtimeState = (record7) => record7.state;
+    runtimeState = (record8) => record8.state;
     lowerBound = (values, target, at) => {
       let low = 0;
       let high = values.length;
@@ -23200,9 +23422,9 @@ var init_instruction_annotations = __esm({
           addAll(transition.evidence, node.evidence);
         }
       };
-      for (const record7 of shards.analysis) {
-        if (record7.kind === "cfg-node") {
-          addNode(record7);
+      for (const record8 of shards.analysis) {
+        if (record8.kind === "cfg-node") {
+          addNode(record8);
         }
       }
       for (const annotation of shards.annotations) {
@@ -23214,38 +23436,38 @@ var init_instruction_annotations = __esm({
           instruction2.outputOffsets = addValue(instruction2.outputOffsets, annotation.start);
         }
       }
-      for (const record7 of runtime()) {
-        if (record7.kind === "runtime-execution") {
-          const instruction2 = ensure(record7.addressSpace, record7.address);
-          if (record7.fileOffset !== void 0) {
-            instruction2.outputOffsets = addValue(instruction2.outputOffsets, record7.fileOffset);
+      for (const record8 of runtime()) {
+        if (record8.kind === "runtime-execution") {
+          const instruction2 = ensure(record8.addressSpace, record8.address);
+          if (record8.fileOffset !== void 0) {
+            instruction2.outputOffsets = addValue(instruction2.outputOffsets, record8.fileOffset);
           }
-          instruction2.architectures = addValue(instruction2.architectures, record7.architecture);
-          instruction2.executionCount += record7.count;
-          instruction2.executionRecordIds = addValue(instruction2.executionRecordIds, record7.id);
-          instruction2.evidence = addAll(instruction2.evidence, record7.evidence);
-        } else if (record7.kind === "runtime-cpu-state") {
-          const instruction2 = ensure(record7.addressSpace, record7.address);
+          instruction2.architectures = addValue(instruction2.architectures, record8.architecture);
+          instruction2.executionCount += record8.count;
+          instruction2.executionRecordIds = addValue(instruction2.executionRecordIds, record8.id);
+          instruction2.evidence = addAll(instruction2.evidence, record8.evidence);
+        } else if (record8.kind === "runtime-cpu-state") {
+          const instruction2 = ensure(record8.addressSpace, record8.address);
           addStateObservation(
             instruction2,
             "runtime",
-            record7.architecture,
-            runtimeState(record7),
-            record7.id,
-            record7.evidence,
-            record7.count
+            record8.architecture,
+            runtimeState(record8),
+            record8.id,
+            record8.evidence,
+            record8.count
           );
-        } else if (record7.kind === "runtime-memory-access") {
-          const instruction2 = ensure(record7.instructionAddressSpace, record7.instructionAddress);
-          instruction2.architectures = addValue(instruction2.architectures, record7.architecture);
+        } else if (record8.kind === "runtime-memory-access") {
+          const instruction2 = ensure(record8.instructionAddressSpace, record8.instructionAddress);
+          instruction2.architectures = addValue(instruction2.architectures, record8.architecture);
           const value = {
-            accessedAddressSpace: record7.accessedAddressSpace,
-            accessedAddress: record7.accessedAddress,
-            access: record7.access,
-            width: record7.width,
-            ...record7.actor === void 0 ? {} : { actor: record7.actor },
-            ...record7.channel === void 0 ? {} : { channel: record7.channel },
-            ...record7.value === void 0 ? {} : { value: record7.value }
+            accessedAddressSpace: record8.accessedAddressSpace,
+            accessedAddress: record8.accessedAddress,
+            access: record8.access,
+            width: record8.width,
+            ...record8.actor === void 0 ? {} : { actor: record8.actor },
+            ...record8.channel === void 0 ? {} : { channel: record8.channel },
+            ...record8.value === void 0 ? {} : { value: record8.value }
           };
           const key3 = canonicalJsonCompact(value);
           const accesses = instruction2.memoryAccesses ??= /* @__PURE__ */ new Map();
@@ -23254,10 +23476,10 @@ var init_instruction_annotations = __esm({
             access = { value, count: 0, recordIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
             accesses.set(key3, access);
           }
-          access.count += record7.count;
-          access.recordIds.add(record7.id);
-          addAll(access.evidence, record7.evidence);
-          instruction2.evidence = addAll(instruction2.evidence, record7.evidence);
+          access.count += record8.count;
+          access.recordIds.add(record8.id);
+          addAll(access.evidence, record8.evidence);
+          instruction2.evidence = addAll(instruction2.evidence, record8.evidence);
         }
       }
       for (const comment of shards.comments) {
@@ -23316,19 +23538,19 @@ var init_instruction_annotations = __esm({
         });
       }
       const coverageById = /* @__PURE__ */ new Map();
-      for (const record7 of runtime()) {
-        if (record7.kind !== "runtime-coverage") {
+      for (const record8 of runtime()) {
+        if (record8.kind !== "runtime-coverage") {
           continue;
         }
-        coverageById.set(record7.id, record7);
-        attachToRange(record7.addressSpace, record7.start, record7.end, (instruction2) => {
-          instruction2.architectures = addValue(instruction2.architectures, record7.architecture);
-          instruction2.coverageRecordIds = addValue(instruction2.coverageRecordIds, record7.id);
-          instruction2.evidence = addAll(instruction2.evidence, record7.evidence);
+        coverageById.set(record8.id, record8);
+        attachToRange(record8.addressSpace, record8.start, record8.end, (instruction2) => {
+          instruction2.architectures = addValue(instruction2.architectures, record8.architecture);
+          instruction2.coverageRecordIds = addValue(instruction2.coverageRecordIds, record8.id);
+          instruction2.evidence = addAll(instruction2.evidence, record8.evidence);
         });
       }
       const summaries2 = new Set(
-        shards.analysis.filter((record7) => record7.kind === "summary").map(({ architecture }) => architecture)
+        shards.analysis.filter((record8) => record8.kind === "summary").map(({ architecture }) => architecture)
       );
       if (summaries2.size === 1) {
         const [architecture] = summaries2;
@@ -23341,13 +23563,13 @@ var init_instruction_annotations = __esm({
       const finalized = mutable.map((instruction2) => {
         const coverage = /* @__PURE__ */ new Map();
         for (const recordId of instruction2.coverageRecordIds ?? []) {
-          const record7 = coverageById.get(recordId);
-          const previous = coverage.get(record7.coverage);
-          coverage.set(record7.coverage, {
-            coverage: record7.coverage,
-            count: (previous?.count ?? 0) + record7.count,
-            recordIds: sortedStrings([...previous?.recordIds ?? [], record7.id]),
-            evidence: sortedStrings([...previous?.evidence ?? [], ...record7.evidence])
+          const record8 = coverageById.get(recordId);
+          const previous = coverage.get(record8.coverage);
+          coverage.set(record8.coverage, {
+            coverage: record8.coverage,
+            count: (previous?.count ?? 0) + record8.count,
+            recordIds: sortedStrings([...previous?.recordIds ?? [], record8.id]),
+            evidence: sortedStrings([...previous?.evidence ?? [], ...record8.evidence])
           });
         }
         return Object.assign(
@@ -23429,26 +23651,26 @@ var init_instruction_annotations = __esm({
 });
 
 // packages/disassembler/src/model/research-mapping.ts
-function isRecord6(value) {
+function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isResearchMapping(value) {
-  if (!isRecord6(value)) {
+  if (!isRecord7(value)) {
     return false;
   }
-  const record7 = value;
-  if (Object.keys(record7).some((key3) => key3 !== "fileOffset" && key3 !== "state")) {
+  const record8 = value;
+  if (Object.keys(record8).some((key3) => key3 !== "fileOffset" && key3 !== "state")) {
     return false;
   }
-  if (record7.fileOffset !== void 0 && !(Number.isSafeInteger(record7.fileOffset) && Number(record7.fileOffset) >= 0)) {
+  if (record8.fileOffset !== void 0 && !(Number.isSafeInteger(record8.fileOffset) && Number(record8.fileOffset) >= 0)) {
     return false;
   }
   let fields2 = 0;
-  if (record7.state !== void 0) {
-    if (typeof record7.state !== "object" || record7.state === null || Array.isArray(record7.state)) {
+  if (record8.state !== void 0) {
+    if (typeof record8.state !== "object" || record8.state === null || Array.isArray(record8.state)) {
       return false;
     }
-    const entries = Object.entries(record7.state);
+    const entries = Object.entries(record8.state);
     if (entries.length === 0 || entries.length > 64) {
       return false;
     }
@@ -23459,7 +23681,7 @@ function isResearchMapping(value) {
     }
     fields2 = entries.length;
   }
-  return record7.fileOffset !== void 0 || fields2 > 0;
+  return record8.fileOffset !== void 0 || fields2 > 0;
 }
 function matchesResearchMapping(mapping, location, delta = 0) {
   if (!mapping) {
@@ -23482,29 +23704,29 @@ var init_research_mapping = __esm({
 function readEvidencePath() {
   return materializeEvidencePath(evidencePaths.get(this));
 }
-var import_node_crypto4, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, materializeEvidencePath, evidencePaths, withEvidencePath, hexAddress, callContexts, emptyCallContext, describeCallContext, contextKey, compactContextKeys, compactContextKey, nodeIdFor, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
+var import_node_crypto5, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, materializeEvidencePath, evidencePaths, withEvidencePath, hexAddress, callContexts, emptyCallContext, describeCallContext, contextKey, compactContextKeys, compactContextKey, nodeIdFor, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
 var init_static_analysis = __esm({
   "packages/disassembler/src/analysis/static-analysis.ts"() {
     "use strict";
-    import_node_crypto4 = require("node:crypto");
+    import_node_crypto5 = require("node:crypto");
     init_canonical_json();
     init_evidence_pool();
     init_research_mapping();
     DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1e6;
     DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
-    materializeEvidencePath = (path51) => {
+    materializeEvidencePath = (path52) => {
       const values = [];
-      values.length = path51?.length ?? 0;
-      for (let current = path51; current; current = current.parent) {
+      values.length = path52?.length ?? 0;
+      for (let current = path52; current; current = current.parent) {
         values[current.length - 1] = current.id;
       }
       return values;
     };
     evidencePaths = /* @__PURE__ */ new WeakMap();
-    withEvidencePath = (record7, path51) => {
-      evidencePaths.set(record7, path51);
-      Object.defineProperty(record7, "evidencePath", { enumerable: true, get: readEvidencePath });
-      return record7;
+    withEvidencePath = (record8, path52) => {
+      evidencePaths.set(record8, path52);
+      Object.defineProperty(record8, "evidencePath", { enumerable: true, get: readEvidencePath });
+      return record8;
     };
     hexAddress = (address3) => address3.toString(16).padStart(6, "0");
     callContexts = /* @__PURE__ */ new WeakMap();
@@ -23530,7 +23752,7 @@ var init_static_analysis = __esm({
     compactContextKey = (context) => {
       let key3 = compactContextKeys.get(context);
       if (key3 === void 0) {
-        key3 = (0, import_node_crypto4.createHash)("sha256").update(contextKey(context)).digest("hex");
+        key3 = (0, import_node_crypto5.createHash)("sha256").update(contextKey(context)).digest("hex");
         compactContextKeys.set(context, key3);
       }
       return key3;
@@ -23545,9 +23767,11 @@ var init_static_analysis = __esm({
           this.push(item);
         }
       }
+      /** Number of work items currently queued for exploration. */
       get length() {
         return this.#values.length;
       }
+      /** Highest-priority work item without removing it from the queue. */
       peek() {
         return this.#values[0]?.item;
       }
@@ -23555,6 +23779,7 @@ var init_static_analysis = __esm({
       clear() {
         this.#values.length = 0;
       }
+      /** Inserts one work item while preserving deterministic heap ordering. */
       push(item) {
         const queued = { item, sequence: this.#nextSequence++ };
         this.#values.push(queued);
@@ -23569,6 +23794,7 @@ var init_static_analysis = __esm({
         }
         this.#values[index] = queued;
       }
+      /** Removes and returns the highest-priority work item. */
       shift() {
         const firstSlot = this.#values.length > 0 ? this.#values[0] : void 0;
         const last = this.#values.pop();
@@ -23813,7 +24039,7 @@ var init_static_analysis = __esm({
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction2, incomingState);
-        const path51 = {
+        const path52 = {
           id: nodeId,
           parent: item.path,
           length: (item.path?.length ?? 0) + 1
@@ -23837,7 +24063,7 @@ var init_static_analysis = __esm({
               entryPoint: item.entryPoint,
               evidence: nodeEvidence
             },
-            path51
+            path52
           )
         );
         if (item.predecessor && item.edgeKind) {
@@ -23906,7 +24132,7 @@ var init_static_analysis = __esm({
             context,
             entryPoint: item.entryPoint,
             evidence: targetEvidence,
-            path: path51,
+            path: path52,
             edgeKind: kind,
             predecessor: nodeId,
             indirect: target.indirect,
@@ -23926,7 +24152,7 @@ var init_static_analysis = __esm({
                     evidence: targetEvidence,
                     evidencePredecessor: nodeId
                   },
-                  path51
+                  path52
                 )
               );
             }
@@ -23947,7 +24173,7 @@ var init_static_analysis = __esm({
                 kind: "call-context-limit",
                 address: instruction2.address,
                 limit: maxCallDepth,
-                message: `Call context at $${hexAddress(instruction2.address)} exceeds depth ${maxCallDepth}.`
+                message: `Call context at $${hexAddress(instruction2.address)} exceeds depth ${maxCallDepth}; exploration continues with older call history discarded.`
               });
               scheduleTarget(target, maxCallDepth === 0 ? [] : nextContext.slice(-maxCallDepth));
             } else {
@@ -23966,7 +24192,7 @@ var init_static_analysis = __esm({
               context: item.context.slice(0, -1),
               entryPoint: item.entryPoint,
               evidence: nodeEvidence,
-              path: path51,
+              path: path52,
               edgeKind: "return",
               predecessor: nodeId
             });
@@ -23978,7 +24204,7 @@ var init_static_analysis = __esm({
             context: item.context,
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            path: path51,
+            path: path52,
             edgeKind: "fallthrough",
             predecessor: nodeId
           });
@@ -24041,30 +24267,30 @@ var init_static_analysis = __esm({
 });
 
 // packages/disassembler/src/analysis/project-evidence.ts
-var evidenceReferences, sortedUnique, explainProjectEvidence;
+var evidenceReferences, sortedUnique2, explainProjectEvidence;
 var init_project_evidence = __esm({
   "packages/disassembler/src/analysis/project-evidence.ts"() {
     "use strict";
     evidenceReferences = (shards, evidenceId) => [
-      ...shards.analysis.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `analysis:${record7.id}`),
-      ...shards.annotations.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `annotations:${record7.id}`),
-      ...shards.labels.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `labels:${record7.id}`),
-      ...shards.comments.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `comments:${record7.id}`),
-      ...shards.regions.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `regions:${record7.id}`),
-      ...shards.runtime.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `runtime:${record7.id}`)
+      ...shards.analysis.filter((record8) => record8.evidence.includes(evidenceId)).map((record8) => `analysis:${record8.id}`),
+      ...shards.annotations.filter((record8) => record8.evidence.includes(evidenceId)).map((record8) => `annotations:${record8.id}`),
+      ...shards.labels.filter((record8) => record8.evidence.includes(evidenceId)).map((record8) => `labels:${record8.id}`),
+      ...shards.comments.filter((record8) => record8.evidence.includes(evidenceId)).map((record8) => `comments:${record8.id}`),
+      ...shards.regions.filter((record8) => record8.evidence.includes(evidenceId)).map((record8) => `regions:${record8.id}`),
+      ...shards.runtime.filter((record8) => record8.evidence.includes(evidenceId)).map((record8) => `runtime:${record8.id}`)
     ];
-    sortedUnique = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
+    sortedUnique2 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
     explainProjectEvidence = (shards, shard, recordId) => {
       const records3 = shards[shard];
-      const record7 = records3.find(({ id }) => id === recordId);
-      if (!record7) {
+      const record8 = records3.find(({ id }) => id === recordId);
+      if (!record8) {
         throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
       }
       let evidenceIds = [];
       if (shard === "evidence") {
-        evidenceIds = [record7.id];
-      } else if ("evidence" in record7) {
-        evidenceIds = record7.evidence;
+        evidenceIds = [record8.id];
+      } else if ("evidence" in record8) {
+        evidenceIds = record8.evidence;
       }
       const evidence = evidenceIds.map((id) => {
         const found = shards.evidence.find((entry) => entry.id === id);
@@ -24073,18 +24299,18 @@ var init_project_evidence = __esm({
         }
         return found;
       });
-      const referencedBy = sortedUnique(evidenceIds.flatMap((id) => evidenceReferences(shards, id)));
+      const referencedBy = sortedUnique2(evidenceIds.flatMap((id) => evidenceReferences(shards, id)));
       const evidenceSet = new Set(evidenceIds);
       const conflicts = shards.analysis.filter(
         (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
       ).toSorted((left, right) => left.id.localeCompare(right.id));
-      return { shard, record: record7, evidence, referencedBy, conflicts };
+      return { shard, record: record8, evidence, referencedBy, conflicts };
     };
   }
 });
 
 // packages/disassembler/src/runtime/runtime-evidence.ts
-var emptyCounts, sortedUnique2, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
+var emptyCounts, sortedUnique3, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
 var init_runtime_evidence = __esm({
   "packages/disassembler/src/runtime/runtime-evidence.ts"() {
     "use strict";
@@ -24099,44 +24325,44 @@ var init_runtime_evidence = __esm({
       evidence: 0,
       imports: 0
     });
-    sortedUnique2 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
+    sortedUnique3 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
     stateValueKey = (value) => `${typeof value}:${String(value)}`;
     conflictReport = (runtime) => {
       const observations = [];
-      for (const record7 of runtime) {
-        if (record7.kind === "runtime-cpu-state") {
-          for (const [field, value] of Object.entries(record7.state)) {
+      for (const record8 of runtime) {
+        if (record8.kind === "runtime-cpu-state") {
+          for (const [field, value] of Object.entries(record8.state)) {
             observations.push({
-              architecture: record7.architecture,
-              addressSpace: record7.addressSpace,
-              address: record7.address,
+              architecture: record8.architecture,
+              addressSpace: record8.addressSpace,
+              address: record8.address,
               field,
               value,
-              record: record7.id,
-              evidence: record7.evidence
+              record: record8.id,
+              evidence: record8.evidence
             });
           }
-        } else if (record7.kind === "runtime-execution") {
-          if (record7.size !== void 0) {
+        } else if (record8.kind === "runtime-execution") {
+          if (record8.size !== void 0) {
             observations.push({
-              architecture: record7.architecture,
-              addressSpace: record7.addressSpace,
-              address: record7.address,
+              architecture: record8.architecture,
+              addressSpace: record8.addressSpace,
+              address: record8.address,
               field: "instruction-size",
-              value: record7.size,
-              record: record7.id,
-              evidence: record7.evidence
+              value: record8.size,
+              record: record8.id,
+              evidence: record8.evidence
             });
           }
-          if (record7.opcode !== void 0) {
+          if (record8.opcode !== void 0) {
             observations.push({
-              architecture: record7.architecture,
-              addressSpace: record7.addressSpace,
-              address: record7.address,
+              architecture: record8.architecture,
+              addressSpace: record8.addressSpace,
+              address: record8.address,
               field: "opcode",
-              value: record7.opcode,
-              record: record7.id,
-              evidence: record7.evidence
+              value: record8.opcode,
+              record: record8.id,
+              evidence: record8.evidence
             });
           }
         }
@@ -24181,8 +24407,8 @@ var init_runtime_evidence = __esm({
           field: first.field,
           values: [...byValue.values()].map((entries) => ({
             value: entries[0].value,
-            records: sortedUnique2(entries.map((entry) => entry.record)),
-            evidence: sortedUnique2(entries.flatMap((entry) => entry.evidence))
+            records: sortedUnique3(entries.map((entry) => entry.record)),
+            evidence: sortedUnique3(entries.flatMap((entry) => entry.evidence))
           })).toSorted(
             (left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value))
           )
@@ -24192,7 +24418,7 @@ var init_runtime_evidence = __esm({
     };
     explanationReport = (shards) => {
       const runtimeEvidence = new Set(
-        shards.evidence.filter((record7) => record7.source === "runtime").map((record7) => record7.id)
+        shards.evidence.filter((record8) => record8.source === "runtime").map((record8) => record8.id)
       );
       const explanations = [];
       for (const annotation of shards.annotations) {
@@ -24204,21 +24430,21 @@ var init_runtime_evidence = __esm({
         explanations.push({
           recordId: annotation.id,
           detail: stateFields.length > 0 ? `Runtime observation supplies ${stateFields.join(", ")} state.` : `Runtime observation classifies bytes as ${annotation.classification}.`,
-          evidence: sortedUnique2(evidence)
+          evidence: sortedUnique3(evidence)
         });
       }
-      for (const record7 of shards.analysis) {
-        if (record7.kind !== "target-override") {
+      for (const record8 of shards.analysis) {
+        if (record8.kind !== "target-override") {
           continue;
         }
-        const evidence = record7.evidence.filter((id) => runtimeEvidence.has(id));
+        const evidence = record8.evidence.filter((id) => runtimeEvidence.has(id));
         if (evidence.length === 0) {
           continue;
         }
         explanations.push({
-          recordId: record7.id,
-          detail: `Runtime observation resolves control flow to ${record7.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
-          evidence: sortedUnique2(evidence)
+          recordId: record8.id,
+          detail: `Runtime observation resolves control flow to ${record8.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
+          evidence: sortedUnique3(evidence)
         });
       }
       return explanations.toSorted((left, right) => left.recordId.localeCompare(right.recordId));
@@ -24227,30 +24453,30 @@ var init_runtime_evidence = __esm({
       if (incoming.length === 0) {
         return prior;
       }
-      const records3 = new Map(prior.map((record7) => [record7.id, record7]));
-      for (const record7 of incoming) {
-        const current = records3.get(record7.id);
+      const records3 = new Map(prior.map((record8) => [record8.id, record8]));
+      for (const record8 of incoming) {
+        const current = records3.get(record8.id);
         if (!current) {
-          records3.set(record7.id, record7);
+          records3.set(record8.id, record8);
           added[kind]++;
-        } else if (canonicalEquals(current, record7)) {
+        } else if (canonicalEquals(current, record8)) {
           existing[kind]++;
         } else if (combine) {
-          const merged = combine(current, record7);
+          const merged = combine(current, record8);
           if (!merged) {
             throw new Error(
-              `Runtime evidence id '${record7.id}' in '${kind}' changed content. Use a content-derived id.`
+              `Runtime evidence id '${record8.id}' in '${kind}' changed content. Use a content-derived id.`
             );
           }
           if (canonicalEquals(current, merged)) {
             existing[kind]++;
           } else {
-            records3.set(record7.id, merged);
+            records3.set(record8.id, merged);
             updated[kind]++;
           }
         } else {
           throw new Error(
-            `Runtime evidence id '${record7.id}' in '${kind}' changed content. Use a content-derived id.`
+            `Runtime evidence id '${record8.id}' in '${kind}' changed content. Use a content-derived id.`
           );
         }
       }
@@ -24280,17 +24506,17 @@ var init_runtime_evidence = __esm({
           added,
           updated,
           existing,
-          (current, record7) => {
-            if (current.kind !== "target-override" || record7.kind !== "target-override" || !current.id.startsWith("runtime:target-override:")) {
+          (current, record8) => {
+            if (current.kind !== "target-override" || record8.kind !== "target-override" || !current.id.startsWith("runtime:target-override:")) {
               return void 0;
             }
-            if (current.addressSpace !== record7.addressSpace || current.address !== record7.address) {
-              throw new Error(`Runtime target override '${record7.id}' changed its control-flow site.`);
+            if (current.addressSpace !== record8.addressSpace || current.address !== record8.address) {
+              throw new Error(`Runtime target override '${record8.id}' changed its control-flow site.`);
             }
             return {
               ...current,
-              targets: [.../* @__PURE__ */ new Set([...current.targets, ...record7.targets])].toSorted((a, b) => a - b),
-              evidence: sortedUnique2([...current.evidence, ...record7.evidence])
+              targets: [.../* @__PURE__ */ new Set([...current.targets, ...record8.targets])].toSorted((a, b) => a - b),
+              evidence: sortedUnique3([...current.evidence, ...record8.evidence])
             };
           }
         ),
@@ -24360,9 +24586,10 @@ var init_trace_cache = __esm({
       constructor(metrics) {
         this.#metrics = metrics;
       }
-      /** Look up a value. Undefined is reserved for misses.
-       * @param {string} key Complete semantic key, never a lossy coordinate projection.
-       * @returns {T | undefined} Retained value, or a cache miss.
+      /**
+       * Look up a value. Undefined is reserved for misses.
+       * @param key Complete semantic key, never a lossy coordinate projection.
+       * @returns Retained value, or a cache miss.
        */
       get(key3) {
         const value = this.#entries.get(key3);
@@ -24375,11 +24602,12 @@ var init_trace_cache = __esm({
         }
         return value;
       }
-      /** Insert a missing key, returning the displaced entry so its owner can flush it.
+      /**
+       * Insert a missing key, returning the displaced entry so its owner can flush it.
        * Existing keys must be updated through their caller-owned mutable value instead.
-       * @param {string} key Previously missing semantic key.
-       * @param {T} value Defined value whose ownership stays with the caller.
-       * @returns {object | undefined} Displaced key/value, or undefined while filling unused capacity.
+       * @param key Previously missing semantic key.
+       * @param value Defined value whose ownership stays with the caller.
+       * @returns Displaced key/value, or undefined while filling unused capacity.
        */
       insert(key3, value) {
         let displaced;
@@ -24406,8 +24634,9 @@ var init_trace_cache = __esm({
         this.#entries.set(key3, value);
         return displaced;
       }
-      /** Iterate the retained working set, for a final durable delta flush.
-       * @returns {MapIterator} Live entries. Do not insert while iterating.
+      /**
+       * Iterate the retained working set, for a final durable delta flush.
+       * @returns Live entries. Do not insert while iterating.
        */
       entries() {
         return this.#entries.entries();
@@ -24512,11 +24741,11 @@ ${entries.join(",\n")}
 function isRowRecord(value) {
   return !Array.isArray(value);
 }
-var import_node_crypto5, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, record, string, integer, sha2563, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
+var import_node_crypto6, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, record, string, integer, sha2563, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
   "packages/disassembler/src/runtime/runtime-trace.ts"() {
     "use strict";
-    import_node_crypto5 = require("node:crypto");
+    import_node_crypto6 = require("node:crypto");
     init_canonical_json();
     init_trace_cache();
     init_trace_detail();
@@ -24544,7 +24773,7 @@ var init_runtime_trace = __esm({
       }
       return value;
     };
-    sha2563 = (value) => (0, import_node_crypto5.createHash)("sha256").update(value).digest("hex");
+    sha2563 = (value) => (0, import_node_crypto6.createHash)("sha256").update(value).digest("hex");
     sha256Identity = (value, context) => {
       const identity2 = string(value, context);
       if (!/^[\da-f]{64}$/.test(identity2)) {
@@ -24708,7 +24937,7 @@ var init_runtime_trace = __esm({
       const maxIndexRecords = runtimeTraceIndexRecordLimit(indexMode, context.maxIndexRecords, storage);
       const envelope = canonicalJson({ ...artifact, chunks: [] });
       const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
-      const hash4 = (0, import_node_crypto5.createHash)("sha256").update(envelope.slice(0, split));
+      const hash4 = (0, import_node_crypto6.createHash)("sha256").update(envelope.slice(0, split));
       const suffix = envelope.slice(split + 2);
       const validateChunk = createRuntimeTraceChunkValidator();
       const index = storage?.index ?? createMemoryFactIndex();
@@ -25032,7 +25261,7 @@ async function* traceEntries(file, options) {
     throw new Error("Trace import maximum bytes must be a positive safe integer.");
   }
   options.signal?.throwIfAborted();
-  const before = await (0, import_promises2.stat)(file);
+  const before = await (0, import_promises3.stat)(file);
   const checkSize = (size) => {
     if (size > maxBytes) {
       throw new Error(
@@ -25206,7 +25435,7 @@ async function* traceEntries(file, options) {
     if (decoder.end() || mode !== "end" || !keys.has("chunks")) {
       fail();
     }
-    const after = await (0, import_promises2.stat)(file);
+    const after = await (0, import_promises3.stat)(file);
     if (bytesRead !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs) {
       throw new Error(
         "Instruction trace changed while it was being read. Stop recording before importing."
@@ -25239,12 +25468,12 @@ async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
     yield validateChunk(chunk);
   }
 }
-var import_node_fs, import_promises2, import_node_string_decoder, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
+var import_node_fs, import_promises3, import_node_string_decoder, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
 var init_runtime_trace_file = __esm({
   "packages/disassembler/src/runtime/runtime-trace-file.ts"() {
     "use strict";
     import_node_fs = require("node:fs");
-    import_promises2 = require("node:fs/promises");
+    import_promises3 = require("node:fs/promises");
     import_node_string_decoder = require("node:string_decoder");
     init_canonical_json();
     init_capture_limits();
@@ -25351,7 +25580,7 @@ var init_runtime_graphics = __esm({
           cgramHigh = !cgramHigh;
         }
       };
-      const record7 = (write) => {
+      const record8 = (write) => {
         const key3 = `${write.actor}:${write.channel}:${write.target}`;
         let group = activity.get(key3);
         if (!group) {
@@ -25448,9 +25677,9 @@ var init_runtime_graphics = __esm({
           const byte2 = port - 8472;
           if (vmain !== null && vramKnown === 65535) {
             const address3 = mapVram(vramAddress, vmain >> 2 & 3) * 2 + byte2;
-            record7({ ...base, target: "vram", status: "addressed", bytes: [{ address: address3, ...data }] });
+            record8({ ...base, target: "vram", status: "addressed", bytes: [{ address: address3, ...data }] });
           } else {
-            record7({
+            record8({
               ...base,
               target: "vram",
               status: "unknown",
@@ -25462,9 +25691,9 @@ var init_runtime_graphics = __esm({
         } else if (port === 8482) {
           if (cgramHigh === false) {
             cgramLatch = data;
-            record7({ ...base, target: "cgram", status: "latched", bytes: [] });
+            record8({ ...base, target: "cgram", status: "latched", bytes: [] });
           } else if (cgramHigh === true && cgramAddress !== null) {
-            record7({
+            record8({
               ...base,
               target: "cgram",
               status: "addressed",
@@ -25475,7 +25704,7 @@ var init_runtime_graphics = __esm({
             });
           } else {
             cgramLatch = { value: null, sourceSequence: null };
-            record7({
+            record8({
               ...base,
               target: "cgram",
               status: "unknown",
@@ -25486,7 +25715,7 @@ var init_runtime_graphics = __esm({
           advanceCgram();
         } else if (oamAddress === null) {
           oamLatch = { value: null, sourceSequence: null };
-          record7({ ...base, target: "oam", status: "unknown", reason: "missing-oam-state", bytes: [] });
+          record8({ ...base, target: "oam", status: "unknown", reason: "missing-oam-state", bytes: [] });
         } else {
           const address3 = oamAddress;
           oamAddress = address3 + 1 & 1023;
@@ -25494,14 +25723,14 @@ var init_runtime_graphics = __esm({
             oamLatch = data;
           }
           if (address3 & 512) {
-            record7({
+            record8({
               ...base,
               target: "oam",
               status: "addressed",
               bytes: [{ address: 512 | address3 & 31, ...data }]
             });
           } else if (address3 & 1) {
-            record7({
+            record8({
               ...base,
               target: "oam",
               status: "addressed",
@@ -25511,7 +25740,7 @@ var init_runtime_graphics = __esm({
               ]
             });
           } else {
-            record7({ ...base, target: "oam", status: "latched", bytes: [] });
+            record8({ ...base, target: "oam", status: "latched", bytes: [] });
           }
         }
       };
@@ -25590,7 +25819,7 @@ var init_runtime_ppu = __esm({
 });
 
 // packages/disassembler/src/runtime/runtime-transfer.ts
-function isRecord7(value) {
+function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isInteger4(value) {
@@ -25608,7 +25837,7 @@ var init_runtime_transfer = __esm({
       return count3;
     };
     validateRuntimeTransferBoundary = (marker) => {
-      if (!isRecord7(marker) || !isRecord7(marker.configuration)) {
+      if (!isRecord8(marker) || !isRecord8(marker.configuration)) {
         throw new Error("Invalid transfer boundary attribution or count.");
       }
       const configuration = marker.configuration;
@@ -25709,8 +25938,9 @@ var init_runtime_transfer = __esm({
         }
       };
       return {
-        /** Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
-         * @param {RuntimeBusAccess | RuntimeTransferBoundary} event Already validated ordered event.
+        /**
+         * Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
+         * @param event Already validated ordered event.
          */
         push: (event) => {
           if (event.actor === "cpu") {
@@ -25778,8 +26008,9 @@ var init_runtime_transfer = __esm({
           retain({ ...current, end: event, status });
           open7.delete(key3);
         },
-        /** Close remaining windows without claiming completion or an attempted slot count.
-         * @returns {RuntimeTransferSummary} Bounded report with exact lifetime window counts.
+        /**
+         * Close remaining windows without claiming completion or an attempted slot count.
+         * @returns Bounded report with exact lifetime window counts.
          */
         finish: () => {
           for (const current of open7.values()) {
@@ -25819,11 +26050,11 @@ function positiveDecimal(value) {
 function isBusTraceEvent(value) {
   return typeof value === "object" && value !== null;
 }
-var import_node_crypto6, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
+var import_node_crypto7, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
 var init_runtime_bus_trace = __esm({
   "packages/disassembler/src/runtime/runtime-bus-trace.ts"() {
     "use strict";
-    import_node_crypto6 = require("node:crypto");
+    import_node_crypto7 = require("node:crypto");
     init_trace_cache();
     init_runtime_bus_types();
     init_runtime_graphics();
@@ -25903,7 +26134,7 @@ var init_runtime_bus_trace = __esm({
         values: () => memory.values(),
         clear: () => memory.clear()
       };
-      const hash4 = (0, import_node_crypto6.createHash)("sha256").update(`uttori-bus-index-v1
+      const hash4 = (0, import_node_crypto7.createHash)("sha256").update(`uttori-bus-index-v1
 ${JSON.stringify(meta)}
 `);
       const factKeys = new TraceCache(context.cacheMetrics?.facts);
@@ -26017,7 +26248,7 @@ ${JSON.stringify(meta)}
             const factJson = JSON.stringify(fact);
             let key3 = factKeys.get(factJson);
             if (key3 === void 0) {
-              key3 = (0, import_node_crypto6.createHash)("sha256").update(factJson).digest("hex");
+              key3 = (0, import_node_crypto7.createHash)("sha256").update(factJson).digest("hex");
               factKeys.insert(factJson, key3);
             }
             if (index.add(key3, () => ({
@@ -26114,16 +26345,16 @@ ${JSON.stringify(meta)}
             if (fact.kind !== "memory" || fact.record.kind !== "runtime-bus-access") {
               throw new Error("Bus trace index contains an unexpected fact kind.");
             }
-            const record7 = {
+            const record8 = {
               ...fact.record,
               id: `runtime:bus-trace:${sourceSha256}:${fact.record.id}`,
               count: count3,
               evidence: [evidenceId]
             };
             if (storage?.onRecord) {
-              storage.onRecord(record7);
+              storage.onRecord(record8);
             } else {
-              runtime.push(record7);
+              runtime.push(record8);
             }
           }
           const transferSummary = transfers?.finish();
@@ -26226,13 +26457,13 @@ ${JSON.stringify(meta)}
 });
 
 // packages/disassembler/src/internal/record-id-set.ts
-var import_node_fs2, import_node_os, import_node_path3, import_node_sqlite, RecordIdSet;
+var import_node_fs2, import_node_os, import_node_path4, import_node_sqlite, RecordIdSet;
 var init_record_id_set = __esm({
   "packages/disassembler/src/internal/record-id-set.ts"() {
     "use strict";
     import_node_fs2 = __toESM(require("node:fs"), 1);
     import_node_os = __toESM(require("node:os"), 1);
-    import_node_path3 = __toESM(require("node:path"), 1);
+    import_node_path4 = __toESM(require("node:path"), 1);
     import_node_sqlite = require("node:sqlite");
     RecordIdSet = class {
       #ids = /* @__PURE__ */ new Set();
@@ -26242,8 +26473,8 @@ var init_record_id_set = __esm({
       #insert;
       /**
        * Claim an ID while keeping the in-memory prefix small.
-       * @param {string} id Complete record identity.
-       * @returns {boolean} False only for an exact duplicate.
+       * @param id Complete record identity.
+       * @returns False only for an exact duplicate.
        */
       add(id) {
         if (this.#insert) {
@@ -26260,9 +26491,9 @@ var init_record_id_set = __esm({
         return true;
       }
       #spill() {
-        this.#directory = import_node_fs2.default.mkdtempSync(import_node_path3.default.join(import_node_os.default.tmpdir(), "uttori-record-ids-"));
+        this.#directory = import_node_fs2.default.mkdtempSync(import_node_path4.default.join(import_node_os.default.tmpdir(), "uttori-record-ids-"));
         try {
-          this.#database = new import_node_sqlite.DatabaseSync(import_node_path3.default.join(this.#directory, "ids.sqlite"));
+          this.#database = new import_node_sqlite.DatabaseSync(import_node_path4.default.join(this.#directory, "ids.sqlite"));
           this.#database.exec(
             "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-4096; CREATE TABLE ids (id TEXT PRIMARY KEY) WITHOUT ROWID; BEGIN;"
           );
@@ -26412,15 +26643,15 @@ var init_project_validation = __esm({
       if (!value || typeof value !== "object" || !isRowRecord3(value)) {
         return;
       }
-      const record7 = value;
-      for (const key3 in record7) {
-        if (!Object.hasOwn(record7, key3)) {
+      const record8 = value;
+      for (const key3 in record8) {
+        if (!Object.hasOwn(record8, key3)) {
           continue;
         }
         if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key3)) {
           throw new Error(`ROM byte payload '${location}.${key3}' is forbidden in analysis projects.`);
         }
-        const entry = record7[key3];
+        const entry = record8[key3];
         if (entry && typeof entry === "object") {
           assertNoRomPayload(entry, `${location}.${key3}`);
         }
@@ -26476,119 +26707,119 @@ var init_project_validation = __esm({
     };
     createRuntimeRecordValidator = (project, evidence, checkDuplicateIds = true) => {
       const ids = checkDuplicateIds ? new RecordIdSet() : void 0;
-      const evidenceIds = new Set(evidence.map((record7) => record7.id));
+      const evidenceIds = new Set(evidence.map((record8) => record8.id));
       const addressSpaceById = new Map(project.addressSpaces.map((space) => [space.id, space]));
-      const validate3 = (record7) => {
-        if (!record7 || typeof record7.id !== "string" || record7.id === "") {
+      const validate3 = (record8) => {
+        if (!record8 || typeof record8.id !== "string" || record8.id === "") {
           throw new Error("Analysis shard 'runtime' contains a record without an id.");
         }
-        if (ids && !ids.add(record7.id)) {
-          throw new Error(`Analysis shard 'runtime' contains duplicate id '${record7.id}'.`);
+        if (ids && !ids.add(record8.id)) {
+          throw new Error(`Analysis shard 'runtime' contains duplicate id '${record8.id}'.`);
         }
-        for (const id of record7.evidence) {
+        for (const id of record8.evidence) {
           if (!evidenceIds.has(id)) {
-            throw new Error(`Analysis record '${record7.id}' refers to missing evidence '${id}'.`);
+            throw new Error(`Analysis record '${record8.id}' refers to missing evidence '${id}'.`);
           }
         }
-        if (!Number.isSafeInteger(record7.count) || record7.count <= 0) {
-          throw new Error(`Runtime record '${record7.id}' has an invalid observation count.`);
+        if (!Number.isSafeInteger(record8.count) || record8.count <= 0) {
+          throw new Error(`Runtime record '${record8.id}' has an invalid observation count.`);
         }
-        if (record7.kind === "runtime-coverage") {
-          if (!Number.isSafeInteger(record7.start) || !Number.isSafeInteger(record7.end) || record7.start < 0 || record7.end <= record7.start) {
-            throw new Error(`Runtime coverage '${record7.id}' has an invalid half-open range.`);
+        if (record8.kind === "runtime-coverage") {
+          if (!Number.isSafeInteger(record8.start) || !Number.isSafeInteger(record8.end) || record8.start < 0 || record8.end <= record8.start) {
+            throw new Error(`Runtime coverage '${record8.id}' has an invalid half-open range.`);
           }
         }
-        if (record7.kind === "runtime-bus-access") {
-          if (record7.architecture !== "snes.65816") {
+        if (record8.kind === "runtime-bus-access") {
+          if (record8.architecture !== "snes.65816") {
             throw new Error("Bus facts require the SNES 65816 architecture.");
           }
-          validateRuntimeBusFact(record7);
+          validateRuntimeBusFact(record8);
         }
-        if (record7.kind === "runtime-graphics-access" && !isRuntimeGraphicsFact(record7)) {
+        if (record8.kind === "runtime-graphics-access" && !isRuntimeGraphicsFact(record8)) {
           throw new Error("Invalid runtime graphics fact.");
         }
-        if (record7.kind === "runtime-memory-access") {
-          if (record7.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record7.actor) || record7.channel !== void 0 && (!Number.isInteger(record7.channel) || record7.channel < 0 || record7.channel > 7 || !["dma", "hdma"].includes(record7.actor ?? "cpu"))) {
-            throw new Error(`Runtime memory access '${record7.id}' has an invalid actor/channel.`);
+        if (record8.kind === "runtime-memory-access") {
+          if (record8.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record8.actor) || record8.channel !== void 0 && (!Number.isInteger(record8.channel) || record8.channel < 0 || record8.channel > 7 || !["dma", "hdma"].includes(record8.actor ?? "cpu"))) {
+            throw new Error(`Runtime memory access '${record8.id}' has an invalid actor/channel.`);
           }
-          if (!Number.isSafeInteger(record7.width) || record7.width <= 0) {
-            throw new Error(`Runtime memory access '${record7.id}' has an invalid width.`);
+          if (!Number.isSafeInteger(record8.width) || record8.width <= 0) {
+            throw new Error(`Runtime memory access '${record8.id}' has an invalid width.`);
           }
-          if (record7.value !== void 0 && (!Number.isSafeInteger(record7.value) || record7.value < 0)) {
-            throw new Error(`Runtime memory access '${record7.id}' has an invalid value.`);
-          }
-        }
-        if (record7.kind === "runtime-execution") {
-          if (record7.size !== void 0 && (!Number.isSafeInteger(record7.size) || record7.size <= 0)) {
-            throw new Error(`Runtime execution '${record7.id}' has an invalid instruction size.`);
-          }
-          if (record7.opcode !== void 0 && (!Number.isInteger(record7.opcode) || record7.opcode < 0 || record7.opcode > 255)) {
-            throw new Error(`Runtime execution '${record7.id}' has an invalid opcode.`);
-          }
-          if (record7.fileOffset !== void 0 && (!Number.isSafeInteger(record7.fileOffset) || record7.fileOffset < 0 || record7.fileOffset >= project.rom.contentSize)) {
-            throw new Error(`Runtime execution '${record7.id}' has an invalid ROM file offset.`);
+          if (record8.value !== void 0 && (!Number.isSafeInteger(record8.value) || record8.value < 0)) {
+            throw new Error(`Runtime memory access '${record8.id}' has an invalid value.`);
           }
         }
-        if (record7.kind === "runtime-instruction") {
-          validateRuntimeInstructionDetails([{ bytes: record7.bytes, state: record7.state }], 1);
+        if (record8.kind === "runtime-execution") {
+          if (record8.size !== void 0 && (!Number.isSafeInteger(record8.size) || record8.size <= 0)) {
+            throw new Error(`Runtime execution '${record8.id}' has an invalid instruction size.`);
+          }
+          if (record8.opcode !== void 0 && (!Number.isInteger(record8.opcode) || record8.opcode < 0 || record8.opcode > 255)) {
+            throw new Error(`Runtime execution '${record8.id}' has an invalid opcode.`);
+          }
+          if (record8.fileOffset !== void 0 && (!Number.isSafeInteger(record8.fileOffset) || record8.fileOffset < 0 || record8.fileOffset >= project.rom.contentSize)) {
+            throw new Error(`Runtime execution '${record8.id}' has an invalid ROM file offset.`);
+          }
         }
-        if (record7.kind === "runtime-cpu-state") {
-          for (const [name2, value] of Object.entries(record7.state)) {
+        if (record8.kind === "runtime-instruction") {
+          validateRuntimeInstructionDetails([{ bytes: record8.bytes, state: record8.state }], 1);
+        }
+        if (record8.kind === "runtime-cpu-state") {
+          for (const [name2, value] of Object.entries(record8.state)) {
             if (name2 === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
-              throw new Error(`Runtime CPU state '${record7.id}' has invalid field '${name2}'.`);
+              throw new Error(`Runtime CPU state '${record8.id}' has invalid field '${name2}'.`);
             }
           }
         }
-        if ("addressSpace" in record7) {
-          const space = addressSpaceById.get(record7.addressSpace);
+        if ("addressSpace" in record8) {
+          const space = addressSpaceById.get(record8.addressSpace);
           if (!space) {
             throw new Error(
-              `Analysis record '${record7.id}' refers to unknown address space '${record7.addressSpace}'.`
+              `Analysis record '${record8.id}' refers to unknown address space '${record8.addressSpace}'.`
             );
           }
-          const addresses2 = record7.kind === "runtime-coverage" ? [record7.start, record7.end - 1] : [record7.address];
+          const addresses2 = record8.kind === "runtime-coverage" ? [record8.start, record8.end - 1] : [record8.address];
           if (addresses2.some(
             (address3) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= 2 ** space.addressBits
           )) {
             throw new Error(
-              `Analysis record '${record7.id}' exceeds address space '${record7.addressSpace}'.`
+              `Analysis record '${record8.id}' exceeds address space '${record8.addressSpace}'.`
             );
           }
         }
         let addresses = [];
-        if (record7.kind === "runtime-memory-access") {
+        if (record8.kind === "runtime-memory-access") {
           addresses = [
-            [record7.instructionAddressSpace, record7.instructionAddress],
-            [record7.accessedAddressSpace, record7.accessedAddress]
+            [record8.instructionAddressSpace, record8.instructionAddress],
+            [record8.accessedAddressSpace, record8.accessedAddress]
           ];
-        } else if (record7.kind === "runtime-bus-access" || record7.kind === "runtime-graphics-access") {
-          addresses = [[record7.addressSpace, record7.pc]];
-        } else if (record7.kind === "runtime-control-target") {
+        } else if (record8.kind === "runtime-bus-access" || record8.kind === "runtime-graphics-access") {
+          addresses = [[record8.addressSpace, record8.pc]];
+        } else if (record8.kind === "runtime-control-target") {
           addresses = [
-            [record7.fromAddressSpace, record7.fromAddress],
-            [record7.toAddressSpace, record7.toAddress]
+            [record8.fromAddressSpace, record8.fromAddress],
+            [record8.toAddressSpace, record8.toAddress]
           ];
         }
         for (const [spaceId, address3] of addresses) {
           const addressSpace = addressSpaceById.get(spaceId);
           if (!addressSpace) {
             throw new Error(
-              `Runtime record '${record7.id}' refers to unknown address space '${spaceId}'.`
+              `Runtime record '${record8.id}' refers to unknown address space '${spaceId}'.`
             );
           }
           if (!Number.isSafeInteger(address3) || address3 < 0 || address3 >= 2 ** addressSpace.addressBits) {
-            throw new Error(`Runtime record '${record7.id}' exceeds address space '${spaceId}'.`);
+            throw new Error(`Runtime record '${record8.id}' exceeds address space '${spaceId}'.`);
           }
         }
-        assertNoRomPayload(record7, `shards.runtime.${record7.id}`);
+        assertNoRomPayload(record8, `shards.runtime.${record8.id}`);
       };
       return Object.assign(validate3, { close: () => ids?.close() });
     };
     validateRuntimeRecords = (records3, project, evidence) => {
       const validate3 = createRuntimeRecordValidator(project, evidence);
       try {
-        for (const record7 of records3) {
-          validate3(record7);
+        for (const record8 of records3) {
+          validate3(record8);
         }
       } finally {
         validate3.close();
@@ -26597,7 +26828,7 @@ var init_project_validation = __esm({
     outsideSpace = (address3, exclusiveMaximum) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= exclusiveMaximum;
     validateLoadedShards = (shards, project, analysisScope = "complete") => {
       const { addressSpaces } = project;
-      const evidenceIds = new Set(shards.evidence.map((record7) => record7.id));
+      const evidenceIds = new Set(shards.evidence.map((record8) => record8.id));
       const shardKinds = [
         "analysis",
         "annotations",
@@ -26609,21 +26840,21 @@ var init_project_validation = __esm({
       ];
       for (const kind of shardKinds) {
         const ids = /* @__PURE__ */ new Set();
-        for (const record7 of shards[kind]) {
-          if (typeof record7.id !== "string" || record7.id === "") {
+        for (const record8 of shards[kind]) {
+          if (typeof record8.id !== "string" || record8.id === "") {
             throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
           }
-          if (ids.has(record7.id)) {
-            throw new Error(`Analysis shard '${kind}' contains duplicate id '${record7.id}'.`);
+          if (ids.has(record8.id)) {
+            throw new Error(`Analysis shard '${kind}' contains duplicate id '${record8.id}'.`);
           }
-          ids.add(record7.id);
-          if (!("evidence" in record7)) {
+          ids.add(record8.id);
+          if (!("evidence" in record8)) {
             continue;
           }
-          for (const evidence of record7.evidence) {
+          for (const evidence of record8.evidence) {
             if (!evidenceIds.has(evidence)) {
               throw new Error(
-                `Analysis record '${record7.id}' refers to missing evidence '${evidence}'.`
+                `Analysis record '${record8.id}' refers to missing evidence '${evidence}'.`
               );
             }
           }
@@ -26769,46 +27000,46 @@ var init_project_validation = __esm({
         shards.regions,
         shards.analysis
       ]) {
-        for (const record7 of records3) {
-          if (!("addressSpace" in record7)) {
+        for (const record8 of records3) {
+          if (!("addressSpace" in record8)) {
             continue;
           }
-          const addressSpace = addressSpaceById.get(record7.addressSpace);
+          const addressSpace = addressSpaceById.get(record8.addressSpace);
           if (!addressSpace) {
             throw new Error(
-              `Analysis record '${record7.id}' refers to unknown address space '${record7.addressSpace}'.`
+              `Analysis record '${record8.id}' refers to unknown address space '${record8.addressSpace}'.`
             );
           }
-          if ("mapping" in record7 && record7.mapping !== void 0) {
-            if (!isResearchMapping(record7.mapping) || record7.mapping.fileOffset !== void 0 && record7.mapping.fileOffset + ("start" in record7 ? record7.end - record7.start : 1) > project.rom.contentSize) {
-              throw new Error(`Invalid research mapping for '${record7.id}'.`);
+          if ("mapping" in record8 && record8.mapping !== void 0) {
+            if (!isResearchMapping(record8.mapping) || record8.mapping.fileOffset !== void 0 && record8.mapping.fileOffset + ("start" in record8 ? record8.end - record8.start : 1) > project.rom.contentSize) {
+              throw new Error(`Invalid research mapping for '${record8.id}'.`);
             }
           }
           const maximum = 2 ** addressSpace.addressBits;
           let invalid = false;
-          if ("start" in record7) {
-            invalid = outsideSpace(record7.start, maximum) || outsideSpace(record7.end - 1, maximum);
-          } else if ("address" in record7) {
-            invalid = outsideSpace(record7.address, maximum);
-            if ("kind" in record7 && record7.kind === "conflict" && record7.end !== void 0) {
-              invalid ||= outsideSpace(record7.end - 1, maximum);
+          if ("start" in record8) {
+            invalid = outsideSpace(record8.start, maximum) || outsideSpace(record8.end - 1, maximum);
+          } else if ("address" in record8) {
+            invalid = outsideSpace(record8.address, maximum);
+            if ("kind" in record8 && record8.kind === "conflict" && record8.end !== void 0) {
+              invalid ||= outsideSpace(record8.end - 1, maximum);
             }
           } else {
-            if ("fromAddress" in record7) {
-              invalid = outsideSpace(record7.fromAddress, maximum);
+            if ("fromAddress" in record8) {
+              invalid = outsideSpace(record8.fromAddress, maximum);
             }
-            if ("toAddress" in record7 && record7.toAddress !== void 0) {
-              invalid ||= outsideSpace(record7.toAddress, maximum);
+            if ("toAddress" in record8 && record8.toAddress !== void 0) {
+              invalid ||= outsideSpace(record8.toAddress, maximum);
             }
-            if ("targets" in record7) {
-              for (const target of record7.targets) {
+            if ("targets" in record8) {
+              for (const target of record8.targets) {
                 invalid ||= outsideSpace(target, maximum);
               }
             }
           }
           if (invalid) {
             throw new Error(
-              `Analysis record '${record7.id}' exceeds address space '${record7.addressSpace}'.`
+              `Analysis record '${record8.id}' exceeds address space '${record8.addressSpace}'.`
             );
           }
         }
@@ -26820,7 +27051,7 @@ var init_project_validation = __esm({
 });
 
 // packages/disassembler/src/model/record-shape.ts
-function isRecord8(value) {
+function isRecord9(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStringArray(value) {
@@ -26842,7 +27073,7 @@ function isJsonValue(value) {
   if (Array.isArray(value)) {
     return value.every(isJsonValue);
   }
-  return isRecord8(value) && Object.values(value).every(isJsonValue);
+  return isRecord9(value) && Object.values(value).every(isJsonValue);
 }
 function allowsString(value) {
   return value === void 0 || typeof value === "string";
@@ -26854,15 +27085,15 @@ function allowsBoolean(value) {
   return value === void 0 || typeof value === "boolean";
 }
 function isNumberRecord(value) {
-  return isRecord8(value) && Object.values(value).every(isFiniteNumber);
+  return isRecord9(value) && Object.values(value).every(isFiniteNumber);
 }
 function isAttributeRecord(value) {
-  return isRecord8(value) && Object.values(value).every(
+  return isRecord9(value) && Object.values(value).every(
     (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
   );
 }
 function isRecordArray(value) {
-  return Array.isArray(value) && value.every(isRecord8);
+  return Array.isArray(value) && value.every(isRecord9);
 }
 function isClassification(value) {
   return CLASSIFICATIONS.some((candidate) => candidate === value);
@@ -26871,7 +27102,7 @@ function isAnnotationState(value) {
   if (value === void 0) {
     return true;
   }
-  if (!isRecord8(value)) {
+  if (!isRecord9(value)) {
     return false;
   }
   for (const key3 of Object.keys(value)) {
@@ -26901,78 +27132,78 @@ function isCodecFields(value) {
   }
   const provider = value.provider;
   if (provider !== void 0) {
-    if (!isRecord8(provider) || typeof provider.pluginId !== "string" || typeof provider.pluginVersion !== "string") {
+    if (!isRecord9(provider) || typeof provider.pluginId !== "string" || typeof provider.pluginVersion !== "string") {
       return false;
     }
   }
   return value.options === void 0 || isJsonValue(value.options);
 }
 function isAsset(value) {
-  if (!isRecord8(value) || !isCodecFields(value)) {
+  if (!isRecord9(value) || !isCodecFields(value)) {
     return false;
   }
   const compression = value.compression;
   if (compression === void 0) {
     return true;
   }
-  return isRecord8(compression) && isCodecFields(compression) && allowsFinite(compression.maximumSize) && allowsFinite(compression.bankStart) && allowsFinite(compression.bankEnd) && allowsFinite(compression.fillByte);
+  return isRecord9(compression) && isCodecFields(compression) && allowsFinite(compression.maximumSize) && allowsFinite(compression.bankStart) && allowsFinite(compression.bankEnd) && allowsFinite(compression.fillByte);
 }
 function hasIdentity(value) {
   return typeof value.id === "string" && isStringArray(value.evidence);
 }
 function isProjectLabel(value) {
-  return isRecord8(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.name === "string" && allowsString(value.comment) && allowsString(value.sourceName) && (value.aliases === void 0 || isStringArray(value.aliases)) && allowsString(value.inlineComment) && allowsBoolean(value.analysisEntryPoint) && allowsBoolean(value.suppressed) && allowsString(value.author) && allowsString(value.confidence);
+  return isRecord9(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.name === "string" && allowsString(value.comment) && allowsString(value.sourceName) && (value.aliases === void 0 || isStringArray(value.aliases)) && allowsString(value.inlineComment) && allowsBoolean(value.analysisEntryPoint) && allowsBoolean(value.suppressed) && allowsString(value.author) && allowsString(value.confidence);
 }
 function isProjectComment(value) {
-  return isRecord8(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.text === "string" && (value.placement === void 0 || value.placement === "before" || value.placement === "inline-instruction");
+  return isRecord9(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.text === "string" && (value.placement === void 0 || value.placement === "before" || value.placement === "inline-instruction");
 }
 function isProjectRegion(value) {
-  return isRecord8(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && typeof value.name === "string" && allowsString(value.parentRegion) && allowsString(value.context) && allowsFinite(value.priority) && (value.attributes === void 0 || isAttributeRecord(value.attributes));
+  return isRecord9(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && typeof value.name === "string" && allowsString(value.parentRegion) && allowsString(value.context) && allowsFinite(value.priority) && (value.attributes === void 0 || isAttributeRecord(value.attributes));
 }
 function isIntervalAnnotation(value) {
-  return isRecord8(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && isClassification(value.classification) && typeof value.architecture === "string" && isAnnotationState(value.state) && isPoints(value.points) && (value.asset === void 0 || isAsset(value.asset));
+  return isRecord9(value) && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.start) && isFiniteNumber(value.end) && isClassification(value.classification) && typeof value.architecture === "string" && isAnnotationState(value.state) && isPoints(value.points) && (value.asset === void 0 || isAsset(value.asset));
 }
 function isArtifact(value) {
   if (value === void 0) {
     return true;
   }
-  return isRecord8(value) && typeof value.format === "string" && typeof value.sha256 === "string" && typeof value.romContentSha256 === "string" && allowsString(value.formatVersion) && allowsString(value.mapper);
+  return isRecord9(value) && typeof value.format === "string" && typeof value.sha256 === "string" && typeof value.romContentSha256 === "string" && allowsString(value.formatVersion) && allowsString(value.mapper);
 }
 function isEvidenceRecord(value) {
-  return isRecord8(value) && typeof value.id === "string" && (value.source === "manual" || value.source === "import" || value.source === "detector" || value.source === "static" || value.source === "runtime") && typeof value.sourceId === "string" && (value.confidence === "certain" || value.confidence === "high" || value.confidence === "medium" || value.confidence === "low" || value.confidence === "unknown") && allowsString(value.detail) && isArtifact(value.artifact);
+  return isRecord9(value) && typeof value.id === "string" && (value.source === "manual" || value.source === "import" || value.source === "detector" || value.source === "static" || value.source === "runtime") && typeof value.sourceId === "string" && (value.confidence === "certain" || value.confidence === "high" || value.confidence === "medium" || value.confidence === "low" || value.confidence === "unknown") && allowsString(value.detail) && isArtifact(value.artifact);
 }
 function isLossItem(value) {
-  return isRecord8(value) && typeof value.field === "string" && isFiniteNumber(value.count) && typeof value.reason === "string";
+  return isRecord9(value) && typeof value.field === "string" && isFiniteNumber(value.count) && typeof value.reason === "string";
 }
 function isImportReport(value) {
-  return isRecord8(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && allowsString(value.sourceVersion) && allowsString(value.indexProfile) && isNumberRecord(value.imported) && Array.isArray(value.unsupported) && value.unsupported.every(isLossItem) && isStringArray(value.warnings);
+  return isRecord9(value) && typeof value.id === "string" && typeof value.format === "string" && typeof value.sourceName === "string" && typeof value.sourceSha256 === "string" && allowsString(value.sourceVersion) && allowsString(value.indexProfile) && isNumberRecord(value.imported) && Array.isArray(value.unsupported) && value.unsupported.every(isLossItem) && isStringArray(value.warnings);
 }
 function isControlFlowNode(value) {
-  return isRecord8(value) && value.kind === "cfg-node" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.fileOffset) && (value.bytes === void 0 || isFiniteNumberArray(value.bytes)) && isFiniteNumber(value.size) && isFiniteNumber(value.opcode) && typeof value.specificationId === "string" && typeof value.mnemonic === "string" && typeof value.mode === "string" && isFiniteNumberArray(value.context) && isRecord8(value.incomingState) && isRecord8(value.outgoingState) && isRecordArray(value.effectiveAddresses) && typeof value.entryPoint === "string" && allowsString(value.functionEntry) && allowsString(value.evidencePredecessor) && isStringArray(value.evidencePath);
+  return isRecord9(value) && value.kind === "cfg-node" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.fileOffset) && (value.bytes === void 0 || isFiniteNumberArray(value.bytes)) && isFiniteNumber(value.size) && isFiniteNumber(value.opcode) && typeof value.specificationId === "string" && typeof value.mnemonic === "string" && typeof value.mode === "string" && isFiniteNumberArray(value.context) && isRecord9(value.incomingState) && isRecord9(value.outgoingState) && isRecordArray(value.effectiveAddresses) && typeof value.entryPoint === "string" && allowsString(value.functionEntry) && allowsString(value.evidencePredecessor) && isStringArray(value.evidencePath);
 }
 function isControlFlowEdge(value) {
-  return isRecord8(value) && value.kind === "cfg-edge" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.from === "string" && isFiniteNumber(value.fromAddress) && allowsString(value.to) && allowsFinite(value.toAddress) && typeof value.edgeKind === "string" && typeof value.indirect === "boolean" && allowsString(value.override) && allowsString(value.explanation);
+  return isRecord9(value) && value.kind === "cfg-edge" && hasIdentity(value) && typeof value.addressSpace === "string" && typeof value.from === "string" && isFiniteNumber(value.fromAddress) && allowsString(value.to) && allowsFinite(value.toAddress) && typeof value.edgeKind === "string" && typeof value.indirect === "boolean" && allowsString(value.override) && allowsString(value.explanation);
 }
 function isFunctionRecord(value) {
-  return isRecord8(value) && value.kind === "function" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isStringArray(value.evidencePath);
+  return isRecord9(value) && value.kind === "function" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isStringArray(value.evidencePath);
 }
 function isConflictRecord(value) {
-  return isRecord8(value) && value.kind === "conflict" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.end) && typeof value.conflictKind === "string" && typeof value.message === "string" && isStringArray(value.nodes);
+  return isRecord9(value) && value.kind === "conflict" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && allowsFinite(value.end) && typeof value.conflictKind === "string" && typeof value.message === "string" && isStringArray(value.nodes);
 }
 function isUnresolvedRecord(value) {
-  return isRecord8(value) && value.kind === "unresolved" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string";
+  return isRecord9(value) && value.kind === "unresolved" && hasIdentity(value) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string";
 }
 function isSummaryRecord(value) {
-  return isRecord8(value) && value.kind === "summary" && hasIdentity(value) && typeof value.architecture === "string" && (value.status === "complete" || value.status === "incomplete") && isNumberRecord(value.coverage) && isFiniteNumber(value.processedWorkItems) && isRecordArray(value.incompleteReasons);
+  return isRecord9(value) && value.kind === "summary" && hasIdentity(value) && typeof value.architecture === "string" && (value.status === "complete" || value.status === "incomplete") && isNumberRecord(value.coverage) && isFiniteNumber(value.processedWorkItems) && isRecordArray(value.incompleteReasons);
 }
 function isTargetOverride(value) {
-  return isRecord8(value) && value.kind === "target-override" && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && isFiniteNumberArray(value.targets);
+  return isRecord9(value) && value.kind === "target-override" && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && isFiniteNumberArray(value.targets);
 }
 function isTargetSet(value) {
-  return isRecord8(value) && value.kind === "target-set" && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && typeof value.name === "string" && isFiniteNumberArray(value.targets);
+  return isRecord9(value) && value.kind === "target-set" && hasIdentity(value) && (value.mapping === void 0 || isResearchMapping(value.mapping)) && typeof value.addressSpace === "string" && typeof value.name === "string" && isFiniteNumberArray(value.targets);
 }
 function isAnalysisRecord(value) {
-  if (!isRecord8(value)) {
+  if (!isRecord9(value)) {
     return false;
   }
   switch (value.kind) {
@@ -27109,11 +27340,11 @@ var init_sqlite_runtime_payload = __esm({
     FIELD_NAMES = new Set(FIELDS.map(([key3]) => key3));
     HEADER_BYTES = 7;
     CHECKSUM_BYTES = 4;
-    encodePackedRuntimePayload = (record7) => {
-      if (Object.keys(record7.state).some((key3) => !FIELD_NAMES.has(key3))) {
+    encodePackedRuntimePayload = (record8) => {
+      if (Object.keys(record8.state).some((key3) => !FIELD_NAMES.has(key3))) {
         return void 0;
       }
-      const bytes = record7.bytes;
+      const bytes = record8.bytes;
       if (bytes !== void 0) {
         if (bytes.length < 1 || bytes.length > 4) {
           return void 0;
@@ -27127,10 +27358,10 @@ var init_sqlite_runtime_payload = __esm({
       let mask = 0;
       let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
       for (const [index, [key3, width]] of FIELDS.entries()) {
-        if (!Object.hasOwn(record7.state, key3)) {
+        if (!Object.hasOwn(record8.state, key3)) {
           continue;
         }
-        const value = record7.state[key3];
+        const value = record8.state[key3];
         const max = key3 === "e" ? 1 : 2 ** (width * 8) - 1;
         if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
           return void 0;
@@ -27148,7 +27379,7 @@ var init_sqlite_runtime_payload = __esm({
       }
       for (const [index, [key3, width]] of FIELDS.entries()) {
         if (mask & 1 << index) {
-          const field = record7.state[key3];
+          const field = record8.state[key3];
           if (typeof field !== "number") {
             return void 0;
           }
@@ -27316,11 +27547,11 @@ function requireFinite(value, label) {
   }
   return value;
 }
-function optionalFinite(record7, key3) {
-  if (!Object.hasOwn(record7, key3)) {
+function optionalFinite(record8, key3) {
+  if (!Object.hasOwn(record8, key3)) {
     return void 0;
   }
-  return requireFinite(record7[key3], key3);
+  return requireFinite(record8[key3], key3);
 }
 function requirePayload(value) {
   if (!value) {
@@ -27342,7 +27573,7 @@ function requireBytes(value) {
   return bytes;
 }
 function isRuntimeState(value) {
-  return isRecord8(value) && Object.values(value).every(
+  return isRecord9(value) && Object.values(value).every(
     (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
   );
 }
@@ -27401,10 +27632,10 @@ function requireCoverage(value) {
   throw new Error("Invalid runtime coverage.");
 }
 function isPpuByte(value) {
-  return isRecord8(value) && isFiniteNumber(value.address) && isFiniteNumber(value.value);
+  return isRecord9(value) && isFiniteNumber(value.address) && isFiniteNumber(value.value);
 }
 function requirePpu(value) {
-  if (!isRecord8(value) || value.target !== "vram" && value.target !== "cgram" && value.target !== "oam" || value.outcome !== "written" && value.outcome !== "blocked" && value.outcome !== "latched" || typeof value.forcedBlank !== "boolean" || typeof value.renderingRestricted !== "boolean" || value.implementation !== "accurate" && value.implementation !== "performance" || value.vramBytes !== null && value.vramBytes !== 65536 && value.vramBytes !== 131072 || !Array.isArray(value.bytes)) {
+  if (!isRecord9(value) || value.target !== "vram" && value.target !== "cgram" && value.target !== "oam" || value.outcome !== "written" && value.outcome !== "blocked" && value.outcome !== "latched" || typeof value.forcedBlank !== "boolean" || typeof value.renderingRestricted !== "boolean" || value.implementation !== "accurate" && value.implementation !== "performance" || value.vramBytes !== null && value.vramBytes !== 65536 && value.vramBytes !== 131072 || !Array.isArray(value.bytes)) {
     throw new Error("Invalid runtime ppu effect.");
   }
   const bytes = [];
@@ -27429,19 +27660,19 @@ function readPayload(value) {
     return {};
   }
   const parsed = parseSqlitePayload(value);
-  return isRecord8(parsed) ? parsed : void 0;
+  return isRecord9(parsed) ? parsed : void 0;
 }
-function optionalBusActor(record7) {
-  if (!Object.hasOwn(record7, "actor")) {
+function optionalBusActor(record8) {
+  if (!Object.hasOwn(record8, "actor")) {
     return {};
   }
-  return { actor: requireBusActor(record7.actor) };
+  return { actor: requireBusActor(record8.actor) };
 }
 function allowsFinite2(value) {
   return value === void 0 || isFiniteNumber(value);
 }
 function isRuntimeEvidenceRecord(value) {
-  if (!isRecord8(value) || typeof value.id !== "string" || typeof value.architecture !== "string" || !isFiniteNumber(value.count) || !isStringArray(value.evidence)) {
+  if (!isRecord9(value) || typeof value.id !== "string" || typeof value.architecture !== "string" || !isFiniteNumber(value.count) || !isStringArray(value.evidence)) {
     return false;
   }
   switch (value.kind) {
@@ -27466,7 +27697,7 @@ function isRuntimeEvidenceRecord(value) {
   }
 }
 function isBusPpu(value) {
-  return isRecord8(value) && (value.target === "vram" || value.target === "cgram" || value.target === "oam") && (value.outcome === "written" || value.outcome === "blocked" || value.outcome === "latched") && typeof value.forcedBlank === "boolean" && typeof value.renderingRestricted === "boolean" && (value.implementation === "accurate" || value.implementation === "performance") && (value.vramBytes === null || value.vramBytes === 65536 || value.vramBytes === 131072) && Array.isArray(value.bytes) && value.bytes.every(isPpuByte);
+  return isRecord9(value) && (value.target === "vram" || value.target === "cgram" || value.target === "oam") && (value.outcome === "written" || value.outcome === "blocked" || value.outcome === "latched") && typeof value.forcedBlank === "boolean" && typeof value.renderingRestricted === "boolean" && (value.implementation === "accurate" || value.implementation === "performance") && (value.vramBytes === null || value.vramBytes === 65536 || value.vramBytes === 131072) && Array.isArray(value.bytes) && value.bytes.every(isPpuByte);
 }
 var compareRuntimeRecordIds, runtimeColumns, runtimeInstructionFields, runtimeFromRow, analysisAddress;
 var init_sqlite_records = __esm({
@@ -27485,12 +27716,12 @@ var init_sqlite_records = __esm({
       }
       return 0;
     };
-    runtimeColumns = (record7) => {
-      switch (record7.kind) {
+    runtimeColumns = (record8) => {
+      switch (record8.kind) {
         case "runtime-execution":
           return {
-            addressSpace: record7.addressSpace,
-            address: record7.address,
+            addressSpace: record8.addressSpace,
+            address: record8.address,
             start: null,
             end: null,
             fromAddressSpace: null,
@@ -27503,15 +27734,15 @@ var init_sqlite_records = __esm({
             accessedAddress: null,
             coverage: null,
             payload: canonicalJson({
-              ...record7.fileOffset === void 0 ? {} : { fileOffset: record7.fileOffset },
-              ...record7.size === void 0 ? {} : { size: record7.size },
-              ...record7.opcode === void 0 ? {} : { opcode: record7.opcode }
+              ...record8.fileOffset === void 0 ? {} : { fileOffset: record8.fileOffset },
+              ...record8.size === void 0 ? {} : { size: record8.size },
+              ...record8.opcode === void 0 ? {} : { opcode: record8.opcode }
             })
           };
         case "runtime-instruction":
           return {
-            addressSpace: record7.addressSpace,
-            address: record7.address,
+            addressSpace: record8.addressSpace,
+            address: record8.address,
             start: null,
             end: null,
             fromAddressSpace: null,
@@ -27523,7 +27754,7 @@ var init_sqlite_records = __esm({
             accessedAddressSpace: null,
             accessedAddress: null,
             coverage: null,
-            payload: canonicalJson({ bytes: record7.bytes, state: record7.state })
+            payload: canonicalJson({ bytes: record8.bytes, state: record8.state })
           };
         case "runtime-graphics-access":
           return {
@@ -27535,19 +27766,19 @@ var init_sqlite_records = __esm({
             fromAddress: null,
             toAddressSpace: null,
             toAddress: null,
-            instructionAddressSpace: record7.context === "instruction" ? record7.addressSpace : null,
-            instructionAddress: record7.context === "instruction" ? record7.pc : null,
-            accessedAddressSpace: record7.addressSpace,
-            accessedAddress: record7.address,
+            instructionAddressSpace: record8.context === "instruction" ? record8.addressSpace : null,
+            instructionAddress: record8.context === "instruction" ? record8.pc : null,
+            accessedAddressSpace: record8.addressSpace,
+            accessedAddress: record8.address,
             coverage: null,
             payload: canonicalJson({
-              pc: record7.pc,
-              actor: record7.actor,
-              context: record7.context,
-              direction: record7.direction,
-              value: record7.value,
-              cpuMapping: record7.cpuMapping,
-              effect: record7.effect
+              pc: record8.pc,
+              actor: record8.actor,
+              context: record8.context,
+              direction: record8.direction,
+              value: record8.value,
+              cpuMapping: record8.cpuMapping,
+              effect: record8.effect
             })
           };
         case "runtime-bus-access":
@@ -27561,20 +27792,20 @@ var init_sqlite_records = __esm({
             toAddressSpace: null,
             toAddress: null,
             // Unowned accesses must never become instruction observations through a coordinate query.
-            instructionAddressSpace: record7.context === "instruction" ? record7.addressSpace : null,
-            instructionAddress: record7.context === "instruction" ? record7.pc : null,
-            accessedAddressSpace: record7.addressSpace,
-            accessedAddress: record7.address,
+            instructionAddressSpace: record8.context === "instruction" ? record8.addressSpace : null,
+            instructionAddress: record8.context === "instruction" ? record8.pc : null,
+            accessedAddressSpace: record8.addressSpace,
+            accessedAddress: record8.address,
             coverage: null,
             payload: canonicalJson({
-              ...record7.ppu ? { ppu: record7.ppu } : {},
-              pc: record7.pc,
-              value: record7.value,
-              direction: record7.direction,
-              actor: record7.actor,
-              channel: record7.channel,
-              phase: record7.phase,
-              context: record7.context
+              ...record8.ppu ? { ppu: record8.ppu } : {},
+              pc: record8.pc,
+              value: record8.value,
+              direction: record8.direction,
+              actor: record8.actor,
+              channel: record8.channel,
+              phase: record8.phase,
+              context: record8.context
             })
           };
         case "runtime-memory-access":
@@ -27587,23 +27818,23 @@ var init_sqlite_records = __esm({
             fromAddress: null,
             toAddressSpace: null,
             toAddress: null,
-            instructionAddressSpace: record7.instructionAddressSpace,
-            instructionAddress: record7.instructionAddress,
-            accessedAddressSpace: record7.accessedAddressSpace,
-            accessedAddress: record7.accessedAddress,
+            instructionAddressSpace: record8.instructionAddressSpace,
+            instructionAddress: record8.instructionAddress,
+            accessedAddressSpace: record8.accessedAddressSpace,
+            accessedAddress: record8.accessedAddress,
             coverage: null,
             payload: canonicalJson({
-              access: record7.access,
-              width: record7.width,
-              ...record7.actor === void 0 ? {} : { actor: record7.actor },
-              ...record7.channel === void 0 ? {} : { channel: record7.channel },
-              ...record7.value === void 0 ? {} : { value: record7.value }
+              access: record8.access,
+              width: record8.width,
+              ...record8.actor === void 0 ? {} : { actor: record8.actor },
+              ...record8.channel === void 0 ? {} : { channel: record8.channel },
+              ...record8.value === void 0 ? {} : { value: record8.value }
             })
           };
         case "runtime-cpu-state":
           return {
-            addressSpace: record7.addressSpace,
-            address: record7.address,
+            addressSpace: record8.addressSpace,
+            address: record8.address,
             start: null,
             end: null,
             fromAddressSpace: null,
@@ -27615,14 +27846,14 @@ var init_sqlite_records = __esm({
             accessedAddressSpace: null,
             accessedAddress: null,
             coverage: null,
-            payload: canonicalJson({ state: record7.state })
+            payload: canonicalJson({ state: record8.state })
           };
         case "runtime-coverage":
           return {
-            addressSpace: record7.addressSpace,
+            addressSpace: record8.addressSpace,
             address: null,
-            start: record7.start,
-            end: record7.end,
+            start: record8.start,
+            end: record8.end,
             fromAddressSpace: null,
             fromAddress: null,
             toAddressSpace: null,
@@ -27631,7 +27862,7 @@ var init_sqlite_records = __esm({
             instructionAddress: null,
             accessedAddressSpace: null,
             accessedAddress: null,
-            coverage: record7.coverage,
+            coverage: record8.coverage,
             payload: null
           };
         case "runtime-control-target":
@@ -27640,16 +27871,16 @@ var init_sqlite_records = __esm({
             address: null,
             start: null,
             end: null,
-            fromAddressSpace: record7.fromAddressSpace,
-            fromAddress: record7.fromAddress,
-            toAddressSpace: record7.toAddressSpace,
-            toAddress: record7.toAddress,
+            fromAddressSpace: record8.fromAddressSpace,
+            fromAddress: record8.fromAddress,
+            toAddressSpace: record8.toAddressSpace,
+            toAddress: record8.toAddress,
             instructionAddressSpace: null,
             instructionAddress: null,
             accessedAddressSpace: null,
             accessedAddress: null,
             coverage: null,
-            payload: canonicalJson({ flowKind: record7.flowKind, indirect: record7.indirect })
+            payload: canonicalJson({ flowKind: record8.flowKind, indirect: record8.indirect })
           };
       }
       throw new Error("Unsupported runtime evidence kind.");
@@ -27807,12 +28038,12 @@ var init_sqlite_records = __esm({
       }
       throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
     };
-    analysisAddress = (record7) => {
-      if ("addressSpace" in record7 && "address" in record7) {
-        return { addressSpace: record7.addressSpace, address: record7.address };
+    analysisAddress = (record8) => {
+      if ("addressSpace" in record8 && "address" in record8) {
+        return { addressSpace: record8.addressSpace, address: record8.address };
       }
-      if ("addressSpace" in record7 && "fromAddress" in record7) {
-        return { addressSpace: record7.addressSpace, address: record7.fromAddress };
+      if ("addressSpace" in record8 && "fromAddress" in record8) {
+        return { addressSpace: record8.addressSpace, address: record8.fromAddress };
       }
       return { addressSpace: null, address: null };
     };
@@ -27826,12 +28057,12 @@ function errorCode(error) {
   }
   return void 0;
 }
-function isRecord9(value) {
+function isRecord10(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function durableReplace(file, bytes, mode) {
-  ensureDurableDirectory(import_node_path4.default.dirname(import_node_path4.default.resolve(file)));
-  const temporary = `${file}.${(0, import_node_crypto7.randomUUID)()}.tmp`;
+  ensureDurableDirectory(import_node_path5.default.dirname(import_node_path5.default.resolve(file)));
+  const temporary = `${file}.${(0, import_node_crypto8.randomUUID)()}.tmp`;
   try {
     const fd = import_node_fs3.default.openSync(temporary, "wx", mode);
     try {
@@ -27841,7 +28072,7 @@ function durableReplace(file, bytes, mode) {
       import_node_fs3.default.closeSync(fd);
     }
     import_node_fs3.default.renameSync(temporary, file);
-    syncDirectory(import_node_path4.default.dirname(file));
+    syncDirectory(import_node_path5.default.dirname(file));
   } finally {
     import_node_fs3.default.rmSync(temporary, { force: true });
   }
@@ -27850,7 +28081,7 @@ function ensureDurableDirectory(directory) {
   if (import_node_fs3.default.existsSync(directory)) {
     return;
   }
-  const parent = import_node_path4.default.dirname(directory);
+  const parent = import_node_path5.default.dirname(directory);
   ensureDurableDirectory(parent);
   try {
     import_node_fs3.default.mkdirSync(directory);
@@ -27873,9 +28104,9 @@ function syncDirectory(directory) {
   }
 }
 function acquireFileLease(file) {
-  ensureDurableDirectory(import_node_path4.default.dirname(import_node_path4.default.resolve(file)));
-  const owner2 = JSON.stringify({ pid: process.pid, host: import_node_os2.default.hostname(), token: (0, import_node_crypto7.randomUUID)() });
-  const candidate = `${file}.${(0, import_node_crypto7.randomUUID)()}.owner`;
+  ensureDurableDirectory(import_node_path5.default.dirname(import_node_path5.default.resolve(file)));
+  const owner2 = JSON.stringify({ pid: process.pid, host: import_node_os2.default.hostname(), token: (0, import_node_crypto8.randomUUID)() });
+  const candidate = `${file}.${(0, import_node_crypto8.randomUUID)()}.owner`;
   durableReplace(candidate, owner2);
   try {
     try {
@@ -27887,7 +28118,7 @@ function acquireFileLease(file) {
       const previous = import_node_fs3.default.readFileSync(file, "utf8");
       const parsed = JSON.parse(previous);
       let dead = false;
-      if (isRecord9(parsed) && parsed.host === import_node_os2.default.hostname() && typeof parsed.pid === "number" && Number.isSafeInteger(parsed.pid) && parsed.pid > 0) {
+      if (isRecord10(parsed) && parsed.host === import_node_os2.default.hostname() && typeof parsed.pid === "number" && Number.isSafeInteger(parsed.pid) && parsed.pid > 0) {
         try {
           process.kill(parsed.pid, 0);
         } catch (cause) {
@@ -27907,7 +28138,7 @@ function acquireFileLease(file) {
         recovery.release();
       }
     }
-    syncDirectory(import_node_path4.default.dirname(file));
+    syncDirectory(import_node_path5.default.dirname(file));
   } finally {
     import_node_fs3.default.rmSync(candidate, { force: true });
   }
@@ -27915,35 +28146,35 @@ function acquireFileLease(file) {
     release() {
       if (import_node_fs3.default.existsSync(file) && import_node_fs3.default.readFileSync(file, "utf8") === owner2) {
         import_node_fs3.default.unlinkSync(file);
-        syncDirectory(import_node_path4.default.dirname(file));
+        syncDirectory(import_node_path5.default.dirname(file));
       }
     }
   };
 }
-var import_node_crypto7, import_node_fs3, import_node_os2, import_node_path4;
+var import_node_crypto8, import_node_fs3, import_node_os2, import_node_path5;
 var init_durable_files = __esm({
   "packages/disassembler/src/internal/durable-files.ts"() {
     "use strict";
-    import_node_crypto7 = require("node:crypto");
+    import_node_crypto8 = require("node:crypto");
     import_node_fs3 = __toESM(require("node:fs"), 1);
     import_node_os2 = __toESM(require("node:os"), 1);
-    import_node_path4 = __toESM(require("node:path"), 1);
+    import_node_path5 = __toESM(require("node:path"), 1);
   }
 });
 
 // packages/disassembler/src/internal/source-inputs.ts
 function assertSourcePath(relative4) {
-  if (!relative4 || relative4.includes("\0") || relative4.includes("\\") || import_node_path5.default.isAbsolute(relative4) || /^[A-Za-z]:/.test(relative4) || relative4.split("/").some((part) => !part || part === "." || part === ".." || part.toLowerCase() === ".git")) {
+  if (!relative4 || relative4.includes("\0") || relative4.includes("\\") || import_node_path6.default.isAbsolute(relative4) || /^[A-Za-z]:/.test(relative4) || relative4.split("/").some((part) => !part || part === "." || part === ".." || part.toLowerCase() === ".git")) {
     throw new Error(`Invalid source project path: ${relative4}`);
   }
 }
-var import_node_crypto8, import_node_path5, sourceContentHash;
+var import_node_crypto9, import_node_path6, sourceContentHash;
 var init_source_inputs = __esm({
   "packages/disassembler/src/internal/source-inputs.ts"() {
     "use strict";
-    import_node_crypto8 = require("node:crypto");
-    import_node_path5 = __toESM(require("node:path"), 1);
-    sourceContentHash = (value) => (0, import_node_crypto8.createHash)("sha256").update(value).digest("hex");
+    import_node_crypto9 = require("node:crypto");
+    import_node_path6 = __toESM(require("node:path"), 1);
+    sourceContentHash = (value) => (0, import_node_crypto9.createHash)("sha256").update(value).digest("hex");
   }
 });
 
@@ -27996,7 +28227,7 @@ var init_target_state = __esm({
 });
 
 // packages/disassembler/src/model/metadata-validation.ts
-function isRecord10(value) {
+function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStringList(value) {
@@ -28053,31 +28284,31 @@ var init_metadata_validation = __esm({
       "empty",
       "text"
     ];
-    validateEditableMetadataRecord = (shard, record7) => {
-      if (!isRecord10(record7) || typeof record7.id !== "string" || !/^\w[\w./:-]*$/.test(record7.id) || !isStringList(record7.evidence)) {
+    validateEditableMetadataRecord = (shard, record8) => {
+      if (!isRecord11(record8) || typeof record8.id !== "string" || !/^\w[\w./:-]*$/.test(record8.id) || !isStringList(record8.evidence)) {
         throw new Error("Metadata needs a stable record ID and evidence list.");
       }
-      if (record7.mapping !== void 0 && !isResearchMapping(record7.mapping)) {
+      if (record8.mapping !== void 0 && !isResearchMapping(record8.mapping)) {
         throw new Error("Invalid research mapping selector.");
       }
-      if (record7.kind === "target-set" && record7.mapping && "fileOffset" in record7.mapping) {
+      if (record8.kind === "target-set" && record8.mapping && "fileOffset" in record8.mapping) {
         throw new Error(
           "Target sets use mapper state; a single physical anchor cannot select multiple targets."
         );
       }
-      const address3 = record7.address;
-      if ("address" in record7 && !(isSafeInteger3(address3) && address3 >= 0)) {
+      const address3 = record8.address;
+      if ("address" in record8 && !(isSafeInteger3(address3) && address3 >= 0)) {
         throw new Error("Metadata needs a nonnegative integer address.");
       }
-      if (typeof record7.addressSpace !== "string") {
+      if (typeof record8.addressSpace !== "string") {
         throw new Error("Metadata needs a named address space.");
       }
       if (shard === "labels") {
-        const name2 = record7.name;
-        if (typeof name2 !== "string" || name2 === "" || !("address" in record7) || "kind" in record7) {
+        const name2 = record8.name;
+        if (typeof name2 !== "string" || name2 === "" || !("address" in record8) || "kind" in record8) {
           throw new Error("Invalid label metadata.");
         }
-        const sourceName = record7.sourceName;
+        const sourceName = record8.sourceName;
         if (sourceName !== void 0) {
           if (typeof sourceName !== "string") {
             throw new Error(
@@ -28086,31 +28317,31 @@ var init_metadata_validation = __esm({
           }
           validateSourceLabelName(sourceName);
         }
-        if (record7.suppressed !== void 0 && typeof record7.suppressed !== "boolean") {
+        if (record8.suppressed !== void 0 && typeof record8.suppressed !== "boolean") {
           throw new Error("Invalid label suppression flag.");
         }
-        for (const value of [record7.comment, record7.inlineComment]) {
+        for (const value of [record8.comment, record8.inlineComment]) {
           if (value !== void 0 && (typeof value !== "string" || value.includes("\0"))) {
             throw new Error("Invalid label comment.");
           }
         }
       } else if (shard === "comments") {
-        const text2 = record7.text;
-        if (typeof text2 !== "string" || !text2.trim() || text2.includes("\0") || !("address" in record7) || "kind" in record7) {
+        const text2 = record8.text;
+        if (typeof text2 !== "string" || !text2.trim() || text2.includes("\0") || !("address" in record8) || "kind" in record8) {
           throw new Error("A standalone comment needs nonempty text.");
         }
       } else if (shard === "annotations") {
-        const classification2 = record7.classification;
-        const architecture = record7.architecture;
+        const classification2 = record8.classification;
+        const architecture = record8.architecture;
         if (typeof classification2 !== "string" || !CLASSIFICATIONS2.some((candidate) => candidate === classification2) || typeof architecture !== "string" || architecture === "") {
           throw new Error("Invalid classification metadata.");
         }
-        const start = record7.start;
-        const end = record7.end;
+        const start = record8.start;
+        const end = record8.end;
         if (!(isSafeInteger3(start) && isSafeInteger3(end) && start >= 0 && end > start)) {
           throw new Error("Classification bounds must describe a nonempty half-open interval.");
         }
-        const state = record7.state ?? {};
+        const state = record8.state ?? {};
         for (const [field, value] of stateEntries(state)) {
           if (field === "e" || field === "m" || field === "x" || field === "carry") {
             if (typeof value !== "boolean") {
@@ -28123,23 +28354,23 @@ var init_metadata_validation = __esm({
             }
           }
         }
-        readAnalysisTargetState(architecture, record7.state);
-        const points = record7.points;
+        readAnalysisTargetState(architecture, record8.state);
+        const points = record8.points;
         if (Array.isArray(points) && points.some(
           (point) => point !== "in" && point !== "out" && point !== "end" && point !== "read" || typeof point !== "string"
         )) {
           throw new Error("Invalid entry-point metadata.");
         }
       } else {
-        const kind = record7.kind;
-        const targets = record7.targets;
+        const kind = record8.kind;
+        const targets = record8.targets;
         if (kind !== "target-override" && kind !== "target-set" || !Array.isArray(targets) || targets.some((value) => !Number.isSafeInteger(value) || value < 0)) {
           throw new Error("Only target overrides and target sets are editable analysis records.");
         }
-        if (kind === "target-set" && (typeof record7.name !== "string" || !record7.name.trim())) {
+        if (kind === "target-set" && (typeof record8.name !== "string" || !record8.name.trim())) {
           throw new Error("A target set needs a name.");
         }
-        if (kind === "target-override" && !Number.isSafeInteger(record7.address)) {
+        if (kind === "target-override" && !Number.isSafeInteger(record8.address)) {
           throw new Error("A target override needs an instruction anchor.");
         }
       }
@@ -28148,7 +28379,7 @@ var init_metadata_validation = __esm({
 });
 
 // packages/disassembler/src/research-inputs/inputs.ts
-function isRecord11(value) {
+function isRecord12(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isUnknownArray2(value) {
@@ -28184,7 +28415,7 @@ function validateResearchSnapshot(snapshot) {
   }
 }
 function validateResearchDecision(decision) {
-  if (!isRecord11(decision)) {
+  if (!isRecord12(decision)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
   const collection = decision.collection;
@@ -28192,40 +28423,40 @@ function validateResearchDecision(decision) {
   if (!isResearchCollection(collection) || typeof id !== "string" || !/^\w[\w./:-]*$/.test(id)) {
     throw new Error("Research decisions require a known collection and stable ID.");
   }
-  const record7 = decision.value;
-  if (record7 === null) {
+  const record8 = decision.value;
+  if (record8 === null) {
     return;
   }
-  if (!isRecord11(record7) || record7.id !== id) {
+  if (!isRecord12(record8) || record8.id !== id) {
     throw new Error(`Research record identity mismatch: ${id}`);
   }
   if (collection === "evidence") {
-    const sourceId = record7.sourceId;
-    const detail = record7.detail;
-    if (record7.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record7.confidence) || detail !== void 0 && typeof detail !== "string") {
+    const sourceId = record8.sourceId;
+    const detail = record8.detail;
+    if (record8.source !== "manual" || typeof sourceId !== "string" || sourceId === "" || !isConfidence(record8.confidence) || detail !== void 0 && typeof detail !== "string") {
       throw new Error("Research files may author only valid manual evidence.");
     }
     return;
   }
-  const evidence = record7.evidence;
+  const evidence = record8.evidence;
   if (!isUnknownArray2(evidence) || evidence.some((entry) => typeof entry !== "string")) {
     throw new Error(`Research record ${id} needs an evidence list.`);
   }
-  if (record7.mapping !== void 0 && !isResearchMapping(record7.mapping)) {
+  if (record8.mapping !== void 0 && !isResearchMapping(record8.mapping)) {
     throw new Error("Invalid research mapping selector.");
   }
   if (collection === "regions") {
-    const name2 = record7.name;
-    const start = record7.start;
-    const end = record7.end;
+    const name2 = record8.name;
+    const start = record8.start;
+    const end = record8.end;
     if (typeof name2 !== "string" || name2 === "" || !(isSafeInteger4(start) && isSafeInteger4(end) && start >= 0 && end > start)) {
       throw new Error(`Invalid research region: ${id}`);
     }
   } else {
-    validateEditableMetadataRecord(collection, record7);
+    validateEditableMetadataRecord(collection, record8);
   }
-  if (collection === "labels" && record7.aliases !== void 0) {
-    const aliases2 = record7.aliases;
+  if (collection === "labels" && record8.aliases !== void 0) {
+    const aliases2 = record8.aliases;
     if (!isUnknownArray2(aliases2)) {
       throw new Error("Symbol aliases must be an array.");
     }
@@ -28243,7 +28474,7 @@ function validateResearchDecision(decision) {
   }
 }
 function parseResearchDocument(value) {
-  if (!isRecord11(value)) {
+  if (!isRecord12(value)) {
     throw new Error("Invalid research document header.");
   }
   const project = value.project;
@@ -28276,7 +28507,7 @@ function researchPath(root, relative4) {
   assertSourcePath(relative4);
   let current = root;
   for (const part of relative4.split("/")) {
-    current = import_node_path6.default.join(current, part);
+    current = import_node_path7.default.join(current, part);
     if (import_node_fs4.default.existsSync(current) && import_node_fs4.default.lstatSync(current).isSymbolicLink()) {
       throw new Error(`Research inputs cannot follow symlinks: ${relative4}`);
     }
@@ -28392,7 +28623,7 @@ function writeResearchDocument(root, relative4, document, expectedSha256) {
     throw new Error("Research documents use .json files.");
   }
   const file = researchPath(root, relative4);
-  import_node_fs4.default.mkdirSync(import_node_path6.default.dirname(file), { recursive: true });
+  import_node_fs4.default.mkdirSync(import_node_path7.default.dirname(file), { recursive: true });
   const lease = acquireFileLease(`${file}.lock`);
   try {
     const current = import_node_fs4.default.existsSync(file) ? sourceContentHash(import_node_fs4.default.readFileSync(file)) : null;
@@ -28404,12 +28635,12 @@ function writeResearchDocument(root, relative4, document, expectedSha256) {
     lease.release();
   }
 }
-var import_node_fs4, import_node_path6, isArray, RESEARCH_COLLECTIONS, RESEARCH_INPUT_LIMIT_NAMES, compareDecisions;
+var import_node_fs4, import_node_path7, isArray, RESEARCH_COLLECTIONS, RESEARCH_INPUT_LIMIT_NAMES, compareDecisions;
 var init_inputs = __esm({
   "packages/disassembler/src/research-inputs/inputs.ts"() {
     "use strict";
     import_node_fs4 = __toESM(require("node:fs"), 1);
-    import_node_path6 = __toESM(require("node:path"), 1);
+    import_node_path7 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_durable_files();
     init_source_inputs();
@@ -28436,7 +28667,7 @@ var init_inputs = __esm({
 
 // packages/disassembler/src/storage/sqlite-annotation-query.ts
 function isPartialInstruction(value) {
-  if (!isRecord8(value)) {
+  if (!isRecord9(value)) {
     return false;
   }
   if (value.kind !== void 0 && value.kind !== "cfg-node") {
@@ -28456,7 +28687,7 @@ function isPartialInstruction(value) {
       return false;
     }
   }
-  if (value.incomingState !== void 0 && !isRecord8(value.incomingState)) {
+  if (value.incomingState !== void 0 && !isRecord9(value.incomingState)) {
     return false;
   }
   return value.evidence === void 0 || isStringArray(value.evidence);
@@ -28552,12 +28783,12 @@ var init_sqlite_annotation_query = __esm({
         const exportData = table === "analysis" ? database.prepare("UPDATE analysis SET query_data=? WHERE rowid=?") : void 0;
         for (let rows2 = pending.all(); rows2.length; rows2 = pending.all()) {
           for (const row of rows2) {
-            const record7 = row.payload === null ? {} : requirePartialInstruction(row.payload);
-            const offset = record7.fileOffset;
+            const record8 = row.payload === null ? {} : requirePartialInstruction(row.payload);
+            const offset = record8.fileOffset;
             if (offset !== void 0 && (!Number.isSafeInteger(offset) || offset < 0)) {
               throw new Error("Invalid persisted instruction output offset.");
             }
-            update.run(offset ?? null, record7.size ?? null, row.row_id);
+            update.run(offset ?? null, record8.size ?? null, row.row_id);
             if (exportData) {
               const {
                 id,
@@ -28570,7 +28801,7 @@ var init_sqlite_annotation_query = __esm({
                 specificationId,
                 incomingState,
                 evidence
-              } = record7;
+              } = record8;
               exportData.run(
                 encodeSqlitePayload(
                   JSON.stringify({
@@ -28632,12 +28863,12 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record7 = requireAnalysisRecord(parseSqlitePayload(row.payload));
-          analysis.set(record7.id, record7);
-          if (record7.kind === "cfg-node") {
-            locate(record7.addressSpace, record7.address);
-            if (record7.fileOffset !== void 0) {
-              offsets.add(record7.fileOffset);
+          const record8 = requireAnalysisRecord(parseSqlitePayload(row.payload));
+          analysis.set(record8.id, record8);
+          if (record8.kind === "cfg-node") {
+            locate(record8.addressSpace, record8.address);
+            if (record8.fileOffset !== void 0) {
+              offsets.add(record8.fileOffset);
             }
           }
         }
@@ -28701,8 +28932,8 @@ var init_sqlite_annotation_query = __esm({
         }
       }
       for (const row of database.prepare("SELECT payload FROM analysis WHERE kind='summary'").iterate()) {
-        const record7 = requireAnalysisRecord(parseSqlitePayload(row.payload));
-        analysis.set(record7.id, record7);
+        const record8 = requireAnalysisRecord(parseSqlitePayload(row.payload));
+        analysis.set(record8.id, record8);
       }
       const runtime = /* @__PURE__ */ new Map();
       const executionCounts = /* @__PURE__ */ new Map();
@@ -28736,10 +28967,10 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record7 = runtimeFromRow(row);
-          runtime.set(record7.id, record7);
-          if (record7.kind === "runtime-execution" && record7.fileOffset !== void 0) {
-            offsets.add(record7.fileOffset);
+          const record8 = runtimeFromRow(row);
+          runtime.set(record8.id, record8);
+          if (record8.kind === "runtime-execution" && record8.fileOffset !== void 0) {
+            offsets.add(record8.fileOffset);
           }
         }
       };
@@ -28778,8 +29009,8 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record7 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
-          annotations.set(record7.id, record7);
+          const record8 = requireIntervalAnnotation(parseSqlitePayload(row.payload));
+          annotations.set(record8.id, record8);
         }
         let commentCount = 0;
         for (const row of comment.iterate(space, address3)) {
@@ -28787,8 +29018,8 @@ var init_sqlite_annotation_query = __esm({
             limited = true;
             break;
           }
-          const record7 = requireProjectComment(parseSqlitePayload(row.payload));
-          comments.set(record7.id, record7);
+          const record8 = requireProjectComment(parseSqlitePayload(row.payload));
+          comments.set(record8.id, record8);
         }
         addRuntime(
           coverage.iterate(space, address3, address3),
@@ -28902,52 +29133,52 @@ var init_sqlite_annotation_query = __esm({
 
 // packages/disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
-  const record7 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record7.kind !== "cfg-node") {
+  const record8 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record8.kind !== "cfg-node") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record7;
+  return record8;
 }
 function requireEdge(value) {
-  const record7 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record7.kind !== "cfg-edge") {
+  const record8 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record8.kind !== "cfg-edge") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record7;
+  return record8;
 }
 function requireUnresolved(value) {
-  const record7 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record7.kind !== "unresolved") {
+  const record8 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record8.kind !== "unresolved") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record7;
+  return record8;
 }
 function requireFunctionRecord(value) {
-  const record7 = requireAnalysisRecord(parseSqlitePayload(value));
-  if (record7.kind !== "function") {
+  const record8 = requireAnalysisRecord(parseSqlitePayload(value));
+  if (record8.kind !== "function") {
     throw new Error("Invalid stored analysis record.");
   }
-  return record7;
+  return record8;
 }
 function isLabelRefList(value) {
   return Array.isArray(value) && value.every(
-    (entry) => isRecord8(entry) && typeof entry.id === "string" && typeof entry.name === "string"
+    (entry) => isRecord9(entry) && typeof entry.id === "string" && typeof entry.name === "string"
   );
 }
 function isNumberList(value) {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
 function isCallGraphFunction(value) {
-  return isRecord8(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isLabelRefList(value.labels) && isStringArray(value.nodeIds) && isNumberList(value.outputOffsets) && isStringArray(value.incomingCallIds) && isStringArray(value.outgoingCallIds) && isStringArray(value.unresolvedIds) && isStringArray(value.evidence);
+  return isRecord9(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.source === "string" && isLabelRefList(value.labels) && isStringArray(value.nodeIds) && isNumberList(value.outputOffsets) && isStringArray(value.incomingCallIds) && isStringArray(value.outgoingCallIds) && isStringArray(value.unresolvedIds) && isStringArray(value.evidence);
 }
 function isCallGraphEdge(value) {
-  return isRecord8(value) && typeof value.id === "string" && (value.edgeKind === "call" || value.edgeKind === "interrupt") && typeof value.addressSpace === "string" && isFiniteNumber(value.fromAddress) && isFiniteNumber(value.toAddress) && typeof value.fromNodeId === "string" && (value.toNodeId === void 0 || typeof value.toNodeId === "string") && isStringArray(value.callerFunctionIds) && isStringArray(value.calleeFunctionIds) && isNumberList(value.fromOutputOffsets) && isNumberList(value.toOutputOffsets) && typeof value.indirect === "boolean" && (value.override === void 0 || typeof value.override === "string") && (value.explanation === void 0 || typeof value.explanation === "string") && isStringArray(value.evidence);
+  return isRecord9(value) && typeof value.id === "string" && (value.edgeKind === "call" || value.edgeKind === "interrupt") && typeof value.addressSpace === "string" && isFiniteNumber(value.fromAddress) && isFiniteNumber(value.toAddress) && typeof value.fromNodeId === "string" && (value.toNodeId === void 0 || typeof value.toNodeId === "string") && isStringArray(value.callerFunctionIds) && isStringArray(value.calleeFunctionIds) && isNumberList(value.fromOutputOffsets) && isNumberList(value.toOutputOffsets) && typeof value.indirect === "boolean" && (value.override === void 0 || typeof value.override === "string") && (value.explanation === void 0 || typeof value.explanation === "string") && isStringArray(value.evidence);
 }
 function isCallGraphUnresolved(value) {
-  return isRecord8(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string" && isStringArray(value.nodeIds) && isStringArray(value.ownerFunctionIds) && isNumberList(value.outputOffsets) && isStringArray(value.evidence);
+  return isRecord9(value) && typeof value.id === "string" && typeof value.addressSpace === "string" && isFiniteNumber(value.address) && typeof value.flowKind === "string" && typeof value.indirect === "boolean" && typeof value.reason === "string" && isStringArray(value.nodeIds) && isStringArray(value.ownerFunctionIds) && isNumberList(value.outputOffsets) && isStringArray(value.evidence);
 }
 function isCallGraph(value) {
-  return isRecord8(value) && Array.isArray(value.functions) && value.functions.every(isCallGraphFunction) && Array.isArray(value.calls) && value.calls.every(isCallGraphEdge) && Array.isArray(value.unresolved) && value.unresolved.every(isCallGraphUnresolved) && isStringArray(value.orphanCallIds) && isStringArray(value.orphanUnresolvedIds);
+  return isRecord9(value) && Array.isArray(value.functions) && value.functions.every(isCallGraphFunction) && Array.isArray(value.calls) && value.calls.every(isCallGraphEdge) && Array.isArray(value.unresolved) && value.unresolved.every(isCallGraphUnresolved) && isStringArray(value.orphanCallIds) && isStringArray(value.orphanUnresolvedIds);
 }
 function requireCallKind(value) {
   if (value === "call" || value === "interrupt") {
@@ -28988,14 +29219,14 @@ var init_sqlite_graph_query = __esm({
       for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
         if (row.kind === "cfg-node") {
           const node = requireNode(row.payload);
-          const path51 = node.evidencePath.length ? node.evidencePath : [node.id];
+          const path52 = node.evidencePath.length ? node.evidencePath : [node.id];
           let owner2 = node.functionEntry;
-          for (let i = path51.length - 1; i >= 0; i--) {
+          for (let i = path52.length - 1; i >= 0; i--) {
             if (owner2) {
               break;
             }
-            if (entries.has(path51[i])) {
-              owner2 = path51[i];
+            if (entries.has(path52[i])) {
+              owner2 = path52[i];
               break;
             }
           }
@@ -29052,21 +29283,21 @@ var init_sqlite_graph_query = __esm({
         "SELECT from_id FROM query_graph_edges WHERE kind='unresolved' AND address_space=? AND from_address=?"
       );
       for (const row of db.prepare("SELECT payload FROM analysis WHERE kind='unresolved'").iterate()) {
-        const record7 = requireUnresolved(row.payload);
+        const record8 = requireUnresolved(row.payload);
         const nodeIds = unique(
-          unresolvedNodes.all(record7.addressSpace, record7.address).map((nodeRow) => String(nodeRow.from_id))
+          unresolvedNodes.all(record8.addressSpace, record8.address).map((nodeRow) => String(nodeRow.from_id))
         );
         unresolved.push({
-          id: record7.id,
-          addressSpace: record7.addressSpace,
-          address: record7.address,
-          flowKind: record7.flowKind,
-          indirect: record7.indirect,
-          reason: record7.reason,
+          id: record8.id,
+          addressSpace: record8.addressSpace,
+          address: record8.address,
+          flowKind: record8.flowKind,
+          indirect: record8.indirect,
+          reason: record8.reason,
           nodeIds,
           ownerFunctionIds: unique(nodeIds.flatMap(owners)),
           outputOffsets: offsets(nodeIds),
-          evidence: record7.evidence
+          evidence: record8.evidence
         });
       }
       const incoming = /* @__PURE__ */ new Map(), outgoing = /* @__PURE__ */ new Map(), unresolvedByOwner = /* @__PURE__ */ new Map();
@@ -29078,9 +29309,9 @@ var init_sqlite_graph_query = __esm({
           append(incoming, id, call.id);
         }
       }
-      for (const record7 of unresolved) {
-        for (const id of record7.ownerFunctionIds) {
-          append(unresolvedByOwner, id, record7.id);
+      for (const record8 of unresolved) {
+        for (const id of record8.ownerFunctionIds) {
+          append(unresolvedByOwner, id, record8.id);
         }
       }
       const owned = db.prepare(
@@ -29273,7 +29504,7 @@ var init_sqlite_query_cache = __esm({
 });
 
 // packages/disassembler/src/storage/sqlite-research-inputs.ts
-function isRecord12(value) {
+function isRecord13(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isResearchCollection2(value) {
@@ -29283,25 +29514,25 @@ function analysisInput(collection, value) {
   if (value === null || collection === "comments") {
     return null;
   }
-  if (!isRecord12(value)) {
+  if (!isRecord13(value)) {
     throw new Error("Invalid research record.");
   }
-  const record7 = value;
+  const record8 = value;
   if (collection === "labels") {
-    if (record7.analysisEntryPoint === false) {
+    if (record8.analysisEntryPoint === false) {
       return null;
     }
     return {
-      id: record7.id,
-      addressSpace: record7.addressSpace,
-      address: record7.address,
-      evidence: record7.evidence
+      id: record8.id,
+      addressSpace: record8.addressSpace,
+      address: record8.address,
+      evidence: record8.evidence
     };
   }
-  if (collection === "analysis" && !["target-override", "target-set"].includes(String(record7.kind))) {
+  if (collection === "analysis" && !["target-override", "target-set"].includes(String(record8.kind))) {
     return null;
   }
-  return record7;
+  return record8;
 }
 function changesAnalysisInputs(database, snapshot) {
   database.exec(SCHEMA);
@@ -29360,7 +29591,7 @@ function projectResearchInputs(database, snapshot, insert) {
     const before = database.prepare(`SELECT payload FROM ${collection} WHERE id=?`).get(decision.id);
     if (collection === "evidence" && before) {
       const observation = recordValue(before.payload);
-      if (!isRecord12(observation) || observation.source !== "manual") {
+      if (!isRecord13(observation) || observation.source !== "manual") {
         throw new Error("Git research cannot replace or suppress imported/runtime provenance.");
       }
     }
@@ -29531,16 +29762,16 @@ END;`;
         return Buffer.concat([Buffer.from([typeof value === "string" ? 1 : 2]), bytes]);
       });
       const directoryBytes = (values.length + 1) * 4;
-      const size = directoryBytes + records3.reduce((n, record7) => n + record7.length, 0);
+      const size = directoryBytes + records3.reduce((n, record8) => n + record8.length, 0);
       if (size > MAX_BYTES) {
         throw new Error("Runtime history block exceeds its decoded byte limit.");
       }
       const body = Buffer.allocUnsafe(size);
       let offset = directoryBytes;
-      for (const [index, record7] of records3.entries()) {
+      for (const [index, record8] of records3.entries()) {
         body.writeUInt32LE(offset, index * 4);
-        record7.copy(body, offset);
-        offset += record7.length;
+        record8.copy(body, offset);
+        offset += record8.length;
       }
       body.writeUInt32LE(offset, values.length * 4);
       const header = Buffer.allocUnsafe(16);
@@ -29685,16 +29916,16 @@ END;`;
 // packages/disassembler/src/storage/sqlite-runtime-storage.ts
 function pairedState(payload) {
   const parsed = parseSqlitePayload(payload);
-  if (!isRecord8(parsed)) {
+  if (!isRecord9(parsed)) {
     throw new Error("Invalid paired runtime payload.");
   }
   return parsed.state;
 }
-var import_node_crypto9, runtimeFactFingerprint, encodeRuntimeFactPayload, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
+var import_node_crypto10, runtimeFactFingerprint, encodeRuntimeFactPayload, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
   "packages/disassembler/src/storage/sqlite-runtime-storage.ts"() {
     "use strict";
-    import_node_crypto9 = require("node:crypto");
+    import_node_crypto10 = require("node:crypto");
     init_canonical_json();
     init_record_shape();
     init_sqlite_payload();
@@ -29702,21 +29933,21 @@ var init_sqlite_runtime_storage = __esm({
     init_sqlite_runtime_facts();
     init_sqlite_runtime_history();
     init_sqlite_runtime_payload();
-    runtimeFactFingerprint = (record7, columns2) => (0, import_node_crypto9.createHash)("sha256").update(
+    runtimeFactFingerprint = (record8, columns2) => (0, import_node_crypto10.createHash)("sha256").update(
       JSON.stringify(
         {
           accessedAddress: columns2.accessedAddress,
           accessedAddressSpace: columns2.accessedAddressSpace,
           address: columns2.address,
           addressSpace: columns2.addressSpace,
-          architecture: record7.architecture,
+          architecture: record8.architecture,
           coverage: columns2.coverage,
           end: columns2.end,
           fromAddress: columns2.fromAddress,
           fromAddressSpace: columns2.fromAddressSpace,
           instructionAddress: columns2.instructionAddress,
           instructionAddressSpace: columns2.instructionAddressSpace,
-          kind: record7.kind,
+          kind: record8.kind,
           payload: columns2.payload,
           start: columns2.start,
           toAddress: columns2.toAddress,
@@ -29726,12 +29957,12 @@ var init_sqlite_runtime_storage = __esm({
         2
       ) + "\n"
     ).digest();
-    encodeRuntimeFactPayload = (record7, payload) => {
+    encodeRuntimeFactPayload = (record8, payload) => {
       if (payload === null) {
         return null;
       }
-      if (record7.architecture === "snes.65816" && (record7.kind === "runtime-instruction" || record7.kind === "runtime-cpu-state")) {
-        const snapshot = record7.kind === "runtime-instruction" ? { bytes: record7.bytes, state: record7.state } : { state: record7.state };
+      if (record8.architecture === "snes.65816" && (record8.kind === "runtime-instruction" || record8.kind === "runtime-cpu-state")) {
+        const snapshot = record8.kind === "runtime-instruction" ? { bytes: record8.bytes, state: record8.state } : { state: record8.state };
         return encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
       }
       return encodeSqlitePayload(payload);
@@ -29860,28 +30091,29 @@ END;
         );
         this.#insertIdentity = db.prepare("INSERT INTO runtime_identities(value) VALUES(?)");
       }
-      /** Append one validated logical record. Only exact trace pairs share a count/provenance link.
-       * @param {RuntimeEvidenceRecord} record Validated source fact with a stable external ID.
-       * @param {Function} intern Transaction-owned prefix/evidence dictionary allocator.
+      /**
+       * Append one validated logical record. Only exact trace pairs share a count/provenance link.
+       * @param record Validated source fact with a stable external ID.
+       * @param intern Transaction-owned prefix/evidence dictionary allocator.
        */
-      insert(record7, intern) {
-        const identity2 = sqliteRuntimeIdentity(record7.id);
+      insert(record8, intern) {
+        const identity2 = sqliteRuntimeIdentity(record8.id);
         const prefix = intern("runtime_prefixes", identity2.prefix);
-        const evidence = intern("runtime_evidence", JSON.stringify(record7.evidence));
-        const columns2 = runtimeColumns(record7);
+        const evidence = intern("runtime_evidence", JSON.stringify(record8.evidence));
+        const columns2 = runtimeColumns(record8);
         let statePrefix = null;
         const match = /^runtime:instruction-trace:([\da-f]{64}):(code|state):([\da-f]{64})$/.exec(
-          record7.id
+          record8.id
         );
-        if (match && (record7.kind === "runtime-instruction" || record7.kind === "runtime-cpu-state")) {
+        if (match && (record8.kind === "runtime-instruction" || record8.kind === "runtime-cpu-state")) {
           const counterpart = match[2] === "code" ? "state" : "code";
           const otherIdentity = sqliteRuntimeIdentity(
             `runtime:instruction-trace:${match[1]}:${counterpart}:${match[3]}`
           );
           const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
-          const expectedKind = record7.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record7.count && other.evidence_id === evidence && other.architecture === record7.architecture && other.address_space === record7.addressSpace && other.address === record7.address && canonicalEquals(pairedState(other.payload), record7.state)) {
-            if (record7.kind === "runtime-cpu-state") {
+          const expectedKind = record8.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
+          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record8.count && other.evidence_id === evidence && other.architecture === record8.architecture && other.address_space === record8.addressSpace && other.address === record8.address && canonicalEquals(pairedState(other.payload), record8.state)) {
+            if (record8.kind === "runtime-cpu-state") {
               this.#pair.run(prefix, other.oid);
               return;
             }
@@ -29890,15 +30122,15 @@ END;
           }
         }
         const payload = columns2.payload;
-        const fingerprint = runtimeFactFingerprint(record7, columns2);
+        const fingerprint = runtimeFactFingerprint(record8, columns2);
         const found = this.#findFact.get(fingerprint);
         let fid = found?.fid;
         if (fid === void 0) {
-          const encoded = encodeRuntimeFactPayload(record7, payload);
+          const encoded = encodeRuntimeFactPayload(record8, payload);
           this.#insertFact.run(
             fingerprint,
-            record7.kind,
-            record7.architecture,
+            record8.kind,
+            record8.architecture,
             columns2.addressSpace,
             columns2.address,
             columns2.start,
@@ -29925,9 +30157,9 @@ END;
           prefix,
           identityId,
           evidence,
-          record7.count,
+          record8.count,
           statePrefix,
-          record7.kind === "runtime-execution" ? 0 : 1
+          record8.kind === "runtime-execution" ? 0 : 1
         );
       }
     };
@@ -29935,25 +30167,25 @@ END;
 });
 
 // packages/disassembler/src/storage/sqlite-runtime-batch.ts
-function assertTraceRecordNamespace(record7, sourceSha256) {
+function assertTraceRecordNamespace(record8, sourceSha256) {
   const root = `runtime:instruction-trace:${sourceSha256}:`;
   let prefix = root;
-  if (record7.kind === "runtime-instruction") {
+  if (record8.kind === "runtime-instruction") {
     prefix += "code:";
-  } else if (record7.kind === "runtime-cpu-state") {
+  } else if (record8.kind === "runtime-cpu-state") {
     prefix += "state:";
-  } else if (record7.kind === "runtime-memory-access") {
+  } else if (record8.kind === "runtime-memory-access") {
     prefix += "memory:";
-  } else if (record7.kind !== "runtime-execution") {
+  } else if (record8.kind !== "runtime-execution") {
     throw new Error("Unsupported instruction trace batch record.");
   }
-  const suffix = record7.id.slice(prefix.length);
+  const suffix = record8.id.slice(prefix.length);
   let validSuffix = /^[\da-f]{64}$/.test(suffix);
-  if (record7.kind === "runtime-execution") {
-    const pc = record7.address.toString(16).toUpperCase().padStart(6, "0");
-    validSuffix = suffix === pc || record7.architecture === "65xx.2a03" && suffix.startsWith(`${pc}:mapping:`) && /^[\da-f]{64}$/.test(suffix.slice(pc.length + 9));
+  if (record8.kind === "runtime-execution") {
+    const pc = record8.address.toString(16).toUpperCase().padStart(6, "0");
+    validSuffix = suffix === pc || record8.architecture === "65xx.2a03" && suffix.startsWith(`${pc}:mapping:`) && /^[\da-f]{64}$/.test(suffix.slice(pc.length + 9));
   }
-  if (!record7.id.startsWith(prefix) || !validSuffix || !canonicalEquals(record7.evidence, [root.slice(0, -1)])) {
+  if (!record8.id.startsWith(prefix) || !validSuffix || !canonicalEquals(record8.evidence, [root.slice(0, -1)])) {
     throw new Error("Runtime record escaped its trace batch namespace or provenance.");
   }
 }
@@ -29999,41 +30231,41 @@ var init_sqlite_runtime_batch = __esm({
         );
       }
       /** Accept only the importer's adjacent code/state pairs; validate equality before sharing storage. */
-      add(record7) {
+      add(record8) {
         if (this.#finished || !this.#db.isTransaction) {
           throw new Error("Runtime trace batch is no longer active.");
         }
         if (this.#source !== void 0) {
-          assertTraceRecordNamespace(record7, this.#source);
+          assertTraceRecordNamespace(record8, this.#source);
         }
         if (this.#pending) {
           const instruction2 = this.#pending;
-          if (record7.kind !== "runtime-cpu-state" || record7.id !== instruction2.id.replace(":code:", ":state:") || record7.architecture !== instruction2.architecture || record7.addressSpace !== instruction2.addressSpace || record7.address !== instruction2.address || record7.count !== instruction2.count || !canonicalEquals(record7.state, instruction2.state)) {
+          if (record8.kind !== "runtime-cpu-state" || record8.id !== instruction2.id.replace(":code:", ":state:") || record8.architecture !== instruction2.architecture || record8.addressSpace !== instruction2.addressSpace || record8.address !== instruction2.address || record8.count !== instruction2.count || !canonicalEquals(record8.state, instruction2.state)) {
             throw new Error("Instruction trace batch has an inconsistent code/state pair.");
           }
           this.#pending = void 0;
           this.#append(
             instruction2,
-            this.#intern("runtime_prefixes", sqliteRuntimeIdentity(record7.id).prefix)
+            this.#intern("runtime_prefixes", sqliteRuntimeIdentity(record8.id).prefix)
           );
-        } else if (record7.kind === "runtime-instruction") {
-          this.#pending = record7;
-        } else if (record7.kind === "runtime-cpu-state") {
+        } else if (record8.kind === "runtime-instruction") {
+          this.#pending = record8;
+        } else if (record8.kind === "runtime-cpu-state") {
           throw new Error("Instruction trace batch state has no preceding instruction.");
         } else {
-          this.#append(record7, null);
+          this.#append(record8, null);
         }
         return true;
       }
       /** Encode once per physical observation; repeated shared facts are resolved together in SQL. */
-      #append(record7, statePrefix) {
-        const columns2 = runtimeColumns(record7);
-        const identity2 = sqliteRuntimeIdentity(record7.id);
+      #append(record8, statePrefix) {
+        const columns2 = runtimeColumns(record8);
+        const identity2 = sqliteRuntimeIdentity(record8.id);
         this.#stage.run(
           ++this.#rows,
-          runtimeFactFingerprint(record7, columns2),
-          record7.kind,
-          record7.architecture,
+          runtimeFactFingerprint(record8, columns2),
+          record8.kind,
+          record8.architecture,
           columns2.addressSpace,
           columns2.address,
           columns2.start,
@@ -30047,13 +30279,13 @@ var init_sqlite_runtime_batch = __esm({
           columns2.accessedAddressSpace,
           columns2.accessedAddress,
           columns2.coverage,
-          encodeRuntimeFactPayload(record7, columns2.payload),
+          encodeRuntimeFactPayload(record8, columns2.payload),
           this.#intern("runtime_prefixes", identity2.prefix),
           identity2.suffix,
-          this.#intern("runtime_evidence", JSON.stringify(record7.evidence)),
-          record7.count,
+          this.#intern("runtime_evidence", JSON.stringify(record8.evidence)),
+          record8.count,
           statePrefix,
-          record7.kind === "runtime-execution" ? 0 : 1
+          record8.kind === "runtime-execution" ? 0 : 1
         );
         if (this.#rows >= 1024) {
           this.#flush();
@@ -30083,6 +30315,7 @@ var init_sqlite_runtime_batch = __esm({
     `);
         this.#rows = 0;
       }
+      /** Flush pending rows and drop the staging table; throws if a paired state is still missing or the transaction ended. */
       finish() {
         if (this.#finished || !this.#db.isTransaction) {
           throw new Error("Runtime trace batch is no longer active.");
@@ -30102,11 +30335,11 @@ var init_sqlite_runtime_batch = __esm({
 function isByteList(value) {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
-var import_node_crypto10, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, ORDERED_STAGED_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
+var import_node_crypto11, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, ORDERED_STAGED_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
 var init_sqlite_runtime_summary = __esm({
   "packages/disassembler/src/storage/sqlite-runtime-summary.ts"() {
     "use strict";
-    import_node_crypto10 = require("node:crypto");
+    import_node_crypto11 = require("node:crypto");
     init_record_shape();
     init_sqlite_payload();
     init_sqlite_query_cache();
@@ -30204,13 +30437,13 @@ var init_sqlite_runtime_summary = __esm({
     };
     registerVariantKey = (db, fields2, masks) => {
       db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
-        const record7 = parseSqlitePayload(payload);
-        if (!isRecord8(record7) || !isByteList(record7.bytes) || !isRecord8(record7.state)) {
+        const record8 = parseSqlitePayload(payload);
+        if (!isRecord9(record8) || !isByteList(record8.bytes) || !isRecord9(record8.state)) {
           throw new Error("Invalid instruction variant payload.");
         }
         const state = {};
         for (const key3 of fields2) {
-          const value = record7.state[key3];
+          const value = record8.state[key3];
           const mask = masks[key3];
           if (mask && typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= mask.max) {
             state[key3] = value & mask.mask;
@@ -30218,7 +30451,7 @@ var init_sqlite_runtime_summary = __esm({
             state[key3] = value;
           }
         }
-        return JSON.stringify([record7.bytes, state]);
+        return JSON.stringify([record8.bytes, state]);
       });
     };
     isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== void 0 && !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
@@ -30235,7 +30468,7 @@ var init_sqlite_runtime_summary = __esm({
         });
       }
       if (!isCurrent(db, signature)) {
-        const pending = `pending:${(0, import_node_crypto10.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto11.randomUUID)()}`;
         let incremental = false;
         transaction(() => {
           incremental = readQueryCache(db, KEY, signature) !== void 0;
@@ -30329,13 +30562,13 @@ var init_sqlite_runtime_summary = __esm({
             const insert = db.prepare("INSERT INTO temp.runtime_summary_rows VALUES(?,?)");
             for (const row of db.prepare(RUNTIME_SUMMARY_ROWS_SQL).iterate()) {
               const parsed = parseSqlitePayload(row.payload);
-              const record7 = runtimeInstructionFields(isRecord8(parsed) ? parsed : void 0);
+              const record8 = runtimeInstructionFields(isRecord9(parsed) ? parsed : void 0);
               insert.run(
                 row.fid,
                 JSON.stringify({
-                  ...record7,
+                  ...record8,
                   state: Object.fromEntries(
-                    Object.entries(record7.state).filter(([key3]) => fields2.includes(key3))
+                    Object.entries(record8.state).filter(([key3]) => fields2.includes(key3))
                   )
                 })
               );
@@ -30346,11 +30579,11 @@ var init_sqlite_runtime_summary = __esm({
             }
             onReadProgress?.(staged);
             for (const row of db.prepare(ORDERED_STAGED_ROWS_SQL).iterate()) {
-              const record7 = runtimeFromRow(row);
-              if (record7.kind !== "runtime-instruction") {
+              const record8 = runtimeFromRow(row);
+              if (record8.kind !== "runtime-instruction") {
                 throw new Error("Invalid instruction summary representative.");
               }
-              yield record7;
+              yield record8;
             }
           } finally {
             db.exec("DROP TABLE IF EXISTS temp.runtime_summary_rows");
@@ -30394,8 +30627,8 @@ function* stageSourceExportGroups(database, groups2, complete, signal) {
   let retainedBytes = 0;
   for (const group of groups2) {
     signal?.throwIfAborted();
-    for (const record7 of group) {
-      const { evidence, ...instruction2 } = record7;
+    for (const record8 of group) {
+      const { evidence, ...instruction2 } = record8;
       const key3 = JSON.stringify(evidence);
       let id = evidenceSets.get(key3);
       if (id === void 0) {
@@ -30407,7 +30640,7 @@ function* stageSourceExportGroups(database, groups2, complete, signal) {
         }
         dictionary.run(id, key3);
       }
-      insert.run(record7.fileOffset, record7.id, JSON.stringify([instruction2, id]));
+      insert.run(record8.fileOffset, record8.id, JSON.stringify([instruction2, id]));
     }
     yield group;
   }
@@ -30439,7 +30672,7 @@ function* sourceExportCacheRecords(database) {
   );
   for (const row of database.prepare("SELECT payload FROM query_source_export_rows ORDER BY file_offset,id").iterate()) {
     const value = parseSqlitePayload(row.payload);
-    if (!isUnknownArray3(value) || value.length !== 2 || !isRecord8(value[0]) || typeof value[1] !== "number" || !Number.isSafeInteger(value[1])) {
+    if (!isUnknownArray3(value) || value.length !== 2 || !isRecord9(value[0]) || typeof value[1] !== "number" || !Number.isSafeInteger(value[1])) {
       throw new Error("Invalid cached export instruction.");
     }
     const id = value[1];
@@ -30475,27 +30708,27 @@ var init_sqlite_source_export = __esm({
 });
 
 // packages/disassembler/src/storage/sqlite-source-query.ts
-function isRecord13(value) {
+function isRecord14(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStringArray2(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
-function optionalString(record7, key3) {
-  if (!Object.hasOwn(record7, key3)) {
+function optionalString(record8, key3) {
+  if (!Object.hasOwn(record8, key3)) {
     return void 0;
   }
-  const value = record7[key3];
+  const value = record8[key3];
   if (typeof value !== "string") {
     throw new Error("Invalid source metadata record.");
   }
   return value;
 }
-function optionalNumber(record7, key3) {
-  if (!Object.hasOwn(record7, key3)) {
+function optionalNumber(record8, key3) {
+  if (!Object.hasOwn(record8, key3)) {
     return void 0;
   }
-  const value = record7[key3];
+  const value = record8[key3];
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new Error("Invalid source metadata record.");
   }
@@ -30549,7 +30782,7 @@ var init_sqlite_source_query = __esm({
         for (let rows2 = pending.all(table); rows2.length; rows2 = pending.all(table)) {
           for (const row of rows2) {
             const parsed = JSON.parse(decodeSqlitePayload(row.payload));
-            if (!isRecord13(parsed) || !isStringArray2(parsed.evidence)) {
+            if (!isRecord14(parsed) || !isStringArray2(parsed.evidence)) {
               throw new Error("Invalid source metadata evidence membership.");
             }
             remove.run(table, row.id);
@@ -30610,21 +30843,21 @@ var init_sqlite_source_query = __esm({
         return db.prepare(`${sourceEvidence} SELECT r.*,p.value AS id_prefix,e.value AS evidence
       FROM runtime r JOIN runtime_prefixes p ON p.id=r.prefix_id JOIN runtime_evidence e ON e.id=r.evidence_id
       WHERE ${sourceRuntime} AND r.kind='runtime-memory-access' ORDER BY r.evidence_id,r.kind,r.rowid LIMIT 200 OFFSET ?`).all(evidence, offset).map((row) => {
-          const record7 = runtimeFromRow(row);
-          if (record7.kind !== "runtime-memory-access") {
+          const record8 = runtimeFromRow(row);
+          if (record8.kind !== "runtime-memory-access") {
             throw new Error("Invalid memory observation.");
           }
-          const detail = `${record7.access} ${record7.accessedAddressSpace}:${hex2(record7.accessedAddress)} \xB7 ${record7.width} byte(s) \xB7 ${record7.count} observations`;
+          const detail = `${record8.access} ${record8.accessedAddressSpace}:${hex2(record8.accessedAddress)} \xB7 ${record8.width} byte(s) \xB7 ${record8.count} observations`;
           return {
-            id: record7.id,
-            label: hex2(record7.instructionAddress),
+            id: record8.id,
+            label: hex2(record8.instructionAddress),
             description: detail,
             detail,
-            architecture: record7.architecture,
-            addressSpace: record7.instructionAddressSpace,
-            address: record7.instructionAddress,
+            architecture: record8.architecture,
+            addressSpace: record8.instructionAddressSpace,
+            address: record8.instructionAddress,
             outputOffsets: [],
-            recordIds: [record7.id]
+            recordIds: [record8.id]
           };
         });
       }
@@ -30634,7 +30867,7 @@ var init_sqlite_source_query = __esm({
       return db.prepare(`WITH matched AS (SELECT DISTINCT collection,id FROM query_source_links WHERE evidence_id IN (SELECT value FROM json_each(?)))
     ${select} ORDER BY collection,id LIMIT 200 OFFSET ?`).all(evidence, offset).map((row) => {
         const parsed = JSON.parse(decodeSqlitePayload(row.payload));
-        if (!isRecord13(parsed) || typeof parsed.id !== "string") {
+        if (!isRecord14(parsed) || typeof parsed.id !== "string") {
           throw new Error("Invalid source metadata record.");
         }
         const addressSpace = optionalString(parsed, "addressSpace");
@@ -30856,12 +31089,12 @@ function isByteList2(value) {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
 function isRuntimeState2(value) {
-  return isRecord8(value) && Object.values(value).every(
+  return isRecord9(value) && Object.values(value).every(
     (entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)
   );
 }
 function requireTraceFact(value) {
-  if (!isRecord8(value)) {
+  if (!isRecord9(value)) {
     throw new Error("Invalid indexed trace fact.");
   }
   if (value.kind === "execution" && isFiniteNumber(value.address)) {
@@ -30915,13 +31148,13 @@ function isIndexedExportInstruction(value, spaces, knownEvidence) {
   const evidenceList = value.evidence;
   return typeof value.id === "string" && value.id !== "" && value.kind === "cfg-node" && isSafeInteger6(value.fileOffset) && value.fileOffset >= 0 && typeof addressSpace === "string" && isSafeInteger6(address3) && address3 >= 0 && address3 < (spaces.get(addressSpace) ?? 0) && isSafeInteger6(size) && size >= 1 && isSafeInteger6(opcode) && typeof value.specificationId === "string" && typeof incomingState === "object" && incomingState !== null && Array.isArray(evidenceList) && evidenceList.every((id) => typeof id === "string" && knownEvidence.has(id));
 }
-var import_node_crypto11, import_node_fs6, import_node_path7, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA2, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
+var import_node_crypto12, import_node_fs6, import_node_path8, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA2, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
   "packages/disassembler/src/storage/sqlite-store.ts"() {
     "use strict";
-    import_node_crypto11 = require("node:crypto");
+    import_node_crypto12 = require("node:crypto");
     import_node_fs6 = __toESM(require("node:fs"), 1);
-    import_node_path7 = __toESM(require("node:path"), 1);
+    import_node_path8 = __toESM(require("node:path"), 1);
     import_node_sqlite2 = require("node:sqlite");
     init_canonical_json();
     init_analysis_sources();
@@ -31042,7 +31275,7 @@ PRAGMA user_version=4;
       if (relative4 !== ANALYSIS_PROJECT_SQLITE_FILE) {
         throw new Error(`Unsupported analysis sqlite path '${relative4}'.`);
       }
-      return import_node_path7.default.join(directory, relative4);
+      return import_node_path8.default.join(directory, relative4);
     };
     parseRecord = (payload) => parseSqlitePayload(payload);
     sqliteFileIdentity = (file) => {
@@ -31077,8 +31310,8 @@ PRAGMA user_version=4;
        * Opens or creates a project database.
        * Opening validates physical format, not every semantic record, and may create SQLite journal files.
        * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
-       * @param {string} file SQLite path. Parent directory must already exist.
-       * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
+       * @param file SQLite path. Parent directory must already exist.
+       * @param [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
        */
       constructor(file, createSchema = true) {
         if (!createSchema && !import_node_fs6.default.existsSync(file)) {
@@ -31169,9 +31402,9 @@ PRAGMA user_version=4;
       }
       /**
        * Intern exact text with a bounded cache. Callers hold the SQLite writer lock.
-       * @param {string} table One of the two prepared dictionary tables.
-       * @param {string} value Exact prefix or serialized evidence list.
-       * @returns {number} Transactionally created or existing dictionary rowid.
+       * @param table One of the two prepared dictionary tables.
+       * @param value Exact prefix or serialized evidence list.
+       * @returns Transactionally created or existing dictionary rowid.
        */
       #intern(table, value) {
         const key3 = `${table}:${value}`;
@@ -31194,70 +31427,70 @@ PRAGMA user_version=4;
       }
       #insertRecord(kind, value) {
         if (kind === "evidence") {
-          const record7 = requireMetadataRecord(kind, value);
-          this.#insertEvidence.run(record7.id, encodeSqlitePayload(JSON.stringify(record7)));
+          const record8 = requireMetadataRecord(kind, value);
+          this.#insertEvidence.run(record8.id, encodeSqlitePayload(JSON.stringify(record8)));
           return;
         }
         if (kind === "labels") {
-          const record7 = requireMetadataRecord(kind, value);
+          const record8 = requireMetadataRecord(kind, value);
           this.#insertLabel.run(
-            record7.id,
-            record7.addressSpace,
-            record7.address,
-            record7.name,
-            encodeSqlitePayload(JSON.stringify(record7))
+            record8.id,
+            record8.addressSpace,
+            record8.address,
+            record8.name,
+            encodeSqlitePayload(JSON.stringify(record8))
           );
           return;
         }
         if (kind === "comments") {
-          const record7 = requireMetadataRecord(kind, value);
+          const record8 = requireMetadataRecord(kind, value);
           this.#insertComment.run(
-            record7.id,
-            record7.addressSpace,
-            record7.address,
-            encodeSqlitePayload(JSON.stringify(record7))
+            record8.id,
+            record8.addressSpace,
+            record8.address,
+            encodeSqlitePayload(JSON.stringify(record8))
           );
           return;
         }
         if (kind === "regions") {
-          const record7 = requireMetadataRecord(kind, value);
+          const record8 = requireMetadataRecord(kind, value);
           this.#insertRegion.run(
-            record7.id,
-            record7.addressSpace,
-            record7.start,
-            record7.end,
-            encodeSqlitePayload(JSON.stringify(record7))
+            record8.id,
+            record8.addressSpace,
+            record8.start,
+            record8.end,
+            encodeSqlitePayload(JSON.stringify(record8))
           );
           return;
         }
         if (kind === "annotations") {
-          const record7 = requireMetadataRecord(kind, value);
+          const record8 = requireMetadataRecord(kind, value);
           this.#insertAnnotation.run(
-            record7.id,
-            record7.addressSpace,
-            record7.start,
-            record7.end,
-            record7.classification,
-            encodeSqlitePayload(JSON.stringify(record7))
+            record8.id,
+            record8.addressSpace,
+            record8.start,
+            record8.end,
+            record8.classification,
+            encodeSqlitePayload(JSON.stringify(record8))
           );
           return;
         }
         if (kind === "analysis") {
-          const record7 = requireMetadataRecord(kind, value);
-          const located = analysisAddress(record7);
+          const record8 = requireMetadataRecord(kind, value);
+          const located = analysisAddress(record8);
           this.#insertAnalysis.run(
-            record7.id,
-            record7.kind,
+            record8.id,
+            record8.kind,
             located.addressSpace,
             located.address,
-            encodeSqlitePayload(JSON.stringify(record7))
+            encodeSqlitePayload(JSON.stringify(record8))
           );
           return;
         }
         if (kind === "imports") {
-          const record7 = requireMetadataRecord(kind, value);
-          this.#insertImport.run(record7.id, encodeSqlitePayload(JSON.stringify(record7)));
-          this.recordCaptureReceipt(record7);
+          const record8 = requireMetadataRecord(kind, value);
+          this.#insertImport.run(record8.id, encodeSqlitePayload(JSON.stringify(record8)));
+          this.recordCaptureReceipt(record8);
           return;
         }
         if (!isRuntimeEvidenceRecord(value)) {
@@ -31271,9 +31504,9 @@ PRAGMA user_version=4;
        * Throwing rolls back records and manifest changes. Promise/thenable results are rejected. Perform
        * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
        * the manifest themselves when changing semantic records. Prefer the commitAnalysisProject APIs.
-       * @param {Function} action Synchronous work. Cursors must be consumed before returning.
-       * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
-       * @returns {T} Callback result after a successful commit.
+       * @param action Synchronous work. Cursors must be consumed before returning.
+       * @param [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
+       * @returns Callback result after a successful commit.
        */
       transaction(action, write = true) {
         if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
@@ -31311,10 +31544,10 @@ PRAGMA user_version=4;
       /**
        * Index trace chunks in temporary or privately staged disk counters. This transaction never
        * reads or writes the destination project, allowing other writers during asynchronous parsing.
-       * @param {Function} action Async parser using only the supplied counter index.
-       * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-       * @param {SqliteTraceStage} stage Optional private counters retained across publication failures.
-       * @returns {Promise} Parser result after counters commit. Staged counters survive connection close.
+       * @param action Async parser using only the supplied counter index.
+       * @param metrics Optional caller-owned diagnostic counters.
+       * @param stage Optional private counters retained across publication failures.
+       * @returns Parser result after counters commit. Staged counters survive connection close.
        */
       async indexTrace(action, metrics, stage) {
         const database = stage?.database ?? this.#database;
@@ -31418,10 +31651,11 @@ PRAGMA user_version=4;
           throw new Error("Analysis mutation requires a transaction.");
         }
       }
-      /** Apply a selected metadata edit by stable ID. Omitted records are never deleted.
+      /**
+       * Apply a selected metadata edit by stable ID. Omitted records are never deleted.
        * Validation and optimistic revision checks belong to the publication API.
-       * @param {AnalysisProjectShards} before Original selected view.
-       * @param {AnalysisProjectShards} after Edited selected view.
+       * @param before Original selected view.
+       * @param after Edited selected view.
        */
       patchMetadata(before, after) {
         this.#requireTransaction();
@@ -31434,13 +31668,13 @@ PRAGMA user_version=4;
           "evidence",
           "imports"
         ]) {
-          const previous = new Map(before[kind].map((record7) => [record7.id, record7]));
-          const next = new Map(after[kind].map((record7) => [record7.id, record7]));
+          const previous = new Map(before[kind].map((record8) => [record8.id, record8]));
+          const next = new Map(after[kind].map((record8) => [record8.id, record8]));
           const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
           const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
           for (const id of /* @__PURE__ */ new Set([...previous.keys(), ...next.keys()])) {
-            const prior = previous.get(id), record7 = next.get(id);
-            if (canonicalEquals(prior, record7)) {
+            const prior = previous.get(id), record8 = next.get(id);
+            if (canonicalEquals(prior, record8)) {
               continue;
             }
             const stored = find.get(id);
@@ -31448,13 +31682,13 @@ PRAGMA user_version=4;
               throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
             }
             remove.run(id);
-            if (record7) {
-              this.#insertRecord(kind, record7);
+            if (record8) {
+              this.#insertRecord(kind, record8);
             }
           }
         }
-        const retained = new Set(after.evidence.map((record7) => record7.id));
-        const removed = before.evidence.filter((record7) => !retained.has(record7.id)).map((record7) => record7.id);
+        const retained = new Set(after.evidence.map((record8) => record8.id));
+        const removed = before.evidence.filter((record8) => !retained.has(record8.id)).map((record8) => record8.id);
         if (removed.length) {
           const ids = JSON.stringify(removed);
           for (const table of ["analysis", "annotations", "labels", "comments", "regions"]) {
@@ -31491,7 +31725,7 @@ PRAGMA user_version=4;
         projectResearchInputs(
           this.#database,
           snapshot,
-          (kind, record7) => this.#insertRecord(kind, record7)
+          (kind, record8) => this.#insertRecord(kind, record8)
         );
         this.validateView(
           view ?? {
@@ -31539,7 +31773,7 @@ PRAGMA user_version=4;
       suspendResearchInputs() {
         this.#requireTransaction();
         this.#researchSuspended = true;
-        clearResearchProjection(this.#database, (kind, record7) => this.#insertRecord(kind, record7));
+        clearResearchProjection(this.#database, (kind, record8) => this.#insertRecord(kind, record8));
       }
       /**
        * Publish analyzer output computed from the projected view without adopting Git decisions as
@@ -31564,7 +31798,7 @@ PRAGMA user_version=4;
           const protectedIds = new Set(
             snapshot.decisions.filter((decision) => decision.collection === collection).map((decision) => decision.id)
           );
-          const records3 = (updates[collection] ?? []).filter((record7) => !protectedIds.has(record7.id));
+          const records3 = (updates[collection] ?? []).filter((record8) => !protectedIds.has(record8.id));
           const current = [...records3];
           for (const decision of snapshot.decisions) {
             if (decision.collection === collection && decision.value !== null) {
@@ -31609,7 +31843,7 @@ PRAGMA user_version=4;
        * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
        * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
        * Semantic validation belongs to the project publication API. This method must run in its transaction.
-       * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
+       * @param shards Validated replacements for explicitly named tables.
        */
       replaceTables(shards) {
         this.#requireTransaction();
@@ -31627,8 +31861,8 @@ PRAGMA user_version=4;
           }
           const records3 = shards[kind] ?? [];
           if (!this.#database.prepare(`SELECT 1 FROM ${kind} LIMIT 1`).get()) {
-            for (const record7 of records3) {
-              this.#insertRecord(kind, record7);
+            for (const record8 of records3) {
+              this.#insertRecord(kind, record8);
             }
             continue;
           }
@@ -31647,7 +31881,7 @@ PRAGMA user_version=4;
               );
               remember.set(batch.length, insert);
             }
-            insert.run(...batch.flatMap((record7, index) => [record7.id, offset + index]));
+            insert.run(...batch.flatMap((record8, index) => [record8.id, offset + index]));
           }
           const unchanged = [];
           const deleted = [];
@@ -31677,9 +31911,9 @@ PRAGMA user_version=4;
             if (row.ordinal === null) {
               deleted.push(id);
             } else {
-              const record7 = records3[Number(row.ordinal)];
+              const record8 = records3[Number(row.ordinal)];
               const json = decodeSqlitePayload(row.payload);
-              if (json === JSON.stringify(record7) || canonicalEquals(JSON.parse(json), record7)) {
+              if (json === JSON.stringify(record8) || canonicalEquals(JSON.parse(json), record8)) {
                 unchanged.push(id);
               } else {
                 deleted.push(id);
@@ -31704,7 +31938,7 @@ PRAGMA user_version=4;
       }
       /**
        * Replace runtime by interned external identities, including virtual paired-state records.
-       * @param {Array} records Complete semantic runtime replacement. Duplicate IDs remain errors.
+       * @param records Complete semantic runtime replacement. Duplicate IDs remain errors.
        */
       #replaceRuntime(records3) {
         this.#database.exec(
@@ -31714,19 +31948,19 @@ PRAGMA user_version=4;
           "INSERT OR IGNORE INTO temp.replacement_runtime_ids VALUES (?,?)"
         );
         const remove = this.#database.prepare("DELETE FROM runtime WHERE rowid=?");
-        for (const record7 of records3) {
-          const identity2 = sqliteRuntimeIdentity(record7.id);
+        for (const record8 of records3) {
+          const identity2 = sqliteRuntimeIdentity(record8.id);
           if (!remember.run(identity2.prefix, identity2.suffix).changes) {
-            throw new Error(`Duplicate runtime record ID '${record7.id}'.`);
+            throw new Error(`Duplicate runtime record ID '${record8.id}'.`);
           }
           const prior = this.#findRuntime.get(identity2.prefix, identity2.suffix);
-          if (prior && canonicalEquals(runtimeFromRow(prior), record7)) {
+          if (prior && canonicalEquals(runtimeFromRow(prior), record8)) {
             continue;
           }
           if (prior) {
             remove.run(prior.storage_rowid);
           }
-          this.#insertRecord("runtime", record7);
+          this.#insertRecord("runtime", record8);
         }
         this.#database.exec(`DELETE FROM runtime WHERE NOT EXISTS (
       SELECT 1 FROM temp.replacement_runtime_ids keep JOIN runtime_prefixes p ON p.value=keep.prefix
@@ -31735,30 +31969,31 @@ PRAGMA user_version=4;
       /**
        * Insert a content-addressed runtime fact once. An ID collision with different content is an
        * error, never a silent no-op. Count values are already aggregated within the source capture.
-       * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
-       * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
+       * @param record Fully aggregated fact with a source-derived stable ID.
+       * @returns True when inserted. Identical facts return false and conflicting facts throw.
        */
-      insertRuntime(record7) {
+      insertRuntime(record8) {
         this.#requireTransaction();
-        const identity2 = sqliteRuntimeIdentity(record7.id);
+        const identity2 = sqliteRuntimeIdentity(record8.id);
         const prior = this.#findRuntime.get(identity2.prefix, identity2.suffix);
         if (prior) {
-          if (!canonicalEquals(runtimeFromRow(prior), record7)) {
+          if (!canonicalEquals(runtimeFromRow(prior), record8)) {
             throw new Error(
-              `Runtime record '${record7.id}' has changed content for a stable imported ID.`
+              `Runtime record '${record8.id}' has changed content for a stable imported ID.`
             );
           }
           return false;
         }
-        this.#insertRecord("runtime", record7);
+        this.#insertRecord("runtime", record8);
         return true;
       }
-      /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
+      /**
+       * Prepare a unique-record batch in one source namespace, inside the publication transaction.
        * New namespaces need no per-record existence query. SQL uniqueness still rejects repeated IDs.
        * Existing/partially pruned sources use full idempotency and collision checks for every record.
        * The callback must not escape its transaction. Any insertion error must abort the whole batch.
-       * @param {string} prefix Exact ID prefix including its final colon.
-       * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
+       * @param prefix Exact ID prefix including its final colon.
+       * @returns Transaction-scoped inserter for validated records with unique suffixes.
        */
       runtimeBatchInserter(prefix) {
         this.#requireTransaction();
@@ -31768,15 +32003,15 @@ PRAGMA user_version=4;
         const existing = this.#database.prepare(
           "SELECT 1 FROM runtime WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) LIMIT 1"
         ).get(prefix);
-        return (record7) => {
+        return (record8) => {
           this.#requireTransaction();
-          if (!record7.id.startsWith(prefix) || record7.id.lastIndexOf(":") !== prefix.length - 1) {
+          if (!record8.id.startsWith(prefix) || record8.id.lastIndexOf(":") !== prefix.length - 1) {
             throw new Error("Runtime record escaped its batch prefix.");
           }
           if (existing) {
-            return this.insertRuntime(record7);
+            return this.insertRuntime(record8);
           }
-          this.#insertRecord("runtime", record7);
+          this.#insertRecord("runtime", record8);
           return true;
         };
       }
@@ -31806,9 +32041,9 @@ PRAGMA user_version=4;
             (table, value) => this.#intern(table, value)
           );
           return {
-            add: (record7) => {
+            add: (record8) => {
               this.#requireTransaction();
-              return batch.add(record7);
+              return batch.add(record8);
             },
             finish: () => {
               this.#requireTransaction();
@@ -31818,13 +32053,13 @@ PRAGMA user_version=4;
         }
         let finished = false;
         return {
-          add: (record7) => {
+          add: (record8) => {
             this.#requireTransaction();
             if (finished) {
               throw new Error("Runtime trace batch is no longer active.");
             }
-            assertTraceRecordNamespace(record7, sourceSha256);
-            return this.insertRuntime(record7);
+            assertTraceRecordNamespace(record8, sourceSha256);
+            return this.insertRuntime(record8);
           },
           finish: () => {
             this.#requireTransaction();
@@ -31851,8 +32086,8 @@ PRAGMA user_version=4;
       }
       /**
        * Store manifest and counter in the same transaction as the changed records.
-       * @param {object} manifest Semantic project identity for this publication.
-       * @returns {AnalysisProjectManifest} Manifest containing the incremented counter.
+       * @param manifest Semantic project identity for this publication.
+       * @returns Manifest containing the incremented counter.
        */
       publishManifest(manifest) {
         this.#requireTransaction();
@@ -31870,7 +32105,7 @@ PRAGMA user_version=4;
       /**
        * Current publication counter, or zero before initial publication. It is not a schema version.
        * Read it with related records inside transaction to retain one consistent snapshot.
-       * @returns {number} Stored revision.
+       * @returns Stored revision.
        */
       revision() {
         const row = this.#database.prepare("SELECT v FROM meta WHERE k='revision'").get();
@@ -31879,7 +32114,7 @@ PRAGMA user_version=4;
       /**
        * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
        * Use a transaction when combining it with other reads. This does not validate the entire project.
-       * @returns {AnalysisProjectManifest} Pointer manifest.
+       * @returns Pointer manifest.
        */
       manifest() {
         const row = this.#database.prepare("SELECT v FROM meta WHERE k='manifest'").get();
@@ -31887,7 +32122,7 @@ PRAGMA user_version=4;
           throw new Error("Sqlite analysis project is missing its stored manifest.");
         }
         const parsed = parseRecord(row.v);
-        if (!isRecord8(parsed)) {
+        if (!isRecord9(parsed)) {
           throw new Error("Sqlite analysis project is missing its stored manifest.");
         }
         validateAnalysisProjectManifest(parsed);
@@ -31895,8 +32130,8 @@ PRAGMA user_version=4;
       }
       /**
        * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
-       * @param {Array} kinds Runtime discriminators to include. Empty selects nothing.
-       * @returns {IterableIterator} Cursor consumed within the owning read transaction.
+       * @param kinds Runtime discriminators to include. Empty selects nothing.
+       * @returns Cursor consumed within the owning read transaction.
        * @yields {RuntimeEvidenceRecord} One matching decoded fact.
        */
       *runtimeRecordsByKinds(kinds) {
@@ -31913,7 +32148,7 @@ PRAGMA user_version=4;
       /**
        * Stream runtime facts without retaining the complete table. Consume before the owning transaction
        * returns or the connection closes. An escaped iterator does not preserve its original snapshot.
-       * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
+       * @returns One reconstructed runtime row at a time.
        * @yields {RuntimeEvidenceRecord} One runtime fact.
        */
       *runtimeRecords() {
@@ -31938,11 +32173,11 @@ PRAGMA user_version=4;
         }
         const records3 = [];
         for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`).iterate()) {
-          const record7 = requireMetadataRecord(kind, parseRecord(row.payload));
-          if ("evidence" in record7) {
-            Object.assign(record7, { evidence: this.#evidencePool.intern(record7.evidence) });
+          const record8 = requireMetadataRecord(kind, parseRecord(row.payload));
+          if ("evidence" in record8) {
+            Object.assign(record8, { evidence: this.#evidencePool.intern(record8.evidence) });
           }
-          records3.push(record7);
+          records3.push(record8);
         }
         return records3;
       }
@@ -31965,16 +32200,18 @@ PRAGMA user_version=4;
         );
         return { records: records3, ...rows2.length > limit ? { next: String(rows2[limit - 1].id) } : {} };
       }
-      /** Validate a query view against this read snapshot, including every included provenance reference.
-       * @param {AnalysisProjectShards} shards Selected records, with unused collections empty.
+      /**
+       * Validate a query view against this read snapshot, including every included provenance reference.
+       * @param shards Selected records, with unused collections empty.
        */
       validateView(shards) {
         validateLoadedShards(shards, this.manifest());
       }
-      /** Merge an already-parsed offline batch by stable IDs without loading saved runtime history.
+      /**
+       * Merge an already-parsed offline batch by stable IDs without loading saved runtime history.
        * The caller owns revision checking and publication in the surrounding writer transaction.
-       * @param {RuntimeEvidenceBatch} batch Imported facts and metadata.
-       * @returns {object} Whether anything changed and per-collection additions/updates.
+       * @param batch Imported facts and metadata.
+       * @returns Whether anything changed and per-collection additions/updates.
        */
       mergeEvidenceBatch(batch) {
         this.#requireTransaction();
@@ -31988,15 +32225,15 @@ PRAGMA user_version=4;
           imports: this.loadTable("imports"),
           runtime: []
         };
-        const ids = JSON.stringify((batch.analysis ?? []).map((record7) => record7.id));
+        const ids = JSON.stringify((batch.analysis ?? []).map((record8) => record8.id));
         const analysis = this.#database.prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))").all(ids).map((row) => requireMetadataRecord("analysis", parseRecord(row.payload)));
         const before = { ...base, analysis };
         const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
         this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
         this.patchMetadata(before, merged.shards);
         let runtime = 0;
-        for (const record7 of batch.runtime ?? []) {
-          if (this.insertRuntime(record7)) {
+        for (const record8 of batch.runtime ?? []) {
+          if (this.insertRuntime(record8)) {
             runtime++;
           }
         }
@@ -32006,9 +32243,10 @@ PRAGMA user_version=4;
           updated: merged.updated
         };
       }
-      /** Produce an explicit complete evidence report one qualified PC at a time.
+      /**
+       * Produce an explicit complete evidence report one qualified PC at a time.
        * Only report output accumulates. Unused instruction/memory histories and CFG contexts are never loaded.
-       * @returns {object} Runtime record count, conflicts, and metadata explanations.
+       * @returns Runtime record count, conflicts, and metadata explanations.
        */
       inspectEvidence() {
         const shards = {
@@ -32044,9 +32282,10 @@ PRAGMA user_version=4;
           explanations: inspectRuntimeEvidence(shards).explanations
         };
       }
-      /** Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
-       * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
-       * @returns {AnalysisProjectShards} Bounded choice view and complete small provenance catalog.
+      /**
+       * Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
+       * @param [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
+       * @returns Bounded choice view and complete small provenance catalog.
        */
       evidenceChoices(selected) {
         const shards = {
@@ -32098,11 +32337,12 @@ PRAGMA user_version=4;
         }
         return shards;
       }
-      /** Find candidate evidence IDs still owned by retained runtime observations.
+      /**
+       * Find candidate evidence IDs still owned by retained runtime observations.
        * Reads the small provenance dictionary and physical observation rows without decoding histories.
        * Caller holds the same read snapshot as the metadata being used for a replacement publication.
-       * @param {readonly string[]} ids Evidence candidates; empty input performs no query.
-       * @returns {string[]} Referenced candidate IDs in stable order, bounded by the input size.
+       * @param ids Evidence candidates; empty input performs no query.
+       * @returns Referenced candidate IDs in stable order, bounded by the input size.
        */
       runtimeEvidenceReferences(ids) {
         if (ids.length === 0) {
@@ -32114,10 +32354,11 @@ PRAGMA user_version=4;
         AND EXISTS (SELECT 1 FROM runtime_observations WHERE evidence_id=sets.id)
       ORDER BY ref.value`).all(JSON.stringify(ids)).map((row) => String(row.id));
       }
-      /** Explain one record with an exact reference count and a bounded reverse-reference preview.
-       * @param {ShardKind} kind Selected collection.
-       * @param {string} id Stable semantic record ID.
-       * @returns {ProjectEvidenceExplanation} Full direct provenance/conflicts, at most 200 reverse links.
+      /**
+       * Explain one record with an exact reference count and a bounded reverse-reference preview.
+       * @param kind Selected collection.
+       * @param id Stable semantic record ID.
+       * @returns Full direct provenance/conflicts, at most 200 reverse links.
        */
       explainEvidence(kind, id) {
         const signature = "1";
@@ -32148,12 +32389,12 @@ PRAGMA user_version=4;
             analysis: [
               ...shards.analysis,
               ...this.analysisByKinds(["conflict"]).filter(
-                (record7) => !shards.analysis.some((other) => other.id === record7.id)
+                (record8) => !shards.analysis.some((other) => other.id === record8.id)
               )
             ]
           };
           const base = explainProjectEvidence(view, kind, id);
-          const evidenceIds = JSON.stringify(base.evidence.map((record7) => record7.id));
+          const evidenceIds = JSON.stringify(base.evidence.map((record8) => record8.id));
           const metadata = "SELECT collection||':'||id AS reference FROM query_evidence_links WHERE evidence IN (SELECT value FROM json_each(?)) GROUP BY collection,id";
           const runtime = "SELECT 'runtime:'||p.value||CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END AS reference FROM runtime_evidence e JOIN runtime r ON r.evidence_id=e.id JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE EXISTS(SELECT 1 FROM json_each(e.value) value WHERE value.value IN (SELECT value FROM json_each(?)))";
           const metadataRows = this.#database.prepare(`${metadata} ORDER BY reference LIMIT 200`).all(evidenceIds);
@@ -32170,8 +32411,9 @@ PRAGMA user_version=4;
           return { ...base, referencedBy, referencedByTotal };
         }, false);
       }
-      /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
-       * @returns {object} Functions, calls, unresolved sites, and ownership.
+      /**
+       * Persisted call graph plus current labels, without retaining CFG contexts between requests.
+       * @returns Functions, calls, unresolved sites, and ownership.
        */
       callGraph() {
         this.assertCurrentAnalysis();
@@ -32212,15 +32454,16 @@ PRAGMA user_version=4;
           )
         };
       }
-      /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
+      /**
+       * Cache a compact target-specific result. Callers declare every persisted input it consumes.
        * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
        * Concurrent input changes discard cache publication. Results still belong to one read snapshot.
-       * @param {string} key Internal stable query name.
-       * @param {string} signature Layout/configuration fingerprint.
-       * @param {readonly ShardKind[]} dependencies Source collections.
-       * @param {Function} compute Synchronous reader. Must not open another transaction.
-       * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
-       * @returns {T} Current projected value.
+       * @param key Internal stable query name.
+       * @param signature Layout/configuration fingerprint.
+       * @param dependencies Source collections.
+       * @param compute Synchronous reader. Must not open another transaction.
+       * @param [publish] Optional short SQL publication for derived rows built in temporary tables.
+       * @returns Current projected value.
        */
       cachedProjection(key3, signature, dependencies, compute, publish2, restore) {
         const cached = readQueryCache(this.#database, key3, signature);
@@ -32230,7 +32473,7 @@ PRAGMA user_version=4;
           }
           return restore(cached);
         }
-        const pending = `pending:${(0, import_node_crypto11.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto12.randomUUID)()}`;
         this.transaction(() => {
           installQueryCache(this.#database, key3, dependencies);
           writeQueryCache(this.#database, key3, pending, null);
@@ -32244,11 +32487,12 @@ PRAGMA user_version=4;
         });
         return result;
       }
-      /** Select a bounded CFG navigation window through its address index.
-       * @param {string} space Exact logical address space.
-       * @param {number} address Selected PC.
-       * @param {readonly string[]} architectures Optional specification prefixes.
-       * @returns {AnalysisRecord[]} Four preceding and 28 following variants, in address order.
+      /**
+       * Select a bounded CFG navigation window through its address index.
+       * @param space Exact logical address space.
+       * @param address Selected PC.
+       * @param architectures Optional specification prefixes.
+       * @returns Four preceding and 28 following variants, in address order.
        */
       navigationNodes(space, address3, architectures) {
         const matches = architectures.length ? " AND EXISTS(SELECT 1 FROM json_each(?) h WHERE json_extract(analysis_json(payload),'$.specificationId')=h.value OR substr(json_extract(analysis_json(payload),'$.specificationId'),1,length(h.value)+1)=h.value||'.')" : "";
@@ -32266,19 +32510,21 @@ PRAGMA user_version=4;
           (row) => requireMetadataRecord("analysis", parseRecord(row.payload))
         );
       }
-      /** Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
-       * @returns {Array} Half-open ROM-content intervals.
+      /**
+       * Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
+       * @returns Half-open ROM-content intervals.
        */
       codeRanges() {
         return this.#database.prepare(
           "SELECT query_file_offset AS start,MAX(query_file_offset+query_size) AS end FROM analysis INDEXED BY query_instruction_ranges WHERE kind='cfg-node' AND query_file_offset IS NOT NULL GROUP BY query_file_offset"
         ).all().map((row) => ({ start: Number(row.start), end: Number(row.end) }));
       }
-      /** Select processor MMIO observations before decoding payloads.
-       * @param {string} architecture Exact runtime architecture.
-       * @param {string} space Instruction and accessed logical space.
-       * @param {readonly number[]} addresses Exact hardware addresses, including target-approved mirrors.
-       * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations. Counts/provenance stay exact.
+      /**
+       * Select processor MMIO observations before decoding payloads.
+       * @param architecture Exact runtime architecture.
+       * @param space Instruction and accessed logical space.
+       * @param addresses Exact hardware addresses, including target-approved mirrors.
+       * @returns SQL-grouped observations. Counts/provenance stay exact.
        * @yields {RuntimeEvidenceRecord} One role-relevant access variant.
        */
       *runtimeMemoryAtAddresses(architecture, space, addresses) {
@@ -32292,16 +32538,17 @@ PRAGMA user_version=4;
           yield runtimeFromRow({ ...row, count: row.total });
         }
       }
-      /** Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
+      /**
+       * Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
        * The signature includes the ordered state fields and architecture. Aliases remain distinct so
        * the target decoder retains its original precedence and validation rules.
-       * @param {string} architecture Exact instruction architecture.
-       * @param {string} space Exact instruction address space.
-       * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
-       * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
-       * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
-       * @param {Function} [onReadProgress] Representatives staged in storage order; throwing aborts the cursor.
-       * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
+       * @param architecture Exact instruction architecture.
+       * @param space Exact instruction address space.
+       * @param stateFields Only fields the target decoder consumes, including aliases.
+       * @param masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+       * @param [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
+       * @param [onReadProgress] Representatives staged in storage order; throwing aborts the cursor.
+       * @returns SQL cursor over compact variants with exact per-evidence counts.
        * Preparation precedes the consuming read transaction. Standalone iteration owns a snapshot;
        * close a partially consumed cursor to release it.
        */
@@ -32318,12 +32565,13 @@ PRAGMA user_version=4;
           () => this.#clearDictionaryCache()
         );
       }
-      /** Exact execution seed totals grouped by PC, without decoding execution payloads.
+      /**
+       * Exact execution seed totals grouped by PC, without decoding execution payloads.
        * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
        * storage. Static seed selection needs their union, not millions of duplicate PC records.
-       * @param {string} architecture Target processor.
-       * @param {string} space Logical CPU address space.
-       * @returns {RuntimeEvidenceRecord[]} Execution facts reduced to the fields used for seed selection.
+       * @param architecture Target processor.
+       * @param space Logical CPU address space.
+       * @returns Execution facts reduced to the fields used for seed selection.
        */
       runtimeExecutionSeeds(architecture, space) {
         const seeds = /* @__PURE__ */ new Map();
@@ -32371,8 +32619,9 @@ PRAGMA user_version=4;
           this.transaction(() => prepareSourceQueries(this.#database));
         }
       }
-      /** Validated source identities from small catalog tables in the caller's read snapshot.
-       * @returns {object} Manifest and sources ordered by their most recent successful import.
+      /**
+       * Validated source identities from small catalog tables in the caller's read snapshot.
+       * @returns Manifest and sources ordered by their most recent successful import.
        */
       sourceCatalog() {
         const manifest = this.manifest();
@@ -32392,9 +32641,10 @@ PRAGMA user_version=4;
         );
         return { manifest, sources: buildAnalysisSourceCatalog(shards, importTimes) };
       }
-      /** Exact SQL counts for a catalog source. No baseline or inferred static execution.
-       * @param {string} sourceId Catalog source ID.
-       * @returns {object} Manifest and source counts.
+      /**
+       * Exact SQL counts for a catalog source. No baseline or inferred static execution.
+       * @param sourceId Catalog source ID.
+       * @returns Manifest and source counts.
        */
       sourceSummary(sourceId) {
         const { manifest, sources } = this.sourceCatalog();
@@ -32404,11 +32654,12 @@ PRAGMA user_version=4;
         }
         return { manifest, summary: readSourceSummary(this.#database, source) };
       }
-      /** At most 200 SQL-selected contribution rows, decoded within the caller's read transaction.
-       * @param {string} sourceId Catalog source ID.
-       * @param {AnalysisSourceGroup} group Contribution category.
-       * @param {number} offset Nonnegative page offset.
-       * @returns {Array} Bounded source records.
+      /**
+       * At most 200 SQL-selected contribution rows, decoded within the caller's read transaction.
+       * @param sourceId Catalog source ID.
+       * @param group Contribution category.
+       * @param offset Nonnegative page offset.
+       * @returns Bounded source records.
        */
       sourcePage(sourceId, group, offset = 0) {
         const source = this.sourceCatalog().sources.find(({ id }) => id === sourceId);
@@ -32419,7 +32670,7 @@ PRAGMA user_version=4;
       }
       /**
        * Read names, comments and provenance for editing without materializing instruction variants.
-       * @returns {object} Validated editing metadata from the caller's read transaction.
+       * @returns Validated editing metadata from the caller's read transaction.
        */
       annotationEditView() {
         const manifest = this.manifest();
@@ -32436,8 +32687,9 @@ PRAGMA user_version=4;
         validateLoadedShards(shards, manifest);
         return { manifest, shards };
       }
-      /** Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
-       * @returns {object} Validated manifest, metadata, and an empty runtime collection.
+      /**
+       * Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
+       * @returns Validated manifest, metadata, and an empty runtime collection.
        */
       sourceExportView() {
         this.assertCurrentAnalysis();
@@ -32499,7 +32751,7 @@ PRAGMA user_version=4;
           }
           return result;
         }
-        const pending = `pending:${(0, import_node_crypto11.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto12.randomUUID)()}`;
         this.transaction(() => {
           installQueryCache(this.#database, SOURCE_EXPORT_CACHE.key, ["analysis", "evidence"]);
           writeQueryCache(this.#database, SOURCE_EXPORT_CACHE.key, pending, null);
@@ -32544,7 +32796,7 @@ PRAGMA user_version=4;
       /**
        * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
        * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
-       * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
+       * @returns All variants at each explicit output offset.
        * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
        */
       *instructionExportGroups() {
@@ -32558,16 +32810,16 @@ PRAGMA user_version=4;
         let previous;
         let group = [];
         const records3 = sourceExportCacheReady(this.#database) ? sourceExportCacheRecords(this.#database) : uncachedSourceExportRecords(this.#database);
-        for (const record7 of records3) {
-          if (!isIndexedExportInstruction(record7, spaces, evidence)) {
+        for (const record8 of records3) {
+          if (!isIndexedExportInstruction(record8, spaces, evidence)) {
             throw new Error("Invalid indexed export instruction or missing provenance.");
           }
-          const offset = record7.fileOffset;
+          const offset = record8.fileOffset;
           if (previous !== void 0 && previous !== offset) {
             yield group;
             group = [];
           }
-          group.push(record7);
+          group.push(record8);
           previous = offset;
         }
         if (group.length) {
@@ -32576,8 +32828,8 @@ PRAGMA user_version=4;
       }
       /**
        * Read and validate only the requested instruction metadata and bounded runtime details.
-       * @param {readonly AnnotationQueryRange[]} ranges Exact visible source/debugger coordinates.
-       * @returns {SqliteAnnotationView} Small view. Consume inside the caller's read transaction.
+       * @param ranges Exact visible source/debugger coordinates.
+       * @returns Small view. Consume inside the caller's read transaction.
        */
       instructionAnnotationView(ranges) {
         const manifest = this.manifest();
@@ -32587,16 +32839,16 @@ PRAGMA user_version=4;
       }
       /**
        * Exact viewport counts without materializing the detailed instruction projection.
-       * @param {readonly AnnotationQueryRange[]} ranges Current mapped coordinates, validated by the query.
-       * @returns {readonly InstructionExecutionSummaryRow[]} Bounded locations with exact execution totals.
+       * @param ranges Current mapped coordinates, validated by the query.
+       * @returns Bounded locations with exact execution totals.
        */
       instructionExecutionSummary(ranges) {
         return readInstructionExecutionSummary(this.#database, this.manifest(), ranges);
       }
       /**
        * Read selected metadata kinds through the address index instead of loading the complete CFG.
-       * @param {readonly AnalysisRecord["kind"][]} kinds Analysis discriminators to include.
-       * @returns {AnalysisRecord[]} Matching rows in stable ID order.
+       * @param kinds Analysis discriminators to include.
+       * @returns Matching rows in stable ID order.
        */
       analysisByKinds(kinds) {
         if (!kinds.length) {
@@ -32613,10 +32865,10 @@ PRAGMA user_version=4;
       /**
        * Resolve an edit boundary to representative CFG nodes, one per qualified location.
        * Call after preparing query indexes and consume inside a read transaction.
-       * @param {string} addressSpace Exact debug-map/native address space.
-       * @param {number} address Instruction start in that space.
-       * @param {number} [outputOffset] Optional explicit file offset, never an inferred mapper alias.
-       * @returns {AnalysisProjectShards["analysis"]} Location representatives. State variants need not be loaded to edit a comment.
+       * @param addressSpace Exact debug-map/native address space.
+       * @param address Instruction start in that space.
+       * @param [outputOffset] Optional explicit file offset, never an inferred mapper alias.
+       * @returns Location representatives. State variants need not be loaded to edit a comment.
        */
       annotationNodesAt(addressSpace, address3, outputOffset) {
         const rows2 = this.#database.prepare(`SELECT payload FROM analysis WHERE rowid IN (
@@ -32627,8 +32879,8 @@ PRAGMA user_version=4;
       }
       /**
        * Materialize complete record arrays without semantic validation. Run inside a read transaction.
-       * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
-       * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
+       * @param [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
+       * @returns Decoded record arrays owned by the caller.
        */
       loadShards(runtime = true) {
         return {
@@ -32644,7 +32896,7 @@ PRAGMA user_version=4;
       }
       /**
        * Table counts for reports.
-       * @returns {Readonly<Record<string, number>>} Row counts.
+       * @returns Row counts.
        */
       counts() {
         const tables = [
@@ -32666,7 +32918,7 @@ PRAGMA user_version=4;
       }
       /**
        * Count analysis kinds without inflating or parsing their compressed payloads.
-       * @returns {Readonly<Record<string, number>>} Counts by analysis record discriminator.
+       * @returns Counts by analysis record discriminator.
        */
       analysisCounts() {
         const result = {};
@@ -32677,7 +32929,7 @@ PRAGMA user_version=4;
       }
       /**
        * Summarize per-PC execution facts using stored columns, without reading register history.
-       * @returns {object} Fact count and total observed executions in the owning transaction.
+       * @returns Fact count and total observed executions in the owning transaction.
        */
       runtimeExecutionCounts() {
         const row = this.#database.prepare(
@@ -32688,14 +32940,14 @@ PRAGMA user_version=4;
       /**
        * Atomically refresh the watcher hint after commit. SQLite is authoritative: a failed hint write
        * is reported as a warning, never as a failed import that could cause an unsafe retry.
-       * @param {string} directory Project root for the watcher hint.
+       * @param directory Project root for the watcher hint.
        */
       writePointer(directory) {
-        const temporary = import_node_path7.default.join(directory, `.analysis.json.${(0, import_node_crypto11.randomUUID)()}.tmp`);
+        const temporary = import_node_path8.default.join(directory, `.analysis.json.${(0, import_node_crypto12.randomUUID)()}.tmp`);
         try {
           this.transaction(() => {
             import_node_fs6.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
-            import_node_fs6.default.renameSync(temporary, import_node_path7.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+            import_node_fs6.default.renameSync(temporary, import_node_path8.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
           });
         } catch (error) {
           process.emitWarning(
@@ -32710,7 +32962,7 @@ PRAGMA user_version=4;
       }
       /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
       compact() {
-        const disk = import_node_fs6.default.statfsSync(import_node_path7.default.dirname(this.file));
+        const disk = import_node_fs6.default.statfsSync(import_node_path8.default.dirname(this.file));
         const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count) - Number(this.#database.prepare("PRAGMA freelist_count").get()?.freelist_count);
         const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
         if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
@@ -32751,9 +33003,9 @@ PRAGMA user_version=4;
           SNES_ANALYSIS_STATE_MASKS,
           (processed, total) => onProgress?.(`Grouping ${processed}/${total} instruction observations.`)
         );
-        const staging = import_node_path7.default.join(
-          import_node_path7.default.dirname(this.file),
-          `.analysis-retention-${(0, import_node_crypto11.randomUUID)()}.sqlite`
+        const staging = import_node_path8.default.join(
+          import_node_path8.default.dirname(this.file),
+          `.analysis-retention-${(0, import_node_crypto12.randomUUID)()}.sqlite`
         );
         let target;
         const lifecycle = { attached: false };
@@ -32789,7 +33041,7 @@ PRAGMA user_version=4;
                 }
                 const state = snesAnalysisTraceState(sample.state);
                 retainedSources.add(match[1].slice("runtime:instruction-trace:".length));
-                const identity2 = (0, import_node_crypto11.createHash)("sha256").update(
+                const identity2 = (0, import_node_crypto12.createHash)("sha256").update(
                   JSON.stringify(
                     {
                       address: sample.address,
@@ -32919,15 +33171,17 @@ PRAGMA user_version=4;
           }
         }
       }
-      /** Current persisted policy. Defaults do not write or change the semantic revision.
-       * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
+      /**
+       * Current persisted policy. Defaults do not write or change the semantic revision.
+       * @returns Validated defaults and persisted overrides.
        */
       storagePolicy() {
         return readStoragePolicy(this.#database);
       }
-      /** Update only explicit policy fields in the caller's writer transaction.
-       * @param {Partial<AnalysisStoragePolicy>} patch Explicit limits, in bytes/days/counts.
-       * @returns {AnalysisStoragePolicy} Complete policy saved without changing the edit revision.
+      /**
+       * Update only explicit policy fields in the caller's writer transaction.
+       * @param patch Explicit limits, in bytes/days/counts.
+       * @returns Complete policy saved without changing the edit revision.
        */
       setStoragePolicy(patch) {
         this.#requireTransaction();
@@ -32935,21 +33189,24 @@ PRAGMA user_version=4;
         this.#database.prepare("INSERT OR REPLACE INTO meta VALUES('storage-policy',?)").run(JSON.stringify(policy));
         return policy;
       }
-      /** Storage accounting avoids decoding runtime or analysis payloads.
-       * @returns {object} Physical allocation and logical retention counts.
+      /**
+       * Storage accounting avoids decoding runtime or analysis payloads.
+       * @returns Physical allocation and logical retention counts.
        */
       storageSnapshot() {
         return storageSnapshot(this.#database, this.file);
       }
-      /** Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
-       * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
+      /**
+       * Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
+       * @returns Allocated cache bytes, excluding permanent editor/export indexes.
        */
       storageCacheBytes() {
         return optionalCacheBytes(this.#database);
       }
-      /** Durable receipt lookup survives source-file removal and cache eviction.
-       * @param {string} sha256 Canonical capture identity.
-       * @returns {object | undefined} Retained import identity and counts.
+      /**
+       * Durable receipt lookup survives source-file removal and cache eviction.
+       * @param sha256 Canonical capture identity.
+       * @returns Retained import identity and counts.
        */
       captureReceipt(sha2564) {
         return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha2564);
@@ -32962,8 +33219,9 @@ PRAGMA user_version=4;
       captureCatalog() {
         return this.#database.prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256").all();
       }
-      /** Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
-       * @param {ImportReport} report Successfully validated native trace import.
+      /**
+       * Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
+       * @param report Successfully validated native trace import.
        */
       recordCaptureReceipt(report) {
         this.#requireTransaction();
@@ -32984,8 +33242,9 @@ PRAGMA user_version=4;
           report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0
         );
       }
-      /** Drop disposable projections after publication, then recycle WAL without waiting on active readers.
-       * @returns {object} Cache eviction totals and whether readers delayed WAL truncation.
+      /**
+       * Drop disposable projections after publication, then recycle WAL without waiting on active readers.
+       * @returns Cache eviction totals and whether readers delayed WAL truncation.
        */
       maintainStorage() {
         const caches = this.transaction(() => maintainStorageCaches(this.#database));
@@ -33010,12 +33269,12 @@ PRAGMA user_version=4;
 function isUntrustedManifest(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-var fs7, import_node_path8, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, validateProjectRom, validateAnalysisProject;
+var fs9, import_node_path9, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, validateProjectRom, validateAnalysisProject;
 var init_project_store = __esm({
   "packages/disassembler/src/project/project-store.ts"() {
     "use strict";
-    fs7 = __toESM(require("node:fs"), 1);
-    import_node_path8 = __toESM(require("node:path"), 1);
+    fs9 = __toESM(require("node:fs"), 1);
+    import_node_path9 = __toESM(require("node:path"), 1);
     init_project_types();
     init_project_validation();
     init_sqlite_records();
@@ -33039,7 +33298,7 @@ var init_project_store = __esm({
     openAnalysisProjectStore = (directory) => {
       let pointer;
       try {
-        pointer = fs7.readFileSync(import_node_path8.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8");
+        pointer = fs9.readFileSync(import_node_path9.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8");
       } catch (error) {
         if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") {
           throw error;
@@ -33071,12 +33330,12 @@ var init_project_store = __esm({
           const records3 = [];
           const projection = createProjection?.();
           try {
-            for (const record7 of store.runtimeRecords()) {
-              validate3(record7);
+            for (const record8 of store.runtimeRecords()) {
+              validate3(record8);
               if (projection) {
-                projection.push(record7);
+                projection.push(record8);
               } else {
-                records3.push(record7);
+                records3.push(record8);
               }
             }
             if (!projection) {
@@ -33117,13 +33376,13 @@ var init_project_store = __esm({
 });
 
 // packages/disassembler/src/project/project-transaction.ts
-var import_node_crypto12, fs8, import_node_path9, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
+var import_node_crypto13, fs10, import_node_path10, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
   "packages/disassembler/src/project/project-transaction.ts"() {
     "use strict";
-    import_node_crypto12 = require("node:crypto");
-    fs8 = __toESM(require("node:fs"), 1);
-    import_node_path9 = __toESM(require("node:path"), 1);
+    import_node_crypto13 = require("node:crypto");
+    fs10 = __toESM(require("node:fs"), 1);
+    import_node_path10 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_project_types();
     init_project_validation();
@@ -33146,7 +33405,7 @@ var init_project_transaction = __esm({
     analysisProjectRevision = (manifest) => ({
       format: ANALYSIS_PROJECT_REVISION_FORMAT,
       version: ANALYSIS_PROJECT_REVISION_VERSION,
-      manifestSha256: (0, import_node_crypto12.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+      manifestSha256: (0, import_node_crypto13.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
     });
     assertAnalysisProjectRevision = (store, expected) => {
       const actual = analysisProjectRevision(store.manifest());
@@ -33174,9 +33433,9 @@ var init_project_transaction = __esm({
     });
     publish = (directory, project, expected, updates = project.shards) => {
       prepareAnalysisProjectTransaction(directory, project);
-      fs8.mkdirSync(directory, { recursive: true });
-      const exists = fs8.existsSync(import_node_path9.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
-      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path9.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+      fs10.mkdirSync(directory, { recursive: true });
+      const exists = fs10.existsSync(import_node_path10.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path10.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
       try {
         const manifest = store.transaction(() => {
           if (expected) {
@@ -33214,7 +33473,7 @@ var init_project_transaction = __esm({
     compactAnalysisProject = (directory, options = {}) => {
       const store = openAnalysisProjectStore(directory);
       try {
-        const before = fs8.statSync(store.file).size;
+        const before = fs10.statSync(store.file).size;
         if (options.analysisOnly) {
           store.retainSnesAnalysisEvidence(options.onProgress);
           store.writePointer(directory);
@@ -33223,7 +33482,7 @@ var init_project_transaction = __esm({
         return {
           ...committed(store.manifest()),
           maintenance: {
-            removedBytes: Math.max(0, before - fs8.statSync(store.file).size),
+            removedBytes: Math.max(0, before - fs10.statSync(store.file).size),
             warnings: []
           }
         };
@@ -34299,7 +34558,8 @@ var init_capture_file_reader = __esm({
       #buffer = Buffer.alloc(0);
       #start = 0;
       #valid = 0;
-      /** Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
+      /**
+       * Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
        * The cap amortizes small metadata reads without loading an entire archive.
        */
       constructor(read2, windowBytes = 1048576) {
@@ -34309,12 +34569,13 @@ var init_capture_file_reader = __esm({
         this.#read = read2;
         this.#windowBytes = windowBytes;
       }
-      /** Read one validated component (at most 256 KiB), bounded by a snapshot or
+      /**
+       * Read one validated component (at most 256 KiB), bounded by a snapshot or
        * durable watermark. Short I/O is retried. Premature EOF is always an error.
-       * @param {number} length Component bytes, no larger than the read window.
-       * @param {number} offset Absolute nonnegative file position.
-       * @param {number} limit Exclusive snapshot/durable byte boundary.
-       * @returns {Promise<Buffer>} Owned component bytes, valid across subsequent refills.
+       * @param length Component bytes, no larger than the read window.
+       * @param offset Absolute nonnegative file position.
+       * @param limit Exclusive snapshot/durable byte boundary.
+       * @returns Owned component bytes, valid across subsequent refills.
        */
       async read(length, offset, limit) {
         if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit) {
@@ -34353,11 +34614,11 @@ var init_capture_file_reader = __esm({
 
 // packages/capture/src/capture-file.ts
 function validateCaptureMetadata(m) {
-  if (!isRecord14(m)) {
+  if (!isRecord15(m)) {
     throw new Error("Capture requires a supported CPU scope and exact ROM/producer identity.");
   }
   const producer = m.producer;
-  if (!(m.architecture === "snes.65816" && m.addressSpace === "snes.cpu" || m.architecture === "65xx.2a03" && m.addressSpace === "nes.cpu") || typeof m.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(m.romContentSha256) || m.romFileSha256 !== void 0 && (typeof m.romFileSha256 !== "string" || !/^[\da-f]{64}$/.test(m.romFileSha256)) || !isRecord14(producer) || typeof producer.id !== "string" || !producer.id || typeof producer.revision !== "string" || !producer.revision) {
+  if (!(m.architecture === "snes.65816" && m.addressSpace === "snes.cpu" || m.architecture === "65xx.2a03" && m.addressSpace === "nes.cpu") || typeof m.romContentSha256 !== "string" || !/^[\da-f]{64}$/.test(m.romContentSha256) || m.romFileSha256 !== void 0 && (typeof m.romFileSha256 !== "string" || !/^[\da-f]{64}$/.test(m.romFileSha256)) || !isRecord15(producer) || typeof producer.id !== "string" || !producer.id || typeof producer.revision !== "string" || !producer.revision) {
     throw new Error("Capture requires a supported CPU scope and exact ROM/producer identity.");
   }
 }
@@ -34365,7 +34626,7 @@ function headerAllocationAccepted(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 4718656 && value <= 64 * 1024 * 1024;
 }
 function assertCaptureFileHeader(value) {
-  if (!isRecord14(value)) {
+  if (!isRecord15(value)) {
     throw new Error("Missing capture session header.");
   }
   validateCaptureMetadata(value);
@@ -34375,22 +34636,22 @@ function assertCaptureFileHeader(value) {
     throw new Error("Capture scope and architecture disagree.");
   }
   const clock = value.clock;
-  if (!isRecord14(clock) || clock.id !== (value.architecture === "65xx.2a03" ? "nes.master" : "snes.master") || !captureU64(clock.numerator) || !captureU64(clock.denominator)) {
+  if (!isRecord15(clock) || clock.id !== (value.architecture === "65xx.2a03" ? "nes.master" : "snes.master") || !captureU64(clock.numerator) || !captureU64(clock.denominator)) {
     throw new Error("Invalid session clock domain.");
   }
   if (value.format !== "uttori-ares-capture" || value.version !== 2 || value.ownership !== "durable-prefix" || value.compression !== "none" && value.compression !== "zstd" || value.checksum !== "crc32c" || value.maxChunkBytes !== 262144 || !headerAllocationAccepted(value.allocatedBytes)) {
     throw new Error("Unsupported capture session contract.");
   }
 }
-var import_promises3, import_promises4, isRecord14, consumerRejected, CaptureTruncationError, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition;
+var import_promises4, import_promises5, isRecord15, consumerRejected, CaptureTruncationError, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition;
 var init_capture_file = __esm({
   "packages/capture/src/capture-file.ts"() {
     "use strict";
-    import_promises3 = require("node:fs/promises");
-    import_promises4 = require("node:timers/promises");
+    import_promises4 = require("node:fs/promises");
+    import_promises5 = require("node:timers/promises");
     init_capture_file_reader();
     init_capture_v2();
-    isRecord14 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    isRecord15 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     consumerRejected = (failed) => failed;
     CaptureTruncationError = class extends Error {
     };
@@ -34423,7 +34684,7 @@ var init_capture_file = __esm({
     };
     readCaptureFileHeader = async (file, options = {}) => {
       options.signal?.throwIfAborted();
-      const handle = await (0, import_promises3.open)(file, "r");
+      const handle = await (0, import_promises4.open)(file, "r");
       try {
         checkCaptureSize((await handle.stat()).size, options);
         const prefix = await readCaptureBytes(handle, 12, 0);
@@ -34448,7 +34709,7 @@ var init_capture_file = __esm({
     };
     recoverCaptureFile = async (file, accept, options = {}) => {
       options.signal?.throwIfAborted();
-      const handle = await (0, import_promises3.open)(file, "r");
+      const handle = await (0, import_promises4.open)(file, "r");
       let before;
       try {
         before = await handle.stat();
@@ -34523,7 +34784,7 @@ var init_capture_file = __esm({
             }
           } else if (magic === "ACK2") {
             const checkpoint = await json(prefix);
-            if (!isRecord14(checkpoint) || !pending || checkpoint.session !== header.session || checkpoint.chunkThrough !== pending.sequence || checkpoint.eventThrough !== pending.through) {
+            if (!isRecord15(checkpoint) || !pending || checkpoint.session !== header.session || checkpoint.chunkThrough !== pending.sequence || checkpoint.eventThrough !== pending.through) {
               throw new Error("Checkpoint does not match the pending chunk.");
             }
             if (accept) {
@@ -34541,7 +34802,7 @@ var init_capture_file = __esm({
             lastCycle = BigInt(captureChunkRecords(pending).at(-1).cycle);
             pending = void 0;
             options.onProgress?.(offset, before.size);
-            await (0, import_promises4.setImmediate)(void 0, { signal: options.signal });
+            await (0, import_promises5.setImmediate)(void 0, { signal: options.signal });
           } else if (magic === "END2") {
             const terminal = validateCapturePosition(await json(prefix), header.session, header.scope);
             if (pending || terminal.state !== "complete" || captureU64(terminal.producedThrough) !== eventThrough || captureU64(terminal.producedChunks) !== chunkThrough) {
@@ -34598,7 +34859,7 @@ var init_capture_file = __esm({
           "Legacy JSON sequence numbers cannot represent this capture. Retain the exact ACT2 archive."
         );
       }
-      const h = await (0, import_promises3.open)(destination, reserved ? "r+" : "wx");
+      const h = await (0, import_promises4.open)(destination, reserved ? "r+" : "wx");
       try {
         if (reserved && (await h.stat()).size !== 0) {
           throw new Error("Reserved trace destination changed during capture.");
@@ -34641,6 +34902,7 @@ var init_capture_file = __esm({
       }
     };
     NativeCaptureFileCursor = class _NativeCaptureFileCursor {
+      /** Parsed or declared header bytes. */
       header;
       #handle;
       #options;
@@ -34659,14 +34921,15 @@ var init_capture_file = __esm({
         this.#identity = identity2;
         this.#options = options;
       }
-      /** Open a prepared native partial file, or a completed archive for replay tests.
-       * @param {string} file Native-owned append-only file path.
-       * @param {CaptureFileReadOptions} options Byte budget and cancellation.
-       * @returns {Promise<NativeCaptureFileCursor>} Cursor pinning the checksummed session header and inode.
+      /**
+       * Open a prepared native partial file, or a completed archive for replay tests.
+       * @param file Native-owned append-only file path.
+       * @param options Byte budget and cancellation.
+       * @returns Cursor pinning the checksummed session header and inode.
        */
       static async open(file, options = {}) {
         options.signal?.throwIfAborted();
-        const handle = await (0, import_promises3.open)(file, "r");
+        const handle = await (0, import_promises4.open)(file, "r");
         try {
           const identity2 = await handle.stat();
           const prefix = await readCaptureBytes(handle, 12, 0);
@@ -34688,26 +34951,30 @@ var init_capture_file = __esm({
           throw error;
         }
       }
-      /** Byte offset includes only the header and consumed, checkpointed chunks.
-       * @returns {number} Consumed file bytes, for bounded backlog accounting.
+      /**
+       * Byte offset includes only the header and consumed, checkpointed chunks.
+       * @returns Consumed file bytes, for bounded backlog accounting.
        */
       get readBytes() {
         return this.#offset;
       }
+      /** Derived observedEvents value for callers. */
       get observedEvents() {
         return String(this.#event);
       }
+      /** Derived complete value for callers. */
       get complete() {
         return this.#complete;
       }
-      /** Read at most maxChunks (default 16) from a validated native status. Growth beyond
+      /**
+       * Read at most maxChunks (default 16) from a validated native status. Growth beyond
        * that durable watermark is ignored even if an unsynced ACK2 is already visible.
        * A failure permanently poisons the cursor. Callers must discard staged facts.
-       * @param {NativeCaptureFilePosition} value Native producer's latest durable watermark.
-       * @param {Function} accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
-       * @param {number} maxChunks Maximum chunks per slice, in [1, 256].
-       * @param {string} publishedFile Final path whose inode must agree before completion.
-       * @returns {Promise<void>} Settlement of one bounded read slice.
+       * @param value Native producer's latest durable watermark.
+       * @param accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
+       * @param maxChunks Maximum chunks per slice, in [1, 256].
+       * @param publishedFile Final path whose inode must agree before completion.
+       * @returns Settlement of one bounded read slice.
        */
       async readThrough(value, accept, maxChunks = 16, publishedFile) {
         if (this.#failed) {
@@ -34779,7 +35046,7 @@ var init_capture_file = __esm({
                 throw new Error("Native capture changed during final validation.");
               }
               if (publishedFile) {
-                const published = await (0, import_promises3.lstat)(publishedFile);
+                const published = await (0, import_promises4.lstat)(publishedFile);
                 if (!published.isFile() || published.dev !== this.#identity.dev || published.ino !== this.#identity.ino) {
                   throw new Error("Native capture publication replaced the opened file.");
                 }
@@ -34812,14 +35079,14 @@ var init_capture_file = __esm({
               throw new Error("Native capture chunk has no checkpoint.");
             }
             const ack = await json(ackPrefix);
-            if (!isRecord14(ack) || ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
+            if (!isRecord15(ack) || ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
               throw new Error("Native checkpoint disagrees with its chunk.");
             }
             accept(chunk);
             this.#chunk = captureU64(chunk.sequence);
             this.#event = captureU64(chunk.through);
             this.#cycle = captureU64(records3.at(-1).cycle);
-            await (0, import_promises4.setImmediate)(void 0, { signal: this.#options.signal });
+            await (0, import_promises5.setImmediate)(void 0, { signal: this.#options.signal });
           }
           if (this.#offset === bytes && !this.#complete && position.fileState === "complete") {
             throw new Error("Completed native capture has no terminal frame.");
@@ -34837,7 +35104,7 @@ var init_capture_file = __esm({
     };
     nativePosition = (value, session, scope) => {
       const position = validateCapturePosition(value, session, scope);
-      if (!isRecord14(value)) {
+      if (!isRecord15(value)) {
         throw new Error("Invalid native file state.");
       }
       const fileState = value.fileState;
@@ -34853,7 +35120,7 @@ var init_capture_file = __esm({
       }
       let fileProfile;
       if (value.fileProfile) {
-        if (!isRecord14(value.fileProfile)) {
+        if (!isRecord15(value.fileProfile)) {
           throw new Error("Invalid native file profile.");
         }
         const sealNs = value.fileProfile.sealNs;
@@ -34884,20 +35151,20 @@ var init_capture_file = __esm({
 });
 
 // packages/capture/src/capture-context.ts
-var import_node_crypto13, import_node_fs7, import_promises5, import_node_path10, isRecord15, digestFile, verifyCaptureContext;
+var import_node_crypto14, import_node_fs7, import_promises6, import_node_path11, isRecord16, digestFile, verifyCaptureContext;
 var init_capture_context = __esm({
   "packages/capture/src/capture-context.ts"() {
     "use strict";
-    import_node_crypto13 = require("node:crypto");
+    import_node_crypto14 = require("node:crypto");
     import_node_fs7 = require("node:fs");
-    import_promises5 = require("node:fs/promises");
-    import_node_path10 = __toESM(require("node:path"), 1);
-    isRecord15 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    import_promises6 = require("node:fs/promises");
+    import_node_path11 = __toESM(require("node:path"), 1);
+    isRecord16 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     digestFile = async (file, signal) => {
-      const hash4 = (0, import_node_crypto13.createHash)("sha256");
+      const hash4 = (0, import_node_crypto14.createHash)("sha256");
       for await (const bytes of (0, import_node_fs7.createReadStream)(file, { signal })) {
         if (!Buffer.isBuffer(bytes)) {
-          throw new Error(`Expected binary capture context data in ${import_node_path10.default.basename(file)}.`);
+          throw new Error(`Expected binary capture context data in ${import_node_path11.default.basename(file)}.`);
         }
         hash4.update(bytes);
       }
@@ -34905,17 +35172,17 @@ var init_capture_context = __esm({
     };
     verifyCaptureContext = async (directory, identity2, signal) => {
       signal?.throwIfAborted();
-      const metadataFile = import_node_path10.default.join(directory, "manifest.json");
-      const metadataStat = await (0, import_promises5.lstat)(metadataFile);
+      const metadataFile = import_node_path11.default.join(directory, "manifest.json");
+      const metadataStat = await (0, import_promises6.lstat)(metadataFile);
       if (!metadataStat.isFile() || metadataStat.isSymbolicLink() || metadataStat.size > 1048576) {
         throw new Error("Invalid capture context manifest.");
       }
-      const manifest = JSON.parse(await (0, import_promises5.readFile)(metadataFile, "utf8"));
-      if (!isRecord15(manifest)) {
+      const manifest = JSON.parse(await (0, import_promises6.readFile)(metadataFile, "utf8"));
+      if (!isRecord16(manifest)) {
         throw new Error("Invalid capture context manifest.");
       }
-      const producer = isRecord15(manifest.producer) ? manifest.producer : void 0;
-      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity2.romContentSha256 || !isRecord15(producer) || producer.id !== identity2.producer.id || producer.revision !== identity2.producer.revision || !isRecord15(manifest.files)) {
+      const producer = isRecord16(manifest.producer) ? manifest.producer : void 0;
+      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity2.romContentSha256 || !isRecord16(producer) || producer.id !== identity2.producer.id || producer.revision !== identity2.producer.revision || !isRecord16(manifest.files)) {
         throw new Error("Capture context does not match the supplied recording identity.");
       }
       const nes = manifest.architecture === "65xx.2a03";
@@ -34947,10 +35214,10 @@ var init_capture_context = __esm({
         signal?.throwIfAborted();
         if (!/^(?:identity\.txt|machine\.json|start-extra\.bin|end-state\.bin|ram-(?:start|end)\.bin|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
           name2
-        ) || !isRecord15(artifact) || typeof artifact.bytes !== "number" || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || typeof artifact.sha256 !== "string" || !/^[\da-f]{64}$/.test(artifact.sha256)) {
+        ) || !isRecord16(artifact) || typeof artifact.bytes !== "number" || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || typeof artifact.sha256 !== "string" || !/^[\da-f]{64}$/.test(artifact.sha256)) {
           throw new Error("Invalid capture context artifact descriptor.");
         }
-        const file = import_node_path10.default.join(directory, name2), stat3 = await (0, import_promises5.lstat)(file);
+        const file = import_node_path11.default.join(directory, name2), stat3 = await (0, import_promises6.lstat)(file);
         if (!stat3.isFile() || stat3.isSymbolicLink() || stat3.size !== artifact.bytes || name2 === "start.bst" && (stat3.size < 538 || stat3.size > 32 * 1048576) || name2.startsWith("wram-") && (nes || stat3.size !== 131072) || name2.startsWith("ram-") && (!nes || stat3.size !== 2048) || name2 === "start-extra.bin" && (!nes || stat3.size !== 38) || name2 === "end-state.bin" && (!nes || stat3.size < 2048 || stat3.size > 32 * 1048576) || name2 === "inputs.bin" && stat3.size % 18) {
           throw new Error(`Capture context artifact size/type mismatch: ${name2}.`);
         }
@@ -35007,12 +35274,12 @@ var init_src = __esm({
 });
 
 // packages/disassembler/src/runtime/capture-companion.ts
-function isRecord16(value) {
+function isRecord17(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
   const directory = `${file}.context`;
-  const stat3 = await (0, import_promises6.lstat)(directory).catch((error) => {
+  const stat3 = await (0, import_promises7.lstat)(directory).catch((error) => {
     if (error.code === "ENOENT") {
       return void 0;
     }
@@ -35024,20 +35291,20 @@ async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
   if (!stat3.isDirectory() || stat3.isSymbolicLink()) {
     throw new Error("Capture companion must be a regular directory.");
   }
-  const manifestFile = import_node_path11.default.join(directory, "manifest.json");
-  if ((await (0, import_promises6.lstat)(manifestFile)).size > 1048576) {
+  const manifestFile = import_node_path12.default.join(directory, "manifest.json");
+  if ((await (0, import_promises7.lstat)(manifestFile)).size > 1048576) {
     throw new Error("Capture companion manifest exceeds its size budget.");
   }
-  const before = await (0, import_promises6.readFile)(manifestFile, "utf8");
+  const before = await (0, import_promises7.readFile)(manifestFile, "utf8");
   const manifest = JSON.parse(before);
-  if (!isRecord16(manifest)) {
+  if (!isRecord17(manifest)) {
     throw new Error(
       "Capture companion does not match this archive's scope, session, or final event boundary."
     );
   }
-  const boundaries = isRecord16(manifest.boundaries) ? manifest.boundaries : void 0;
-  const end = boundaries && isRecord16(boundaries.end) ? boundaries.end : void 0;
-  if (!recovery.complete || manifest.archive !== import_node_path11.default.basename(file) || manifest.scope !== recovery.header.scope || boundaries?.session !== recovery.header.session || // A retained index already bound the terminal count to this archive's exact content hash.
+  const boundaries = isRecord17(manifest.boundaries) ? manifest.boundaries : void 0;
+  const end = boundaries && isRecord17(boundaries.end) ? boundaries.end : void 0;
+  if (!recovery.complete || manifest.archive !== import_node_path12.default.basename(file) || manifest.scope !== recovery.header.scope || boundaries?.session !== recovery.header.session || // A retained index already bound the terminal count to this archive's exact content hash.
   // Reuse still checks every companion artifact, without decoding the primary a second time.
   recovery.eventThrough !== void 0 && end?.eventThrough !== recovery.eventThrough) {
     throw new Error(
@@ -35046,36 +35313,36 @@ async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
   }
   await verifyCaptureContext(directory, recovery.header, signal);
   const boundaryArtifact = JSON.parse(
-    await (0, import_promises6.readFile)(import_node_path11.default.join(directory, "boundaries.json"), "utf8")
+    await (0, import_promises7.readFile)(import_node_path12.default.join(directory, "boundaries.json"), "utf8")
   );
-  if (!canonicalEquals(boundaryArtifact, manifest.boundaries) || await (0, import_promises6.readFile)(manifestFile, "utf8") !== before) {
+  if (!canonicalEquals(boundaryArtifact, manifest.boundaries) || await (0, import_promises7.readFile)(manifestFile, "utf8") !== before) {
     throw new Error("Capture companion changed or its manifest and boundary artifact disagree.");
   }
 }
-var import_promises6, import_node_path11;
+var import_promises7, import_node_path12;
 var init_capture_companion = __esm({
   "packages/disassembler/src/runtime/capture-companion.ts"() {
     "use strict";
-    import_promises6 = require("node:fs/promises");
-    import_node_path11 = __toESM(require("node:path"), 1);
+    import_promises7 = require("node:fs/promises");
+    import_node_path12 = __toESM(require("node:path"), 1);
     init_src();
     init_canonical_json();
   }
 });
 
 // packages/disassembler/src/runtime/capture-instruction-source.ts
-var import_promises7, createRuntimeCaptureSource;
+var import_promises8, createRuntimeCaptureSource;
 var init_capture_instruction_source = __esm({
   "packages/disassembler/src/runtime/capture-instruction-source.ts"() {
     "use strict";
-    import_promises7 = require("node:fs/promises");
+    import_promises8 = require("node:fs/promises");
     init_canonical_json();
     init_capture_companion();
     init_runtime_trace_file();
     init_runtime_trace();
     createRuntimeCaptureSource = async (file, options = {}) => {
       options.signal?.throwIfAborted();
-      const handle = await (0, import_promises7.open)(file, "r");
+      const handle = await (0, import_promises8.open)(file, "r");
       const magic = Buffer.alloc(4);
       try {
         let offset = 0;
@@ -35119,7 +35386,7 @@ var init_capture_instruction_source = __esm({
         },
         read: async (accept) => {
           recovery = void 0;
-          const before = await (0, import_promises7.lstat)(file, { bigint: true });
+          const before = await (0, import_promises8.lstat)(file, { bigint: true });
           if (!before.isFile() || before.isSymbolicLink()) {
             throw new Error("Capture must be a regular file.");
           }
@@ -35144,7 +35411,7 @@ var init_capture_instruction_source = __esm({
             },
             limits
           );
-          const after = await (0, import_promises7.lstat)(file, { bigint: true });
+          const after = await (0, import_promises8.lstat)(file, { bigint: true });
           if (before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs) {
             throw new Error("Capture archive changed while importing.");
           }
@@ -35197,18 +35464,18 @@ function readCheckpoint(value) {
     memoryLoss: checkpointCount(value, "memoryLoss")
   };
 }
-var import_node_fs8, import_node_path12, import_node_sqlite3, SqliteTraceStage;
+var import_node_fs8, import_node_path13, import_node_sqlite3, SqliteTraceStage;
 var init_sqlite_trace_stage = __esm({
   "packages/disassembler/src/storage/sqlite-trace-stage.ts"() {
     "use strict";
     import_node_fs8 = __toESM(require("node:fs"), 1);
-    import_node_path12 = __toESM(require("node:path"), 1);
+    import_node_path13 = __toESM(require("node:path"), 1);
     import_node_sqlite3 = require("node:sqlite");
     init_durable_files();
     SqliteTraceStage = class {
       constructor(file) {
         this.file = file;
-        import_node_fs8.default.mkdirSync(import_node_path12.default.dirname(file), { recursive: true });
+        import_node_fs8.default.mkdirSync(import_node_path13.default.dirname(file), { recursive: true });
         this.#lease = acquireFileLease(`${file}.lock`);
         let database;
         try {
@@ -35286,7 +35553,7 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
     let publication;
     let validate3;
     if (options.validatedIndex && !options.recoverPartial) {
-      const key3 = (0, import_node_crypto14.createHash)("sha256").update(
+      const key3 = (0, import_node_crypto15.createHash)("sha256").update(
         canonicalJson({
           version: 1,
           identity: options.validatedIndex.identity,
@@ -35294,7 +35561,7 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
           context
         })
       ).digest("hex");
-      stage = new SqliteTraceStage(import_node_path13.default.join(options.validatedIndex.directory, `${key3}.sqlite`));
+      stage = new SqliteTraceStage(import_node_path14.default.join(options.validatedIndex.directory, `${key3}.sqlite`));
       if (stage.checkpoint) {
         await options.validatedIndex.verify();
         await source.verifyRetained?.();
@@ -35323,11 +35590,11 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
               publication = store.runtimeTracePublicationSink(sha2564);
             }
           },
-          onRecord: (record7) => {
+          onRecord: (record8) => {
             options.signal?.throwIfAborted();
             validate3 ??= createRuntimeRecordValidator(
               manifest,
-              record7.evidence.map((id) => ({
+              record8.evidence.map((id) => ({
                 id,
                 source: "runtime",
                 sourceId: "instruction-trace",
@@ -35335,12 +35602,12 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
               })),
               false
             );
-            validate3(record7);
-            if (publication?.add(record7)) {
+            validate3(record8);
+            if (publication?.add(record8)) {
               addedRuntime++;
             }
-            if (record7.kind === "runtime-execution") {
-              execution.push(record7);
+            if (record8.kind === "runtime-execution") {
+              execution.push(record8);
             }
           }
         });
@@ -35481,12 +35748,12 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
     }
   }
 }
-var import_node_crypto14, import_node_path13, importRuntimeTraceIntoProject, commitRuntimeEvidenceBatch;
+var import_node_crypto15, import_node_path14, importRuntimeTraceIntoProject, commitRuntimeEvidenceBatch;
 var init_runtime_trace_project = __esm({
   "packages/disassembler/src/project/runtime-trace-project.ts"() {
     "use strict";
-    import_node_crypto14 = require("node:crypto");
-    import_node_path13 = __toESM(require("node:path"), 1);
+    import_node_crypto15 = require("node:crypto");
+    import_node_path14 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_project_validation();
     init_capture_instruction_source();
@@ -35566,11 +35833,11 @@ var init_runtime_bus_project = __esm({
             onSource: (sha2564) => {
               insert = store.runtimeBatchInserter(`runtime:bus-trace:${sha2564}:`);
             },
-            onRecord: (record7) => {
+            onRecord: (record8) => {
               options.signal?.throwIfAborted();
               validate3 ??= createRuntimeRecordValidator(
                 manifest,
-                record7.evidence.map((id) => ({
+                record8.evidence.map((id) => ({
                   id,
                   source: "runtime",
                   sourceId: "bus-trace",
@@ -35578,8 +35845,8 @@ var init_runtime_bus_project = __esm({
                 })),
                 false
               );
-              validate3(record7);
-              if (insert(record7)) {
+              validate3(record8);
+              if (insert(record8)) {
                 addedRuntime++;
               }
             }
@@ -35694,23 +35961,23 @@ function notesPath(directory, sha2564) {
   if (!/^[\da-f]{64}$/.test(sha2564)) {
     throw new Error("Invalid capture notes identity.");
   }
-  return import_node_path14.default.join(directory, "capture-notes", `${sha2564}.json`);
+  return import_node_path15.default.join(directory, "capture-notes", `${sha2564}.json`);
 }
-function isRecord17(value) {
+function isRecord18(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isStrings(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 function isAddedCode(value) {
-  return isRecord17(value) && typeof value.start === "number" && Number.isSafeInteger(value.start) && value.start >= 0 && typeof value.end === "number" && Number.isSafeInteger(value.end) && value.end > value.start && typeof value.addressSpace === "string" && typeof value.address === "number" && Number.isSafeInteger(value.address) && value.address >= 0 && isStrings(value.recordIds);
+  return isRecord18(value) && typeof value.start === "number" && Number.isSafeInteger(value.start) && value.start >= 0 && typeof value.end === "number" && Number.isSafeInteger(value.end) && value.end > value.start && typeof value.addressSpace === "string" && typeof value.address === "number" && Number.isSafeInteger(value.address) && value.address >= 0 && isStrings(value.recordIds);
 }
 function isCaptureImportNotes(value) {
-  if (!isRecord17(value) || value.format !== "uttori-capture-notes" || value.version !== 1 || typeof value.sourceSha256 !== "string" || typeof value.sourceName !== "string" || typeof value.importedAt !== "number" || !Number.isFinite(value.importedAt) || !isStrings(value.notes)) {
+  if (!isRecord18(value) || value.format !== "uttori-capture-notes" || value.version !== 1 || typeof value.sourceSha256 !== "string" || typeof value.sourceName !== "string" || typeof value.importedAt !== "number" || !Number.isFinite(value.importedAt) || !isStrings(value.notes)) {
     return false;
   }
   const analysis = value.analysis;
-  return analysis === void 0 || isRecord17(analysis) && (analysis.status === "complete" || analysis.status === "incomplete") && isStrings(analysis.sources) && Array.isArray(analysis.addedCode) && analysis.addedCode.every(isAddedCode);
+  return analysis === void 0 || isRecord18(analysis) && (analysis.status === "complete" || analysis.status === "incomplete") && isStrings(analysis.sources) && Array.isArray(analysis.addedCode) && analysis.addedCode.every(isAddedCode);
 }
 function readCaptureImportNotes(directory, sha2564) {
   const file = notesPath(directory, sha2564);
@@ -35748,7 +36015,7 @@ function writeCaptureImportNotes(directory, report) {
   durableReplace(notesPath(directory, report.sourceSha256), canonicalJson(notes));
 }
 function pendingCaptureImportNotes(directory) {
-  const folder = import_node_path14.default.join(directory, "capture-notes");
+  const folder = import_node_path15.default.join(directory, "capture-notes");
   if (!import_node_fs10.default.existsSync(folder)) {
     return [];
   }
@@ -35769,26 +36036,26 @@ function completeCaptureImportNotes(directory, pending, status, addedCode) {
     );
   }
 }
-var import_node_fs10, import_node_path14;
+var import_node_fs10, import_node_path15;
 var init_capture_notes = __esm({
   "packages/disassembler/src/project/capture-notes.ts"() {
     "use strict";
     import_node_fs10 = __toESM(require("node:fs"), 1);
-    import_node_path14 = __toESM(require("node:path"), 1);
+    import_node_path15 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_durable_files();
   }
 });
 
 // packages/disassembler/src/source/source-export.ts
-var import_node_crypto15, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, sourceExportSha256, compareByteImages;
+var import_node_crypto16, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, sourceExportSha256, compareByteImages;
 var init_source_export = __esm({
   "packages/disassembler/src/source/source-export.ts"() {
     "use strict";
-    import_node_crypto15 = require("node:crypto");
+    import_node_crypto16 = require("node:crypto");
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
     SOURCE_EXPORT_SCHEMA_VERSION = 1;
-    sourceExportSha256 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
+    sourceExportSha256 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
     compareByteImages = (expected, actual) => {
       const common = Math.min(expected.length, actual.length);
       let firstDifference;
@@ -35991,28 +36258,28 @@ var init_symbols = __esm({
 });
 
 // packages/disassembler/src/research-inputs/analysis.ts
-function validateLocations(record7, spaces) {
-  const space = spaces.find((item) => item.id === record7.addressSpace);
+function validateLocations(record8, spaces) {
+  const space = spaces.find((item) => item.id === record8.addressSpace);
   if (!space || !Number.isInteger(space.addressBits) || space.addressBits < 1 || space.addressBits > 53) {
     throw new Error("Select a declared project address space.");
   }
   const limit = 2 ** space.addressBits;
-  const addresses = "start" in record7 ? [record7.start, record7.end - 1] : [...record7.targets];
-  if ("address" in record7) {
-    addresses.push(record7.address);
+  const addresses = "start" in record8 ? [record8.start, record8.end - 1] : [...record8.targets];
+  if ("address" in record8) {
+    addresses.push(record8.address);
   }
   if (addresses.some((address3) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= limit)) {
     throw new Error(
       `Research locations exceed the ${space.addressBits}-bit address space '${space.id}'.`
     );
   }
-  if ("targets" in record7 && (record7.targets.length > 4096 || new Set(record7.targets).size !== record7.targets.length)) {
+  if ("targets" in record8 && (record8.targets.length > 4096 || new Set(record8.targets).size !== record8.targets.length)) {
     throw new Error("Use at most 4096 distinct indirect targets.");
   }
-  if ("state" in record7 && record7.state?.e && (record7.state.m === false || record7.state.x === false)) {
+  if ("state" in record8 && record8.state?.e && (record8.state.m === false || record8.state.x === false)) {
     throw new Error("65816 emulation mode requires 8-bit accumulator and index registers.");
   }
-  if ("asset" in record7 && record7.asset && !["asset", "compressed", "graphics", "music", "text"].includes(record7.classification)) {
+  if ("asset" in record8 && record8.asset && !["asset", "compressed", "graphics", "music", "text"].includes(record8.classification)) {
     throw new Error(
       "Remove the asset recipe explicitly before changing to a non-asset classification."
     );
@@ -36125,7 +36392,7 @@ var init_interval_index = __esm({
       #prefixMaximumEnd;
       /**
        * Builds an immutable search index from already-owned interval values.
-       * @param {readonly Value[]} values Non-negative safe half-open intervals in semantic input order.
+       * @param values Non-negative safe half-open intervals in semantic input order.
        * @throws {Error} When an interval is empty, reversed, negative, or outside safe integers.
        */
       constructor(values) {
@@ -36147,8 +36414,8 @@ var init_interval_index = __esm({
       }
       /**
        * Returns every interval containing one safe non-negative point, in input order.
-       * @param {number} point Safe non-negative point to query.
-       * @returns {readonly Value[]} Matching intervals in their original input order.
+       * @param point Safe non-negative point to query.
+       * @returns Matching intervals in their original input order.
        */
       at(point) {
         if (!Number.isSafeInteger(point) || point < 0) {
@@ -36158,9 +36425,9 @@ var init_interval_index = __esm({
       }
       /**
        * Returns every interval intersecting a valid half-open query, in input order.
-       * @param {number} start Inclusive safe non-negative query start.
-       * @param {number} end Exclusive safe query end greater than `start`.
-       * @returns {readonly Value[]} Matching intervals in their original input order.
+       * @param start Inclusive safe non-negative query start.
+       * @param end Exclusive safe query end greater than `start`.
+       * @returns Matching intervals in their original input order.
        */
       overlapping(start, end) {
         if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
@@ -36246,7 +36513,7 @@ var init_capture_bus_source = __esm({
 // packages/disassembler/src/runtime/capture-source.ts
 async function openRuntimeCaptureSource(file, options = {}) {
   options.signal?.throwIfAborted();
-  const handle = await (0, import_promises8.open)(file, "r");
+  const handle = await (0, import_promises9.open)(file, "r");
   const magic = Buffer.alloc(4);
   try {
     let offset = 0;
@@ -36269,11 +36536,11 @@ async function openRuntimeCaptureSource(file, options = {}) {
   }
   return { kind: "instructions", source: await createRuntimeCaptureSource(file, options) };
 }
-var import_promises8;
+var import_promises9;
 var init_capture_source = __esm({
   "packages/disassembler/src/runtime/capture-source.ts"() {
     "use strict";
-    import_promises8 = require("node:fs/promises");
+    import_promises9 = require("node:fs/promises");
     init_capture_bus_source();
     init_capture_instruction_source();
   }
@@ -36426,12 +36693,12 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path50 = __toESM(require("node:path"), 1);
-var import_vscode33 = require("vscode");
+var path51 = __toESM(require("node:path"), 1);
+var import_vscode32 = require("vscode");
 var import_node = __toESM(require_main5(), 1);
 
 // packages/vscode-extension/src/analysis/annotation-controller.ts
-var path21 = __toESM(require("node:path"), 1);
+var path22 = __toESM(require("node:path"), 1);
 var import_vscode3 = require("vscode");
 
 // packages/vscode-extension/src/editor-info/format.ts
@@ -36987,8 +37254,8 @@ var EditorInformationProvider = class {
   #trackedRevision = 0;
   /**
    * New successful build paths bypass workspace glob limits and invalidate old artifact facts.
-   * @param {string} mapFile Debug map published atomically with a successful output.
-   * @param {string} sourceRoot Root used to resolve portable source paths.
+   * @param mapFile Debug map published atomically with a successful output.
+   * @param sourceRoot Root used to resolve portable source paths.
    */
   buildCompleted(mapFile, sourceRoot) {
     const file = path2.resolve(mapFile);
@@ -37023,8 +37290,8 @@ var EditorInformationProvider = class {
   }
   /**
    * Ignore unrelated filesystem churn; discovery changes still invalidate the candidate list.
-   * @param {string} file Changed absolute file path.
-   * @returns {boolean} Whether this file can invalidate known source facts or map discovery.
+   * @param file Changed absolute file path.
+   * @returns Whether this file can invalidate known source facts or map discovery.
    */
   tracks(file) {
     return this.#trackedFiles.has(path2.resolve(file)) || file.endsWith(".debug.json");
@@ -37039,9 +37306,9 @@ var EditorInformationProvider = class {
   }
   /**
    * Coalesce identical work while allowing newer generations to replace invalidated requests.
-   * @param {string} key Complete artifact/project, range, and request identity.
-   * @param {Function} operation Deferred host request.
-   * @returns {Promise<T>} Shared result; rejection removes the in-flight entry for retry.
+   * @param key Complete artifact/project, range, and request identity.
+   * @param operation Deferred host request.
+   * @returns Shared result; rejection removes the in-flight entry for retry.
    */
   async #request(key3, operation2) {
     const existing = this.#pending.get(key3);
@@ -37232,9 +37499,9 @@ var EditorInformationProvider = class {
   /**
    * Explain snapshot rejection for one editor, including failures in another build dependency.
    * Reuses asynchronous validation; it never builds or changes source files.
-   * @param {string} file Absolute source filename.
-   * @param {ReadonlySet<string>} dirtyFiles Current unsaved dependencies.
-   * @returns {Promise<readonly string[]>} Actionable reasons, or an empty list for a current map.
+   * @param file Absolute source filename.
+   * @param dirtyFiles Current unsaved dependencies.
+   * @returns Actionable reasons, or an empty list for a current map.
    */
   async diagnostics(file, dirtyFiles) {
     if (this.#currentConfigurationMaps?.size === 0) {
@@ -37279,11 +37546,11 @@ var EditorInformationProvider = class {
   /**
    * Query current visible/hovered lines. Dirty dependencies suppress the complete artifact, even
    * if its saved files still hash correctly. Neither hovering nor scrolling starts a build.
-   * @param {string} file Absolute source filename.
-   * @param {readonly InformationLineRange[]} visible Inclusive one-based source-line intervals.
-   * @param {InformationRequirements} requirements Selected fields' provider needs.
-   * @param {ReadonlySet<string>} dirtyFiles Unsaved source/dependency paths to suppress.
-   * @returns {Promise<ReadonlyMap<number, readonly LineInformation[]>>} Current facts grouped by source line.
+   * @param file Absolute source filename.
+   * @param visible Inclusive one-based source-line intervals.
+   * @param requirements Selected fields' provider needs.
+   * @param dirtyFiles Unsaved source/dependency paths to suppress.
+   * @returns Current facts grouped by source line.
    */
   async lines(file, visible, requirements, dirtyFiles) {
     if (this.#currentConfigurationMaps?.size === 0) {
@@ -37482,6 +37749,7 @@ var WorkerRequestSlots = class {
   #active = /* @__PURE__ */ new Set();
   #nextId = 0;
   #disposed = false;
+  /** Whether the slot owner has been disposed and rejects new admissions. */
   get disposed() {
     return this.#disposed;
   }
@@ -37710,18 +37978,23 @@ var EditorInformationWorker = class {
       }
     }
   }
+  /** Notify the worker that a build finished and a new debug map is available. */
   buildCompleted(map, root) {
     this.#notify("buildCompleted", [map, root]);
   }
+  /** Propagate editor information settings changes into the worker cache. */
   configurationChanged() {
     this.#notify("configurationChanged");
   }
+  /** Drop worker-side indexes after source or map invalidation. */
   invalidate() {
     this.#notify("invalidate");
   }
+  /** Whether the worker maintains facts for the given source path. */
   tracks(file) {
     return this.#tracked.has(import_node_path2.default.resolve(file)) || file.endsWith(".debug.json");
   }
+  /** Return configuration or dependency diagnostics for one tracked file. */
   async diagnostics(file, dirty) {
     const value = await this.#send("diagnostics", [file, dirty]);
     if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) {
@@ -37729,6 +38002,7 @@ var EditorInformationWorker = class {
     }
     return value;
   }
+  /** Fetch bounded line facts for the visible viewport and requested placeholders. */
   async lines(file, visible, requirements, dirty) {
     const value = await this.#send("lines", [file, visible, requirements, dirty]);
     if (!isLineMap(value)) {
@@ -37736,18 +38010,193 @@ var EditorInformationWorker = class {
     }
     return value;
   }
+  /** Terminate the worker and fail any in-flight requests. */
   dispose() {
     this.#fail(new Error("Source information worker disposed."));
     void this.#worker.terminate();
   }
 };
 
+// packages/vscode-extension/src/analysis/debug-maps.ts
+var import_node_crypto3 = require("node:crypto");
+var fs2 = __toESM(require("node:fs"), 1);
+var path5 = __toESM(require("node:path"), 1);
+var import_vscode = require("vscode");
+
+// packages/vscode-extension/src/source/project-path.ts
+var import_promises2 = __toESM(require("node:fs/promises"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
+async function findSourceRoot(directory) {
+  let current = import_node_path3.default.resolve(directory);
+  for (; ; ) {
+    try {
+      await import_promises2.default.access(import_node_path3.default.join(current, ".uttori/project.json"));
+      return current;
+    } catch {
+    }
+    try {
+      await import_promises2.default.access(import_node_path3.default.join(current, ".git"));
+      return void 0;
+    } catch {
+    }
+    const parent = import_node_path3.default.dirname(current);
+    if (parent === current) {
+      return void 0;
+    }
+    current = parent;
+  }
+}
+
+// packages/vscode-extension/src/analysis/debug-maps.ts
+var DEBUG_MAP_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
+var sortedUnique = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
+function isRecord5(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isStoredDebugMap2(value) {
+  return isRecord5(value) && isRecord5(value.fingerprint) && typeof value.fingerprint.algorithm === "string" && typeof value.fingerprint.value === "string" && isRecord5(value.output) && typeof value.output.size === "number" && typeof value.output.sha256 === "string" && typeof value.target === "string" && Array.isArray(value.sources) && Array.isArray(value.ranges) && (value.instructions === void 0 || Array.isArray(value.instructions)) && (value.assets === void 0 || Array.isArray(value.assets));
+}
+function isAcceptedDebugMap2(map) {
+  return map.format === DEBUG_MAP_FORMAT && map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION && map.fingerprint.algorithm === "sha256";
+}
+function isIdentityList(value) {
+  return Array.isArray(value);
+}
+var resolvedConfigurationPath = (value, root) => path5.isAbsolute(value) ? value : path5.resolve(root ?? process.cwd(), value);
+var analysisSourceSha256 = (file) => (0, import_node_crypto3.createHash)("sha256").update(fs2.readFileSync(file)).digest("hex");
+var sourcePaths = (source, candidate) => {
+  if (path5.isAbsolute(source.path)) {
+    return [source.path];
+  }
+  return sortedUnique([
+    ...candidate.sourceRoots.map((root) => path5.resolve(root, source.path)),
+    path5.resolve(path5.dirname(candidate.file), source.path),
+    ...(import_vscode.workspace.workspaceFolders ?? []).map(({ uri }) => path5.resolve(uri.fsPath, source.path))
+  ]);
+};
+var currentAnalysisSourcePath = (source, candidate, expectedFile) => sourcePaths(source, candidate).find((file) => {
+  if (expectedFile !== void 0 && path5.resolve(file) !== expectedFile) {
+    return false;
+  }
+  try {
+    return fs2.statSync(file).isFile() && analysisSourceSha256(file) === source.sha256;
+  } catch {
+    return false;
+  }
+});
+var findAnalysisDebugMapCandidates = async (identity2) => {
+  const identities = isIdentityList(identity2) ? identity2 : [identity2];
+  const candidates = [];
+  for (const descriptor2 of await discoverAnalysisDebugMapFiles()) {
+    try {
+      const parsed = JSON.parse(fs2.readFileSync(descriptor2.file, "utf8"));
+      if (!isStoredDebugMap2(parsed)) {
+        continue;
+      }
+      if (validateDebugMap(parsed).length > 0 || !isAcceptedDebugMap2(parsed) || !identities.some(
+        (candidate) => parsed.target === candidate.target && parsed.output.sha256 === candidate.romContentSha256 && parsed.output.size === candidate.romContentSize
+      )) {
+        continue;
+      }
+      candidates.push({ ...descriptor2, map: parsed });
+    } catch {
+    }
+  }
+  return candidates;
+};
+var discoverAnalysisDebugMapFiles = async () => {
+  const active = import_vscode.debug.activeDebugSession;
+  const configuredMap = active?.type === "uttori-asm" && typeof active.configuration.debugMap === "string" ? resolvedConfigurationPath(active.configuration.debugMap, active.workspaceFolder?.uri.fsPath) : void 0;
+  const configuredRoot = active?.type === "uttori-asm" && typeof active.configuration.sourceRoot === "string" ? resolvedConfigurationPath(
+    active.configuration.sourceRoot,
+    active.workspaceFolder?.uri.fsPath
+  ) : active?.workspaceFolder?.uri.fsPath;
+  const discovered = await import_vscode.workspace.findFiles("**/*.debug.json", DEBUG_MAP_EXCLUDE, 64);
+  const sourceRoots = [
+    ...new Set(
+      (await Promise.all(
+        (import_vscode.workspace.workspaceFolders ?? []).map(({ uri }) => findSourceRoot(uri.fsPath))
+      )).filter((root) => !!root)
+    )
+  ];
+  const selected = [];
+  for (const root of sourceRoots) {
+    try {
+      const directory = path5.join(root, ".uttori-local/builds");
+      const receiptFile = path5.join(directory, "current.json");
+      if ((await fs2.promises.stat(receiptFile)).size > 1024 * 1024) {
+        continue;
+      }
+      const receipt = JSON.parse(await fs2.promises.readFile(receiptFile, "utf8"));
+      if (!isRecord5(receipt) || typeof receipt.inputSha256 !== "string" || typeof receipt.debugMapFile !== "string" || !/^[\da-f]{64}$/.test(receipt.inputSha256)) {
+        continue;
+      }
+      const file = path5.join(directory, receipt.inputSha256, "program.sfc.debug.json");
+      if (receipt.debugMapFile === file) {
+        selected.push(file);
+      }
+    } catch {
+    }
+  }
+  const files = sortedUnique([
+    ...configuredMap ? [configuredMap] : [],
+    ...selected,
+    ...discovered.filter(
+      ({ scheme, fsPath }) => scheme === "file" && !sourceRoots.some((root) => fsPath.startsWith(root + path5.sep))
+    ).map(({ fsPath }) => fsPath)
+  ]);
+  return files.map((file) => {
+    const containingWorkspace = import_vscode.workspace.getWorkspaceFolder(import_vscode.Uri.file(file));
+    const ancestors = [];
+    if (containingWorkspace) {
+      const root = containingWorkspace.uri.fsPath;
+      for (let directory = path5.dirname(file); directory !== root && directory.startsWith(`${root}${path5.sep}`); directory = path5.dirname(directory)) {
+        ancestors.push(directory);
+      }
+    }
+    return {
+      file,
+      sourceRoots: sortedUnique([
+        ...file === configuredMap && configuredRoot ? [configuredRoot] : [],
+        ...sourceRoots.filter((root) => file.startsWith(root + path5.sep)),
+        ...(import_vscode.workspace.workspaceFolders ?? []).map(({ uri }) => uri.fsPath),
+        ...ancestors
+      ])
+    };
+  });
+};
+var analysisDebugMapRanges = (map, location) => {
+  const ranges = [
+    ...debugMapRangesForAddress(map, location.addressSpace, location.address),
+    ...location.outputOffsets.flatMap(
+      (outputOffset) => debugMapRangesForAddress(map, location.addressSpace, location.address, { outputOffset })
+    )
+  ];
+  const unique2 = new Map(
+    ranges.map((range) => [
+      [
+        range.architecture,
+        range.addressSpace,
+        range.start,
+        range.end,
+        range.outputStart ?? "",
+        range.sourceId,
+        range.line
+      ].join(":"),
+      range
+    ])
+  );
+  const hints = new Set(location.architectureHints);
+  return [...unique2.values()].filter((range) => hints.size === 0 || hints.has(range.architecture));
+};
+
 // packages/vscode-extension/src/analysis/project-discovery.ts
-var path17 = __toESM(require("node:path"), 1);
+var path20 = __toESM(require("node:path"), 1);
 init_src2();
 
 // packages/disassembler/src/source-project/git.ts
 var import_node_child_process = require("node:child_process");
+var import_node_path16 = __toESM(require("node:path"), 1);
 init_source_inputs();
 var SourceGitError = class extends Error {
   constructor(args, result) {
@@ -37823,6 +38272,19 @@ function sourceGit(root, args, options = {}) {
     child.stdin.end(options.input);
   });
 }
+async function sourceRepository(directory) {
+  const results = await Promise.all([
+    sourceGit(directory, ["rev-parse", "--show-toplevel"]),
+    sourceGit(directory, ["rev-parse", "--absolute-git-dir"])
+  ]);
+  const [root, gitDirectory] = results.map(
+    (result) => result.stdout.toString("utf8").replace(/\n$/, "")
+  );
+  if (!root || !gitDirectory || !import_node_path16.default.isAbsolute(root) || !import_node_path16.default.isAbsolute(gitDirectory)) {
+    throw new Error("Source editing requires a non-bare Git working tree.");
+  }
+  return { root, gitDirectory, stateDirectory: import_node_path16.default.join(gitDirectory, "uttori-source") };
+}
 function sourceStatusPaths(status) {
   const entries = status.toString("utf8").split("\0");
   const files = [];
@@ -37841,24 +38303,89 @@ function assertSourceObjectId(value) {
   }
 }
 
+// packages/disassembler/src/source-project/blobs.ts
+async function readSourceBlobs(repository, objects, signal) {
+  const unique2 = [...new Set(objects)];
+  const sizes = /* @__PURE__ */ new Map();
+  const result = /* @__PURE__ */ new Map();
+  for (const object2 of unique2) {
+    assertSourceObjectId(object2);
+  }
+  for (let start = 0; start < unique2.length; start += 256) {
+    const batch = unique2.slice(start, start + 256);
+    const metadata = await sourceGit(repository.root, ["cat-file", "--batch-check"], {
+      signal,
+      input: `${batch.join("\n")}
+`
+    });
+    const lines = metadata.stdout.toString("utf8").trimEnd().split("\n");
+    if (lines.length !== batch.length) {
+      throw new Error("Incomplete source blob inventory.");
+    }
+    for (const [index, line] of lines.entries()) {
+      const [object2, type, sizeText] = line.split(" ");
+      const size = Number(sizeText);
+      if (object2 !== batch[index] || type !== "blob" || !Number.isSafeInteger(size) || size < 0 || size > 64 * 1024 * 1024) {
+        throw new Error("Invalid or oversized source blob.");
+      }
+      sizes.set(object2, size);
+    }
+  }
+  for (let start = 0; start < unique2.length; ) {
+    const batch = [];
+    let bytes = 0;
+    while (start < unique2.length && batch.length < 32) {
+      const object2 = unique2[start];
+      const size = sizes.get(object2);
+      if (batch.length && bytes + size > 16 * 1024 * 1024) {
+        break;
+      }
+      batch.push(object2);
+      bytes += size;
+      start++;
+    }
+    const content = await sourceGit(repository.root, ["cat-file", "--batch"], {
+      signal,
+      input: `${batch.join("\n")}
+`,
+      maxOutputBytes: bytes + batch.length * 128
+    });
+    let cursor = 0;
+    for (const object2 of batch) {
+      const end = content.stdout.indexOf(10, cursor);
+      const header = content.stdout.subarray(cursor, end).toString("utf8").split(" ");
+      const size = sizes.get(object2);
+      if (end < cursor || header[0] !== object2 || header[1] !== "blob" || Number(header[2]) !== size || end + size + 1 >= content.stdout.length || content.stdout[end + size + 1] !== 10) {
+        throw new Error("Incomplete source blob stream.");
+      }
+      result.set(object2, content.stdout.subarray(end + 1, end + size + 1));
+      cursor = end + size + 2;
+    }
+    if (cursor !== content.stdout.length) {
+      throw new Error("Unexpected trailing source blob bytes.");
+    }
+  }
+  return result;
+}
+
 // packages/disassembler/src/source-project/generation.ts
 init_source_inputs();
 
 // packages/disassembler/src/source-project/project.ts
 var import_node_fs11 = __toESM(require("node:fs"), 1);
-var import_node_path15 = __toESM(require("node:path"), 1);
+var import_node_path17 = __toESM(require("node:path"), 1);
 init_inputs();
 function isUnknownArray4(value) {
   return Array.isArray(value);
 }
-function isRecord18(value) {
+function isRecord19(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSafeInteger7(value) {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 function assertSourceProjectConfiguration(value) {
-  if (!isRecord18(value)) {
+  if (!isRecord19(value)) {
     throw new Error("Invalid Git source project configuration.");
   }
   const id = value.id;
@@ -37882,7 +38409,7 @@ function assertSourceProjectConfiguration(value) {
     assertSourcePath(name2);
   }
   if (value.limits !== void 0) {
-    if (!isRecord18(value.limits)) {
+    if (!isRecord19(value.limits)) {
       throw new Error("Source work limits must be an object.");
     }
     for (const [name2, limit] of Object.entries(value.limits)) {
@@ -37899,7 +38426,7 @@ function parseSourceProject(value) {
   return value;
 }
 function assertSourceProjectLocalInputs(value) {
-  if (!isRecord18(value) || value.format !== "uttori-source-local" || value.version !== 1 || typeof value.rom !== "string" || value.rom === "" || typeof value.evidence !== "string" || value.evidence === "") {
+  if (!isRecord19(value) || value.format !== "uttori-source-local" || value.version !== 1 || typeof value.rom !== "string" || value.rom === "" || typeof value.evidence !== "string" || value.evidence === "") {
     throw new Error(
       "Configure the local ROM and evidence paths before running this source project."
     );
@@ -37907,26 +38434,26 @@ function assertSourceProjectLocalInputs(value) {
 }
 function readSourceProjectLocalInputs(root) {
   const local = JSON.parse(
-    import_node_fs11.default.readFileSync(import_node_path15.default.join(root, ".uttori-local/project.json"), "utf8")
+    import_node_fs11.default.readFileSync(import_node_path17.default.join(root, ".uttori-local/project.json"), "utf8")
   );
   assertSourceProjectLocalInputs(local);
   return {
     ...local,
-    rom: import_node_path15.default.resolve(root, local.rom),
-    evidence: import_node_path15.default.resolve(root, local.evidence)
+    rom: import_node_path17.default.resolve(root, local.rom),
+    evidence: import_node_path17.default.resolve(root, local.evidence)
   };
 }
 
 // packages/core/src/linker/value.ts
-var import_node_crypto16 = require("node:crypto");
+var import_node_crypto17 = require("node:crypto");
 function artifactHash(value) {
-  return (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
+  return (0, import_node_crypto17.createHash)("sha256").update(value).digest("hex");
 }
-function isRecord19(value) {
+function isRecord20(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function record4(value, purpose) {
-  if (!isRecord19(value)) {
+  if (!isRecord20(value)) {
     throw new Error(`${purpose} must be a record.`);
   }
   return value;
@@ -38014,6 +38541,13 @@ function assertLinkExpression(value, depth = 0, budget = { nodes: 0 }) {
 
 // packages/core/src/linker/types.ts
 var LinkError = class extends Error {
+  /**
+   * Captures a link failure with optional source anchoring and partial placement state.
+   * @param code Stable machine-readable failure code.
+   * @param message Human-readable explanation prefixed with source location when present.
+   * @param source Optional source occurrence tied to the failure.
+   * @param allocations Partial allocations computed before the failure.
+   */
   constructor(code, message, source, allocations = []) {
     const location = source ? `${source.file}:${source.line}: ` : "";
     super(`${location}${message}`);
@@ -38024,6 +38558,7 @@ var LinkError = class extends Error {
   code;
   source;
   allocations;
+  /** Stable error name for instanceof checks across bundle boundaries. */
   name = "LinkError";
 };
 
@@ -39075,7 +39610,13 @@ var ExpressionParser = class {
   }
   tokens;
   sourceText;
+  /** Position of the next unconsumed token. */
   index = 0;
+  /**
+   * Parses a binary expression whose operators bind at least as tightly as `minPrecedence`.
+   * @param minPrecedence Lowest operator precedence this call may consume.
+   * @returns The parsed expression.
+   */
   parseExpression(minPrecedence = 0) {
     let left = this.parsePrefix();
     while (true) {
@@ -39106,9 +39647,11 @@ var ExpressionParser = class {
     }
     return left;
   }
+  /** Reports whether every token has been consumed. */
   isAtEnd() {
     return this.index >= this.tokens.length;
   }
+  /** Parses right-nested prefix operators followed by a primary with postfix accessors. */
   parsePrefix() {
     const token = this.peek();
     if (!token) {
@@ -39124,6 +39667,7 @@ var ExpressionParser = class {
     }
     return this.parsePostfix(this.parsePrimary());
   }
+  /** Parses one operand: dotted local name, literal, string, define reference, identifier or parenthesized group. */
   parsePrimary() {
     if (this.peek()?.type === "dot") {
       const firstSpan = this.peek()?.span;
@@ -39214,6 +39758,7 @@ var ExpressionParser = class {
       { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` }
     );
   }
+  /** Applies call, member and index postfixes; calls require identifiers and accessors require references. */
   parsePostfix(expression) {
     let current = expression;
     while (true) {
@@ -39263,6 +39808,7 @@ var ExpressionParser = class {
       return current;
     }
   }
+  /** Parses comma-separated arguments after `(` through the closing `)`. */
   parseCallArguments() {
     const args = [];
     if (this.match({ type: "rparen" })) {
@@ -39276,7 +39822,7 @@ var ExpressionParser = class {
   }
   /**
    * Expects a value.
-   * @param {Token["type"]} type The type.
+   * @param type The type.
    */
   expect(type) {
     const token = this.consume();
@@ -39289,6 +39835,7 @@ var ExpressionParser = class {
       );
     }
   }
+  /** Consumes the next token only when its type matches, reporting whether it did. */
   match(expected) {
     const token = this.peek();
     if (token && token.type === expected.type) {
@@ -39297,11 +39844,13 @@ var ExpressionParser = class {
     }
     return false;
   }
+  /** Returns the next token and advances; undefined past the end. */
   consume() {
     const token = this.tokens[this.index];
     this.index++;
     return token;
   }
+  /** Returns the next token without advancing; undefined past the end. */
   peek() {
     return this.tokens[this.index];
   }
@@ -39691,7 +40240,7 @@ function parseInstructionOperands(mnemonic, text2, grammar2) {
     const parts2 = operandParts(text2, ",");
     for (let index = 0; index < parts2.length; index++) {
       let part = parts2[index];
-      const next = parts2[index + 1];
+      const next = parts2.at(index + 1);
       if (grammar2.commaIndex && next && grammar2.indexRegisters.includes(next.text.toLowerCase())) {
         part = { text: text2.slice(part.start, next.end), start: part.start, end: next.end };
         index++;
@@ -39909,11 +40458,17 @@ function definePlugin(plugin2) {
 
 // packages/core/src/plugin/diagnostics.ts
 var PluginError = class extends Error {
+  /** Stable failure category for programmatic handling. */
   code;
+  /** Manifest ID of the plugin responsible, when known. */
   pluginId;
+  /** Module specifier or URL the plugin was loaded from, when known. */
   pluginModule;
+  /** Contribution ID involved in the failure, when known. */
   contributionId;
+  /** Target ID involved in the failure, when known. */
   targetId;
+  /** Original thrown value, also passed to the native Error cause. */
   cause;
   constructor(message, context) {
     super(message, { cause: context.cause });
@@ -40051,21 +40606,21 @@ var RelocatableInstruction = class {
 };
 
 // packages/disassembler/src/source-project/build-coverage.ts
-function isRecord20(value) {
+function isRecord21(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSourceBuildCoverage(value) {
-  if (!isRecord20(value)) {
+  if (!isRecord21(value)) {
     return false;
   }
-  const record7 = value;
-  return typeof record7.romSha256 === "string" && /^[\da-f]{64}$/.test(record7.romSha256) && [record7.totalBytes, record7.remainingBytes, record7.convertedBytes].every(
+  const record8 = value;
+  return typeof record8.romSha256 === "string" && /^[\da-f]{64}$/.test(record8.romSha256) && [record8.totalBytes, record8.remainingBytes, record8.convertedBytes].every(
     (count3) => typeof count3 === "number" && Number.isSafeInteger(count3) && count3 >= 0
-  ) && Number(record7.remainingBytes) + Number(record7.convertedBytes) === record7.totalBytes;
+  ) && Number(record8.remainingBytes) + Number(record8.convertedBytes) === record8.totalBytes;
 }
 
 // packages/vscode-extension/src/analysis/project-discovery.ts
-var import_vscode = require("vscode");
+var import_vscode2 = require("vscode");
 var ANALYSIS_PROJECT_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
 var selectedSourceRoot;
 function initializeAnalysisProjectDiscovery(root) {
@@ -40084,206 +40639,33 @@ var findAnalysisProjectDirectories = async () => {
   if (source) {
     return [readSourceProjectLocalInputs(source).evidence];
   }
-  const configured = import_vscode.workspace.getConfiguration("asm").get("analysisProject", "").trim();
+  const configured = import_vscode2.workspace.getConfiguration("asm").get("analysisProject", "").trim();
   if (configured !== "") {
-    const folders = import_vscode.workspace.workspaceFolders ?? [];
-    const candidates = path17.isAbsolute(configured) ? [configured] : folders.map(({ uri }) => path17.resolve(uri.fsPath, configured));
+    const folders = import_vscode2.workspace.workspaceFolders ?? [];
+    const candidates = path20.isAbsolute(configured) ? [configured] : folders.map(({ uri }) => path20.resolve(uri.fsPath, configured));
     return [
       ...new Set(
         candidates.map(
-          (candidate) => path17.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path17.dirname(candidate) : candidate
+          (candidate) => path20.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path20.dirname(candidate) : candidate
         )
       )
     ].toSorted();
   }
-  const manifests = await import_vscode.workspace.findFiles(
+  const manifests = await import_vscode2.workspace.findFiles(
     `**/${ANALYSIS_PROJECT_MANIFEST}`,
     ANALYSIS_PROJECT_EXCLUDE,
     32
   );
   return [
     ...new Set(
-      manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path17.dirname(fsPath))
+      manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path20.dirname(fsPath))
     )
   ].toSorted();
 };
 
-// packages/vscode-extension/src/analysis/debug-maps.ts
-var import_node_crypto17 = require("node:crypto");
-var fs14 = __toESM(require("node:fs"), 1);
-var path19 = __toESM(require("node:path"), 1);
-var import_vscode2 = require("vscode");
-
-// packages/vscode-extension/src/source/project-path.ts
-var import_promises9 = __toESM(require("node:fs/promises"), 1);
-var import_node_path16 = __toESM(require("node:path"), 1);
-async function findSourceRoot(directory) {
-  let current = import_node_path16.default.resolve(directory);
-  for (; ; ) {
-    try {
-      await import_promises9.default.access(import_node_path16.default.join(current, ".uttori/project.json"));
-      return current;
-    } catch {
-    }
-    try {
-      await import_promises9.default.access(import_node_path16.default.join(current, ".git"));
-      return void 0;
-    } catch {
-    }
-    const parent = import_node_path16.default.dirname(current);
-    if (parent === current) {
-      return void 0;
-    }
-    current = parent;
-  }
-}
-
-// packages/vscode-extension/src/analysis/debug-maps.ts
-var DEBUG_MAP_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
-var sortedUnique3 = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
-function isRecord21(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isStoredDebugMap2(value) {
-  return isRecord21(value) && isRecord21(value.fingerprint) && typeof value.fingerprint.algorithm === "string" && typeof value.fingerprint.value === "string" && isRecord21(value.output) && typeof value.output.size === "number" && typeof value.output.sha256 === "string" && typeof value.target === "string" && Array.isArray(value.sources) && Array.isArray(value.ranges) && (value.instructions === void 0 || Array.isArray(value.instructions)) && (value.assets === void 0 || Array.isArray(value.assets));
-}
-function isAcceptedDebugMap2(map) {
-  return map.format === DEBUG_MAP_FORMAT && map.schemaVersion === DEBUG_MAP_SCHEMA_VERSION && map.fingerprint.algorithm === "sha256";
-}
-function isIdentityList(value) {
-  return Array.isArray(value);
-}
-var resolvedConfigurationPath = (value, root) => path19.isAbsolute(value) ? value : path19.resolve(root ?? process.cwd(), value);
-var analysisSourceSha256 = (file) => (0, import_node_crypto17.createHash)("sha256").update(fs14.readFileSync(file)).digest("hex");
-var sourcePaths = (source, candidate) => {
-  if (path19.isAbsolute(source.path)) {
-    return [source.path];
-  }
-  return sortedUnique3([
-    ...candidate.sourceRoots.map((root) => path19.resolve(root, source.path)),
-    path19.resolve(path19.dirname(candidate.file), source.path),
-    ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => path19.resolve(uri.fsPath, source.path))
-  ]);
-};
-var currentAnalysisSourcePath = (source, candidate, expectedFile) => sourcePaths(source, candidate).find((file) => {
-  if (expectedFile !== void 0 && path19.resolve(file) !== expectedFile) {
-    return false;
-  }
-  try {
-    return fs14.statSync(file).isFile() && analysisSourceSha256(file) === source.sha256;
-  } catch {
-    return false;
-  }
-});
-var findAnalysisDebugMapCandidates = async (identity2) => {
-  const identities = isIdentityList(identity2) ? identity2 : [identity2];
-  const candidates = [];
-  for (const descriptor2 of await discoverAnalysisDebugMapFiles()) {
-    try {
-      const parsed = JSON.parse(fs14.readFileSync(descriptor2.file, "utf8"));
-      if (!isStoredDebugMap2(parsed)) {
-        continue;
-      }
-      if (validateDebugMap(parsed).length > 0 || !isAcceptedDebugMap2(parsed) || !identities.some(
-        (candidate) => parsed.target === candidate.target && parsed.output.sha256 === candidate.romContentSha256 && parsed.output.size === candidate.romContentSize
-      )) {
-        continue;
-      }
-      candidates.push({ ...descriptor2, map: parsed });
-    } catch {
-    }
-  }
-  return candidates;
-};
-var discoverAnalysisDebugMapFiles = async () => {
-  const active = import_vscode2.debug.activeDebugSession;
-  const configuredMap = active?.type === "uttori-asm" && typeof active.configuration.debugMap === "string" ? resolvedConfigurationPath(active.configuration.debugMap, active.workspaceFolder?.uri.fsPath) : void 0;
-  const configuredRoot = active?.type === "uttori-asm" && typeof active.configuration.sourceRoot === "string" ? resolvedConfigurationPath(
-    active.configuration.sourceRoot,
-    active.workspaceFolder?.uri.fsPath
-  ) : active?.workspaceFolder?.uri.fsPath;
-  const discovered = await import_vscode2.workspace.findFiles("**/*.debug.json", DEBUG_MAP_EXCLUDE, 64);
-  const sourceRoots = [
-    ...new Set(
-      (await Promise.all(
-        (import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => findSourceRoot(uri.fsPath))
-      )).filter((root) => !!root)
-    )
-  ];
-  const selected = [];
-  for (const root of sourceRoots) {
-    try {
-      const directory = path19.join(root, ".uttori-local/builds");
-      const receiptFile = path19.join(directory, "current.json");
-      if ((await fs14.promises.stat(receiptFile)).size > 1024 * 1024) {
-        continue;
-      }
-      const receipt = JSON.parse(await fs14.promises.readFile(receiptFile, "utf8"));
-      if (!isRecord21(receipt) || typeof receipt.inputSha256 !== "string" || typeof receipt.debugMapFile !== "string" || !/^[\da-f]{64}$/.test(receipt.inputSha256)) {
-        continue;
-      }
-      const file = path19.join(directory, receipt.inputSha256, "program.sfc.debug.json");
-      if (receipt.debugMapFile === file) {
-        selected.push(file);
-      }
-    } catch {
-    }
-  }
-  const files = sortedUnique3([
-    ...configuredMap ? [configuredMap] : [],
-    ...selected,
-    ...discovered.filter(
-      ({ scheme, fsPath }) => scheme === "file" && !sourceRoots.some((root) => fsPath.startsWith(root + path19.sep))
-    ).map(({ fsPath }) => fsPath)
-  ]);
-  return files.map((file) => {
-    const containingWorkspace = import_vscode2.workspace.getWorkspaceFolder(import_vscode2.Uri.file(file));
-    const ancestors = [];
-    if (containingWorkspace) {
-      const root = containingWorkspace.uri.fsPath;
-      for (let directory = path19.dirname(file); directory !== root && directory.startsWith(`${root}${path19.sep}`); directory = path19.dirname(directory)) {
-        ancestors.push(directory);
-      }
-    }
-    return {
-      file,
-      sourceRoots: sortedUnique3([
-        ...file === configuredMap && configuredRoot ? [configuredRoot] : [],
-        ...sourceRoots.filter((root) => file.startsWith(root + path19.sep)),
-        ...(import_vscode2.workspace.workspaceFolders ?? []).map(({ uri }) => uri.fsPath),
-        ...ancestors
-      ])
-    };
-  });
-};
-var analysisDebugMapRanges = (map, location) => {
-  const ranges = [
-    ...debugMapRangesForAddress(map, location.addressSpace, location.address),
-    ...location.outputOffsets.flatMap(
-      (outputOffset) => debugMapRangesForAddress(map, location.addressSpace, location.address, { outputOffset })
-    )
-  ];
-  const unique2 = new Map(
-    ranges.map((range) => [
-      [
-        range.architecture,
-        range.addressSpace,
-        range.start,
-        range.end,
-        range.outputStart ?? "",
-        range.sourceId,
-        range.line
-      ].join(":"),
-      range
-    ])
-  );
-  const hints = new Set(location.architectureHints);
-  return [...unique2.values()].filter((range) => hints.size === 0 || hints.has(range.architecture));
-};
-
 // packages/vscode-extension/src/analysis/worker-client.ts
 var import_node_child_process2 = require("node:child_process");
-var path20 = __toESM(require("node:path"), 1);
+var path21 = __toESM(require("node:path"), 1);
 var AnalysisRequestCancelled = class extends Error {
 };
 var interactiveOperations = /* @__PURE__ */ new Set([
@@ -40311,9 +40693,11 @@ var AnalysisWorkerClient = class _AnalysisWorkerClient {
   #active;
   #queue = [];
   #inflight = /* @__PURE__ */ new Map();
+  /** Whether this client has been disposed and rejects new requests. */
   get disposed() {
     return this.#slots.disposed;
   }
+  /** Queue a projection read against the analysis worker for one project directory. */
   request(directory, operation2, options = {}) {
     if (this.disposed) {
       return Promise.reject(new Error("Analysis worker disposed."));
@@ -40484,11 +40868,13 @@ ${stderr}` : ""}`
       }
     });
   }
+  /** Terminate in-flight work after project or evidence invalidation. */
   invalidate() {
     this.#manifests?.invalidate();
     this.#previews?.invalidate();
     this.#fail(new AnalysisRequestCancelled("Analysis project invalidated."));
   }
+  /** Dispose slot tracking and terminate owned worker processes. */
   dispose() {
     this.#slots.dispose();
     this.#manifests?.dispose();
@@ -40518,7 +40904,7 @@ var initializeAnalysisWorker = (extensionRoot, options) => {
     client = void 0;
   }
   return client ??= new AnalysisWorkerClient(
-    path20.join(extensionRoot, "out", "analysis-worker.cjs"),
+    path21.join(extensionRoot, "out", "analysis-worker.cjs"),
     {
       ...options,
       isolateAnnotations: true
@@ -40553,6 +40939,7 @@ function documentDirty(document) {
 var TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotations";
 var configurationTarget = (uri) => uri && import_vscode3.workspace.getWorkspaceFolder(uri) ? import_vscode3.ConfigurationTarget.WorkspaceFolder : import_vscode3.ConfigurationTarget.Global;
 var AnalysisAnnotationController = class {
+  /** Snapshot-backed information service feeding decorations and hovers. */
   provider;
   #decoration;
   #disposables = [];
@@ -40628,14 +41015,14 @@ var AnalysisAnnotationController = class {
   }
   #dirtyFiles() {
     return new Set(
-      import_vscode3.workspace.textDocuments.filter((document) => document.isDirty && document.uri.scheme === "file").map((document) => path21.resolve(document.uri.fsPath))
+      import_vscode3.workspace.textDocuments.filter((document) => document.isDirty && document.uri.scheme === "file").map((document) => path22.resolve(document.uri.fsPath))
     );
   }
   /**
    * Publish status only for the active assembly editor; retain reasons for explicit inspection.
-   * @param {TextEditor} editor Editor owning this generation's result.
-   * @param {string} label Brief state shown in the status bar.
-   * @param {string} explanation Full diagnostic retained for the status report.
+   * @param editor Editor owning this generation's result.
+   * @param label Brief state shown in the status bar.
+   * @param explanation Full diagnostic retained for the status report.
    */
   #setStatus(editor, label, explanation) {
     this.#explanations.set(editor, explanation);
@@ -40691,8 +41078,8 @@ Click for source information diagnostics.`;
   }
   /**
    * Remember a successful build even if automatic discovery has reached its map-file limit.
-   * @param {string} debugMapPath Newly published map filename.
-   * @param {string} sourceRoot Owning workspace/include resolution root.
+   * @param debugMapPath Newly published map filename.
+   * @param sourceRoot Owning workspace/include resolution root.
    */
   buildCompleted(debugMapPath, sourceRoot) {
     this.provider.buildCompleted(debugMapPath, sourceRoot);
@@ -40700,7 +41087,7 @@ Click for source information diagnostics.`;
   }
   /**
    * Coalesce scrolling; both disabled surfaces produce no provider work.
-   * @param {TextEditor | undefined} editor Optional editor; omission refreshes all visible editors.
+   * @param editor Optional editor; omission refreshes all visible editors.
    */
   refresh(editor) {
     if (this.#disposed) {
@@ -40786,7 +41173,7 @@ Click for source information diagnostics.`;
   }
   /**
    * Includes can change another open file's layout; clear all affected work immediately.
-   * @param {TextDocument} document Changed document, including unsaved buffers.
+   * @param document Changed document, including unsaved buffers.
    */
   documentChanged(document) {
     if (document.uri.scheme === "file") {
@@ -40853,10 +41240,10 @@ Click for source information diagnostics.`;
   }
   /**
    * Append compact analysis independently of the language server's instruction documentation.
-   * @param {TextDocument} document Source snapshot requested by VS Code.
-   * @param {Position} position Hovered zero-based source position.
-   * @param {CancellationToken} token Host cancellation; stale replies are discarded.
-   * @returns {Promise<Hover | undefined>} Compact additional hover, or nothing when unavailable.
+   * @param document Source snapshot requested by VS Code.
+   * @param position Hovered zero-based source position.
+   * @param token Host cancellation; stale replies are discarded.
+   * @returns Compact additional hover, or nothing when unavailable.
    */
   async provideHover(document, position, token) {
     const config = this.#configuration(document.uri);
@@ -40994,6 +41381,7 @@ ${content.slice(start, start + 120).join("\n")}`
     });
     await import_vscode3.window.showTextDocument(document, { preview: true, viewColumn: editor.viewColumn });
   }
+  /** Cancel timers, invalidate information caches, and dispose editor subscriptions. */
   dispose() {
     this.#disposed = true;
     for (const timer of this.#timers.values()) {
@@ -41010,28 +41398,28 @@ ${content.slice(start, start + 120).join("\n")}`
 };
 
 // packages/vscode-extension/src/analysis/coverage-tree.ts
-var path24 = __toESM(require("node:path"), 1);
+var path25 = __toESM(require("node:path"), 1);
 var import_vscode4 = require("vscode");
 
 // packages/vscode-extension/src/analysis/build-coverage.ts
 var import_promises11 = __toESM(require("node:fs/promises"), 1);
-var import_node_path18 = __toESM(require("node:path"), 1);
+var import_node_path19 = __toESM(require("node:path"), 1);
 
 // packages/vscode-extension/src/source/build-inputs.ts
 var import_promises10 = __toESM(require("node:fs/promises"), 1);
-var import_node_path17 = __toESM(require("node:path"), 1);
+var import_node_path18 = __toESM(require("node:path"), 1);
 async function captureBuildControls(root) {
-  const projectBytes = await import_promises10.default.readFile(import_node_path17.default.join(root, ".uttori/project.json"));
+  const projectBytes = await import_promises10.default.readFile(import_node_path18.default.join(root, ".uttori/project.json"));
   const configuration = parseSourceProject(JSON.parse(projectBytes.toString("utf8")));
   const files = [
     configuration.layout,
     configuration.buildConfig,
-    import_node_path17.default.posix.join(import_node_path17.default.posix.dirname(configuration.buildConfig), "source-raw.json")
+    import_node_path18.default.posix.join(import_node_path18.default.posix.dirname(configuration.buildConfig), "source-raw.json")
   ];
   const controls = await Promise.all(
     files.map(async (file) => ({
       path: file,
-      sha256: sourceContentHash(await import_promises10.default.readFile(import_node_path17.default.resolve(root, file)))
+      sha256: sourceContentHash(await import_promises10.default.readFile(import_node_path18.default.resolve(root, file)))
     }))
   );
   return [{ path: ".uttori/project.json", sha256: sourceContentHash(projectBytes) }, ...controls];
@@ -41042,7 +41430,7 @@ async function changedBuildInputs(root, inputs) {
     const results = await Promise.all(
       inputs.slice(start, start + 8).map(async (input) => {
         try {
-          return sourceContentHash(await import_promises10.default.readFile(import_node_path17.default.resolve(root, input.path))) !== input.sha256;
+          return sourceContentHash(await import_promises10.default.readFile(import_node_path18.default.resolve(root, input.path))) !== input.sha256;
         } catch (error) {
           if (error instanceof Error && "code" in error && error.code === "ENOENT") {
             return true;
@@ -41072,7 +41460,7 @@ async function readJson(file, limit) {
   return JSON.parse(await import_promises11.default.readFile(file, "utf8"));
 }
 async function readBuildCoverage(root) {
-  const file = import_node_path18.default.join(root, ".uttori-local/builds/summary.json");
+  const file = import_node_path19.default.join(root, ".uttori-local/builds/summary.json");
   let value;
   try {
     value = await readJson(file, 4096);
@@ -41089,7 +41477,7 @@ async function readBuildCoverage(root) {
     return void 0;
   }
   const project = parseSourceProject(
-    await readJson(import_node_path18.default.join(root, ".uttori/project.json"), 65536)
+    await readJson(import_node_path19.default.join(root, ".uttori/project.json"), 65536)
   );
   if (project.romSha256 !== value.coverage.romSha256) {
     throw new Error(
@@ -41103,7 +41491,7 @@ async function readBuildCoverage(root) {
 }
 async function checkBuildCoverageFreshness(root, summary) {
   try {
-    const file = import_node_path18.default.join(root, ".uttori-local/builds/current.json");
+    const file = import_node_path19.default.join(root, ".uttori-local/builds/current.json");
     const receipt = await readJson(file, 16 * 1024 * 1024);
     if (!isRecord23(receipt) || receipt.inputSha256 !== summary.inputSha256) {
       return { status: "stale", reason: "A different build is selected. Refresh coverage." };
@@ -41168,6 +41556,7 @@ var AnalysisCoverageProvider = class {
   #disposed = false;
   #sourceRoots = /* @__PURE__ */ new Set();
   #inputTimer;
+  /** Stop timers and dispose change events when the provider is torn down. */
   dispose() {
     this.#disposed = true;
     clearTimeout(this.#inputTimer);
@@ -41175,8 +41564,10 @@ var AnalysisCoverageProvider = class {
     this.#freshness.clear();
     this.#onDidChangeTreeData.dispose();
   }
+  /** Registered tree view id for build coverage summaries. */
   static viewId = "uttori-asm.analysisCoverage";
   #onDidChangeTreeData = new import_vscode4.EventEmitter();
+  /** Fired when coverage freshness maps are cleared after refresh. */
   onDidChangeTreeData = this.#onDidChangeTreeData.event;
   /** External writes also invalidate persisted checks for source projects not currently selected. */
   inputChanged(uri) {
@@ -41184,11 +41575,11 @@ var AnalysisCoverageProvider = class {
       return;
     }
     for (const root of this.#sourceRoots) {
-      const relative4 = path24.relative(root, uri.fsPath);
-      if (relative4 === ".." || relative4.startsWith(`..${path24.sep}`) || path24.isAbsolute(relative4)) {
+      const relative4 = path25.relative(root, uri.fsPath);
+      if (relative4 === ".." || relative4.startsWith(`..${path25.sep}`) || path25.isAbsolute(relative4)) {
         continue;
       }
-      const first = relative4.split(path24.sep)[0];
+      const first = relative4.split(path25.sep)[0];
       if (first === ".git" || first === ".uttori-local") {
         continue;
       }
@@ -41197,11 +41588,13 @@ var AnalysisCoverageProvider = class {
       break;
     }
   }
+  /** Bump revision and drop cached freshness before reloading projects. */
   refresh() {
     this.#revision++;
     this.#freshness.clear();
     this.#onDidChangeTreeData.fire();
   }
+  /** Map a coverage node into VS Code tree presentation state. */
   getTreeItem(element) {
     const item = new import_vscode4.TreeItem(element.label, element.state);
     item.id = element.id;
@@ -41211,6 +41604,7 @@ var AnalysisCoverageProvider = class {
     item.command = element.command;
     return item;
   }
+  /** Return project roots or the static children attached to one node. */
   async getChildren(element) {
     if (!element) {
       return this.loadProjects();
@@ -41302,7 +41696,7 @@ ${String(error)}`;
     });
     return {
       id,
-      label: path24.basename(root),
+      label: path25.basename(root),
       description,
       tooltip,
       icon,
@@ -41325,8 +41719,8 @@ ${String(error)}`;
     const roots = [
       ...new Set(
         configurations.filter(
-          ({ scheme, fsPath }) => scheme === "file" && fsPath.endsWith(`${path24.sep}.uttori${path24.sep}project.json`)
-        ).map(({ fsPath }) => path24.dirname(path24.dirname(fsPath)))
+          ({ scheme, fsPath }) => scheme === "file" && fsPath.endsWith(`${path25.sep}.uttori${path25.sep}project.json`)
+        ).map(({ fsPath }) => path25.dirname(path25.dirname(fsPath)))
       )
     ].toSorted();
     if (roots.length) {
@@ -41340,7 +41734,7 @@ ${String(error)}`;
 };
 
 // packages/vscode-extension/src/analysis/evidence-inspector.ts
-var path25 = __toESM(require("node:path"), 1);
+var path26 = __toESM(require("node:path"), 1);
 init_canonical_json();
 var import_vscode5 = require("vscode");
 var EVIDENCE_SHARDS = [
@@ -41373,6 +41767,7 @@ function isEvidenceExplanation(value) {
 }
 var indentedJson = (value) => canonicalJson(value).trimEnd().split("\n").map((line) => `    ${line}`).join("\n");
 var AnalysisEvidenceInspector = class {
+  /** Prompt for a record and open a read-only explanation document. */
   async explainEvidence() {
     try {
       const projectDirectory = await this.chooseProject("Explain Analysis Evidence");
@@ -41422,7 +41817,7 @@ var AnalysisEvidenceInspector = class {
     }
     return (await import_vscode5.window.showQuickPick(
       directories.map((directory) => ({
-        label: path25.basename(directory),
+        label: path26.basename(directory),
         description: directory,
         directory
       })),
@@ -41432,12 +41827,12 @@ var AnalysisEvidenceInspector = class {
   evidenceChoices(shards) {
     const kinds = EVIDENCE_SHARDS;
     return kinds.flatMap(
-      (shard) => shards[shard].map((record7) => ({
-        label: record7.id,
+      (shard) => shards[shard].map((record8) => ({
+        label: record8.id,
         description: shard,
-        key: `${shard}:${record7.id}`,
+        key: `${shard}:${record8.id}`,
         shard,
-        recordId: record7.id
+        recordId: record8.id
       }))
     );
   }
@@ -41496,7 +41891,7 @@ var parseAnalysisNavigationTarget = (value) => {
 };
 
 // packages/vscode-extension/src/analysis/navigation.ts
-var path28 = __toESM(require("node:path"), 1);
+var path29 = __toESM(require("node:path"), 1);
 
 // packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
@@ -41649,6 +42044,7 @@ var DebugExpressionParser = class {
     this.#tokens = tokens;
     this.#registers = registers;
   }
+  /** Parses the full token stream into one evaluated result. */
   parse() {
     const result = this.#expression(0, 0);
     if (this.#peek().type !== "end") {
@@ -41800,7 +42196,7 @@ var formatDebugExpressionValue = (value) => value < 0n ? `-0x${(-value).toString
 
 // packages/debug-adapter/src/dap.ts
 var import_node_async_hooks = require("node:async_hooks");
-var import_node_path19 = __toESM(require("node:path"), 1);
+var import_node_path20 = __toESM(require("node:path"), 1);
 init_src();
 var numeric = (value, fallback = 0) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
 var isRecord25 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -41952,12 +42348,12 @@ var DebugAdapterSession = class {
   #executionUpdateQueue = Promise.resolve();
   /**
    * Creates a DAP session around one backend.
-   * @param {DebugAdapterSessionOptions} options Backend, map, and host callbacks.
+   * @param options Backend, map, and host callbacks.
    */
   constructor(options) {
     this.#backend = options.backend;
     this.#map = options.debugMap;
-    this.#sourceRoot = import_node_path19.default.resolve(options.sourceRoot ?? process.cwd());
+    this.#sourceRoot = import_node_path20.default.resolve(options.sourceRoot ?? process.cwd());
     this.#sourceBreakpointAddresses = options.sourceBreakpointAddresses;
     this.#sourceOutputOffset = options.sourceOutputOffset;
     this.#instructionAnnotation = options.instructionAnnotation;
@@ -41976,8 +42372,8 @@ var DebugAdapterSession = class {
   }
   /**
    * Handles one request and returns all deterministically ordered response/events.
-   * @param {DapRequest} request Incoming request.
-   * @returns {Promise<readonly DapProtocolMessage[]>} Response followed by queued events.
+   * @param request Incoming request.
+   * @returns Response followed by queued events.
    */
   async dispatch(request) {
     const pending = [];
@@ -42036,7 +42432,7 @@ var DebugAdapterSession = class {
    * VS Code sends its initial breakpoints between `initialized` and
    * `configurationDone`. Connecting first leaves the emulator stopped and able to
    * accept those breakpoint-table writes before execution begins.
-   * @returns {Promise<void>} Resolves after the client finishes breakpoint configuration.
+   * @returns Resolves after the client finishes breakpoint configuration.
    */
   async #configure() {
     if (!this.#configurationHandshake) {
@@ -42281,13 +42677,13 @@ var DebugAdapterSession = class {
         if (range && this.#map) {
           const source = this.#map.sources.find((candidate) => candidate.id === range.sourceId);
           if (source) {
-            const sourcePath = import_node_path19.default.isAbsolute(source.path) ? source.path : import_node_path19.default.resolve(this.#sourceRoot, source.path);
+            const sourcePath = import_node_path20.default.isAbsolute(source.path) ? source.path : import_node_path20.default.resolve(this.#sourceRoot, source.path);
             return {
               id: frame.id,
               name: frame.currentOnly ? `${frame.name} (current frame only)` : frame.name,
               line: range.line,
               column: 1,
-              source: { name: import_node_path19.default.basename(sourcePath), path: sourcePath },
+              source: { name: import_node_path20.default.basename(sourcePath), path: sourcePath },
               instructionPointerReference: formatDebugAddress(frame.pc)
             };
           }
@@ -42530,8 +42926,8 @@ var DebugAdapterSession = class {
   /**
    * Replaces the breakpoint set for one source and reports the executable line chosen
    * for each request. Directive/comment lines move forward to the next mapped instruction.
-   * @param {Record<string, unknown>} args DAP `setBreakpoints` arguments.
-   * @returns {Promise<Record<string, unknown>>} Verified or rejected breakpoint results.
+   * @param args DAP `setBreakpoints` arguments.
+   * @returns Verified or rejected breakpoint results.
    */
   async #setSourceBreakpoints(args) {
     if (!this.#map) {
@@ -42583,8 +42979,8 @@ var DebugAdapterSession = class {
   /**
    * Returns only mapped, backend-supported lines so the IDE can render valid gutter
    * locations before the user creates a breakpoint.
-   * @param {Record<string, unknown>} args DAP source range to query.
-   * @returns {Record<string, unknown>} Executable source locations in the requested range.
+   * @param args DAP source range to query.
+   * @returns Executable source locations in the requested range.
    */
   #breakpointLocations(args) {
     if (!this.#map) {
@@ -42645,9 +43041,9 @@ var DebugAdapterSession = class {
    * Live emulators require a stopped CPU for this mutation, so a running session is
    * paused briefly. A failed replacement restores the confirmed table before resuming.
    * Failed recovery leaves a visible stop and blocks execution until a successful edit.
-   * @param {Map<string, DebugAddress[]>} sources Proposed per-source requests.
-   * @param {Map<string, DebugAddress>} instructions Proposed instruction requests.
-   * @returns {Promise<Map<string, DebugBreakpoint>>} Applied breakpoints keyed by address.
+   * @param sources Proposed per-source requests.
+   * @param instructions Proposed instruction requests.
+   * @returns Applied breakpoints keyed by address.
    */
   async #applyBreakpoints(sources, instructions) {
     const source = [...sources.values()].flat();
@@ -42720,14 +43116,14 @@ var DebugAdapterSession = class {
   }
   /**
    * Finds ranges for either a portable map path or its absolute workspace spelling.
-   * @param {string} sourcePath Source path supplied by the DAP client.
-   * @returns {readonly DebugMapRange[]} All mapped ranges belonging to the source.
+   * @param sourcePath Source path supplied by the DAP client.
+   * @returns All mapped ranges belonging to the source.
    */
   #sourceRanges(sourcePath) {
     if (!this.#map) {
       return [];
     }
-    const normalized = sourcePath.split(import_node_path19.default.sep).join("/");
+    const normalized = sourcePath.split(import_node_path20.default.sep).join("/");
     const sourceIds = new Set(
       this.#map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
     );
@@ -42735,9 +43131,9 @@ var DebugAdapterSession = class {
   }
   /**
    * Resolves an exact line first, then the nearest later executable line in the same source.
-   * @param {string} sourcePath Source path supplied by the DAP client.
-   * @param {number} requestedLine One-based requested source line.
-   * @returns {DebugMapRange | undefined} Executable range chosen for the breakpoint.
+   * @param sourcePath Source path supplied by the DAP client.
+   * @param requestedLine One-based requested source line.
+   * @returns Executable range chosen for the breakpoint.
    */
   #sourceBreakpointRange(sourcePath, requestedLine) {
     return debugMapRangesForSource(this.#map, sourcePath, requestedLine).find(
@@ -42749,8 +43145,8 @@ var DebugAdapterSession = class {
   /**
    * Serializes execution and whole-table writes without blocking backend events.
    * Otherwise a user Continue could resume the CPU during a maintenance table write.
-   * @param {() => Promise<T>} update Deferred execution or breakpoint mutation.
-   * @returns {Promise<T>} Result after earlier mutations settle.
+   * @param update Deferred execution or breakpoint mutation.
+   * @returns Result after earlier mutations settle.
    */
   #queueExecutionUpdate(update) {
     const result = this.#executionUpdateQueue.then(() => {
@@ -42783,8 +43179,8 @@ var DebugAdapterSession = class {
   /**
    * Records execution intent before the backend can resolve ahead of its continued
    * event. A newer stop/termination owns the state even if the operation later rejects.
-   * @param {() => Promise<void>} resume Backend Continue or supported step operation.
-   * @returns {Promise<void>} Resolves on backend acceptance, not on event delivery.
+   * @param resume Backend Continue or supported step operation.
+   * @returns Resolves on backend acceptance, not on event delivery.
    */
   async #resumeExecution(resume) {
     this.#assertExecutionActive();
@@ -42809,9 +43205,8 @@ var DebugAdapterSession = class {
    * The returned `resume` flag is false when a real breakpoint/exception wins the race
    * with our pause request. In that case the real stop remains visible and must not be
    * undone by an automatic continue.
-   * @param {readonly DebugAddress[]} addresses Breakpoints about to replace the table.
-   * @returns {Promise<{ readonly threadId: number; readonly resume: boolean; readonly revision: number } | undefined>}
-   * Maintenance state, or undefined when the emulator was not running.
+   * @param addresses Breakpoints about to replace the table.
+   * @returns Maintenance state, or undefined when the emulator was not running.
    */
   async #pauseForBreakpointUpdate(addresses) {
     if (this.#executionState !== "running") {
@@ -42858,8 +43253,8 @@ var DebugAdapterSession = class {
   }
   /**
    * Resumes after a confirmed maintenance pause and marks its continued event as internal.
-   * @param {number} threadId Processor thread paused for the table replacement.
-   * @returns {Promise<void>} Resolves when the backend accepts the continue request.
+   * @param threadId Processor thread paused for the table replacement.
+   * @returns Resolves when the backend accepts the continue request.
    */
   async #resumeAfterBreakpointUpdate(threadId) {
     this.#maintenanceResumeThreadId = threadId;
@@ -42874,8 +43269,7 @@ var DebugAdapterSession = class {
   }
   /**
    * Rejects an in-flight breakpoint update when the debug session ends underneath it.
-   * @param {Error} error Termination error reported to the waiting DAP request.
-   * @returns {void}
+   * @param error Termination error reported to the waiting DAP request.
    */
   #cancelMaintenancePause(error) {
     const maintenance = this.#maintenancePause;
@@ -43144,18 +43538,18 @@ function assertDebugSidecarSessionToken(value) {
   }
 }
 var assertRequestBounds = (command, args, limits) => {
-  const record7 = args ?? {};
-  if (!isRecord26(record7)) {
+  const record8 = args ?? {};
+  if (!isRecord26(record8)) {
     throw new Error("Sidecar request arguments must be an object.");
   }
   if (command === "readMemory") {
-    const count3 = record7.count;
+    const count3 = record8.count;
     if (!nonNegativeInteger(count3) || count3 > limits.maxMemoryReadBytes) {
       throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
     }
   }
   if (command === "disassemble") {
-    const count3 = record7.count;
+    const count3 = record8.count;
     if (!nonNegativeInteger(count3) || count3 > limits.maxDisassemblyInstructions) {
       throw new Error(
         `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
@@ -43163,13 +43557,13 @@ var assertRequestBounds = (command, args, limits) => {
     }
   }
   if (command === "setBreakpoints") {
-    const breakpoints = record7.breakpoints;
+    const breakpoints = record8.breakpoints;
     if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
       throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
     }
   }
   if (command === "readTrace") {
-    const maxEvents = record7.maxEvents;
+    const maxEvents = record8.maxEvents;
     if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
       throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
     }
@@ -43257,7 +43651,7 @@ var DebugSidecarMessageParser = class {
   #lastSequence = 0;
   /**
    * Creates one directional stream parser.
-   * @param {DebugSidecarProtocolLimits} limits Framing and request limits.
+   * @param limits Framing and request limits.
    */
   constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
     validateLimits(limits);
@@ -43265,8 +43659,8 @@ var DebugSidecarMessageParser = class {
   }
   /**
    * Adds a transport chunk and returns every complete validated message in order.
-   * @param {Uint8Array} chunk Next stdio or socket bytes.
-   * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
+   * @param chunk Next stdio or socket bytes.
+   * @returns Complete messages decoded from the stream.
    */
   push(chunk) {
     if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
@@ -43330,7 +43724,7 @@ var NodeStdioSidecarTransport = class {
   #closePromise;
   /**
    * Spawns one sidecar without a shell and authenticates it through inherited environment state.
-   * @param {NodeStdioSidecarTransportOptions} options Explicit executable and lifecycle bounds.
+   * @param options Explicit executable and lifecycle bounds.
    */
   constructor(options) {
     if (options.command.length === 0) {
@@ -43369,18 +43763,24 @@ var NodeStdioSidecarTransport = class {
     );
     this.#child.on("close", (code, signal) => this.#handleExit(code, signal));
   }
-  /** @returns {number | undefined} Native child PID when process creation succeeded. */
+  /**
+   * Native child PID when process creation succeeded.
+   * @returns Process id or undefined before spawn completes.
+   */
   get pid() {
     return this.#child.pid;
   }
-  /** @returns {string} Bounded, token-redacted tail of native stderr. */
+  /**
+   * Bounded, token-redacted tail of native stderr.
+   * @returns Accumulated stderr text capped by maxStderrBytes.
+   */
   get stderr() {
     return this.#stderr.toString("utf8");
   }
   /**
    * Writes one complete or partial frame, resolving only after Node flushes it from its buffer.
-   * @param {Uint8Array} data Framed protocol bytes.
-   * @returns {Promise<void>} Completion of the native pipe write.
+   * @param data Framed protocol bytes.
+   * @returns Completion of the native pipe write.
    */
   write(data) {
     if (this.#notified || this.#exited) {
@@ -43402,7 +43802,7 @@ var NodeStdioSidecarTransport = class {
   }
   /**
    * Ends stdin and escalates from SIGTERM to SIGKILL only when the child misses bounded deadlines.
-   * @returns {Promise<void>} Completion of child-process cleanup.
+   * @returns Completion of child-process cleanup.
    */
   close() {
     this.#closePromise ??= this.#closeProcess();
@@ -43497,8 +43897,11 @@ var identity = (value, context) => {
   return value;
 };
 var DebugTraceBuffer = class {
+  /** Architecture recorded by every batch from this buffer. */
   architecture;
+  /** Address space of every retained PC. */
   addressSpace;
+  /** Fixed capacity before oldest-first loss. */
   capacity;
   #addresses;
   #head = 0;
@@ -43506,18 +43909,27 @@ var DebugTraceBuffer = class {
   #nextSequence = 1;
   #droppedEvents = 0;
   #active = false;
-  /** @param {DebugTraceBufferOptions} options Trace identity and fixed producer capacity. */
+  /**
+   * Allocates an empty ring with the given identity and capacity.
+   * @param options Trace identity and fixed producer capacity.
+   */
   constructor(options) {
     this.architecture = identity(options.architecture, "Trace architecture");
     this.addressSpace = identity(options.addressSpace, "Trace address space");
     this.capacity = positiveInteger3(options.capacity, "Trace capacity");
     this.#addresses = Array.from({ length: this.capacity });
   }
-  /** @returns {boolean} Whether new instruction addresses are currently accepted. */
+  /**
+   * Whether new instruction addresses are currently accepted.
+   * @returns True while recording is active.
+   */
   get active() {
     return this.#active;
   }
-  /** @returns {number} Current retained event count, which never exceeds `capacity`. */
+  /**
+   * Current retained event count, which never exceeds capacity.
+   * @returns Number of addresses waiting to be pulled.
+   */
   get bufferedEvents() {
     return this.#length;
   }
@@ -43535,7 +43947,7 @@ var DebugTraceBuffer = class {
   }
   /**
    * Records one instruction address when active.
-   * @param {number} address Architecture-local logical instruction address.
+   * @param address Architecture-local logical instruction address.
    */
   append(address3) {
     if (!this.#active) {
@@ -43555,8 +43967,8 @@ var DebugTraceBuffer = class {
   }
   /**
    * Destructively reads the oldest retained addresses.
-   * @param {number} maxEvents Positive consumer batch bound.
-   * @returns {DebugTraceBatch} Ordered addresses plus explicit cumulative loss state.
+   * @param maxEvents Positive consumer batch bound.
+   * @returns Ordered addresses plus explicit cumulative loss state.
    */
   read(maxEvents) {
     positiveInteger3(maxEvents, "Trace batch size");
@@ -43653,7 +44065,9 @@ var assertCount = (count3) => {
   }
 };
 var ReplayDebugBackend = class {
+  /** Fixed replay protocol revision. */
   protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
+  /** Capabilities derived from script content or explicit architecture declarations. */
   capabilities;
   #script;
   #listeners = /* @__PURE__ */ new Set();
@@ -43664,7 +44078,7 @@ var ReplayDebugBackend = class {
   #trace;
   /**
    * Creates a replay backend from at least one complete snapshot.
-   * @param {ReplayScript} script Replay timeline.
+   * @param script Replay timeline.
    */
   constructor(script) {
     if (script.snapshots.length === 0) {
@@ -43696,14 +44110,17 @@ var ReplayDebugBackend = class {
       architectures: Object.freeze(architectures.map((capability) => Object.freeze(capability)))
     });
   }
-  /** @returns {number} Current zero-based replay position, exposed for deterministic tests. */
+  /**
+   * Current zero-based replay position, exposed for deterministic tests.
+   * @returns Index into the snapshot timeline.
+   */
   get position() {
     return this.#index;
   }
   /**
    * Connects and optionally resets the replay cursor.
-   * @param {DebugBackendConnectOptions} options Reset behavior.
-   * @returns {Promise<void>} A resolved promise after the entry event is emitted.
+   * @param options Reset behavior.
+   * @returns A resolved promise after the entry event is emitted.
    */
   connect(options = {}) {
     if (options.reset ?? true) {
@@ -43717,8 +44134,8 @@ var ReplayDebugBackend = class {
   }
   /**
    * Disconnects while preserving cursor and breakpoints for an optional reconnect.
-   * @param {{ readonly terminate?: boolean }} options Termination event behavior.
-   * @returns {Promise<void>} A resolved promise after disconnection.
+   * @param options Termination event behavior.
+   * @returns A resolved promise after disconnection.
    */
   disconnect(options = {}) {
     this.#requireConnected();
@@ -43731,8 +44148,8 @@ var ReplayDebugBackend = class {
   }
   /**
    * Emits a pause event at the current cursor.
-   * @param {number} threadId Thread to report as stopped.
-   * @returns {Promise<void>} A resolved promise after the event.
+   * @param threadId Thread to report as stopped.
+   * @returns A resolved promise after the event.
    */
   pause(threadId = this.#snapshot.threads[0]?.id ?? 0) {
     this.#requireConnected();
@@ -43741,8 +44158,8 @@ var ReplayDebugBackend = class {
   }
   /**
    * Runs until the next configured breakpoint or terminates at the end of the script.
-   * @param {number} threadId Thread to continue.
-   * @returns {Promise<void>} A resolved promise after the next stop or termination.
+   * @param threadId Thread to continue.
+   * @returns A resolved promise after the next stop or termination.
    */
   continue(threadId = this.#snapshot.threads[0]?.id ?? 0) {
     this.#requireConnected();
@@ -43763,9 +44180,9 @@ var ReplayDebugBackend = class {
   }
   /**
    * Advances exactly one scripted state or terminates when no state remains.
-   * @param {number} threadId Thread to step.
-   * @param {DebugStepKind} _kind Requested step granularity.
-   * @returns {Promise<void>} A resolved promise after the next stop or termination.
+   * @param threadId Thread to step.
+   * @param _kind Requested step granularity.
+   * @returns A resolved promise after the next stop or termination.
    */
   step(threadId, _kind) {
     this.#requireConnected();
@@ -43779,15 +44196,18 @@ var ReplayDebugBackend = class {
     this.#emit({ type: "stopped", reason: "step", threadId });
     return Promise.resolve();
   }
-  /** @returns {Promise<readonly DebugThread[]>} Processors/threads in stable script order. */
+  /**
+   * Processors and threads in stable script order.
+   * @returns Copied thread list from the active snapshot.
+   */
   threads() {
     this.#requireConnected();
     return Promise.resolve(this.#snapshot.threads.map((thread2) => ({ ...thread2 })));
   }
   /**
    * Lists stack frames for one thread.
-   * @param {number} threadId Thread to inspect.
-   * @returns {Promise<readonly DebugStackFrame[]>} Stable frame copies.
+   * @param threadId Thread to inspect.
+   * @returns Stable frame copies.
    */
   stackFrames(threadId) {
     this.#requireConnected();
@@ -43797,8 +44217,8 @@ var ReplayDebugBackend = class {
   }
   /**
    * Lists registers associated with a frame.
-   * @param {number} frameId Frame to inspect.
-   * @returns {Promise<readonly DebugRegister[]>} Stable register copies.
+   * @param frameId Frame to inspect.
+   * @returns Stable register copies.
    */
   registers(frameId) {
     this.#requireConnected();
@@ -43808,9 +44228,9 @@ var ReplayDebugBackend = class {
   }
   /**
    * Reads available bytes from the current snapshot without crossing address spaces.
-   * @param {DebugAddress} address First logical address.
-   * @param {number} count Number of bytes.
-   * @returns {Promise<DebugMemoryRead>} Bytes and an unreadable-byte count.
+   * @param address First logical address.
+   * @param count Number of bytes.
+   * @returns Bytes and an unreadable-byte count.
    */
   readMemory(address3, count3) {
     this.#requireConnected();
@@ -43838,8 +44258,8 @@ var ReplayDebugBackend = class {
   }
   /**
    * Replaces all instruction breakpoints with stable ids sorted by qualified address.
-   * @param {readonly DebugAddress[]} addresses New qualified addresses.
-   * @returns {Promise<readonly DebugBreakpoint[]>} Breakpoint verification results.
+   * @param addresses New qualified addresses.
+   * @returns Breakpoint verification results.
    */
   setBreakpoints(addresses) {
     this.#requireConnected();
@@ -43863,9 +44283,9 @@ var ReplayDebugBackend = class {
   }
   /**
    * Returns scripted instructions starting at or after an address.
-   * @param {DebugAddress} address First logical address.
-   * @param {number} count Maximum instruction count.
-   * @returns {Promise<readonly DebugInstruction[]>} Stable instruction copies.
+   * @param address First logical address.
+   * @param count Maximum instruction count.
+   * @returns Stable instruction copies.
    */
   disassemble(address3, count3) {
     this.#requireConnected();
@@ -43939,8 +44359,8 @@ var ReplayDebugBackend = class {
   }
   /**
    * Subscribes to synchronously ordered backend events.
-   * @param {(event: DebugBackendEvent) => void} listener Event consumer.
-   * @returns {DebugSubscription} Disposable subscription.
+   * @param listener Event consumer.
+   * @returns Disposable subscription.
    */
   onEvent(listener) {
     this.#listeners.add(listener);
@@ -44362,9 +44782,11 @@ var backendEvent2 = (message) => {
   };
 };
 var SidecarDebugBackend = class {
+  /** Fixed sidecar-backed protocol revision. */
   protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
   #capabilities;
   #configuredCapabilities;
+  /** Capabilities verified on initialize, which may refine configured expectations. */
   get capabilities() {
     return this.#capabilities;
   }
@@ -44378,7 +44800,7 @@ var SidecarDebugBackend = class {
   #connected = false;
   /**
    * Creates a backend with capabilities declared before DAP initialization and verified on connect.
-   * @param {SidecarDebugBackendOptions} options Sidecar identity, capability manifest, and factory.
+   * @param options Sidecar identity, capability manifest, and factory.
    */
   constructor(options) {
     this.#backend = string2(options.backend, "Sidecar backend name");
@@ -44556,6 +44978,7 @@ var SidecarDebugBackend = class {
     validateCaptureRequest(request);
     return validateCaptureResult(await this.#requireConnected().request("capture", { ...request }));
   }
+  /** @inheritdoc */
   async startTrace(options) {
     const architecture = string2(options.architecture, "Trace architecture");
     const addressSpace = string2(options.addressSpace, "Trace address space");
@@ -44712,7 +45135,7 @@ var DebugSidecarClient = class {
   #writeTail = Promise.resolve();
   /**
    * Starts listening to one already-created transport.
-   * @param {DebugSidecarClientOptions} options Authenticated transport and safety bounds.
+   * @param options Authenticated transport and safety bounds.
    */
   constructor(options) {
     assertDebugSidecarSessionToken(options.session);
@@ -44729,14 +45152,17 @@ var DebugSidecarClient = class {
       (error) => this.#fail(error ?? new Error("Sidecar transport closed."))
     );
   }
-  /** @returns {boolean} Whether the transport can still accept requests. */
+  /**
+   * Whether the transport can still accept requests.
+   * @returns True after terminal failure or explicit close.
+   */
   get closed() {
     return this.#closed;
   }
   /**
    * Subscribes to validated, session-matched events.
-   * @param {(event: DebugSidecarEvent) => void} listener Event consumer.
-   * @returns {DebugSubscription} Disposable subscription.
+   * @param listener Event consumer.
+   * @returns Disposable subscription.
    */
   onEvent(listener) {
     this.#eventListeners.add(listener);
@@ -44744,8 +45170,8 @@ var DebugSidecarClient = class {
   }
   /**
    * Subscribes to terminal client failure, including native process crashes and protocol errors.
-   * @param {(error: Error) => void} listener Failure consumer.
-   * @returns {DebugSubscription} Disposable subscription.
+   * @param listener Failure consumer.
+   * @returns Disposable subscription.
    */
   onClose(listener) {
     if (this.#closeError) {
@@ -44759,9 +45185,9 @@ var DebugSidecarClient = class {
    * Sends one bounded command and resolves its paired response. A command error rejects only this
    * request. Timeout, malformed input, or transport failure closes the connection and rejects all
    * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
-   * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
-   * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
-   * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
+   * @param command Neutral sidecar command.
+   * @param arguments_ Validated command arguments.
+   * @returns Untrusted command result for the typed backend adapter to validate.
    */
   request(command, arguments_ = {}) {
     if (this.#closed) {
@@ -44815,7 +45241,7 @@ var DebugSidecarClient = class {
   }
   /**
    * Closes the connection and rejects unresolved requests.
-   * @returns {Promise<void>} Completion of the transport close.
+   * @returns Completion of the transport close.
    */
   async close() {
     if (this.#closed) {
@@ -44892,20 +45318,22 @@ init_src();
 var import_node_crypto19 = require("node:crypto");
 var import_node_fs12 = require("node:fs");
 var import_promises12 = require("node:fs/promises");
-var import_node_path20 = __toESM(require("node:path"), 1);
+var import_node_path21 = __toESM(require("node:path"), 1);
 var isRecord29 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var digestFile2 = async (file, signal) => {
   const hash4 = (0, import_node_crypto19.createHash)("sha256");
   for await (const bytes of (0, import_node_fs12.createReadStream)(file, { signal })) {
     if (!Buffer.isBuffer(bytes)) {
-      throw new Error(`Expected binary capture context data in ${import_node_path20.default.basename(file)}.`);
+      throw new Error(`Expected binary capture context data in ${import_node_path21.default.basename(file)}.`);
     }
     hash4.update(bytes);
   }
   return hash4.digest("hex");
 };
 var CaptureContextRecorder = class {
+  /** Reserved directory receiving companion context artifacts. */
   directory;
+  /** Capture transport wrapping native calls with context prepare/start/stop. */
   transport;
   #metadata;
   #native;
@@ -44980,13 +45408,14 @@ var CaptureContextRecorder = class {
       return transport(request);
     };
   }
-  /** Publish integrity hashes and trace-relative boundaries after primary publication.
+  /**
+   * Publish integrity hashes and trace-relative boundaries after primary publication.
    * Failures retain all files without claiming a complete context bundle.
-   * @param {CaptureFileSummary} summary Completed primary archive whose session/counters must match.
+   * @param summary Completed primary archive whose session/counters must match.
    */
   async finish(summary) {
     const boundaries = JSON.parse(
-      await (0, import_promises12.readFile)(import_node_path20.default.join(this.directory, "boundaries.json"), "utf8")
+      await (0, import_promises12.readFile)(import_node_path21.default.join(this.directory, "boundaries.json"), "utf8")
     );
     if (!isRecord29(boundaries)) {
       throw new Error("Capture context boundaries must be an object.");
@@ -45003,7 +45432,7 @@ var CaptureContextRecorder = class {
       )) {
         throw new Error(`Unexpected capture context artifact: ${name2}.`);
       }
-      const file = import_node_path20.default.join(this.directory, name2);
+      const file = import_node_path21.default.join(this.directory, name2);
       const stat3 = await (0, import_promises12.lstat)(file);
       if (!stat3.isFile() || stat3.isSymbolicLink()) {
         throw new Error("Capture context artifacts must be regular files.");
@@ -45044,7 +45473,7 @@ var CaptureContextRecorder = class {
       throw new Error("Capture context requires full-capture graphics from the native runtime.");
     }
     const graphicsScope = nes ? "nes.cpu-bus-ppu" : "snes.cpu-bus-ppu";
-    const manifest = import_node_path20.default.join(this.directory, "manifest.json");
+    const manifest = import_node_path21.default.join(this.directory, "manifest.json");
     const handle = await (0, import_promises12.open)(`${manifest}.partial`, "wx");
     try {
       await handle.writeFile(
@@ -45053,7 +45482,7 @@ var CaptureContextRecorder = class {
             format: "uttori-capture-context",
             version: 1,
             ...this.#metadata,
-            archive: import_node_path20.default.basename(summary.archive),
+            archive: import_node_path21.default.basename(summary.archive),
             scope: summary.scope,
             boundaries,
             ...nes ? {
@@ -45082,7 +45511,7 @@ var CaptureContextRecorder = class {
               scope: summary.scope,
               windowFrames: null,
               file: null,
-              primaryArchive: import_node_path20.default.basename(summary.archive)
+              primaryArchive: import_node_path21.default.basename(summary.archive)
             },
             files
           },
@@ -45132,6 +45561,7 @@ var emptyStageTiming = () => ({
   maxMs: 0
 });
 var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
+  /** Resolves when the archive is finalized or the recorder is torn down. */
   completion;
   #file;
   #partial;
@@ -45189,8 +45619,8 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
   /**
    * Reserve a new output and start lossless recording. ACT2 output publishes only the archive.
    * Legacy JSON output additionally exports a compatible trace after draining the producer.
-   * @param {object} options Output format, identity and serialized producer transport.
-   * @returns {Promise<LosslessCaptureFileRecorder>} Active recorder. Stop() drains and syncs it.
+   * @param options Output format, identity and serialized producer transport.
+   * @returns Active recorder. Stop() drains and syncs it.
    */
   static async create(options) {
     validateCaptureMetadata(options);
@@ -45279,12 +45709,17 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
       throw error;
     }
   }
-  /** Current producer session, for a paused user milestone.
-   * @returns {CapturePositionV2} Latest verified position; querying does not drain the archive.
+  /**
+   * Current producer session, for a paused user milestone.
+   * @returns Latest verified position; querying does not drain the archive.
    */
   get position() {
     return this.#position;
   }
+  /**
+   * Requests a graceful stop and waits for archive finalization.
+   * @returns Summary after the completion promise settles.
+   */
   async stop() {
     if (!this.#stopRequested) {
       this.#stopRequested = true;
@@ -45302,14 +45737,19 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
     }
     return this.completion;
   }
+  /**
+   * Marks the recording cancelled and still waits for teardown to finish.
+   * @returns Summary from the completion promise after abort paths run.
+   */
   finishIncomplete() {
     this.#cancelled = true;
     return this.completion;
   }
-  /** Account one completed stage without retaining per-chunk samples.
-   * @param {CaptureFileTimingStage} stage Work completed since the previous boundary.
-   * @param {number} start Monotonic start in milliseconds, or zero with profiling disabled.
-   * @returns {number} Next boundary. Disabled profiling never reads the clock.
+  /**
+   * Account one completed stage without retaining per-chunk samples.
+   * @param stage Work completed since the previous boundary.
+   * @param start Monotonic start in milliseconds, or zero with profiling disabled.
+   * @returns Next boundary. Disabled profiling never reads the clock.
    */
   #mark(stage, start) {
     if (!this.#timings) {
@@ -45444,6 +45884,7 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
   }
 };
 var NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
+  /** Resolves when the native writer finishes or the recorder is cancelled. */
   completion;
   #file;
   #scope;
@@ -45452,8 +45893,9 @@ var NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
   #position;
   #stopRequested = false;
   #cancelled = false;
-  /** Latest validated durable position. Observing it never reads or drains event bytes.
-   * @returns {NativeCaptureFilePosition} Read-only status snapshot from the control pump.
+  /**
+   * Latest validated durable position. Observing it never reads or drains event bytes.
+   * @returns Read-only status snapshot from the control pump.
    */
   get position() {
     return this.#position;
@@ -45474,10 +45916,11 @@ var NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
     };
     this.completion = this.#pump();
   }
-  /** Arm while the debugger is stopped, then await the durable session header.
+  /**
+   * Arm while the debugger is stopped, then await the durable session header.
    * The supplied path belongs to the native host, which must share this filesystem.
-   * @param {object} options Destination, scope, verified identity and control transport.
-   * @returns {Promise<NativeCaptureFileRecorder>} Armed recorder with a durable session header.
+   * @param options Destination, scope, verified identity and control transport.
+   * @returns Armed recorder with a durable session header.
    */
   static async create(options) {
     validateCaptureMetadata(options);
@@ -45527,8 +45970,9 @@ var NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
       throw error;
     }
   }
-  /** Fix the capture boundary, then wait for synced END2 and no-clobber publication.
-   * @returns {Promise<CaptureFileSummary>} Published complete archive, or a writer failure.
+  /**
+   * Fix the capture boundary, then wait for synced END2 and no-clobber publication.
+   * @returns Published complete archive, or a writer failure.
    */
   async stop() {
     if (!this.#stopRequested) {
@@ -45547,8 +45991,9 @@ var NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
     }
     return this.completion;
   }
-  /** Leave a recoverable partial artifact. Never publish an interrupted session.
-   * @returns {Promise<CaptureFileSummary>} Existing completion. Rejects on cancellation.
+  /**
+   * Leave a recoverable partial artifact. Never publish an interrupted session.
+   * @returns Existing completion. Rejects on cancellation.
    */
   finishIncomplete() {
     this.#cancelled = true;
@@ -45655,7 +46100,7 @@ var openSourceLocation = async (locations) => {
   }
   const selected = locations.length === 1 ? locations[0] : (await import_vscode6.window.showQuickPick(
     locations.map((location) => ({
-      label: `${path28.basename(location.file)}:${location.line}`,
+      label: `${path29.basename(location.file)}:${location.line}`,
       description: `${location.architecture} \xB7 ${location.addressSpace} \xB7 ${location.mapFile}`,
       location
     })),
@@ -45791,7 +46236,7 @@ var navigateToAnalysisLocation = async (target) => {
 };
 
 // packages/vscode-extension/src/analysis/sources-tree.ts
-var path29 = __toESM(require("node:path"), 1);
+var path30 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode7 = require("vscode");
 function isRecord31(value) {
@@ -45820,19 +46265,24 @@ function isSourceCatalog(value) {
 var count = (value) => value.toLocaleString("en-US");
 var PAGE_SIZE = 200;
 var AnalysisSourcesProvider = class {
+  /** Registered tree view id for the Sources sidebar. */
   static viewId = "uttori-asm.sources";
   #changed = new import_vscode7.EventEmitter();
+  /** Fired when cached source pages are invalidated after refresh. */
   onDidChangeTreeData = this.#changed.event;
   #children = /* @__PURE__ */ new Map();
   #epoch = 0;
+  /** Release the change emitter when the provider is torn down. */
   dispose() {
     this.#changed.dispose();
   }
+  /** Drop cached pages and notify the tree to reload from the worker. */
   refresh() {
     this.#epoch++;
     this.#children.clear();
     this.#changed.fire();
   }
+  /** Map an internal node into VS Code tree presentation state. */
   getTreeItem(element) {
     const item = new import_vscode7.TreeItem(
       element.label,
@@ -45846,6 +46296,7 @@ var AnalysisSourcesProvider = class {
     item.command = element.command;
     return item;
   }
+  /** Resolve lazy children once per node id until refresh bumps the epoch. */
   async getChildren(element) {
     const id = element?.id ?? "root";
     let pending = this.#children.get(id);
@@ -45883,7 +46334,7 @@ var AnalysisSourcesProvider = class {
           }
           return {
             id: directory,
-            label: path29.basename(directory),
+            label: path30.basename(directory),
             description: `${count(catalog.sources.length)} sources`,
             tooltip: directory,
             icon: "database",
@@ -45892,7 +46343,7 @@ var AnalysisSourcesProvider = class {
         } catch (error) {
           return {
             id: `${directory}:error`,
-            label: path29.basename(directory),
+            label: path30.basename(directory),
             description: "could not read sources",
             icon: "error",
             tooltip: `${directory}
@@ -46118,11 +46569,12 @@ var AssetPreviewController = class {
   }
   client;
   #panel;
-  /** Return media only while the same text revision remains open.
-   * @param {TextDocument} document Open assembly source.
-   * @param {number} line Zero-based statement line.
-   * @param {CancellationToken} [token] Hover cancellation.
-   * @returns {Promise<AssetPreviewResponse | undefined>} Current preview response.
+  /**
+   * Return media only while the same text revision remains open.
+   * @param document Open assembly source.
+   * @param line Zero-based statement line.
+   * @param [token] Hover cancellation.
+   * @returns Current preview response.
    */
   async request(document, line, token) {
     const active = this.client(document.uri);
@@ -46145,11 +46597,12 @@ var AssetPreviewController = class {
       return void 0;
     }
   }
-  /** Append a compact image or waveform preview to an asset-call hover.
-   * @param {TextDocument} document Open assembly source.
-   * @param {Position} position Hover cursor.
-   * @param {CancellationToken} token Hover cancellation.
-   * @returns {Promise<Hover | undefined>} Current preview hover.
+  /**
+   * Append a compact image or waveform preview to an asset-call hover.
+   * @param document Open assembly source.
+   * @param position Hover cursor.
+   * @param token Hover cancellation.
+   * @returns Current preview hover.
    */
   async provideHover(document, position, token) {
     const line = document.lineAt(position.line).text;
@@ -46199,9 +46652,10 @@ var AssetPreviewController = class {
     }
     return new import_vscode8.Hover(markdown);
   }
-  /** Open media only from a fresh trusted command, never from arbitrary command URI payloads.
-   * @param {unknown} argument Parsed command URI argument.
-   * @returns {Promise<void>} Completes after panel content is ready.
+  /**
+   * Open media only from a fresh trusted command, never from arbitrary command URI payloads.
+   * @param argument Parsed command URI argument.
+   * @returns Completes after panel content is ready.
    */
   async open(argument) {
     if (!isAssetPreviewRequest(argument)) {
@@ -46274,13 +46728,13 @@ var AssetPreviewController = class {
         body += `<img alt="Source waveform" src="data:image/png;base64,${media.waveformPngBase64}">`;
       }
       if (media.sourceWavBase64) {
-        body += `<h2>Source PCM</h2><audio controls preload="none" src="data:audio/wav;base64,${media.sourceWavBase64}"></audio>`;
+        body += `<h2>Source PCM</h2><audio aria-label="Source PCM" controls preload="none" src="data:audio/wav;base64,${media.sourceWavBase64}"></audio>`;
       }
       if (media.decodedWavBase64) {
-        body += `<h2>Decoded BRR</h2><audio controls preload="none" src="data:audio/wav;base64,${media.decodedWavBase64}"></audio>`;
+        body += `<h2>Decoded BRR</h2><audio aria-label="Decoded BRR" controls preload="none" src="data:audio/wav;base64,${media.decodedWavBase64}"></audio>`;
       }
     }
-    panel.webview.html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data:; style-src 'unsafe-inline'"><style>body{font:13px sans-serif;padding:16px}img{max-width:none;image-rendering:pixelated}audio{display:block;width:100%}</style></head><body>${body}</body></html>`;
+    panel.webview.html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Asset Preview</title><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data:; style-src 'unsafe-inline'"><style>body{font:13px sans-serif;padding:16px}img{max-width:none;image-rendering:pixelated}audio{display:block;width:100%}</style></head><body><main>${body}</main></body></html>`;
   }
   /** Dispose the panel to stop any active audio element. */
   dispose() {
@@ -46292,12 +46746,16 @@ var AssetPreviewController = class {
 // packages/vscode-extension/src/assets/binary-drafts.ts
 var import_vscode9 = require("vscode");
 var BinaryDrafts = class {
+  /** Open binary drafts tracked for unsaved-state queries. */
   documents = /* @__PURE__ */ new Set();
   #changed = new import_vscode9.EventEmitter();
+  /** Fired when a tracked draft's dirty state or bytes change. */
   onDidChange = this.#changed.event;
+  /** Notify listeners that one draft URI changed. */
   changed(uri) {
     this.#changed.fire(uri);
   }
+  /** Dispose change events and clear tracked documents. */
   dispose() {
     this.#changed.dispose();
     this.documents.clear();
@@ -46360,12 +46818,12 @@ function paletteRecord(catalog, id) {
   return palette;
 }
 function spritePaletteBytes(catalog, id, { wordOffset = 0, wordCount } = {}) {
-  const record7 = paletteRecord(catalog, id);
-  const count3 = wordCount ?? record7.words.length - wordOffset;
-  if (!Number.isSafeInteger(wordOffset) || !Number.isSafeInteger(count3) || wordOffset < 0 || count3 < 1 || wordOffset + count3 > record7.words.length) {
+  const record8 = paletteRecord(catalog, id);
+  const count3 = wordCount ?? record8.words.length - wordOffset;
+  if (!Number.isSafeInteger(wordOffset) || !Number.isSafeInteger(count3) || wordOffset < 0 || count3 < 1 || wordOffset + count3 > record8.words.length) {
     throw new Error(`Invalid ROM palette word slice ${id}.`);
   }
-  const words = record7.words.slice(wordOffset, wordOffset + count3);
+  const words = record8.words.slice(wordOffset, wordOffset + count3);
   const bytes = new Uint8Array(words.length * 2);
   for (const [index, raw] of words.entries()) {
     const word = Number.parseInt(raw, 16);
@@ -46891,12 +47349,12 @@ function parseTree(text2, errors = [], options = ParseOptions.DEFAULT) {
   }
   return result;
 }
-function findNodeAtLocation(root, path51) {
+function findNodeAtLocation(root, path52) {
   if (!root) {
     return void 0;
   }
   let node = root;
-  for (let segment of path51) {
+  for (let segment of path52) {
     if (typeof segment === "string") {
       if (node.type !== "object" || !Array.isArray(node.children)) {
         return void 0;
@@ -47351,20 +47809,20 @@ function parse2(text2) {
 }
 function paletteView(text2) {
   const { catalog } = parse2(text2);
-  return Object.entries(catalog.palettes).map(([id, record7]) => ({
+  return Object.entries(catalog.palettes).map(([id, record8]) => ({
     id,
-    name: "name" in record7 && typeof record7.name === "string" ? record7.name : "",
-    firstIndex: record7.firstIndex,
-    words: record7.words
+    name: "name" in record8 && typeof record8.name === "string" ? record8.name : "",
+    firstIndex: record8.firstIndex,
+    words: record8.words
   }));
 }
 function paletteWordEdit(text2, id, index, word) {
   const { tree, catalog } = parse2(text2);
-  const record7 = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : void 0;
-  if (!record7 || !Number.isSafeInteger(index) || index < record7.firstIndex || index >= record7.firstIndex + record7.words.length || !/^[\dA-Fa-f]{4}$/.test(word)) {
+  const record8 = Object.hasOwn(catalog.palettes, id) ? catalog.palettes[id] : void 0;
+  if (!record8 || !Number.isSafeInteger(index) || index < record8.firstIndex || index >= record8.firstIndex + record8.words.length || !/^[\dA-Fa-f]{4}$/.test(word)) {
     throw new Error("Select a stored palette slot and a four-digit BGR555 word.");
   }
-  const node = findNodeAtLocation2(tree, ["palettes", id, "words", index - record7.firstIndex]);
+  const node = findNodeAtLocation2(tree, ["palettes", id, "words", index - record8.firstIndex]);
   if (!node || node.type !== "string") {
     throw new Error("Palette slot changed; reload the view.");
   }
@@ -47401,6 +47859,7 @@ var PaletteEditor = class {
       throw new Error("VS Code could not apply the palette edit.");
     }
   }
+  /** Bind the palette webview to document text changes and edit messages. */
   resolveCustomTextEditor(document, panel) {
     panel.webview.options = {
       enableScripts: true,
@@ -47526,12 +47985,15 @@ var PngCodec = class {
       });
     });
   }
+  /** Decode PNG bytes into an indexed image in a short-lived worker. */
   decode(bytes) {
     return this.run(bytes);
   }
+  /** Rewrite palette indexes into PNG bytes in a short-lived worker. */
   encode(bytes, indexes) {
     return this.run(bytes, indexes);
   }
+  /** Terminate outstanding conversion workers when the editor closes. */
   dispose() {
     this.#disposed = true;
     for (const worker of this.#workers) {
@@ -47543,7 +48005,7 @@ var PngCodec = class {
 // packages/vscode-extension/src/assets/png-document.ts
 var import_node_crypto22 = require("node:crypto");
 var import_promises15 = __toESM(require("node:fs/promises"), 1);
-var import_node_path21 = __toESM(require("node:path"), 1);
+var import_node_path22 = __toESM(require("node:path"), 1);
 var import_vscode12 = require("vscode");
 
 // packages/vscode-extension/src/assets/png-guidance.ts
@@ -54928,12 +55390,13 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
       if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
         throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
       }
-      if (Array.isArray(frame.blocks))
+      if (Array.isArray(frame.blocks)) {
         for (const block of frame.blocks) {
           if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
             throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
           }
         }
+      }
     }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
@@ -55005,13 +55468,13 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
       ids.add(frame.id);
       rectangle(frame.bounds, layout2.width, layout2.height, `frame ${frame.id}`);
       validateFrameComposition(layout2, frame);
-      const record7 = frame.nativeFrame;
-      if (record7?.bytes) {
-        const previous = nativeRecords.get(record7.address);
-        if (previous && JSON.stringify(previous) !== JSON.stringify(record7)) {
+      const record8 = frame.nativeFrame;
+      if (record8?.bytes) {
+        const previous = nativeRecords.get(record8.address);
+        if (previous && JSON.stringify(previous) !== JSON.stringify(record8)) {
           throw new Error(`Shared native frame records disagree: ${frame.id}.`);
         }
-        nativeRecords.set(record7.address, record7);
+        nativeRecords.set(record8.address, record8);
       }
     }
     const ordered = [...nativeRecords.values()].toSorted((a, b) => a.address - b.address);
@@ -55155,10 +55618,13 @@ var PngDocument = class _PngDocument {
   drafts;
   guidance;
   #changed = new import_vscode12.EventEmitter();
+  /** Fired when pixel or disk state changes require UI refresh. */
   onDidChange = this.#changed.event;
   #edited = new import_vscode12.EventEmitter();
+  /** Fired when a paint stroke creates a new undo element. */
   onDidEdit = this.#edited.event;
   #disposed = new import_vscode12.EventEmitter();
+  /** Fired once when the custom document is closed. */
   onDidDispose = this.#disposed.event;
   #savedIndexes;
   #diskHash;
@@ -55240,9 +55706,11 @@ var PngDocument = class _PngDocument {
     }
     return import_promises15.default.readFile(uri.fsPath);
   }
+  /** Monotonic revision bumped on each successful pixel mutation. */
   get version() {
     return this.#version;
   }
+  /** Whether in-memory indexes differ from the last saved snapshot. */
   get dirty() {
     return !this.image.indexes.every((value, index) => value === this.#savedIndexes[index]);
   }
@@ -55296,6 +55764,7 @@ var PngDocument = class _PngDocument {
       redo: () => apply(false)
     });
   }
+  /** Encode current indexes to PNG bytes, optionally revalidating guidance first. */
   async snapshot(checkGuidance = true) {
     const version = this.version;
     if (checkGuidance) {
@@ -55344,7 +55813,7 @@ var PngDocument = class _PngDocument {
           "PNG changed on disk. Revert to review the external version, or use Save As to retain this draft."
         );
       }
-      temporary = import_node_path21.default.join(import_node_path21.default.dirname(file), `.${import_node_path21.default.basename(file)}.${(0, import_node_crypto22.randomUUID)()}.tmp`);
+      temporary = import_node_path22.default.join(import_node_path22.default.dirname(file), `.${import_node_path22.default.basename(file)}.${(0, import_node_crypto22.randomUUID)()}.tmp`);
       const handle = await import_promises15.default.open(temporary, "wx", 384);
       try {
         await handle.writeFile(encoded);
@@ -55429,6 +55898,7 @@ var PngDocument = class _PngDocument {
     this.#changed.fire();
     this.drafts.changed(this.uri);
   }
+  /** Serialize draft bytes, indexes, and guidance identity for VS Code backup. */
   backup() {
     let guidanceSha256 = this.guidance?.sha256 ?? null;
     if (this.#backupGuidanceMismatch) {
@@ -55446,6 +55916,7 @@ var PngDocument = class _PngDocument {
       })
     );
   }
+  /** Release emitters and unregister from draft tracking on close. */
   dispose() {
     if (this.#closed) {
       return;
@@ -55480,7 +55951,9 @@ var PngEditor = class {
   codec;
   drafts;
   #edited = new import_vscode13.EventEmitter();
+  /** Fired when a paint stroke creates a new custom-document undo element. */
   onDidChangeCustomDocument = this.#edited.event;
+  /** Open or restore a PNG custom document and wire filesystem watchers. */
   async openCustomDocument(uri, context, token) {
     let backup;
     if (context.backupId) {
@@ -55521,6 +55994,7 @@ var PngEditor = class {
     });
     return document;
   }
+  /** Bind the indexed canvas webview to document paint and refresh events. */
   resolveCustomEditor(document, panel) {
     panel.webview.options = {
       enableScripts: true,
@@ -55561,21 +56035,25 @@ var PngEditor = class {
     });
     panel.webview.html = renderWebviewTemplate(panel.webview, this.extensionUri, "indexed-png");
   }
+  /** Persist in-memory indexes to the document URI unless cancelled. */
   async saveCustomDocument(document, token) {
     if (token.isCancellationRequested) {
       throw new Error("PNG save cancelled.");
     }
     await document.save(document.uri, () => token.isCancellationRequested);
   }
+  /** Write encoded PNG bytes to a new local destination. */
   async saveCustomDocumentAs(document, destination, token) {
     if (token.isCancellationRequested || destination.scheme !== "file") {
       throw new Error("PNG Save As requires a local file and an active operation.");
     }
     await document.save(destination, () => token.isCancellationRequested);
   }
+  /** Reload indexes from disk, discarding unsaved pixel edits. */
   async revertCustomDocument(document) {
     await document.revert();
   }
+  /** Write VS Code backup JSON for an open PNG draft. */
   async backupCustomDocument(document, context, token) {
     if (token.isCancellationRequested) {
       throw new Error("PNG backup cancelled.");
@@ -55592,6 +56070,7 @@ var PngEditor = class {
       }
     };
   }
+  /** Release custom-document change events when the provider is torn down. */
   dispose() {
     this.#edited.dispose();
   }
@@ -55611,7 +56090,7 @@ function registerPngEditor(context, drafts) {
 // packages/vscode-extension/src/debug/session.ts
 var import_node_crypto25 = require("node:crypto");
 var fs20 = __toESM(require("node:fs"), 1);
-var path36 = __toESM(require("node:path"), 1);
+var path37 = __toESM(require("node:path"), 1);
 init_src();
 
 // packages/debug-sidecar-ares/src/profile.ts
@@ -55743,7 +56222,7 @@ var import_node_child_process4 = require("node:child_process");
 var import_node_crypto23 = require("node:crypto");
 var import_node_fs14 = require("node:fs");
 var import_node_net2 = __toESM(require("node:net"), 1);
-var import_node_path22 = __toESM(require("node:path"), 1);
+var import_node_path23 = __toESM(require("node:path"), 1);
 
 // packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 var import_node_net = __toESM(require("node:net"), 1);
@@ -55772,8 +56251,8 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
   /**
    * Opens a bounded connection to a numeric loopback address.
-   * @param {NodeTcpGdbRspTransportOptions} options Loopback endpoint and deadlines.
-   * @returns {Promise<NodeTcpGdbRspTransport>} Connected transport.
+   * @param options Loopback endpoint and deadlines.
+   * @returns Connected transport.
    */
   static async connect(options) {
     const host = options.host ?? "127.0.0.1";
@@ -55902,7 +56381,7 @@ var checkedRevision = (value, name2) => {
   return value.toLowerCase();
 };
 var checkedResourcePath = (value) => {
-  if (value === "." || value.includes("\\") || import_node_path22.default.posix.isAbsolute(value) || import_node_path22.default.posix.normalize(value) !== value || value.split("/").includes("..")) {
+  if (value === "." || value.includes("\\") || import_node_path23.default.posix.isAbsolute(value) || import_node_path23.default.posix.normalize(value) !== value || value.split("/").includes("..")) {
     throw new Error(`Ares resource path '${value}' must be normalized and relative.`);
   }
   return value;
@@ -55911,6 +56390,10 @@ var NodeAresProcessHandle = class {
   #child;
   #exit;
   #exited = false;
+  /**
+   * Spawns the child immediately without a shell.
+   * @param options Command, arguments, environment, and output sink.
+   */
   constructor(options) {
     let spawnError;
     this.#child = (0, import_node_child_process4.spawn)(options.command, [...options.args], {
@@ -55932,15 +56415,25 @@ var NodeAresProcessHandle = class {
       });
     });
   }
+  /** OS process id, or undefined when spawning failed. */
   get pid() {
     return this.#child.pid;
   }
+  /** True after the child's `close` event. */
   get exited() {
     return this.#exited;
   }
+  /**
+   * Waits for the child's `close` event.
+   * @returns Exit status, including any earlier spawn error.
+   */
   waitForExit() {
     return this.#exit;
   }
+  /**
+   * Signals the child unless it has already closed.
+   * @param signal Graceful `SIGTERM` or forced `SIGKILL`.
+   */
   kill(signal) {
     if (!this.#exited) {
       this.#child.kill(signal);
@@ -56105,7 +56598,7 @@ init_src2();
 var import_vscode17 = require("vscode");
 
 // packages/vscode-extension/src/runtime/binding.ts
-var path32 = __toESM(require("node:path"), 1);
+var path33 = __toESM(require("node:path"), 1);
 function isRecord37(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -56124,7 +56617,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
         return void 0;
       }
       const expanded = value.replaceAll("${workspaceFolder}", root);
-      return expanded.includes("${") ? void 0 : path32.resolve(root, expanded);
+      return expanded.includes("${") ? void 0 : path33.resolve(root, expanded);
     };
     const runtimeManifest = resolve9(config.runtimeManifest);
     const emulator = resolve9(config.emulator);
@@ -56230,8 +56723,9 @@ var LiveBusAnalysis = class {
       }
     });
   }
-  /** Replace pending progress. Debugger polling never waits for analysis.
-   * @param {NativeCaptureFilePosition} position Latest validated native status, including final publication.
+  /**
+   * Replace pending progress. Debugger polling never waits for analysis.
+   * @param position Latest validated native status, including final publication.
    */
   update(position) {
     this.#latest = position;
@@ -56326,14 +56820,17 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
     this.#handle = handle;
     this.#completion = this.#pump();
   }
-  /** @returns {Promise<RuntimeTraceFileSummary>} Settlement when the artifact is closed. */
+  /**
+   * Pump result shared by {@link stop} and {@link finishIncomplete}; rejects on invalid batches or I/O failure.
+   * @returns Settlement when the artifact is closed.
+   */
   get completion() {
     return this.#completion;
   }
   /**
    * Opens and initializes a native version-1 instruction-trace artifact.
-   * @param {RuntimeTraceFileRecorderOptions} options Destination, identity, and DAP callbacks.
-   * @returns {Promise<RuntimeTraceFileRecorder>} Active disk-backed recorder.
+   * @param options Destination, identity, and DAP callbacks.
+   * @returns Active disk-backed recorder.
    */
   static async create(options) {
     assertIdentity(options.architecture, "Trace architecture");
@@ -56367,7 +56864,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
   }
   /**
    * Stops capture, drains the producer, and closes a complete JSON artifact.
-   * @returns {Promise<RuntimeTraceFileSummary>} Final file and loss counters.
+   * @returns Final file and loss counters.
    */
   async stop() {
     if (!this.#stopRequested) {
@@ -56384,7 +56881,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
   }
   /**
    * Closes a valid but explicitly incomplete artifact after session loss.
-   * @returns {Promise<RuntimeTraceFileSummary>} Final incomplete file and loss counters.
+   * @returns Final incomplete file and loss counters.
    */
   finishIncomplete() {
     this.#cancelled = true;
@@ -56485,7 +56982,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
 };
 
 // packages/vscode-extension/src/source/evidence-selection.ts
-var import_node_path23 = __toESM(require("node:path"), 1);
+var import_node_path24 = __toESM(require("node:path"), 1);
 var import_vscode15 = require("vscode");
 function isRecord38(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -56504,7 +57001,7 @@ async function chooseLiveBusProject(romContentSha256) {
       throw new Error("Analysis manifest is unavailable.");
     }
     if (manifest.rom.contentSha256 === romContentSha256) {
-      choices.push({ label: import_node_path23.default.basename(directory), description: directory, directory });
+      choices.push({ label: import_node_path24.default.basename(directory), description: directory, directory });
     }
   }
   if (choices.length === 1) {
@@ -56629,7 +57126,7 @@ var createDebugInstructionAnnotation = async (map) => {
 // packages/vscode-extension/src/debug/nes-ppu.ts
 var import_node_crypto24 = require("node:crypto");
 var import_promises17 = require("node:fs/promises");
-var import_node_path24 = __toESM(require("node:path"), 1);
+var import_node_path25 = __toESM(require("node:path"), 1);
 
 // packages/plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
@@ -58952,6 +59449,11 @@ var Cpu6502Decoder = class {
   }
   cpu;
   #forms;
+  /**
+   * Decodes one instruction at `context.offset`.
+   * @param context Byte source, offset, and 16-bit logical PC.
+   * @returns Decoded instruction, or an error for an invalid PC, missing/truncated bytes, or an opcode absent from this CPU's table.
+   */
   decode(context) {
     const { source, offset, logicalAddress } = context;
     if (!Number.isInteger(logicalAddress) || logicalAddress < 0 || logicalAddress > 65535) {
@@ -58992,7 +59494,7 @@ var Cpu6502Decoder = class {
         message: "Truncated 6502 instruction."
       };
     }
-    let value = bytes[1] ?? 0;
+    let value = bytes.at(1) ?? 0;
     if (size === 3) {
       value |= bytes[2] << 8;
     }
@@ -59067,15 +59569,26 @@ var Cpu6502Decoder = class {
 // packages/plugin-65xx/src/nes/cartridge.ts
 var NesCartridge = class {
   #bytes;
+  /** iNES mapper number derived from the header. */
   mapper;
+  /** Whether the header advertises battery-backed PRG RAM. */
   battery;
+  /** Nametable mirroring mode declared in the header. */
   mirroring;
+  /** Optional 512-byte trainer section immediately after the header. */
   trainer;
+  /** PRG ROM section layout within the image. */
   prg;
+  /** CHR ROM section layout within the image. */
   chr;
+  /** Bytes after PRG and CHR, when present in the supplied image. */
   trailing;
   /** Legacy zero means unspecified; mapper-specific defaults belong to the machine profile. */
   declaredPrgRamSize;
+  /**
+   * Parse a complete iNES image and freeze section layout derived from the header.
+   * @param input Full cartridge bytes including the 16-byte header.
+   */
   constructor(input) {
     this.#bytes = Uint8Array.from(input);
     const bytes = this.#bytes;
@@ -59104,15 +59617,29 @@ var NesCartridge = class {
     }
     this.trailing = Object.freeze({ offset: end, size: bytes.length - end });
   }
+  /** Total byte length of the parsed cartridge image. */
   get size() {
     return this.#bytes.length;
   }
+  /**
+   * Copy the full cartridge image so callers cannot mutate the parsed original.
+   * @returns Defensive copy of all cartridge bytes.
+   */
   bytes() {
     return this.#bytes.slice();
   }
+  /**
+   * Copy the 16-byte iNES header prefix.
+   * @returns Header bytes independent of the internal buffer.
+   */
   header() {
     return this.#bytes.slice(0, 16);
   }
+  /**
+   * Copy one parsed section range from the cartridge image.
+   * @param section Offset and size describing a contiguous cartridge range.
+   * @returns Bytes for the requested section only.
+   */
   section(section) {
     return this.#bytes.slice(section.offset, section.offset + section.size);
   }
@@ -59342,7 +59869,7 @@ function nesPPUHtml(snapshot, identity2 = {}) {
       Object.entries(views).map(([key3, bytes]) => [key3, Buffer.from(bytes).toString("base64")])
     )
   }).replaceAll("<", "\\u003c");
-  return `<!doctype html><html><meta charset="utf-8"><title>NES PPU evidence</title><style>body{font:16px system-ui;background:#10141d;color:#eef2fa;margin:32px}canvas{image-rendering:pixelated;max-width:100%;border:1px solid #526079}section{margin:24px 0}pre{white-space:pre-wrap;font:13px monospace}h1{font-size:28px}</style><h1>NES PPU evidence</h1><p>Halted storage view. Pattern tables, four nametables and OAM tiles use the captured mapper and palette. These panels do not reproduce mid-frame scrolling, sprite evaluation or the final composited screen.</p><section><h2>Mapped pattern tables</h2><canvas id="patterns" width="256" height="128" style="width:768px"></canvas></section><section><h2>Nametables</h2><canvas id="nametables" width="512" height="480" style="width:768px"></canvas></section><section><h2>OAM tiles (64 sprites)</h2><canvas id="sprites" width="128" height="128" style="width:512px"></canvas></section><h2>Coordinates and provenance</h2><pre id="details"></pre><script>const data=${data};for(const [key,encoded] of Object.entries(data.views)){const c=document.getElementById(key),ctx=c.getContext('2d'),pixels=atob(encoded),out=ctx.createImageData(c.width,c.height);for(let i=0;i<pixels.length;i++){const code=pixels.charCodeAt(i);out.data.set(data.colors.slice(code*3,code*3+3),i*4);out.data[i*4+3]=255}ctx.putImageData(out,0,0)}const {views,colors,...details}=data;document.getElementById('details').textContent=JSON.stringify(details,null,2);</script></html>`;
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>NES PPU evidence</title><style>body{font:16px system-ui;background:#10141d;color:#eef2fa;margin:32px}canvas{image-rendering:pixelated;max-width:100%;border:1px solid #526079}section{margin:24px 0}pre{white-space:pre-wrap;font:13px monospace}h1{font-size:28px}</style><main><h1>NES PPU evidence</h1><p>Halted storage view. Pattern tables, four nametables and OAM tiles use the captured mapper and palette. These panels do not reproduce mid-frame scrolling, sprite evaluation or the final composited screen.</p><section><h2>Mapped pattern tables</h2><canvas role="img" aria-label="Captured mapped pattern tables; numeric palette and mapping data follows under Coordinates and provenance" id="patterns" width="256" height="128" style="width:768px"></canvas></section><section><h2>Nametables</h2><canvas role="img" aria-label="Captured four nametables; numeric palette and mapping data follows under Coordinates and provenance" id="nametables" width="512" height="480" style="width:768px"></canvas></section><section><h2>OAM tiles (64 sprites)</h2><canvas role="img" aria-label="Captured 64 OAM sprites; numeric OAM and palette data follows under Coordinates and provenance" id="sprites" width="128" height="128" style="width:512px"></canvas></section><h2>Coordinates and provenance</h2><pre id="details"></pre></main><script>const data=${data};for(const [key,encoded] of Object.entries(data.views)){const c=document.getElementById(key),ctx=c.getContext('2d'),pixels=atob(encoded),out=ctx.createImageData(c.width,c.height);for(let i=0;i<pixels.length;i++){const code=pixels.charCodeAt(i);out.data.set(data.colors.slice(code*3,code*3+3),i*4);out.data[i*4+3]=255}ctx.putImageData(out,0,0)}const {views,colors,...details}=data;document.getElementById('details').textContent=JSON.stringify(details,null,2);</script></html>`;
 }
 
 // packages/vscode-extension/src/debug/nes-ppu.ts
@@ -59368,20 +59895,20 @@ async function saveNesPPUSnapshot(session, metadata, root) {
     ...metadata,
     snapshotSha256: (0, import_node_crypto24.createHash)("sha256").update(bytes).digest("hex")
   };
-  const directory = import_node_path24.default.join(root, ".uttori-local", "graphics", "snapshots");
+  const directory = import_node_path25.default.join(root, ".uttori-local", "graphics", "snapshots");
   await (0, import_promises17.mkdir)(directory, { recursive: true });
-  const staging = await (0, import_promises17.mkdtemp)(import_node_path24.default.join(directory, ".pending-"));
-  const destination = import_node_path24.default.join(
+  const staging = await (0, import_promises17.mkdtemp)(import_node_path25.default.join(directory, ".pending-"));
+  const destination = import_node_path25.default.join(
     directory,
-    import_node_path24.default.basename(staging).replace(".pending-", `ppu-${Date.now()}-`)
+    import_node_path25.default.basename(staging).replace(".pending-", `ppu-${Date.now()}-`)
   );
   const html = nesPPUHtml(snapshot, identity2);
   try {
-    await (0, import_promises17.writeFile)(import_node_path24.default.join(staging, "ppu.bin"), bytes, { flag: "wx" });
-    await (0, import_promises17.writeFile)(import_node_path24.default.join(staging, "identity.json"), JSON.stringify(identity2, null, 2) + "\n", {
+    await (0, import_promises17.writeFile)(import_node_path25.default.join(staging, "ppu.bin"), bytes, { flag: "wx" });
+    await (0, import_promises17.writeFile)(import_node_path25.default.join(staging, "identity.json"), JSON.stringify(identity2, null, 2) + "\n", {
       flag: "wx"
     });
-    await (0, import_promises17.writeFile)(import_node_path24.default.join(staging, "index.html"), html, { flag: "wx" });
+    await (0, import_promises17.writeFile)(import_node_path25.default.join(staging, "index.html"), html, { flag: "wx" });
     await (0, import_promises17.rename)(staging, destination);
   } catch (error) {
     await (0, import_promises17.rm)(staging, { recursive: true, force: true });
@@ -59831,20 +60358,20 @@ function ld65LinkRecipe(config, target = "65xx.nes") {
   }
   return {
     target,
-    regions: [...config.memories.values()].map((region) => ({
-      name: region.name,
-      start: region.start,
-      size: region.size,
-      ...region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
-      ...region.fill ? { fillByte: region.fillval } : {},
-      addressSpace: "65xx.ines-address-space"
-    })),
-    placements: [...config.segments.values()].map((segment) => ({
-      section: segment.name,
-      load: segment.load,
-      run: segment.run,
-      ...segment.start !== void 0 ? { start: segment.start } : {}
-    })),
+    regions: [...config.memories.values()].map(
+      (region) => Object.assign(
+        { name: region.name, start: region.start, size: region.size },
+        region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
+        region.fill ? { fillByte: region.fillval } : {},
+        { addressSpace: "65xx.ines-address-space" }
+      )
+    ),
+    placements: [...config.segments.values()].map(
+      (segment) => Object.assign(
+        { section: segment.name, load: segment.load, run: segment.run },
+        segment.start !== void 0 ? { start: segment.start } : {}
+      )
+    ),
     // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
     symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()]
   };
@@ -61163,10 +61690,15 @@ var TypedArch65xx = class {
     }
   }
   cpu;
+  /** 65xx encodings can be emitted into relocatable objects. */
   supportsRelocatable = true;
+  /** Unbound operand templates stay errors at encode time, not parse time. */
   deferOperandBindingErrors = true;
+  /** Assembly forms enabled for this CPU's feature set. */
   forms;
+  /** Editor/LSP instruction catalog derived from `forms`. */
   catalog;
+  /** Lookup of enabled forms grouped by canonical mnemonic. */
   formsByMnemonic = /* @__PURE__ */ new Map();
   /** Failed binding retains parsed punctuation so addressing errors keep precedence over value reads. */
   syntax(frame) {
@@ -61210,6 +61742,7 @@ var TypedArch65xx = class {
     }
     return prepare65xx(this.syntax(frame), frame);
   }
+  /** Return encoded size for the resolved operand frame without emitting bytes. */
   estimate(frame) {
     const state = this.classification(frame);
     const form = this.resolveForm(frame, this.syntax(frame), state);
@@ -61988,13 +62521,16 @@ function register65xxContributions(context) {
           },
           // The flat NES lifecycle fills the complete cartridge with the target byte, including MEMORY gaps.
           // Keep its established output here; ld65LinkRecipe remains available for explicit per-region policies.
-          ...recipe.regions.map((region) => ({
-            ...region,
-            ...region.outputOffset !== void 0 ? {
-              outputOffset: region.outputOffset + nes.header.length,
-              fillByte: nes.fillByte
-            } : {}
-          }))
+          ...recipe.regions.map(
+            (region) => Object.assign(
+              {},
+              region,
+              region.outputOffset !== void 0 ? {
+                outputOffset: region.outputOffset + nes.header.length,
+                fillByte: nes.fillByte
+              } : {}
+            )
+          )
         ]
       };
     }
@@ -62075,9 +62611,9 @@ var snesRomAddressSpace = {
    * CPU bus → ROM file offset. Returns `-1` for WRAM, SRAM, or unmapped holes.
    * Formulas match Asar's `snestopc` (not a hardware bus trace).
    *
-   * @param {number} address The address to convert.
-   * @param {AddressSpaceContext} context The address space context.
-   * @returns {number} The output offset.
+   * @param address The address to convert.
+   * @param context The address space context.
+   * @returns The output offset.
    */
   toOutputOffset(address3, context) {
     if (address3 < 0 || address3 > 16777215) {
@@ -62141,9 +62677,9 @@ var snesRomAddressSpace = {
    * Inverse of {@link snesRomAddressSpace.toOutputOffset}: file offset → a
    * canonical CPU address (usually the FastROM mirror). `-1` if the offset
    * cannot exist for this mapper.
-   * @param {number} offset The offset to convert.
-   * @param {AddressSpaceContext} context The address space context.
-   * @returns {number} The canonical CPU address.
+   * @param offset The offset to convert.
+   * @param context The address space context.
+   * @returns The canonical CPU address.
    */
   fromOutputOffset(offset, context) {
     if (offset < 0) {
@@ -62691,12 +63227,16 @@ var createSnesDebugAddressResolvers = (map, output) => {
             windows.push(49152 + offset);
           }
         }
-        return windows.map((pc) => ({
-          ...address3,
-          architecture: "65xx.2a03",
-          addressSpace: "nes.cpu",
-          address: pc
-        }));
+        const breakpoints = [];
+        for (const pc of windows) {
+          breakpoints.push({
+            ...address3,
+            architecture: "65xx.2a03",
+            addressSpace: "nes.cpu",
+            address: pc
+          });
+        }
+        return breakpoints;
       },
       // A live mapper observation is required; a CPU address alone cannot select a PRG bank.
       sourceOutputOffset: (address3) => address3.architecture === "65xx.2a03" ? address3.outputOffset : void 0
@@ -62739,14 +63279,14 @@ var createSnesDebugAddressResolvers = (map, output) => {
 
 // packages/vscode-extension/src/debug/source-root.ts
 var import_node_fs15 = __toESM(require("node:fs"), 1);
-var import_node_path25 = __toESM(require("node:path"), 1);
+var import_node_path26 = __toESM(require("node:path"), 1);
 var sourceMatches = (root, source) => {
-  if (import_node_path25.default.isAbsolute(source.path)) {
+  if (import_node_path26.default.isAbsolute(source.path)) {
     return false;
   }
-  const resolved = import_node_path25.default.resolve(root, source.path);
-  const relative4 = import_node_path25.default.relative(root, resolved);
-  if (!relative4 || relative4.startsWith(`..${import_node_path25.default.sep}`) || import_node_path25.default.isAbsolute(relative4)) {
+  const resolved = import_node_path26.default.resolve(root, source.path);
+  const relative4 = import_node_path26.default.relative(root, resolved);
+  if (!relative4 || relative4.startsWith(`..${import_node_path26.default.sep}`) || import_node_path26.default.isAbsolute(relative4)) {
     return false;
   }
   try {
@@ -62757,18 +63297,18 @@ var sourceMatches = (root, source) => {
   }
 };
 var resolveDebugSourceRoot = (options) => {
-  const configuredRoot = import_node_path25.default.resolve(options.configuredRoot);
+  const configuredRoot = import_node_path26.default.resolve(options.configuredRoot);
   const candidates = [
     configuredRoot,
-    ...options.workspaceRoot ? [import_node_path25.default.resolve(options.workspaceRoot)] : [],
-    import_node_path25.default.dirname(import_node_path25.default.resolve(options.debugMapFile)),
+    ...options.workspaceRoot ? [import_node_path26.default.resolve(options.workspaceRoot)] : [],
+    import_node_path26.default.dirname(import_node_path26.default.resolve(options.debugMapFile)),
     // Generated ROMs/maps commonly live in build/, with mapped sources in its parent.
-    import_node_path25.default.dirname(import_node_path25.default.dirname(import_node_path25.default.resolve(options.debugMapFile))),
-    import_node_path25.default.dirname(import_node_path25.default.resolve(options.programFile)),
-    import_node_path25.default.dirname(import_node_path25.default.dirname(import_node_path25.default.resolve(options.programFile)))
+    import_node_path26.default.dirname(import_node_path26.default.dirname(import_node_path26.default.resolve(options.debugMapFile))),
+    import_node_path26.default.dirname(import_node_path26.default.resolve(options.programFile)),
+    import_node_path26.default.dirname(import_node_path26.default.dirname(import_node_path26.default.resolve(options.programFile)))
   ];
   const unique2 = [...new Set(candidates)];
-  const relativeSources = options.map.sources.filter((source) => !import_node_path25.default.isAbsolute(source.path)).slice(0, 128);
+  const relativeSources = options.map.sources.filter((source) => !import_node_path26.default.isAbsolute(source.path)).slice(0, 128);
   if (relativeSources.length === 0) {
     return configuredRoot;
   }
@@ -62904,7 +63444,7 @@ var liveDebugConfiguration = (binding, artifacts, folder) => ({
   debugMap: artifacts.debugMapPath,
   ...artifacts.outputSha256 ? { outputSha256: artifacts.outputSha256 } : {},
   ...artifacts.debugMapFingerprint ? { debugMapFingerprint: artifacts.debugMapFingerprint } : {},
-  sourceRoot: folder?.uri.fsPath ?? path36.dirname(artifacts.outputPath),
+  sourceRoot: folder?.uri.fsPath ?? path37.dirname(artifacts.outputPath),
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
   runtimeDirectory: binding.runtimeDirectory,
@@ -62916,7 +63456,7 @@ var activeTraceRecording;
 var debuggingExtensionRoot = "";
 var liveAnalyses = /* @__PURE__ */ new Set();
 var sessionContexts = /* @__PURE__ */ new Map();
-var resolvedPath = (value, folder) => path36.isAbsolute(value) ? value : path36.resolve(folder?.uri.fsPath ?? process.cwd(), value);
+var resolvedPath = (value, folder) => path37.isAbsolute(value) ? value : path37.resolve(folder?.uri.fsPath ?? process.cwd(), value);
 var requiredLivePath = (value, name2, folder) => {
   if (!value) {
     throw new Error(`Live Uttori ASM debugging requires '${name2}'.`);
@@ -63036,7 +63576,7 @@ var defaultTraceUri = (session, extension, bus) => {
   }
   const timestamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(":", "-");
   const prefix = bus ? "bus-trace" : "instruction-trace";
-  return import_vscode17.Uri.file(path36.join(root, `${prefix}-${timestamp}.${extension}`));
+  return import_vscode17.Uri.file(path37.join(root, `${prefix}-${timestamp}.${extension}`));
 };
 var startRuntimeTraceWithLease = async () => {
   if (activeTraceRecording) {
@@ -63118,7 +63658,7 @@ var startRuntimeTraceWithLease = async () => {
       status.show();
       try {
         live = new LiveBusAnalysis(
-          path36.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
+          path37.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
           {
             file: destination.fsPath,
             projectDirectory: liveProject,
@@ -63406,7 +63946,7 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
     "runtimeDirectory",
     folder
   );
-  const bundledSidecar = path36.join(extensionRoot, "sidecars", "ares.mjs");
+  const bundledSidecar = path37.join(extensionRoot, "sidecars", "ares.mjs");
   const sidecar = configuration.sidecar ? resolvedPath(configuration.sidecar, folder) : bundledSidecar;
   return new SidecarDebugBackend({
     backend: ARES_RSP_BACKEND_ID,
@@ -63511,6 +64051,7 @@ var InlineDebugAdapter = class {
   #emitter = new import_vscode17.EventEmitter();
   #session;
   #backend;
+  /** Outbound DAP messages forwarded to VS Code after session normalization. */
   onDidSendMessage = this.#emitter.event;
   constructor(loaded, instructionAnnotation, log = () => {
   }) {
@@ -63542,7 +64083,10 @@ var InlineDebugAdapter = class {
       }
     });
   }
-  /** @param {DapRequest} message DAP request from VS Code. */
+  /**
+   * Dispatch an inbound DAP request to the shared debug adapter session.
+   * @param message DAP request from VS Code.
+   */
   handleMessage(message) {
     void this.#session.dispatch(message);
   }
@@ -63556,8 +64100,8 @@ var InlineDebugAdapter = class {
 var UttoriDebugConfigurationProvider = class {
   /**
    * Supplies a usable map-backed replay launch when `launch.json` is initially empty.
-   * @param {WorkspaceFolder | undefined} folder Selected workspace folder.
-   * @param {DebugConfiguration} configuration Partial configuration.
+   * @param folder Selected workspace folder.
+   * @param configuration Partial configuration.
    * @returns Completed configuration, or undefined when the source build failed.
    */
   async resolveDebugConfiguration(folder, configuration) {
@@ -63588,7 +64132,7 @@ var UttoriDebugConfigurationProvider = class {
     const configuredProgram = typeof configuration.program === "string" ? configuration.program : void 0;
     const configuredMap = typeof configuration.debugMap === "string" ? configuration.debugMap : void 0;
     const configuredSourceRoot = typeof configuration.sourceRoot === "string" ? configuration.sourceRoot : void 0;
-    const program = configuredProgram ?? path36.join(root, "build", "rebuilt-content.sfc");
+    const program = configuredProgram ?? path37.join(root, "build", "rebuilt-content.sfc");
     return {
       ...configuration,
       type: typeof configuration.type === "string" ? configuration.type : UTTORI_ASM_DEBUG_TYPE,
@@ -63609,9 +64153,9 @@ var UttoriDebugAdapterFactory = class {
   #extensionRoot;
   /**
    * Hosts the adapter inside the extension process.
-   * @param {DebugSession} session VS Code debug session.
-   * @param {DebugAdapterExecutable | undefined} _executable Ignored external adapter descriptor.
-   * @returns {DebugAdapterDescriptor} Inline adapter descriptor.
+   * @param session VS Code debug session.
+   * @param _executable Ignored external adapter descriptor.
+   * @returns Inline adapter descriptor.
    */
   createDebugAdapterDescriptor(session, _executable) {
     this.output.show(true);
@@ -63726,11 +64270,11 @@ var registerDebugging = (extensionRoot) => {
 };
 
 // packages/vscode-extension/src/linked-build.ts
-var import_node_path28 = __toESM(require("node:path"), 1);
+var import_node_path29 = __toESM(require("node:path"), 1);
 
 // packages/plugin-loader-node/src/configuration.ts
 var import_node_fs16 = require("node:fs");
-var import_node_path26 = __toESM(require("node:path"), 1);
+var import_node_path27 = __toESM(require("node:path"), 1);
 var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
 var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
   "$schema",
@@ -63823,9 +64367,9 @@ var validateProjectConfiguration = (value) => {
 };
 var discoverProjectConfigurationPath = (cwd, configuredPath) => {
   if (configuredPath) {
-    return import_node_path26.default.resolve(cwd, configuredPath);
+    return import_node_path27.default.resolve(cwd, configuredPath);
   }
-  const candidate = import_node_path26.default.resolve(cwd, PROJECT_CONFIG_FILENAME);
+  const candidate = import_node_path27.default.resolve(cwd, PROJECT_CONFIG_FILENAME);
   return (0, import_node_fs16.existsSync)(candidate) ? candidate : void 0;
 };
 
@@ -63861,10 +64405,10 @@ var isHash = (value) => typeof value === "string" && /^[\da-f]{64}$/.test(value)
 
 // packages/workflows/src/build-selection.ts
 var import_node_fs17 = __toESM(require("node:fs"), 1);
-var import_node_path27 = __toESM(require("node:path"), 1);
+var import_node_path28 = __toESM(require("node:path"), 1);
 async function resolveAssemblyBuildSelection(directory, configFile, override) {
   if (override) {
-    return { manifest: import_node_path27.default.resolve(directory, override) };
+    return { manifest: import_node_path28.default.resolve(directory, override) };
   }
   const file = discoverProjectConfigurationPath(directory, configFile);
   if (!file) {
@@ -63882,7 +64426,7 @@ async function resolveAssemblyBuildSelection(directory, configFile, override) {
   return {
     configurationFile: file,
     configurationSha256: artifactHash(bytes),
-    ...manifest ? { manifest: import_node_path27.default.resolve(import_node_path27.default.dirname(file), manifest) } : {}
+    ...manifest ? { manifest: import_node_path28.default.resolve(import_node_path28.default.dirname(file), manifest) } : {}
   };
 }
 
@@ -64141,6 +64685,7 @@ ${stderr}` : ""}`
       });
     });
   }
+  /** Terminate owned child processes and reject new operations. */
   dispose() {
     this.#disposed = true;
     this.#slots.dispose();
@@ -64194,11 +64739,12 @@ var LinkedBuildController = class {
   #inputs = /* @__PURE__ */ new Set();
   #builds = /* @__PURE__ */ new Map();
   #changed = new import_vscode18.EventEmitter();
+  /** Fired when a linked assembly input file changes on disk. */
   onDidChangeInput = this.#changed.event;
   #busy = false;
   /** Watch reacts to consumed sources, resources, recipes, configuration and serialized inputs. */
   tracks(file) {
-    return this.#inputs.has(import_node_path28.default.resolve(file));
+    return this.#inputs.has(import_node_path29.default.resolve(file));
   }
   /** An absent manifest preserves the existing build route; an invalid opted-in build fails without falling back. */
   async buildConfigured(uri) {
@@ -64222,7 +64768,7 @@ var LinkedBuildController = class {
     this.#inputs.add(manifest);
     const result = await this.run({
       action: "build-linked",
-      directory: import_node_path28.default.dirname(manifest),
+      directory: import_node_path29.default.dirname(manifest),
       manifest,
       ...selection.configurationFile && selection.configurationSha256 ? {
         selection: { file: selection.configurationFile, sha256: selection.configurationSha256 }
@@ -64272,7 +64818,7 @@ var LinkedBuildController = class {
               onProgress: (message) => progress.report({ message }),
               readResult: readAssemblyBuildResult,
               onBeforePublish: (paths) => {
-                const consumed = new Set(paths.map((file) => import_node_path28.default.resolve(file)));
+                const consumed = new Set(paths.map((file) => import_node_path29.default.resolve(file)));
                 for (const file of consumed) {
                   this.#inputs.add(file);
                 }
@@ -64311,10 +64857,10 @@ var LinkedBuildController = class {
     if (!source || source.scheme !== "file") {
       throw new Error("Open a saved assembly source file first.");
     }
-    const root = import_vscode18.workspace.getWorkspaceFolder(source)?.uri.fsPath ?? import_node_path28.default.dirname(source.fsPath);
+    const root = import_vscode18.workspace.getWorkspaceFolder(source)?.uri.fsPath ?? import_node_path29.default.dirname(source.fsPath);
     const module2 = await import_vscode18.window.showInputBox({
       title: "Stable module ID",
-      value: import_node_path28.default.relative(root, source.fsPath).replace(/\.[^.]+$/, "")
+      value: import_node_path29.default.relative(root, source.fsPath).replace(/\.[^.]+$/, "")
     });
     if (!module2) {
       return;
@@ -64371,7 +64917,7 @@ var LinkedBuildController = class {
       return;
     }
     const output = await import_vscode18.window.showSaveDialog({
-      defaultUri: import_vscode18.Uri.file(import_node_path28.default.join(import_node_path28.default.dirname(inputs[0].fsPath), "library.ulib")),
+      defaultUri: import_vscode18.Uri.file(import_node_path29.default.join(import_node_path29.default.dirname(inputs[0].fsPath), "library.ulib")),
       filters: { "Uttori library": ["ulib"] }
     });
     if (!output) {
@@ -64379,7 +64925,7 @@ var LinkedBuildController = class {
     }
     await this.run({
       action: "library",
-      directory: import_node_path28.default.dirname(output.fsPath),
+      directory: import_node_path29.default.dirname(output.fsPath),
       output: output.fsPath,
       objects: inputs.map((input) => input.fsPath)
     });
@@ -64395,7 +64941,7 @@ var LinkedBuildController = class {
     }
     const result = await this.run({
       action,
-      directory: import_node_path28.default.dirname(selected.fsPath),
+      directory: import_node_path29.default.dirname(selected.fsPath),
       manifest: selected.fsPath
     });
     void import_vscode18.window.showInformationMessage(`Assembly: built ${result.outputFile}.`);
@@ -64410,6 +64956,7 @@ var LinkedBuildController = class {
       void import_vscode18.window.showErrorMessage(`Assembly: ${message}`);
     }
   }
+  /** Dispose the source worker and registered build commands. */
   dispose() {
     this.#worker.dispose();
     this.#changed.dispose();
@@ -64419,64 +64966,8 @@ var LinkedBuildController = class {
   }
 };
 
-// packages/vscode-extension/src/project/index-tree.ts
-var import_vscode19 = require("vscode");
-var count2 = (value) => value.toLocaleString("en-US");
-var IndexDetailsProvider = class {
-  constructor(snapshot) {
-    this.snapshot = snapshot;
-  }
-  snapshot;
-  static viewId = "uttori-asm.indexDetails";
-  #changed = new import_vscode19.EventEmitter();
-  onDidChangeTreeData = this.#changed.event;
-  refresh() {
-    this.#changed.fire();
-  }
-  dispose() {
-    this.#changed.dispose();
-  }
-  getTreeItem(row) {
-    const item = new import_vscode19.TreeItem(row.label, import_vscode19.TreeItemCollapsibleState.None);
-    item.id = row.label;
-    item.description = row.description;
-    item.tooltip = row.tooltip ?? `${row.label}: ${row.description}`;
-    if (row.problems) {
-      item.iconPath = new import_vscode19.ThemeIcon("error");
-      item.command = { command: "workbench.actions.view.problems", title: "Show Problems" };
-    }
-    return item;
-  }
-  async getChildren() {
-    const { status, indexReady } = await this.snapshot();
-    if (!indexReady) {
-      return [{ label: "Index", description: "Waiting for source index" }];
-    }
-    return [
-      { label: "Index", description: "Ready" },
-      { label: "Files", description: count2(status.fileCount) },
-      { label: "Symbols", description: count2(status.symbolCount) },
-      { label: "References", description: count2(status.referenceCount) },
-      {
-        label: "Errors",
-        description: count2(status.errorCount),
-        tooltip: "Current assembly and configuration errors. Click to open Problems.",
-        problems: true
-      },
-      {
-        label: "Last reindex",
-        description: status.lastReindexDurationMs == null ? "\u2014" : `${status.lastReindexDurationMs} ms`
-      },
-      {
-        label: "Roots",
-        description: `${count2(status.lastReindexRootCount)} (${count2(status.lastReindexCachedRoots)} cached, ${count2(status.lastReindexAnalyzedRoots)} analyzed)`
-      }
-    ];
-  }
-};
-
 // packages/vscode-extension/src/project/outline-tree.ts
-var import_vscode20 = require("vscode");
+var import_vscode19 = require("vscode");
 
 // packages/vscode-extension/node_modules/vscode-languageserver-types/lib/esm/main.js
 var DocumentUri;
@@ -65775,16 +66266,20 @@ var ProjectOutlineProvider = class {
     this.getClient = getClient;
   }
   getClient;
+  /** Registered tree view id for the project outline sidebar. */
   static viewId = "uttori-asm.projectOutline";
-  #onDidChangeTreeData = new import_vscode20.EventEmitter();
+  #onDidChangeTreeData = new import_vscode19.EventEmitter();
+  /** Fired when include graph or symbol caches should reload. */
   onDidChangeTreeData = this.#onDidChangeTreeData.event;
+  /** Invalidate cached roots and notify the tree to reload. */
   refresh() {
     this.#onDidChangeTreeData.fire();
   }
+  /** Map an outline row into VS Code tree presentation state. */
   getTreeItem(element) {
-    const item = new import_vscode20.TreeItem(
+    const item = new import_vscode19.TreeItem(
       element.label,
-      element.collapsible ? import_vscode20.TreeItemCollapsibleState.Collapsed : import_vscode20.TreeItemCollapsibleState.None
+      element.collapsible ? import_vscode19.TreeItemCollapsibleState.Collapsed : import_vscode19.TreeItemCollapsibleState.None
     );
     item.id = element.id;
     item.description = element.description;
@@ -65792,7 +66287,7 @@ var ProjectOutlineProvider = class {
     item.iconPath = element.icon;
     item.contextValue = element.symbolUri ? "file" : "symbol";
     if (element.uri) {
-      const uri = import_vscode20.Uri.parse(element.uri);
+      const uri = import_vscode19.Uri.parse(element.uri);
       item.resourceUri = uri;
       item.command = {
         command: "vscode.open",
@@ -65800,7 +66295,7 @@ var ProjectOutlineProvider = class {
         arguments: element.range ? [
           uri,
           {
-            selection: new import_vscode20.Range(
+            selection: new import_vscode19.Range(
               element.range.start.line,
               element.range.start.character,
               element.range.end.line,
@@ -65812,6 +66307,7 @@ var ProjectOutlineProvider = class {
     }
     return item;
   }
+  /** Resolve include-graph children or lazy document symbols for one row. */
   async getChildren(element) {
     if (!element) {
       return this.loadRoots();
@@ -65823,6 +66319,7 @@ var ProjectOutlineProvider = class {
     }
     return element.children ?? [];
   }
+  /** Fetch top-level include graph nodes from the language client. */
   async loadRoots() {
     const client2 = this.getClient();
     if (!client2) {
@@ -65835,6 +66332,7 @@ var ProjectOutlineProvider = class {
       return [];
     }
   }
+  /** Convert a tooling outline node into a tree row model. */
   toItem(node) {
     const isFile = node.kind === "file";
     return {
@@ -65848,6 +66346,7 @@ var ProjectOutlineProvider = class {
       ...isFile ? { symbolUri: node.uri, includeChildren: node.children ?? [] } : { children: (node.children ?? []).map((child) => this.toItem(child)) }
     };
   }
+  /** Load document symbols for one file URI under a stable parent id. */
   async loadSymbols(uri, parentId) {
     const client2 = this.getClient();
     if (!client2) {
@@ -65882,104 +66381,618 @@ function symbolToItem(symbol, uri, id) {
 function iconForKind(kind) {
   switch (kind) {
     case "entry":
-      return new import_vscode20.ThemeIcon("folder-library");
+      return new import_vscode19.ThemeIcon("folder-library");
     case "orphanGroup":
-      return new import_vscode20.ThemeIcon("folder");
+      return new import_vscode19.ThemeIcon("folder");
     case "include":
-      return new import_vscode20.ThemeIcon("link");
+      return new import_vscode19.ThemeIcon("link");
     case "file":
     default:
-      return new import_vscode20.ThemeIcon("file");
+      return new import_vscode19.ThemeIcon("file");
   }
 }
 function iconForSymbolKind(kind) {
   switch (kind) {
     case SymbolKind.Namespace:
-      return new import_vscode20.ThemeIcon("symbol-namespace");
+      return new import_vscode19.ThemeIcon("symbol-namespace");
     case SymbolKind.Function:
-      return new import_vscode20.ThemeIcon("symbol-method");
+      return new import_vscode19.ThemeIcon("symbol-method");
     case SymbolKind.Constant:
-      return new import_vscode20.ThemeIcon("symbol-constant");
+      return new import_vscode19.ThemeIcon("symbol-constant");
     case SymbolKind.Struct:
-      return new import_vscode20.ThemeIcon("symbol-struct");
+      return new import_vscode19.ThemeIcon("symbol-struct");
     case SymbolKind.Field:
-      return new import_vscode20.ThemeIcon("symbol-field");
+      return new import_vscode19.ThemeIcon("symbol-field");
     case SymbolKind.Variable:
-      return new import_vscode20.ThemeIcon("symbol-variable");
+      return new import_vscode19.ThemeIcon("symbol-variable");
     default:
-      return new import_vscode20.ThemeIcon("symbol-misc");
+      return new import_vscode19.ThemeIcon("symbol-misc");
   }
 }
 
 // packages/vscode-extension/src/project/panel.ts
-var path40 = __toESM(require("node:path"), 1);
-var import_vscode21 = require("vscode");
-var ProjectPanelProvider = class {
-  constructor(extensionUri, getClient, initConfig2) {
+var path41 = __toESM(require("node:path"), 1);
+var import_vscode20 = require("vscode");
+
+// packages/vscode-extension/src/source/workflow.ts
+function shouldClearSourceCandidate(status) {
+  if (!["idle", "verified", "checkpoint"].includes(status.phase)) {
+    return false;
+  }
+  return status.candidateStale || status.candidateAccepted && status.phase !== "checkpoint";
+}
+var HEALTH_BY_COMMAND = {
+  "asm.source.catalog": "needs-catalog",
+  "asm.source.analyze": "needs-analysis",
+  "asm.source.prepare": "needs-prepare",
+  "asm.source.preview": "needs-preview",
+  "asm.source.apply": "ready-to-apply",
+  "asm.source.finish": "finish",
+  "workbench.view.scm": "merging"
+};
+function workflowEscapes(workflow) {
+  const commands11 = new Set(
+    workflow.map((step) => step.command).filter((command) => Boolean(command))
+  );
+  const escapes = [];
+  if (commands11.has("asm.source.abort")) {
+    escapes.push({ command: "asm.source.abort", label: "Abort merge" });
+  }
+  if (commands11.has("asm.source.discard")) {
+    escapes.push({ command: "asm.source.discard", label: "Discard candidate" });
+  }
+  if (commands11.has("asm.source.clean")) {
+    escapes.push({ command: "asm.source.clean", label: "Clean leftover files" });
+  }
+  if (commands11.has("workbench.view.scm")) {
+    escapes.push({ command: "workbench.view.scm", label: "Open Source Control" });
+  }
+  return escapes;
+}
+function sourceHealth(workflow, options = {}) {
+  const next = workflow.find((step) => step.current);
+  const escapes = workflowEscapes(workflow);
+  if (options.busy) {
+    return {
+      kind: "busy",
+      label: "Working",
+      reason: options.busy,
+      escapes: escapes.filter((escape) => escape.command === "asm.source.abort")
+    };
+  }
+  if (options.phase === "diverged") {
+    return {
+      kind: "diverged",
+      label: next?.label ?? "Diverged",
+      reason: next?.description ?? "HEAD moved during merge. Abort or finish in Source Control.",
+      next: next?.command ? { command: next.command, title: next.label } : void 0,
+      escapes
+    };
+  }
+  if (options.phase === "merging") {
+    if (next?.command === "asm.source.finish") {
+      return {
+        kind: "finish",
+        label: next.label,
+        reason: next.description,
+        next: { command: next.command, title: next.label },
+        escapes
+      };
+    }
+    return {
+      kind: "merging",
+      label: next?.label ?? "Merge in progress",
+      reason: next?.description ?? "Resolve conflicts, then finish.",
+      next: next?.command ? { command: next.command, title: next.label } : void 0,
+      escapes
+    };
+  }
+  if (!next) {
+    return { kind: "idle", label: "Idle", reason: "Select a Git source project.", escapes };
+  }
+  return {
+    kind: HEALTH_BY_COMMAND[next.command ?? ""] ?? "idle",
+    label: next.label,
+    reason: next.description,
+    next: next.command ? { command: next.command, title: next.label } : void 0,
+    escapes
+  };
+}
+function sourceWorkflow(state) {
+  if (state.busy) {
+    return [
+      {
+        label: `Working \xB7 ${state.busy}`,
+        description: "Wait for this operation to finish.",
+        current: true
+      }
+    ];
+  }
+  if (state.phase === "diverged") {
+    return [
+      {
+        label: "Inspect Regeneration Recovery in Source Control",
+        description: "Git changed outside the active merge. Inspect the branch and merge state before continuing.",
+        command: "workbench.view.scm",
+        current: true
+      }
+    ];
+  }
+  if (state.phase === "merging") {
+    const conflicts = state.conflicts ?? 0;
+    const ready = conflicts === 0 && state.unstaged === false && !state.unsaved;
+    return [
+      {
+        label: "5. Resolve and Stage Merge Changes",
+        description: `${conflicts} unresolved conflicts. Save editors and stage the intended result in Source Control.`,
+        command: "workbench.view.scm",
+        current: !ready
+      },
+      {
+        label: "6. Validate and Finish Regeneration",
+        description: "Builds the staged merge, validates it, and creates the merge commit.",
+        command: ready ? "asm.source.finish" : void 0,
+        current: ready
+      },
+      {
+        label: "Abort Regeneration",
+        description: "Return to the saved checkpoint.",
+        command: "asm.source.abort"
+      }
+    ];
+  }
+  if (state.phase === "committed") {
+    return [
+      {
+        label: "6. Validate Committed Regeneration",
+        description: "Validate the already committed merge before using it.",
+        command: "asm.source.finish",
+        current: true
+      }
+    ];
+  }
+  const steps = [];
+  if (!state.candidate) {
+    if (state.catalogReady === false) {
+      return [
+        {
+          label: "Refresh Capture Catalog",
+          description: state.catalogReason ?? "Record retained capture identities, then analyze and prepare.",
+          command: "asm.source.catalog",
+          current: true
+        }
+      ];
+    }
+    steps.push({
+      label: "1. Analyze Evidence",
+      description: "Required after importing captures or changing analysis research.",
+      command: "asm.source.analyze",
+      current: state.analysisReady !== true
+    });
+    if (state.analysisReady === false) {
+      steps.push({
+        label: "2. Prepare Regeneration \xB7 analysis required",
+        description: state.analysisReason ?? "Run Analyze Evidence first. Building does not update generated source."
+      });
+    } else {
+      steps.push({
+        label: "2. Prepare Regeneration",
+        description: "Generate a candidate from analyzed evidence; keeps current source edits.",
+        command: "asm.source.prepare",
+        current: state.analysisReady === true
+      });
+    }
+    return steps;
+  }
+  steps.push({
+    label: "3. Preview with Current Edits",
+    description: "Show file diffs for the proposed merge before applying or committing it.",
+    command: "asm.source.preview",
+    current: !state.previewed
+  });
+  if (!state.previewed) {
+    steps.push({
+      label: "4. Apply \xB7 preview required",
+      description: "Review the generated file diffs first. A clean checkout can apply using its existing commit."
+    });
+  } else if (state.dirty) {
+    steps.push({
+      label: "4. Save and Commit Checkpoint",
+      description: "Review Generation Preview first. Preserve existing local edits by saving and committing or moving them before Apply.",
+      command: "workbench.view.scm",
+      current: true
+    });
+  } else {
+    steps.push({
+      label: "4. Apply Previewed Generation",
+      description: "Apply the reviewed generation using the existing commit. Review and stage the result before Finish validates and commits it.",
+      command: "asm.source.apply",
+      current: true
+    });
+  }
+  steps.push({
+    label: "Discard Candidate",
+    description: "Release this candidate without changing source.",
+    command: "asm.source.discard"
+  });
+  return steps;
+}
+
+// packages/vscode-extension/src/project/home-model.ts
+var STEPPER = [
+  { id: "analyze", label: "Analyze", kinds: ["needs-catalog", "needs-analysis"] },
+  { id: "prepare", label: "Prepare", kinds: ["needs-prepare"] },
+  { id: "preview", label: "Preview", kinds: ["needs-preview"] },
+  { id: "apply", label: "Apply", kinds: ["ready-to-apply"] },
+  { id: "finish", label: "Finish", kinds: ["merging", "finish", "diverged"] }
+];
+var STEP_ORDER = [
+  "needs-catalog",
+  "needs-analysis",
+  "needs-prepare",
+  "needs-preview",
+  "ready-to-apply",
+  "merging",
+  "finish",
+  "diverged"
+];
+var SOURCE_MORE = [
+  { command: "asm.source.research", title: "Open declarations" },
+  { command: "asm.source.editResearch", title: "Edit symbol research" },
+  { command: "asm.source.editAnalysis", title: "Edit analysis research" },
+  { command: "asm.source.relocate", title: "Relocate object" },
+  { command: "asm.source.expand", title: "Expand ROM capacity" },
+  { command: "asm.asset.export", title: "Export asset" },
+  { command: "asm.asset.review", title: "Review saved asset" },
+  { command: "asm.asset.apply", title: "Apply reviewed asset" },
+  { command: "asm.source.catalog", title: "Refresh capture catalog" },
+  { command: "asm.source.migrate", title: "Migrate to linked sources" },
+  { command: "asm.source.clean", title: "Clean leftover files" },
+  { command: "asm.source.select", title: "Select source project" }
+];
+function catalogLabel(id, entries, fallback) {
+  if (!id) {
+    return fallback;
+  }
+  const entry = entries?.find((item) => item.id === id);
+  if (entry?.displayName) {
+    return entry.displayName;
+  }
+  if (id.startsWith("snes.")) {
+    return id.includes("65816") ? "65C816" : "SNES";
+  }
+  if (id.startsWith("65xx.")) {
+    return "NES";
+  }
+  return id;
+}
+function coverageFrom(input) {
+  const coverage = input?.summary.coverage;
+  if (!coverage) {
+    return void 0;
+  }
+  const total = coverage.totalBytes;
+  const remaining = coverage.remainingBytes;
+  const converted = coverage.convertedBytes;
+  const freshness = input.staleBuild ? { status: "stale", reason: "Source changed since the last successful build." } : input.freshness;
+  return {
+    remaining,
+    converted,
+    total,
+    remainingPercent: total === 0 ? 0 : remaining / total * 100,
+    convertedPercent: total === 0 ? 0 : converted / total * 100,
+    freshness: freshness.status,
+    reason: freshness.reason
+  };
+}
+function stepper(kind) {
+  if (kind === "idle" || kind === "busy") {
+    return STEPPER.map((step) => ({ id: step.id, label: step.label, state: "todo" }));
+  }
+  const currentIndex = STEPPER.findIndex((step) => step.kinds.includes(kind));
+  const kindIndex = STEP_ORDER.indexOf(kind);
+  return STEPPER.map((step, index) => {
+    if (index === currentIndex) {
+      return { id: step.id, label: step.label, state: "current" };
+    }
+    const stepKindIndex = Math.min(...step.kinds.map((item) => STEP_ORDER.indexOf(item)));
+    return {
+      id: step.id,
+      label: step.label,
+      state: kindIndex > stepKindIndex ? "done" : "todo"
+    };
+  });
+}
+function recoveryCard(health) {
+  const blocked = health.kind === "merging" || health.kind === "diverged" || health.next?.command === "workbench.view.scm";
+  if (health.kind !== "busy" && health.kind !== "merging" && health.kind !== "finish" && health.kind !== "diverged" && health.next?.command !== "workbench.view.scm") {
+    return void 0;
+  }
+  const secondary = health.escapes.map((escape) => ({
+    command: escape.command,
+    title: escape.label
+  }));
+  let primary;
+  if (health.next) {
+    primary = { command: health.next.command, title: health.next.title };
+  } else if (secondary.length > 0) {
+    primary = secondary[0];
+  }
+  let stripe = "merging";
+  if (health.kind === "busy") {
+    stripe = "info";
+  } else if (blocked) {
+    stripe = "blocked";
+  }
+  if (!primary) {
+    return {
+      kind: health.kind,
+      stripe,
+      label: health.label,
+      reason: health.reason,
+      secondary
+    };
+  }
+  return {
+    kind: health.kind,
+    stripe,
+    label: health.label,
+    reason: health.reason,
+    primary,
+    secondary: secondary.filter((action) => action.command !== primary.command)
+  };
+}
+function captureCard(source) {
+  const phase2 = source.capturePhase;
+  const actions = [];
+  if (phase2 === "idle" && source.debugging) {
+    actions.push({ command: "asm.trace.start", title: "Start capture" });
+  } else if (phase2 === "recording") {
+    actions.push(
+      { command: "asm.trace.stop", title: "Stop capture" },
+      { command: "asm.trace.stopAnalyze", title: "Stop and import" }
+    );
+  }
+  actions.push({ command: "asm.source.importCapture", title: "Import captures" });
+  const labels = {
+    idle: source.debugging ? "Ready to record" : "Saved captures",
+    starting: "Starting capture",
+    recording: "Recording",
+    finalizing: "Finalizing capture"
+  };
+  return { phase: phase2, label: labels[phase2] ?? phase2, actions };
+}
+function detectMode(input) {
+  if (input.source?.root) {
+    return "source";
+  }
+  const { status } = input;
+  if (status.target || status.architecture || status.configFile || status.buildOutput) {
+    return "assembly";
+  }
+  return "none";
+}
+function buildHomeSnapshot(input) {
+  const mode = detectMode(input);
+  const { status, metadata, indexReady } = input;
+  const source = input.source;
+  const workflow = source?.workflow ?? [];
+  const health = sourceHealth(workflow, { busy: source?.busy, phase: source?.phase });
+  const commands11 = [
+    ...new Set(
+      workflow.map((step) => step.command).filter((command) => Boolean(command))
+    )
+  ];
+  if (source?.root) {
+    commands11.push("asm.source.build");
+  }
+  const target = source?.target || status.target || metadata?.activeTarget || "";
+  const architecture = status.architecture || metadata?.activeArchitecture || "";
+  const name2 = source?.name || input.workspaceName || (mode === "none" ? "No project" : "Assembly");
+  const incomingFiles2 = source?.incoming ?? [];
+  const snapshot = {
+    mode,
+    trusted: input.trusted,
+    name: name2,
+    branch: source?.branch,
+    dirty: source?.dirty,
+    target,
+    architecture,
+    targetLabel: catalogLabel(target, metadata?.targets, ""),
+    architectureLabel: catalogLabel(architecture, metadata?.architectures, ""),
+    indexReady,
+    status,
+    metadata,
+    health: {
+      index: {
+        files: status.fileCount,
+        symbols: status.symbolCount,
+        references: status.referenceCount,
+        errors: status.errorCount,
+        lastIndexed: status.lastReindexDurationMs == null ? void 0 : `${status.lastReindexDurationMs} ms`
+      },
+      coverage: mode === "source" ? coverageFrom(source?.coverage) : void 0,
+      outputPath: mode === "assembly" ? status.buildOutput || void 0 : void 0
+    },
+    recovery: mode === "source" ? recoveryCard(health) : void 0,
+    next: mode === "source" && health.next ? { command: health.next.command, title: health.next.title } : void 0,
+    steps: mode === "source" && source?.root ? stepper(health.kind) : void 0,
+    incoming: mode === "source" && source?.candidate ? {
+      previewed: source.previewed,
+      total: incomingFiles2.length,
+      shown: incomingFiles2.length,
+      files: [...incomingFiles2]
+    } : void 0,
+    capture: source ? captureCard(source) : void 0,
+    more: mode === "source" ? SOURCE_MORE : [],
+    assembly: mode === "assembly" ? {
+      targets: metadata?.targets ?? [],
+      architectures: metadata?.architectures ?? [],
+      target: status.target ?? "",
+      architecture: status.architecture ?? "",
+      output: status.buildOutput ?? "",
+      entryPoints: status.entryPoints,
+      includePaths: status.includePaths
+    } : void 0,
+    welcome: mode === "none" ? {
+      title: "Get started",
+      detail: "Create a Git source project or initialize an assembly config.",
+      actions: [
+        { command: "asm.source.init", title: "Create Git source project" },
+        { command: "asm.source.select", title: "Select source project" },
+        { command: "asm.initConfig", title: "Initialize assembly config" }
+      ]
+    } : void 0,
+    watch: input.watch,
+    sourcePhase: mode === "source" ? health.kind : "",
+    candidate: source?.candidate,
+    canAbort: health.escapes.some((escape) => escape.command === "asm.source.abort"),
+    canDiscard: health.escapes.some((escape) => escape.command === "asm.source.discard"),
+    build: source?.buildDescription ? { description: source.buildDescription } : void 0,
+    commands: commands11
+  };
+  return snapshot;
+}
+
+// packages/vscode-extension/src/project/panel.ts
+function fallbackProjectStatus() {
+  const config = import_vscode20.workspace.getConfiguration("asm");
+  return {
+    fileCount: 0,
+    symbolCount: 0,
+    referenceCount: 0,
+    errorCount: 0,
+    lastReindexRootCount: 0,
+    lastReindexCachedRoots: 0,
+    lastReindexAnalyzedRoots: 0,
+    configFile: config.get("configFile", ""),
+    target: config.get("target", ""),
+    architecture: config.get("architecture", ""),
+    buildOutput: config.get("buildOutput", ""),
+    baseImage: config.get("baseImage", ""),
+    entryPoints: config.get("entryPoints", []),
+    includePaths: config.get("includePaths", [])
+  };
+}
+var LANGUAGE_CLIENT_RUNNING = 3;
+function isLanguageClientReady(client2) {
+  if (!client2) {
+    return false;
+  }
+  if (!("state" in client2)) {
+    return true;
+  }
+  return client2.state === LANGUAGE_CLIENT_RUNNING;
+}
+var HomeProvider = class {
+  constructor(extensionUri, getClient, initConfig2, options = {}) {
     this.extensionUri = extensionUri;
     this.getClient = getClient;
     this.initConfig = initConfig2;
+    this.options = options;
   }
   extensionUri;
   getClient;
   initConfig;
-  static viewId = "uttori-asm.projectPanel";
+  options;
+  /** View ID contributed in the extension manifest. */
+  static viewId = "uttori-asm.home";
   #view;
   #metadata;
   #snapshotRequest = 0;
+  #last;
+  #refreshTimer;
+  #coverage;
   #pending = /* @__PURE__ */ new Set();
+  /** Most recently published Home snapshot; used by the status bar and Next command. */
+  get lastSnapshot() {
+    return this.#last;
+  }
   /**
    * Called when the view becomes visible.
-   * @param {WebviewView} webviewView The hosted webview.
+   * @param webviewView The hosted webview.
    */
   resolveWebviewView(webviewView) {
     this.#view = webviewView;
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [import_vscode21.Uri.joinPath(this.extensionUri, "media")]
+      localResourceRoots: [import_vscode20.Uri.joinPath(this.extensionUri, "media")]
     };
     webviewView.webview.html = renderWebviewTemplate(
       webviewView.webview,
       this.extensionUri,
-      "panel"
+      "home"
     );
     webviewView.webview.onDidReceiveMessage((message) => {
       void this.onMessage(message);
     });
     webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible) {
-        void this.refresh();
+        this.scheduleRefresh();
       }
     });
     void this.refresh();
   }
-  /**
-   * Pushes a fresh status snapshot to the webview.
-   */
-  async refresh() {
-    if (!this.#view) {
+  /** Coalesce session/watcher bursts so Home cannot retrigger source status. */
+  scheduleRefresh() {
+    if (this.#refreshTimer !== void 0) {
       return;
     }
+    this.#refreshTimer = setTimeout(() => {
+      this.#refreshTimer = void 0;
+      void this.refresh();
+    }, 200);
+  }
+  /** Drop cached conversion totals after a source build so the next paint rereads summary.json. */
+  invalidateCoverage() {
+    this.#coverage = void 0;
+    this.scheduleRefresh();
+  }
+  /**
+   * Paints the current session immediately, then loads coverage once per selected root.
+   * Conversion freshness uses session `buildStale`; it must not hash watched source files.
+   */
+  async refresh() {
     const request = ++this.#snapshotRequest;
-    const snapshot = await this.snapshot();
+    const source = this.options.getSource?.();
+    if (source?.root && this.#coverage?.root !== source.root) {
+      this.#coverage = void 0;
+    }
+    await this.publish(await this.snapshot({ lsp: false }));
     if (request !== this.#snapshotRequest) {
       return;
     }
+    if (source?.root && !this.#coverage) {
+      this.#coverage = {
+        root: source.root,
+        value: await readSummaryCoverage(source.root, source.session.buildStale)
+      };
+    }
+    if (request !== this.#snapshotRequest) {
+      return;
+    }
+    await this.publish(await this.snapshot({ lsp: true }));
+  }
+  /** Push one snapshot to context keys, status bar, and the webview. */
+  async publish(snapshot) {
+    this.#last = snapshot;
     this.#metadata = snapshot.metadata;
+    this.options.onSnapshot?.(snapshot);
+    await publishHomeContext(snapshot);
+    if (!this.#view) {
+      return;
+    }
     void this.#view.webview.postMessage({
       type: "snapshot",
-      ...snapshot,
-      trusted: import_vscode21.workspace.isTrusted
+      ...snapshot
     });
   }
   /**
    * Handles messages from the webview.
-   * @param {Object} message The message object.
-   * @param {string} message.type The type of message.
-   * @param {unknown} message.value The value of the message.
+   * @param message The message object.
    */
   async onMessage(message) {
-    if (!isPanelMessage(message) || this.#pending.has(message.type)) {
+    if (!isHomeMessage(message) || this.#pending.has(message.type)) {
       return;
     }
     this.#pending.add(message.type);
@@ -65999,14 +67012,37 @@ var ProjectPanelProvider = class {
   }
   /**
    * Executes a message.
-   * @param {Object} message The message object.
-   * @param {string} message.type The type of message.
-   * @param {unknown} message.value The value of the message.
+   * @param message The message object.
    */
   async executeMessage(message) {
     switch (message.type) {
       case "ready":
+        if (this.#last) {
+          void this.#view?.webview.postMessage({ type: "snapshot", ...this.#last });
+        }
         await this.refresh();
+        return;
+      case "command":
+        if (typeof message.command === "string") {
+          await import_vscode20.commands.executeCommand(message.command, ...message.args ?? []);
+        }
+        await this.refresh();
+        return;
+      case "diff":
+        if (typeof message.left === "string" && typeof message.right === "string") {
+          await import_vscode20.commands.executeCommand(
+            "asm.source.diff",
+            import_vscode20.Uri.parse(message.left),
+            import_vscode20.Uri.parse(message.right),
+            typeof message.title === "string" ? message.title : "Incoming"
+          );
+        }
+        return;
+      case "overflow":
+        await this.showOverflow();
+        return;
+      case "openConfig":
+        await this.openConfiguration();
         return;
       case "addEntryPoint":
         await this.addPath("entryPoints", false);
@@ -66033,62 +67069,130 @@ var ProjectPanelProvider = class {
         return;
     }
   }
-  /** Opens the effective project configuration, initializing the default file when none is configured. */
+  /** Opens the project identity file: `.uttori/project.json` or `uttori-asm.config.json`. */
   async openConfiguration() {
-    const { status } = await this.snapshot();
-    const root = import_vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (root && status.configFile) {
-      await import_vscode21.window.showTextDocument(import_vscode21.Uri.file(path40.resolve(root, status.configFile)));
+    const snapshot = await this.snapshot();
+    const source = this.options.getSource?.();
+    if (snapshot.mode === "source" && source?.root) {
+      await import_vscode20.window.showTextDocument(import_vscode20.Uri.file(path41.join(source.root, ".uttori/project.json")));
       return;
     }
-    if (!status.configFile) {
+    const root = import_vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (root && snapshot.status.configFile) {
+      await import_vscode20.window.showTextDocument(import_vscode20.Uri.file(path41.resolve(root, snapshot.status.configFile)));
+      return;
+    }
+    if (!snapshot.status.configFile) {
       await this.initConfig();
       await this.refresh();
     }
   }
+  /** Run the legal Next command from the last snapshot. */
+  async runNext() {
+    const next = (this.#last ?? await this.snapshot()).next;
+    if (!next) {
+      return;
+    }
+    await import_vscode20.commands.executeCommand(next.command);
+    await this.refresh();
+  }
   /**
-   * Takes a snapshot of the project status and metadata.
-   * @returns {Promise<{ status: ProjectStatus; metadata?: ProjectMetadata; indexReady: boolean }>} A promise that resolves with the snapshot.
+   * Compose Home from the source session, coverage on disk, and optional running language server.
    */
-  async snapshot() {
-    const config = import_vscode21.workspace.getConfiguration("asm");
-    const fallback = {
-      fileCount: 0,
-      symbolCount: 0,
-      referenceCount: 0,
-      errorCount: 0,
-      lastReindexRootCount: 0,
-      lastReindexCachedRoots: 0,
-      lastReindexAnalyzedRoots: 0,
-      configFile: config.get("configFile", ""),
-      target: config.get("target", ""),
-      architecture: config.get("architecture", ""),
-      buildOutput: config.get("buildOutput", ""),
-      baseImage: config.get("baseImage", ""),
-      entryPoints: config.get("entryPoints", []),
-      includePaths: config.get("includePaths", [])
+  async snapshot(options = {}) {
+    const fallback = fallbackProjectStatus();
+    let status = this.#last?.status ?? fallback;
+    let metadata = this.#metadata;
+    let indexReady = this.#last?.indexReady ?? false;
+    const client2 = options.lsp === false ? void 0 : this.getClient();
+    if (isLanguageClientReady(client2)) {
+      try {
+        const [lspStatus, lspMetadata] = await Promise.all([
+          client2.sendRequest("asm/status"),
+          client2.sendRequest("asm/projectMetadata")
+        ]);
+        status = { ...fallback, ...lspStatus };
+        metadata = lspMetadata;
+        indexReady = true;
+      } catch {
+        status = fallback;
+        indexReady = false;
+      }
+    }
+    const source = this.options.getSource?.();
+    return buildHomeSnapshot({
+      trusted: import_vscode20.workspace.isTrusted,
+      watch: this.options.getWatch?.() ?? false,
+      workspaceName: import_vscode20.workspace.name,
+      status,
+      metadata,
+      indexReady,
+      source: source ? this.sourceInput(source) : void 0
+    });
+  }
+  sourceInput(source) {
+    const root = source.root;
+    if (!root) {
+      return void 0;
+    }
+    const unsaved = source.buffers().length > 0 || source.binaryBuffers().length > 0 || source.opaqueBinaryBuffers().length > 0;
+    const previewed = source.session.preview?.candidate === source.session.candidate && Boolean(source.session.candidate);
+    const workflow = sourceWorkflow({
+      ...source.session.status,
+      busy: source.session.busy,
+      conflicts: source.session.status?.conflicts.length,
+      candidate: Boolean(source.session.candidate),
+      previewed,
+      dirty: (source.session.status?.dirty ?? false) || unsaved,
+      unsaved
+    });
+    return {
+      root,
+      name: source.session.configuration?.id || path41.basename(root),
+      branch: source.session.branch,
+      dirty: (source.session.status?.dirty ?? false) || unsaved,
+      target: source.session.configuration?.target ?? "",
+      candidate: source.session.candidate,
+      previewed,
+      busy: source.session.busy,
+      phase: source.session.status?.phase,
+      workflow,
+      incoming: incomingFiles(source),
+      capturePhase: runtimeCapturePhase(),
+      debugging: import_vscode20.debug.activeDebugSession?.type === "uttori-asm",
+      buildDescription: sourceBuildDescription(source),
+      coverage: this.#coverage?.root === root ? this.#coverage.value : void 0
     };
-    const client2 = this.getClient();
-    if (!client2) {
-      return { status: fallback, indexReady: false };
+  }
+  async showOverflow() {
+    const mode = this.#last?.mode ?? "none";
+    const picked = await import_vscode20.window.showQuickPick(
+      [
+        { label: "Select source project", command: "asm.source.select" },
+        { label: "Create Git source project", command: "asm.source.init" },
+        {
+          label: mode === "source" ? "Open .uttori/project.json" : "Open project configuration",
+          command: "openConfig"
+        }
+      ],
+      { title: "Uttori Home" }
+    );
+    if (!picked) {
+      return;
     }
-    try {
-      const [status, metadata] = await Promise.all([
-        client2.sendRequest("asm/status"),
-        client2.sendRequest("asm/projectMetadata")
-      ]);
-      return { status: { ...fallback, ...status }, metadata, indexReady: true };
-    } catch {
-      return { status: fallback, indexReady: false };
+    if (picked.command === "openConfig") {
+      await this.openConfiguration();
+      return;
     }
+    await import_vscode20.commands.executeCommand(picked.command);
   }
   /**
    * Adds a path to the project.
-   * @param {string} key The key of the path to add.
-   * @param {boolean} folders Whether to add folders.
+   * @param key The key of the path to add.
+   * @param folders Whether to add folders.
    */
   async addPath(key3, folders) {
-    const picked = await import_vscode21.window.showOpenDialog({
+    const picked = await import_vscode20.window.showOpenDialog({
       canSelectFiles: !folders,
       canSelectFolders: folders,
       canSelectMany: true,
@@ -66097,11 +67201,11 @@ var ProjectPanelProvider = class {
     if (!picked?.length) {
       return;
     }
-    const current = import_vscode21.workspace.getConfiguration("asm").get(key3, []);
+    const current = import_vscode20.workspace.getConfiguration("asm").get(key3, []);
     const next = [...current];
     for (const uri of picked) {
-      const folder = import_vscode21.workspace.workspaceFolders?.[0];
-      const relative4 = folder ? path40.relative(folder.uri.fsPath, uri.fsPath) : void 0;
+      const folder = import_vscode20.workspace.workspaceFolders?.[0];
+      const relative4 = folder ? path41.relative(folder.uri.fsPath, uri.fsPath) : void 0;
       const value = relative4 && !relative4.startsWith("..") ? relative4 : uri.fsPath;
       if (!next.includes(value)) {
         next.push(value);
@@ -66111,11 +67215,11 @@ var ProjectPanelProvider = class {
   }
   /**
    * Removes a path from the project.
-   * @param {string} key The key of the path to remove.
-   * @param {string} value The value of the path to remove.
+   * @param key The key of the path to remove.
+   * @param value The value of the path to remove.
    */
   async removePath(key3, value) {
-    const current = import_vscode21.workspace.getConfiguration("asm").get(key3, []);
+    const current = import_vscode20.workspace.getConfiguration("asm").get(key3, []);
     await this.updateSetting(
       key3,
       current.filter((entry) => entry !== value)
@@ -66124,17 +67228,17 @@ var ProjectPanelProvider = class {
   /**
    * Writes the selected target and resets architecture (and output extension)
    * so the previous target's values cannot fail validation.
-   * @param {string} targetId Canonical target contribution ID.
+   * @param targetId Canonical target contribution ID.
    */
   async setTarget(targetId) {
-    const config = import_vscode21.workspace.getConfiguration("asm");
+    const config = import_vscode20.workspace.getConfiguration("asm");
     const target = this.#metadata?.targets.find((entry) => entry.id === targetId);
-    await config.update("target", targetId, import_vscode21.ConfigurationTarget.Workspace);
+    await config.update("target", targetId, import_vscode20.ConfigurationTarget.Workspace);
     if (target?.defaultArchitecture) {
       await config.update(
         "architecture",
         target.defaultArchitecture,
-        import_vscode21.ConfigurationTarget.Workspace
+        import_vscode20.ConfigurationTarget.Workspace
       );
     }
     if (target?.defaultOutputExtension) {
@@ -66143,7 +67247,7 @@ var ProjectPanelProvider = class {
         const suffix = target.defaultOutputExtension.startsWith(".") ? target.defaultOutputExtension : `.${target.defaultOutputExtension}`;
         const next = current.replace(/\.[^.]+$/, suffix);
         if (next !== current) {
-          await config.update("buildOutput", next, import_vscode21.ConfigurationTarget.Workspace);
+          await config.update("buildOutput", next, import_vscode20.ConfigurationTarget.Workspace);
         }
       }
     }
@@ -66151,15 +67255,84 @@ var ProjectPanelProvider = class {
   }
   /**
    * Updates a setting in the project.
-   * @param {string} key The key of the setting to update.
-   * @param {unknown} value The value of the setting to update.
+   * @param key The key of the setting to update.
+   * @param value The value of the setting to update.
    */
   async updateSetting(key3, value) {
-    await import_vscode21.workspace.getConfiguration("asm").update(key3, value, import_vscode21.ConfigurationTarget.Workspace);
+    await import_vscode20.workspace.getConfiguration("asm").update(key3, value, import_vscode20.ConfigurationTarget.Workspace);
     await this.refresh();
   }
 };
-function isPanelMessage(value) {
+function sourceBuildDescription(source) {
+  if (!source.session.build) {
+    return void 0;
+  }
+  return source.session.buildStale ? "source changed" : "verified";
+}
+async function publishHomeContext(snapshot) {
+  await Promise.all([
+    import_vscode20.commands.executeCommand("setContext", "uttori.projectMode", snapshot.mode),
+    import_vscode20.commands.executeCommand("setContext", "uttori.sourcePhase", snapshot.sourcePhase),
+    import_vscode20.commands.executeCommand("setContext", "uttori.nextCommand", snapshot.next?.command ?? ""),
+    import_vscode20.commands.executeCommand("setContext", "uttori.canAbort", snapshot.canAbort),
+    import_vscode20.commands.executeCommand("setContext", "uttori.canDiscard", snapshot.canDiscard)
+  ]);
+}
+function rowLabel(row) {
+  return typeof row.label === "string" ? row.label : row.label?.label ?? "";
+}
+function incomingFiles(source) {
+  return source.session.incoming.flatMap((row) => {
+    const args = row.command?.arguments;
+    const filePath = rowLabel(row);
+    if (!filePath || !Array.isArray(args) || args.length < 2) {
+      return [];
+    }
+    const left = args[0];
+    const right = args[1];
+    const title = typeof args[2] === "string" ? args[2] : filePath;
+    if (typeof left !== "string" && !(left instanceof import_vscode20.Uri)) {
+      return [];
+    }
+    if (typeof right !== "string" && !(right instanceof import_vscode20.Uri)) {
+      return [];
+    }
+    return [
+      {
+        path: filePath,
+        status: typeof row.description === "string" ? row.description : "M",
+        conflict: row.description === "predicted conflict",
+        additions: row.additions,
+        deletions: row.deletions,
+        left: uriString(left),
+        right: uriString(right),
+        title
+      }
+    ];
+  });
+}
+function uriString(value) {
+  return typeof value === "string" ? value : value.toString();
+}
+async function readSummaryCoverage(root, staleBuild) {
+  try {
+    const snapshot = await readBuildCoverage(root);
+    if (!snapshot) {
+      return void 0;
+    }
+    return {
+      summary: snapshot.summary,
+      freshness: {
+        status: staleBuild ? "stale" : "current",
+        reason: staleBuild ? "Source changed since the last successful build." : "Last successful build coverage."
+      },
+      staleBuild
+    };
+  } catch {
+    return void 0;
+  }
+}
+function isHomeMessage(value) {
   return typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";
 }
 function asString(value) {
@@ -66168,17 +67341,17 @@ function asString(value) {
 
 // packages/vscode-extension/src/source/controller.ts
 var import_promises21 = __toESM(require("node:fs/promises"), 1);
-var import_node_path37 = __toESM(require("node:path"), 1);
-var import_vscode32 = require("vscode");
+var import_node_path38 = __toESM(require("node:path"), 1);
+var import_vscode31 = require("vscode");
 
 // packages/vscode-extension/src/source/analysis-editor.ts
-var import_node_path30 = __toESM(require("node:path"), 1);
+var import_node_path31 = __toESM(require("node:path"), 1);
 init_src2();
-var import_vscode23 = require("vscode");
+var import_vscode22 = require("vscode");
 
 // packages/vscode-extension/src/source/research-editor.ts
-var import_node_path29 = __toESM(require("node:path"), 1);
-var import_vscode22 = require("vscode");
+var import_node_path30 = __toESM(require("node:path"), 1);
+var import_vscode21 = require("vscode");
 
 // packages/vscode-extension/src/source/result-readers.ts
 function record6(value) {
@@ -66306,7 +67479,7 @@ function readConversionPlan(value) {
 
 // packages/vscode-extension/src/source/research-editor.ts
 async function editSourceResearch(worker, context, request) {
-  if (!import_vscode22.workspace.isTrusted) {
+  if (!import_vscode21.workspace.isTrusted) {
     throw new Error("Research edits require a trusted workspace.");
   }
   const initial = context();
@@ -66327,7 +67500,7 @@ async function editSourceResearch(worker, context, request) {
     if (result2.kind !== "symbols") {
       throw new Error("Research service returned an invalid symbol list.");
     }
-    const choice = await import_vscode22.window.showQuickPick(
+    const choice = await import_vscode21.window.showQuickPick(
       result2.symbols.map((symbol2) => ({
         label: symbol2.name,
         description: `${symbol2.addressSpace}:$${symbol2.address.toString(16).toUpperCase()} \xB7 ${symbol2.id}`,
@@ -66340,7 +67513,7 @@ async function editSourceResearch(worker, context, request) {
       return void 0;
     }
     const symbol = choice.symbol;
-    const action = await import_vscode22.window.showQuickPick(
+    const action = await import_vscode21.window.showQuickPick(
       [
         {
           label: "Rename Source Symbol\u2026",
@@ -66374,16 +67547,16 @@ async function editSourceResearch(worker, context, request) {
       return void 0;
     }
     if (action.action === "rename") {
-      const matches = (await import_vscode22.commands.executeCommand(
+      const matches = (await import_vscode21.commands.executeCommand(
         "vscode.executeWorkspaceSymbolProvider",
         symbol.name
       ) ?? []).filter(
-        (item) => item.name === symbol.name && item.location.uri.scheme === "file" && item.location.uri.fsPath.startsWith(initial.root + import_node_path29.default.sep)
+        (item) => item.name === symbol.name && item.location.uri.scheme === "file" && item.location.uri.fsPath.startsWith(initial.root + import_node_path30.default.sep)
       );
-      const selected = matches.length === 1 ? matches[0] : (await import_vscode22.window.showQuickPick(
+      const selected = matches.length === 1 ? matches[0] : (await import_vscode21.window.showQuickPick(
         matches.map((item) => ({
           label: item.name,
-          description: import_node_path29.default.relative(initial.root, item.location.uri.fsPath),
+          description: import_node_path30.default.relative(initial.root, item.location.uri.fsPath),
           item
         })),
         { title: "Source declaration to rename" }
@@ -66396,7 +67569,7 @@ async function editSourceResearch(worker, context, request) {
         }
         return void 0;
       }
-      const name2 = await import_vscode22.window.showInputBox({
+      const name2 = await import_vscode21.window.showInputBox({
         title: `Rename ${symbol.name}`,
         value: symbol.name,
         validateInput: (value) => /^[A-Z_a-z]\w*$/.test(value) ? void 0 : "Enter an assembly identifier."
@@ -66404,8 +67577,8 @@ async function editSourceResearch(worker, context, request) {
       if (name2 === void 0 || name2 === symbol.name) {
         return void 0;
       }
-      await import_vscode22.workspace.openTextDocument(selected.location.uri);
-      const edit2 = await import_vscode22.commands.executeCommand(
+      await import_vscode21.workspace.openTextDocument(selected.location.uri);
+      const edit2 = await import_vscode21.commands.executeCommand(
         "vscode.executeDocumentRenameProvider",
         selected.location.uri,
         selected.location.range.start,
@@ -66416,18 +67589,18 @@ async function editSourceResearch(worker, context, request) {
           "The selected project changed or its declaration cannot be renamed. Refresh and retry."
         );
       }
-      if (!await import_vscode22.workspace.applyEdit(edit2)) {
+      if (!await import_vscode21.workspace.applyEdit(edit2)) {
         throw new Error("The editor rejected the source rename. Refresh and retry.");
       }
-      await import_vscode22.window.showTextDocument(selected.location.uri);
+      await import_vscode21.window.showTextDocument(selected.location.uri);
       return result2;
     }
     if (action.action === "open") {
-      await import_vscode22.window.showTextDocument(import_vscode22.Uri.file(import_node_path29.default.join(initial.root, symbol.path)));
+      await import_vscode21.window.showTextDocument(import_vscode21.Uri.file(import_node_path30.default.join(initial.root, symbol.path)));
       return result2;
     }
     if (action.action === "aliases") {
-      const aliases2 = await import_vscode22.window.showInputBox({
+      const aliases2 = await import_vscode21.window.showInputBox({
         title: `Aliases for ${symbol.name}`,
         prompt: "Comma-separated names; leave empty to remove aliases.",
         value: symbol.aliases.join(", ")
@@ -66458,20 +67631,20 @@ async function editSourceResearch(worker, context, request) {
   if (result.kind !== "edit") {
     throw new Error("Research service did not produce an edit.");
   }
-  const document = await import_vscode22.workspace.openTextDocument(import_vscode22.Uri.file(import_node_path29.default.join(initial.root, result.path)));
+  const document = await import_vscode21.workspace.openTextDocument(import_vscode21.Uri.file(import_node_path30.default.join(initial.root, result.path)));
   if (context()?.root !== initial.root || sourceContentHash(document.getText()) !== result.beforeSha256) {
     throw new Error("The selected project or research changed. Prepare the edit again.");
   }
-  const edit = new import_vscode22.WorkspaceEdit();
+  const edit = new import_vscode21.WorkspaceEdit();
   edit.replace(
     document.uri,
-    new import_vscode22.Range(document.positionAt(0), document.positionAt(document.getText().length)),
+    new import_vscode21.Range(document.positionAt(0), document.positionAt(document.getText().length)),
     result.after
   );
-  if (!await import_vscode22.workspace.applyEdit(edit)) {
+  if (!await import_vscode21.workspace.applyEdit(edit)) {
     throw new Error("The editor rejected the research edit. Refresh the declaration and retry.");
   }
-  await import_vscode22.window.showTextDocument(document);
+  await import_vscode21.window.showTextDocument(document);
   return result;
 }
 
@@ -66502,7 +67675,7 @@ function isRegisterKey(key3) {
   return key3 === "programBank" || key3 === "dataBank" || key3 === "directPage" || key3 === "stackPointer";
 }
 async function address2(title, initial, maximum) {
-  const text2 = await import_vscode23.window.showInputBox({
+  const text2 = await import_vscode22.window.showInputBox({
     title,
     value: hex4(initial),
     prompt: "Original address: $hex, 0xhex, or decimal.",
@@ -66513,16 +67686,16 @@ async function address2(title, initial, maximum) {
   });
   return text2 === void 0 ? void 0 : parseResearchAddress(text2);
 }
-async function editState(record7) {
-  const field = await import_vscode23.window.showQuickPick(CPU_STATE_FIELDS, {
-    title: `CPU assumption \xB7 ${record7.id}`
+async function editState(record8) {
+  const field = await import_vscode22.window.showQuickPick(CPU_STATE_FIELDS, {
+    title: `CPU assumption \xB7 ${record8.id}`
   });
   if (!field) {
     return void 0;
   }
-  const payload = readAnalysisTargetState(record7.architecture, record7.state);
-  if (record7.architecture !== "snes.65816") {
-    await import_vscode23.window.showInformationMessage(
+  const payload = readAnalysisTargetState(record8.architecture, record8.state);
+  if (record8.architecture !== "snes.65816") {
+    await import_vscode22.window.showInformationMessage(
       "CPU assumption editing currently supports 65816 annotations."
     );
     return void 0;
@@ -66536,7 +67709,7 @@ async function editState(record7) {
     } else if (key3 === "m" || key3 === "x") {
       labels = ["8-bit", "16-bit"];
     }
-    const choice = await import_vscode23.window.showQuickPick(
+    const choice = await import_vscode22.window.showQuickPick(
       [
         { label: labels[0], value: true },
         { label: labels[1], value: false },
@@ -66560,7 +67733,7 @@ async function editState(record7) {
   } else if (isRegisterKey(field.key)) {
     const register2 = field.key;
     const maximum = register2 === "programBank" || register2 === "dataBank" ? 255 : 65535;
-    const value = await import_vscode23.window.showInputBox({
+    const value = await import_vscode22.window.showInputBox({
       title: field.label,
       value: state[register2] === void 0 ? "" : hex4(state[register2]),
       prompt: `Value from $0 through ${hex4(maximum)}; empty removes the assumption.`,
@@ -66582,9 +67755,9 @@ async function editState(record7) {
       state[register2] = parsed;
     }
   }
-  return { ...record7, state };
+  return { ...record8, state };
 }
-async function classification(record7) {
+async function classification(record8) {
   const choices = [
     "opcode",
     "data8",
@@ -66603,17 +67776,17 @@ async function classification(record7) {
     "unreached",
     "operand"
   ];
-  const selected = await import_vscode23.window.showQuickPick(
+  const selected = await import_vscode22.window.showQuickPick(
     choices.map((label) => ({
       label,
-      description: label === record7.classification ? "current" : void 0
+      description: label === record8.classification ? "current" : void 0
     })),
-    { title: `Classification \xB7 ${hex4(record7.start)}\u2013${hex4(record7.end)} (exclusive)` }
+    { title: `Classification \xB7 ${hex4(record8.start)}\u2013${hex4(record8.end)} (exclusive)` }
   );
-  return selected ? { ...record7, classification: selected.label } : void 0;
+  return selected ? { ...record8, classification: selected.label } : void 0;
 }
 async function mappingSelection(initial) {
-  const text2 = await import_vscode23.window.showInputBox({
+  const text2 = await import_vscode22.window.showInputBox({
     title: "Original NES mapper selection",
     value: initial ? JSON.stringify(initial) : "",
     prompt: 'Use mapper state, for example {"state":{"prgMode":0,"r6":2,"r7":3}}. Optional fileOffset is headerless.',
@@ -66635,7 +67808,7 @@ async function mappingSelection(initial) {
   return mapping;
 }
 async function newRecord(selection, kind, hint) {
-  const document = await import_vscode23.window.showQuickPick(
+  const document = await import_vscode22.window.showQuickPick(
     selection.documents.map((item) => item.path),
     { title: "Research document" }
   );
@@ -66643,7 +67816,7 @@ async function newRecord(selection, kind, hint) {
     return void 0;
   }
   const spaces = selection.addressSpaces;
-  const space = await import_vscode23.window.showQuickPick(
+  const space = await import_vscode22.window.showQuickPick(
     spaces.map((item) => ({ label: item.name, description: item.id, item })),
     { title: "Original address space" }
   );
@@ -66685,7 +67858,7 @@ async function newRecord(selection, kind, hint) {
   if (end === void 0) {
     return void 0;
   }
-  const architecture = await import_vscode23.window.showInputBox({
+  const architecture = await import_vscode22.window.showInputBox({
     title: "Architecture",
     value: space.item.id.startsWith("nes.") ? "65xx.2a03" : "snes.65816",
     prompt: "Architecture identifier used by this range.",
@@ -66713,7 +67886,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
     return editSourceResearch(worker, context, { kind: "analysis", change });
   }
   const initial = context();
-  if (!initial || !import_vscode23.workspace.isTrusted) {
+  if (!initial || !import_vscode22.workspace.isTrusted) {
     throw new Error("Select a Git source project in a trusted workspace first.");
   }
   const selection = await worker.run(
@@ -66729,16 +67902,16 @@ async function editAnalysisResearch(worker, context, change, hint) {
     throw new Error("Research service returned an invalid analysis selection.");
   }
   const relevant = selection.records.filter(
-    (record8) => !hint || "classification" in record8.value !== (hint.action === "targets")
+    (record9) => !hint || "classification" in record9.value !== (hint.action === "targets")
   );
-  const options = relevant.map((record8) => ({
-    label: record8.value.id,
-    description: record8.value.addressSpace + (record8.value.mapping ? ` \xB7 ${JSON.stringify(record8.value.mapping)}` : ""),
-    detail: record8.path,
-    record: record8,
+  const options = relevant.map((record9) => ({
+    label: record9.value.id,
+    description: record9.value.addressSpace + (record9.value.mapping ? ` \xB7 ${JSON.stringify(record9.value.mapping)}` : ""),
+    detail: record9.path,
+    record: record9,
     create: void 0
   }));
-  const choice = hint && options.length === 1 ? options[0] : await import_vscode23.window.showQuickPick(
+  const choice = hint && options.length === 1 ? options[0] : await import_vscode22.window.showQuickPick(
     [
       {
         label: "Classify a Range\u2026",
@@ -66767,32 +67940,32 @@ async function editAnalysisResearch(worker, context, change, hint) {
   if (!selected) {
     return void 0;
   }
-  let record7 = selected.value;
+  let record8 = selected.value;
   const expectedDocumentSha256 = selection.documents.find(
     (item) => item.path === selected.path
   ).sha256;
-  if (choice.create && selection.records.some((item) => item.value.id === record7.id)) {
+  if (choice.create && selection.records.some((item) => item.value.id === record8.id)) {
     throw new Error(
       "This range or target already has a declaration. Select it from the research list."
     );
   }
   let action = hint?.action ?? (choice.create === "range" ? "classification" : "targets");
-  const rangeRecord = "classification" in record7;
+  const rangeRecord = "classification" in record8;
   if (hint && rangeRecord === (hint.action === "targets")) {
     throw new Error("This declaration does not support the requested evidence action.");
   }
   if (!choice.create && !hint) {
-    const edits = "classification" in record7 ? ["classification", "state"] : ["targets"];
-    if (record7.addressSpace.startsWith("nes.")) {
+    const edits = "classification" in record8 ? ["classification", "state"] : ["targets"];
+    if (record8.addressSpace.startsWith("nes.")) {
       const state = edits.indexOf("state");
       if (state !== -1) {
         edits.splice(state, 1);
       }
-      if (record7.addressSpace === "nes.cpu") {
+      if (record8.addressSpace === "nes.cpu") {
         edits.push("mapping");
       }
     }
-    const picked = await import_vscode23.window.showQuickPick(
+    const picked = await import_vscode22.window.showQuickPick(
       [
         ...edits.map((item) => ({
           label: item === "state" ? "Change CPU Assumption" : `Edit ${item}`,
@@ -66805,7 +67978,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
           detail: "Restores imported observations after saving; keeps evidence."
         }
       ],
-      { title: record7.id }
+      { title: record8.id }
     );
     if (!picked) {
       return void 0;
@@ -66813,45 +67986,45 @@ async function editAnalysisResearch(worker, context, change, hint) {
     action = picked.action;
   }
   if (action === "open") {
-    await import_vscode23.window.showTextDocument(import_vscode23.Uri.file(import_node_path30.default.join(initial.root, selected.path)));
+    await import_vscode22.window.showTextDocument(import_vscode22.Uri.file(import_node_path31.default.join(initial.root, selected.path)));
     return selection;
   }
   if (action === "remove") {
     change = {
       kind: "remove",
       expectedDocumentSha256,
-      collection: "classification" in record7 ? "annotations" : "analysis",
-      id: record7.id
+      collection: "classification" in record8 ? "annotations" : "analysis",
+      id: record8.id
     };
   } else {
-    if (action === "mapping" || action === "state" && record7.addressSpace === "nes.cpu") {
-      const mapping = await mappingSelection(record7.mapping);
+    if (action === "mapping" || action === "state" && record8.addressSpace === "nes.cpu") {
+      const mapping = await mappingSelection(record8.mapping);
       if (!mapping) {
         return void 0;
       }
-      record7 = { ...record7, mapping };
-    } else if ("classification" in record7) {
-      const edited = action === "state" ? await editState(record7) : await classification(record7);
+      record8 = { ...record8, mapping };
+    } else if ("classification" in record8) {
+      const edited = action === "state" ? await editState(record8) : await classification(record8);
       if (!edited) {
         return void 0;
       }
-      record7 = edited;
+      record8 = edited;
     } else {
-      const targets = await import_vscode23.window.showInputBox({
-        title: `Indirect targets \xB7 ${record7.id}`,
-        value: record7.targets.map(hex4).join(", "),
+      const targets = await import_vscode22.window.showInputBox({
+        title: `Indirect targets \xB7 ${record8.id}`,
+        value: record8.targets.map(hex4).join(", "),
         prompt: "Comma-separated original addresses. Empty records no known targets.",
         validateInput: (value) => value.trim() && value.split(",").some((item) => parseResearchAddress(item) === void 0) ? "Enter comma-separated $hex, 0xhex or decimal addresses." : void 0
       });
       if (targets === void 0) {
         return void 0;
       }
-      record7 = {
-        ...record7,
+      record8 = {
+        ...record8,
         targets: targets.trim() ? targets.split(",").map((item) => parseResearchAddress(item)) : []
       };
     }
-    const reason = await import_vscode23.window.showInputBox({
+    const reason = await import_vscode22.window.showInputBox({
       title: "Reason for the research decision",
       prompt: "Evidence or reasoning retained in Git beside this declaration.",
       validateInput: (value) => value.trim() ? void 0 : "Describe the evidence or reasoning."
@@ -66859,13 +68032,13 @@ async function editAnalysisResearch(worker, context, change, hint) {
     if (reason === void 0) {
       return void 0;
     }
-    if ("classification" in record7) {
+    if ("classification" in record8) {
       change = {
         kind: "put",
         expectedDocumentSha256,
         collection: "annotations",
         path: selected.path,
-        value: record7,
+        value: record8,
         reason
       };
     } else {
@@ -66874,7 +68047,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
         expectedDocumentSha256,
         collection: "analysis",
         path: selected.path,
-        value: record7,
+        value: record8,
         reason
       };
     }
@@ -66887,7 +68060,7 @@ async function editAnalysisResearch(worker, context, change, hint) {
 
 // packages/vscode-extension/src/source/asset-coordinator.ts
 var import_promises19 = __toESM(require("node:fs/promises"), 1);
-var import_node_path34 = __toESM(require("node:path"), 1);
+var import_node_path35 = __toESM(require("node:path"), 1);
 
 // packages/workflows/src/asset-interchange/public-records.ts
 function isObject2(value) {
@@ -67037,17 +68210,17 @@ function readAssetOperation(value) {
 }
 
 // packages/vscode-extension/src/source/asset-coordinator.ts
-var import_vscode26 = require("vscode");
+var import_vscode25 = require("vscode");
 
 // packages/workflows/src/asset-interchange/paths.ts
 var import_node_fs18 = __toESM(require("node:fs"), 1);
-var import_node_path31 = __toESM(require("node:path"), 1);
+var import_node_path32 = __toESM(require("node:path"), 1);
 function assetPath(file) {
-  const absolute = import_node_path31.default.resolve(file);
+  const absolute = import_node_path32.default.resolve(file);
   if (process.platform === "darwin") {
     for (const alias of ["/var", "/tmp"]) {
       if (absolute === alias || absolute.startsWith(alias + "/")) {
-        return import_node_path31.default.join(import_node_fs18.default.realpathSync(alias), import_node_path31.default.relative(alias, absolute));
+        return import_node_path32.default.join(import_node_fs18.default.realpathSync(alias), import_node_path32.default.relative(alias, absolute));
       }
     }
   }
@@ -67073,156 +68246,15 @@ function assertAssetEditorVersions(before, current, relevant) {
 
 // packages/vscode-extension/src/source/conversion-editor.ts
 var import_promises18 = __toESM(require("node:fs/promises"), 1);
-var import_node_path33 = __toESM(require("node:path"), 1);
+var import_node_path34 = __toESM(require("node:path"), 1);
 
-// packages/workflows/src/source-requests.ts
-var fields = {
-  init: ["rom", "dizRawFile", "mapper"],
-  status: ["candidate"],
-  prepare: ["assembly"],
-  preview: ["candidate"],
-  apply: ["candidate"],
-  finish: ["message"],
-  abort: [],
-  discard: ["candidate"],
-  clean: [],
-  build: [],
-  index: [],
-  analyze: [],
-  catalog: [],
-  graphics: ["graphicsQuery"],
-  relocate: ["objectId"],
-  expand: ["expansionSize"],
-  research: ["research"],
-  import: ["capture", "captures", "recoverPartial"]
-};
-var isRecord44 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-var isAction = (value) => typeof value === "string" && Object.hasOwn(fields, value);
-var isText2 = (value) => typeof value === "string" && value.length > 0 && !value.includes("\0");
-function assertRequest(value) {
-  if (!isRecord44(value) || !isAction(value.action) || !isText2(value.directory)) {
-    throw new Error("Source operation requires a known action and project directory.");
-  }
-  const allowed = /* @__PURE__ */ new Set([
-    "action",
-    "directory",
-    "signal",
-    "onProgress",
-    "overlays",
-    ...fields[value.action]
-  ]);
-  for (const [key3, field] of Object.entries(value)) {
-    if (field !== void 0 && !allowed.has(key3)) {
-      throw new Error(`Source ${value.action} does not accept ${key3}.`);
-    }
-  }
-  for (const key3 of [
-    "rom",
-    "dizRawFile",
-    "mapper",
-    "candidate",
-    "message",
-    "capture",
-    "objectId"
-  ]) {
-    if (value[key3] !== void 0 && !isText2(value[key3])) {
-      throw new Error(`Invalid source ${key3}.`);
-    }
-  }
-  if (value.signal !== void 0 && !(value.signal instanceof AbortSignal)) {
-    throw new Error("Invalid source cancellation signal.");
-  }
-  if (value.onProgress !== void 0 && typeof value.onProgress !== "function") {
-    throw new Error("Invalid source progress callback.");
-  }
-  if (value.overlays !== void 0 && (!Array.isArray(value.overlays) || value.overlays.length > 65536 || !value.overlays.every(
-    (item) => isRecord44(item) && isText2(item.path) && item.bytes instanceof Uint8Array
-  ))) {
-    throw new Error("Invalid source overlays.");
-  }
-  if (value.assembly !== void 0 && value.assembly !== "linked") {
-    throw new Error("Source preparation supports only explicit linked migration.");
-  }
-  if (value.action === "init" && !isText2(value.rom)) {
-    throw new Error("Initialization requires an original ROM path.");
-  }
-  if (["preview", "apply", "discard"].includes(value.action) && !isText2(value.candidate)) {
-    throw new Error("Source operation requires a generation commit.");
-  }
-  if (value.action === "relocate" && !isText2(value.objectId)) {
-    throw new Error("Relocation requires a declared object ID.");
-  }
-  if (value.action === "expand" && (typeof value.expansionSize !== "number" || !Number.isSafeInteger(value.expansionSize) || value.expansionSize < 1)) {
-    throw new Error("Expansion requires an explicit capacity in bytes.");
-  }
-  if (value.action === "import") {
-    if (value.recoverPartial !== void 0 && typeof value.recoverPartial !== "boolean") {
-      throw new Error("Invalid partial capture recovery selection.");
-    }
-    const single = isText2(value.capture);
-    const batch = Array.isArray(value.captures) && value.captures.length > 0 && value.captures.length <= 65536 && value.captures.every(isText2);
-    if (single === batch || value.capture !== void 0 && !single || value.captures !== void 0 && !batch) {
-      throw new Error("Import requires one archive or one nonempty capture queue, exclusively.");
-    }
-  }
-  if (value.graphicsQuery !== void 0) {
-    const query = value.graphicsQuery;
-    if (!isRecord44(query) || !isText2(query.captureSha256)) {
-      throw new Error("Invalid source graphics selection.");
-    }
-    for (const key3 of ["pc", "physicalOffset", "limit"]) {
-      if (query[key3] !== void 0 && (typeof query[key3] !== "number" || !Number.isSafeInteger(query[key3]) || query[key3] < 0)) {
-        throw new Error(`Invalid graphics ${key3}.`);
-      }
-    }
-  }
-  if (value.research !== void 0) {
-    const request = value.research;
-    if (!isRecord44(request) || request.kind !== void 0 && request.kind !== "symbols" && request.kind !== "analysis" || request.symbolId !== void 0 && !isText2(request.symbolId)) {
-      throw new Error("Invalid research request.");
-    }
-    const change = request.change;
-    if (change !== void 0) {
-      if (!isRecord44(change)) {
-        throw new Error("Invalid research change.");
-      }
-      if (request.kind === "analysis") {
-        if (!isText2(change.expectedDocumentSha256) || !["annotations", "analysis"].includes(String(change.collection))) {
-          throw new Error("Invalid research analysis identity.");
-        }
-        if (change.kind === "remove") {
-          if (!isText2(change.id)) {
-            throw new Error("Research removal requires a record ID.");
-          }
-        } else if (change.kind !== "put" || !isText2(change.path) || !isText2(change.reason) || !isRecord44(change.value)) {
-          throw new Error("Invalid research analysis edit.");
-        }
-      } else if (change.kind === "aliases") {
-        if (!Array.isArray(change.aliases) || !change.aliases.every(isText2)) {
-          throw new Error("Invalid research aliases.");
-        }
-      } else if (change.kind === "suppression") {
-        if (typeof change.suppressed !== "boolean") {
-          throw new Error("Invalid research suppression.");
-        }
-      } else if (change.kind !== "entry-point" || typeof change.enabled !== "boolean") {
-        throw new Error("Invalid research symbol edit.");
-      }
-    }
-  }
-}
-function readSourceOperation(value) {
-  assertRequest(value);
-  return value;
-}
-
-// packages/workflows/src/asset-source-conversion.ts
+// packages/workflows/src/asset-source-inventory.ts
 var import_node_fs19 = __toESM(require("node:fs"), 1);
-var import_node_path32 = __toESM(require("node:path"), 1);
+var import_node_path33 = __toESM(require("node:path"), 1);
 function assetSourceAssemblyInventory(root) {
   const absoluteRoot = import_node_fs19.default.realpathSync(root);
   const project = parseSourceProject(
-    JSON.parse(import_node_fs19.default.readFileSync(import_node_path32.default.join(absoluteRoot, ".uttori/project.json"), "utf8"))
+    JSON.parse(import_node_fs19.default.readFileSync(import_node_path33.default.join(absoluteRoot, ".uttori/project.json"), "utf8"))
   );
   const files = [];
   let visited = 0;
@@ -67234,7 +68266,7 @@ function assetSourceAssemblyInventory(root) {
       if (++visited > 65536) {
         throw new Error("Source conversion assembly discovery exceeds its file budget.");
       }
-      const file = import_node_path32.default.join(directory, entry.name);
+      const file = import_node_path33.default.join(directory, entry.name);
       if (entry.isSymbolicLink()) {
         files.push(file);
       } else if (entry.isDirectory()) {
@@ -67245,29 +68277,29 @@ function assetSourceAssemblyInventory(root) {
     }
   };
   for (const sourceRoot of project.sourceRoots) {
-    visit2(import_node_path32.default.resolve(absoluteRoot, sourceRoot));
+    visit2(import_node_path33.default.resolve(absoluteRoot, sourceRoot));
   }
   return files.toSorted();
 }
 
 // packages/vscode-extension/src/source/conversion-editor.ts
-var import_vscode24 = require("vscode");
+var import_vscode23 = require("vscode");
 async function applyAssetSourceEdit(root, plan2, validateEditors) {
   const paths = [
-    ...plan2.snapshots.map((item) => import_node_path33.default.resolve(root, item.path)),
-    ...plan2.changes.map((item) => import_node_path33.default.resolve(root, item.path))
+    ...plan2.snapshots.map((item) => import_node_path34.default.resolve(root, item.path)),
+    ...plan2.changes.map((item) => import_node_path34.default.resolve(root, item.path))
   ];
-  const edit = new import_vscode24.WorkspaceEdit();
+  const edit = new import_vscode23.WorkspaceEdit();
   const documents = [];
   for (const snapshot of plan2.snapshots) {
-    if (sourceContentHash(await import_promises18.default.readFile(import_node_path33.default.resolve(root, snapshot.path))) !== snapshot.sha256) {
+    if (sourceContentHash(await import_promises18.default.readFile(import_node_path34.default.resolve(root, snapshot.path))) !== snapshot.sha256) {
       throw new Error(
         `Source changed before editor publication: ${snapshot.path}. Recover the staged conversion.`
       );
     }
   }
   for (const change of plan2.changes) {
-    const uri = import_vscode24.Uri.file(import_node_path33.default.resolve(root, change.path));
+    const uri = import_vscode23.Uri.file(import_node_path34.default.resolve(root, change.path));
     let current = null;
     try {
       current = await import_promises18.default.readFile(uri.fsPath);
@@ -67289,11 +68321,11 @@ async function applyAssetSourceEdit(root, plan2, validateEditors) {
       if (!/\.(asm|s|inc|json)$/i.test(change.path)) {
         throw new Error(`Native editor publication cannot replace opaque file '${change.path}'.`);
       }
-      const document = await import_vscode24.workspace.openTextDocument(uri);
+      const document = await import_vscode23.workspace.openTextDocument(uri);
       const text2 = new TextDecoder("utf-8", { fatal: true }).decode(change.after);
       edit.replace(
         uri,
-        new import_vscode24.Range(document.positionAt(0), document.positionAt(document.getText().length)),
+        new import_vscode23.Range(document.positionAt(0), document.positionAt(document.getText().length)),
         text2
       );
       documents.push(document);
@@ -67305,7 +68337,7 @@ async function applyAssetSourceEdit(root, plan2, validateEditors) {
     );
   }
   validateEditors(paths);
-  if (!await import_vscode24.workspace.applyEdit(edit, { isRefactoring: true })) {
+  if (!await import_vscode23.workspace.applyEdit(edit, { isRefactoring: true })) {
     throw new Error("Native source conversion edit was declined. Recover the staged conversion.");
   }
   for (const document of documents) {
@@ -67316,41 +68348,41 @@ async function applyAssetSourceEdit(root, plan2, validateEditors) {
 }
 
 // packages/vscode-extension/src/source/ui-contracts.ts
-var import_vscode25 = require("vscode");
-function isRecord45(value) {
+var import_vscode24 = require("vscode");
+function isRecord44(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function isSnesMapper2(value) {
   return value === "lorom" || value === "hirom" || value === "exlorom" || value === "exhirom" || value === "sfxrom" || value === "sa1rom" || value === "bigsa1rom" || value === "norom";
 }
 function isLayoutObject(value) {
-  return isRecord45(value) && typeof value.id === "string" && typeof value.kind === "string";
+  return isRecord44(value) && typeof value.id === "string" && typeof value.kind === "string";
 }
 function isSnesSourceBuild(value) {
-  return isRecord45(value) && typeof value.outputFile === "string" && typeof value.debugMapFile === "string" && typeof value.inputSha256 === "string" && Array.isArray(value.inputs) && value.inputs.every(
-    (input) => isRecord45(input) && typeof input.path === "string" && typeof input.sha256 === "string"
-  ) && typeof value.outputSize === "number" && typeof value.debugMapFingerprint === "string" && isRecord45(value.verification) && typeof value.verification.outputSha256 === "string" && typeof value.verification.debugMapSha256 === "string" && typeof value.verification.toolchainSha256 === "string" && Array.isArray(value.verification.checks) && value.verification.checks.every((check) => typeof check === "string") && isRecord45(value.contracts) && typeof value.contracts.cpuStates === "number" && typeof value.contracts.fixedExtents === "number" && (value.cacheWarnings === void 0 || Array.isArray(value.cacheWarnings) && value.cacheWarnings.every((warning) => typeof warning === "string"));
+  return isRecord44(value) && typeof value.outputFile === "string" && typeof value.debugMapFile === "string" && typeof value.inputSha256 === "string" && Array.isArray(value.inputs) && value.inputs.every(
+    (input) => isRecord44(input) && typeof input.path === "string" && typeof input.sha256 === "string"
+  ) && typeof value.outputSize === "number" && typeof value.debugMapFingerprint === "string" && isRecord44(value.verification) && typeof value.verification.outputSha256 === "string" && typeof value.verification.debugMapSha256 === "string" && typeof value.verification.toolchainSha256 === "string" && Array.isArray(value.verification.checks) && value.verification.checks.every((check) => typeof check === "string") && isRecord44(value.contracts) && typeof value.contracts.cpuStates === "number" && typeof value.contracts.fixedExtents === "number" && (value.cacheWarnings === void 0 || Array.isArray(value.cacheWarnings) && value.cacheWarnings.every((warning) => typeof warning === "string"));
 }
 function isSourceMergePreview(value) {
-  return isRecord45(value) && typeof value.head === "string" && typeof value.sourceTree === "string" && typeof value.candidate === "string" && typeof value.base === "string" && typeof value.resultTree === "string" && typeof value.messages === "string" && Array.isArray(value.conflicts) && value.conflicts.every((conflict) => typeof conflict === "string") && (value.ref === void 0 || typeof value.ref === "string");
+  return isRecord44(value) && typeof value.head === "string" && typeof value.sourceTree === "string" && typeof value.candidate === "string" && typeof value.base === "string" && typeof value.resultTree === "string" && typeof value.messages === "string" && Array.isArray(value.conflicts) && value.conflicts.every((conflict) => typeof conflict === "string") && (value.ref === void 0 || typeof value.ref === "string");
 }
 function isGenerationCommit(value) {
-  return isRecord45(value) && isRecord45(value.generation) && typeof value.generation.commit === "string" && value.generation.commit.length > 0;
+  return isRecord44(value) && isRecord44(value.generation) && typeof value.generation.commit === "string" && value.generation.commit.length > 0;
 }
 function isRelocationEdit(value) {
-  return isRecord45(value) && typeof value.path === "string" && typeof value.beforeSha256 === "string" && typeof value.before === "string" && typeof value.after === "string";
+  return isRecord44(value) && typeof value.path === "string" && typeof value.beforeSha256 === "string" && typeof value.before === "string" && typeof value.after === "string";
 }
 function relocationEdits(value) {
-  if (!isRecord45(value) || !Array.isArray(value.edits) || !value.edits.every(isRelocationEdit)) {
+  if (!isRecord44(value) || !Array.isArray(value.edits) || !value.edits.every(isRelocationEdit)) {
     throw new Error("Invalid source relocation.");
   }
   return value.edits;
 }
-var SourceRow = class extends import_vscode25.TreeItem {
+var SourceRow = class extends import_vscode24.TreeItem {
   constructor(label, children = [], command, args) {
     super(
       label,
-      children.length ? import_vscode25.TreeItemCollapsibleState.Expanded : import_vscode25.TreeItemCollapsibleState.None
+      children.length ? import_vscode24.TreeItemCollapsibleState.Expanded : import_vscode24.TreeItemCollapsibleState.None
     );
     this.children = children;
     if (command) {
@@ -67358,8 +68390,12 @@ var SourceRow = class extends import_vscode25.TreeItem {
     }
   }
   children;
+  /** Inserted lines for an incoming generation file, when Git numstat is available. */
+  additions;
+  /** Deleted lines for an incoming generation file, when Git numstat is available. */
+  deletions;
 };
-var chooseAssetFile = async (title, extensions) => (await import_vscode25.window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } }))?.[0]?.fsPath;
+var chooseAssetFile = async (title, extensions) => (await import_vscode24.window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } }))?.[0]?.fsPath;
 
 // packages/vscode-extension/src/source/asset-coordinator.ts
 var SourceAssetCoordinator = class {
@@ -67376,9 +68412,9 @@ var SourceAssetCoordinator = class {
   #menuRequest;
   /** Hide stale menu actions immediately; evaluated paths and continued calls come from the normal build worker. */
   scheduleAssetContext() {
-    const editor = import_vscode26.window.activeTextEditor;
+    const editor = import_vscode25.window.activeTextEditor;
     const document = editor?.document;
-    const eligible = import_vscode26.workspace.isTrusted && !this.session.busy && document && !document.isDirty && document.uri.scheme === "file" && /^(uttori-|asm)/.test(document.languageId);
+    const eligible = import_vscode25.workspace.isTrusted && !this.session.busy && document && !document.isDirty && document.uri.scheme === "file" && /^(uttori-|asm)/.test(document.languageId);
     const key3 = JSON.stringify([
       this.session.root,
       this.session.selectionRevision,
@@ -67395,13 +68431,13 @@ var SourceAssetCoordinator = class {
     clearTimeout(this.session.assetContextTimer);
     this.session.assetContextAbort?.abort();
     const version = ++this.session.assetContextVersion;
-    void import_vscode26.commands.executeCommand("setContext", "asm.assetSourceRepresentation", "");
+    void import_vscode25.commands.executeCommand("setContext", "asm.assetSourceRepresentation", "");
     if (!eligible) {
       return;
     }
     this.session.assetContextTimer = setTimeout(() => {
       void (async () => {
-        if (!import_vscode26.workspace.isTrusted || this.session.busy || editor.document.isDirty || editor.document.uri.scheme !== "file" || !/^(uttori-|asm)/.test(editor.document.languageId)) {
+        if (!import_vscode25.workspace.isTrusted || this.session.busy || editor.document.isDirty || editor.document.uri.scheme !== "file" || !/^(uttori-|asm)/.test(editor.document.languageId)) {
           return;
         }
         const root = await findSourceRoot(editor.document.uri.fsPath);
@@ -67421,14 +68457,14 @@ var SourceAssetCoordinator = class {
             if (version === this.session.assetContextVersion && !abort.signal.aborted) {
               let representation = cached.representation;
               if (cached.menus) {
-                const relative4 = import_node_path34.default.relative(root, editor.document.uri.fsPath).split(import_node_path34.default.sep).join("/");
+                const relative4 = import_node_path35.default.relative(root, editor.document.uri.fsPath).split(import_node_path35.default.sep).join("/");
                 const line = editor.selection.active.line + 1;
                 const matches = cached.menus.filter(
                   (row) => row.file === relative4 && row.line <= line && row.endLine >= line
                 );
                 representation = matches.length === 1 ? matches[0].representation : "";
               }
-              await import_vscode26.commands.executeCommand(
+              await import_vscode25.commands.executeCommand(
                 "setContext",
                 "asm.assetSourceRepresentation",
                 representation
@@ -67473,7 +68509,7 @@ var SourceAssetCoordinator = class {
             if (version === this.session.assetContextVersion && !abort.signal.aborted && // Saved state can change while dependency hashing awaits filesystem reads.
             // oxlint-disable-next-line typescript/no-unnecessary-condition
             !editor.document.isDirty) {
-              await import_vscode26.commands.executeCommand(
+              await import_vscode25.commands.executeCommand(
                 "setContext",
                 "asm.assetSourceRepresentation",
                 result?.representation ?? ""
@@ -67490,23 +68526,23 @@ var SourceAssetCoordinator = class {
   }
   /** One clean command stages validated recovery bytes, publishes a native undo unit, then verifies the saved ROM. */
   async assetConvert(representation, request) {
-    if (!import_vscode26.workspace.isTrusted) {
+    if (!import_vscode25.workspace.isTrusted) {
       throw new Error("Trust this workspace before converting source assets.");
     }
     if (this.session.busy) {
       throw new Error(`Source operation already running: ${this.session.busy}.`);
     }
-    const editor = import_vscode26.window.activeTextEditor;
+    const editor = import_vscode25.window.activeTextEditor;
     let file = editor?.document.uri.fsPath;
     let line = editor ? editor.selection.active.line + 1 : void 0;
     let destination;
-    if (request instanceof import_vscode26.Uri) {
+    if (request instanceof import_vscode25.Uri) {
       if (editor?.document.uri.toString() !== request.toString()) {
         throw new Error(
           "The selected editor changed before conversion. Invoke the command on the intended include again."
         );
       }
-    } else if (isRecord45(request)) {
+    } else if (isRecord44(request)) {
       if (typeof request.file !== "string" || !Number.isSafeInteger(request.line) || Number(request.line) < 1 || request.destination !== void 0 && typeof request.destination !== "string") {
         throw new Error("Conversion needs a file and one-based cursor line.");
       }
@@ -67573,19 +68609,19 @@ var SourceAssetCoordinator = class {
         savedVersions
       );
       this.session.assetReview = void 0;
-      const document = await import_vscode26.workspace.openTextDocument(import_vscode26.Uri.file(file));
-      await import_vscode26.window.showTextDocument(document, {
-        selection: new import_vscode26.Range(line - 1, 0, line - 1, 0),
+      const document = await import_vscode25.workspace.openTextDocument(import_vscode25.Uri.file(file));
+      await import_vscode25.window.showTextDocument(document, {
+        selection: new import_vscode25.Range(line - 1, 0, line - 1, 0),
         preview: false
       });
-      const destinationUri = import_vscode26.Uri.file(import_node_path34.default.resolve(root, result.destination));
-      await import_vscode26.commands.executeCommand("revealInExplorer", destinationUri);
+      const destinationUri = import_vscode25.Uri.file(import_node_path35.default.resolve(root, result.destination));
+      await import_vscode25.commands.executeCommand("revealInExplorer", destinationUri);
       const retained = result.retained.length ? ` Retained other source references: ${result.retained.join(", ")}.` : "";
       const unresolved = result.unresolvedDeclarations.length ? ` ${result.unresolvedDeclarations.length} declarations are outside the current build.` : "";
-      void import_vscode26.window.showInformationMessage(
+      void import_vscode25.window.showInformationMessage(
         `Converted ${result.destination}; complete ROM verified. Updated ${result.affected.length} includes.${retained}${unresolved}`,
         "Open in Associated Editor"
-      ).then((choice) => choice ? import_vscode26.env.openExternal(destinationUri) : void 0);
+      ).then((choice) => choice ? import_vscode25.env.openExternal(destinationUri) : void 0);
       return result;
     } finally {
       this.session.busy = void 0;
@@ -67603,7 +68639,7 @@ var SourceAssetCoordinator = class {
   }
   /** Saved-source export/review/apply share the existing source worker, busy state and live editor-version checks. */
   async assetFile(action, request) {
-    if (!import_vscode26.workspace.isTrusted) {
+    if (!import_vscode25.workspace.isTrusted) {
       throw new Error("Trust this workspace before editing source assets.");
     }
     if (this.session.busy) {
@@ -67619,17 +68655,17 @@ var SourceAssetCoordinator = class {
     let operation2;
     if (request !== void 0) {
       const selected = readAssetOperation(request);
-      if (selected.action !== `asset-${action}` || import_node_path34.default.resolve(selected.directory) !== root || selected.action === "asset-cleanup" || selected.action === "asset-recover") {
+      if (selected.action !== `asset-${action}` || import_node_path35.default.resolve(selected.directory) !== root || selected.action === "asset-cleanup" || selected.action === "asset-recover") {
         throw new Error(
           "Asset command request does not match the selected source project and action."
         );
       }
       operation2 = selected;
-      if (selected.action === "asset-apply" && (!this.session.assetReview || selected.review !== this.session.assetReview.summary.id || import_node_path34.default.resolve(selected.document) !== import_node_path34.default.resolve(this.session.assetReview.document) || import_node_path34.default.resolve(selected.manifest) !== import_node_path34.default.resolve(this.session.assetReview.manifest))) {
+      if (selected.action === "asset-apply" && (!this.session.assetReview || selected.review !== this.session.assetReview.summary.id || import_node_path35.default.resolve(selected.document) !== import_node_path35.default.resolve(this.session.assetReview.document) || import_node_path35.default.resolve(selected.manifest) !== import_node_path35.default.resolve(this.session.assetReview.manifest))) {
         throw new Error("Apply the saved asset review shown in this editor.");
       }
     } else if (action === "export") {
-      const adapter = await import_vscode26.window.showQuickPick(
+      const adapter = await import_vscode25.window.showQuickPick(
         [
           { label: "Secret of Mana sprite", id: "som.sprite.native" },
           { label: "Secret of Mana room", id: "som.room.native" }
@@ -67645,7 +68681,7 @@ var SourceAssetCoordinator = class {
       if (!selection) {
         return void 0;
       }
-      const presentation = await import_vscode26.window.showQuickPick(
+      const presentation = await import_vscode25.window.showQuickPick(
         [
           {
             label: "Aseprite tilemaps",
@@ -67669,7 +68705,7 @@ var SourceAssetCoordinator = class {
         return void 0;
       }
       const filters = presentation.id === "indexed-png" ? { PNG: ["png"] } : { Aseprite: ["aseprite"] };
-      const document = (await import_vscode26.window.showSaveDialog({ title: "Export editable asset", filters }))?.fsPath;
+      const document = (await import_vscode25.window.showSaveDialog({ title: "Export editable asset", filters }))?.fsPath;
       if (!document) {
         return void 0;
       }
@@ -67735,7 +68771,7 @@ var SourceAssetCoordinator = class {
         }
         const summary = readAssetImportReview(result);
         assertAssetEditorVersions(versions, this.host.assetEditorVersions(), [
-          ...summary.files.map((file) => import_node_path34.default.resolve(root, file.path)),
+          ...summary.files.map((file) => import_node_path35.default.resolve(root, file.path)),
           operation2.document
         ]);
         this.session.assetReview = {
@@ -67746,27 +68782,27 @@ var SourceAssetCoordinator = class {
           epoch,
           versions
         };
-        const reviewDocument = await import_vscode26.workspace.openTextDocument({
+        const reviewDocument = await import_vscode25.workspace.openTextDocument({
           language: "json",
           content: JSON.stringify(summary, null, 2)
         });
-        await import_vscode26.window.showTextDocument(reviewDocument, { preview: true });
-        void import_vscode26.window.showInformationMessage(
+        await import_vscode25.window.showTextDocument(reviewDocument, { preview: true });
+        void import_vscode25.window.showInformationMessage(
           `Asset review: ${summary.files.length} source files. Apply Reviewed Asset uses this exact plan.`
         );
       } else if (action === "apply") {
-        if (!isRecord45(result) || !isRecord45(result.review)) {
+        if (!isRecord44(result) || !isRecord44(result.review)) {
           throw new Error("Invalid asset publication result.");
         }
         readAssetImportReview(result.review);
         published = typeof result.transaction === "string";
         this.session.assetReview = void 0;
-        void import_vscode26.window.showInformationMessage(
+        void import_vscode25.window.showInformationMessage(
           published ? "Asset edits applied. Re-export for the next editing round." : "No asset changes; source files are unchanged."
         );
       } else {
         const instruction2 = operation2.action === "asset-export" && (operation2.presentation ?? "tilemap") === "tilemap" ? "Select the Tiles layer, use Draw Pixels and Manual in Aseprite's toolbar (hold Space and press 1), paint and save." : "Edit pixels or palette colors in the fixed inventory and save.";
-        void import_vscode26.window.showInformationMessage(
+        void import_vscode25.window.showInformationMessage(
           `Asset exported. ${instruction2} Then Review Saved Asset.`
         );
       }
@@ -67785,9 +68821,9 @@ var SourceAssetCoordinator = class {
   /** All asset workers use the same cancellation and final live-buffer gate, including explicit journal recovery. */
   async runAssetOperation(operation2, epoch, versions, reviewedVersions = versions) {
     const root = operation2.directory;
-    return import_vscode26.window.withProgress(
+    return import_vscode25.window.withProgress(
       {
-        location: import_vscode26.ProgressLocation.Notification,
+        location: import_vscode25.ProgressLocation.Notification,
         title: `Asset: ${operation2.action.slice(6)}`,
         cancellable: true
       },
@@ -67796,11 +68832,11 @@ var SourceAssetCoordinator = class {
         try {
           return await this.session.worker.run(operation2, {
             signal: abort.signal,
-            maxMemoryMiB: import_vscode26.workspace.getConfiguration("asm", import_vscode26.Uri.file(root)).get("analysis.maxMemoryMiB", 4096),
+            maxMemoryMiB: import_vscode25.workspace.getConfiguration("asm", import_vscode25.Uri.file(root)).get("analysis.maxMemoryMiB", 4096),
             onProgress: (message) => reporter.report({ message }),
             onBeforePublish: (paths) => {
               if (this.session.root !== root || operation2.action !== "asset-convert" && operation2.action !== "asset-conversion-finish" && this.session.epoch !== epoch) {
-                const input = this.session.epochInput ? ` (${import_node_path34.default.relative(root, this.session.epochInput)}; ${this.session.epochEvent} event)` : "";
+                const input = this.session.epochInput ? ` (${import_node_path35.default.relative(root, this.session.epochInput)}; ${this.session.epochEvent} event)` : "";
                 throw new Error(
                   `Source/editor state changed during asset validation${input}. Review again.`
                 );
@@ -67816,7 +68852,7 @@ var SourceAssetCoordinator = class {
   }
   /** Recovery is an explicit journal direction; unknown external bytes and relevant drafts remain protected by the worker. */
   async assetRecovery() {
-    if (!import_vscode26.workspace.isTrusted) {
+    if (!import_vscode25.workspace.isTrusted) {
       throw new Error("Trust this workspace before recovering asset edits.");
     }
     if (this.session.busy) {
@@ -67829,7 +68865,7 @@ var SourceAssetCoordinator = class {
     if (!root) {
       return;
     }
-    const direction = await import_vscode26.window.showQuickPick(
+    const direction = await import_vscode25.window.showQuickPick(
       [
         { label: "Complete staged asset edit", id: "after" },
         { label: "Restore bytes from before the asset edit", id: "before" }
@@ -67858,9 +68894,9 @@ var SourceAssetCoordinator = class {
         epoch,
         versions
       );
-      recovered = isRecord45(result) && result.state === "completed";
+      recovered = isRecord44(result) && result.state === "completed";
       this.session.assetReview = void 0;
-      void import_vscode26.window.showInformationMessage(
+      void import_vscode25.window.showInformationMessage(
         recovered ? "Asset publication recovered. Re-export before editing again." : "No interrupted asset publication to recover."
       );
     } finally {
@@ -67878,27 +68914,248 @@ var SourceAssetCoordinator = class {
 
 // packages/vscode-extension/src/source/build-coordinator.ts
 var import_promises20 = __toESM(require("node:fs/promises"), 1);
-var import_node_path35 = __toESM(require("node:path"), 1);
-var import_vscode28 = require("vscode");
+var import_node_path36 = __toESM(require("node:path"), 1);
+
+// packages/workflows/src/source-requests.ts
+var fields = {
+  init: ["rom", "dizRawFile", "mapper"],
+  status: ["candidate"],
+  prepare: ["assembly"],
+  preview: ["candidate"],
+  apply: ["candidate"],
+  finish: ["message"],
+  abort: [],
+  discard: ["candidate"],
+  clean: [],
+  build: [],
+  index: [],
+  analyze: [],
+  catalog: [],
+  graphics: ["graphicsQuery"],
+  relocate: ["objectId"],
+  expand: ["expansionSize"],
+  research: ["research"],
+  import: ["capture", "captures", "recoverPartial"]
+};
+var isRecord45 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isAction = (value) => typeof value === "string" && Object.hasOwn(fields, value);
+var isText2 = (value) => typeof value === "string" && value.length > 0 && !value.includes("\0");
+function assertRequest(value) {
+  if (!isRecord45(value) || !isAction(value.action) || !isText2(value.directory)) {
+    throw new Error("Source operation requires a known action and project directory.");
+  }
+  const allowed = /* @__PURE__ */ new Set([
+    "action",
+    "directory",
+    "signal",
+    "onProgress",
+    "overlays",
+    ...fields[value.action]
+  ]);
+  for (const [key3, field] of Object.entries(value)) {
+    if (field !== void 0 && !allowed.has(key3)) {
+      throw new Error(`Source ${value.action} does not accept ${key3}.`);
+    }
+  }
+  for (const key3 of [
+    "rom",
+    "dizRawFile",
+    "mapper",
+    "candidate",
+    "message",
+    "capture",
+    "objectId"
+  ]) {
+    if (value[key3] !== void 0 && !isText2(value[key3])) {
+      throw new Error(`Invalid source ${key3}.`);
+    }
+  }
+  if (value.signal !== void 0 && !(value.signal instanceof AbortSignal)) {
+    throw new Error("Invalid source cancellation signal.");
+  }
+  if (value.onProgress !== void 0 && typeof value.onProgress !== "function") {
+    throw new Error("Invalid source progress callback.");
+  }
+  if (value.overlays !== void 0 && (!Array.isArray(value.overlays) || value.overlays.length > 65536 || !value.overlays.every(
+    (item) => isRecord45(item) && isText2(item.path) && item.bytes instanceof Uint8Array
+  ))) {
+    throw new Error("Invalid source overlays.");
+  }
+  if (value.assembly !== void 0 && value.assembly !== "linked") {
+    throw new Error("Source preparation supports only explicit linked migration.");
+  }
+  if (value.action === "init" && !isText2(value.rom)) {
+    throw new Error("Initialization requires an original ROM path.");
+  }
+  if (["preview", "apply", "discard"].includes(value.action) && !isText2(value.candidate)) {
+    throw new Error("Source operation requires a generation commit.");
+  }
+  if (value.action === "relocate" && !isText2(value.objectId)) {
+    throw new Error("Relocation requires a declared object ID.");
+  }
+  if (value.action === "expand" && (typeof value.expansionSize !== "number" || !Number.isSafeInteger(value.expansionSize) || value.expansionSize < 1)) {
+    throw new Error("Expansion requires an explicit capacity in bytes.");
+  }
+  if (value.action === "import") {
+    if (value.recoverPartial !== void 0 && typeof value.recoverPartial !== "boolean") {
+      throw new Error("Invalid partial capture recovery selection.");
+    }
+    const single = isText2(value.capture);
+    const batch = Array.isArray(value.captures) && value.captures.length > 0 && value.captures.length <= 65536 && value.captures.every(isText2);
+    if (single === batch || value.capture !== void 0 && !single || value.captures !== void 0 && !batch) {
+      throw new Error("Import requires one archive or one nonempty capture queue, exclusively.");
+    }
+  }
+  if (value.graphicsQuery !== void 0) {
+    const query = value.graphicsQuery;
+    if (!isRecord45(query) || !isText2(query.captureSha256)) {
+      throw new Error("Invalid source graphics selection.");
+    }
+    for (const key3 of ["pc", "physicalOffset", "limit"]) {
+      if (query[key3] !== void 0 && (typeof query[key3] !== "number" || !Number.isSafeInteger(query[key3]) || query[key3] < 0)) {
+        throw new Error(`Invalid graphics ${key3}.`);
+      }
+    }
+  }
+  if (value.research !== void 0) {
+    const request = value.research;
+    if (!isRecord45(request) || request.kind !== void 0 && request.kind !== "symbols" && request.kind !== "analysis" || request.symbolId !== void 0 && !isText2(request.symbolId)) {
+      throw new Error("Invalid research request.");
+    }
+    const change = request.change;
+    if (change !== void 0) {
+      if (!isRecord45(change)) {
+        throw new Error("Invalid research change.");
+      }
+      if (request.kind === "analysis") {
+        if (!isText2(change.expectedDocumentSha256) || !["annotations", "analysis"].includes(String(change.collection))) {
+          throw new Error("Invalid research analysis identity.");
+        }
+        if (change.kind === "remove") {
+          if (!isText2(change.id)) {
+            throw new Error("Research removal requires a record ID.");
+          }
+        } else if (change.kind !== "put" || !isText2(change.path) || !isText2(change.reason) || !isRecord45(change.value)) {
+          throw new Error("Invalid research analysis edit.");
+        }
+      } else if (change.kind === "aliases") {
+        if (!Array.isArray(change.aliases) || !change.aliases.every(isText2)) {
+          throw new Error("Invalid research aliases.");
+        }
+      } else if (change.kind === "suppression") {
+        if (typeof change.suppressed !== "boolean") {
+          throw new Error("Invalid research suppression.");
+        }
+      } else if (change.kind !== "entry-point" || typeof change.enabled !== "boolean") {
+        throw new Error("Invalid research symbol edit.");
+      }
+    }
+  }
+}
+function readSourceOperation(value) {
+  assertRequest(value);
+  return value;
+}
+
+// packages/vscode-extension/src/source/build-coordinator.ts
+var import_vscode27 = require("vscode");
+
+// packages/vscode-extension/src/source/analysis-summary.ts
+function record7(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function count2(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
+}
+function summarizeSourceAnalysis(value) {
+  if (!record7(value) || value.status !== "complete" && value.status !== "incomplete") {
+    throw new Error("Invalid source analysis response.");
+  }
+  const details = [];
+  let message = "Analysis published.";
+  let warning = value.status === "incomplete";
+  if (warning) {
+    message = "Analysis published with static-analysis limits.";
+  }
+  const missing = count2(value.runtimePcsWithoutCode);
+  if (missing === 0) {
+    message += " All captured PCs have matching code.";
+  } else if (missing !== void 0) {
+    warning = true;
+    message += ` ${missing.toLocaleString("en-US")} captured PCs still lack matching code.`;
+  }
+  const omitted = count2(value.omittedRuntimeSeeds);
+  if (omitted !== void 0 && omitted > 0) {
+    warning = true;
+    message += ` ${omitted.toLocaleString("en-US")} runtime seeds were omitted.`;
+  }
+  const groups2 = /* @__PURE__ */ new Map();
+  for (const reason of Array.isArray(value.incompleteReasons) ? value.incompleteReasons : []) {
+    if (!record7(reason) || typeof reason.kind !== "string") {
+      continue;
+    }
+    const limit = count2(reason.limit);
+    const address3 = count2(reason.address);
+    if (limit === void 0 || address3 === void 0) {
+      continue;
+    }
+    const key3 = `${reason.kind}:${limit}`;
+    const group = groups2.get(key3) ?? { kind: reason.kind, limit, sites: /* @__PURE__ */ new Set() };
+    group.sites.add(address3);
+    groups2.set(key3, group);
+  }
+  for (const { kind, limit, sites } of groups2.values()) {
+    if (kind === "call-context-limit") {
+      details.push(
+        `Static call history was limited to ${limit} frames at ${sites.size.toLocaleString("en-US")} call sites. Exploration continued with older frames discarded; deeper caller/return relationships may be incomplete. Configured by limits.analysisCallDepth.`
+      );
+    } else if (kind === "work-limit") {
+      details.push(
+        `Static exploration stopped at ${limit.toLocaleString("en-US")} work items with pending work. Review limits.analysisWorkItems before increasing the budget.`
+      );
+    } else {
+      details.push(`Static-analysis limitation ${kind}: ${sites.size} sites, limit ${limit}.`);
+    }
+  }
+  if (value.status === "incomplete" && details.length === 0) {
+    details.push(
+      "Static exploration is incomplete. Review the full analysis report for target-specific limitations."
+    );
+  }
+  const conflicts = count2(value.conflicts);
+  const unresolved = count2(value.unresolved);
+  if (conflicts !== void 0) {
+    details.push(
+      `${conflicts.toLocaleString("en-US")} decode/state conflicts retained for review.`
+    );
+  }
+  if (unresolved !== void 0) {
+    details.push(
+      `${unresolved.toLocaleString("en-US")} unresolved control-flow sites retained for review.`
+    );
+  }
+  return { message, warning, details };
+}
 
 // packages/vscode-extension/src/source/capture-coordinator.ts
-var import_vscode27 = require("vscode");
+var import_vscode26 = require("vscode");
 var SourceCaptureCoordinator = class {
   constructor(session) {
     this.session = session;
   }
   session;
+  /** Prompt for capture archives and return paths chosen for worker import. */
   async select(captureUri) {
     const root = this.session.root;
     let selected;
     if (Array.isArray(captureUri)) {
       selected = captureUri;
-    } else if (captureUri instanceof import_vscode27.Uri) {
+    } else if (captureUri instanceof import_vscode26.Uri) {
       selected = [captureUri];
     } else if (captureUri !== void 0) {
       throw new Error("Capture import requires a local file URI.");
     }
-    selected ??= await import_vscode27.window.showOpenDialog({
+    selected ??= await import_vscode26.window.showOpenDialog({
       title: "Import captures into source project",
       canSelectMany: true,
       canSelectFiles: true,
@@ -67908,7 +69165,7 @@ var SourceCaptureCoordinator = class {
     if (!selected?.length) {
       return void 0;
     }
-    if (selected.some((uri) => !(uri instanceof import_vscode27.Uri) || uri.scheme !== "file")) {
+    if (selected.some((uri) => !(uri instanceof import_vscode26.Uri) || uri.scheme !== "file")) {
       throw new Error("Capture import requires local file URIs.");
     }
     if (root !== this.session.root) {
@@ -67961,6 +69218,25 @@ async function readSourceGenerationReview(root, candidate, preview) {
   }
   return { before, after, previewed, files, localChanges };
 }
+async function readGenerationDiffStats(root, before, after) {
+  const diff = await sourceGit(root, ["diff", "--numstat", "-z", before, after]);
+  const stats = /* @__PURE__ */ new Map();
+  for (const part of diff.stdout.toString("utf8").split("\0")) {
+    if (!part) {
+      continue;
+    }
+    const [added, deleted, ...pathParts] = part.split("	");
+    const file = pathParts.join("	");
+    if (!file) {
+      continue;
+    }
+    stats.set(file, {
+      additions: added === "-" ? void 0 : Number(added),
+      deletions: deleted === "-" ? void 0 : Number(deleted)
+    });
+  }
+  return stats;
+}
 
 // packages/vscode-extension/src/source/build-coordinator.ts
 var SourceBuildCoordinator = class {
@@ -67992,7 +69268,7 @@ var SourceBuildCoordinator = class {
    * Explicit capture URIs bypass the picker; queues retain completed per-file commits on interruption.
    */
   async perform(action, cancellation, progress, captureUri, assembly) {
-    if (!import_vscode28.workspace.isTrusted) {
+    if (!import_vscode27.workspace.isTrusted) {
       throw new Error("Trust this workspace before running source tools or plugins.");
     }
     if (!this.session.root) {
@@ -68007,7 +69283,7 @@ var SourceBuildCoordinator = class {
     const root = this.session.root;
     if (["apply", "preview", "discard"].includes(action) && !this.session.candidate) {
       this.host.output.info("No pending regeneration. Prepare a generation first.");
-      void import_vscode28.window.showInformationMessage("No pending regeneration. Prepare a generation first.");
+      void import_vscode27.window.showInformationMessage("No pending regeneration. Prepare a generation first.");
       return void 0;
     }
     const epoch = this.session.epoch;
@@ -68017,8 +69293,8 @@ var SourceBuildCoordinator = class {
     if (action === "build" && (buffers.length || binaryBuffers.length || opaqueBuffers.length)) {
       const files = [
         ...buffers.map((buffer) => buffer.path),
-        ...binaryBuffers.map((document) => import_node_path35.default.relative(root, document.uri.fsPath)),
-        ...opaqueBuffers.map((file) => import_node_path35.default.relative(root, file))
+        ...binaryBuffers.map((document) => import_node_path36.default.relative(root, document.uri.fsPath)),
+        ...opaqueBuffers.map((file) => import_node_path36.default.relative(root, file))
       ];
       throw this.host.changedBuildError(files);
     }
@@ -68040,11 +69316,11 @@ var SourceBuildCoordinator = class {
     let expansionSize;
     if (action === "expand") {
       const layoutText = await import_promises20.default.readFile(
-        import_node_path35.default.join(root, this.session.configuration.layout),
+        import_node_path36.default.join(root, this.session.configuration.layout),
         "utf8"
       );
       const layoutValue = JSON.parse(layoutText);
-      if (!isRecord45(layoutValue)) {
+      if (!isRecord44(layoutValue)) {
         throw new Error("Layout contract is missing a numeric ROM size.");
       }
       const romSize = layoutValue.size;
@@ -68059,7 +69335,7 @@ var SourceBuildCoordinator = class {
       if (!capacities.length) {
         throw new Error("This ROM has no supported larger LoROM/HiROM capacity (maximum 4 MiB).");
       }
-      expansionSize = (await import_vscode28.window.showQuickPick(capacities, {
+      expansionSize = (await import_vscode27.window.showQuickPick(capacities, {
         title: "Expand ROM capacity",
         placeHolder: "Apply reviewable source, layout and build configuration edits"
       }))?.size;
@@ -68068,13 +69344,13 @@ var SourceBuildCoordinator = class {
       }
     }
     if (action === "relocate") {
-      const file = import_node_path35.default.join(root, this.session.configuration.layout);
+      const file = import_node_path36.default.join(root, this.session.configuration.layout);
       if ((await import_promises20.default.stat(file)).size > 8 * 1024 * 1024) {
         throw new Error("Layout contract exceeds its size budget.");
       }
       const layoutText = await import_promises20.default.readFile(file, "utf8");
       const layoutValue = JSON.parse(layoutText);
-      const objects = isRecord45(layoutValue) && Array.isArray(layoutValue.objects) ? layoutValue.objects.filter(isLayoutObject) : [];
+      const objects = isRecord44(layoutValue) && Array.isArray(layoutValue.objects) ? layoutValue.objects.filter(isLayoutObject) : [];
       const choices = objects.map((object2) => ({
         label: object2.id,
         description: object2.kind
@@ -68084,7 +69360,7 @@ var SourceBuildCoordinator = class {
           "Declare a movable object and proven free-space block in the project layout first."
         );
       }
-      objectId = (await import_vscode28.window.showQuickPick(choices, {
+      objectId = (await import_vscode27.window.showQuickPick(choices, {
         title: "Relocate a source object",
         placeHolder: "Compute placement, validate references, and apply ordinary undoable source edits"
       }))?.label;
@@ -68112,7 +69388,7 @@ var SourceBuildCoordinator = class {
       if (action === "preview") {
         for (const document of binaryBuffers) {
           overlays.push({
-            path: import_node_path35.default.relative(root, document.uri.fsPath).split(import_node_path35.default.sep).join("/"),
+            path: import_node_path36.default.relative(root, document.uri.fsPath).split(import_node_path36.default.sep).join("/"),
             bytes: Buffer.from(await document.snapshot())
           });
         }
@@ -68135,13 +69411,13 @@ var SourceBuildCoordinator = class {
         {
           signal,
           onProgress,
-          maxMemoryMiB: import_vscode28.workspace.getConfiguration("asm", import_vscode28.Uri.file(root)).get("analysis.maxMemoryMiB", 4096)
+          maxMemoryMiB: import_vscode27.workspace.getConfiguration("asm", import_vscode27.Uri.file(root)).get("analysis.maxMemoryMiB", 4096)
         }
       );
       const result = cancellation ? await run(cancellation, progress ?? (() => {
-      })) : await import_vscode28.window.withProgress(
+      })) : await import_vscode27.window.withProgress(
         {
-          location: import_vscode28.ProgressLocation.Notification,
+          location: import_vscode27.ProgressLocation.Notification,
           title: `Source: ${action}`,
           cancellable: true
         },
@@ -68186,9 +69462,21 @@ var SourceBuildCoordinator = class {
         }
         const message = `${summary} Review ${review.files.length} changed files in Generation Preview. ${next} After applying, review/resolve and stage changes, then Finish; Finish builds and commits the merge.`;
         this.host.output.info(message);
-        void import_vscode28.window.showInformationMessage(message, "Review Generation", "Show Analysis Output").then((choice) => {
+        if (this.session.incoming.length > 0) {
+          const diffArgs = this.session.incoming[0].command?.arguments;
+          if (Array.isArray(diffArgs) && diffArgs.length >= 2) {
+            const left = diffArgs[0];
+            const right = diffArgs[1];
+            const title = typeof diffArgs[2] === "string" ? diffArgs[2] : "Incoming";
+            if (left instanceof import_vscode27.Uri && right instanceof import_vscode27.Uri) {
+              void import_vscode27.commands.executeCommand("asm.source.diff", left, right, title);
+            }
+          }
+        }
+        void import_vscode27.commands.executeCommand("uttori-asm.home.focus");
+        void import_vscode27.window.showInformationMessage(message, "Review Generation", "Show Analysis Output").then((choice) => {
           if (choice === "Review Generation") {
-            void import_vscode28.commands.executeCommand("uttori-asm.sourceProject.focus");
+            void import_vscode27.commands.executeCommand("uttori-asm.home.focus");
           }
           if (choice === "Show Analysis Output") {
             this.host.output.show(true);
@@ -68202,8 +69490,8 @@ var SourceBuildCoordinator = class {
         const changed2 = await changedBuildInputs(root, [...buildControls, ...result.inputs]);
         const unsaved = [
           ...this.host.buffers().map((buffer) => buffer.path),
-          ...this.host.binaryBuffers().map((document) => import_node_path35.default.relative(root, document.uri.fsPath)),
-          ...this.host.opaqueBinaryBuffers().map((file) => import_node_path35.default.relative(root, file))
+          ...this.host.binaryBuffers().map((document) => import_node_path36.default.relative(root, document.uri.fsPath)),
+          ...this.host.opaqueBinaryBuffers().map((file) => import_node_path36.default.relative(root, file))
         ];
         if (this.session.root !== root) {
           throw new Error(
@@ -68221,14 +69509,14 @@ var SourceBuildCoordinator = class {
       } else if (action === "relocate" || action === "expand") {
         const edits = relocationEdits(result);
         const documents = await Promise.all(
-          edits.map((edit2) => import_vscode28.workspace.openTextDocument(import_vscode28.Uri.file(import_node_path35.default.join(root, edit2.path))))
+          edits.map((edit2) => import_vscode27.workspace.openTextDocument(import_vscode27.Uri.file(import_node_path36.default.join(root, edit2.path))))
         );
         if (this.session.root !== root || this.session.epoch !== epoch || this.host.buffers().length || this.host.binaryBuffers().length) {
           throw new Error(
             "Source changed during placement inspection. Prepare it again before applying edits."
           );
         }
-        const edit = new import_vscode28.WorkspaceEdit();
+        const edit = new import_vscode27.WorkspaceEdit();
         for (const [index, change] of edits.entries()) {
           const document = documents[index];
           if (sourceContentHash(document.getText()) !== change.beforeSha256) {
@@ -68236,36 +69524,51 @@ var SourceBuildCoordinator = class {
           }
           edit.replace(
             document.uri,
-            new import_vscode28.Range(document.positionAt(0), document.positionAt(document.getText().length)),
+            new import_vscode27.Range(document.positionAt(0), document.positionAt(document.getText().length)),
             change.after
           );
         }
-        if (!await import_vscode28.workspace.applyEdit(edit)) {
+        if (!await import_vscode27.workspace.applyEdit(edit)) {
           throw new Error("The editor rejected stale placement edits. Prepare them again.");
         }
         this.session.buildStale = true;
-        await import_vscode28.commands.executeCommand("workbench.view.scm");
+        await import_vscode27.commands.executeCommand("workbench.view.scm");
       } else if (action === "apply") {
-        await import_vscode28.commands.executeCommand("workbench.view.scm");
-        void import_vscode28.window.showInformationMessage(
+        await import_vscode27.commands.executeCommand("workbench.view.scm");
+        void import_vscode27.window.showInformationMessage(
           "Generation applied. Resolve conflicts and stage the intended changes in Source Control, then Validate and Finish Regeneration. Finish builds and creates the merge commit."
         );
       } else if (action === "import" || action === "analyze") {
         let message = "Capture imported. Next: Analyze Evidence, then Prepare Regeneration. Current source has not changed.";
-        if (captures && isRecord45(result) && Array.isArray(result.imports)) {
+        if (captures && isRecord44(result) && Array.isArray(result.imports)) {
           message = `${result.imports.length} captures imported. Next: Analyze Evidence, then Prepare Regeneration. Current source has not changed.`;
         }
         let button = "Analyze Evidence";
         let command = "asm.source.analyze";
+        let warning = false;
+        let reportFile;
         if (action === "analyze") {
-          message = "Analysis complete. Next: Prepare Regeneration, then Preview with Current Edits. Building alone does not update source.";
+          const summary = summarizeSourceAnalysis(result);
+          message = `${summary.message} Next: Prepare Regeneration, then Preview with Current Edits.`;
+          warning = summary.warning;
+          this.host.output.info([summary.message, ...summary.details].join("\n"));
+          reportFile = import_node_path36.default.join(root, ".uttori-local/reports/analysis.json");
+          try {
+            await import_promises20.default.mkdir(import_node_path36.default.dirname(reportFile), { recursive: true });
+            await import_promises20.default.writeFile(reportFile, JSON.stringify(result, null, 2) + "\n");
+            this.host.output.info(`Full analysis report: ${reportFile}`);
+          } catch (error) {
+            this.host.output.warn(`Could not save analysis report: ${String(error)}`);
+            this.host.output.info(JSON.stringify(result, null, 2));
+            reportFile = void 0;
+          }
           button = "Prepare Regeneration";
           command = "asm.source.prepare";
         }
         let loggedResult = result;
-        if (isRecord45(result) && Array.isArray(result.addedCode)) {
+        if (isRecord44(result) && Array.isArray(result.addedCode)) {
           const addedBytes = result.addedCode.reduce((total, range) => {
-            if (!isRecord45(range) || typeof range.start !== "number" || typeof range.end !== "number") {
+            if (!isRecord44(range) || typeof range.start !== "number" || typeof range.end !== "number") {
               return total;
             }
             return total + range.end - range.start;
@@ -68275,16 +69578,22 @@ var SourceBuildCoordinator = class {
             addedCode: { ranges: result.addedCode.length, bytes: addedBytes }
           };
         }
-        this.host.output.info(JSON.stringify(loggedResult, null, 2));
-        void import_vscode28.window.showInformationMessage(message, button).then((choice) => {
+        if (action === "import") {
+          this.host.output.info(JSON.stringify(loggedResult, null, 2));
+        }
+        const buttons = reportFile ? [button, "Open Analysis Report"] : [button];
+        const notification = warning ? import_vscode27.window.showWarningMessage(message, ...buttons) : import_vscode27.window.showInformationMessage(message, ...buttons);
+        void notification.then((choice) => {
           if (choice === button) {
-            void import_vscode28.commands.executeCommand(command);
+            void import_vscode27.commands.executeCommand(command);
+          } else if (choice === "Open Analysis Report" && reportFile) {
+            void import_vscode27.window.showTextDocument(import_vscode27.Uri.file(reportFile));
           }
           return void 0;
         });
       } else if (action === "catalog") {
         this.host.output.info(JSON.stringify(result, null, 2));
-        void import_vscode28.window.showInformationMessage(
+        void import_vscode27.window.showInformationMessage(
           "Capture catalog refreshed. Follow Next in Source Project to analyze or prepare regeneration. Review the catalog change with your checkpoint."
         );
       } else if (action === "abort") {
@@ -68302,7 +69611,7 @@ var SourceBuildCoordinator = class {
       const changedPrefix = "Source dependency changed during assembly: ";
       if (action === "build" && error instanceof Error && error.message.startsWith(changedPrefix)) {
         const file = error.message.slice(changedPrefix.length);
-        failure = this.host.changedBuildError([import_node_path35.default.relative(root, file)]);
+        failure = this.host.changedBuildError([import_node_path36.default.relative(root, file)]);
       }
       if (action === "build" || action === "finish") {
         this.host.publishDiagnostics(failure);
@@ -68329,6 +69638,10 @@ var SourceBuildCoordinator = class {
     if (root !== this.session.root || candidate !== this.session.candidate || preview !== this.session.preview) {
       return void 0;
     }
+    const stats = await readGenerationDiffStats(root, review.before, review.after);
+    if (root !== this.session.root || candidate !== this.session.candidate || preview !== this.session.preview) {
+      return void 0;
+    }
     const rows2 = [];
     const label = review.previewed ? "Generation Preview" : "Generated";
     for (const { status, path: file, conflict } of review.files) {
@@ -68340,16 +69653,20 @@ var SourceBuildCoordinator = class {
         `${file} \xB7 ${label} ${review.before.slice(0, 7)} \u2192 ${review.after.slice(0, 7)}`
       ]);
       row.description = conflict ? "predicted conflict" : status;
+      const count3 = stats.get(file);
+      row.additions = count3?.additions;
+      row.deletions = count3?.deletions;
       rows2.push(row);
     }
     this.session.incoming = rows2;
     return review;
   }
+  /** Create a VS Code task that runs the native source build for one project root. */
   buildTask(root, folder) {
     const definition = { type: "uttori-source", action: "build", project: root };
-    const scope = folder ?? import_vscode28.workspace.getWorkspaceFolder(import_vscode28.Uri.file(root)) ?? import_vscode28.workspace.workspaceFolders?.[0];
-    const execution = new import_vscode28.CustomExecution(() => {
-      const write = new import_vscode28.EventEmitter(), close = new import_vscode28.EventEmitter();
+    const scope = folder ?? import_vscode27.workspace.getWorkspaceFolder(import_vscode27.Uri.file(root)) ?? import_vscode27.workspace.workspaceFolders?.[0];
+    const execution = new import_vscode27.CustomExecution(() => {
+      const write = new import_vscode27.EventEmitter(), close = new import_vscode27.EventEmitter();
       const abort = new AbortController();
       const terminal = {
         onDidWrite: write.event,
@@ -68377,24 +69694,24 @@ var SourceBuildCoordinator = class {
       };
       return Promise.resolve(terminal);
     });
-    const task = new import_vscode28.Task(
+    const task = new import_vscode27.Task(
       definition,
-      scope ?? 2,
+      scope ?? import_vscode27.TaskScope.Workspace,
       "Build and Check",
       "Uttori Source",
       execution,
       []
     );
-    task.group = import_vscode28.TaskGroup.Build;
+    task.group = import_vscode27.TaskGroup.Build;
     return task;
   }
 };
 
 // packages/vscode-extension/src/source/code-actions.ts
-var import_node_path36 = __toESM(require("node:path"), 1);
-var import_vscode29 = require("vscode");
+var import_node_path37 = __toESM(require("node:path"), 1);
+var import_vscode28 = require("vscode");
 function registerSourceCodeActions(context) {
-  return import_vscode29.languages.registerCodeActionsProvider(
+  return import_vscode28.languages.registerCodeActionsProvider(
     { scheme: "file" },
     {
       provideCodeActions(document, _range, requested) {
@@ -68402,8 +69719,8 @@ function registerSourceCodeActions(context) {
         if (!project) {
           return [];
         }
-        const relative4 = import_node_path36.default.relative(project.root, document.uri.fsPath);
-        if (relative4 === ".." || relative4.startsWith(`..${import_node_path36.default.sep}`) || import_node_path36.default.isAbsolute(relative4)) {
+        const relative4 = import_node_path37.default.relative(project.root, document.uri.fsPath);
+        if (relative4 === ".." || relative4.startsWith(`..${import_node_path37.default.sep}`) || import_node_path37.default.isAbsolute(relative4)) {
           return [];
         }
         const diagnostics = requested.diagnostics.filter((item) => item.source === "Uttori source");
@@ -68412,10 +69729,10 @@ function registerSourceCodeActions(context) {
         }
         const actions = [];
         const append3 = (title, command, args = []) => {
-          const action = new import_vscode29.CodeAction(title, import_vscode29.CodeActionKind.QuickFix);
+          const action = new import_vscode28.CodeAction(title, import_vscode28.CodeActionKind.QuickFix);
           action.command = { title, command, arguments: args };
           action.diagnostics = diagnostics;
-          if (!import_vscode29.workspace.isTrusted && command !== "vscode.open") {
+          if (!import_vscode28.workspace.isTrusted && command !== "vscode.open") {
             action.disabled = {
               reason: "Trust this workspace before executing source operations."
             };
@@ -68441,69 +69758,102 @@ function registerSourceCodeActions(context) {
           "expansion"
         ].some((code) => codes.has(code))) {
           append3("Open layout and reference contracts", "vscode.open", [
-            import_vscode29.Uri.file(import_node_path36.default.join(project.root, project.layout))
+            import_vscode28.Uri.file(import_node_path37.default.join(project.root, project.layout))
           ]);
         }
         append3("Build and check source again", "asm.source.build");
         return actions;
       }
     },
-    { providedCodeActionKinds: [import_vscode29.CodeActionKind.QuickFix] }
+    { providedCodeActionKinds: [import_vscode28.CodeActionKind.QuickFix] }
   );
 }
 
+// packages/vscode-extension/src/source/git-watch.ts
+function isGitCacheNoise(relative4) {
+  if (relative4 === ".git") {
+    return true;
+  }
+  if (!relative4.startsWith(".git/")) {
+    return false;
+  }
+  return relative4.includes("/fsmonitor--daemon/") || relative4 === ".git/gk" || relative4.startsWith(".git/gk/") || relative4.startsWith(".git/objects/") || relative4.startsWith(".git/hooks/") || relative4.startsWith(".git/logs/") || relative4.startsWith(".git/info/");
+}
+function isGitIndexEcho(relative4) {
+  if (!relative4.startsWith(".git/")) {
+    return false;
+  }
+  const name2 = relative4.slice(relative4.lastIndexOf("/") + 1);
+  return name2 === "index" || name2 === "index.lock" || name2 === "index.backup";
+}
+
 // packages/vscode-extension/src/source/session.ts
-var import_vscode31 = require("vscode");
+var import_vscode30 = require("vscode");
 
 // packages/vscode-extension/src/source/git-files.ts
-var import_vscode30 = require("vscode");
+var import_vscode29 = require("vscode");
 var SourceGitFiles = class {
-  changes = new import_vscode30.EventEmitter();
+  /** Internal emitter backing onDidChangeFile notifications. */
+  changes = new import_vscode29.EventEmitter();
+  /** Emits when registered roots change; history blobs themselves are immutable. */
   onDidChangeFile = this.changes.event;
+  /** Source project roots that have been opened through this provider. */
   roots = /* @__PURE__ */ new Set();
+  /** Build a uttori-source URI for one revision of a repository-relative file. */
   uri(root, revision, file) {
     this.roots.add(root);
-    return import_vscode30.Uri.from({
+    return import_vscode29.Uri.from({
       scheme: "uttori-source",
       path: `/${file}`,
       query: new URLSearchParams({ root, revision: revision ?? "", file }).toString()
     });
   }
+  /** Read immutable blob bytes for a revision through native Git. */
   async readFile(uri) {
     const values = new URLSearchParams(uri.query);
     const root = values.get("root"), revision = values.get("revision"), file = values.get("file");
     if (!this.roots.has(root)) {
-      throw import_vscode30.FileSystemError.NoPermissions("Select this source project before opening its history.");
+      throw import_vscode29.FileSystemError.NoPermissions("Select this source project before opening its history.");
     }
     assertSourcePath(file);
     if (!revision) {
       return new Uint8Array();
     }
     assertSourceObjectId(revision);
-    return (await sourceGit(root, ["show", `${revision}:${file}`], { maxOutputBytes: 32 * 1024 * 1024 })).stdout;
+    const object2 = (await sourceGit(root, ["rev-parse", "--verify", `${revision}:${file}`])).stdout.toString("utf8").trim();
+    const blobs = await readSourceBlobs(await sourceRepository(root), [object2]);
+    return blobs.get(object2);
   }
+  /** Report file size from the resolved blob length. */
   async stat(uri) {
-    return { type: import_vscode30.FileType.File, ctime: 0, mtime: 0, size: (await this.readFile(uri)).length };
+    return { type: import_vscode29.FileType.File, ctime: 0, mtime: 0, size: (await this.readFile(uri)).length };
   }
+  /** History URIs address single files; directories are not enumerated. */
   readDirectory() {
     return [];
   }
+  /** No file watching is required for immutable revision blobs. */
   watch() {
     return { dispose() {
     } };
   }
+  /** Mutations are rejected because Git history is read-only. */
   createDirectory() {
-    throw import_vscode30.FileSystemError.NoPermissions("Git history is immutable.");
+    throw import_vscode29.FileSystemError.NoPermissions("Git history is immutable.");
   }
+  /** Mutations are rejected because Git history is read-only. */
   writeFile() {
-    throw import_vscode30.FileSystemError.NoPermissions("Git history is immutable.");
+    throw import_vscode29.FileSystemError.NoPermissions("Git history is immutable.");
   }
+  /** Mutations are rejected because Git history is read-only. */
   delete() {
-    throw import_vscode30.FileSystemError.NoPermissions("Git history is immutable.");
+    throw import_vscode29.FileSystemError.NoPermissions("Git history is immutable.");
   }
+  /** Mutations are rejected because Git history is read-only. */
   rename() {
-    throw import_vscode30.FileSystemError.NoPermissions("Git history is immutable.");
+    throw import_vscode29.FileSystemError.NoPermissions("Git history is immutable.");
   }
+  /** Dispose change emitters when the provider is torn down. */
   dispose() {
     this.changes.dispose();
   }
@@ -68511,35 +69861,59 @@ var SourceGitFiles = class {
 
 // packages/vscode-extension/src/source/session.ts
 var SourceProjectSession = class {
-  changed = new import_vscode31.EventEmitter();
-  built = new import_vscode31.EventEmitter();
-  researchChanged = new import_vscode31.EventEmitter();
-  savedInput = new import_vscode31.EventEmitter();
-  selected = new import_vscode31.EventEmitter();
+  /** Source tree refresh signal; `undefined` refreshes the whole tree and also reschedules asset-menu probes. */
+  changed = new import_vscode30.EventEmitter();
+  /** Fires after a successful build of the selected project with the matching debug map. */
+  built = new import_vscode30.EventEmitter();
+  /** Fires when saved research, `.uttori/` or Git state may have changed cached names. */
+  researchChanged = new import_vscode30.EventEmitter();
+  /** Fires once per saved authoring input change; deferred while an asset publication is busy. */
+  savedInput = new import_vscode30.EventEmitter();
+  /** Fires before a different project root replaces the current selection. */
+  selected = new import_vscode30.EventEmitter();
+  /** Source worker process client; assigned by the controller before any session use. */
   worker;
+  /** Read-only `uttori-source` file system serving Git revisions of selected roots. */
   files = new SourceGitFiles();
-  diagnostics = import_vscode31.languages.createDiagnosticCollection("uttori-source");
+  /** Diagnostics reported by source builds and workflow actions. */
+  diagnostics = import_vscode30.languages.createDiagnosticCollection("uttori-source");
+  /** Absolute root of the selected source project; undefined when no project is selected. */
   root;
   /** Advances for every selection request so delayed filesystem/worker replies cannot select an old project. */
   selectionRevision = 0;
+  /** Parsed `.uttori/project.json` of the selected root, re-read on every refresh. */
   configuration;
+  /** Last worker status for the selected root plus working-tree and analysis readiness flags. */
   status;
+  /** Current branch name, `detached HEAD`, or empty before the first refresh. */
   branch = "";
+  /** Prepared generation commit selected for review, persisted per root in workspace state. */
   candidate;
+  /** Merge preview of the candidate; cleared whenever authoring inputs change. */
   preview;
+  /** Tree rows describing the candidate's incoming changes; empty without a candidate. */
   incoming = [];
+  /** Most recent successful build of the selected root. */
   build;
   /** Controls plus consumed dependencies for checking delayed saved-file notifications. */
   buildInputs = [];
+  /** True when no build exists or an authoring input changed after the displayed build. */
   buildStale = true;
+  /** Action ID of the running foreground operation; undefined when idle. Refreshes are skipped while set. */
   busy;
   /** Watcher changes during coordinated publication are delivered once, including interrupted partial publication. */
   assetSavedInputPending = false;
+  /** Debounce timer (400 ms) for the status refresh triggered by watcher events. */
   refreshTimer;
+  /** Debounce timer for the asset-representation menu probe. */
   assetContextTimer;
+  /** Cancels the in-flight asset-menu probe; aborted on reschedule and project change. */
   assetContextAbort;
+  /** Advances on every asset-menu schedule so stale probe results are discarded. */
   assetContextVersion = 0;
+  /** File-system watcher subscriptions for the selected root; replaced on selection. */
   watcher;
+  /** Advances on every authoring input change (text, binary, opaque draft or saved file). */
   epoch = 0;
   /** Last authoring input notification, retained to explain conservative publication invalidation. */
   epochInput;
@@ -68548,133 +69922,6 @@ var SourceProjectSession = class {
   /** UI review state never owns native bytes; the worker's durable plan remains authoritative. */
   assetReview;
 };
-
-// packages/vscode-extension/src/source/workflow.ts
-function shouldClearSourceCandidate(status) {
-  if (!["idle", "verified", "checkpoint"].includes(status.phase)) {
-    return false;
-  }
-  return status.candidateStale || status.candidateAccepted && status.phase !== "checkpoint";
-}
-function sourceWorkflow(state) {
-  if (state.busy) {
-    return [
-      {
-        label: `Working \xB7 ${state.busy}`,
-        description: "Wait for this operation to finish.",
-        current: true
-      }
-    ];
-  }
-  if (state.phase === "diverged") {
-    return [
-      {
-        label: "Inspect Regeneration Recovery in Source Control",
-        description: "Git changed outside the active merge. Inspect the branch and merge state before continuing.",
-        command: "workbench.view.scm",
-        current: true
-      }
-    ];
-  }
-  if (state.phase === "merging") {
-    const conflicts = state.conflicts ?? 0;
-    const ready = conflicts === 0 && state.unstaged === false && !state.unsaved;
-    return [
-      {
-        label: "5. Resolve and Stage Merge Changes",
-        description: `${conflicts} unresolved conflicts. Save editors and stage the intended result in Source Control.`,
-        command: "workbench.view.scm",
-        current: !ready
-      },
-      {
-        label: "6. Validate and Finish Regeneration",
-        description: "Builds the staged merge, validates it, and creates the merge commit.",
-        command: ready ? "asm.source.finish" : void 0,
-        current: ready
-      },
-      {
-        label: "Abort Regeneration",
-        description: "Return to the saved checkpoint.",
-        command: "asm.source.abort"
-      }
-    ];
-  }
-  if (state.phase === "committed") {
-    return [
-      {
-        label: "6. Validate Committed Regeneration",
-        description: "Validate the already committed merge before using it.",
-        command: "asm.source.finish",
-        current: true
-      }
-    ];
-  }
-  const steps = [];
-  if (!state.candidate) {
-    if (state.catalogReady === false) {
-      return [
-        {
-          label: "Refresh Capture Catalog",
-          description: state.catalogReason ?? "Record retained capture identities, then analyze and prepare.",
-          command: "asm.source.catalog",
-          current: true
-        }
-      ];
-    }
-    steps.push({
-      label: "1. Analyze Evidence",
-      description: "Required after importing captures or changing analysis research.",
-      command: "asm.source.analyze",
-      current: state.analysisReady !== true
-    });
-    if (state.analysisReady === false) {
-      steps.push({
-        label: "2. Prepare Regeneration \xB7 analysis required",
-        description: state.analysisReason ?? "Run Analyze Evidence first. Building does not update generated source."
-      });
-    } else {
-      steps.push({
-        label: "2. Prepare Regeneration",
-        description: "Generate a candidate from analyzed evidence; keeps current source edits.",
-        command: "asm.source.prepare",
-        current: state.analysisReady === true
-      });
-    }
-    return steps;
-  }
-  steps.push({
-    label: "3. Preview with Current Edits",
-    description: "Show file diffs for the proposed merge before applying or committing it.",
-    command: "asm.source.preview",
-    current: !state.previewed
-  });
-  if (!state.previewed) {
-    steps.push({
-      label: "4. Apply \xB7 preview required",
-      description: "Review the generated file diffs first. A clean checkout can apply using its existing commit."
-    });
-  } else if (state.dirty) {
-    steps.push({
-      label: "4. Save and Commit Checkpoint",
-      description: "Review Generation Preview first. Preserve existing local edits by saving and committing or moving them before Apply.",
-      command: "workbench.view.scm",
-      current: true
-    });
-  } else {
-    steps.push({
-      label: "4. Apply Previewed Generation",
-      description: "Apply the reviewed generation using the existing commit. Review and stage the result before Finish validates and commits it.",
-      command: "asm.source.apply",
-      current: true
-    });
-  }
-  steps.push({
-    label: "Discard Candidate",
-    description: "Release this candidate without changing source.",
-    command: "asm.source.discard"
-  });
-  return steps;
-}
 
 // packages/vscode-extension/src/source/controller.ts
 var SourceController = class {
@@ -68702,73 +69949,72 @@ var SourceController = class {
       registerSourceCodeActions(
         () => this.session.root && this.session.configuration ? { root: this.session.root, layout: this.session.configuration.layout } : void 0
       ),
-      import_vscode32.window.registerTreeDataProvider("uttori-asm.sourceProject", this),
-      import_vscode32.workspace.registerFileSystemProvider("uttori-source", this.session.files, {
+      import_vscode31.workspace.registerFileSystemProvider("uttori-source", this.session.files, {
         isReadonly: true,
         isCaseSensitive: true
       }),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand(
         "asm.source.select",
         (folder) => this.guard(() => this.select(typeof folder === "string" ? folder : folder?.fsPath))
       ),
       // F5 must select and build atomically: a rejected selection cannot launch another project.
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand(
         "asm.source.buildProject",
         (folder) => this.guard(async () => {
           await this.select(folder.fsPath);
           return this.perform("build");
         })
       ),
-      import_vscode32.commands.registerCommand("asm.source.init", () => this.guard(() => this.create())),
-      import_vscode32.commands.registerCommand("asm.source.initDiz", () => this.guard(() => this.create(true))),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand("asm.source.init", () => this.guard(() => this.create())),
+      import_vscode31.commands.registerCommand("asm.source.initDiz", () => this.guard(() => this.create(true))),
+      import_vscode31.commands.registerCommand(
         "asm.source.migrate",
         () => this.guard(() => this.builds.perform("prepare", void 0, void 0, void 0, "linked"))
       ),
-      import_vscode32.commands.registerCommand("asm.source.refresh", () => this.guard(() => this.refresh())),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand("asm.source.refresh", () => this.guard(() => this.refresh())),
+      import_vscode31.commands.registerCommand(
         "asm.asset.export",
         (request) => this.guard(() => this.assetFile("export", request))
       ),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand(
         "asm.asset.review",
         (request) => this.guard(() => this.assetFile("review", request))
       ),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand(
         "asm.asset.apply",
         (request) => this.guard(() => this.assetFile("apply", request))
       ),
-      import_vscode32.commands.registerCommand("asm.asset.recover", () => this.guard(() => this.assetRecovery())),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand("asm.asset.recover", () => this.guard(() => this.assetRecovery())),
+      import_vscode31.commands.registerCommand(
         "asm.asset.convertToAseprite",
         (request) => this.guard(() => this.assetConvert("aseprite", request))
       ),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand(
         "asm.asset.convertToPng",
         (request) => this.guard(() => this.assetConvert("indexed-png", request))
       ),
-      import_vscode32.window.onDidChangeActiveTextEditor(() => this.scheduleAssetContext()),
-      import_vscode32.window.onDidChangeTextEditorSelection((event) => {
-        if (event.textEditor === import_vscode32.window.activeTextEditor) {
+      import_vscode31.window.onDidChangeActiveTextEditor(() => this.scheduleAssetContext()),
+      import_vscode31.window.onDidChangeTextEditorSelection((event) => {
+        if (event.textEditor === import_vscode31.window.activeTextEditor) {
           this.scheduleAssetContext();
         }
       }),
-      import_vscode32.workspace.onDidChangeTextDocument((event) => {
-        if (event.document.uri.scheme === "file" && (event.document === import_vscode32.window.activeTextEditor?.document || this.authoringFile(event.document.uri.fsPath))) {
+      import_vscode31.workspace.onDidChangeTextDocument((event) => {
+        if (event.document.uri.scheme === "file" && (event.document === import_vscode31.window.activeTextEditor?.document || this.authoringFile(event.document.uri.fsPath))) {
           this.scheduleAssetContext();
         }
       }),
-      import_vscode32.workspace.onDidSaveTextDocument((document) => {
-        if (document.uri.scheme === "file" && (document === import_vscode32.window.activeTextEditor?.document || this.authoringFile(document.uri.fsPath))) {
+      import_vscode31.workspace.onDidSaveTextDocument((document) => {
+        if (document.uri.scheme === "file" && (document === import_vscode31.window.activeTextEditor?.document || this.authoringFile(document.uri.fsPath))) {
           this.scheduleAssetContext();
         }
       }),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand(
         "asm.source.diff",
-        (left, right, title) => import_vscode32.commands.executeCommand("vscode.diff", left, right, title)
+        (left, right, title) => import_vscode31.commands.executeCommand("vscode.diff", left, right, title)
       ),
-      import_vscode32.commands.registerCommand("asm.source.research", () => this.openResearch()),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand("asm.source.research", () => this.openResearch()),
+      import_vscode31.commands.registerCommand(
         "asm.source.editResearch",
         (request) => this.guard(
           () => editSourceResearch(
@@ -68783,7 +70029,7 @@ var SourceController = class {
           )
         )
       ),
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand(
         "asm.source.editAnalysis",
         (change) => this.guard(
           () => editAnalysisResearch(
@@ -68798,7 +70044,7 @@ var SourceController = class {
           )
         )
       ),
-      import_vscode32.workspace.onDidChangeTextDocument((event) => {
+      import_vscode31.workspace.onDidChangeTextDocument((event) => {
         if (event.document.uri.scheme === "file" && event.contentChanges.length > 0 && this.authoringFile(event.document.uri.fsPath)) {
           this.session.epoch++;
           this.session.epochInput = event.document.uri.fsPath;
@@ -68820,14 +70066,14 @@ var SourceController = class {
           this.session.changed.fire(void 0);
         }
       }),
-      import_vscode32.window.tabGroups.onDidChangeTabs((event) => {
+      import_vscode31.window.tabGroups.onDidChangeTabs((event) => {
         const known = new Set(
           [...binaryDrafts.documents].map((document) => document.uri.toString())
         );
         const dirtyTab = [...event.changed, ...event.closed].find(
-          (tab) => tab.isDirty && tab.input instanceof import_vscode32.TabInputCustom && tab.input.uri.scheme === "file" && !known.has(tab.input.uri.toString()) && this.authoringFile(tab.input.uri.fsPath)
+          (tab) => tab.isDirty && tab.input instanceof import_vscode31.TabInputCustom && tab.input.uri.scheme === "file" && !known.has(tab.input.uri.toString()) && this.authoringFile(tab.input.uri.fsPath)
         );
-        if (dirtyTab && dirtyTab.input instanceof import_vscode32.TabInputCustom) {
+        if (dirtyTab && dirtyTab.input instanceof import_vscode31.TabInputCustom) {
           this.session.epoch++;
           this.session.epochInput = dirtyTab.input.uri.fsPath;
           this.session.epochEvent = "opaque";
@@ -68836,7 +70082,7 @@ var SourceController = class {
           this.session.changed.fire(void 0);
         }
       }),
-      import_vscode32.tasks.registerTaskProvider("uttori-source", {
+      import_vscode31.tasks.registerTaskProvider("uttori-source", {
         provideTasks: () => this.session.root ? [this.buildTask(this.session.root)] : [],
         resolveTask: (task) => {
           const root = task.definition.project;
@@ -68865,18 +70111,18 @@ var SourceController = class {
       "expand"
     ]) {
       this.#disposables.push(
-        import_vscode32.commands.registerCommand(
+        import_vscode31.commands.registerCommand(
           `asm.source.${action === "import" ? "importCapture" : action}`,
           (capture) => this.guard(() => this.perform(action, void 0, void 0, capture))
         )
       );
     }
     this.#disposables.push(
-      import_vscode32.commands.registerCommand(
+      import_vscode31.commands.registerCommand(
         "asm.source.graphics",
         (captureSha256) => this.guard(async () => {
           const root = this.session.root;
-          if (!root || !import_vscode32.workspace.isTrusted) {
+          if (!root || !import_vscode31.workspace.isTrusted) {
             throw new Error("Select a trusted NES source project first.");
           }
           const selection = await this.session.worker.run(
@@ -68884,7 +70130,7 @@ var SourceController = class {
             { maxMemoryMiB: 512, readResult: readGraphicsSelection }
           );
           if (!selection.captures.length) {
-            await import_vscode32.window.showInformationMessage(
+            await import_vscode31.window.showInformationMessage(
               "Import NES graphics captures to inspect their CPU evidence links."
             );
             return;
@@ -68902,7 +70148,7 @@ var SourceController = class {
               throw new Error("Select an imported graphics capture identity.");
             }
           } else {
-            selected = await import_vscode32.window.showQuickPick(choices, {
+            selected = await import_vscode31.window.showQuickPick(choices, {
               title: "NES Graphics Evidence",
               matchOnDetail: true
             });
@@ -68921,8 +70167,8 @@ var SourceController = class {
             },
             { maxMemoryMiB: 512 }
           );
-          await import_vscode32.window.showTextDocument(
-            await import_vscode32.workspace.openTextDocument({
+          await import_vscode31.window.showTextDocument(
+            await import_vscode31.workspace.openTextDocument({
               language: "json",
               content: JSON.stringify(report, null, 2) + "\n"
             })
@@ -68935,8 +70181,11 @@ var SourceController = class {
   context;
   output;
   binaryDrafts;
+  /** Shared Git source session state for tree rows and commands. */
   session = new SourceProjectSession();
+  /** Asset import and conversion flows bound to the active source project. */
   assets = new SourceAssetCoordinator(this.session, this);
+  /** Build, watch, and debug coordination for the selected source project. */
   builds = new SourceBuildCoordinator(this.session, this);
   /** All source build entry points publish the same matching map to navigation and inline information. */
   onDidBuild = this.session.built.event;
@@ -68946,14 +70195,20 @@ var SourceController = class {
   onDidChangeSavedInput = this.session.savedInput.event;
   /** A target change cancels watch work before another project's artifacts can be launched. */
   onDidSelectProject = this.session.selected.event;
+  /** Fired when workflow tree rows should reload from session state. */
   onDidChangeTreeData = this.session.changed.event;
   #disposables = [];
+  /** Status is idle work; overlapping runs still consume the two worker slots and retrigger the watcher. */
+  #statusRefresh = false;
+  /** Git rewrites `.git/index` during status; ignore those echoes until this time. */
+  #statusQuietUntil = 0;
+  /** Absolute path of the selected source project root, when any. */
   get root() {
     return this.session.root;
   }
   /** The selected build contract also identifies Watch when no source editor is open. */
   get buildUri() {
-    return this.session.root && this.session.configuration ? import_vscode32.Uri.file(import_node_path37.default.join(this.session.root, this.session.configuration.buildConfig)).toString() : void 0;
+    return this.session.root && this.session.configuration ? import_vscode31.Uri.file(import_node_path38.default.join(this.session.root, this.session.configuration.buildConfig)).toString() : void 0;
   }
   /** Command-palette research edits always use the explicitly selected source project. */
   async editEvidence(action) {
@@ -68970,9 +70225,57 @@ var SourceController = class {
       }
     });
   }
+  /** Legal Next command, enablement, and incoming review for Home and host smokes. */
+  homeProjection() {
+    const workflow = sourceWorkflow(this.workflowState());
+    const health = sourceHealth(workflow, {
+      busy: this.session.busy,
+      phase: this.session.status?.phase
+    });
+    const legal = [
+      ...new Set(
+        workflow.map((step) => step.command).filter((command) => Boolean(command))
+      )
+    ];
+    if (this.session.root) {
+      legal.push("asm.source.build");
+    }
+    const previewed = this.session.preview?.candidate === this.session.candidate && Boolean(this.session.candidate);
+    let build;
+    if (this.session.build) {
+      build = this.session.buildStale ? "source changed" : "verified";
+    }
+    return {
+      next: health.next,
+      commands: legal,
+      build,
+      candidate: this.session.candidate,
+      incoming: {
+        previewed,
+        total: this.session.incoming.length,
+        shown: this.session.incoming.length,
+        collapsed: false
+      }
+    };
+  }
+  /** Cached service/editor flags used by Home and the remaining workflow tree. */
+  workflowState() {
+    const unsaved = this.buffers().length > 0 || this.binaryBuffers().length > 0 || this.opaqueBinaryBuffers().length > 0;
+    return {
+      ...this.session.status,
+      busy: this.session.busy,
+      conflicts: this.session.status?.conflicts.length,
+      candidate: Boolean(this.session.candidate),
+      previewed: this.session.preview?.candidate === this.session.candidate && Boolean(this.session.candidate),
+      dirty: (this.session.status?.dirty ?? false) || unsaved,
+      unsaved
+    };
+  }
+  /** Source rows are tree items; no additional presentation mapping is required. */
   getTreeItem(row) {
     return row;
   }
+  /** Return workflow children for one row or the project root menu when unset. */
   getChildren(row) {
     if (row) {
       return row.children;
@@ -68984,7 +70287,7 @@ var SourceController = class {
       ];
     }
     const source = new SourceRow(
-      `Source \xB7 ${this.session.branch || import_node_path37.default.basename(this.session.root)}`,
+      `Source \xB7 ${this.session.branch || import_node_path38.default.basename(this.session.root)}`,
       [],
       "workbench.view.scm"
     );
@@ -68992,17 +70295,8 @@ var SourceController = class {
     if (this.session.status) {
       source.description = this.session.status.dirty ? "uncommitted changes" : "clean";
     }
-    source.iconPath = new import_vscode32.ThemeIcon("git-branch");
-    const unsaved = this.buffers().length > 0 || this.binaryBuffers().length > 0 || this.opaqueBinaryBuffers().length > 0;
-    const workflow = sourceWorkflow({
-      ...this.session.status,
-      busy: this.session.busy,
-      conflicts: this.session.status?.conflicts.length,
-      candidate: Boolean(this.session.candidate),
-      previewed: this.session.preview?.candidate === this.session.candidate && Boolean(this.session.candidate),
-      dirty: (this.session.status?.dirty ?? false) || unsaved,
-      unsaved
-    });
+    source.iconPath = new import_vscode31.ThemeIcon("git-branch");
+    const workflow = sourceWorkflow(this.workflowState());
     const steps = workflow.map((step) => {
       const item = new SourceRow(step.label, [], step.command);
       item.tooltip = step.description;
@@ -69022,7 +70316,7 @@ var SourceController = class {
         `${reviewLabel} \xB7 ${this.session.incoming.length} files`,
         this.session.incoming
       );
-      incoming.collapsibleState = previewed ? import_vscode32.TreeItemCollapsibleState.Expanded : import_vscode32.TreeItemCollapsibleState.Collapsed;
+      incoming.collapsibleState = previewed ? import_vscode31.TreeItemCollapsibleState.Expanded : import_vscode31.TreeItemCollapsibleState.Collapsed;
       incoming.tooltip = "Click a file to review its diff. Preview leaves working files unchanged.";
       steps.unshift(incoming);
     }
@@ -69037,18 +70331,18 @@ var SourceController = class {
     const captureRows = [];
     if (capturePhase === "idle") {
       const start = new SourceRow("Start Capture", [], "asm.trace.start");
-      start.iconPath = new import_vscode32.ThemeIcon("record");
+      start.iconPath = new import_vscode31.ThemeIcon("record");
       start.tooltip = "Launch an ares debug session first. Choose a capture file, then Continue (F5) to record execution.";
       captureRows.push(start);
     } else if (capturePhase === "recording") {
       const stop = new SourceRow("Stop Capture", [], "asm.trace.stop");
-      stop.iconPath = new import_vscode32.ThemeIcon("debug-stop");
+      stop.iconPath = new import_vscode31.ThemeIcon("debug-stop");
       const stopImport = new SourceRow(
         "Stop Capture and Import Evidence",
         [],
         "asm.trace.stopAnalyze"
       );
-      stopImport.iconPath = new import_vscode32.ThemeIcon("database");
+      stopImport.iconPath = new import_vscode31.ThemeIcon("database");
       captureRows.push(stop, stopImport);
     }
     captureRows.push(new SourceRow("Import Captures", [], "asm.source.importCapture"));
@@ -69080,13 +70374,13 @@ var SourceController = class {
   }
   /** Create in a worker and select only a completely verified new repository. */
   async create(importDiz = false) {
-    if (!import_vscode32.workspace.isTrusted) {
+    if (!import_vscode31.workspace.isTrusted) {
       throw new Error("Trust this workspace before creating a source project.");
     }
     if (this.session.busy) {
       throw new Error("Wait for the current source operation before creating a project.");
     }
-    const rom = (await import_vscode32.window.showOpenDialog({
+    const rom = (await import_vscode31.window.showOpenDialog({
       canSelectMany: false,
       title: "Original SNES or NES ROM",
       filters: { "Cartridge ROM": ["sfc", "smc", "nes"] }
@@ -69096,7 +70390,7 @@ var SourceController = class {
     }
     let dizRawFile;
     if (importDiz) {
-      dizRawFile = (await import_vscode32.window.showOpenDialog({
+      dizRawFile = (await import_vscode31.window.showOpenDialog({
         canSelectMany: false,
         title: "DiztinGUIsh research",
         filters: { "Uncompressed DiztinGUIsh XML": ["dizraw"] }
@@ -69105,18 +70399,18 @@ var SourceController = class {
         return;
       }
     }
-    const destination = await import_vscode32.window.showSaveDialog({
+    const destination = await import_vscode31.window.showSaveDialog({
       title: "New Git source project folder",
       saveLabel: "Create Project",
-      defaultUri: import_vscode32.Uri.file(
-        import_node_path37.default.join(import_node_path37.default.dirname(rom.fsPath), `${import_node_path37.default.parse(rom.fsPath).name}-source`)
+      defaultUri: import_vscode31.Uri.file(
+        import_node_path38.default.join(import_node_path38.default.dirname(rom.fsPath), `${import_node_path38.default.parse(rom.fsPath).name}-source`)
       )
     });
     if (!destination) {
       return;
     }
-    const nes = import_node_path37.default.extname(rom.fsPath).toLowerCase() === ".nes";
-    const mapper = nes ? "Detect automatically" : await import_vscode32.window.showQuickPick(["Detect automatically", ...SNES_MAPPERS], {
+    const nes = import_node_path38.default.extname(rom.fsPath).toLowerCase() === ".nes";
+    const mapper = nes ? "Detect automatically" : await import_vscode31.window.showQuickPick(["Detect automatically", ...SNES_MAPPERS], {
       title: "SNES cartridge mapping"
     });
     if (!mapper || mapper !== "Detect automatically" && !isSnesMapper2(mapper)) {
@@ -69125,9 +70419,9 @@ var SourceController = class {
     this.session.busy = "init";
     this.session.changed.fire(void 0);
     try {
-      await import_vscode32.window.withProgress(
+      await import_vscode31.window.withProgress(
         {
-          location: import_vscode32.ProgressLocation.Notification,
+          location: import_vscode31.ProgressLocation.Notification,
           title: "Create Git Source Project",
           cancellable: true
         },
@@ -69146,7 +70440,7 @@ var SourceController = class {
               {
                 signal: abort.signal,
                 onProgress: (message) => reporter.report({ message }),
-                maxMemoryMiB: import_vscode32.workspace.getConfiguration("asm").get("analysis.maxMemoryMiB", 4096)
+                maxMemoryMiB: import_vscode31.workspace.getConfiguration("asm").get("analysis.maxMemoryMiB", 4096)
               }
             );
           } finally {
@@ -69159,9 +70453,9 @@ var SourceController = class {
       this.session.changed.fire(void 0);
     }
     await this.select(destination.fsPath);
-    await import_vscode32.commands.executeCommand(
+    await import_vscode31.commands.executeCommand(
       "revealInExplorer",
-      import_vscode32.Uri.file(import_node_path37.default.join(destination.fsPath, "source/main.asm"))
+      import_vscode31.Uri.file(import_node_path38.default.join(destination.fsPath, "source/main.asm"))
     );
   }
   /** Selected context persists across active-editor changes; multi-root workspaces select explicitly. */
@@ -69175,16 +70469,16 @@ var SourceController = class {
       const options = [
         ...new Set(
           (await Promise.all(
-            (import_vscode32.workspace.workspaceFolders ?? []).map((folder) => findSourceRoot(folder.uri.fsPath))
+            (import_vscode31.workspace.workspaceFolders ?? []).map((folder) => findSourceRoot(folder.uri.fsPath))
           )).filter((value) => !!value)
         )
       ];
       const choices = options.map((value) => ({
-        label: import_node_path37.default.basename(value),
+        label: import_node_path38.default.basename(value),
         description: value,
         root: value
       }));
-      const choice = await import_vscode32.window.showQuickPick(
+      const choice = await import_vscode31.window.showQuickPick(
         [...choices, { label: "Choose Project Folder\u2026", description: "", root: "" }],
         { title: "Select Git Source Project" }
       );
@@ -69193,7 +70487,7 @@ var SourceController = class {
       }
       selected = choice.root;
       if (!selected) {
-        selected = (await import_vscode32.window.showOpenDialog({
+        selected = (await import_vscode31.window.showOpenDialog({
           canSelectFiles: false,
           canSelectFolders: true,
           canSelectMany: false,
@@ -69209,7 +70503,7 @@ var SourceController = class {
       throw new Error("This folder has no .uttori/project.json source project.");
     }
     const configuration = parseSourceProject(
-      JSON.parse(await import_promises21.default.readFile(import_node_path37.default.join(resolved, ".uttori/project.json"), "utf8"))
+      JSON.parse(await import_promises21.default.readFile(import_node_path38.default.join(resolved, ".uttori/project.json"), "utf8"))
     );
     if (selectionRevision !== this.session.selectionRevision) {
       return;
@@ -69229,18 +70523,22 @@ var SourceController = class {
     this.session.build = void 0;
     this.session.buildInputs = [];
     this.session.watcher?.dispose();
-    const watcher = import_vscode32.workspace.createFileSystemWatcher(new import_vscode32.RelativePattern(resolved, "**/*"));
+    const watcher = import_vscode31.workspace.createFileSystemWatcher(new import_vscode31.RelativePattern(resolved, "**/*"));
     const changed2 = (uri) => {
       if (uri.scheme !== "file") {
         return;
       }
-      const relative4 = import_node_path37.default.relative(resolved, uri.fsPath).split(import_node_path37.default.sep).join("/");
-      const gitEvent = relative4 === ".git" || relative4.startsWith(".git/");
+      const relative4 = import_node_path38.default.relative(resolved, uri.fsPath).split(import_node_path38.default.sep).join("/");
+      const gitEvent = relative4.startsWith(".git/");
+      const indexEcho = isGitIndexEcho(relative4);
       const authoring = this.authoringFile(uri.fsPath);
-      if (!authoring && !gitEvent) {
+      if (isGitCacheNoise(relative4) || !authoring && !gitEvent) {
         return;
       }
-      const openDocument = import_vscode32.workspace.textDocuments.some(
+      if (indexEcho && (this.#statusRefresh || Date.now() < this.#statusQuietUntil)) {
+        return;
+      }
+      const openDocument = import_vscode31.workspace.textDocuments.some(
         (document) => document.uri.scheme === "file" && document.uri.fsPath === uri.fsPath && !document.isClosed
       );
       const openBinary = [...this.binaryDrafts.documents].some(
@@ -69283,14 +70581,17 @@ var SourceController = class {
         }
       }
       const researchRoots = this.session.configuration?.researchRoots ?? [];
-      if (relative4.startsWith(".uttori/") || relative4.startsWith(".git/") || researchRoots.some(
+      if (relative4.startsWith(".uttori/") || gitEvent && !indexEcho || researchRoots.some(
         (researchRoot) => relative4 === researchRoot || relative4.startsWith(`${researchRoot}/`)
       )) {
         this.session.researchChanged.fire();
       }
       clearTimeout(this.session.refreshTimer);
       this.session.refreshTimer = setTimeout(() => {
-        if (!this.session.busy) {
+        if (!this.session.busy && !this.#statusRefresh) {
+          if (gitEvent) {
+            this.output.info(`Source refresh scheduled by ${relative4}.`);
+          }
           void this.guard(() => this.refresh());
         }
       }, 400);
@@ -69317,35 +70618,42 @@ var SourceController = class {
   async build() {
     return this.builds.build();
   }
+  /** Reload session status and rebuild workflow rows when idle and trusted. */
   async refresh() {
-    if (!this.session.root || this.session.busy || !import_vscode32.workspace.isTrusted) {
-      return;
-    }
     const root = this.session.root;
-    const configuration = parseSourceProject(
-      JSON.parse(await import_promises21.default.readFile(import_node_path37.default.join(root, ".uttori/project.json"), "utf8"))
-    );
-    const status = await this.session.worker.run(
-      { directory: root, action: "status", candidate: this.session.candidate },
-      { maxMemoryMiB: 512, readResult: readSourceStatus }
-    );
-    const branch = (await sourceGit(root, ["branch", "--show-current"])).stdout.toString().trim() || "detached HEAD";
-    if (root !== this.session.root) {
+    if (!root || this.session.busy || !import_vscode31.workspace.isTrusted || this.#statusRefresh) {
       return;
     }
-    this.session.status = status;
-    this.session.configuration = configuration;
-    if (shouldClearSourceCandidate(status)) {
-      await this.clearCandidate(root);
+    this.#statusRefresh = true;
+    try {
+      const configuration = parseSourceProject(
+        JSON.parse(await import_promises21.default.readFile(import_node_path38.default.join(root, ".uttori/project.json"), "utf8"))
+      );
+      const status = await this.session.worker.run(
+        { directory: root, action: "status", candidate: this.session.candidate },
+        { maxMemoryMiB: 512, readResult: readSourceStatus }
+      );
+      const branch = (await sourceGit(root, ["branch", "--show-current"])).stdout.toString().trim() || "detached HEAD";
+      if (root !== this.session.root) {
+        return;
+      }
+      this.session.status = status;
+      this.session.configuration = configuration;
+      if (shouldClearSourceCandidate(status)) {
+        await this.clearCandidate(root);
+      }
+      if (root !== this.session.root) {
+        return;
+      }
+      this.session.branch = branch;
+      if (this.session.candidate) {
+        await this.incoming();
+      }
+      this.session.changed.fire(void 0);
+    } finally {
+      this.#statusRefresh = false;
+      this.#statusQuietUntil = Date.now() + 800;
     }
-    if (root !== this.session.root) {
-      return;
-    }
-    this.session.branch = branch;
-    if (this.session.candidate) {
-      await this.incoming();
-    }
-    this.session.changed.fire(void 0);
   }
   /** Release only the editor selection; the source service owns Git pin and preview lifetimes. */
   async clearCandidate(root) {
@@ -69366,7 +70674,7 @@ var SourceController = class {
   assetEditorVersions() {
     const binary = [...this.binaryDrafts.documents], known = new Set(binary.map((document) => document.uri.toString()));
     return [
-      ...import_vscode32.workspace.textDocuments.filter((document) => document.uri.scheme === "file" && !document.isClosed).map((document) => ({
+      ...import_vscode31.workspace.textDocuments.filter((document) => document.uri.scheme === "file" && !document.isClosed).map((document) => ({
         path: document.uri.fsPath,
         version: document.version,
         dirty: document.isDirty,
@@ -69378,9 +70686,9 @@ var SourceController = class {
         dirty: document.dirty,
         opaque: false
       })),
-      ...import_vscode32.window.tabGroups.all.flatMap(
+      ...import_vscode31.window.tabGroups.all.flatMap(
         (group) => group.tabs.flatMap((tab) => {
-          if (!(tab.input instanceof import_vscode32.TabInputCustom) || tab.input.uri.scheme !== "file" || known.has(tab.input.uri.toString())) {
+          if (!(tab.input instanceof import_vscode31.TabInputCustom) || tab.input.uri.scheme !== "file" || known.has(tab.input.uri.toString())) {
             return [];
           }
           return [{ path: tab.input.uri.fsPath, version: 0, dirty: tab.isDirty, opaque: true }];
@@ -69413,9 +70721,9 @@ var SourceController = class {
     const known = new Set(
       [...this.binaryDrafts.documents].map((document) => document.uri.toString())
     );
-    return import_vscode32.window.tabGroups.all.flatMap(
+    return import_vscode31.window.tabGroups.all.flatMap(
       (group) => group.tabs.flatMap((tab) => {
-        if (!tab.isDirty || !(tab.input instanceof import_vscode32.TabInputCustom) || !this.authoringFile(tab.input.uri.fsPath) || tab.input.viewType === "uttori.indexedPng" && known.has(tab.input.uri.toString())) {
+        if (!tab.isDirty || !(tab.input instanceof import_vscode31.TabInputCustom) || !this.authoringFile(tab.input.uri.fsPath) || tab.input.viewType === "uttori.indexedPng" && known.has(tab.input.uri.toString())) {
           return [];
         }
         return [tab.input.uri.fsPath];
@@ -69429,10 +70737,10 @@ var SourceController = class {
       ...this.session.configuration?.researchRoots ?? [],
       ".uttori"
     ];
-    return import_vscode32.workspace.textDocuments.filter(
+    return import_vscode31.workspace.textDocuments.filter(
       (document) => document.isDirty && document.uri.scheme === "file" && this.contains(document.uri.fsPath)
     ).flatMap((document) => {
-      const relative4 = import_node_path37.default.relative(this.session.root, document.uri.fsPath).split(import_node_path37.default.sep).join("/");
+      const relative4 = import_node_path38.default.relative(this.session.root, document.uri.fsPath).split(import_node_path38.default.sep).join("/");
       if (!this.authoringFile(document.uri.fsPath)) {
         return [];
       }
@@ -69463,17 +70771,18 @@ var SourceController = class {
   buildTask(root, folder) {
     return this.builds.buildTask(root, folder);
   }
+  /** Map structured build failures onto workspace diagnostics for the source tree. */
   publishDiagnostics(error) {
     const message = error instanceof Error ? error.message : String(error);
     const diagnostics = /* @__PURE__ */ new Map();
     for (const line of message.split("\n").slice(0, 30)) {
       const match = /^(.*):(\d+): ([\w-]+): (.*)$/.exec(line);
-      const file = match?.[1] ?? import_node_path37.default.join(this.session.root, this.session.configuration.buildConfig);
+      const file = match?.[1] ?? import_node_path38.default.join(this.session.root, this.session.configuration.buildConfig);
       const row = Math.max(0, Number(match?.[2] ?? 1) - 1);
-      const diagnostic = new import_vscode32.Diagnostic(
-        new import_vscode32.Range(row, 0, row, 1),
+      const diagnostic = new import_vscode31.Diagnostic(
+        new import_vscode31.Range(row, 0, row, 1),
         match?.[4] ?? line,
-        import_vscode32.DiagnosticSeverity.Error
+        import_vscode31.DiagnosticSeverity.Error
       );
       diagnostic.source = "Uttori source";
       diagnostic.code = match?.[3];
@@ -69483,25 +70792,25 @@ var SourceController = class {
     }
     this.session.diagnostics.clear();
     this.session.diagnostics.set(
-      [...diagnostics].map(([file, values]) => [import_vscode32.Uri.file(file), values])
+      [...diagnostics].map(([file, values]) => [import_vscode31.Uri.file(file), values])
     );
   }
   contains(file) {
     if (!this.session.root) {
       return false;
     }
-    const relative4 = import_node_path37.default.relative(this.session.root, file);
-    return relative4 === "" || !relative4.startsWith(`..${import_node_path37.default.sep}`) && relative4 !== ".." && !import_node_path37.default.isAbsolute(relative4);
+    const relative4 = import_node_path38.default.relative(this.session.root, file);
+    return relative4 === "" || !relative4.startsWith(`..${import_node_path38.default.sep}`) && relative4 !== ".." && !import_node_path38.default.isAbsolute(relative4);
   }
   /** Ignore local evidence, verification reports and caches even when they share the repository root. */
   authoringFile(file) {
     if (!this.session.root || !this.session.configuration || !this.contains(file)) {
       return false;
     }
-    const relative4 = import_node_path37.default.relative(this.session.root, file).split(import_node_path37.default.sep).join("/");
+    const relative4 = import_node_path38.default.relative(this.session.root, file).split(import_node_path38.default.sep).join("/");
     if (
       // Finder metadata may change when browsing assets; it never contributes build bytes.
-      import_node_path37.default.basename(relative4) === ".DS_Store" || // These conventional subdirectories hold analysis/capture evidence or golden outputs,
+      import_node_path38.default.basename(relative4) === ".DS_Store" || // These conventional subdirectories hold analysis/capture evidence or golden outputs,
       // not editable source. Consumed files are still checked by the build receipt.
       this.session.configuration.sourceRoots.some(
         (root) => ["analysis", "build", "captures"].some(
@@ -69522,9 +70831,9 @@ var SourceController = class {
     if (!this.session.root || !this.session.configuration) {
       return;
     }
-    await import_vscode32.commands.executeCommand(
+    await import_vscode31.commands.executeCommand(
       "revealInExplorer",
-      import_vscode32.Uri.file(import_node_path37.default.join(this.session.root, this.session.configuration.researchRoots[0]))
+      import_vscode31.Uri.file(import_node_path38.default.join(this.session.root, this.session.configuration.researchRoots[0]))
     );
   }
   async restore() {
@@ -69537,7 +70846,7 @@ var SourceController = class {
     const roots = [
       ...new Set(
         (await Promise.all(
-          (import_vscode32.workspace.workspaceFolders ?? []).map((folder) => findSourceRoot(folder.uri.fsPath))
+          (import_vscode31.workspace.workspaceFolders ?? []).map((folder) => findSourceRoot(folder.uri.fsPath))
         )).filter((value) => !!value)
       )
     ];
@@ -69566,13 +70875,13 @@ var SourceController = class {
       if (buildChanged) {
         buttons.unshift("Save All and Rebuild");
       }
-      void import_vscode32.window.showErrorMessage(`Source: ${message}`, ...buttons).then(async (choice) => {
+      void import_vscode31.window.showErrorMessage(`Source: ${message}`, ...buttons).then(async (choice) => {
         if (choice === "Show Analysis Output") {
           this.output.show(true);
         }
         if (choice === "Save All and Rebuild") {
           await this.guard(async () => {
-            await import_vscode32.commands.executeCommand("workbench.action.files.saveAll");
+            await import_vscode31.commands.executeCommand("workbench.action.files.saveAll");
             return this.perform("build");
           });
         }
@@ -69581,6 +70890,7 @@ var SourceController = class {
       return void 0;
     }
   }
+  /** Tear down watchers, timers, and child processes for the controller. */
   dispose() {
     this.session.selectionRevision++;
     this.session.root = void 0;
@@ -69617,8 +70927,8 @@ function isBuildResult(value) {
 }
 var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var languageClients = /* @__PURE__ */ new Map();
-function languageClientFor(uri = import_vscode33.window.activeTextEditor?.document.uri) {
-  const folder = uri ? import_vscode33.workspace.getWorkspaceFolder(uri) : import_vscode33.workspace.workspaceFolders?.[0];
+function languageClientFor(uri = import_vscode32.window.activeTextEditor?.document.uri) {
+  const folder = uri ? import_vscode32.workspace.getWorkspaceFolder(uri) : import_vscode32.workspace.workspaceFolders?.[0];
   return languageClients.get(folder?.uri.toString() ?? "");
 }
 var editorInformationController;
@@ -69638,8 +70948,9 @@ var watchEntryUri;
 var saveListener;
 var watchTimer;
 var statusItem;
+var projectStatusItem;
 function serverInitializationOptions(resource) {
-  const config = import_vscode33.workspace.getConfiguration("asm", resource ?? null);
+  const config = import_vscode32.workspace.getConfiguration("asm", resource ?? null);
   return {
     configFile: config.get("configFile", ""),
     linkProject: config.get("linkProject", ""),
@@ -69650,12 +70961,12 @@ function serverInitializationOptions(resource) {
     architecture: config.get("architecture", ""),
     buildOutput: config.get("buildOutput", ""),
     baseImage: config.get("baseImage", ""),
-    workspaceTrusted: import_vscode33.workspace.isTrusted
+    workspaceTrusted: import_vscode32.workspace.isTrusted
   };
 }
 var analysisConfigurationIdentity = () => JSON.stringify(
-  (import_vscode33.workspace.workspaceFolders ?? []).map(({ uri }) => {
-    const config = import_vscode33.workspace.getConfiguration("asm", uri);
+  (import_vscode32.workspace.workspaceFolders ?? []).map(({ uri }) => {
+    const config = import_vscode32.workspace.getConfiguration("asm", uri);
     return Object.assign({}, config, {
       editorInfo: void 0,
       analysis: Object.assign({}, config.get("analysis", {}), {
@@ -69671,16 +70982,16 @@ function activate(context) {
   const binaryDrafts = new BinaryDrafts();
   context.subscriptions.push(binaryDrafts);
   registerPngEditor(context, binaryDrafts);
-  const analysisOutputChannel = import_vscode33.window.createOutputChannel("Uttori Analysis", { log: true });
+  const analysisOutputChannel = import_vscode32.window.createOutputChannel("Uttori Analysis", { log: true });
   context.subscriptions.push(analysisOutputChannel);
   analysisOutputChannel.info("Git source operations and analysis diagnostics are ready.");
   const worker = initializeAnalysisWorker(context.extensionPath, {
     log: (level, message) => analysisOutputChannel[level](message),
     sourceRoot: () => sourceController?.root,
-    maxMemoryMiB: (directory) => import_vscode33.workspace.getConfiguration("asm", import_vscode33.Uri.file(directory)).get("analysis.maxMemoryMiB", 4096)
+    maxMemoryMiB: (directory) => import_vscode32.workspace.getConfiguration("asm", import_vscode32.Uri.file(directory)).get("analysis.maxMemoryMiB", 4096)
   });
   context.subscriptions.push(worker);
-  const serverModule = context.asAbsolutePath(path50.join("server", "server.mjs"));
+  const serverModule = context.asAbsolutePath(path51.join("server", "server.mjs"));
   const assetPreviewController = new AssetPreviewController(languageClientFor);
   context.subscriptions.push(assetPreviewController);
   const serverOptions = {
@@ -69697,7 +71008,7 @@ function activate(context) {
       options: { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" } }
     }
   };
-  outputChannel = import_vscode33.window.createOutputChannel("Uttori Assembly Language Server", {
+  outputChannel = import_vscode32.window.createOutputChannel("Uttori Assembly Language Server", {
     log: true
   });
   sourceController = new SourceController(context, analysisOutputChannel, binaryDrafts);
@@ -69727,7 +71038,7 @@ function activate(context) {
         if (!information && !assetPreview) {
           return instruction2;
         }
-        return new import_vscode33.Hover(
+        return new import_vscode32.Hover(
           [
             ...instruction2?.contents ?? [],
             ...information?.contents ?? [],
@@ -69741,19 +71052,25 @@ function activate(context) {
     outputChannel,
     traceOutputChannel: outputChannel
   };
-  statusItem = import_vscode33.window.createStatusBarItem(import_vscode33.StatusBarAlignment.Left, 0);
+  statusItem = import_vscode32.window.createStatusBarItem(import_vscode32.StatusBarAlignment.Left, 0);
   statusItem.command = "asm.toggleWatch";
   updateStatusItem();
   statusItem.show();
-  const panelProvider = new ProjectPanelProvider(
+  projectStatusItem = import_vscode32.window.createStatusBarItem(import_vscode32.StatusBarAlignment.Left, 1);
+  projectStatusItem.command = "asm.openPanel";
+  projectStatusItem.show();
+  const panelProvider = new HomeProvider(
     context.extensionUri,
     () => languageClientFor(),
-    () => initConfig()
+    () => initConfig(),
+    {
+      getSource: () => sourceController,
+      getWatch: () => watchEnabled,
+      onSnapshot: updateProjectStatus
+    }
   );
-  const indexProvider = new IndexDetailsProvider(() => panelProvider.snapshot());
   const refreshProjectViews = () => {
-    void panelProvider.refresh();
-    indexProvider.refresh();
+    panelProvider.scheduleRefresh();
   };
   const outlineProvider = new ProjectOutlineProvider(() => languageClientFor());
   const coverageProvider = new AnalysisCoverageProvider((root, inputSha256) => {
@@ -69779,8 +71096,12 @@ function activate(context) {
     sourceController.onDidBuild(({ root, build }) => {
       analysisAnnotationController.buildCompleted(build.debugMapFile, root);
       coverageProvider.refresh();
+      panelProvider.invalidateCoverage();
     }),
-    sourceController.onDidChangeTreeData(() => coverageProvider.refresh()),
+    sourceController.onDidChangeTreeData(() => {
+      coverageProvider.refresh();
+      panelProvider.scheduleRefresh();
+    }),
     sourceController.onDidChangeSavedInput(scheduleWatchBuild),
     linkedBuildController.onDidChangeInput(() => {
       if (!sourceController?.root) {
@@ -69810,33 +71131,28 @@ function activate(context) {
     sourceController.onDidSelectProject(refreshAnalysisViews)
   );
   const evidenceInspector = new AnalysisEvidenceInspector();
-  const analysisManifestWatcher = import_vscode33.workspace.createFileSystemWatcher("**/analysis.json");
-  const analysisShardWatcher = import_vscode33.workspace.createFileSystemWatcher("**/analysis/**/*.json");
-  const coverageInputWatcher = import_vscode33.workspace.createFileSystemWatcher("**/*");
-  const buildSummaryWatcher = import_vscode33.workspace.createFileSystemWatcher(
+  const analysisManifestWatcher = import_vscode32.workspace.createFileSystemWatcher("**/analysis.json");
+  const analysisShardWatcher = import_vscode32.workspace.createFileSystemWatcher("**/analysis/**/*.json");
+  const coverageInputWatcher = import_vscode32.workspace.createFileSystemWatcher("**/*");
+  const buildSummaryWatcher = import_vscode32.workspace.createFileSystemWatcher(
     "**/.uttori-local/builds/{summary,current}.json"
   );
   context.subscriptions.push(
     ...registerDebugging(context.extensionPath),
     outputChannel,
     statusItem,
+    projectStatusItem,
     analysisAnnotationController,
     sourcesProvider,
     coverageProvider,
-    indexProvider,
-    import_vscode33.window.createTreeView(IndexDetailsProvider.viewId, { treeDataProvider: indexProvider }),
-    import_vscode33.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
+    import_vscode32.window.registerWebviewViewProvider(HomeProvider.viewId, panelProvider, {
       webviewOptions: { retainContextWhenHidden: true }
     }),
-    import_vscode33.window.createTreeView(ProjectOutlineProvider.viewId, {
+    import_vscode32.window.createTreeView(ProjectOutlineProvider.viewId, {
       treeDataProvider: outlineProvider,
       showCollapseAll: true
     }),
-    import_vscode33.window.createTreeView(AnalysisCoverageProvider.viewId, {
-      treeDataProvider: coverageProvider,
-      showCollapseAll: true
-    }),
-    import_vscode33.window.createTreeView(AnalysisSourcesProvider.viewId, {
+    import_vscode32.window.createTreeView(AnalysisSourcesProvider.viewId, {
       treeDataProvider: sourcesProvider,
       showCollapseAll: true
     }),
@@ -69856,97 +71172,99 @@ function activate(context) {
     analysisShardWatcher.onDidCreate(refreshAnalysisViews),
     analysisShardWatcher.onDidChange(refreshAnalysisViews),
     analysisShardWatcher.onDidDelete(refreshAnalysisViews),
-    import_vscode33.window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
-    import_vscode33.window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
+    import_vscode32.window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
+    import_vscode32.window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
       analysisAnnotationController.refresh(textEditor);
     }),
-    import_vscode33.window.onDidChangeTextEditorOptions(({ textEditor }) => {
+    import_vscode32.window.onDidChangeTextEditorOptions(({ textEditor }) => {
       analysisAnnotationController.refresh(textEditor);
     }),
-    import_vscode33.workspace.onDidChangeTextDocument(
+    import_vscode32.workspace.onDidChangeTextDocument(
       ({ document }) => analysisAnnotationController.documentChanged(document)
     ),
-    import_vscode33.workspace.onDidSaveTextDocument(() => analysisAnnotationController.invalidate()),
-    import_vscode33.workspace.onDidCloseTextDocument((document) => {
+    import_vscode32.workspace.onDidSaveTextDocument(() => analysisAnnotationController.invalidate()),
+    import_vscode32.workspace.onDidCloseTextDocument((document) => {
       if (document.uri.scheme === "file" && analysisAnnotationController.provider.tracks(document.uri.fsPath)) {
         analysisAnnotationController.invalidate();
       }
     }),
-    import_vscode33.debug.onDidStartDebugSession((session) => {
+    import_vscode32.debug.onDidStartDebugSession((session) => {
       if (session.configuration.uttoriRunAndWatch === true) {
         watchedDebugSession = session;
       }
       analysisAnnotationController.refresh();
     }),
-    import_vscode33.debug.onDidTerminateDebugSession((session) => {
+    import_vscode32.debug.onDidTerminateDebugSession((session) => {
       if (watchedDebugSession?.id === session.id) {
         watchedDebugSession = void 0;
       }
       analysisAnnotationController.refresh();
     }),
-    import_vscode33.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
+    import_vscode32.commands.registerCommand(
       "asm.assetPreview.open",
       (request) => assetPreviewController.open(request)
     ),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand(
       TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
       () => analysisAnnotationController.toggle()
     ),
-    import_vscode33.commands.registerCommand("asm.toggleWatch", toggleWatch),
-    import_vscode33.commands.registerCommand("asm.runEmulator", () => buildAndLaunch(context, true)),
-    import_vscode33.commands.registerCommand("asm.debugEmulator", () => buildAndLaunch(context, false)),
-    import_vscode33.commands.registerCommand("asm.runAndWatch", () => runAndWatch(context)),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand("asm.toggleWatch", toggleWatch),
+    import_vscode32.commands.registerCommand("asm.runEmulator", () => buildAndLaunch(context, true)),
+    import_vscode32.commands.registerCommand("asm.debugEmulator", () => buildAndLaunch(context, false)),
+    import_vscode32.commands.registerCommand("asm.runAndWatch", () => runAndWatch(context)),
+    import_vscode32.commands.registerCommand(
       "asm.configureEmulatorRuntime",
-      () => configureEmulatorRuntime(context, import_vscode33.window.activeTextEditor?.document.uri)
+      () => configureEmulatorRuntime(context, import_vscode32.window.activeTextEditor?.document.uri)
     ),
-    import_vscode33.commands.registerCommand("asm.initConfig", () => initConfig()),
-    import_vscode33.commands.registerCommand("asm.openConfig", () => panelProvider.openConfiguration()),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand("asm.initConfig", () => initConfig()),
+    import_vscode32.commands.registerCommand("asm.openConfig", () => panelProvider.openConfiguration()),
+    import_vscode32.commands.registerCommand(
       "asm.openPanel",
-      () => import_vscode33.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
+      () => import_vscode32.commands.executeCommand(`${HomeProvider.viewId}.focus`)
     ),
-    import_vscode33.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
-    import_vscode33.commands.registerCommand("asm.coverage.refresh", () => coverageProvider.refresh()),
-    import_vscode33.commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
-    import_vscode33.commands.registerCommand("asm.analysis.navigate", (element) => {
+    import_vscode32.commands.registerCommand("asm.home.next", () => panelProvider.runNext()),
+    import_vscode32.commands.registerCommand("asm.home.refresh", () => panelProvider.refresh()),
+    import_vscode32.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
+    import_vscode32.commands.registerCommand("asm.coverage.refresh", () => coverageProvider.refresh()),
+    import_vscode32.commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
+    import_vscode32.commands.registerCommand("asm.analysis.navigate", (element) => {
       const target = parseAnalysisNavigationTarget(element);
       if (target) {
         void navigateToAnalysisLocation(target);
       }
     }),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand(
       "asm.coverage.classifyRange",
       () => sourceController?.editEvidence("classification")
     ),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand(
       "asm.coverage.setStateEntryPoint",
       () => sourceController?.editEvidence("state")
     ),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand(
       "asm.coverage.resolveTarget",
       () => sourceController?.editEvidence("targets")
     ),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand(
       "asm.coverage.renameLabel",
       () => sourceController?.editEvidence("symbols")
     ),
-    import_vscode33.commands.registerCommand(
+    import_vscode32.commands.registerCommand(
       "asm.coverage.explainEvidence",
       () => evidenceInspector.explainEvidence()
     ),
-    import_vscode33.workspace.onDidGrantWorkspaceTrust(() => {
+    import_vscode32.workspace.onDidGrantWorkspaceTrust(() => {
       refreshProjectViews();
       for (const [key3, languageClient] of languageClients) {
         void languageClient.sendNotification("workspace/didChangeConfiguration", {
-          settings: { asm: serverInitializationOptions(key3 ? import_vscode33.Uri.parse(key3) : void 0) }
+          settings: { asm: serverInitializationOptions(key3 ? import_vscode32.Uri.parse(key3) : void 0) }
         });
       }
     }),
-    import_vscode33.workspace.onDidChangeConfiguration((event) => {
+    import_vscode32.workspace.onDidChangeConfiguration((event) => {
       for (const [key3, languageClient] of languageClients) {
-        const resource = key3 ? import_vscode33.Uri.parse(key3) : void 0;
+        const resource = key3 ? import_vscode32.Uri.parse(key3) : void 0;
         if (event.affectsConfiguration("asm", resource)) {
           void languageClient.sendNotification("workspace/didChangeConfiguration", {
             settings: { asm: serverInitializationOptions(resource) }
@@ -69978,10 +71296,10 @@ function activate(context) {
       return;
     }
     const owned = [];
-    const owns = (uri) => (import_vscode33.workspace.getWorkspaceFolder(uri)?.uri.toString() ?? "") === key3;
+    const owns = (uri) => (import_vscode32.workspace.getWorkspaceFolder(uri)?.uri.toString() ?? "") === key3;
     const watch = (pattern) => {
-      const watcher = import_vscode33.workspace.createFileSystemWatcher(
-        folder ? new import_vscode33.RelativePattern(folder, pattern) : pattern
+      const watcher = import_vscode32.workspace.createFileSystemWatcher(
+        folder ? new import_vscode32.RelativePattern(folder, pattern) : pattern
       );
       owned.push(watcher);
       return watcher;
@@ -70054,15 +71372,15 @@ function activate(context) {
         return;
       }
       outputChannel?.info(`Language server ready for ${key3 || "standalone files"}.`);
-      if (context.extensionMode === import_vscode33.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
+      if (context.extensionMode === import_vscode32.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
         void client2.setTrace(import_node.Trace.Verbose);
       }
       refreshProjectViews();
       owned.push(
         client2.onRequest("asm/researchBuffers", ({ root }) => {
-          const buffers = import_vscode33.workspace.textDocuments.filter((document) => {
-            const relative4 = path50.relative(root, document.uri.fsPath);
-            return document.uri.scheme === "file" && document.uri.fsPath.endsWith(".json") && relative4 !== ".." && !relative4.startsWith(`..${path50.sep}`) && !path50.isAbsolute(relative4);
+          const buffers = import_vscode32.workspace.textDocuments.filter((document) => {
+            const relative4 = path51.relative(root, document.uri.fsPath);
+            return document.uri.scheme === "file" && document.uri.fsPath.endsWith(".json") && relative4 !== ".." && !relative4.startsWith(`..${path51.sep}`) && !path51.isAbsolute(relative4);
           }).map((document) => ({
             uri: document.uri.toString(),
             version: document.version,
@@ -70097,7 +71415,7 @@ function activate(context) {
     });
   };
   const reconcileClients = () => {
-    const folders = import_vscode33.workspace.workspaceFolders?.length ? import_vscode33.workspace.workspaceFolders : [void 0];
+    const folders = import_vscode32.workspace.workspaceFolders?.length ? import_vscode32.workspace.workspaceFolders : [void 0];
     const retained = new Set(folders.map((folder) => folder?.uri.toString() ?? ""));
     for (const [key3, languageClient] of languageClients) {
       if (retained.has(key3)) {
@@ -70115,8 +71433,8 @@ function activate(context) {
     }
   };
   context.subscriptions.push(
-    import_vscode33.workspace.onDidChangeWorkspaceFolders(reconcileClients),
-    import_vscode33.window.onDidChangeActiveTextEditor(() => {
+    import_vscode32.workspace.onDidChangeWorkspaceFolders(reconcileClients),
+    import_vscode32.window.onDidChangeActiveTextEditor(() => {
       reconcileClients();
       refreshProjectViews();
       outlineProvider.refresh();
@@ -70153,14 +71471,14 @@ function toggleWatch() {
     watchEntryUri = resolveBuildEntryUri();
     if (!watchEntryUri) {
       stopWatch();
-      void import_vscode33.window.showErrorMessage(
+      void import_vscode32.window.showErrorMessage(
         "Assembly: open a source file (or set asm.entryPoints) before watching."
       );
       return;
     }
-    saveListener = import_vscode33.workspace.onDidSaveTextDocument(onDocumentSaved);
-    void import_vscode33.window.showInformationMessage(
-      `Assembly: watching ${path50.basename(import_vscode33.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+    saveListener = import_vscode32.workspace.onDidSaveTextDocument(onDocumentSaved);
+    void import_vscode32.window.showInformationMessage(
+      `Assembly: watching ${path51.basename(import_vscode32.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   }
   updateStatusItem();
@@ -70187,25 +71505,25 @@ var completeArtifacts = (result) => result.ok && result.outputPath && result.deb
 async function launchLiveBuild(context, result, noDebug, watched) {
   const artifacts = completeArtifacts(result);
   if (!artifacts) {
-    void import_vscode33.window.showErrorMessage(
+    void import_vscode32.window.showErrorMessage(
       "Assembly: successful build did not return a debug artifact pair."
     );
     return false;
   }
-  const resource = import_vscode33.Uri.file(artifacts.outputPath);
-  const folder = import_vscode33.workspace.getWorkspaceFolder(resource) ?? import_vscode33.workspace.workspaceFolders?.[0];
+  const resource = import_vscode32.Uri.file(artifacts.outputPath);
+  const folder = import_vscode32.workspace.getWorkspaceFolder(resource) ?? import_vscode32.workspace.workspaceFolders?.[0];
   const binding = configuredEmulatorRuntime(context, resource) ?? await configureEmulatorRuntime(context, resource);
   if (!binding) {
     return false;
   }
   if (watched && watchedDebugSession) {
-    await import_vscode33.debug.stopDebugging(watchedDebugSession);
+    await import_vscode32.debug.stopDebugging(watchedDebugSession);
   }
   const configuration = {
     ...liveDebugConfiguration(binding, artifacts, folder),
     ...watched ? { uttoriRunAndWatch: true } : {}
   };
-  return import_vscode33.debug.startDebugging(folder, configuration, { noDebug });
+  return import_vscode32.debug.startDebugging(folder, configuration, { noDebug });
 }
 async function buildAndLaunch(context, noDebug) {
   const epoch = watchEpoch;
@@ -70221,7 +71539,7 @@ async function runAndWatch(context) {
   }
   const entry = resolveBuildEntryUri();
   if (!entry) {
-    void import_vscode33.window.showErrorMessage(
+    void import_vscode32.window.showErrorMessage(
       "Assembly: open a source file (or set asm.entryPoints) before running and watching."
     );
     return;
@@ -70229,7 +71547,7 @@ async function runAndWatch(context) {
   watchEnabled = true;
   watchMode = "emulator";
   watchEntryUri = entry;
-  saveListener = import_vscode33.workspace.onDidSaveTextDocument(onDocumentSaved);
+  saveListener = import_vscode32.workspace.onDidSaveTextDocument(onDocumentSaved);
   updateStatusItem();
   const epoch = watchEpoch;
   watchBuildRunning = true;
@@ -70247,7 +71565,7 @@ async function runAndWatch(context) {
     return;
   }
   if (!result?.ok) {
-    void import_vscode33.window.showWarningMessage(
+    void import_vscode32.window.showWarningMessage(
       "Assembly: Run and Watch is active. Fix the build error and save to launch the emulator."
     );
     return;
@@ -70260,20 +71578,20 @@ function resolveBuildEntryUri() {
   if (sourceController?.buildUri) {
     return sourceController.buildUri;
   }
-  const activeUri = import_vscode33.window.activeTextEditor?.document.uri;
-  const entryPoints = import_vscode33.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
-  const folder = activeUri ? import_vscode33.workspace.getWorkspaceFolder(activeUri) : import_vscode33.workspace.workspaceFolders?.[0];
+  const activeUri = import_vscode32.window.activeTextEditor?.document.uri;
+  const entryPoints = import_vscode32.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
+  const folder = activeUri ? import_vscode32.workspace.getWorkspaceFolder(activeUri) : import_vscode32.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    const resolved = path50.isAbsolute(first) ? import_vscode33.Uri.file(first).toString() : import_vscode33.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path51.isAbsolute(first) ? import_vscode32.Uri.file(first).toString() : import_vscode32.Uri.joinPath(folder.uri, first).toString();
     outputChannel?.info(
-      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode33.Uri.parse(resolved).fsPath}`
+      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode32.Uri.parse(resolved).fsPath}`
     );
     return resolved;
   }
-  const active = import_vscode33.window.activeTextEditor?.document.uri.toString();
+  const active = import_vscode32.window.activeTextEditor?.document.uri.toString();
   if (active) {
-    outputChannel?.info(`Build entry from active editor: ${import_vscode33.Uri.parse(active).fsPath}`);
+    outputChannel?.info(`Build entry from active editor: ${import_vscode32.Uri.parse(active).fsPath}`);
   }
   return active;
 }
@@ -70327,19 +71645,19 @@ function isAssemblyDocument(document) {
   return ASSEMBLY_LANGUAGE_IDS.includes(document.languageId) || /\.(asm|src|s|inc)$/i.test(document.fileName);
 }
 async function initConfig() {
-  const folder = import_vscode33.workspace.workspaceFolders?.[0];
+  const folder = import_vscode32.workspace.workspaceFolders?.[0];
   if (!folder) {
-    void import_vscode33.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
+    void import_vscode32.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
     return;
   }
-  const configUri = import_vscode33.Uri.joinPath(folder.uri, "uttori-asm.config.json");
-  const config = import_vscode33.workspace.getConfiguration("asm");
+  const configUri = import_vscode32.Uri.joinPath(folder.uri, "uttori-asm.config.json");
+  const config = import_vscode32.workspace.getConfiguration("asm");
   let entryPoints = config.get("entryPoints", []);
-  const active = import_vscode33.window.activeTextEditor?.document;
+  const active = import_vscode32.window.activeTextEditor?.document;
   if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
-    const relative4 = path50.relative(folder.uri.fsPath, active.fileName);
+    const relative4 = path51.relative(folder.uri.fsPath, active.fileName);
     entryPoints = [
-      relative4 && !relative4.startsWith("..") ? relative4 : path50.basename(active.fileName)
+      relative4 && !relative4.startsWith("..") ? relative4 : path51.basename(active.fileName)
     ];
   }
   const includePaths = config.get("includePaths", []);
@@ -70375,18 +71693,18 @@ async function initConfig() {
     body.baseImage = baseImage;
   }
   try {
-    await import_vscode33.workspace.fs.stat(configUri);
-    const existing = await import_vscode33.workspace.openTextDocument(configUri);
-    await import_vscode33.window.showTextDocument(existing);
-    void import_vscode33.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
+    await import_vscode32.workspace.fs.stat(configUri);
+    const existing = await import_vscode32.workspace.openTextDocument(configUri);
+    await import_vscode32.window.showTextDocument(existing);
+    void import_vscode32.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
     return;
   } catch {
   }
-  await import_vscode33.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
+  await import_vscode32.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
 `));
-  await config.update("configFile", "uttori-asm.config.json", import_vscode33.ConfigurationTarget.Workspace);
-  const document = await import_vscode33.workspace.openTextDocument(configUri);
-  await import_vscode33.window.showTextDocument(document);
+  await config.update("configFile", "uttori-asm.config.json", import_vscode32.ConfigurationTarget.Workspace);
+  const document = await import_vscode32.workspace.openTextDocument(configUri);
+  await import_vscode32.window.showTextDocument(document);
 }
 async function runBuild(documentUri, transient = false) {
   outputChannel?.show(true);
@@ -70410,23 +71728,23 @@ async function runBuild(documentUri, transient = false) {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       outputChannel?.error(message);
-      void import_vscode33.window.showErrorMessage(`Source build: ${message}`);
+      void import_vscode32.window.showErrorMessage(`Source build: ${message}`);
       return { ok: false, message };
     }
   }
   try {
     const linked = await linkedBuildController?.buildConfigured(
-      documentUri ? import_vscode33.Uri.parse(documentUri) : void 0
+      documentUri ? import_vscode32.Uri.parse(documentUri) : void 0
     );
     if (linked) {
-      const root = import_vscode33.workspace.getWorkspaceFolder(import_vscode33.Uri.file(linked.outputFile))?.uri.fsPath ?? path50.dirname(linked.outputFile);
+      const root = import_vscode32.workspace.getWorkspaceFolder(import_vscode32.Uri.file(linked.outputFile))?.uri.fsPath ?? path51.dirname(linked.outputFile);
       editorInformationController?.buildCompleted(linked.debugMapFile, root);
       const message = `Assembly: linked ${linked.outputSize} bytes + debug map \u2192 ${linked.outputFile}.`;
       outputChannel?.info(message);
       if (transient) {
-        import_vscode33.window.setStatusBarMessage(message, 4e3);
+        import_vscode32.window.setStatusBarMessage(message, 4e3);
       } else {
-        void import_vscode33.window.showInformationMessage(message);
+        void import_vscode32.window.showInformationMessage(message);
       }
       return {
         ok: true,
@@ -70445,24 +71763,24 @@ async function runBuild(documentUri, transient = false) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     outputChannel?.error(message);
-    void import_vscode33.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode32.window.showErrorMessage(`Assembly: ${message}`);
     return { ok: false, message };
   }
-  const client2 = languageClientFor(documentUri ? import_vscode33.Uri.parse(documentUri) : void 0);
+  const client2 = languageClientFor(documentUri ? import_vscode32.Uri.parse(documentUri) : void 0);
   if (!client2) {
     const message = "Language server is not running.";
     outputChannel?.error(message);
-    void import_vscode33.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode32.window.showErrorMessage(`Assembly: ${message}`);
     return void 0;
   }
   if (!documentUri) {
     const message = "Open a source file or set asm.entryPoints before building.";
     outputChannel?.error(message);
-    void import_vscode33.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode32.window.showErrorMessage(`Assembly: ${message}`);
     return void 0;
   }
-  const document = import_vscode33.Uri.parse(documentUri);
-  const config = import_vscode33.workspace.getConfiguration("asm", document);
+  const document = import_vscode32.Uri.parse(documentUri);
+  const config = import_vscode32.workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get("buildOutput", ""), document);
   const baseImage = resolveConfiguredPath(config.get("baseImage", ""), document);
   outputChannel?.info(`  file: ${document.fsPath}`);
@@ -70479,27 +71797,27 @@ async function runBuild(documentUri, transient = false) {
       if (result.debugMapPath) {
         editorInformationController?.buildCompleted(
           result.debugMapPath,
-          import_vscode33.workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path50.dirname(document.fsPath)
+          import_vscode32.workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path51.dirname(document.fsPath)
         );
       }
       const changed2 = result.outputChanged === false && result.debugMapChanged === false ? " (unchanged)" : "";
       const message = `Assembly: built ${result.bytes ?? 0} bytes + debug map \u2192 ${result.outputPath ?? "output"}${changed2}.`;
       outputChannel?.info(message);
       if (transient) {
-        import_vscode33.window.setStatusBarMessage(message, 4e3);
+        import_vscode32.window.setStatusBarMessage(message, 4e3);
       } else {
-        void import_vscode33.window.showInformationMessage(message);
+        void import_vscode32.window.showInformationMessage(message);
       }
     } else {
       const detail = result?.message ?? "unknown error";
       outputChannel?.error(`Build failed: ${detail}`);
-      void import_vscode33.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+      void import_vscode32.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     }
     return result;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     outputChannel?.error(`Build request failed: ${detail}`);
-    void import_vscode33.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+    void import_vscode32.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     return void 0;
   }
 }
@@ -70507,11 +71825,11 @@ function resolveConfiguredPath(configuredPath, document) {
   if (!configuredPath) {
     return void 0;
   }
-  if (path50.isAbsolute(configuredPath)) {
-    return path50.normalize(configuredPath);
+  if (path51.isAbsolute(configuredPath)) {
+    return path51.normalize(configuredPath);
   }
-  const folder = import_vscode33.workspace.getWorkspaceFolder(document);
-  return path50.resolve(folder?.uri.fsPath ?? path50.dirname(document.fsPath), configuredPath);
+  const folder = import_vscode32.workspace.getWorkspaceFolder(document);
+  return path51.resolve(folder?.uri.fsPath ?? path51.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
   if (!watchEnabled) {
@@ -70524,6 +71842,19 @@ function updateStatusItem() {
     statusItem.text = "$(eye) Assembly Watch: On";
     statusItem.tooltip = "Assembly is rebuilding on save. Click to stop.";
   }
+}
+function updateProjectStatus(snapshot) {
+  if (snapshot.mode === "source") {
+    const remaining = snapshot.health.coverage && Number.isFinite(snapshot.health.coverage.remainingPercent) ? `${snapshot.health.coverage.remainingPercent.toFixed(0)}% remaining` : void 0;
+    const nextTitle = snapshot.next?.title.replace(/^\d+\.\s*/u, "").split(" \xB7 ")[0];
+    projectStatusItem.text = `$(home) ${[snapshot.name, remaining, nextTitle ? `Next: ${nextTitle}` : void 0].filter(Boolean).join(" \xB7 ")}`;
+  } else if (snapshot.mode === "assembly") {
+    projectStatusItem.text = `$(home) ${snapshot.name} \xB7 index ${snapshot.indexReady ? "ready" : "waiting"}`;
+  } else {
+    projectStatusItem.text = "$(home) Uttori";
+  }
+  projectStatusItem.tooltip = "Open Uttori Home";
+  projectStatusItem.command = "asm.openPanel";
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

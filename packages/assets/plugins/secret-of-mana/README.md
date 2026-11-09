@@ -99,10 +99,10 @@ colorways belong in `paletteVariants`, with complete captured records retained i
 palette banks are removed. These historical rectangles do not own current pixels.
 The project naming review can preview referenced palettes without repeating pose art.
 
-Open `secret-of-mana/` as the editor workspace to use its checked-in
+Open `../secret-of-mana/` as the editor workspace to use its checked-in
 `.vscode/settings.json`; this loads the disassembly config and registers the SoM
 formats for Asset Preview. When opening the monorepo root instead, set
-`asm.configFile` to `secret-of-mana/disassembly/uttori-asm.config.json` in that
+`asm.configFile` to `disassembly/uttori-asm.config.json` in that
 workspace. The frame preview displays the complete atlas, ROM palette address and
 all catalogue users of that palette. Workspace plugin loading requires a trusted
 workspace.
@@ -151,7 +151,7 @@ palette mismatch with the catalogue.
 
 The sidecar format is deliberately small. `width` and `height` equal the PNG dimensions;
 `version` is `1`. `paletteRefs` lists ROM addresses in the shared
-[`rom-palettes.json`](../../../../secret-of-mana/disassembly/assets/palettes/rom-palettes.json)
+[`rom-palettes.json`](../../../../../secret-of-mana/disassembly/assets/palettes/rom-palettes.json)
 catalogue. Each address begins a little-endian BGR555 span. `firstIndex: 1` means
 the ROM stores fifteen visible actor colors, while PNG index zero is transparent;
 `firstIndex: 0` means the ROM stores all sixteen boss colors, including a hidden
@@ -258,7 +258,7 @@ To add a sprite from scratch:
    assemble the entire ROM; require the SHA-256 of `rebuilt-content.sfc` to match
    the source ROM before accepting a no-edit migration.
 
-For the existing capture set, `secret-of-mana/tools/build-frame-atlases.py` performs
+For the existing capture set, `../secret-of-mana/tools/build-frame-atlases.py` performs
 steps 2–3 from the original ROM, shared palette catalogue, and reviewed Potos,
 Dwarf, Mantis Ant and Tropicallo records when explicitly seeding new files with
 `--seed`. It also writes complete bottom tile atlases and records source-only tiles.
@@ -287,14 +287,14 @@ list and editor preview reveal every graphic affected by that word. The frame
 atlas does not specify animation timing; runtime variants such as Dwarf/Watts are
 recorded with `paletteVariants` and separate ROM palette references.
 
-The [WRAM cartridge example](../../../../secret-of-mana/examples/asset-wram/README.md)
+The [WRAM cartridge example](../../../../../secret-of-mana/examples/asset-wram/README.md)
 loads this plugin with the CLI and repacks freshly assembled WRAM images. The
-[plugin tests](../../../../secret-of-mana/tools/som-asset-plugin.test.mjs) check all LZ
+[plugin tests](../../../../../secret-of-mana/tools/som-asset-plugin.test.mjs) check all LZ
 modes, actor and boss tile round trips, transform chaining and an actual assembled cartridge.
 Run them from the repository root with:
 
 ```sh
-node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-asset-plugin.test.mjs
+node --conditions=uttori-source --import tsx --test ../secret-of-mana/tools/som-asset-plugin.test.mjs
 ```
 
 For another Secret of Mana compression or graphics mode, keep the game codec next to its
@@ -328,13 +328,13 @@ Run from the repository root (after building workspace packages, plain `node` al
 
 ```sh
 # Add reviewed composition to existing sidecars; leaves PNGs untouched.
-python3 secret-of-mana/tools/build-frame-atlases.py
+python3 ../secret-of-mana/tools/build-frame-atlases.py
 # To seed original ROM pixels, --seed requires new output files and refuses existing ones.
-python3 secret-of-mana/tools/build-frame-atlases.py --atlas rabite --seed --output /tmp/new-sprite-images
+python3 ../secret-of-mana/tools/build-frame-atlases.py --atlas rabite --seed --output /tmp/new-sprite-images
 
 # Dry-run by default; add --write to publish. --atlas is optional and repeatable.
-node --conditions=uttori-source --import tsx secret-of-mana/tools/refresh-frame-atlases.mjs --atlas enemy/rabite-frames.png
-node --conditions=uttori-source --import tsx secret-of-mana/tools/edit-sprite-palette.mjs --edits /tmp/palette-edits.json
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/refresh-frame-atlases.mjs --atlas enemy/rabite-frames.png
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/edit-sprite-palette.mjs --edits /tmp/palette-edits.json
 ```
 
 Palette edits are a JSON array: `[{"palette":"<catalogue ID>","index":1,"rgb":[255,0,0]}]`.
@@ -380,9 +380,9 @@ and swatches, and include sources/map. It is relocatable;
 its identity includes the adapter revision and reference ROM hash.
 
 ```sh
-node --conditions=uttori-source --import tsx secret-of-mana/tools/snapshot-sprite-assets.mjs --output /tmp/sprite-baseline.json
-node --conditions=uttori-source --import tsx secret-of-mana/tools/refresh-frame-atlases.mjs --baseline /tmp/sprite-baseline.json
-node --conditions=uttori-source --import tsx secret-of-mana/tools/edit-sprite-palette.mjs --baseline /tmp/sprite-baseline.json --edits /tmp/palette-edits.json
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/snapshot-sprite-assets.mjs --output /tmp/sprite-baseline.json
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/refresh-frame-atlases.mjs --baseline /tmp/sprite-baseline.json
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/edit-sprite-palette.mjs --baseline /tmp/sprite-baseline.json --edits /tmp/palette-edits.json
 ```
 
 The snapshot command refuses to overwrite an existing baseline. Authoring commands
@@ -397,9 +397,9 @@ validate placement and references against their exact source snapshot.
 
 ```sh
 node packages/cli/out/cli.mjs source build /path/to/project
-node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --source-only
-node --conditions=uttori-source --import tsx secret-of-mana/tools/build-palette-previews.mjs --export /path/to/export --check
-node --conditions=uttori-source --import tsx secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --rom /path/to/rebuilt.sfc
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --source-only
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/build-palette-previews.mjs --export /path/to/export --check
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/check-sprite-palettes.mjs --export /path/to/export --rom /path/to/rebuilt.sfc
 ```
 
 The build command validates the selected Git source snapshot. The sprite
@@ -414,7 +414,7 @@ shape and the HiROM address mapping remain explicit SoM adapter policy.
 Run both conversion and authoring regressions with:
 
 ```sh
-node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-asset-plugin.test.mjs secret-of-mana/tools/asset-authoring.test.mjs
+node --conditions=uttori-source --import tsx --test ../secret-of-mana/tools/som-asset-plugin.test.mjs ../secret-of-mana/tools/asset-authoring.test.mjs
 ```
 
 ## Editable rooms (`som.room`)
@@ -482,13 +482,13 @@ origin. Missing external cells fail explicitly rather than becoming zero. Use
 instance for compatibility. Context-free room previews cannot resolve such layouts
 without independently retained history. The Water Palace layout 0025 is the
 captured regression example. The seven initial
-room assets are seeded by `secret-of-mana/tools/build-haunted-room-assets.mjs`,
+room assets are seeded by `../secret-of-mana/tools/build-haunted-room-assets.mjs`,
 which refuses to overwrite an edited source. Its `--check` mode verifies the
 no-edit ROM conversion and saved preview PNGs.
 
 ```sh
-node --conditions=uttori-source --import tsx --test secret-of-mana/tools/som-room-assets.test.mjs
-node --conditions=uttori-source --import tsx secret-of-mana/tools/build-haunted-room-assets.mjs --check
+node --conditions=uttori-source --import tsx --test ../secret-of-mana/tools/som-room-assets.test.mjs
+node --conditions=uttori-source --import tsx ../secret-of-mana/tools/build-haunted-room-assets.mjs --check
 ```
 
 ## Editable dialogue (`som.dialogue.script`)

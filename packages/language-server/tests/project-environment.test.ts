@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 
@@ -94,24 +95,13 @@ test("source adapters survive language-tooling root selection and snapshot publi
   );
 });
 
-test("repository editor config discovers the packaged SoM sprite preview format", async (t) => {
-  const project = path.resolve("secret-of-mana");
-  const settings: unknown = JSON.parse(
-    fs.readFileSync(path.join(project, ".vscode/settings.json"), "utf8"),
-  );
-  if (
-    typeof settings !== "object" ||
-    settings === null ||
-    Array.isArray(settings) ||
-    typeof settings["asm.configFile"] !== "string"
-  ) {
-    throw new Error("Expected editor settings with asm.configFile.");
-  }
+test("editor config discovers the packaged SoM preview formats", async (t) => {
+  const project = fileURLToPath(new URL("./fixtures/som-project", import.meta.url));
   const controller = createController();
   try {
     const state = await controller.replace({
       cwd: project,
-      configFile: settings["asm.configFile"],
+      configFile: "uttori-asm.config.json",
       workspaceTrusted: true,
     });
     t.truthy(state.index.environment.getAssetFormat("som.sprite.frames", state.index.target));

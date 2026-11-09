@@ -140,8 +140,8 @@ var EditorInformationProvider = class {
   #trackedRevision = 0;
   /**
    * New successful build paths bypass workspace glob limits and invalidate old artifact facts.
-   * @param {string} mapFile Debug map published atomically with a successful output.
-   * @param {string} sourceRoot Root used to resolve portable source paths.
+   * @param mapFile Debug map published atomically with a successful output.
+   * @param sourceRoot Root used to resolve portable source paths.
    */
   buildCompleted(mapFile, sourceRoot) {
     const file = path.resolve(mapFile);
@@ -176,8 +176,8 @@ var EditorInformationProvider = class {
   }
   /**
    * Ignore unrelated filesystem churn; discovery changes still invalidate the candidate list.
-   * @param {string} file Changed absolute file path.
-   * @returns {boolean} Whether this file can invalidate known source facts or map discovery.
+   * @param file Changed absolute file path.
+   * @returns Whether this file can invalidate known source facts or map discovery.
    */
   tracks(file) {
     return this.#trackedFiles.has(path.resolve(file)) || file.endsWith(".debug.json");
@@ -192,9 +192,9 @@ var EditorInformationProvider = class {
   }
   /**
    * Coalesce identical work while allowing newer generations to replace invalidated requests.
-   * @param {string} key Complete artifact/project, range, and request identity.
-   * @param {Function} operation Deferred host request.
-   * @returns {Promise<T>} Shared result; rejection removes the in-flight entry for retry.
+   * @param key Complete artifact/project, range, and request identity.
+   * @param operation Deferred host request.
+   * @returns Shared result; rejection removes the in-flight entry for retry.
    */
   async #request(key, operation) {
     const existing = this.#pending.get(key);
@@ -385,9 +385,9 @@ var EditorInformationProvider = class {
   /**
    * Explain snapshot rejection for one editor, including failures in another build dependency.
    * Reuses asynchronous validation; it never builds or changes source files.
-   * @param {string} file Absolute source filename.
-   * @param {ReadonlySet<string>} dirtyFiles Current unsaved dependencies.
-   * @returns {Promise<readonly string[]>} Actionable reasons, or an empty list for a current map.
+   * @param file Absolute source filename.
+   * @param dirtyFiles Current unsaved dependencies.
+   * @returns Actionable reasons, or an empty list for a current map.
    */
   async diagnostics(file, dirtyFiles) {
     if (this.#currentConfigurationMaps?.size === 0) {
@@ -432,11 +432,11 @@ var EditorInformationProvider = class {
   /**
    * Query current visible/hovered lines. Dirty dependencies suppress the complete artifact, even
    * if its saved files still hash correctly. Neither hovering nor scrolling starts a build.
-   * @param {string} file Absolute source filename.
-   * @param {readonly InformationLineRange[]} visible Inclusive one-based source-line intervals.
-   * @param {InformationRequirements} requirements Selected fields' provider needs.
-   * @param {ReadonlySet<string>} dirtyFiles Unsaved source/dependency paths to suppress.
-   * @returns {Promise<ReadonlyMap<number, readonly LineInformation[]>>} Current facts grouped by source line.
+   * @param file Absolute source filename.
+   * @param visible Inclusive one-based source-line intervals.
+   * @param requirements Selected fields' provider needs.
+   * @param dirtyFiles Unsaved source/dependency paths to suppress.
+   * @returns Current facts grouped by source line.
    */
   async lines(file, visible, requirements, dirtyFiles) {
     if (this.#currentConfigurationMaps?.size === 0) {

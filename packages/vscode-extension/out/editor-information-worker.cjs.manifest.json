@@ -4,20 +4,20 @@
   "source": "packages/vscode-extension/src/editor-info/worker.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/editor-information-worker.cjs.licenses.txt",
-  "sha256": "b0fd72c9c00490611c75e17d68b54b6ee99ec8b69c2a201dcd483f81c8afaacd",
+  "sha256": "7b3890b2637577ad850ed8981914686b32c0e4ca9795e4d43ebd93a7ea6717a3",
   "noticesSha256": "fcfc842aeb2910110fcdc8fb8c1f8378d0d70310445d6ef4cb3104fc0d0a370f",
   "inputs": [
     {
       "file": "package-lock.json",
-      "sha256": "6c51bc05ebd03b6c8012aa08bb62754be4c635bb138490124e59e34cf92671bc"
+      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
     },
     {
       "file": "packages/core/src/canonical-json.ts",
-      "sha256": "5f18a6e6e37a7b2735307d6268e1a5b3056641ab67b692a183b5b248e717f684"
+      "sha256": "5aadceecfcbf70f7b7046efee0e27cd2296f0be8dd248ec732b08dec71542ae4"
     },
     {
       "file": "packages/core/src/debug-map.ts",
-      "sha256": "bb21e686f144deb80a0f753cfce2132d5008ede551f9a04a448cc951dfc18ed2"
+      "sha256": "24e28751591b8b1c510cd325729076e42a5e54b03b71447d413bc3856fa9688a"
     },
     {
       "file": "packages/vscode-extension/esbuild.mjs",
@@ -25,11 +25,11 @@
     },
     {
       "file": "packages/vscode-extension/src/editor-info/provider.ts",
-      "sha256": "e18aa828fe77069f83e0a2f6211de7d70b5d6772c783e30a766c41cc11f07120"
+      "sha256": "bd276d6f390e61ab91524edd438d2cca1357be76c4874f236960e68cfbf430f1"
     },
     {
       "file": "packages/vscode-extension/src/editor-info/worker.ts",
-      "sha256": "c0a3ca970bb6cdec2253620059415c6bb60e388926e16da6c8ba7286e1ae5cf8"
+      "sha256": "1f0dc3a285ba075da2e975550c695259fe07c80975a95c8a921b3e9d891ea584"
     },
     {
       "file": "scripts/bundle-notices.mjs",

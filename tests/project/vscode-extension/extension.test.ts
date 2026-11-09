@@ -480,7 +480,7 @@ test("VS Code client propagates trust and every project environment setting", (t
   t.true(source.includes("traceOutputChannel"));
   t.true(source.includes("uttori-asm.config.json"));
   t.true(source.includes("asm.initConfig"));
-  t.true(source.includes("ProjectPanelProvider"));
+  t.true(source.includes("HomeProvider"));
   t.true(source.includes("ProjectOutlineProvider"));
   t.true(source.includes("AnalysisCoverageProvider"));
   t.false(source.includes("AnalysisGraphProvider"));

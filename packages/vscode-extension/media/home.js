@@ -11,31 +11,40 @@ let snapshot;
 let moreOpen = false;
 let settingsOpen = false;
 
-const root = document.getElementById("root");
-const actionStatus = document.getElementById("actionStatus");
-if (!root || !actionStatus) {
-  throw new Error("Missing Home webview root.");
+/** Resolve persistent template controls before registering host callbacks.
+ * @param {string} id Required template element.
+ * @returns {HTMLElement} Mounted element, or throws for an invalid package.
+ */
+function required(id) {
+  const node = document.getElementById(id);
+  if (!node) {
+    throw new Error(`Missing Home control: ${id}`);
+  }
+  return node;
 }
+const root = required("root");
+const actionStatus = required("actionStatus");
 
 /**
- * @param {string} type
- * @param {Record<string, unknown>} [extra]
+ * @param {string} type Host action identifier, also used to deduplicate pending requests.
+ * @param {Record<string, unknown>} [extra] Action-specific arguments serialized to the extension.
  */
 function send(type, extra) {
   if (pending.has(type)) {
     return;
   }
   pending.add(type);
-  actionStatus.hidden = false;
   actionStatus.classList.remove("error");
   actionStatus.textContent = "Updating…";
   vscode.postMessage({ type, ...extra });
 }
 
 /**
- * @param {string} tag
- * @param {string} [className]
- * @param {string} [text]
+ * @template {keyof HTMLElementTagNameMap} K
+ * @param {K} tag Native element type.
+ * @param {string} [className] Styling hooks.
+ * @param {string} [text] Untrusted display text assigned without markup parsing.
+ * @returns {HTMLElementTagNameMap[K]} A new typed element; text is never parsed as markup.
  */
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -49,13 +58,15 @@ function el(tag, className, text) {
 }
 
 /**
- * @param {HomeAction} action
- * @param {string} appearance
- * @param {boolean} [full]
+ * @param {HomeAction} action Authorized command and native editor arguments.
+ * @param {string} appearance Button style variant.
+ * @param {boolean} [full] Stretch the primary workflow control to the sidebar width.
+ * @returns {HTMLButtonElement} Command button disabled for untrusted or pending state.
  */
 function actionButton(action, appearance, full) {
   const button = el("button", `home-btn home-btn--${appearance}${full ? " home-btn--full" : ""}`);
   button.type = "button";
+  button.dataset.focusKey = `command:${action.command}:${JSON.stringify(action.args ?? [])}`;
   button.textContent = action.title;
   button.disabled = !snapshot?.trusted || pending.size > 0;
   button.addEventListener("click", () => {
@@ -64,15 +75,23 @@ function actionButton(action, appearance, full) {
   return button;
 }
 
+/** @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement} Persistent project status section.
+ */
 function renderHeader(data) {
   const header = el("header", "home-header");
   const identity = el("div");
-  identity.append(el("h2", "home-name", data.name));
+  identity.append(el("h1", "home-name", data.name));
   const meta = el("div", "home-meta");
   if (data.branch) {
     meta.append(el("span", undefined, data.branch));
   }
-  const mode = data.mode === "source" ? "Source" : data.mode === "assembly" ? "Assembly" : "None";
+  let mode = "None";
+  if (data.mode === "source") {
+    mode = "Source";
+  } else if (data.mode === "assembly") {
+    mode = "Assembly";
+  }
   meta.append(el("span", "home-badge", mode));
   if (data.targetLabel) {
     meta.append(el("span", undefined, data.targetLabel));
@@ -84,11 +103,16 @@ function renderHeader(data) {
   const overflow = el("button", "home-btn home-btn--toolbar", "⋯");
   overflow.type = "button";
   overflow.title = "Project actions";
+  overflow.setAttribute("aria-label", "Project actions");
+  overflow.dataset.focusKey = "overflow";
   overflow.addEventListener("click", () => send("overflow"));
   header.append(identity, overflow);
   return header;
 }
 
+/** @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement | undefined} Section when the current project exposes these controls.
+ */
 function renderRecovery(data) {
   if (!data.recovery) {
     return undefined;
@@ -107,21 +131,31 @@ function renderRecovery(data) {
   return card;
 }
 
+/** @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement | undefined} Section when the current project exposes these controls.
+ */
 function renderCta(data) {
   const section = el("section", "home-section");
   if (data.mode === "source") {
     if (data.next && !data.recovery) {
       section.append(actionButton(data.next, "primary", true));
     } else if (!data.recovery) {
-      section.append(actionButton({ command: "asm.source.refresh", title: "Refresh status" }, "secondary", true));
+      section.append(
+        actionButton({ command: "asm.source.refresh", title: "Refresh status" }, "secondary", true),
+      );
     }
     if (data.steps?.length) {
-      const stepper = el("div", "home-stepper");
-      data.steps.forEach((step, index) => {
-        if (index > 0) {
-          stepper.append(el("span", "home-step", "→"));
+      const stepper = el("ol", "home-stepper");
+      stepper.setAttribute("aria-label", "Regeneration progress");
+      data.steps.forEach((step) => {
+        const item = el("li", `home-step home-step--${step.state}`, step.label);
+        if (step.state === "current") {
+          item.setAttribute("aria-current", "step");
         }
-        stepper.append(el("span", `home-step home-step--${step.state}`, step.label));
+        if (step.state === "done") {
+          item.append(el("span", "sr-only", " completed"));
+        }
+        stepper.append(item);
       });
       section.append(stepper);
     }
@@ -130,6 +164,16 @@ function renderCta(data) {
       ? `Build current source · ${data.build.description}`
       : "Build current source";
     build.append(actionButton({ command: "asm.source.build", title: buildLabel }, "secondary"));
+    // Discard is a normal prepared-candidate action, not just a recovery exit.
+    // Releasing it lets Next offer Analyze/Prepare again using current inputs.
+    if (data.canDiscard && !data.recovery) {
+      const discard = actionButton(
+        { command: "asm.source.discard", title: "Discard candidate" },
+        "secondary",
+      );
+      discard.title = "Clear the prepared generation and its preview; keep current source edits.";
+      build.append(discard);
+    }
     section.append(build);
     return section;
   }
@@ -140,6 +184,8 @@ function renderCta(data) {
     actions.append(actionButton({ command: "asm.debugEmulator", title: "Debug" }, "secondary"));
     const watch = el("button", "home-btn home-btn--toolbar");
     watch.type = "button";
+    watch.dataset.focusKey = "watch";
+    watch.setAttribute("aria-pressed", String(data.watch));
     watch.textContent = data.watch ? "Watch on" : "Watch off";
     watch.disabled = !data.trusted;
     watch.addEventListener("click", () => send("command", { command: "asm.toggleWatch" }));
@@ -150,69 +196,117 @@ function renderCta(data) {
   return undefined;
 }
 
+/** All paths remain in the accessibility tree; only the visual list height is bounded.
+ * @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement | undefined} Complete review list when a generation exists.
+ */
 function renderIncoming(data) {
   if (!data.incoming) {
     return undefined;
   }
   const section = el("section", "home-section");
-  const title = el("h3", "home-section-title");
-  title.append(
-    el(
-      "span",
-      undefined,
-      data.incoming.previewed
-        ? `Incoming · ${data.incoming.shown} of ${data.incoming.total}`
-        : `Incoming · ${data.incoming.total} files`,
-    ),
-  );
+  const title = el("h2", "home-section-title", `Incoming · ${data.incoming.total} files`);
+  title.id = "incoming-title";
   section.append(title);
-  if (!data.incoming.previewed) {
-    section.append(
-      el("p", "home-card-meta", "Preview to review diffs. Full regenerations stay collapsed until then."),
-    );
-    return section;
-  }
-  const list = el("div");
+  const help = el(
+    "p",
+    "home-card-meta",
+    "Use ↑/↓ to move between files, Home/End for first/last, and Enter or Space to open a diff.",
+  );
+  help.id = "incoming-help";
+  section.append(help);
+  const list = el("ul", "home-incoming");
+  list.id = "incoming-files";
+  list.tabIndex = 0;
+  list.setAttribute("aria-labelledby", title.id);
+  list.setAttribute("aria-describedby", help.id);
   for (const file of data.incoming.files) {
+    const item = el("li");
     const row = el("button", "home-file");
     row.type = "button";
+    row.dataset.focusKey = `diff:${file.path}`;
     const status = file.conflict ? "C" : file.status.slice(0, 1);
-    row.append(el("span", `home-file-status ${status}`, status));
+    /** @type {Record<string, string>} */
+    const statusNames = { A: "Added", M: "Modified", D: "Deleted", R: "Renamed", C: "Conflict" };
+    const statusLabel = statusNames[status] ?? file.status;
+    let label = `${file.path}, ${statusLabel}`;
+    if (!file.conflict && (file.additions != null || file.deletions != null)) {
+      label += `, ${file.additions ?? 0} lines added, ${file.deletions ?? 0} lines deleted`;
+    }
+    row.title = label;
+    const statusIcon = el("span", `home-file-status ${status}`, status);
+    statusIcon.setAttribute("aria-hidden", "true");
+    row.append(statusIcon);
     row.append(el("span", "home-file-path", file.path));
+    // Keep the visible path as the native button name and add spoken status details.
+    // The single-letter badges and +/- counters are visual shorthand for this text.
+    row.append(el("span", "sr-only", label.slice(file.path.length)));
     if (file.conflict) {
       row.append(el("span", "home-pill home-pill--warn", "conflict"));
     } else if (file.additions != null || file.deletions != null) {
-      const added = file.additions ?? 0;
-      const deleted = file.deletions ?? 0;
-      row.append(el("span", "home-file-stats", `+${added} −${deleted}`));
+      const stats = el(
+        "span",
+        "home-file-stats",
+        `+${file.additions ?? 0} −${file.deletions ?? 0}`,
+      );
+      stats.setAttribute("aria-hidden", "true");
+      row.append(stats);
     }
     row.addEventListener("click", () => {
       send("diff", { left: file.left, right: file.right, title: file.title });
     });
-    list.append(row);
+    item.append(row);
+    list.append(item);
+  }
+  list.addEventListener("keydown", (event) => {
+    // Leave Tab and modified shortcuts to the browser/assistive technology; these
+    // optional navigation keys move actual button focus without trapping the user.
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
+    }
+    const rows = [...list.querySelectorAll("button")];
+    const index = rows.findIndex((row) => row === document.activeElement);
+    let next;
+    if (event.key === "Home") {
+      next = rows[0];
+    } else if (event.key === "End") {
+      next = rows.at(-1);
+    } else if (event.key === "ArrowDown") {
+      next = rows[Math.min(index + 1, rows.length - 1)];
+    } else if (event.key === "ArrowUp") {
+      next = rows[Math.max(0, index - 1)];
+    }
+    if (next) {
+      event.preventDefault();
+      next.focus();
+      next.scrollIntoView({ block: "nearest" });
+    }
+  });
+  if (!data.incoming.files.length) {
+    section.append(el("p", "home-card-meta", "No incoming file changes."));
   }
   section.append(list);
   return section;
 }
 
+/** @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement} Persistent project status section.
+ */
 function renderHealth(data) {
   const section = el("section", "home-section");
-  section.append(el("h3", "home-section-title", "Health"));
+  section.append(el("h2", "home-section-title", "Health"));
   const card = el("div", "home-card home-card--info");
   const indexLabel = data.indexReady ? "Index ready" : "Index waiting";
   const indexRow = el("div", "home-health-row");
   indexRow.append(el("span", undefined, indexLabel));
   indexRow.append(
-    el(
-      "span",
-      "muted",
-      `${data.health.index.files} files · ${data.health.index.symbols} symbols`,
-    ),
+    el("span", "muted", `${data.health.index.files} files · ${data.health.index.symbols} symbols`),
   );
   card.append(indexRow);
   const errorRow = el("div", "home-health-row");
   const errors = el("button", undefined, `${data.health.index.errors} errors`);
   errors.type = "button";
+  errors.dataset.focusKey = "problems";
   errors.addEventListener("click", () =>
     send("command", { command: "workbench.actions.view.problems" }),
   );
@@ -224,14 +318,24 @@ function renderHealth(data) {
   if (data.health.coverage) {
     const coverage = data.health.coverage;
     const remaining = el("div", "home-health-row");
-    remaining.append(
-      el("span", undefined, `${coverage.remainingPercent.toFixed(1)}% remaining`),
-    );
+    remaining.append(el("span", undefined, `${coverage.remainingPercent.toFixed(1)}% remaining`));
     remaining.append(el("span", "muted", coverage.freshness));
     card.append(remaining);
     const meter = el("div", "home-meter");
     const fill = el("span");
     fill.style.width = `${Math.min(100, coverage.convertedPercent)}%`;
+    meter.setAttribute("role", "meter");
+    meter.setAttribute("aria-label", "ROM conversion");
+    meter.setAttribute("aria-valuemin", "0");
+    meter.setAttribute("aria-valuemax", "100");
+    meter.setAttribute(
+      "aria-valuenow",
+      String(Math.max(0, Math.min(100, coverage.convertedPercent))),
+    );
+    meter.setAttribute(
+      "aria-valuetext",
+      `${coverage.convertedPercent.toFixed(1)}% converted, ${coverage.remainingPercent.toFixed(1)}% remaining`,
+    );
     meter.append(fill);
     card.append(meter);
     card.append(el("p", "home-card-meta", coverage.reason));
@@ -242,12 +346,15 @@ function renderHealth(data) {
   return section;
 }
 
+/** @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement | undefined} Section when the current project exposes these controls.
+ */
 function renderCapture(data) {
   if (!data.capture) {
     return undefined;
   }
   const section = el("section", "home-section");
-  section.append(el("h3", "home-section-title", "Capture"));
+  section.append(el("h2", "home-section-title", "Capture"));
   const card = el("div", "home-card home-card--info");
   card.append(el("p", "home-card-title", data.capture.label));
   const actions = el("div", "home-actions");
@@ -259,35 +366,45 @@ function renderCapture(data) {
   return section;
 }
 
+/** @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement | undefined} Section when the current project exposes these controls.
+ */
 function renderMore(data) {
   if (!data.more.length) {
     return undefined;
   }
   const section = el("section", "home-section");
-  const title = el("h3", "home-section-title");
+  const title = el("h2", "home-section-title");
   title.append(el("span", undefined, "More"));
   const toggle = el("button", "home-btn home-btn--link", moreOpen ? "Hide" : "Show");
   toggle.type = "button";
+  toggle.id = "more-toggle";
+  toggle.setAttribute("aria-label", `${moreOpen ? "Hide" : "Show"} more project actions`);
+  toggle.setAttribute("aria-expanded", String(moreOpen));
+  toggle.setAttribute("aria-controls", "more-actions");
   toggle.addEventListener("click", () => {
     moreOpen = !moreOpen;
     render();
   });
   title.append(toggle);
   section.append(title);
+  const list = el("div", "home-more");
+  list.id = "more-actions";
+  list.hidden = !moreOpen;
   if (moreOpen) {
-    const list = el("div", "home-more");
     for (const action of data.more) {
       list.append(actionButton(action, "link"));
     }
-    section.append(list);
   }
+  section.append(list);
   return section;
 }
 
 /**
- * @param {string} id
- * @param {readonly string[]} items
- * @param {string} removeType
+ * @param {string} id Stable control identifier.
+ * @param {readonly string[]} items Configured paths, in workspace order.
+ * @param {string} removeType Host operation for removing a selected path.
+ * @returns {HTMLDivElement} Path list with individually named remove controls.
  */
 function fillList(id, items, removeType) {
   const node = el("div", "home-list");
@@ -301,6 +418,11 @@ function fillList(id, items, removeType) {
     row.append(el("span", undefined, item));
     const remove = el("button", "home-btn home-btn--toolbar", "Remove");
     remove.type = "button";
+    remove.dataset.focusKey = `${removeType}:${item}`;
+    remove.setAttribute(
+      "aria-label",
+      `Remove ${item} from ${id === "entryPoints" ? "entry points" : "include paths"}`,
+    );
     remove.disabled = !snapshot?.trusted;
     remove.addEventListener("click", () => send(removeType, { value: item }));
     row.append(remove);
@@ -310,9 +432,9 @@ function fillList(id, items, removeType) {
 }
 
 /**
- * @param {HTMLSelectElement} select
- * @param {readonly CatalogEntry[]} entries
- * @param {string} selected
+ * @param {HTMLSelectElement} select Destination control.
+ * @param {readonly CatalogEntry[]} entries Selectable toolchain contributions.
+ * @param {string} selected Current ID, preserved even when its contribution is unavailable.
  */
 function fillSelect(select, entries, selected) {
   select.replaceChildren();
@@ -330,25 +452,31 @@ function fillSelect(select, entries, selected) {
   select.value = selected;
 }
 
+/** @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement | undefined} Section when the current project exposes these controls.
+ */
 function renderSettings(data) {
   if (!data.assembly) {
     return undefined;
   }
   const section = el("section", "home-section");
-  const title = el("h3", "home-section-title");
+  const title = el("h2", "home-section-title");
   title.append(el("span", undefined, "Project settings"));
   const toggle = el("button", "home-btn home-btn--link", settingsOpen ? "Hide" : "Show");
   toggle.type = "button";
+  toggle.id = "settings-toggle";
+  toggle.setAttribute("aria-label", `${settingsOpen ? "Hide" : "Show"} project settings`);
+  toggle.setAttribute("aria-expanded", String(settingsOpen));
+  toggle.setAttribute("aria-controls", "project-settings");
   toggle.addEventListener("click", () => {
     settingsOpen = !settingsOpen;
     render();
   });
   title.append(toggle);
   section.append(title);
-  if (!settingsOpen) {
-    return section;
-  }
   const form = el("div", "home-settings");
+  form.id = "project-settings";
+  form.hidden = !settingsOpen;
   const targetLabel = el("label", undefined, "Target");
   const target = el("select");
   target.id = "target";
@@ -378,6 +506,7 @@ function renderSettings(data) {
   form.append(fillList("entryPoints", [...data.assembly.entryPoints], "removeEntryPoint"));
   const addEntry = el("button", "home-btn home-btn--secondary", "Add file…");
   addEntry.type = "button";
+  addEntry.dataset.focusKey = "addEntryPoint";
   addEntry.disabled = !data.trusted;
   addEntry.addEventListener("click", () => send("addEntryPoint"));
   form.append(addEntry);
@@ -385,6 +514,7 @@ function renderSettings(data) {
   form.append(fillList("includePaths", [...data.assembly.includePaths], "removeIncludePath"));
   const addInclude = el("button", "home-btn home-btn--secondary", "Add folder…");
   addInclude.type = "button";
+  addInclude.dataset.focusKey = "addIncludePath";
   addInclude.disabled = !data.trusted;
   addInclude.addEventListener("click", () => send("addIncludePath"));
   form.append(addInclude);
@@ -392,6 +522,9 @@ function renderSettings(data) {
   return section;
 }
 
+/** @param {HomeSnapshot} data Current project facts.
+ * @returns {HTMLElement | undefined} Section when the current project exposes these controls.
+ */
 function renderWelcome(data) {
   if (!data.welcome) {
     return undefined;
@@ -407,8 +540,29 @@ function renderWelcome(data) {
   return card;
 }
 
+/** Snapshot focus candidates include stable controls, not text/graphics elements.
+ * @returns {HTMLElement[]} Controls in document order, including disabled entries for positional recovery.
+ */
+function focusableControls() {
+  return [...root.querySelectorAll("button, input, select, [tabindex]")].filter(
+    (node) => node instanceof HTMLElement,
+  );
+}
+
 function render() {
   const data = snapshot;
+  const active = document.activeElement;
+  const hadFocus = active instanceof HTMLElement && root.contains(active);
+  const focusKey = hadFocus ? active.dataset.focusKey : undefined;
+  const focusId = hadFocus ? active.id : undefined;
+  const oldControls = focusableControls();
+  const focusIndex = oldControls.findIndex((node) => node === active);
+  const scrollTop = document.getElementById("incoming-files")?.scrollTop ?? 0;
+  const pageScroll = window.scrollY;
+  // Host refreshes must not discard an unsubmitted field value or its caret.
+  const draft = active instanceof HTMLInputElement ? active.value : undefined;
+  const start = active instanceof HTMLInputElement ? active.selectionStart : null;
+  const end = active instanceof HTMLInputElement ? active.selectionEnd : null;
   root.replaceChildren();
   if (!data) {
     return;
@@ -445,33 +599,55 @@ function render() {
   if (more) {
     root.append(more);
   }
+  const list = document.getElementById("incoming-files");
+  if (list) {
+    list.scrollTop = scrollTop;
+  }
+  if (hadFocus) {
+    const controls = focusableControls();
+    let replacement = controls.find((node) =>
+      focusKey ? node.dataset.focusKey === focusKey : Boolean(focusId && node.id === focusId),
+    );
+    // A removed action/path hands focus to its nearest surviving control.
+    if (!replacement || replacement.matches(":disabled") || replacement.closest("[hidden]")) {
+      const available = controls.filter(
+        (node) => !node.matches(":disabled") && !node.closest("[hidden]"),
+      );
+      replacement = available[Math.min(Math.max(0, focusIndex), available.length - 1)] ?? root;
+    }
+    if (draft !== undefined && replacement instanceof HTMLInputElement) {
+      replacement.value = draft;
+      if (start !== null && end !== null) {
+        replacement.setSelectionRange(start, end);
+      }
+    }
+    replacement.focus({ preventScroll: true });
+  }
+  window.scrollTo(0, pageScroll);
 }
 
-window.addEventListener("message", (event) => {
+/** @typedef {(HomeSnapshot & {type:"snapshot"}) | {type:"actionComplete",command:string,error?:string}} HomeMessage */
+window.addEventListener("message", (/** @type {MessageEvent<HomeMessage>} */ event) => {
   const message = event.data;
-  if (!message || typeof message !== "object") {
-    return;
-  }
   if (message.type === "snapshot") {
+    // Identical filesystem/status refreshes must not reset a screen reader's browse position.
+    const changed = JSON.stringify(snapshot) !== JSON.stringify(message);
     snapshot = message;
     pending.clear();
-    actionStatus.hidden = true;
     actionStatus.textContent = "";
-    render();
+    if (changed) {
+      render();
+    }
     return;
   }
-  if (message.type === "actionComplete") {
-    pending.delete(message.command);
-    if (message.error) {
-      actionStatus.hidden = false;
-      actionStatus.classList.add("error");
-      actionStatus.textContent = message.error;
-    } else {
-      actionStatus.hidden = true;
-      actionStatus.textContent = "";
-    }
-    render();
+  pending.delete(message.command);
+  actionStatus.classList.toggle("error", Boolean(message.error));
+  if (message.error) {
+    actionStatus.textContent = message.error;
+  } else {
+    actionStatus.textContent = "Updated.";
   }
+  render();
 });
 
 vscode.postMessage({ type: "ready" });

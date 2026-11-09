@@ -68,16 +68,31 @@ export type SourceHealthKind =
 
 /** A recovery command that remains legal for the current source phase. */
 export type SourceEscape = {
+  /** Palette command that remains legal for this phase. */
   command: "asm.source.abort" | "asm.source.discard" | "asm.source.clean" | "workbench.view.scm";
+  /** Button label shown on Home and in the recovery banner. */
   label: string;
+};
+
+/** Legal Next command projected from the current workflow step. */
+export type SourceNextCommand = {
+  /** Palette command id. */
+  command: string;
+  /** Workflow step title shown as Next. */
+  title: string;
 };
 
 /** Compact health for Home, the status bar, and palette enablement. */
 export type SourceHealth = {
+  /** Enablement key published as `uttori.sourcePhase`. */
   kind: SourceHealthKind;
+  /** Short status title, usually the current workflow step. */
   label: string;
+  /** Plain-language reason agents and humans can act on. */
   reason: string;
-  next?: { command: string; title: string };
+  /** Legal Next command when one exists; omitted while busy. */
+  next?: SourceNextCommand;
+  /** Abort, discard, clean, or SCM exits that remain legal. */
   escapes: SourceEscape[];
 };
 
@@ -91,6 +106,7 @@ const HEALTH_BY_COMMAND: Record<string, SourceHealthKind> = {
   "workbench.view.scm": "merging",
 };
 
+/** Collect recovery commands that already appear in the legal workflow. */
 function workflowEscapes(workflow: readonly SourceWorkflowStep[]): SourceEscape[] {
   const commands = new Set(
     workflow.map((step) => step.command).filter((command): command is string => Boolean(command)),

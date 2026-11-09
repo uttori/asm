@@ -33,6 +33,8 @@ if (!(applyControl instanceof HTMLButtonElement)) {
 const apply = applyControl;
 /** @type {number | undefined} Last host document version; every edit must carry this version. */
 let version;
+/** Prevent duplicate edits while retaining focus on the Apply button. */
+let pending = false;
 /** @type {readonly PaletteView[]} Host-derived catalog; webview selections never grant edit authority. */
 let palettes = [];
 let selection = vscode.getState() ?? { id: "", index: 0, filter: "" };
@@ -44,11 +46,20 @@ function remember() {
 
 function renderColors() {
   const record = palettes.find((item) => item.id === selection.id);
+  const active = document.activeElement;
+  const focusedSlot =
+    active instanceof HTMLElement && el("colors").contains(active)
+      ? active.dataset.slot
+      : undefined;
   el("colors").replaceChildren();
   valueControl("word").disabled = !record;
   apply.disabled = !record;
+  apply.setAttribute("aria-disabled", String(pending || !record));
   if (!record) {
     el("slot").textContent = "";
+    if (focusedSlot !== undefined) {
+      el("palettes").focus();
+    }
     return;
   }
   // A refreshed catalog may remove slots; keep the selection inside the record's native range.
@@ -61,11 +72,13 @@ function renderColors() {
   record.words.forEach((word, offset) => {
     const index = record.firstIndex + offset;
     const button = document.createElement("button");
+    button.dataset.slot = String(index);
     button.type = "button";
     button.title = `Slot ${index}: $${word}`;
     button.setAttribute("aria-label", button.title);
     button.setAttribute("aria-pressed", String(index === selection.index));
     const canvas = document.createElement("canvas");
+    canvas.setAttribute("aria-hidden", "true");
     canvas.width = 32;
     canvas.height = 32;
     const value = parseInt(word, 16);
@@ -86,6 +99,12 @@ function renderColors() {
     });
     el("colors").append(button);
   });
+  // Rebuilding swatches must preserve the keyboard user's place after selection or host updates.
+  if (focusedSlot !== undefined) {
+    const buttons = [...el("colors").querySelectorAll("button")];
+    const next = buttons.find((button) => button.dataset.slot === focusedSlot) ?? buttons.at(0);
+    next?.focus({ preventScroll: true });
+  }
   valueControl("word").value = record.words[selection.index - record.firstIndex];
   el("slot").textContent = `· slot ${selection.index}`;
 }
@@ -123,7 +142,11 @@ el("palettes").addEventListener("change", () => {
 el("text").addEventListener("click", () => vscode.postMessage({ type: "text" }));
 el("edit").addEventListener("submit", (event) => {
   event.preventDefault();
-  apply.disabled = true;
+  if (pending || version === undefined || apply.disabled) {
+    return;
+  }
+  pending = true;
+  apply.setAttribute("aria-disabled", "true");
   vscode.postMessage({
     type: "edit",
     version,
@@ -135,6 +158,7 @@ el("edit").addEventListener("submit", (event) => {
 // Only the extension posts this contract; it validates edits before touching the text document.
 window.addEventListener("message", (/** @type {MessageEvent<PaletteMessage>} */ { data }) => {
   if (data.type === "palette") {
+    pending = false;
     version = data.version;
     palettes = data.palettes;
     el("error").textContent = "";
@@ -143,7 +167,8 @@ window.addEventListener("message", (/** @type {MessageEvent<PaletteMessage>} */ 
     // oxlint-disable-next-line typescript/no-unnecessary-condition
   } else if (data.type === "error") {
     el("error").textContent = data.text;
-    apply.disabled = true;
+    pending = false;
+    apply.setAttribute("aria-disabled", String(apply.disabled));
   }
 });
 vscode.postMessage({ type: "ready" });

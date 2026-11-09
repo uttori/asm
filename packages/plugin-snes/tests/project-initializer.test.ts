@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { commitAnalysisProjectTransaction, importRuntimeInstructionTrace, loadAnalysisProjectSnapshot, mergeRuntimeEvidence, openAnalysisProjectStore } from "@uttori/asm-disassembler";
 
@@ -508,14 +509,8 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
   }
 });
 
-test("shared probe accepts the local Secret of Mana DizRaw fixture when available", async (t) => {
-  const dizRawFile = path.resolve("secret-of-mana", "Secret of Mana (USA).dizraw");
-  try {
-    await fs.stat(dizRawFile);
-  } catch {
-    t.pass("local test-only fixture is not present");
-    return;
-  }
+test("shared probe accepts the compressed HiROM DizRaw fixture", async (t) => {
+  const dizRawFile = fileURLToPath(new URL("./fixtures/som-usa.dizraw", import.meta.url));
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-init-som-"));
   const romFile = path.join(temporary, "secret-of-mana-fixture.sfc");
   try {

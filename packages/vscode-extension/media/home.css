@@ -12,6 +12,44 @@ body {
   background: var(--vscode-sideBar-background);
 }
 
+* {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
+}
+:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder, Highlight);
+  outline-offset: 2px;
+}
+.sr-only,
+.home-status:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.home-incoming {
+  max-height: min(24rem, 40vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  padding: 0.4rem;
+  margin: 0.6rem 0 0;
+  list-style: none;
+}
+.home-header > div,
+.home-health-row > span {
+  min-width: 0;
+}
+.home-card-meta,
+.home-list-row > span {
+  overflow-wrap: anywhere;
+}
+
 .home-status {
   margin: 0 0 0.8rem;
   font-size: 1.2rem;
@@ -120,9 +158,7 @@ body {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .home-card-meta {
@@ -222,9 +258,12 @@ body {
   margin: 0.8rem 0 0;
   color: var(--vscode-descriptionForeground);
   font-size: 1.1rem;
+  padding: 0;
+  list-style: none;
 }
 
 .home-step {
+  position: relative;
   white-space: nowrap;
 }
 
@@ -238,6 +277,9 @@ body {
 }
 
 .home-file {
+  /* Anchor hidden spoken labels inside the scroll clip. Viewport-positioned
+     labels would otherwise extend the page to the height of every file. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.8rem;
@@ -275,15 +317,18 @@ body {
 
 .home-file-path {
   flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .home-file-stats {
   flex: 0 0 auto;
   color: var(--vscode-descriptionForeground);
   font-size: 1.1rem;
+}
+
+.home-file:focus-visible {
+  outline-offset: -2px;
 }
 
 .home-meter {
@@ -380,4 +425,10 @@ body {
   .home-btn--full {
     width: 100%;
   }
+}
+
+/* Compact controls still need a reliably targetable area at narrow sidebar widths. */
+button {
+  min-height: 24px;
+  min-width: 24px;
 }

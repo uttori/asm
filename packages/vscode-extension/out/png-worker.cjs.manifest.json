@@ -41,19 +41,19 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "6c51bc05ebd03b6c8012aa08bb62754be4c635bb138490124e59e34cf92671bc"
+      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
     },
     {
       "file": "packages/assets/src/image-conversion.ts",
-      "sha256": "4a6477415ef6115509458cb7d83c9660b0284bd68eef937fcf9f36b7dd53524a"
+      "sha256": "f373b0cdb7984ad8bd4eebb30365da2060fc2bce8d44b81714e30adc031399e9"
     },
     {
       "file": "packages/assets/src/image.ts",
-      "sha256": "0487b77557b375e02554eb9a3fcba1373202a99efc74431314d14f14d9f69994"
+      "sha256": "72f11fadf5a8c1bc0328f5a26c769dfae588b821fc78b618af18999553905ea1"
     },
     {
       "file": "packages/assets/src/indexed-edit.ts",
-      "sha256": "be2abac30bcb5af27b31ca7dcb8dbe2571dc1763bf8d332dfb369598bd4da7c7"
+      "sha256": "609f0e2370684fb88fb7f55fa8ada7188b9006142b2c26442e7e249b63423c21"
     },
     {
       "file": "packages/assets/src/indexed-values.ts",
@@ -61,23 +61,23 @@
     },
     {
       "file": "packages/assets/src/limits.ts",
-      "sha256": "1fb4a976bd051acbe8124e6e15ada007c503b2962b39ef6888a362f3fd0ec0dd"
+      "sha256": "ee2bf2076712aaa044219f32595eb0d04abd306e6343ab5293f1005d7b245f06"
     },
     {
       "file": "packages/assets/src/png-edit.ts",
-      "sha256": "b7f297118c8ab569ff678bb8aa8f560eb19b924b297b5d5e0076af9564a25fb6"
+      "sha256": "65409ee094d656af02068f8b5af9c3e1fbe8c03466773ae855da0f2cafea0061"
     },
     {
       "file": "packages/assets/src/png.ts",
-      "sha256": "9a367fc0b0299e3eaa01f9826ab6707a0b2d7cebab50c9bb56b0a46f5b54a619"
+      "sha256": "254039a15b6d9f43c35d5d021421207c7f6604b18650f624b5f9b783886ae4f5"
     },
     {
       "file": "packages/assets/src/snes.ts",
-      "sha256": "e6fbe29b1702cd42b36737dd084f213ff4c665cd2aa12ccfb1062614bcb20f3b"
+      "sha256": "541ac70b52268175866ac20d5077e4e14e4ec251d0bcc8875ce4beaf5352d82b"
     },
     {
       "file": "packages/assets/src/validation.ts",
-      "sha256": "1784b5b075e1706ea64342ef519af01e19f69ef9dbf9887e1d8a13314ddd9327"
+      "sha256": "1f611a1ed459aef243cc6ef05dc1ed00bc1a2e8b95f52f6de55629d31865a8ce"
     },
     {
       "file": "packages/vscode-extension/esbuild.mjs",
@@ -85,7 +85,7 @@
     },
     {
       "file": "packages/vscode-extension/src/assets/png-worker.ts",
-      "sha256": "0d136422bc59bb94d67b0f1f692c13bb8ff0ee2a5adef3de6f21a75930e5cb08"
+      "sha256": "c8f11bb54da2fcc9560c7765756388c25e5963f058f4966b65c076653049ddd0"
     },
     {
       "file": "scripts/bundle-notices.mjs",

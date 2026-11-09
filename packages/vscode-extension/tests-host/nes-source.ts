@@ -22,8 +22,10 @@ export async function runNesSourceSmoke(folder: vscode.WorkspaceFolder): Promise
   const root = folder.uri.fsPath;
   const launch = JSON.parse(await fs.readFile(path.join(root, ".vscode/launch.json"), "utf8"));
   const configuration = launch.configurations.find(
-    (entry: { name: string }) => entry.name === "LOTTERY1 (ares Famicom)",
+    (entry: { type: string; aresSystem: string; sourceProject: boolean }) =>
+      entry.type === "uttori-asm" && entry.aresSystem === "Famicom" && entry.sourceProject,
   );
+  assert.ok(configuration, "NES smoke requires a Famicom source launch.");
   const manifest = JSON.parse(
     await fs.readFile(configuration.runtimeManifest.replace("${workspaceFolder}", root), "utf8"),
   );
@@ -37,7 +39,7 @@ export async function runNesSourceSmoke(folder: vscode.WorkspaceFolder): Promise
   });
   let session: vscode.DebugSession | undefined;
   const started = vscode.debug.onDidStartDebugSession((value) => {
-    if (value.name === "LOTTERY1 (ares Famicom)") {
+    if (value.name === configuration.name) {
       session = value;
     }
   });
@@ -49,7 +51,7 @@ export async function runNesSourceSmoke(folder: vscode.WorkspaceFolder): Promise
     );
     assert.ok(build);
     assert.equal(build.verification.outputSha256, manifest.romSha256);
-    assert.equal(await vscode.debug.startDebugging(folder, "LOTTERY1 (ares Famicom)"), true);
+    assert.equal(await vscode.debug.startDebugging(folder, configuration.name), true);
     await until(
       () => !!session && events.some((event) => event.event === "stopped"),
       "F5 reset stop",

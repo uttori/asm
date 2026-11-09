@@ -33,6 +33,13 @@ import {
 } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
 
 import { convertBossImage, convertBrrWave, sliceBrrSegment } from "./assembly.js";
+import {
+  composeWorldOverview,
+  convertWorldOverviewColors,
+  readWorldOverviewTileIds,
+  WORLD_OVERVIEW_SIDE,
+  worldOverviewRgba,
+} from "./world-overview.js";
 
 /**
  * Preview the authored frame arrangement while validating the same source tiles as assembly.
@@ -247,9 +254,36 @@ function convertSomBrrPreview(input: AssetPreviewInput): AssetPreviewResult {
   };
 }
 
+/** Render current swatch colors against the same extracted tile IDs used by the game. */
+function convertWorldOverviewPreview(input: AssetPreviewInput): AssetPreviewResult {
+  const { primaryOutput, outputs } = convertWorldOverviewColors(input.source);
+  if (input.output !== undefined && input.output !== primaryOutput) {
+    throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
+  }
+  const tilesPath = input.options.tiles;
+  if (typeof tilesPath !== "string" || !Object.hasOwn(input.resources, tilesPath)) {
+    throw new Error("Flammie overview preview requires the extracted world tile grid.");
+  }
+  const colors = outputs.colors.bytes;
+  const tiles = readWorldOverviewTileIds(input.resources[tilesPath]);
+  const rgba = worldOverviewRgba(composeWorldOverview(tiles, colors));
+  const size = WORLD_OVERVIEW_SIDE;
+  return {
+    kind: "image",
+    sourceBytes: input.source.bytes.length,
+    encodedBytes: colors.length,
+    format: input.format,
+    output: primaryOutput,
+    metadata: { width: size, height: size, name: "Flammie world overview" },
+    thumbnailPngBase64: Buffer.from(rgbaPreviewPng(rgba, size, size, 192)).toString("base64"),
+    composedPngBase64: Buffer.from(rgbaNativePng(rgba, size, size)).toString("base64"),
+  };
+}
+
 /** Game previews validate through the same portable codecs as assembly without publishing files. */
 export const somPreviewAdapters: readonly AssetPreviewAdapter[] = Object.freeze([
   { formats: ["som.room"], convert: convertSomRoomPreview },
+  { formats: ["som.world.overview-colors"], convert: convertWorldOverviewPreview },
   { formats: ["som.brr.pcm", "som.brr.segment"], convert: convertSomBrrPreview },
   { formats: ["som.palette.bgr555"], convert: convertSomPalettePreview },
   { formats: ["som.sprite.frames", "som.boss.graphics"], convert: convertSomFramePreview },

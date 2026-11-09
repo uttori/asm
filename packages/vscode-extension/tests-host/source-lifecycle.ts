@@ -3,7 +3,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { sourceGit, sourceRepository, sourceContentHash } from "@uttori/asm-disassembler/source-project";
+import {
+  sourceGit,
+  sourceRepository,
+  sourceContentHash,
+} from "@uttori/asm-disassembler/source-project";
 import type { PreparedSnesGeneration, SnesSourceBuild } from "@uttori/asm-plugin-snes/disassembler";
 import * as vscode from "vscode";
 
@@ -11,9 +15,8 @@ import type { SourceHomeProjection } from "../src/project/home-model.js";
 
 /** Inspect the production Home snapshot through the disposable test entry, never a shipped command. */
 async function sourceProjection(): Promise<SourceHomeProjection> {
-  const projection = await vscode.commands.executeCommand<SourceHomeProjection>(
-    "uttori.tests.sourceTree",
-  );
+  const projection =
+    await vscode.commands.executeCommand<SourceHomeProjection>("uttori.tests.sourceTree");
   assert.ok(projection);
   return projection;
 }
@@ -119,7 +122,8 @@ export async function runSourceLifecycleSmoke(folder: vscode.WorkspaceFolder): P
     assert.ok(!(await treeCommands()).includes("asm.source.apply"));
     const preparedHome = await sourceProjection();
     assert.equal(preparedHome.incoming.previewed, false);
-    assert.ok(preparedHome.incoming.collapsed);
+    assert.equal(preparedHome.incoming.collapsed, false);
+    assert.equal(preparedHome.incoming.shown, preparedHome.incoming.total);
     assert.ok(preparedHome.candidate);
     checks.push("Apply is hidden until a preview exists; pure generation matches the original ROM");
     const checkpoint = (await sourceGit(root, ["rev-parse", "HEAD"])).stdout.toString();

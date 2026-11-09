@@ -38,6 +38,10 @@ test("empty LSP still names a source project from disk identity", (t) => {
   t.is(snapshot.targetLabel, "SNES");
   t.false(snapshot.indexReady);
   t.is(snapshot.next?.command, "asm.source.prepare");
+  t.deepEqual(
+    snapshot.capture?.actions.map((action) => action.command),
+    ["asm.source.importCapture"],
+  );
   t.is(snapshot.health.coverage, undefined);
   t.is(sourceHomeProjection(snapshot).build, undefined);
 });
@@ -99,34 +103,40 @@ test("assembly Home skips the stepper and conversion meter", (t) => {
   t.true(snapshot.watch);
 });
 
-test("unpreviewed incoming stays collapsed", (t) => {
-  const snapshot = buildHomeSnapshot({
-    trusted: true,
-    watch: false,
-    status: emptyStatus,
-    indexReady: false,
-    source: {
-      root: "/games/secret-of-mana",
-      name: "secret-of-mana",
-      branch: "main",
-      dirty: false,
-      target: "snes.sfc",
-      candidate: "deadbeef",
-      previewed: false,
-      workflow: sourceWorkflow({ candidate: true }),
-      incoming: Array.from({ length: 20 }, (_, index) => ({
-        path: `bank-${index}.asm`,
-        status: "M",
-        conflict: false,
-        left: "left",
-        right: "right",
-        title: "diff",
-      })),
-      capturePhase: "idle",
-    },
+for (const previewed of [false, true]) {
+  test(`Incoming exposes all 288 diffs with previewed=${previewed}`, (t) => {
+    const snapshot = buildHomeSnapshot({
+      trusted: true,
+      watch: false,
+      status: emptyStatus,
+      indexReady: false,
+      source: {
+        root: "/games/secret-of-mana",
+        name: "secret-of-mana",
+        branch: "main",
+        dirty: false,
+        target: "snes.sfc",
+        candidate: "deadbeef",
+        previewed,
+        workflow: sourceWorkflow({ candidate: true }),
+        incoming: Array.from({ length: 288 }, (_, index) => ({
+          path: `bank-${index}.asm`,
+          status: "M",
+          conflict: false,
+          left: "left",
+          right: "right",
+          title: "diff",
+        })),
+        capturePhase: "idle",
+      },
+    });
+    t.is(snapshot.incoming?.previewed, previewed);
+    t.is(snapshot.incoming?.total, 288);
+    t.is(snapshot.incoming?.shown, 288);
+    t.is(snapshot.incoming?.files.length, 288);
+    t.is(snapshot.incoming?.files[0]?.path, "bank-0.asm");
+    t.is(snapshot.incoming?.files[287]?.path, "bank-287.asm");
+    t.false(sourceHomeProjection(snapshot).incoming.collapsed);
+    t.is(sourceHomeProjection(snapshot).incoming.shown, 288);
   });
-  t.is(snapshot.incoming?.previewed, false);
-  t.is(snapshot.incoming?.total, 20);
-  t.is(snapshot.incoming?.shown, 0);
-  t.true(sourceHomeProjection(snapshot).incoming.collapsed);
-});
+}

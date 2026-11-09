@@ -11934,12 +11934,13 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
       if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
         throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
       }
-      if (Array.isArray(frame.blocks))
+      if (Array.isArray(frame.blocks)) {
         for (const block of frame.blocks) {
           if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
             throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
           }
         }
+      }
     }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
@@ -15306,41 +15307,50 @@ var Cursor = class {
     this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
   bytes;
+  /** Little-endian view over the bounded byte slice. */
   view;
   /** Byte offset within this cursor's bounded payload. */
   position = 0;
+  /** Advance the cursor and return an owned subarray of exactly `length` bytes. */
   take(length) {
     integer(length, "Aseprite field size", 0, this.bytes.length - this.position);
     const value = this.bytes.subarray(this.position, this.position + length);
     this.position += length;
     return value;
   }
+  /** Read one unsigned byte. */
   u8() {
     return this.take(1)[0];
   }
+  /** Read one little-endian unsigned 16-bit integer. */
   u16() {
     const offset = this.position;
     this.take(2);
     return this.view.getUint16(offset, true);
   }
+  /** Read one little-endian signed 16-bit integer. */
   i16() {
     const offset = this.position;
     this.take(2);
     return this.view.getInt16(offset, true);
   }
+  /** Read one little-endian unsigned 32-bit integer. */
   u32() {
     const offset = this.position;
     this.take(4);
     return this.view.getUint32(offset, true);
   }
+  /** Read one little-endian signed 32-bit integer. */
   i32() {
     const offset = this.position;
     this.take(4);
     return this.view.getInt32(offset, true);
   }
+  /** Read a UTF-8 string prefixed by a uint16 byte length. */
   text() {
     return decoder.decode(this.take(this.u16()));
   }
+  /** Require the cursor to consume the entire bounded payload. */
   finish() {
     if (this.position !== this.bytes.length) {
       throw new Error("Unexpected Aseprite chunk payload.");
@@ -15348,32 +15358,39 @@ var Cursor = class {
   }
 };
 var Fields = class {
+  /** Appended field fragments concatenated by `build`. */
   parts = [];
   /** Reserved bytes are checked while appending, before allocating the combined payload. */
   length = 0;
+  /** Append raw bytes after checking the combined output size limit. */
   raw(bytes) {
     this.length = boundedSum(this.length, bytes.length, ATLAS_FILE_LIMIT2, "Aseprite output size");
     this.parts.push(bytes);
     return this;
   }
+  /** Append one unsigned byte. */
   u8(value) {
     return this.raw(Uint8Array.of(value));
   }
+  /** Append one little-endian unsigned 16-bit integer. */
   u16(value) {
     const bytes = new Uint8Array(2);
     new DataView(bytes.buffer).setUint16(0, value, true);
     return this.raw(bytes);
   }
+  /** Append one little-endian unsigned 32-bit integer. */
   u32(value) {
     const bytes = new Uint8Array(4);
     new DataView(bytes.buffer).setUint32(0, value, true);
     return this.raw(bytes);
   }
+  /** Append a UTF-8 string prefixed by its uint16 byte length. */
   text(value) {
     const bytes = new TextEncoder().encode(value);
     integer(bytes.length, "Aseprite text size", 0, 65535);
     return this.u16(bytes.length).raw(bytes);
   }
+  /** Concatenate appended parts into one owned buffer. */
   build() {
     const bytes = new Uint8Array(this.length);
     let offset = 0;
@@ -16846,6 +16863,7 @@ var AssetSourceCodecRegistry = class {
   get revision() {
     return this.#revision;
   }
+  /** Register one codec; ambiguous extensions reject registration. */
   register(codec) {
     if (!codec.id || this.#codecs.has(codec.id) || typeof codec.matches !== "function" || typeof codec.decode !== "function" || typeof codec.encode !== "function" || typeof codec.embeddedIdentity !== "boolean" || !Number.isSafeInteger(codec.version) || codec.version < 1 || !/^[\w+.-]+\/[\w+.-]+$/.test(codec.mediaType) || !codec.extensions.length || codec.extensions.some((extension) => !/^\.[\d.a-z-]+$/i.test(extension))) {
       throw new Error(`Invalid or duplicate source codec '${codec.id}'.`);
@@ -16875,6 +16893,7 @@ var AssetSourceCodecRegistry = class {
     this.#revision++;
     return this;
   }
+  /** Resolve a registered codec by id. */
   get(id2) {
     const codec = this.#codecs.get(id2);
     if (!codec) {
@@ -16962,6 +16981,11 @@ var AssetRegistry = class {
   #importers = /* @__PURE__ */ new Map();
   #encoders = /* @__PURE__ */ new Map();
   #mediaTypes = /* @__PURE__ */ new Map();
+  /**
+   * Register an importer and claim its media types.
+   * @param importer Importer with a namespaced unused ID, a version, and unclaimed media types.
+   * @returns This registry for chaining.
+   */
   registerImporter(importer) {
     if (!isNamespacedId(importer.id) || !importer.version || importer.mediaTypes.length === 0 || this.#importers.has(importer.id)) {
       throw new Error(`Invalid or duplicate asset importer '${importer.id}'.`);
@@ -16975,6 +16999,7 @@ var AssetRegistry = class {
     importer.mediaTypes.forEach((type) => this.#mediaTypes.set(type, importer));
     return this;
   }
+  /** Register one encoder; duplicate ids reject registration. */
   registerEncoder(encoder) {
     if (!isNamespacedId(encoder.id) || !encoder.version || !encoder.primaryOutput || encoder.inputKinds.length === 0 || this.#encoders.has(encoder.id)) {
       throw new Error(`Invalid or duplicate asset encoder '${encoder.id}'.`);
@@ -16982,6 +17007,7 @@ var AssetRegistry = class {
     this.#encoders.set(encoder.id, encoder);
     return this;
   }
+  /** Resolve the importer registered for a MIME type. */
   importerFor(mediaType) {
     const importer = this.#mediaTypes.get(mediaType);
     if (!importer) {
@@ -16989,6 +17015,7 @@ var AssetRegistry = class {
     }
     return importer;
   }
+  /** Resolve a registered encoder by id. */
   encoderFor(id2) {
     const encoder = this.#encoders.get(id2);
     if (!encoder) {
@@ -19010,7 +19037,13 @@ var ExpressionParser = class {
   }
   tokens;
   sourceText;
+  /** Position of the next unconsumed token. */
   index = 0;
+  /**
+   * Parses a binary expression whose operators bind at least as tightly as `minPrecedence`.
+   * @param minPrecedence Lowest operator precedence this call may consume.
+   * @returns The parsed expression.
+   */
   parseExpression(minPrecedence = 0) {
     let left = this.parsePrefix();
     while (true) {
@@ -19041,9 +19074,11 @@ var ExpressionParser = class {
     }
     return left;
   }
+  /** Reports whether every token has been consumed. */
   isAtEnd() {
     return this.index >= this.tokens.length;
   }
+  /** Parses right-nested prefix operators followed by a primary with postfix accessors. */
   parsePrefix() {
     const token = this.peek();
     if (!token) {
@@ -19059,6 +19094,7 @@ var ExpressionParser = class {
     }
     return this.parsePostfix(this.parsePrimary());
   }
+  /** Parses one operand: dotted local name, literal, string, define reference, identifier or parenthesized group. */
   parsePrimary() {
     if (this.peek()?.type === "dot") {
       const firstSpan = this.peek()?.span;
@@ -19149,6 +19185,7 @@ var ExpressionParser = class {
       { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` }
     );
   }
+  /** Applies call, member and index postfixes; calls require identifiers and accessors require references. */
   parsePostfix(expression) {
     let current = expression;
     while (true) {
@@ -19198,6 +19235,7 @@ var ExpressionParser = class {
       return current;
     }
   }
+  /** Parses comma-separated arguments after `(` through the closing `)`. */
   parseCallArguments() {
     const args = [];
     if (this.match({ type: "rparen" })) {
@@ -19211,7 +19249,7 @@ var ExpressionParser = class {
   }
   /**
    * Expects a value.
-   * @param {Token["type"]} type The type.
+   * @param type The type.
    */
   expect(type) {
     const token = this.consume();
@@ -19224,6 +19262,7 @@ var ExpressionParser = class {
       );
     }
   }
+  /** Consumes the next token only when its type matches, reporting whether it did. */
   match(expected) {
     const token = this.peek();
     if (token && token.type === expected.type) {
@@ -19232,11 +19271,13 @@ var ExpressionParser = class {
     }
     return false;
   }
+  /** Returns the next token and advances; undefined past the end. */
   consume() {
     const token = this.tokens[this.index];
     this.index++;
     return token;
   }
+  /** Returns the next token without advancing; undefined past the end. */
   peek() {
     return this.tokens[this.index];
   }
@@ -19824,7 +19865,7 @@ function parseInstructionOperands(mnemonic, text, grammar2) {
     const parts2 = operandParts(text, ",");
     for (let index = 0; index < parts2.length; index++) {
       let part = parts2[index];
-      const next = parts2[index + 1];
+      const next = parts2.at(index + 1);
       if (grammar2.commaIndex && next && grammar2.indexRegisters.includes(next.text.toLowerCase())) {
         part = { text: text.slice(part.start, next.end), start: part.start, end: next.end };
         index++;
@@ -20165,6 +20206,13 @@ var RelocatableInstruction = class {
 
 // packages/core/src/linker/types.ts
 var LinkError = class extends Error {
+  /**
+   * Captures a link failure with optional source anchoring and partial placement state.
+   * @param code Stable machine-readable failure code.
+   * @param message Human-readable explanation prefixed with source location when present.
+   * @param source Optional source occurrence tied to the failure.
+   * @param allocations Partial allocations computed before the failure.
+   */
   constructor(code, message, source, allocations = []) {
     const location = source ? `${source.file}:${source.line}: ` : "";
     super(`${location}${message}`);
@@ -20175,6 +20223,7 @@ var LinkError = class extends Error {
   code;
   source;
   allocations;
+  /** Stable error name for instanceof checks across bundle boundaries. */
   name = "LinkError";
 };
 
@@ -20217,16 +20266,16 @@ function encodeBossTilemap(data, tag = 1) {
 }
 
 // packages/assets/src/secret-of-mana/som-dialogue-command.ts
-function encodeSomDialogueCommand(token) {
+function encodeSomDialogueCommand(text) {
   const names = ["${boy}", "${girl}", "${sprite}"];
-  const index = names.indexOf(token);
+  const index = names.indexOf(text);
   if (index >= 0) {
     return { family: "party-name", bytes: Uint8Array.of(87, index) };
   }
-  if (token === "${wait}") {
+  if (text === "${wait}") {
     return { family: "wait", bytes: Uint8Array.of(40, 0) };
   }
-  const wait = /^\${wait:(0|[1-9]\d*)}$/.exec(token);
+  const wait = /^\${wait:(0|[1-9]\d*)}$/.exec(text);
   if (wait) {
     const count = Number(wait[1]);
     if (!Number.isSafeInteger(count) || count > 255) {
@@ -20239,11 +20288,11 @@ function encodeSomDialogueCommand(token) {
     ["${closeDialogue}", 81],
     ["${clearDialogue}", 82]
   ]);
-  const opcode = windows.get(token);
+  const opcode = windows.get(text);
   if (opcode !== void 0) {
     return { family: "text-window", bytes: Uint8Array.of(opcode) };
   }
-  throw new Error(`Unsupported dialogue command token ${token}.`);
+  throw new Error(`Unsupported dialogue command token ${text}.`);
 }
 
 // packages/assets/src/secret-of-mana/som-dialogue.ts
@@ -20297,7 +20346,7 @@ function expandSomDialogue(bytes, dictionary) {
       index = byte - 195;
     }
     if (index !== void 0) {
-      const pair = dictionary[index];
+      const pair = dictionary.at(index);
       if (!pair) {
         throw new Error(`Missing SoM dialogue pair ${index}.`);
       }
@@ -20396,7 +20445,7 @@ function encodeSomDialogue(text, dictionary, options = {}) {
     if (index === void 0) {
       continue;
     }
-    const pair = dictionary[index];
+    const pair = dictionary.at(index);
     if (!pair) {
       throw new Error(`Missing SoM dialogue pair ${index}.`);
     }
@@ -23897,6 +23946,11 @@ var Cpu6502Decoder = class {
   }
   cpu;
   #forms;
+  /**
+   * Decodes one instruction at `context.offset`.
+   * @param context Byte source, offset, and 16-bit logical PC.
+   * @returns Decoded instruction, or an error for an invalid PC, missing/truncated bytes, or an opcode absent from this CPU's table.
+   */
   decode(context) {
     const { source, offset, logicalAddress } = context;
     if (!Number.isInteger(logicalAddress) || logicalAddress < 0 || logicalAddress > 65535) {
@@ -23937,7 +23991,7 @@ var Cpu6502Decoder = class {
         message: "Truncated 6502 instruction."
       };
     }
-    let value = bytes[1] ?? 0;
+    let value = bytes.at(1) ?? 0;
     if (size === 3) {
       value |= bytes[2] << 8;
     }
@@ -24245,20 +24299,20 @@ function ld65LinkRecipe(config, target = "65xx.nes") {
   }
   return {
     target,
-    regions: [...config.memories.values()].map((region) => ({
-      name: region.name,
-      start: region.start,
-      size: region.size,
-      ...region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
-      ...region.fill ? { fillByte: region.fillval } : {},
-      addressSpace: "65xx.ines-address-space"
-    })),
-    placements: [...config.segments.values()].map((segment) => ({
-      section: segment.name,
-      load: segment.load,
-      run: segment.run,
-      ...segment.start !== void 0 ? { start: segment.start } : {}
-    })),
+    regions: [...config.memories.values()].map(
+      (region) => Object.assign(
+        { name: region.name, start: region.start, size: region.size },
+        region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
+        region.fill ? { fillByte: region.fillval } : {},
+        { addressSpace: "65xx.ines-address-space" }
+      )
+    ),
+    placements: [...config.segments.values()].map(
+      (segment) => Object.assign(
+        { section: segment.name, load: segment.load, run: segment.run },
+        segment.start !== void 0 ? { start: segment.start } : {}
+      )
+    ),
     // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
     symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()]
   };
@@ -25668,10 +25722,15 @@ var TypedArch65xx = class {
     }
   }
   cpu;
+  /** 65xx encodings can be emitted into relocatable objects. */
   supportsRelocatable = true;
+  /** Unbound operand templates stay errors at encode time, not parse time. */
   deferOperandBindingErrors = true;
+  /** Assembly forms enabled for this CPU's feature set. */
   forms;
+  /** Editor/LSP instruction catalog derived from `forms`. */
   catalog;
+  /** Lookup of enabled forms grouped by canonical mnemonic. */
   formsByMnemonic = /* @__PURE__ */ new Map();
   /** Failed binding retains parsed punctuation so addressing errors keep precedence over value reads. */
   syntax(frame) {
@@ -25715,6 +25774,7 @@ var TypedArch65xx = class {
     }
     return prepare65xx(this.syntax(frame), frame);
   }
+  /** Return encoded size for the resolved operand frame without emitting bytes. */
   estimate(frame) {
     const state = this.classification(frame);
     const form = this.resolveForm(frame, this.syntax(frame), state);
@@ -26493,13 +26553,16 @@ function register65xxContributions(context) {
           },
           // The flat NES lifecycle fills the complete cartridge with the target byte, including MEMORY gaps.
           // Keep its established output here; ld65LinkRecipe remains available for explicit per-region policies.
-          ...recipe.regions.map((region) => ({
-            ...region,
-            ...region.outputOffset !== void 0 ? {
-              outputOffset: region.outputOffset + nes.header.length,
-              fillByte: nes.fillByte
-            } : {}
-          }))
+          ...recipe.regions.map(
+            (region) => Object.assign(
+              {},
+              region,
+              region.outputOffset !== void 0 ? {
+                outputOffset: region.outputOffset + nes.header.length,
+                fillByte: nes.fillByte
+              } : {}
+            )
+          )
         ]
       };
     }

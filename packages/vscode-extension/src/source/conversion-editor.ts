@@ -2,10 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
-import {
-  assetSourceAssemblyInventory,
-  type AssetSourceConversionPlan,
-} from "@uttori/asm-workflows/asset-source";
+import type { AssetSourceConversionPlan } from "@uttori/asm-workflows/asset-source";
+import { assetSourceAssemblyInventory } from "@uttori/asm-workflows/asset-source-inventory";
 import { workspace, WorkspaceEdit, Uri, Range, type TextDocument } from "vscode";
 
 /** Publish one native undo unit after the worker has staged recovery bytes. Existing text buffers must be clean. */

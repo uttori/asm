@@ -10,38 +10,67 @@
     <title>Indexed PNG</title>
   </head>
   <body>
-    <header>
-      <strong>Indexed PNG</strong><span id="size"></span
-      ><label
-        >Zoom
-        <select id="zoom">
-          <option>1</option>
-          <option>2</option>
-          <option selected>4</option>
-          <option>8</option>
-          <option>16</option>
-        </select></label
-      >
-    </header>
-    <label id="palette-group-label" hidden
-      >Palette group
-      <select id="palette-group"></select
-    ></label>
-    <div id="palette" role="group" aria-label="Palette slots"></div>
-    <p id="selection">Select a palette slot, then paint pixels. Save and undo normally.</p>
-    <p id="guidance" hidden>
-      Outlined tiles are encoded into the ROM. Other pixels are previews or padding. Shared poses
-      use the same tile on build; the PNG preview copies are unchanged.
-    </p>
-    <p id="tile" aria-live="polite"></p>
-    <div id="viewport">
-      <canvas id="image" aria-label="Indexed pixel canvas" tabindex="0"></canvas>
-    </div>
-    <p>
-      Indexes and duplicate colors stay distinct. Edit shared ROM colors in the palette JSON.
-      Format-specific PNG metadata is re-encoded on build after pixel edits.
-    </p>
-    <p id="error" role="alert"></p>
+    <main>
+      <header>
+        <h1>Indexed PNG</h1>
+        <span id="size"></span
+        ><label
+          >Zoom
+          <select id="zoom">
+            <option>1</option>
+            <option>2</option>
+            <option selected>4</option>
+            <option>8</option>
+            <option>16</option>
+          </select></label
+        >
+      </header>
+      <label id="palette-group-label" hidden
+        >Palette group
+        <select id="palette-group"></select
+      ></label>
+      <div id="palette" role="group" aria-label="Palette slots"></div>
+      <p id="selection" role="status">
+        Select a palette slot, then paint pixels. Save and undo normally.
+      </p>
+      <form id="pixel-edit" aria-label="Edit a pixel">
+        <p id="pixel-help">
+          Coordinates start at zero. Inspect a pixel, choose a palette slot, then paint. Save and
+          undo normally.
+        </p>
+        <label id="region-label" hidden
+          >Encoded tile
+          <select id="region"></select
+        ></label>
+        <label
+          >Column (X)
+          <input id="pixel-x" type="number" min="0" step="1" value="0" required disabled
+        /></label>
+        <label
+          >Row (Y) <input id="pixel-y" type="number" min="0" step="1" value="0" required disabled
+        /></label>
+        <p id="pixel-info" role="status" aria-atomic="true"></p>
+        <button id="paint-pixel" type="submit" aria-describedby="pixel-help" disabled>
+          Paint selected slot
+        </button>
+      </form>
+      <p id="guidance" hidden>
+        Outlined tiles are encoded into the ROM. Other pixels are previews or padding. Shared poses
+        use the same tile on build; the PNG preview copies are unchanged.
+      </p>
+      <p id="tile" aria-live="polite"></p>
+      <div id="viewport" role="region" aria-label="Image preview" tabindex="0">
+        <canvas
+          id="image"
+          role="img"
+          aria-label="Indexed image. Use Edit a pixel for coordinates and palette values."></canvas>
+      </div>
+      <p>
+        Indexes and duplicate colors stay distinct. Edit shared ROM colors in the palette JSON.
+        Format-specific PNG metadata is re-encoded on build after pixel edits.
+      </p>
+      <p id="error" role="alert"></p>
+    </main>
     <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
   </body>
 </html>

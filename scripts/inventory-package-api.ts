@@ -57,7 +57,7 @@ function sourceFiles(directory: string): string[] {
   });
 }
 const uses = new Map<string, Set<string>>();
-for (const file of ["packages", "scripts", "tests", "secret-of-mana/tools"].flatMap((folder) =>
+for (const file of ["packages", "scripts", "tests"].flatMap((folder) =>
   sourceFiles(path.join(root, folder)),
 )) {
   const source = fs.readFileSync(file, "utf8");

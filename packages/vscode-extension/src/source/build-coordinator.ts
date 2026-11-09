@@ -22,6 +22,7 @@ import {
   type WorkspaceFolder,
 } from "vscode";
 
+import { summarizeSourceAnalysis } from "./analysis-summary.js";
 import { captureBuildControls, changedBuildInputs } from "./build-inputs.js";
 import { SourceCaptureCoordinator } from "./capture-coordinator.js";
 import type { SourceController } from "./controller.js";
@@ -309,12 +310,16 @@ export class SourceBuildCoordinator {
         const message = `${summary} Review ${review.files.length} changed files in Generation Preview. ${next} After applying, review/resolve and stage changes, then Finish; Finish builds and commits the merge.`;
         // Persist every conflicting path and the next steps after the notification disappears.
         this.host.output.info(message);
-        const first = this.session.incoming[0];
-        if (first?.command?.arguments?.length) {
-          void commands.executeCommand(
-            "asm.source.diff",
-            ...(first.command.arguments as [Uri, Uri, string]),
-          );
+        if (this.session.incoming.length > 0) {
+          const diffArgs = this.session.incoming[0].command?.arguments;
+          if (Array.isArray(diffArgs) && diffArgs.length >= 2) {
+            const left: unknown = diffArgs[0];
+            const right: unknown = diffArgs[1];
+            const title = typeof diffArgs[2] === "string" ? diffArgs[2] : "Incoming";
+            if (left instanceof Uri && right instanceof Uri) {
+              void commands.executeCommand("asm.source.diff", left, right, title);
+            }
+          }
         }
         void commands.executeCommand("uttori-asm.home.focus");
         void window
@@ -400,9 +405,27 @@ export class SourceBuildCoordinator {
         }
         let button = "Analyze Evidence";
         let command = "asm.source.analyze";
+        let warning = false;
+        let reportFile: string | undefined;
         if (action === "analyze") {
-          message =
-            "Analysis complete. Next: Prepare Regeneration, then Preview with Current Edits. Building alone does not update source.";
+          const summary = summarizeSourceAnalysis(result);
+          message = `${summary.message} Next: Prepare Regeneration, then Preview with Current Edits.`;
+          warning = summary.warning;
+          this.host.output.info([summary.message, ...summary.details].join("\n"));
+          // Persist every diagnostic outside authored source. Output stays readable even when
+          // shallow call contexts produce thousands of bounds; the report remains inspectable.
+          reportFile = path.join(root, ".uttori-local/reports/analysis.json");
+          try {
+            await fs.mkdir(path.dirname(reportFile), { recursive: true });
+            await fs.writeFile(reportFile, JSON.stringify(result, null, 2) + "\n");
+            this.host.output.info(`Full analysis report: ${reportFile}`);
+          } catch (error) {
+            // Publication already succeeded. A report-write failure must not turn it into a
+            // failed Analyze or discard diagnostics that exist only in the worker response.
+            this.host.output.warn(`Could not save analysis report: ${String(error)}`);
+            this.host.output.info(JSON.stringify(result, null, 2));
+            reportFile = undefined;
+          }
           button = "Prepare Regeneration";
           command = "asm.source.prepare";
         }
@@ -424,11 +447,19 @@ export class SourceBuildCoordinator {
             addedCode: { ranges: result.addedCode.length, bytes: addedBytes },
           };
         }
-        this.host.output.info(JSON.stringify(loggedResult, null, 2));
+        if (action === "import") {
+          this.host.output.info(JSON.stringify(loggedResult, null, 2));
+        }
         // Notifications do not hold the operation busy; only an explicit click starts the next step.
-        void window.showInformationMessage(message, button).then((choice) => {
+        const buttons = reportFile ? [button, "Open Analysis Report"] : [button];
+        const notification = warning
+          ? window.showWarningMessage(message, ...buttons)
+          : window.showInformationMessage(message, ...buttons);
+        void notification.then((choice) => {
           if (choice === button) {
             void commands.executeCommand(command);
+          } else if (choice === "Open Analysis Report" && reportFile) {
+            void window.showTextDocument(Uri.file(reportFile));
           }
           return undefined;
         });

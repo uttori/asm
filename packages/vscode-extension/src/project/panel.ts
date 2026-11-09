@@ -10,12 +10,9 @@ import {
   type WebviewView,
   type WebviewViewProvider,
 } from "vscode";
-import { State, type LanguageClient } from "vscode-languageclient/node";
+import type { LanguageClient } from "vscode-languageclient/node";
 
-import {
-  checkBuildCoverageFreshness,
-  readBuildCoverage,
-} from "../analysis/build-coverage.js";
+import { readBuildCoverage } from "../analysis/build-coverage.js";
 import { runtimeCapturePhase } from "../runtime/capture-state.js";
 import type { SourceController } from "../source/controller.js";
 import { sourceWorkflow } from "../source/workflow.js";
@@ -48,14 +45,23 @@ export function fallbackProjectStatus(): ProjectStatus {
     architecture: config.get<string>("architecture", ""),
     buildOutput: config.get<string>("buildOutput", ""),
     baseImage: config.get<string>("baseImage", ""),
-    entryPoints: config.get<string>("entryPoints", []),
-    includePaths: config.get<string>("includePaths", []),
+    entryPoints: config.get<string[]>("entryPoints", []),
+    includePaths: config.get<string[]>("includePaths", []),
   };
 }
 
+/** vscode-languageclient `State.Running`. Imported as a number so unit tests can stub vscode without loading the client. */
+const LANGUAGE_CLIENT_RUNNING = 3;
+
 /** Language-client stubs without a state still answer requests; Starting/Stopped clients do not. */
 function isLanguageClientReady(client: LanguageClient | undefined): client is LanguageClient {
-  return Boolean(client) && (client.state === undefined || client.state === State.Running);
+  if (!client) {
+    return false;
+  }
+  if (!("state" in client)) {
+    return true;
+  }
+  return (client as { state?: number }).state === LANGUAGE_CLIENT_RUNNING;
 }
 
 /**
@@ -70,6 +76,8 @@ export class HomeProvider implements WebviewViewProvider {
   #metadata?: ProjectMetadata;
   #snapshotRequest = 0;
   #last?: HomeSnapshot;
+  #refreshTimer?: ReturnType<typeof setTimeout>;
+  #coverage?: { root: string; value: HomeSourceInput["coverage"] };
   readonly #pending = new Set<string>();
 
   constructor(
@@ -108,21 +116,57 @@ export class HomeProvider implements WebviewViewProvider {
     });
     webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible) {
-        void this.refresh();
+        this.scheduleRefresh();
       }
     });
     void this.refresh();
   }
 
+  /** Coalesce session/watcher bursts so Home cannot retrigger source status. */
+  scheduleRefresh(): void {
+    if (this.#refreshTimer !== undefined) {
+      return;
+    }
+    this.#refreshTimer = setTimeout(() => {
+      this.#refreshTimer = undefined;
+      void this.refresh();
+    }, 200);
+  }
+
+  /** Drop cached conversion totals after a source build so the next paint rereads summary.json. */
+  invalidateCoverage(): void {
+    this.#coverage = undefined;
+    this.scheduleRefresh();
+  }
+
   /**
-   * Pushes a fresh Home snapshot to the webview and context keys.
+   * Paints the current session immediately, then loads coverage once per selected root.
+   * Conversion freshness uses session `buildStale`; it must not hash watched source files.
    */
   async refresh(): Promise<void> {
     const request = ++this.#snapshotRequest;
-    const snapshot = await this.snapshot();
+    const source = this.options.getSource?.();
+    if (source?.root && this.#coverage?.root !== source.root) {
+      this.#coverage = undefined;
+    }
+    await this.publish(await this.snapshot({ lsp: false }));
     if (request !== this.#snapshotRequest) {
       return;
     }
+    if (source?.root && !this.#coverage) {
+      this.#coverage = {
+        root: source.root,
+        value: await readSummaryCoverage(source.root, source.session.buildStale),
+      };
+    }
+    if (request !== this.#snapshotRequest) {
+      return;
+    }
+    await this.publish(await this.snapshot({ lsp: true }));
+  }
+
+  /** Push one snapshot to context keys, status bar, and the webview. */
+  private async publish(snapshot: HomeSnapshot): Promise<void> {
     this.#last = snapshot;
     this.#metadata = snapshot.metadata;
     this.options.onSnapshot?.(snapshot);
@@ -175,6 +219,9 @@ export class HomeProvider implements WebviewViewProvider {
   }): Promise<void> {
     switch (message.type) {
       case "ready":
+        if (this.#last) {
+          void this.#view?.webview.postMessage({ type: "snapshot", ...this.#last });
+        }
         await this.refresh();
         return;
       case "command":
@@ -227,7 +274,7 @@ export class HomeProvider implements WebviewViewProvider {
 
   /** Opens the project identity file: `.uttori/project.json` or `uttori-asm.config.json`. */
   async openConfiguration(): Promise<void> {
-    const snapshot = this.#last ?? (await this.snapshot());
+    const snapshot = await this.snapshot();
     const source = this.options.getSource?.();
     if (snapshot.mode === "source" && source?.root) {
       await window.showTextDocument(Uri.file(path.join(source.root, ".uttori/project.json")));
@@ -257,12 +304,12 @@ export class HomeProvider implements WebviewViewProvider {
   /**
    * Compose Home from the source session, coverage on disk, and optional running language server.
    */
-  async snapshot(): Promise<HomeSnapshot> {
+  async snapshot(options: { lsp?: boolean } = {}): Promise<HomeSnapshot> {
     const fallback = fallbackProjectStatus();
-    let status = fallback;
+    let status = this.#last?.status ?? fallback;
     let metadata = this.#metadata;
-    let indexReady = false;
-    const client = this.getClient();
+    let indexReady = this.#last?.indexReady ?? false;
+    const client = options.lsp === false ? undefined : this.getClient();
     if (isLanguageClientReady(client)) {
       try {
         const [lspStatus, lspMetadata] = await Promise.all([
@@ -285,11 +332,11 @@ export class HomeProvider implements WebviewViewProvider {
       status,
       metadata,
       indexReady,
-      source: source ? await this.sourceInput(source) : undefined,
+      source: source ? this.sourceInput(source) : undefined,
     });
   }
 
-  private async sourceInput(source: SourceController): Promise<HomeSourceInput | undefined> {
+  private sourceInput(source: SourceController): HomeSourceInput | undefined {
     const root = source.root;
     if (!root) {
       return undefined;
@@ -324,12 +371,8 @@ export class HomeProvider implements WebviewViewProvider {
       incoming: incomingFiles(source),
       capturePhase: runtimeCapturePhase(),
       debugging: debug.activeDebugSession?.type === "uttori-asm",
-      buildDescription: source.session.build
-        ? source.session.buildStale
-          ? "source changed"
-          : "verified"
-        : undefined,
-      coverage: await sourceCoverage(root, source.session.buildStale),
+      buildDescription: sourceBuildDescription(source),
+      coverage: this.#coverage?.root === root ? this.#coverage.value : undefined,
     };
   }
 
@@ -442,6 +485,15 @@ export class HomeProvider implements WebviewViewProvider {
 /** @deprecated Use HomeProvider; retained for tests that still import the previous name. */
 export { HomeProvider as ProjectPanelProvider };
 
+/** `verified` after a matching source build; `source changed` when inputs diverged. */
+function sourceBuildDescription(source: SourceController): string | undefined {
+  if (!source.session.build) {
+    return undefined;
+  }
+  return source.session.buildStale ? "source changed" : "verified";
+}
+
+/** Publish enablement keys so the palette cannot take illegal source transitions. */
 async function publishHomeContext(snapshot: HomeSnapshot): Promise<void> {
   await Promise.all([
     commands.executeCommand("setContext", "uttori.projectMode", snapshot.mode),
@@ -452,18 +504,32 @@ async function publishHomeContext(snapshot: HomeSnapshot): Promise<void> {
   ]);
 }
 
+/** TreeItem labels may be objects; Incoming always uses the repository-relative path string. */
+function rowLabel(row: { label?: string | { label: string } }): string {
+  return typeof row.label === "string" ? row.label : (row.label?.label ?? "");
+}
+
+/** Map session incoming rows onto Home file cards that open `asm.source.diff`. */
 function incomingFiles(source: SourceController): HomeIncomingFile[] {
   return source.session.incoming.flatMap((row) => {
     const args = row.command?.arguments;
-    if (!Array.isArray(args) || args.length < 2) {
+    const filePath = rowLabel(row);
+    // Incomplete native rows have no reviewable path and must not create unnamed diff buttons.
+    if (!filePath || !Array.isArray(args) || args.length < 2) {
       return [];
     }
-    const left = args[0];
-    const right = args[1];
-    const title = typeof args[2] === "string" ? args[2] : String(row.label);
+    const left: unknown = args[0];
+    const right: unknown = args[1];
+    const title = typeof args[2] === "string" ? args[2] : filePath;
+    if (typeof left !== "string" && !(left instanceof Uri)) {
+      return [];
+    }
+    if (typeof right !== "string" && !(right instanceof Uri)) {
+      return [];
+    }
     return [
       {
-        path: String(row.label),
+        path: filePath,
         status: typeof row.description === "string" ? row.description : "M",
         conflict: row.description === "predicted conflict",
         additions: row.additions,
@@ -476,20 +542,13 @@ function incomingFiles(source: SourceController): HomeIncomingFile[] {
   });
 }
 
-function uriString(value: unknown): string {
-  if (value instanceof Uri) {
-    return value.toString();
-  }
-  if (typeof value === "string") {
-    return value;
-  }
-  if (value && typeof value === "object" && "toString" in value) {
-    return String(value.toString());
-  }
-  return "";
+/** Serialize a native or `uttori-source` URI for the webview. */
+function uriString(value: Uri | string): string {
+  return typeof value === "string" ? value : value.toString();
 }
 
-async function sourceCoverage(
+/** Read the compact summary only. Do not hash watched source files from this path. */
+async function readSummaryCoverage(
   root: string,
   staleBuild: boolean,
 ): Promise<HomeSourceInput["coverage"]> {
@@ -498,8 +557,16 @@ async function sourceCoverage(
     if (!snapshot) {
       return undefined;
     }
-    const freshness = await checkBuildCoverageFreshness(root, snapshot.summary);
-    return { summary: snapshot.summary, freshness, staleBuild };
+    return {
+      summary: snapshot.summary,
+      freshness: {
+        status: staleBuild ? "stale" : "current",
+        reason: staleBuild
+          ? "Source changed since the last successful build."
+          : "Last successful build coverage.",
+      },
+      staleBuild,
+    };
   } catch {
     return undefined;
   }

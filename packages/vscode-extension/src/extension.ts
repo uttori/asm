@@ -339,7 +339,7 @@ export function activate(context: ExtensionContext): void {
     },
   );
   const refreshProjectViews = (): void => {
-    void panelProvider.refresh();
+    panelProvider.scheduleRefresh();
   };
   const outlineProvider = new ProjectOutlineProvider(() => languageClientFor());
   const coverageProvider = new AnalysisCoverageProvider((root, inputSha256) => {
@@ -369,11 +369,11 @@ export function activate(context: ExtensionContext): void {
     sourceController.onDidBuild(({ root, build }) => {
       analysisAnnotationController.buildCompleted(build.debugMapFile, root);
       coverageProvider.refresh();
-      void panelProvider.refresh();
+      panelProvider.invalidateCoverage();
     }),
     sourceController.onDidChangeTreeData(() => {
       coverageProvider.refresh();
-      void panelProvider.refresh();
+      panelProvider.scheduleRefresh();
     }),
     sourceController.onDidChangeSavedInput(scheduleWatchBuild),
     linkedBuildController.onDidChangeInput(() => {
@@ -1336,9 +1336,6 @@ function updateStatusItem(): void {
 
 /** Compact project identity and Next action; click focuses Home. */
 function updateProjectStatus(snapshot: HomeSnapshot): void {
-  if (!projectStatusItem) {
-    return;
-  }
   if (snapshot.mode === "source") {
     const remaining =
       snapshot.health.coverage && Number.isFinite(snapshot.health.coverage.remainingPercent)

@@ -41,13 +41,19 @@ import { SourceBuildCoordinator } from "./build-coordinator.js";
 import { changedBuildInputs } from "./build-inputs.js";
 import { registerSourceCodeActions } from "./code-actions.js";
 import { type SourceGenerationReview } from "./generation-review.js";
+import { isGitCacheNoise, isGitIndexEcho } from "./git-watch.js";
 import { SourceProcessClient } from "./process-client.js";
 import { findSourceRoot } from "./project-path.js";
 import { editSourceResearch } from "./research-editor.js";
 import { readGraphicsSelection, readSourceStatus } from "./result-readers.js";
 import { SourceProjectSession } from "./session.js";
 import { isSnesMapper, SourceRow } from "./ui-contracts.js";
-import { shouldClearSourceCandidate, sourceHealth, sourceWorkflow } from "./workflow.js";
+import {
+  shouldClearSourceCandidate,
+  sourceHealth,
+  sourceWorkflow,
+  type SourceWorkflowState,
+} from "./workflow.js";
 
 /** A selected ROM project, native Git review, and shared background operations; source edits stay in editors. */
 export class SourceController implements TreeDataProvider<SourceRow>, Disposable {
@@ -69,6 +75,10 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
   /** Fired when workflow tree rows should reload from session state. */
   readonly onDidChangeTreeData = this.session.changed.event;
   readonly #disposables: Disposable[] = [];
+  /** Status is idle work; overlapping runs still consume the two worker slots and retrigger the watcher. */
+  #statusRefresh = false;
+  /** Git rewrites `.git/index` during status; ignore those echoes until this time. */
+  #statusQuietUntil = 0;
 
   constructor(
     readonly context: ExtensionContext,
@@ -378,7 +388,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       busy: this.session.busy,
       phase: this.session.status?.phase,
     });
-    const commands = [
+    const legal = [
       ...new Set(
         workflow
           .map((step) => step.command)
@@ -386,30 +396,30 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       ),
     ];
     if (this.session.root) {
-      commands.push("asm.source.build");
+      legal.push("asm.source.build");
     }
     const previewed =
-      this.session.preview?.candidate === this.session.candidate &&
-      Boolean(this.session.candidate);
+      this.session.preview?.candidate === this.session.candidate && Boolean(this.session.candidate);
+    let build: string | undefined;
+    if (this.session.build) {
+      build = this.session.buildStale ? "source changed" : "verified";
+    }
     return {
       next: health.next,
-      commands,
-      build: this.session.build
-        ? this.session.buildStale
-          ? "source changed"
-          : "verified"
-        : undefined,
+      commands: legal,
+      build,
       candidate: this.session.candidate,
       incoming: {
         previewed,
         total: this.session.incoming.length,
-        collapsed: !previewed,
+        shown: this.session.incoming.length,
+        collapsed: false,
       },
     };
   }
 
   /** Cached service/editor flags used by Home and the remaining workflow tree. */
-  workflowState() {
+  workflowState(): SourceWorkflowState {
     const unsaved =
       this.buffers().length > 0 ||
       this.binaryBuffers().length > 0 ||
@@ -712,9 +722,16 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
         return;
       }
       const relative = path.relative(resolved, uri.fsPath).split(path.sep).join("/");
-      const gitEvent = relative === ".git" || relative.startsWith(".git/");
+      const gitEvent = relative.startsWith(".git/");
+      const indexEcho = isGitIndexEcho(relative);
       const authoring = this.authoringFile(uri.fsPath);
-      if (!authoring && !gitEvent) {
+      // fsmonitor cookies, Git client caches, and the `.git` directory node itself change
+      // whenever status runs. Refs and HEAD still arrive as their own paths.
+      if (isGitCacheNoise(relative) || (!authoring && !gitEvent)) {
+        return;
+      }
+      // `git status` / `git diff` refresh the index stat cache. Those writes are not SCM changes.
+      if (indexEcho && (this.#statusRefresh || Date.now() < this.#statusQuietUntil)) {
         return;
       }
       // Git object/ref activity also comes from other branches and linked worktrees. Refresh SCM
@@ -776,7 +793,7 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       const researchRoots = this.session.configuration?.researchRoots ?? [];
       if (
         relative.startsWith(".uttori/") ||
-        relative.startsWith(".git/") ||
+        (gitEvent && !indexEcho) ||
         researchRoots.some(
           (researchRoot) => relative === researchRoot || relative.startsWith(`${researchRoot}/`),
         )
@@ -785,7 +802,10 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
       }
       clearTimeout(this.session.refreshTimer);
       this.session.refreshTimer = setTimeout(() => {
-        if (!this.session.busy) {
+        if (!this.session.busy && !this.#statusRefresh) {
+          if (gitEvent) {
+            this.output.info(`Source refresh scheduled by ${relative}.`);
+          }
           void this.guard(() => this.refresh());
         }
       }, 400);
@@ -816,40 +836,46 @@ export class SourceController implements TreeDataProvider<SourceRow>, Disposable
 
   /** Reload session status and rebuild workflow rows when idle and trusted. */
   async refresh(): Promise<void> {
-    if (!this.session.root || this.session.busy || !workspace.isTrusted) {
-      return;
-    }
     const root = this.session.root;
-    // Terminal branch switches may select a different research layout or build configuration.
-    const configuration = parseSourceProject(
-      JSON.parse(await fs.readFile(path.join(root, ".uttori/project.json"), "utf8")),
-    );
-    const status = await this.session.worker.run(
-      { directory: root, action: "status", candidate: this.session.candidate },
-      { maxMemoryMiB: 512, readResult: readSourceStatus },
-    );
-    const branch =
-      (await sourceGit(root, ["branch", "--show-current"])).stdout.toString().trim() ||
-      "detached HEAD";
-    if (root !== this.session.root) {
+    if (!root || this.session.busy || !workspace.isTrusted || this.#statusRefresh) {
       return;
     }
-    this.session.status = status;
-    this.session.configuration = configuration;
-    // Persisted editor state can outlive Finish or an integration completed in a terminal.
-    // A candidate from the old accepted generation cannot be previewed after another integration.
-    // Keep an unvalidated committed merge available for Finish; otherwise offer a fresh Prepare.
-    if (shouldClearSourceCandidate(status)) {
-      await this.clearCandidate(root);
+    this.#statusRefresh = true;
+    try {
+      // Terminal branch switches may select a different research layout or build configuration.
+      const configuration = parseSourceProject(
+        JSON.parse(await fs.readFile(path.join(root, ".uttori/project.json"), "utf8")),
+      );
+      const status = await this.session.worker.run(
+        { directory: root, action: "status", candidate: this.session.candidate },
+        { maxMemoryMiB: 512, readResult: readSourceStatus },
+      );
+      const branch =
+        (await sourceGit(root, ["branch", "--show-current"])).stdout.toString().trim() ||
+        "detached HEAD";
+      if (root !== this.session.root) {
+        return;
+      }
+      this.session.status = status;
+      this.session.configuration = configuration;
+      // Persisted editor state can outlive Finish or an integration completed in a terminal.
+      // A candidate from the old accepted generation cannot be previewed after another integration.
+      // Keep an unvalidated committed merge available for Finish; otherwise offer a fresh Prepare.
+      if (shouldClearSourceCandidate(status)) {
+        await this.clearCandidate(root);
+      }
+      if (root !== this.session.root) {
+        return;
+      }
+      this.session.branch = branch;
+      if (this.session.candidate) {
+        await this.incoming();
+      }
+      this.session.changed.fire(undefined);
+    } finally {
+      this.#statusRefresh = false;
+      this.#statusQuietUntil = Date.now() + 800;
     }
-    if (root !== this.session.root) {
-      return;
-    }
-    this.session.branch = branch;
-    if (this.session.candidate) {
-      await this.incoming();
-    }
-    this.session.changed.fire(undefined);
   }
 
   /** Release only the editor selection; the source service owns Git pin and preview lifetimes. */

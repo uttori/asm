@@ -7,13 +7,38 @@ header {
   display: flex;
   align-items: center;
   gap: 24px;
+  flex-wrap: wrap;
+}
+h1 {
+  font-size: 1.25em;
+}
+[hidden] {
+  display: none !important;
 }
 select,
-button {
+button,
+input {
   font: inherit;
   color: var(--vscode-input-foreground);
   background: var(--vscode-input-background);
   border: 1px solid var(--vscode-input-border, transparent);
+}
+#pixel-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+}
+#pixel-edit p {
+  flex-basis: 100%;
+  margin: 0;
+}
+#pixel-edit input {
+  width: 6em;
+}
+#region {
+  max-width: 100%;
 }
 #palette {
   display: flex;
@@ -52,4 +77,20 @@ p {
 }
 :focus-visible {
   outline: 1px solid var(--vscode-focusBorder);
+}
+
+* {
+  box-sizing: border-box;
+}
+#pixel-edit label {
+  max-width: 100%;
+  min-width: 0;
+}
+#region-label {
+  display: grid;
+  width: 100%;
+}
+#region {
+  width: 100%;
+  min-width: 0;
 }

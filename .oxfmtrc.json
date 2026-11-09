@@ -6,6 +6,7 @@
     "src/generated/**",
     "packages/cli/out/**",
     "packages/language-server/out/**",
+    "packages/language-server/tests/fixtures/som-assets/**",
     "packages/vscode-extension/out/**",
     "packages/vscode-extension/server/**"
   ],

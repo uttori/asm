@@ -61,6 +61,11 @@
       "types": "./dist/asset-source/operations.d.ts",
       "import": "./dist/asset-source/operations.js"
     },
+    "./asset-source-inventory": {
+      "uttori-source": "./src/asset-source-inventory.ts",
+      "types": "./dist/asset-source-inventory.d.ts",
+      "import": "./dist/asset-source-inventory.js"
+    },
     "./asset-interchange": {
       "uttori-source": "./src/asset-interchange/index.ts",
       "types": "./dist/asset-interchange/index.d.ts",

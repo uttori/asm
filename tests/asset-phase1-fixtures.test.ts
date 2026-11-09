@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { decodeBrr } from "../secret-of-mana/tools/som-brr.mjs";
+import { decodeBrrPcm } from "@uttori/asm-assets/audio";
+
 import { test } from "./ava-helper.js";
 import { Assembler } from "./test-assembler.js";
 
@@ -25,13 +26,11 @@ test("synthetic WRAM images resolve cross-image symbols at their CPU bases", (t)
 });
 
 test("synthetic BRR reference vectors have independently specified PCM samples", (t) => {
-  const silence = decodeBrr(new Uint8Array(readFileSync(path.join(fixtures, "brr-silence.bin"))));
+  const silence = decodeBrrPcm(readFileSync(path.join(fixtures, "brr-silence.bin")));
   t.deepEqual(
-    silence.samples,
+    [...silence],
     Array.from({ length: 16 }, () => 0),
   );
-  const transient = decodeBrr(
-    new Uint8Array(readFileSync(path.join(fixtures, "brr-transient.bin"))),
-  );
-  t.deepEqual(transient.samples, [28672, -32768, ...Array.from({ length: 14 }, () => 0)]);
+  const transient = decodeBrrPcm(readFileSync(path.join(fixtures, "brr-transient.bin")));
+  t.deepEqual([...transient], [28672, -32768, ...Array.from({ length: 14 }, () => 0)]);
 });

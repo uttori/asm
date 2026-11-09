@@ -67,17 +67,24 @@ function slots() {
   if (!state) {
     return;
   }
+  const active = document.activeElement;
+  const focusedSlot =
+    active instanceof HTMLElement && el("palette").contains(active)
+      ? active.dataset.slot
+      : undefined;
   el("palette").replaceChildren(
     ...state.palette.flatMap((rgba, index) => {
       if (index !== 0 && (index < paletteStart || index >= paletteStart + 16)) {
         return [];
       }
       const button = document.createElement("button");
+      button.dataset.slot = String(index);
       button.type = "button";
       button.setAttribute("aria-pressed", String(index === selected));
-      button.setAttribute("aria-label", `Palette slot ${index}`);
+      button.setAttribute("aria-label", `Palette slot ${index}, RGBA ${rgba.join(", ")}`);
       button.title = `Slot ${index}: RGBA ${rgba.join(", ")}`;
       const swatch = document.createElement("canvas");
+      swatch.setAttribute("aria-hidden", "true");
       swatch.width = 24;
       swatch.height = 24;
       const paint = swatch.getContext("2d");
@@ -95,6 +102,12 @@ function slots() {
       return button;
     }),
   );
+  // Retain the selected swatch's focus rather than sending Tab back to the page start.
+  if (focusedSlot !== undefined) {
+    const buttons = [...el("palette").querySelectorAll("button")];
+    const next = buttons.find((button) => button.dataset.slot === focusedSlot) ?? buttons.at(0);
+    next?.focus({ preventScroll: true });
+  }
   el("selection").textContent =
     `Palette slot ${selected} · paint a stroke, then save or undo normally.`;
 }
@@ -147,24 +160,105 @@ el("zoom").addEventListener("change", () => {
   draw();
   remember();
 });
-/** Paint a single source pixel in the pending stroke; the host validates the complete patch again.
- * @param {PointerEvent} event Browser canvas coordinates.
- * @returns {void} Nothing; invalid presentation pixels remain unchanged.
+/** Resolve the keyboard editor's coordinate fields; a missing/wrong input is a package error.
+ * @param {string} id Coordinate field identifier.
+ * @returns {HTMLInputElement} Number input with native range validation.
  */
-function point(event) {
-  if (!state || !stroke) {
+function coordinateInput(id) {
+  const input = el(id);
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Invalid pixel coordinate control: ${id}`);
+  }
+  return input;
+}
+
+/** Read a bounded integer coordinate pair; invalid/empty fields must never select pixel zero.
+ * @returns {{x:number,y:number} | undefined} Valid source coordinates, excluding empty or out-of-range fields.
+ */
+function coordinates() {
+  const x = coordinateInput("pixel-x").valueAsNumber;
+  const y = coordinateInput("pixel-y").valueAsNumber;
+  if (
+    !state ||
+    !Number.isInteger(x) ||
+    !Number.isInteger(y) ||
+    x < 0 ||
+    y < 0 ||
+    x >= state.width ||
+    y >= state.height
+  ) {
+    return undefined;
+  }
+  return { x, y };
+}
+
+/** Describe the source pixel and encoding ownership without requiring a visual preview. */
+function inspectPixel() {
+  const position = coordinates();
+  el("paint-pixel").setAttribute("aria-disabled", String(pending || !position));
+  if (!state || !position) {
+    el("pixel-info").textContent = "Enter a column and row within the image bounds.";
     return;
   }
-  const bounds = canvas.getBoundingClientRect();
-  const x = Math.floor((event.clientX - bounds.left) / zoom);
-  const y = Math.floor((event.clientY - bounds.top) / zoom);
-  if (x < 0 || y < 0 || x >= state.width || y >= state.height || stroke.size >= 8192) {
+  const { x, y } = position;
+  const index = state.indexes[y * state.width + x];
+  const owners = at(x, y).map(
+    (region) =>
+      `${region.label}, slots ${region.paletteStart} through ${region.paletteStart + 15}, ${region.uses} pose uses`,
+  );
+  let ownership = "";
+  if (state.regions) {
+    ownership = owners.join("; ") || "Preview or padding; this pixel is not encoded.";
+  }
+  el("pixel-info").textContent =
+    `Column ${x}, row ${y}: palette slot ${index}, RGBA ${state.palette[index].join(", ")}. ${ownership}`;
+}
+
+/** Configure the nonvisual editor after loading, including direct jumps to encoded tiles. */
+function pixelControls() {
+  if (!state) {
     return;
+  }
+  const control = el("region");
+  if (!(control instanceof HTMLSelectElement)) {
+    throw new Error("Invalid encoded tile selector.");
+  }
+  const previous = control.value;
+  control.replaceChildren(
+    ...(state.regions ?? []).map((region, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = `${region.label}: column ${region.x}, row ${region.y}, ${region.width} by ${region.height}, slots ${region.paletteStart}–${region.paletteStart + 15}`;
+      return option;
+    }),
+  );
+  control.value = previous || "0";
+  el("region-label").hidden = !state.regions?.length;
+  for (const [id, size] of [
+    ["pixel-x", state.width],
+    ["pixel-y", state.height],
+  ]) {
+    const input = coordinateInput(String(id));
+    input.disabled = false;
+    input.max = String(Number(size) - 1);
+  }
+  el("paint-pixel").removeAttribute("disabled");
+  inspectPixel();
+}
+
+/** Validate encoding and palette ownership once for both pointer strokes and keyboard edits.
+ * @param {number} x Unzoomed image column.
+ * @param {number} y Unzoomed image row.
+ * @returns {boolean} Whether the source pixel can use the selected slot.
+ */
+function canPaint(x, y) {
+  if (!state || x < 0 || y < 0 || x >= state.width || y >= state.height) {
+    return false;
   }
   const regions = at(x, y);
   if (state.regions && !regions.length) {
     el("error").textContent = "Paint inside an outlined source tile. This pixel is not encoded.";
-    return;
+    return false;
   }
   if (
     selected !== 0 &&
@@ -172,6 +266,54 @@ function point(event) {
   ) {
     el("error").textContent =
       "Choose a slot from this tile's palette group, or slot 0 for transparency.";
+    return false;
+  }
+  el("error").textContent = "";
+  return true;
+}
+
+el("pixel-edit").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const position = coordinates();
+  if (!state || pending || !position || !canPaint(position.x, position.y)) {
+    return;
+  }
+  pending = true;
+  inspectPixel();
+  vscode.postMessage({
+    type: "paint",
+    version: state.version,
+    pixels: [position.y * state.width + position.x],
+    index: selected,
+  });
+});
+for (const id of ["pixel-x", "pixel-y"]) {
+  el(id).addEventListener("input", inspectPixel);
+}
+el("region").addEventListener("change", () => {
+  const control = el("region");
+  if (!(control instanceof HTMLSelectElement)) {
+    return;
+  }
+  const region = state?.regions?.[Number(control.value)];
+  if (region) {
+    coordinateInput("pixel-x").value = String(region.x);
+    coordinateInput("pixel-y").value = String(region.y);
+    inspectPixel();
+  }
+});
+
+/** Paint a single source pixel in a bounded pending stroke.
+ * @param {PointerEvent} event Browser canvas coordinates.
+ */
+function point(event) {
+  if (!state || !stroke || stroke.size >= 8192) {
+    return;
+  }
+  const bounds = canvas.getBoundingClientRect();
+  const x = Math.floor((event.clientX - bounds.left) / zoom);
+  const y = Math.floor((event.clientY - bounds.top) / zoom);
+  if (!canPaint(x, y)) {
     return;
   }
   stroke.add(y * state.width + x);
@@ -201,7 +343,7 @@ canvas.addEventListener("pointerdown", (event) => {
     return;
   }
   // Focusing a tall atlas must not scroll its canvas between the click and coordinate lookup.
-  canvas.focus({ preventScroll: true });
+  el("viewport").focus({ preventScroll: true });
   canvas.setPointerCapture(event.pointerId);
   stroke = new Set();
   point(event);
@@ -236,6 +378,7 @@ canvas.addEventListener("pointerup", () => {
     return;
   }
   pending = true;
+  inspectPixel();
   vscode.postMessage({ type: "paint", version: state.version, pixels, index: selected });
 });
 canvas.addEventListener("pointercancel", () => {
@@ -261,11 +404,13 @@ window.addEventListener(
       paletteGroups();
       slots();
       draw();
+      pixelControls();
       // Ignore unknown host message kinds rather than treating them as failed edits.
       // oxlint-disable-next-line typescript/no-unnecessary-condition
     } else if (data.type === "error") {
       el("error").textContent = data.text;
       pending = false;
+      inspectPixel();
     }
   },
 );

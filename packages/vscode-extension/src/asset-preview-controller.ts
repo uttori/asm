@@ -330,14 +330,14 @@ export class AssetPreviewController implements Disposable {
         body += `<img alt="Source waveform" src="data:image/png;base64,${media.waveformPngBase64}">`;
       }
       if (media.sourceWavBase64) {
-        body += `<h2>Source PCM</h2><audio controls preload="none" src="data:audio/wav;base64,${media.sourceWavBase64}"></audio>`;
+        body += `<h2>Source PCM</h2><audio aria-label="Source PCM" controls preload="none" src="data:audio/wav;base64,${media.sourceWavBase64}"></audio>`;
       }
       if (media.decodedWavBase64) {
-        body += `<h2>Decoded BRR</h2><audio controls preload="none" src="data:audio/wav;base64,${media.decodedWavBase64}"></audio>`;
+        body += `<h2>Decoded BRR</h2><audio aria-label="Decoded BRR" controls preload="none" src="data:audio/wav;base64,${media.decodedWavBase64}"></audio>`;
       }
     }
     // Preserve native pixels and allow scrolling; fitting the viewport hides full-size image detail.
-    panel.webview.html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data:; style-src 'unsafe-inline'"><style>body{font:13px sans-serif;padding:16px}img{max-width:none;image-rendering:pixelated}audio{display:block;width:100%}</style></head><body>${body}</body></html>`;
+    panel.webview.html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Asset Preview</title><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data:; style-src 'unsafe-inline'"><style>body{font:13px sans-serif;padding:16px}img{max-width:none;image-rendering:pixelated}audio{display:block;width:100%}</style></head><body><main>${body}</main></body></html>`;
   }
 
   /** Dispose the panel to stop any active audio element. */

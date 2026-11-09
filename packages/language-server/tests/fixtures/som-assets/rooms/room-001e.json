@@ -1,0 +1,183 @@
+{
+  "format": "som.room",
+  "version": 1,
+  "id": 30,
+  "name": "Haunted woods switch",
+  "sections": {
+    "objects": {
+      "address": 13145640,
+      "bytes": 64
+    },
+    "assembly": {
+      "address": 13129121,
+      "bytes": 27
+    },
+    "triggers": {
+      "address": 13124858,
+      "bytes": 14
+    }
+  },
+  "header": [
+    135,
+    159,
+    135,
+    0,
+    103,
+    5,
+    0,
+    255
+  ],
+  "entities": [
+    {
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "x": 13,
+      "y": 31,
+      "flags": 0,
+      "orientationAndLayer": 64,
+      "entity": 7,
+      "event": 1,
+      "interaction": 4
+    },
+    {
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "x": 31,
+      "y": 35,
+      "flags": 0,
+      "orientationAndLayer": 0,
+      "entity": 10,
+      "event": 1,
+      "interaction": 12
+    },
+    {
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "x": 32,
+      "y": 31,
+      "flags": 0,
+      "orientationAndLayer": 0,
+      "entity": 2,
+      "event": 1,
+      "interaction": 12
+    },
+    {
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "x": 27,
+      "y": 15,
+      "flags": 0,
+      "orientationAndLayer": 0,
+      "entity": 3,
+      "event": 1,
+      "interaction": 12
+    },
+    {
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "x": 19,
+      "y": 18,
+      "flags": 0,
+      "orientationAndLayer": 0,
+      "entity": 1,
+      "event": 1,
+      "interaction": 12
+    },
+    {
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "x": 28,
+      "y": 31,
+      "flags": 0,
+      "orientationAndLayer": 0,
+      "entity": 2,
+      "event": 1,
+      "interaction": 12
+    },
+    {
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "x": 30,
+      "y": 20,
+      "flags": 0,
+      "orientationAndLayer": 0,
+      "entity": 3,
+      "event": 1,
+      "interaction": 12
+    }
+  ],
+  "pieces": [
+    {
+      "layer": 1,
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "layout": 162,
+      "x": 0,
+      "y": 0,
+      "marker": 254
+    },
+    {
+      "layer": 1,
+      "variable": 95,
+      "minimum": 1,
+      "maximum": 1,
+      "layout": 154,
+      "x": 14,
+      "y": 23
+    },
+    {
+      "layer": 1,
+      "variable": 95,
+      "minimum": 2,
+      "maximum": 2,
+      "layout": 155,
+      "x": 14,
+      "y": 23
+    },
+    {
+      "layer": 1,
+      "variable": 95,
+      "minimum": 3,
+      "maximum": 15,
+      "layout": 156,
+      "x": 14,
+      "y": 23
+    },
+    {
+      "layer": 2,
+      "variable": 0,
+      "minimum": 0,
+      "maximum": 15,
+      "layout": 164,
+      "x": 0,
+      "y": 0,
+      "marker": 255
+    }
+  ],
+  "triggers": [
+    1752,
+    1752,
+    1108,
+    1109,
+    1110,
+    1754,
+    1111
+  ],
+  "previewStory": {
+    "0": 1,
+    "95": 0
+  },
+  "notes": [
+    "Fixed ROM extents: edit fields in place; record-count changes require relocation.",
+    "Header and trigger bytes retain unresolved flags. Coordinates use 16-pixel map cells.",
+    "Graphics, layouts and palette preview resources are shared data, not editable room-owned ROM spans."
+  ]
+}

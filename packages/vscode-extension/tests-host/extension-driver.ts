@@ -5,7 +5,11 @@ import { PngEditor } from "../src/assets/png-editor.js";
 import type { EmulatorRuntimeBinding } from "../src/debug/session.js";
 import { activate as activateExtension } from "../src/extension.js";
 import { SourceController } from "../src/source/controller.js";
-import { SourceProcessClient, type SourceProcessOptions, type SourceProcessOperation } from "../src/source/process-client.js";
+import {
+  SourceProcessClient,
+  type SourceProcessOptions,
+  type SourceProcessOperation,
+} from "../src/source/process-client.js";
 
 export { deactivate } from "../src/extension.js";
 
@@ -20,12 +24,20 @@ let buildMutation: { path: string; append: string } | undefined;
 /** One-shot editor event at the production worker's final publication gate. */
 let assetPublicationEvent: (() => Promise<void>) | undefined;
 const run = SourceProcessClient.prototype.run;
-function trackedRun<T>(this: SourceProcessClient, operation: SourceProcessOperation, options: SourceProcessOptions & {readResult: (value: unknown) => T}): Promise<T>;
-function trackedRun(this: SourceProcessClient, operation: SourceProcessOperation, options: SourceProcessOptions): Promise<unknown>;
+function trackedRun<T>(
+  this: SourceProcessClient,
+  operation: SourceProcessOperation,
+  options: SourceProcessOptions & { readResult: (value: unknown) => T },
+): Promise<T>;
+function trackedRun(
+  this: SourceProcessClient,
+  operation: SourceProcessOperation,
+  options: SourceProcessOptions,
+): Promise<unknown>;
 async function trackedRun(
   this: SourceProcessClient,
   operation: SourceProcessOperation,
-  options: SourceProcessOptions & {readResult?: (value: unknown) => unknown},
+  options: SourceProcessOptions & { readResult?: (value: unknown) => unknown },
 ): Promise<unknown> {
   const execute = run.bind(this);
   if (operation.action === "asset-apply" && assetPublicationEvent) {

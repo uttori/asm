@@ -1,7 +1,9 @@
 import {
   assertSourceObjectId,
   assertSourcePath,
+  readSourceBlobs,
   sourceGit,
+  sourceRepository,
 } from "@uttori/asm-disassembler/source-project";
 import {
   EventEmitter,
@@ -45,9 +47,13 @@ export class SourceGitFiles implements FileSystemProvider {
       return new Uint8Array();
     }
     assertSourceObjectId(revision);
-    return (
-      await sourceGit(root, ["show", `${revision}:${file}`], { maxOutputBytes: 32 * 1024 * 1024 })
-    ).stdout;
+    // Generation snapshots can exceed the editor's old 32 MiB command budget. Resolve the
+    // immutable object first, then use the shared size-checked 64 MiB blob reader used by builds.
+    const object = (await sourceGit(root, ["rev-parse", "--verify", `${revision}:${file}`])).stdout
+      .toString("utf8")
+      .trim();
+    const blobs = await readSourceBlobs(await sourceRepository(root), [object]);
+    return blobs.get(object)!;
   }
   /** Report file size from the resolved blob length. */
   async stat(uri: Uri): Promise<FileStat> {

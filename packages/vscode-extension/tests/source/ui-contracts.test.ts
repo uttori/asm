@@ -144,6 +144,13 @@ test("Git virtual files preserve exact binary history and deny mutation or unsel
   git("init", "-b", "main");
   const original = Uint8Array.of(0, 255, 128, 10);
   fs.writeFileSync(path.join(root, "sprite pixels.bin"), original);
+  // Valid generation snapshots can exceed the former editor-only 32 MiB cap. The
+  // shared 64 MiB ceiling still rejects oversized blobs before streaming their contents.
+  const snapshot = Buffer.alloc(32 * 1024 * 1024 + 1, 0x61);
+  fs.writeFileSync(path.join(root, "generation-snapshot.json"), snapshot);
+  const oversized = path.join(root, "oversized.bin");
+  fs.writeFileSync(oversized, "");
+  fs.truncateSync(oversized, 64 * 1024 * 1024 + 1);
   git("add", ".");
   git("commit", "-m", "Fixture");
   const revision = git("rev-parse", "HEAD");
@@ -151,6 +158,16 @@ test("Git virtual files preserve exact binary history and deny mutation or unsel
   const uri = files.uri(root, revision, "sprite pixels.bin");
   t.deepEqual(new Uint8Array(await files.readFile(uri)), original);
   t.deepEqual(await files.stat(uri), { type: FileType.File, ctime: 0, mtime: 0, size: 4 });
+  t.is(
+    Buffer.compare(
+      await files.readFile(files.uri(root, revision, "generation-snapshot.json")),
+      snapshot,
+    ),
+    0,
+  );
+  await t.throwsAsync(files.readFile(files.uri(root, revision, "oversized.bin")), {
+    message: "Invalid or oversized source blob.",
+  });
   t.deepEqual(await files.readFile(files.uri(root, null, "added.asm")), new Uint8Array());
   const unknown = Uri.from({
     scheme: "uttori-source",

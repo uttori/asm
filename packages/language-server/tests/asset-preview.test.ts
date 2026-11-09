@@ -32,6 +32,8 @@ function isPcmAudio(value: unknown): value is PcmAudio {
 
 const fixture = (name: string): Uint8Array =>
   fs.readFileSync(path.resolve("packages/assets/tests/fixtures", name));
+const somFixture = (name: string): Buffer =>
+  fs.readFileSync(new URL(`./fixtures/som-assets/${name}`, import.meta.url));
 const json = (value: unknown) => ({
   bytes: new TextEncoder().encode(JSON.stringify(value)),
   mediaType: "application/json",
@@ -238,9 +240,7 @@ test("editor audio preview keeps source PCM distinct from decoded BRR", (t) => {
 });
 
 test("SoM native BRR preview exposes its playable WAVE and exact ROM byte count", (t) => {
-  const source = fs.readFileSync(
-    path.resolve("secret-of-mana/disassembly/assets/audio/brr/034784-waveform-01.wav"),
-  );
+  const source = somFixture("audio/brr/034784-waveform-01.wav");
   t.true(supportsPortableAssetPreview("som.brr.pcm"));
   const preview = convertAssetPreview({
     source: { bytes: source, mediaType: "audio/wav" },
@@ -260,9 +260,7 @@ test("SoM native BRR preview exposes its playable WAVE and exact ROM byte count"
 });
 
 test("edited SoM WAVE preview exposes the same decoded audio and fidelity as assembly", (t) => {
-  const source = fs.readFileSync(
-    path.resolve("secret-of-mana/disassembly/assets/audio/brr/034784-waveform-01.wav"),
-  );
+  const source = somFixture("audio/brr/034784-waveform-01.wav");
   const pcm = waveImporter.import({ bytes: source, mediaType: "audio/wav" }).value;
   if (!isPcmAudio(pcm)) {
     throw new Error("Expected PCM audio.");
@@ -285,9 +283,7 @@ test("edited SoM WAVE preview exposes the same decoded audio and fidelity as ass
 });
 
 test("SoM BRR bank segment reports its slice while previewing the complete stream", (t) => {
-  const source = fs.readFileSync(
-    path.resolve("secret-of-mana/disassembly/assets/audio/brr/03fbcc-title-instrument-s13.wav"),
-  );
+  const source = somFixture("audio/brr/03fbcc-title-instrument-s13.wav");
   t.true(supportsPortableAssetPreview("som.brr.segment"));
   const input = {
     source: { bytes: source, mediaType: "audio/wav" },
@@ -307,19 +303,18 @@ test("SoM BRR bank segment reports its slice while previewing the complete strea
 });
 
 test("SoM frame preview validates a shared ROM palette and renders the authored atlas", (t) => {
-  const root = path.resolve("secret-of-mana/disassembly/assets");
   const layoutName = "../assets/images/enemy/rabite-frames.layout.json";
   const paletteName = "../assets/palettes/rom-palettes.json";
-  const source = fs.readFileSync(path.join(root, "images/enemy/rabite-frames.png"));
+  const source = somFixture("images/enemy/rabite-frames.png");
   const input = {
     source: { bytes: source, mediaType: "image/png" },
     resources: {
       [layoutName]: {
-        bytes: fs.readFileSync(path.join(root, "images/enemy/rabite-frames.layout.json")),
+        bytes: somFixture("images/enemy/rabite-frames.layout.json"),
         mediaType: "application/json",
       },
       [paletteName]: {
-        bytes: fs.readFileSync(path.join(root, "palettes/rom-palettes.json")),
+        bytes: somFixture("palettes/rom-palettes.json"),
         mediaType: "application/json",
       },
     },
@@ -350,18 +345,17 @@ test("SoM frame preview validates a shared ROM palette and renders the authored 
 });
 
 test("combined SoM frame previews retain the atlas and all palette users", (t) => {
-  const root = path.resolve("secret-of-mana/disassembly/assets");
   const palettes = {
-    bytes: fs.readFileSync(path.join(root, "palettes/rom-palettes.json")),
+    bytes: somFixture("palettes/rom-palettes.json"),
     mediaType: "application/json",
   };
   const preview = (name: string, segments?: string[]) => {
-    const source = fs.readFileSync(path.join(root, `images/${name}-frames.png`));
+    const source = somFixture(`images/${name}-frames.png`);
     const result = convertAssetPreview({
       source: { bytes: source, mediaType: "image/png" },
       resources: {
         "layout.json": {
-          bytes: fs.readFileSync(path.join(root, `images/${name}-frames.layout.json`)),
+          bytes: somFixture(`images/${name}-frames.layout.json`),
           mediaType: "application/json",
         },
         "palettes.json": palettes,
@@ -410,19 +404,18 @@ test("combined SoM frame previews retain the atlas and all palette users", (t) =
 });
 
 test("SoM boss frame preview reports its fixed compressed ROM span", (t) => {
-  const root = path.resolve("secret-of-mana/disassembly/assets");
   const layoutName = "../assets/images/enemy/mantis-ant-frames.layout.json";
   const paletteName = "../assets/palettes/rom-palettes.json";
-  const source = fs.readFileSync(path.join(root, "images/enemy/mantis-ant-frames.png"));
+  const source = somFixture("images/enemy/mantis-ant-frames.png");
   const preview = convertAssetPreview({
     source: { bytes: source, mediaType: "image/png" },
     resources: {
       [layoutName]: {
-        bytes: fs.readFileSync(path.join(root, "images/enemy/mantis-ant-frames.layout.json")),
+        bytes: somFixture("images/enemy/mantis-ant-frames.layout.json"),
         mediaType: "application/json",
       },
       [paletteName]: {
-        bytes: fs.readFileSync(path.join(root, "palettes/rom-palettes.json")),
+        bytes: somFixture("palettes/rom-palettes.json"),
         mediaType: "application/json",
       },
     },
@@ -441,9 +434,7 @@ test("SoM boss frame preview reports its fixed compressed ROM span", (t) => {
 });
 
 test("SoM palette preview shows sixteen 8×8 squares from the ROM source object", (t) => {
-  const source = fs.readFileSync(
-    path.resolve("secret-of-mana/disassembly/assets/palettes/rom-palettes.json"),
-  );
+  const source = somFixture("palettes/rom-palettes.json");
   const preview = convertAssetPreview({
     source: { bytes: source, mediaType: "application/json" },
     resources: {},
@@ -459,9 +450,7 @@ test("SoM palette preview shows sixteen 8×8 squares from the ROM source object"
 });
 
 test("SoM background palette preview preserves its 15-column, 105-word grid", (t) => {
-  const source = fs.readFileSync(
-    path.resolve("secret-of-mana/disassembly/assets/palettes/rom-palettes.json"),
-  );
+  const source = somFixture("palettes/rom-palettes.json");
   const preview = convertAssetPreview({
     source: { bytes: source, mediaType: "application/json" },
     resources: {},
@@ -475,13 +464,59 @@ test("SoM background palette preview preserves its 15-column, 105-word grid", (t
   t.is(png.readUInt32BE(20), 64);
 });
 
+test("SoM Flammie overview preview samples tile IDs and reflects native swatch edits", (t) => {
+  const tileIds = new Uint8Array(512 * 512).fill(192);
+  tileIds[0] = 1;
+  tileIds[1] = 1;
+  tileIds[512] = 1;
+  tileIds[513] = 2;
+  const tiles = "world-tiles.png";
+  const swatches = new Uint8Array(192 * 4);
+  for (let slot = 0; slot < 192; slot++) {
+    swatches[slot * 4 + 3] = 255;
+  }
+  swatches[4] = 231;
+  swatches[9] = 231;
+  const options = { tiles };
+  const resources = {
+    [tiles]: {
+      mediaType: "image/png",
+      bytes: createIndexedPng({
+        width: 512,
+        height: 512,
+        indexes: tileIds,
+        palette: Array.from({ length: 193 }, () => [0, 0, 0, 255]),
+      }),
+    },
+  };
+  const format = "som.world.overview-colors";
+  const preview = () =>
+    convertAssetPreview({
+      format,
+      resources,
+      options,
+      source: { mediaType: "image/png", bytes: rgbaNativePng(swatches, 16, 12) },
+    });
+  const pixels = (result: ReturnType<typeof preview>) =>
+    readAssetPng(Buffer.from(result.composedPngBase64 ?? "", "base64")).toRGBA().rgba;
+  t.true(supportsPortableAssetPreview(format));
+  const original = preview();
+  t.is(original.output, "colors");
+  t.is(original.encodedBytes, 192);
+  t.is(original.metadata?.width, 256);
+  t.deepEqual([...pixels(original).subarray(0, 8)], [165, 33, 0, 255, 0, 0, 0, 255]);
+  swatches[4] = 0;
+  t.deepEqual([...pixels(preview()).subarray(0, 4)], [0, 33, 0, 255]);
+  swatches[4] = 1;
+  t.throws(preview, { message: /native direct-color gamut/ });
+});
+
 test("SoM room preview validates section output and responds to edited room placement", (t) => {
-  const base = path.resolve("secret-of-mana/disassembly/assets/rooms");
-  const bytes = fs.readFileSync(path.join(base, "room-001e.json"));
+  const bytes = somFixture("rooms/room-001e.json");
   const previewPath = "room-001e.preview.json";
   const resources = {
     [previewPath]: {
-      bytes: fs.readFileSync(path.join(base, previewPath)),
+      bytes: somFixture(`rooms/${previewPath}`),
       mediaType: "application/json",
     },
   };

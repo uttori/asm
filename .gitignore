@@ -86,11 +86,15 @@ graphify-out/
 
 # Uttori ASM output
 .uttori-asm/
-
+docs/
 
 # IDE & Agent Files
+AGENTS.md
 CLAUDE.md
+TESTING.md
+.codex/
 .cursor/
+.verification/
 .vscode/
 !packages/vscode-extension/.vscode/
 !packages/vscode-extension/.vscode/launch.json

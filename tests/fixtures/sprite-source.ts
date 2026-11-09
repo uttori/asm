@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { createIndexedPng } from "@uttori/asm-assets/image";
 import {
@@ -26,6 +27,15 @@ import {
   renderStableFrameAtlas,
 } from "../../packages/assets/src/secret-of-mana/som-frame-edit.js";
 import type { RoundtripSelection } from "./sprite-roundtrip-host.js";
+
+/** A complete selection of the synthetic source's single palette consumer. */
+export const spriteSourceSelection = {
+  atlasId: "sprite.png",
+  image: "source/sprite.png",
+  layout: "source/sprite.layout.json",
+  catalog: "source/palettes.json",
+  atlases: [{ id: "sprite.png", image: "source/sprite.png", layout: "source/sprite.layout.json" }],
+} satisfies Omit<RoundtripSelection, "directory">;
 
 /** Original synthetic assets, with a flipped block, duplicate colors and preserved palette high bits. */
 export function spriteFixture(blank = false) {
@@ -102,7 +112,17 @@ export async function spriteSourceFixture(
 ) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sprite-source-"));
   teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  fs.symlinkSync(path.resolve("node_modules"), path.join(directory, "node_modules"), "dir");
+  return createSpriteSourceFixture(directory, compression, blankBoss);
+}
+
+/** Populate a new, empty directory. The caller owns its lifetime and cleanup. */
+export async function createSpriteSourceFixture(
+  directory: string,
+  compression?: "rle" | "lz-rle",
+  blankBoss = false,
+) {
+  const dependencies = fileURLToPath(new URL("../../node_modules", import.meta.url));
+  fs.symlinkSync(dependencies, path.join(directory, "node_modules"), "dir");
   for (const name of [".uttori/research", ".uttori-local", "source"]) {
     fs.mkdirSync(path.join(directory, name), { recursive: true });
   }
@@ -259,16 +279,7 @@ incbin "original.bin":$${graphicsEnd.toString(16)}..$8000
     message: "Adopt synthetic generation",
     validate: () => buildSpriteSource(directory),
   });
-  const selection: RoundtripSelection = {
-    directory,
-    atlasId: "sprite.png",
-    image: "source/sprite.png",
-    layout: "source/sprite.layout.json",
-    catalog: "source/palettes.json",
-    atlases: [
-      { id: "sprite.png", image: "source/sprite.png", layout: "source/sprite.layout.json" },
-    ],
-  };
+  const selection: RoundtripSelection = { directory, ...spriteSourceSelection };
   return { directory, selection, original, source, repository, files, generationInputs };
 }
 

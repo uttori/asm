@@ -10,8 +10,14 @@
     <title>Uttori Home</title>
   </head>
   <body>
-    <p id="actionStatus" class="home-status" role="status" aria-live="polite" hidden></p>
-    <div id="root"></div>
+    <!-- Keep the live region mounted so assistive technology observes later message updates. -->
+    <p
+      id="actionStatus"
+      class="home-status"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"></p>
+    <main id="root" tabindex="-1" aria-label="Project home"></main>
     <script nonce="{{nonce}}" src="{{scriptUri}}"></script>
   </body>
 </html>

@@ -39,6 +39,8 @@ import {
 import { decodeWorldRow, encodeWorldRow } from "@uttori/asm-assets/secret-of-mana/som-world-rle";
 import { indexedSourceCodecs } from "@uttori/asm-assets/source-codecs";
 
+import { convertWorldOverviewColors } from "./world-overview.js";
+
 const registry = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry.registerEncoder(encoder);
@@ -357,6 +359,16 @@ export function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
         targets: ["snes.sfc"],
         resourcePaths: (options) => (typeof options.preview === "string" ? [options.preview] : []),
         convert: convertRoomAsset,
+      });
+      context.registerAssetFormat({
+        id: "som.world.overview-colors",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        optionSchema: {
+          tiles: { summary: "Extracted indexed 512 × 512 world tile grid for preview." },
+        },
+        resourcePaths: (options) => (typeof options.tiles === "string" ? [options.tiles] : []),
+        convert: convertWorldOverviewColors,
       });
       context.registerAssetFormat({
         id: "som.palette.bgr555",

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../../../node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
+  "architecture": "snes.65816",
+  "buildOutput": "build/rebuilt-content.sfc",
+  "entryPoints": ["main.asm"],
+  "includePaths": ["./"],
+  "plugins": [
+    {
+      "module": "@uttori/asm-plugin-snes",
+      "options": {
+        "checksumEnabled": false,
+        "checksumMode": "asar"
+      }
+    },
+    {
+      "module": "@uttori/asm-game-secret-of-mana"
+    }
+  ],
+  "target": "snes.sfc"
+}

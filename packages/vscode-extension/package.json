@@ -53,9 +53,9 @@
     "vscode-languageserver-types": "^3.18.5"
   },
   "devDependencies": {
-    "@types/vscode": "1.140.0",
+    "@types/vscode": "1.145.0",
     "@uttori/asm-game-secret-of-mana": "1.0.0",
-    "@vscode/vsce": "^4.0.0",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.28.2"
   },
   "contributes": {

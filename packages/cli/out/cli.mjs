@@ -152,6 +152,33 @@ var require_constants = __commonJS({
     9007199254740991;
     var MAX_SAFE_COMPONENT_LENGTH = 16;
     var MAX_SAFE_BUILD_LENGTH = MAX_LENGTH - 6;
+    var WHITESPACE_CHARACTERS = [
+      "	",
+      "\n",
+      "\v",
+      "\f",
+      "\r",
+      " ",
+      "\xA0",
+      "\u1680",
+      "\u2000",
+      "\u2001",
+      "\u2002",
+      "\u2003",
+      "\u2004",
+      "\u2005",
+      "\u2006",
+      "\u2007",
+      "\u2008",
+      "\u2009",
+      "\u200A",
+      "\u2028",
+      "\u2029",
+      "\u202F",
+      "\u205F",
+      "\u3000",
+      "\uFEFF"
+    ];
     var RELEASE_TYPES = [
       "major",
       "premajor",
@@ -166,6 +193,7 @@ var require_constants = __commonJS({
       MAX_SAFE_COMPONENT_LENGTH,
       MAX_SAFE_BUILD_LENGTH,
       MAX_SAFE_INTEGER,
+      WHITESPACE_CHARACTERS,
       RELEASE_TYPES,
       SEMVER_SPEC_VERSION,
       FLAG_INCLUDE_PRERELEASE: 1,
@@ -1066,6 +1094,197 @@ var require_lrucache = __commonJS({
   }
 });
 
+// node_modules/semver/internal/trim-comparator-whitespace.js
+var require_trim_comparator_whitespace = __commonJS({
+  "node_modules/semver/internal/trim-comparator-whitespace.js"(exports, module) {
+    "use strict";
+    var {
+      MAX_LENGTH,
+      MAX_SAFE_BUILD_LENGTH,
+      WHITESPACE_CHARACTERS
+    } = require_constants();
+    var whitespace = new Uint8Array(65536);
+    for (const char of WHITESPACE_CHARACTERS) {
+      whitespace[char.charCodeAt(0)] = 1;
+    }
+    var isWhitespace = (char) => char !== void 0 && whitespace[char.charCodeAt(0)] === 1;
+    var isVersionPrefix = (char) => char === "v" || char === "=" || isWhitespace(char);
+    var isDigit = (char) => char !== void 0 && char >= "0" && char <= "9";
+    var isLetter = (char) => char !== void 0 && (char >= "a" && char <= "z" || char >= "A" && char <= "Z");
+    var isIdentifierCharacter = (char) => isDigit(char) || isLetter(char) || char === "-";
+    var isVersionStart = (char) => isDigit(char) || char === "x" || char === "X" || char === "*";
+    var findDigitsEndIndex = (range2, start, limit, digitRuns) => {
+      if (!isDigit(range2[start])) {
+        return start;
+      }
+      if (start >= digitRuns.start && start < digitRuns.end) {
+        return Math.min(start + limit, digitRuns.end);
+      }
+      if (start >= digitRuns.previousStart && start < digitRuns.previousEnd) {
+        return Math.min(start + limit, digitRuns.previousEnd);
+      }
+      let end = start + 1;
+      while (isDigit(range2[end])) {
+        end++;
+      }
+      digitRuns.previousStart = digitRuns.start;
+      digitRuns.previousEnd = digitRuns.end;
+      digitRuns.start = start;
+      digitRuns.end = end;
+      return Math.min(start + limit, end);
+    };
+    var findVersionNumberEndIndex = (range2, start, loose, digitRuns) => {
+      if (!loose && range2[start] === "0") {
+        return start + 1;
+      }
+      return findDigitsEndIndex(range2, start, loose ? MAX_LENGTH : MAX_LENGTH + 1, digitRuns);
+    };
+    var findPrereleaseIdentifierEndIndex = (range2, start, loose, digitRuns) => {
+      const digitsEnd = findDigitsEndIndex(range2, start, MAX_LENGTH, digitRuns);
+      if (isLetter(range2[digitsEnd]) || range2[digitsEnd] === "-") {
+        let end = digitsEnd + 1;
+        const limit = end + MAX_SAFE_BUILD_LENGTH;
+        while (end < limit && isIdentifierCharacter(range2[end])) {
+          end++;
+        }
+        return end;
+      }
+      return findVersionNumberEndIndex(range2, start, loose, digitRuns);
+    };
+    var findPrereleaseEndIndex = (range2, start, loose, digitRuns) => {
+      const hyphen = range2[start] === "-";
+      if (!loose && !hyphen) {
+        return start;
+      }
+      const identifierStart = start + (hyphen ? 1 : 0);
+      let end = findPrereleaseIdentifierEndIndex(range2, identifierStart, loose, digitRuns);
+      if (end === identifierStart) {
+        if (!loose || !hyphen) {
+          return start;
+        }
+        end = findPrereleaseIdentifierEndIndex(range2, start, loose, digitRuns);
+      }
+      while (range2[end] === ".") {
+        const next = findPrereleaseIdentifierEndIndex(range2, end + 1, loose, digitRuns);
+        if (next === end + 1) {
+          break;
+        }
+        end = next;
+      }
+      return end;
+    };
+    var findBuildIdentifierEndIndex = (range2, start) => {
+      let end = start;
+      while (end - start < MAX_SAFE_BUILD_LENGTH && isIdentifierCharacter(range2[end])) {
+        end++;
+      }
+      return end;
+    };
+    var findBuildEndIndex = (range2, start) => {
+      if (range2[start] !== "+") {
+        return start;
+      }
+      let end = findBuildIdentifierEndIndex(range2, start + 1);
+      if (end === start + 1) {
+        return start;
+      }
+      while (range2[end] === ".") {
+        const next = findBuildIdentifierEndIndex(range2, end + 1);
+        if (next === end + 1) {
+          break;
+        }
+        end = next;
+      }
+      return end;
+    };
+    var findLooseFullVersionEndIndex = (range2, start, digitRuns) => {
+      let end = start;
+      for (let component = 0; component < 3; component++) {
+        const next = findVersionNumberEndIndex(range2, end, true, digitRuns);
+        if (next === end) {
+          return start;
+        }
+        end = next;
+        if (component < 2) {
+          if (range2[end] !== ".") {
+            return start;
+          }
+          end++;
+        }
+      }
+      const prereleaseEnd = findPrereleaseEndIndex(range2, end, true, digitRuns);
+      return findBuildEndIndex(range2, prereleaseEnd);
+    };
+    var findPartialVersionComponentEndIndex = (range2, start, digitRuns) => {
+      if (isDigit(range2[start])) {
+        return findVersionNumberEndIndex(range2, start, false, digitRuns);
+      }
+      return isVersionStart(range2[start]) ? start + 1 : start;
+    };
+    var findPartialVersionEndIndex = (range2, start, digitRuns) => {
+      let end = findPartialVersionComponentEndIndex(range2, start, digitRuns);
+      for (let component = 0; component < 2; component++) {
+        if (range2[end] !== ".") {
+          return end;
+        }
+        const next = findPartialVersionComponentEndIndex(range2, end + 1, digitRuns);
+        if (next === end + 1) {
+          return end;
+        }
+        end = next;
+      }
+      const prereleaseEnd = findPrereleaseEndIndex(range2, end, false, digitRuns);
+      return findBuildEndIndex(range2, prereleaseEnd);
+    };
+    var findVersionEndIndex = (range2, start, digitRuns) => {
+      const fullVersionEnd = findLooseFullVersionEndIndex(range2, start, digitRuns);
+      return fullVersionEnd !== start ? fullVersionEnd : findPartialVersionEndIndex(range2, start, digitRuns);
+    };
+    var findRemovableWhitespaceIndex = (range2, matchStart) => {
+      let position = matchStart;
+      if (isWhitespace(range2[position])) {
+        position++;
+      }
+      if (range2[position] === "<" || range2[position] === ">") {
+        position++;
+      }
+      if (range2[position] === "=") {
+        position++;
+      }
+      return isWhitespace(range2[position]) ? position : -1;
+    };
+    var trimComparatorWhitespace = (range2) => {
+      let result = "";
+      let copyFrom = 0;
+      let cursor = 0;
+      const digitRuns = { start: -1, end: -1, previousStart: -1, previousEnd: -1 };
+      while (cursor < range2.length) {
+        const matchStart = cursor;
+        if (range2[cursor] === "<" || range2[cursor] === ">") {
+          cursor++;
+        } else if (!isVersionPrefix(range2[cursor]) && !isVersionStart(range2[cursor])) {
+          cursor++;
+          continue;
+        }
+        while (cursor < range2.length && isVersionPrefix(range2[cursor])) {
+          cursor++;
+        }
+        if (!isVersionStart(range2[cursor])) {
+          continue;
+        }
+        const whitespacePosition = findRemovableWhitespaceIndex(range2, matchStart);
+        if (whitespacePosition !== -1) {
+          result += range2.slice(copyFrom, whitespacePosition);
+          copyFrom = whitespacePosition + 1;
+        }
+        cursor = findVersionEndIndex(range2, cursor, digitRuns);
+      }
+      return result + range2.slice(copyFrom);
+    };
+    module.exports = trimComparatorWhitespace;
+  }
+});
+
 // node_modules/semver/classes/range.js
 var require_range = __commonJS({
   "node_modules/semver/classes/range.js"(exports, module) {
@@ -1147,7 +1366,7 @@ var require_range = __commonJS({
         const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
         range2 = range2.replace(hr, hyphenReplace(this.options.includePrerelease));
         debug4("hyphen replace", range2);
-        range2 = range2.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
+        range2 = trimComparatorWhitespace(range2);
         debug4("comparator trim", range2);
         range2 = range2.replace(re[t.TILDETRIM], tildeTrimReplace);
         debug4("tilde trim", range2);
@@ -1217,11 +1436,11 @@ var require_range = __commonJS({
     var Comparator = require_comparator();
     var debug4 = require_debug();
     var SemVer = require_semver();
+    var trimComparatorWhitespace = require_trim_comparator_whitespace();
     var {
       safeRe: re,
       src,
       t,
-      comparatorTrimReplace,
       tildeTrimReplace,
       caretTrimReplace
     } = require_re();
@@ -3081,7 +3300,8 @@ var init_capture_file_reader = __esm({
       #buffer = Buffer.alloc(0);
       #start = 0;
       #valid = 0;
-      /** Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
+      /**
+       * Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
        * The cap amortizes small metadata reads without loading an entire archive.
        */
       constructor(read, windowBytes = 1048576) {
@@ -3091,12 +3311,13 @@ var init_capture_file_reader = __esm({
         this.#read = read;
         this.#windowBytes = windowBytes;
       }
-      /** Read one validated component (at most 256 KiB), bounded by a snapshot or
+      /**
+       * Read one validated component (at most 256 KiB), bounded by a snapshot or
        * durable watermark. Short I/O is retried. Premature EOF is always an error.
-       * @param {number} length Component bytes, no larger than the read window.
-       * @param {number} offset Absolute nonnegative file position.
-       * @param {number} limit Exclusive snapshot/durable byte boundary.
-       * @returns {Promise<Buffer>} Owned component bytes, valid across subsequent refills.
+       * @param length Component bytes, no larger than the read window.
+       * @param offset Absolute nonnegative file position.
+       * @param limit Exclusive snapshot/durable byte boundary.
+       * @returns Owned component bytes, valid across subsequent refills.
        */
       async read(length, offset, limit) {
         if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit) {
@@ -3423,6 +3644,7 @@ var init_capture_file = __esm({
       }
     };
     NativeCaptureFileCursor = class _NativeCaptureFileCursor {
+      /** Parsed or declared header bytes. */
       header;
       #handle;
       #options;
@@ -3441,10 +3663,11 @@ var init_capture_file = __esm({
         this.#identity = identity3;
         this.#options = options;
       }
-      /** Open a prepared native partial file, or a completed archive for replay tests.
-       * @param {string} file Native-owned append-only file path.
-       * @param {CaptureFileReadOptions} options Byte budget and cancellation.
-       * @returns {Promise<NativeCaptureFileCursor>} Cursor pinning the checksummed session header and inode.
+      /**
+       * Open a prepared native partial file, or a completed archive for replay tests.
+       * @param file Native-owned append-only file path.
+       * @param options Byte budget and cancellation.
+       * @returns Cursor pinning the checksummed session header and inode.
        */
       static async open(file, options = {}) {
         options.signal?.throwIfAborted();
@@ -3470,26 +3693,30 @@ var init_capture_file = __esm({
           throw error;
         }
       }
-      /** Byte offset includes only the header and consumed, checkpointed chunks.
-       * @returns {number} Consumed file bytes, for bounded backlog accounting.
+      /**
+       * Byte offset includes only the header and consumed, checkpointed chunks.
+       * @returns Consumed file bytes, for bounded backlog accounting.
        */
       get readBytes() {
         return this.#offset;
       }
+      /** Derived observedEvents value for callers. */
       get observedEvents() {
         return String(this.#event);
       }
+      /** Derived complete value for callers. */
       get complete() {
         return this.#complete;
       }
-      /** Read at most maxChunks (default 16) from a validated native status. Growth beyond
+      /**
+       * Read at most maxChunks (default 16) from a validated native status. Growth beyond
        * that durable watermark is ignored even if an unsynced ACK2 is already visible.
        * A failure permanently poisons the cursor. Callers must discard staged facts.
-       * @param {NativeCaptureFilePosition} value Native producer's latest durable watermark.
-       * @param {Function} accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
-       * @param {number} maxChunks Maximum chunks per slice, in [1, 256].
-       * @param {string} publishedFile Final path whose inode must agree before completion.
-       * @returns {Promise<void>} Settlement of one bounded read slice.
+       * @param value Native producer's latest durable watermark.
+       * @param accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
+       * @param maxChunks Maximum chunks per slice, in [1, 256].
+       * @param publishedFile Final path whose inode must agree before completion.
+       * @returns Settlement of one bounded read slice.
        */
       async readThrough(value, accept, maxChunks = 16, publishedFile) {
         if (this.#failed) {
@@ -4552,8 +4779,8 @@ var require_src = __commonJS({
 });
 
 // packages/cli/src/index.ts
-import * as fs49 from "node:fs";
-import path68 from "node:path";
+import * as fs50 from "node:fs";
+import path69 from "node:path";
 
 // packages/core/src/address-width.ts
 function maximumAddressForWidth(addressWidth) {
@@ -4573,21 +4800,22 @@ function normalizeAddressForWidth(address3, addressWidth) {
 // packages/core/src/crc32.ts
 init_data_hash_crc32();
 var CRC32 = class _CRC32 {
-  /** Legacy lookup-table snapshot for inspection; mutations do not customize compute().
+  /**
+   * Legacy lookup-table snapshot for inspection; mutations do not customize compute().
    * @deprecated Use node:zlib in Node-only code or data-tools in portable integrations.
    */
   static table = _CRC32.makeCRCTable();
   /**
    * Return an independent snapshot of the standard reflected CRC32 lookup table.
-   * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
+   * @returns 256 unsigned entries for the reflected CRC32 polynomial.
    */
   static makeCRCTable() {
     return Uint32Array.from(CRC32_TABLE);
   }
   /**
    * Computes the CRC32 checksum for the given data.
-   * @param {number[] | Uint8Array} data A Uint8Array (or Node.js Buffer) of data.
-   * @returns {number} Unsigned CRC-32, without modifying the input.
+   * @param data A Uint8Array (or Node.js Buffer) of data.
+   * @returns Unsigned CRC-32, without modifying the input.
    */
   static compute(data) {
     return compute(data);
@@ -4597,12 +4825,12 @@ var CRC32 = class _CRC32 {
 // packages/core/src/addressToLine.ts
 var sourceIdentity = (filename, supplied) => {
   try {
-    const fs50 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
+    const fs51 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
     const crypto = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:crypto");
-    if (!fs50 || !crypto) {
+    if (!fs51 || !crypto) {
       return { crc: 0, size: 0, sha256: "" };
     }
-    const data = supplied ?? fs50.readFileSync(filename);
+    const data = supplied ?? fs51.readFileSync(filename);
     return {
       crc: CRC32.compute(data),
       size: data.length,
@@ -4613,9 +4841,13 @@ var sourceIdentity = (filename, supplied) => {
   }
 };
 var AddressToLineMapping = class {
+  /** Fingerprinted source files indexed by {@link getFileIndex}. */
   fileList = [];
+  /** CRC32 of paths parallel to {@link fileList} for fast lookup. */
   filenameCrcs = [];
+  /** Legacy point mappings retained for older debug consumers. */
   addrToLineInfo = [];
+  /** Coalesced half-open logical and output ranges. */
   ranges = [];
   /** Final encoder evaluations, collected without evaluating expressions a second time. */
   instructions = [];
@@ -4633,9 +4865,10 @@ var AddressToLineMapping = class {
     this.assets = [];
     this.structFields = [];
   }
-  /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.
-   * @param {string} filename Provider path.
-   * @param {Uint8Array} bytes Build snapshot.
+  /**
+   * Record a binary dependency using the bytes consumed by assembly, not a later disk read.
+   * @param filename Provider path.
+   * @param bytes Build snapshot.
    */
   registerDependencySnapshot(filename, bytes3) {
     const index = this.getFileIndex(filename);
@@ -4644,9 +4877,9 @@ var AddressToLineMapping = class {
   }
   /**
    * Adds a legacy point mapping. New debugger consumers should use ranges.
-   * @param {string} filename Source filename.
-   * @param {number} line One-based source line.
-   * @param {number} addr Logical address.
+   * @param filename Source filename.
+   * @param line One-based source line.
+   * @param addr Logical address.
    */
   includeMapping(filename, line, addr) {
     const fileIdx = this.getFileIndex(filename);
@@ -4654,12 +4887,12 @@ var AddressToLineMapping = class {
   }
   /**
    * Adds one emitted byte, coalescing it with the preceding compatible range.
-   * @param {string} filename Source filename.
-   * @param {number} line One-based source line.
-   * @param {string} architecture Architecture contribution id.
-   * @param {string} addressSpace Address-space contribution id.
-   * @param {number} address Logical byte address.
-   * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
+   * @param filename Source filename.
+   * @param line One-based source line.
+   * @param architecture Architecture contribution id.
+   * @param addressSpace Address-space contribution id.
+   * @param address Logical byte address.
+   * @param outputOffset Physical output offset, or a negative value when unmapped.
    */
   includeByte(filename, line, architecture, addressSpace, address3, outputOffset) {
     const fileIdx = this.getFileIndex(filename);
@@ -4685,10 +4918,10 @@ var AddressToLineMapping = class {
   }
   /**
    * Returns all source ranges containing a logical address.
-   * @param {string} addressSpace Address-space contribution id.
-   * @param {number} address Logical address.
-   * @param {string} architecture Optional architecture filter.
-   * @returns {readonly SerializableAddressRange[]} Matching source ranges.
+   * @param addressSpace Address-space contribution id.
+   * @param address Logical address.
+   * @param architecture Optional architecture filter.
+   * @returns Matching source ranges.
    */
   findSourceRanges(addressSpace, address3, architecture) {
     return this.serializableRanges().filter(
@@ -4697,17 +4930,20 @@ var AddressToLineMapping = class {
   }
   /**
    * Returns all address ranges generated by a one-based source line.
-   * @param {string} source Source path.
-   * @param {number} line One-based source line.
-   * @param {string} architecture Optional architecture filter.
-   * @returns {readonly SerializableAddressRange[]} Matching address ranges.
+   * @param source Source path.
+   * @param line One-based source line.
+   * @param architecture Optional architecture filter.
+   * @returns Matching address ranges.
    */
   findAddressRanges(source2, line, architecture) {
     return this.serializableRanges().filter(
       (range2) => range2.source === source2 && range2.line === line && (architecture === void 0 || range2.architecture === architecture)
     );
   }
-  /** @returns {readonly SerializableAddressRange[]} Deterministic path-based ranges. */
+  /**
+   * Converts stored ranges into portable path-based records sorted for stable output.
+   * @returns Sorted serializable ranges.
+   */
   serializableRanges() {
     return this.ranges.map(({ fileIdx, ...range2 }) => ({ ...range2, source: this.fileList[fileIdx]?.name ?? "" })).toSorted(
       (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.architecture.localeCompare(right.architecture) || left.start - right.start || left.end - right.end || left.source.localeCompare(right.source) || left.line - right.line
@@ -4715,8 +4951,8 @@ var AddressToLineMapping = class {
   }
   /**
    * Gets or creates a fingerprinted source-file entry.
-   * @param {string} filename Source path.
-   * @returns {number} Stable file-table index.
+   * @param filename Source path.
+   * @returns Stable file-table index.
    */
   getFileIndex(filename) {
     const filenameCrc = CRC32.compute(new TextEncoder().encode(filename));
@@ -4733,12 +4969,14 @@ var AddressToLineMapping = class {
 
 // packages/core/src/architecture-registry.ts
 var ArchitectureRegistry = class {
+  /** Definitions keyed by lowercase canonical name. */
   definitions = /* @__PURE__ */ new Map();
+  /** Lowercase alias or canonical name to canonical name; every canonical name maps to itself. */
   aliases = /* @__PURE__ */ new Map();
   /**
    * Registers the value.
-   * @param {ArchitectureDefinition} definition The definition.
-   * @param {string[]} [aliases] The aliases.
+   * @param definition The definition.
+   * @param [aliases] The aliases.
    */
   register(definition, aliases3 = []) {
     const canonical2 = definition.name.toLowerCase();
@@ -4748,9 +4986,19 @@ var ArchitectureRegistry = class {
       this.aliases.set(alias.toLowerCase(), canonical2);
     }
   }
+  /**
+   * Resolves an architecture name or alias, ignoring case.
+   * @param name Architecture name or alias.
+   * @returns The lowercase canonical name, or undefined when unregistered.
+   */
   getCanonicalName(name4) {
     return this.aliases.get(name4.toLowerCase());
   }
+  /**
+   * Looks up a definition by name or alias, ignoring case.
+   * @param name Architecture name or alias.
+   * @returns The registered definition, or undefined when unregistered.
+   */
   getDefinition(name4) {
     const canonical2 = this.getCanonicalName(name4);
     if (!canonical2) {
@@ -4760,8 +5008,8 @@ var ArchitectureRegistry = class {
   }
   /**
    * Returns editor metadata from the same registered encoder used for builds.
-   * @param {string} name Architecture name or alias.
-   * @returns {InstructionDescriptor[]} Registered instruction descriptors.
+   * @param name Architecture name or alias.
+   * @returns Registered instruction descriptors.
    */
   getInstructionCatalog(name4) {
     const definition = this.getDefinition(name4);
@@ -4845,18 +5093,22 @@ function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
 
 // packages/core/src/diagnostics.ts
 var AssemblyError = class extends Error {
+  /** Stable diagnostic code mirrored in AssemblyDiagnostic records. */
   code;
+  /** Severity used when converting the error into a diagnostic. */
   severity;
+  /** Optional source location attached at throw site. */
   location;
+  /** Optional pipeline stage recorded for the failure. */
   stage;
   /**
    * Creates a new structured assembly error.
-   * @param {string} code Stable diagnostic code.
-   * @param {string} message Human-readable message.
-   * @param {{ severity?: AssemblyDiagnosticSeverity; location?: AssemblySourceLocation; stage?: string }} [options] Optional metadata.
-   * @param {AssemblyDiagnosticSeverity} [options.severity] Optional diagnostic severity.
-   * @param {AssemblySourceLocation} [options.location] Optional source location.
-   * @param {string} [options.stage] Optional pipeline stage.
+   * @param code Stable diagnostic code.
+   * @param message Human-readable message.
+   * @param [options] Optional metadata.
+   * @param [options.severity] Optional diagnostic severity.
+   * @param [options.location] Optional source location.
+   * @param [options.stage] Optional pipeline stage.
    */
   constructor(code, message, options = {}) {
     super(message);
@@ -5987,7 +6239,13 @@ var ExpressionParser = class {
   }
   tokens;
   sourceText;
+  /** Position of the next unconsumed token. */
   index = 0;
+  /**
+   * Parses a binary expression whose operators bind at least as tightly as `minPrecedence`.
+   * @param minPrecedence Lowest operator precedence this call may consume.
+   * @returns The parsed expression.
+   */
   parseExpression(minPrecedence = 0) {
     let left = this.parsePrefix();
     while (true) {
@@ -6018,9 +6276,11 @@ var ExpressionParser = class {
     }
     return left;
   }
+  /** Reports whether every token has been consumed. */
   isAtEnd() {
     return this.index >= this.tokens.length;
   }
+  /** Parses right-nested prefix operators followed by a primary with postfix accessors. */
   parsePrefix() {
     const token = this.peek();
     if (!token) {
@@ -6036,6 +6296,7 @@ var ExpressionParser = class {
     }
     return this.parsePostfix(this.parsePrimary());
   }
+  /** Parses one operand: dotted local name, literal, string, define reference, identifier or parenthesized group. */
   parsePrimary() {
     if (this.peek()?.type === "dot") {
       const firstSpan = this.peek()?.span;
@@ -6126,6 +6387,7 @@ var ExpressionParser = class {
       { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` }
     );
   }
+  /** Applies call, member and index postfixes; calls require identifiers and accessors require references. */
   parsePostfix(expression2) {
     let current = expression2;
     while (true) {
@@ -6175,6 +6437,7 @@ var ExpressionParser = class {
       return current;
     }
   }
+  /** Parses comma-separated arguments after `(` through the closing `)`. */
   parseCallArguments() {
     const args = [];
     if (this.match({ type: "rparen" })) {
@@ -6188,7 +6451,7 @@ var ExpressionParser = class {
   }
   /**
    * Expects a value.
-   * @param {Token["type"]} type The type.
+   * @param type The type.
    */
   expect(type) {
     const token = this.consume();
@@ -6201,6 +6464,7 @@ var ExpressionParser = class {
       );
     }
   }
+  /** Consumes the next token only when its type matches, reporting whether it did. */
   match(expected) {
     const token = this.peek();
     if (token && token.type === expected.type) {
@@ -6209,11 +6473,13 @@ var ExpressionParser = class {
     }
     return false;
   }
+  /** Returns the next token and advances; undefined past the end. */
   consume() {
     const token = this.tokens[this.index];
     this.index++;
     return token;
   }
+  /** Returns the next token without advancing; undefined past the end. */
   peek() {
     return this.tokens[this.index];
   }
@@ -7211,7 +7477,7 @@ function parseDeclaration(text4, words) {
     if (!match) {
       throw new Error("Invalid function definition syntax.");
     }
-    const parameters = (match[2] ?? "").split(",").map((value) => value.trim()).filter(Boolean);
+    const parameters = (match.at(2) ?? "").split(",").map((value) => value.trim()).filter(Boolean);
     return {
       kind: "function",
       name: match[1],
@@ -7238,7 +7504,7 @@ function parseDeclaration(text4, words) {
     const seen = /* @__PURE__ */ new Set();
     for (let index = 1; index < words.length; index += 2) {
       const name4 = words[index].toLowerCase();
-      if (name4 !== "align" && name4 !== "count" && name4 !== "firstindex" || seen.has(name4) || words[index + 1] === void 0) {
+      if (name4 !== "align" && name4 !== "count" && name4 !== "firstindex" || seen.has(name4) || index + 1 >= words.length) {
         if (words[1]?.toLowerCase() === "align") {
           throw new Error("endstruct align requires a single alignment parameter.");
         }
@@ -7254,9 +7520,10 @@ function parseDeclaration(text4, words) {
     const declaration = words.slice(1).join(" ");
     const typed = /^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i.exec(declaration);
     if (typed) {
+      const count2 = typed.at(2);
       const storage = {
         width: ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1,
-        ...typed[2] === void 0 ? {} : { count: expression(typed[2]) }
+        ...count2 === void 0 ? {} : { count: expression(count2) }
       };
       return { kind: "structField", name: name4, storage };
     }
@@ -7289,12 +7556,13 @@ function parseDeclaration(text4, words) {
     if (!reference2) {
       throw new Error(`Unknown dataStruct record '${args[0]}'.`);
     }
+    const index = reference2.at(2);
     return {
       kind: "dataStruct",
       reference: {
         name: reference2[1],
         text: args[0],
-        ...reference2[2] === void 0 ? {} : { index: expression(reference2[2]) }
+        ...index === void 0 ? {} : { index: expression(index) }
       },
       fields: parseStructInitializerEntries(args[1])
     };
@@ -7736,9 +8004,11 @@ function isOpenStructuredCommand(text4) {
   return depth > 0;
 }
 var StructuredContinuation = class {
+  /** Whether continuation tracks an asset call or struct/datastruct literal. */
   kind;
   /** Signed delimiter balance; malformed input is left for the normal parser's diagnostics. */
   depth = 0;
+  /** Active quote character while scanning nested structured text. */
   quote = "";
   previous = "";
   slashes = 0;
@@ -8620,7 +8890,7 @@ var parseIncludeTarget = (words, directive3) => {
   const quoted = target.length >= 2 && ['"', "'", "`"].includes(quote) && target.endsWith(quote);
   return { path: quoted ? target.slice(1, -1) : target, quote: quoted ? quote : "" };
 };
-var resolveIncludeTarget = ({ path: path69, quote }, expander) => quote ? `${quote}${expander.resolveDefinesInStringLiteral(path69)}${quote}` : expander.resolveRegularDefines(path69);
+var resolveIncludeTarget = ({ path: path70, quote }, expander) => quote ? `${quote}${expander.resolveDefinesInStringLiteral(path70)}${quote}` : expander.resolveRegularDefines(path70);
 var splitIncbinArrow = (words) => {
   const arrowIndex = words.indexOf("->");
   if (arrowIndex === -1) {
@@ -8860,9 +9130,9 @@ var registerIncludeSourceDirectives = (registry5, context) => {
       directive3,
       ({ words }) => parseIncludeTarget(words, directive3),
       syntaxRecord({ path: syntaxString, quote: syntaxString }),
-      ({ path: path69, quote }) => {
+      ({ path: path70, quote }) => {
         const expander = context.defineEngine ?? IDENTITY_INCLUDE_DEFINES;
-        const filename = resolveIncludeTarget({ path: path69, quote }, expander);
+        const filename = resolveIncludeTarget({ path: path70, quote }, expander);
         if (directive3 === "incsrc") {
           context.includeSource.assembleFile(filename);
         } else {
@@ -9355,6 +9625,7 @@ var DirectiveRegistry = class {
     this.directivePrefixes = directivePrefixes;
   }
   directivePrefixes;
+  /** Lowercase keyword to bound handler map including prefix-stripped aliases. */
   handlers = /* @__PURE__ */ new Map();
   /** Grammar versions are immutable; registration is the only ownership transition. */
   cachedGrammarIdentity;
@@ -9509,9 +9780,11 @@ var DirectiveRegistry = class {
     }
     withTypedExecution(() => entry.execute(payload, command));
   }
+  /** Reports whether a handler exists for the keyword after prefix normalization. */
   has(keyword) {
     return this.lookup(keyword) !== void 0;
   }
+  /** Invokes a registered handler when present; returns false when the keyword is unknown. */
   dispatch(keyword, words, raw, command) {
     const handler = this.lookup(keyword);
     if (!handler) {
@@ -9522,8 +9795,8 @@ var DirectiveRegistry = class {
   }
   /**
    * Resolves a directive handler using prefixes supplied by the active syntax profile.
-   * @param {string} keyword The directive keyword.
-   * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
+   * @param keyword The directive keyword.
+   * @returns The handler, if registered.
    */
   lookup(keyword) {
     const direct = this.handlers.get(keyword);
@@ -9606,9 +9879,9 @@ var NodeAssemblyFileProvider = class {
   readFiles = /* @__PURE__ */ new Set();
   /**
    * Find the first existing path: macro directory, current source directory, include paths, then cwd.
-   * @param {string} filename Include path token, optionally quoted.
-   * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
-   * @returns {string | undefined} First existing file identity, or undefined.
+   * @param filename Include path token, optionally quoted.
+   * @param [options] Source and include directories in search order.
+   * @returns First existing file identity, or undefined.
    */
   resolvePath(filename, options = {}) {
     requireNodeFs();
@@ -9636,30 +9909,33 @@ var NodeAssemblyFileProvider = class {
     }
     return void 0;
   }
+  /** Probes disk metadata without recording the path as a consumed dependency. */
   stat(filePath) {
-    const fs50 = requireNodeFs();
+    const fs51 = requireNodeFs();
     let st;
     try {
-      st = fs50.statSync(filePath);
+      st = fs51.statSync(filePath);
     } catch {
       return { exists: false, readable: false };
     }
     try {
-      fs50.accessSync(filePath, fs50.constants.R_OK);
+      fs51.accessSync(filePath, fs51.constants.R_OK);
       return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
     } catch {
       return { exists: true, readable: false, mtimeMs: st.mtimeMs };
     }
   }
+  /** Reads disk bytes and records the path in the build dependency set. */
   readFile(filePath) {
-    const fs50 = requireNodeFs();
+    const fs51 = requireNodeFs();
     this.readFiles.add(filePath);
-    return new Uint8Array(fs50.readFileSync(filePath));
+    return new Uint8Array(fs51.readFileSync(filePath));
   }
+  /** Reads disk text and records the path in the build dependency set. */
   readTextFile(filePath, encoding = "utf8") {
-    const fs50 = requireNodeFs();
+    const fs51 = requireNodeFs();
     this.readFiles.add(filePath);
-    return fs50.readFileSync(filePath, encoding);
+    return fs51.readFileSync(filePath, encoding);
   }
 };
 var NodeAssemblySnapshotProvider = class extends NodeAssemblyFileProvider {
@@ -9688,6 +9964,7 @@ var NodeAssemblySnapshotProvider = class extends NodeAssemblyFileProvider {
       this.#overlays.set(path.resolve(file), value === null ? null : Uint8Array.from(value));
     }
   }
+  /** Applies overlays and retained snapshots before falling back to disk stat. */
   stat(file) {
     const name4 = path.resolve(file);
     if (this.#overlays.has(name4)) {
@@ -9700,6 +9977,7 @@ var NodeAssemblySnapshotProvider = class extends NodeAssemblyFileProvider {
     }
     return super.stat(name4);
   }
+  /** Returns immutable snapshot bytes, honoring overlays and the build byte budget. */
   readFile(file) {
     const name4 = path.resolve(file);
     let bytes3 = this.#snapshots.get(name4);
@@ -9722,18 +10000,19 @@ var NodeAssemblySnapshotProvider = class extends NodeAssemblyFileProvider {
     }
     return bytes3.slice();
   }
+  /** Decodes snapshot bytes using the same copy-on-read path as binary reads. */
   readTextFile(file, encoding = "utf8") {
     return Buffer.from(this.readFile(file)).toString(encoding);
   }
   /** Reject changed or removed saved inputs; copied overlays remain independent of the host disk. */
   assertUnchanged() {
-    const fs50 = requireNodeFs();
+    const fs51 = requireNodeFs();
     for (const [file, bytes3] of this.#snapshots) {
       if (this.#overlays.has(file)) {
         continue;
       }
       try {
-        if (fs50.statSync(file).size === bytes3.length && fs50.readFileSync(file).equals(bytes3)) {
+        if (fs51.statSync(file).size === bytes3.length && fs51.readFileSync(file).equals(bytes3)) {
           continue;
         }
       } catch (cause) {
@@ -9991,7 +10270,7 @@ function parseInstructionOperands(mnemonic, text4, grammar2) {
     const parts2 = operandParts(text4, ",");
     for (let index = 0; index < parts2.length; index++) {
       let part = parts2[index];
-      const next = parts2[index + 1];
+      const next = parts2.at(index + 1);
       if (grammar2.commaIndex && next && grammar2.indexRegisters.includes(next.text.toLowerCase())) {
         part = { text: text4.slice(part.start, next.end), start: part.start, end: next.end };
         index++;
@@ -10260,7 +10539,7 @@ function instructionReferenceExpressions(syntax2, command) {
   }
   const text4 = command.parsed.opcodeOperands?.operandText ?? "";
   const physical2 = command.source.physical?.text ?? command.source.raw;
-  const mnemonic = command.source.tokenSpans[0];
+  const mnemonic = command.source.tokenSpans.at(0);
   const offset = mnemonic?.end ?? physical2.indexOf(command.keyword) + command.keyword.length;
   const at = physical2.indexOf(text4, offset);
   const positions = at < 0 ? locateContinuedExpression(text4, physical2, offset) : void 0;
@@ -10277,13 +10556,10 @@ function instructionReferenceExpressions(syntax2, command) {
       if (at >= 0) {
         return createTextSpan(physical2, at + start, at + end, command.source.line);
       }
-      if (positions?.[start] !== void 0 && positions[end - 1] !== void 0) {
-        return createTextSpan(
-          physical2,
-          positions[start],
-          positions[end - 1] + 1,
-          command.source.line
-        );
+      const first = positions?.[start];
+      const last = positions?.[end - 1];
+      if (first !== void 0 && last !== void 0) {
+        return createTextSpan(physical2, first, last + 1, command.source.line);
       }
       return { start: span.start, end: span.end };
     });
@@ -10533,10 +10809,12 @@ var InstructionResolutionFrame = class {
     this.assertActive();
     return this.stage;
   }
+  /** Build an encoder error without releasing the resolution frame. */
   error(message) {
     this.assertActive();
     return this.context.error?.(message) ?? new Error(message);
   }
+  /** Logical address after opcode and operand writes within this frame. */
   currentAddress() {
     this.assertActive();
     return this.context.currentAddress();
@@ -10672,17 +10950,29 @@ var MathCore = class {
   functionTemplates = /* @__PURE__ */ new WeakMap();
   /** Parsed syntax is reused only within an assembly snapshot; state-dependent values are never cached. */
   parsedStringExpressions = /* @__PURE__ */ new Map();
+  /** Memoized numeric results for pure string expressions. */
   pureStringExpressionCache = /* @__PURE__ */ new Map();
+  /** Memoized rounded results for pure string expressions when math_round is enabled. */
   roundedPureStringExpressionCache = /* @__PURE__ */ new Map();
+  /** Records whether a source string expression is independent of assembly state. */
   pureStringClassification = /* @__PURE__ */ new Map();
+  /** Source strings already traced by internal instrumentation. */
   instrumentedExpressionStrings = /* @__PURE__ */ new Set();
+  /** Pure source strings already traced by internal instrumentation. */
   instrumentedPureExpressionStrings = /* @__PURE__ */ new Set();
+  /** Parsed expression nodes already traced by internal instrumentation. */
   instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
+  /** Pure parsed expression nodes already traced by internal instrumentation. */
   instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
+  /** Optional expression host supplying reference resolution and side effects. */
   host;
+  /** When true, numeric results round toward nearest integer where applicable. */
   math_round = false;
+  /** User-defined functions parsed from assembly source. */
   userFunctions = /* @__PURE__ */ new Map();
+  /** Target-provided expression functions registered for this session. */
   expressionFunctions = /* @__PURE__ */ new Map();
+  /** Binary operator table used for precedence parsing and evaluation. */
   operators = OPERATORS;
   /**
    * Initialize the math core.
@@ -10694,8 +10984,8 @@ var MathCore = class {
   }
   /**
    * Installs a target-provided expression function for this session.
-   * @param {string | readonly string[]} names The canonical name and aliases.
-   * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
+   * @param names The canonical name and aliases.
+   * @param expressionFunction The function descriptor and evaluator.
    */
   registerExpressionFunction(names, expressionFunction) {
     for (const name4 of typeof names === "string" ? [names] : names) {
@@ -10730,8 +11020,8 @@ var MathCore = class {
   /**
    * Evaluates an expression.
    * This is a direct conversion of `math` in `asar_math.cpp`.
-   * @param {string} expression The expression to evaluate.
-   * @returns {number} The result of the expression.
+   * @param expression The expression to evaluate.
+   * @returns The result of the expression.
    */
   math = (expression2) => {
     if (isInternalInstrumentationActive()) {
@@ -10744,8 +11034,8 @@ var MathCore = class {
   };
   /**
    * Evaluates a string or typed expression without instrumentation dispatch.
-   * @param {string | ExpressionNode} expression The expression to evaluate.
-   * @returns {number} The expression result.
+   * @param expression The expression to evaluate.
+   * @returns The expression result.
    */
   evaluateMathInput(expression2) {
     if (this.linkContext) {
@@ -10762,8 +11052,8 @@ var MathCore = class {
   }
   /**
    * Reuses successful results only for strings proven to contain literal operators.
-   * @param {string} expression The legacy expression source.
-   * @returns {number} The expression result.
+   * @param expression The legacy expression source.
+   * @returns The expression result.
    */
   evaluateCachedStringExpression(expression2) {
     let parsed = this.parsedStringExpressions.get(expression2);
@@ -10795,7 +11085,7 @@ var MathCore = class {
   }
   /**
    * Records the shape and reuse of a top-level expression evaluation.
-   * @param {string | ExpressionNode} expression The evaluated expression.
+   * @param expression The evaluated expression.
    */
   recordExpressionEvaluation(expression2) {
     incrementInternalCounter("expressionEvaluations");
@@ -10830,8 +11120,8 @@ var MathCore = class {
   }
   /**
    * Determines whether an expression depends only on literal operators.
-   * @param {ExpressionNode} expression The expression to classify.
-   * @returns {boolean} Whether the result is independent of assembler state.
+   * @param expression The expression to classify.
+   * @returns Whether the result is independent of assembler state.
    */
   isPureExpressionNode(expression2) {
     switch (expression2.type) {
@@ -10863,8 +11153,8 @@ var MathCore = class {
   }
   /**
    * Evaluates syntax directly; parser diagnostics are raised only when their occurrence is selected.
-   * @param {ExpressionNode} expression The expression node to evaluate.
-   * @returns {number} The numeric result.
+   * @param expression The expression node to evaluate.
+   * @returns The numeric result.
    */
   evaluateExpressionNode(expression2, round = true) {
     const result = this.evaluateNodeValue(expression2);
@@ -10928,6 +11218,7 @@ var MathCore = class {
     }
     throw new Error("Unsupported expression node.");
   }
+  /** Evaluates one call argument, preserving string slots and deferring failed identifier lookups. */
   evaluateCallArgument(functionName, argumentIndex, argument) {
     if (argument.type === "sourceText") {
       return argument.value;
@@ -10992,6 +11283,7 @@ var MathCore = class {
     }
     return this.evaluateExpressionNode(argument);
   }
+  /** Applies a unary operator to an evaluated operand node. */
   evaluateUnaryExpressionNode(operator, argument) {
     const value = this.evaluateExpressionNode(argument, false);
     switch (operator) {
@@ -11012,6 +11304,7 @@ var MathCore = class {
         return value;
     }
   }
+  /** Applies a binary operator to two evaluated operand nodes. */
   evaluateBinaryExpressionNode(operator, left, right) {
     const spec = this.operators[operator];
     return spec.operation(
@@ -11042,6 +11335,7 @@ var MathCore = class {
     }
     throw new Error(`Error: Label '${result.name}' not found.`);
   }
+  /** Reports whether a builtin call slot expects source text instead of a numeric value. */
   isStringArgument(functionName, argumentIndex) {
     return isSourceTextArgument(functionName, argumentIndex);
   }
@@ -11051,9 +11345,9 @@ var MathCore = class {
   }
   /**
    * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callFunction = (name4, args) => {
     if (this.userFunctions.has(name4)) {
@@ -11075,9 +11369,9 @@ var MathCore = class {
   };
   /**
    * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callUserFunction = (name4, args) => {
     const func = this.userFunctions.get(name4);
@@ -11140,9 +11434,9 @@ var MathCore = class {
   }
   /**
    * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name The name of the function to call.
-   * @param {Array<number | string>} args The arguments to pass to the function.
-   * @returns {number} The result of the function call.
+   * @param name The name of the function to call.
+   * @param args The arguments to pass to the function.
+   * @returns The result of the function call.
    */
   callBuiltInFunction = (name4, args) => {
     switch (name4) {
@@ -11424,9 +11718,9 @@ var MathCore = class {
   };
   /**
    * Validates an argument as a number.
-   * @param {string} funcName The name of the function.
-   * @param {number | string} arg The argument to validate.
-   * @returns {number} The validated number.
+   * @param funcName The name of the function.
+   * @param arg The argument to validate.
+   * @returns The validated number.
    */
   numArg = (funcName, arg) => {
     if (typeof arg === "string") {
@@ -11438,9 +11732,9 @@ var MathCore = class {
   };
   /**
    * Validates an argument as a string.
-   * @param {string} funcName The name of the function.
-   * @param {number | string} arg The argument to validate.
-   * @returns {string} The validated string.
+   * @param funcName The name of the function.
+   * @param arg The argument to validate.
+   * @returns The validated string.
    */
   strArg = (funcName, arg) => {
     if (typeof arg === "number") {
@@ -11463,6 +11757,7 @@ var MathCore = class {
     this.userFunctions.set(name4, definition);
     this.functionTemplates.set(definition, template);
   }
+  /** Returns the configured expression host or throws when evaluation is attempted too early. */
   getHost() {
     if (!this.host) {
       throw new Error("ExpressionHost not set.");
@@ -11547,11 +11842,17 @@ function definePlugin(plugin3) {
 
 // packages/core/src/plugin/diagnostics.ts
 var PluginError = class extends Error {
+  /** Stable failure category for programmatic handling. */
   code;
+  /** Manifest ID of the plugin responsible, when known. */
   pluginId;
+  /** Module specifier or URL the plugin was loaded from, when known. */
   pluginModule;
+  /** Contribution ID involved in the failure, when known. */
   contributionId;
+  /** Target ID involved in the failure, when known. */
   targetId;
+  /** Original thrown value, also passed to the native Error cause. */
   cause;
   constructor(message, context) {
     super(message, { cause: context.cause });
@@ -11771,8 +12072,8 @@ var ResolvedToolingCatalog = class {
   /**
    * Instruction catalog for an architecture id or alias on this target.
    * Unknown architectures, or ones not listed on the target, yield an empty list.
-   * @param {string} architecture Architecture contribution id or alias.
-   * @returns {readonly InstructionDescriptor[]} Instruction descriptors, possibly empty.
+   * @param architecture Architecture contribution id or alias.
+   * @returns Instruction descriptors, possibly empty.
    */
   getInstructions(architecture) {
     const id2 = this.architectureAliases.get(canonical(architecture)) ?? canonical(architecture);
@@ -11784,7 +12085,7 @@ var ResolvedToolingCatalog = class {
   /**
    * Core directive catalog (filtered by `coreDirectiveGroups`) plus this target's
    * contributed tooling. Later keywords win when a plugin overrides a core name.
-   * @returns {readonly DirectiveDescriptor[]} Deduped directive descriptors.
+   * @returns Deduped directive descriptors.
    */
   getDirectives() {
     const enabledCoreGroups = new Set(
@@ -11803,7 +12104,7 @@ var ResolvedToolingCatalog = class {
   }
   /**
    * Expression functions contributed by this target's expression sets.
-   * @returns {readonly ExpressionFunctionDescriptor[]} Name, aliases, signature, summary.
+   * @returns Name, aliases, signature, summary.
    */
   getExpressionFunctions() {
     return this.target.expressionSets.flatMap(
@@ -11817,7 +12118,7 @@ var ResolvedToolingCatalog = class {
   }
   /**
    * Architectures listed on this target. Missing contributions are skipped.
-   * @returns {readonly ArchitectureSummary[]} Id, aliases, and display name.
+   * @returns Id, aliases, and display name.
    */
   getArchitectures() {
     return this.target.architectures.flatMap((id2) => {
@@ -11833,7 +12134,7 @@ var ResolvedToolingCatalog = class {
   }
   /**
    * Every target in the environment, not only the one this catalog was built for.
-   * @returns {readonly TargetSummary[]} Frozen-friendly summaries for UI/LSP.
+   * @returns Frozen-friendly summaries for UI/LSP.
    */
   getTargets() {
     return this.targets.map(({ value }) => ({
@@ -11846,7 +12147,9 @@ var ResolvedToolingCatalog = class {
   }
 };
 var AssemblerEnvironment = class {
+  /** Plugin manifests retained for tooling and diagnostics surfacing. */
   manifests;
+  /** Session-state contributions indexed during environment construction. */
   sessionStates;
   #architectures;
   #addressSpaces;
@@ -11866,7 +12169,7 @@ var AssemblerEnvironment = class {
    * Indexes contributions, checks target alias uniqueness, then validates every target.
    * Prefer PluginManager.freeze: this constructor retains input records and assumes they were
    * already validated and deeply frozen by the manager. It does not own plugin resources.
-   * @param {EnvironmentContributions} contributions Manager-collected plugin graph.
+   * @param contributions Manager-collected plugin graph.
    * @throws {PluginError} On alias collisions or an invalid target graph.
    */
   constructor(contributions) {
@@ -11949,10 +12252,11 @@ var AssemblerEnvironment = class {
     this.#architectureAliasesByTarget = aliasesByTarget;
     Object.freeze(this);
   }
-  /** Resolve a globally named or target-scoped short format ID.
-   * @param {string} id Full ID or short alias.
-   * @param {string} targetId Selected target.
-   * @returns {Readonly<AssetFormatContribution> | undefined} Compatible format.
+  /**
+   * Resolve a globally named or target-scoped short format ID.
+   * @param id Full ID or short alias.
+   * @param targetId Selected target.
+   * @returns Compatible format.
    */
   getAssetFormat(id2, targetId) {
     const canonicalTarget = this.getTarget(targetId)?.id ?? targetId;
@@ -11963,9 +12267,10 @@ var AssemblerEnvironment = class {
     }
     return value;
   }
-  /** List formats compatible with a target for editor completion and discovery.
-   * @param {string} targetId Selected target.
-   * @returns {readonly Readonly<AssetFormatContribution>[]} Canonical registrations.
+  /**
+   * List formats compatible with a target for editor completion and discovery.
+   * @param targetId Selected target.
+   * @returns Canonical registrations.
    */
   getAssetFormats(targetId) {
     const target = this.getTarget(targetId)?.id ?? targetId;
@@ -11973,10 +12278,11 @@ var AssemblerEnvironment = class {
       (format) => !format.targets || format.targets.some((supported) => canonical(supported) === canonical(target))
     );
   }
-  /** Resolve a globally named or target-scoped short transform ID.
-   * @param {string} id Full ID or short alias.
-   * @param {string} targetId Selected target.
-   * @returns {Readonly<AssetTransformContribution> | undefined} Compatible transform.
+  /**
+   * Resolve a globally named or target-scoped short transform ID.
+   * @param id Full ID or short alias.
+   * @param targetId Selected target.
+   * @returns Compatible transform.
    */
   getAssetTransform(id2, targetId) {
     const canonicalTarget = this.getTarget(targetId)?.id ?? targetId;
@@ -11987,9 +12293,10 @@ var AssemblerEnvironment = class {
     }
     return value;
   }
-  /** List reversible transforms compatible with a target for editor completion.
-   * @param {string} targetId Selected target.
-   * @returns {readonly Readonly<AssetTransformContribution>[]} Canonical registrations.
+  /**
+   * List reversible transforms compatible with a target for editor completion.
+   * @param targetId Selected target.
+   * @returns Canonical registrations.
    */
   getAssetTransforms(targetId) {
     const target = this.getTarget(targetId)?.id ?? targetId;
@@ -12000,8 +12307,8 @@ var AssemblerEnvironment = class {
   /**
    * Ensures a target's referenced contributions exist and that aliases, directive
    * keywords, and expression names are unique within that target.
-   * @param {OwnedContribution<TargetContribution>} targetRecord The target to check.
-   * @returns {ReadonlyMap<string, string>} Canonical architecture alias → contribution id.
+   * @param targetRecord The target to check.
+   * @returns Canonical architecture alias → contribution id.
    * @throws {PluginError} `PLUGIN_TARGET_INVALID` or `PLUGIN_ALIAS_DUPLICATE`.
    */
   #validateTarget(targetRecord) {
@@ -12096,16 +12403,16 @@ var AssemblerEnvironment = class {
   }
   /**
    * Resolves a target contribution id or alias to the canonical target id.
-   * @param {string} idOrAlias Target id or alias (case-insensitive).
-   * @returns {string | undefined} Canonical target id, or `undefined` if unknown.
+   * @param idOrAlias Target id or alias (case-insensitive).
+   * @returns Canonical target id, or `undefined` if unknown.
    */
   resolveTargetId(idOrAlias) {
     return this.#targetAliases.get(canonical(idOrAlias));
   }
   /**
    * Looks up a target by id or alias.
-   * @param {string} idOrAlias Target id or alias (case-insensitive).
-   * @returns {Readonly<TargetContribution> | undefined} The target, if registered.
+   * @param idOrAlias Target id or alias (case-insensitive).
+   * @returns The target, if registered.
    */
   getTarget(idOrAlias) {
     const id2 = this.resolveTargetId(idOrAlias);
@@ -12113,7 +12420,7 @@ var AssemblerEnvironment = class {
   }
   /**
    * Frozen summaries of every registered target (for LSP/UI pickers).
-   * @returns {readonly TargetSummary[]} Id, aliases, display name, defaults.
+   * @returns Id, aliases, display name, defaults.
    */
   getTargetSummaries() {
     return Object.freeze(
@@ -12130,9 +12437,9 @@ var AssemblerEnvironment = class {
   }
   /**
    * Resolves an architecture id or alias in the context of a target.
-   * @param {string} targetId Target id or alias.
-   * @param {string} idOrAlias Architecture contribution id or alias.
-   * @returns {string | undefined} Canonical architecture id, or `undefined`.
+   * @param targetId Target id or alias.
+   * @param idOrAlias Architecture contribution id or alias.
+   * @returns Canonical architecture id, or `undefined`.
    */
   resolveArchitectureId(targetId, idOrAlias) {
     const id2 = this.resolveTargetId(targetId);
@@ -12140,56 +12447,56 @@ var AssemblerEnvironment = class {
   }
   /**
    * Looks up an architecture contribution by canonical id (not alias).
-   * @param {string} id Architecture contribution id.
-   * @returns {Readonly<ArchitectureContribution> | undefined} The architecture, if registered.
+   * @param id Architecture contribution id.
+   * @returns The architecture, if registered.
    */
   getArchitecture(id2) {
     return this.#architectures.get(canonical(id2))?.value;
   }
   /**
    * Looks up an address-space contribution by id.
-   * @param {string} id Address-space contribution id.
-   * @returns {Readonly<AddressSpaceContribution> | undefined} The contribution, if registered.
+   * @param id Address-space contribution id.
+   * @returns The contribution, if registered.
    */
   getAddressSpace(id2) {
     return this.#addressSpaces.get(canonical(id2))?.value;
   }
   /**
    * Looks up an output-format contribution by id.
-   * @param {string} id Output-format contribution id.
-   * @returns {Readonly<OutputFormatContribution> | undefined} The contribution, if registered.
+   * @param id Output-format contribution id.
+   * @returns The contribution, if registered.
    */
   getOutputFormat(id2) {
     return this.#outputFormats.get(canonical(id2))?.value;
   }
   /**
    * Looks up a directive-set contribution by id.
-   * @param {string} id Directive-set contribution id.
-   * @returns {Readonly<DirectiveSetContribution> | undefined} The contribution, if registered.
+   * @param id Directive-set contribution id.
+   * @returns The contribution, if registered.
    */
   getDirectiveSet(id2) {
     return this.#directiveSets.get(canonical(id2))?.value;
   }
   /**
    * Looks up an expression-set contribution by id.
-   * @param {string} id Expression-set contribution id.
-   * @returns {Readonly<ExpressionSetContribution> | undefined} The contribution, if registered.
+   * @param id Expression-set contribution id.
+   * @returns The contribution, if registered.
    */
   getExpressionSet(id2) {
     return this.#expressionSets.get(canonical(id2))?.value;
   }
   /**
    * Looks up a lifecycle contribution by id.
-   * @param {string} id Lifecycle contribution id.
-   * @returns {Readonly<LifecycleContribution> | undefined} The contribution, if registered.
+   * @param id Lifecycle contribution id.
+   * @returns The contribution, if registered.
    */
   getLifecycle(id2) {
     return this.#lifecycles.get(canonical(id2))?.value;
   }
   /**
    * Returns the plugin id that registered a contribution (any kind except session state).
-   * @param {string} id Contribution id (case-insensitive).
-   * @returns {string | undefined} Owning plugin id, or `undefined` if unknown.
+   * @param id Contribution id (case-insensitive).
+   * @returns Owning plugin id, or `undefined` if unknown.
    */
   getContributionOwner(id2) {
     const key3 = canonical(id2);
@@ -12197,8 +12504,8 @@ var AssemblerEnvironment = class {
   }
   /**
    * Lifecycle contributions wired to a target, sorted by registration order.
-   * @param {string} targetId Target id or alias.
-   * @returns {readonly OwnedContribution<LifecycleContribution>[]} Frozen, ordered records.
+   * @param targetId Target id or alias.
+   * @returns Frozen, ordered records.
    * @throws {PluginError} If `targetId` does not resolve (`PLUGIN_TARGET_INVALID`).
    */
   getTargetLifecycles(targetId) {
@@ -12218,8 +12525,8 @@ var AssemblerEnvironment = class {
   }
   /**
    * Builds the LSP/editor catalog for a target (instructions, directives, expressions).
-   * @param {string} targetId Target id or alias.
-   * @returns {ToolingCatalog} Frozen per-target tooling view.
+   * @param targetId Target id or alias.
+   * @returns Frozen per-target tooling view.
    * @throws {PluginError} If `targetId` does not resolve (`PLUGIN_TARGET_INVALID`).
    */
   getToolingCatalog(targetId) {
@@ -12450,14 +12757,14 @@ var PluginManager = class {
   }
   /**
    * Inspect successfully activated plugins.
-   * @returns {readonly AssemblerPluginManifest[]} A new array of frozen manifests in activation order.
+   * @returns A new array of frozen manifests in activation order.
    */
   get activatedPlugins() {
     return this.#activated.map((item) => item.manifest);
   }
   /**
    * Validate module default exports, then activate them with the same rules as activatePlugins.
-   * @param {readonly PluginModuleActivationRequest[]} requests Imported namespaces and the options supplied for each plugin.
+   * @param requests Imported namespaces and the options supplied for each plugin.
    */
   async activateModules(requests) {
     const normalized = requests.map((request) => {
@@ -12480,7 +12787,7 @@ var PluginManager = class {
    * Each plugin commits independently: earlier successes remain active if a later one fails.
    * Throws PluginError for invalid input, dependency conflicts, or activation failure.
    * Activation is unavailable after freeze or disposal. Dispose the manager after a failed batch.
-   * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
+   * @param requests Plugins/options to activate, reordered only as dependencies require.
    */
   async activatePlugins(requests) {
     if (this.#disposed) {
@@ -12702,7 +13009,8 @@ var PluginManager = class {
     }
     for (const record7 of transaction.architectures) {
       validateAliases(record7.value.aliases, transaction.manifest.id, record7.contributionId);
-      if (typeof record7.value.displayName !== "string" || "createEncoder" in record7.value || "classifyOperand" in record7.value || "splitOperands" in record7.value || "referenceExpressions" in record7.value || record7.value.createTypedEncoder !== void 0 && typeof record7.value.createTypedEncoder !== "function" || !record7.value.operandGrammar || typeof record7.value.operandGrammar.version !== "string" || !record7.value.operandGrammar.version || typeof record7.value.operandGrammar.parse !== "function" || record7.value.createDecoder !== void 0 && typeof record7.value.createDecoder !== "function" || !isArray(record7.value.instructions)) {
+      if (typeof record7.value.displayName !== "string" || "createEncoder" in record7.value || "classifyOperand" in record7.value || "splitOperands" in record7.value || "referenceExpressions" in record7.value || record7.value.createTypedEncoder !== void 0 && typeof record7.value.createTypedEncoder !== "function" || // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
+      !record7.value.operandGrammar || typeof record7.value.operandGrammar.version !== "string" || !record7.value.operandGrammar.version || typeof record7.value.operandGrammar.parse !== "function" || record7.value.createDecoder !== void 0 && typeof record7.value.createDecoder !== "function" || !isArray(record7.value.instructions)) {
         throw new PluginError(`Architecture '${record7.contributionId}' is malformed.`, {
           code: "PLUGIN_CONFIGURATION_INVALID",
           pluginId: transaction.manifest.id,
@@ -12741,7 +13049,9 @@ var PluginManager = class {
         local.add(directive3.id.toLowerCase());
         if (!isArray(directive3.keywords) || directive3.keywords.length === 0 || directive3.keywords.some(
           (keyword) => typeof keyword !== "string" || keyword === ""
-        ) || directive3.phase !== "lowered" || "createHandler" in directive3 || !directive3.syntax || typeof directive3.syntax.parse !== "function" || typeof directive3.syntax.bind !== "function" || typeof directive3.syntax.validate !== "function" || typeof directive3.syntax.version !== "string" || !directive3.syntax.version || !isArray(directive3.tooling)) {
+        ) || // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
+        directive3.phase !== "lowered" || "createHandler" in directive3 || // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
+        !directive3.syntax || typeof directive3.syntax.parse !== "function" || typeof directive3.syntax.bind !== "function" || typeof directive3.syntax.validate !== "function" || typeof directive3.syntax.version !== "string" || !directive3.syntax.version || !isArray(directive3.tooling)) {
           throw new PluginError(`Directive '${directive3.id}' is malformed.`, {
             code: "PLUGIN_CONFIGURATION_INVALID",
             pluginId: transaction.manifest.id,
@@ -12865,7 +13175,7 @@ var PluginManager = class {
   /**
    * Validate target references and aliases, then seal registration. Repeated calls return the
    * same environment. Throws PluginError for invalid graphs or a disposed manager.
-   * @returns {AssemblerEnvironment} The validated, shared contribution graph. Resources remain owned by this manager.
+   * @returns The validated, shared contribution graph. Resources remain owned by this manager.
    */
   freeze() {
     if (this.#disposed) {
@@ -12923,8 +13233,8 @@ var PluginSessionStateStore = class {
   #disposed = false;
   /**
    * Creates every registered session-state slot for this session.
-   * @param {readonly OwnedContribution<SessionStateContribution<unknown>>[]} contributions Owned session-state factories, in registration order.
-   * @param {SessionCreationContext} context Target id and options passed to each `create`.
+   * @param contributions Owned session-state factories, in registration order.
+   * @param context Target id and options passed to each `create`.
    * @throws {PluginError} If a slot factory throws (`PLUGIN_ACTIVATION_FAILED`).
    */
   constructor(contributions, context) {
@@ -12949,8 +13259,8 @@ var PluginSessionStateStore = class {
   }
   /**
    * Returns the live value for a branded session-state slot.
-   * @param {SessionStateKey<T>} slot The slot key registered by the owning plugin.
-   * @returns {T} The current value for this session.
+   * @param slot The slot key registered by the owning plugin.
+   * @returns The current value for this session.
    * @throws {PluginError} If the slot was not created for this session.
    */
   get(slot) {
@@ -12966,8 +13276,8 @@ var PluginSessionStateStore = class {
   /**
    * Copies every slot via its plugin `clone` hook. Each hook is responsible for copying
    * mutable descendants so later passes cannot mutate earlier stage snapshots.
-   * @param {ReadonlyMap<string, unknown>} [source] Values to clone. Defaults to the live store.
-   * @returns {PluginStateSnapshot} A new map of cloned slot values.
+   * @param [source] Values to clone. Defaults to the live store.
+   * @returns A new map of cloned slot values.
    * @throws {PluginError} If `source` is missing a registered slot, or a `clone` hook throws.
    */
   cloneSnapshot(source2 = this.#values) {
@@ -12996,7 +13306,7 @@ var PluginSessionStateStore = class {
   /**
    * Adopts a snapshot from {@link cloneSnapshot} as the live map without copying or validation.
    * Subsequent writes mutate this map. The previous snapshot is not individually disposed.
-   * @param {PluginStateSnapshot} snapshot Previously cloned slot values.
+   * @param snapshot Previously cloned slot values.
    */
   restore(snapshot) {
     this.#values = snapshot;
@@ -13004,7 +13314,7 @@ var PluginSessionStateStore = class {
   /**
    * Runs each slot's optional `resetForStage` hook (stage entry / pass boundary).
    * Slots without a hook are left unchanged.
-   * @param {AssemblyStageName} stage The stage that is about to run.
+   * @param stage The stage that is about to run.
    * @throws {PluginError} If a `resetForStage` hook throws (`PLUGIN_HOOK_FAILED`).
    */
   resetForStage(stage) {
@@ -13078,13 +13388,16 @@ var AsarModuleLayout = class {
     this.origins.set(section, { section, loadAddress, runAddress });
     return this.module.selectSection({ name: section });
   }
+  /** Opens a section with identical load and run addresses. */
   org(address3) {
     return this.open(address3, address3);
   }
+  /** Opens a section keeping the current load address and optional run address. */
   base(address3) {
     const loadAddress = this.currentAddress("load");
     return this.open(loadAddress, address3 ?? loadAddress);
   }
+  /** Saves the current section cursor on the PC stack. */
   pushPc() {
     if (this.pcStack.length >= 256) {
       throw new Error("PushPC stack overflow.");
@@ -13092,6 +13405,7 @@ var AsarModuleLayout = class {
     this.currentAddress("load");
     this.pcStack.push(this.module.position());
   }
+  /** Restores the most recently pushed section cursor. */
   pullPc() {
     const saved = this.pcStack.pop();
     if (!saved) {
@@ -13100,9 +13414,11 @@ var AsarModuleLayout = class {
     this.module.selectSection({ name: saved.section });
     return this.module.seek(saved.offset);
   }
+  /** Saves the current run address on the base stack. */
   pushBase() {
     this.baseStack.push(this.currentAddress("run"));
   }
+  /** Reopens a section using the saved run address as the new base. */
   pullBase() {
     const address3 = this.baseStack.pop();
     if (address3 === void 0) {
@@ -13332,9 +13648,11 @@ var OccurrenceSyntaxCache = class {
   scope(grammar2, file, line, family2) {
     return `${this.atom(grammar2)}:${this.atom(file)}:${line}:${this.atom(family2)}`;
   }
+  /** Looks up parsed syntax cached for one physical occurrence and exact source text. */
   get(grammar2, file, line, family2, text4) {
     return this.scopes.get(this.scope(grammar2, file, line, family2))?.get(text4);
   }
+  /** Stores parsed syntax under the occurrence scope and original text key. */
   set(grammar2, file, line, family2, text4, value) {
     const key3 = this.scope(grammar2, file, line, family2);
     let entries3 = this.scopes.get(key3);
@@ -13371,7 +13689,7 @@ var ProgramModelBuilder = class {
   }
   /**
    * Creates an incremental parser state for line-by-line assembly.
-   * @returns {IncrementalProgramParseState} The parser state.
+   * @returns The parser state.
    */
   createIncrementalParseState() {
     return {
@@ -13384,7 +13702,7 @@ var ProgramModelBuilder = class {
   }
   /**
    * Resets an incremental parser state in place.
-   * @param {IncrementalProgramParseState} state The parser state.
+   * @param state The parser state.
    */
   resetIncrementalParseState(state) {
     state.roots.length = 0;
@@ -13395,10 +13713,10 @@ var ProgramModelBuilder = class {
   }
   /**
    * Builds a program model from raw source text.
-   * @param {string} source The source block to parse.
-   * @param {string} [sourceFile] Optional source file override.
-   * @param {number} [startLine] Optional starting line number.
-   * @returns {ProgramModel} The parsed program model.
+   * @param source The source block to parse.
+   * @param [sourceFile] Optional source file override.
+   * @param [startLine] Optional starting line number.
+   * @returns The parsed program model.
    */
   buildProgramModel(source2, sourceFile3 = this.host.currentFile, startLine = 0, sourceKind = "physical") {
     const grammar2 = this.host.grammarIdentity?.() ?? "";
@@ -13446,9 +13764,9 @@ var ProgramModelBuilder = class {
   }
   /**
    * Creates a typed include node from a source file body.
-   * @param {string} file The include file name.
-   * @param {string} source The include source content.
-   * @returns {IncludeProgramNode} The include node.
+   * @param file The include file name.
+   * @param source The include source content.
+   * @returns The include node.
    */
   createIncludeNode(file, source2) {
     const program = this.buildProgramModel(source2, file, 0);
@@ -13456,10 +13774,10 @@ var ProgramModelBuilder = class {
   }
   /**
    * Returns cached executable nodes for a command stream.
-   * @param {Array<string | SourcedCommand>} commands The command stream.
-   * @param {string} [sourceFile] Optional source file override.
-   * @param {number} [startLine] Optional starting line number.
-   * @returns {ExecutableNode[]} The cached or parsed nodes.
+   * @param commands The command stream.
+   * @param [sourceFile] Optional source file override.
+   * @param [startLine] Optional starting line number.
+   * @returns The cached or parsed nodes.
    */
   getOrBuildPassProgram(commands, sourceFile3 = this.host.currentFile, startLine = this.host.currentLine, sourceKind = "physical") {
     const stream = JSON.stringify(
@@ -13498,11 +13816,11 @@ var ProgramModelBuilder = class {
   /**
    * Consumes one raw command into an incremental parse state and returns newly
    * completed top-level executable nodes.
-   * @param {IncrementalProgramParseState} state The parser state.
-   * @param {string} rawCommand The raw command to consume.
-   * @param {string} [sourceFile] Optional source file override.
-   * @param {number} [sourceLine] Optional source line override.
-   * @returns {ExecutableNode[]} Newly completed top-level nodes.
+   * @param state The parser state.
+   * @param rawCommand The raw command to consume.
+   * @param [sourceFile] Optional source file override.
+   * @param [sourceLine] Optional source line override.
+   * @returns Newly completed top-level nodes.
    */
   consumeIncrementalCommand(state, rawCommand, sourceFile3 = this.host.currentFile, sourceLine = this.host.currentLine, normalized) {
     if (!normalized) {
@@ -13513,10 +13831,10 @@ var ProgramModelBuilder = class {
   }
   /**
    * Parses a flat command stream into nested executable nodes.
-   * @param {Array<string | SourcedCommand>} commands The command stream.
-   * @param {string} [sourceFile] Optional source file override.
-   * @param {number} [startLine] Optional starting line number.
-   * @returns {ExecutableNode[]} The executable nodes.
+   * @param commands The command stream.
+   * @param [sourceFile] Optional source file override.
+   * @param [startLine] Optional starting line number.
+   * @returns The executable nodes.
    */
   parseCommandStreamToNodes(commands, sourceFile3 = this.host.currentFile, startLine = this.host.currentLine, sourceKind = "physical") {
     recordSyntaxBoundary(
@@ -13534,8 +13852,8 @@ var ProgramModelBuilder = class {
   }
   /**
    * Pushes to current.
-   * @param {IncrementalProgramParseState} state The state.
-   * @param {ExecutableNode} node The node.
+   * @param state The state.
+   * @param node The node.
    */
   pushToCurrent(state, node) {
     const capture = stackTop(state.captures);
@@ -13565,10 +13883,10 @@ var ProgramModelBuilder = class {
   }
   /**
    * Consumes command into state.
-   * @param {IncrementalProgramParseState} state The state.
-   * @param {string} rawCommand The raw command.
-   * @param {string} sourceFile The source file.
-   * @param {number} sourceLine The source line.
+   * @param state The state.
+   * @param rawCommand The raw command.
+   * @param sourceFile The source file.
+   * @param sourceLine The source line.
    */
   consumeCommandIntoState(state, rawCommand, sourceFile3, sourceLine, normalized) {
     const command = normalized ?? this.host.createLoopCommandNode(rawCommand, sourceFile3, sourceLine);
@@ -13729,12 +14047,14 @@ var ProgramModelBuilder = class {
     }
     this.pushToCurrent(state, command);
   }
+  /** Reports whether an executable node has enough metadata to leave the incremental buffer. */
   isNodeComplete(node) {
     if ("source" in node) {
       return true;
     }
     return node.endLine !== void 0;
   }
+  /** Moves fully closed root nodes out of the incremental parse state. */
   drainCompletedRoots(state) {
     let completedCount = 0;
     while (completedCount < state.roots.length && this.isNodeComplete(state.roots[completedCount])) {
@@ -13765,11 +14085,13 @@ var AssemblyFrontEndService = class {
     });
   }
   host;
+  /** Partial command text retained for multiline structured statements. */
   commandBuffer = "";
   /** Source occurrences and grammar identity are part of syntax ownership, never invocation values. */
   fragmentCommands = new OccurrenceSyntaxCache();
   fragmentExpressions = new OccurrenceSyntaxCache();
   assemblyExpressions = /* @__PURE__ */ new Map();
+  /** Drops occurrence-keyed syntax caches at assembly boundaries. */
   clearFragmentCache() {
     this.fragmentCommands.clear();
     this.fragmentExpressions.clear();
@@ -13809,19 +14131,20 @@ var AssemblyFrontEndService = class {
   }
   /** Opening physical line when processCommand receives a structured statement one line at a time. */
   statementBufferStart;
+  /** Builds executable program trees from normalized commands. */
   programModelBuilder;
   /**
    * Preprocesses raw source blocks while preserving continued-line buffering.
-   * @param {string} block The raw source block.
-   * @returns {string[]} The normalized commands.
+   * @param block The raw source block.
+   * @returns The normalized commands.
    */
   preprocessBlockCommands(block) {
     return this.preprocessSourcedBlockCommands(block).map((command) => command.text);
   }
   /**
    * Preprocesses raw source blocks, tagging each command with its original line.
-   * @param {string} block The raw source block.
-   * @returns {SourcedCommand[]} The normalized sourced commands.
+   * @param block The raw source block.
+   * @returns The normalized sourced commands.
    */
   preprocessSourcedBlockCommands(block) {
     const opening = this.statementBufferStart;
@@ -13849,27 +14172,27 @@ var AssemblyFrontEndService = class {
   }
   /**
    * Splits statements according to the active target's source grammar.
-   * @param {string[]} commands Commands to split.
-   * @returns {string[]} Profile-aware command statements.
+   * @param commands Commands to split.
+   * @returns Profile-aware command statements.
    */
   splitInlineCommands(commands) {
     return splitInlineCommands(commands, this.host.syntaxProfile);
   }
   /**
    * Splits sourced statements according to the active target's source grammar.
-   * @param {SourcedCommand[]} commands Sourced commands to split.
-   * @returns {SourcedCommand[]} Profile-aware sourced command statements.
+   * @param commands Sourced commands to split.
+   * @returns Profile-aware sourced command statements.
    */
   splitSourcedInlineCommands(commands) {
     return splitSourcedInlineCommands(commands, this.host.syntaxProfile);
   }
   /**
    * Builds a normalized command from raw source text.
-   * @param {string} command The raw command text.
-   * @param {string} sourceFile The command source file.
-   * @param {number} sourceLine The source line number.
-   * @param {boolean} [allowEmpty] When true, empty commands still produce nodes.
-   * @returns {NormalizedCommand | null} The normalized command or null for empty input.
+   * @param command The raw command text.
+   * @param sourceFile The command source file.
+   * @param sourceLine The source line number.
+   * @param [allowEmpty] When true, empty commands still produce nodes.
+   * @returns The normalized command or null for empty input.
    */
   createNormalizedCommandFromRaw(command, sourceFile3, sourceLine, allowEmpty = false, physical2) {
     let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
@@ -13999,10 +14322,10 @@ var AssemblyFrontEndService = class {
   }
   /**
    * Creates a loop-aware normalized command node for the typed parser.
-   * @param {string} command The raw command text.
-   * @param {string} [sourceFile] Optional source file.
-   * @param {number} [sourceLine] Optional source line.
-   * @returns {NormalizedCommand} The normalized node.
+   * @param command The raw command text.
+   * @param [sourceFile] Optional source file.
+   * @param [sourceLine] Optional source line.
+   * @returns The normalized node.
    */
   createLoopCommandNode(command, sourceFile3 = this.host.currentFile, sourceLine = this.host.currentLine, physical2) {
     return this.createNormalizedCommandFromRaw(command, sourceFile3, sourceLine, true, physical2) ?? createNormalizedCommand(
@@ -14024,6 +14347,7 @@ var AssemblyOutputBuffer = class {
   visible;
   used = 0;
   managed = true;
+  /** Visible byte count; spare capacity in managed storage is excluded. */
   get length() {
     return this.storage ? this.used : this.value.length;
   }
@@ -14134,14 +14458,14 @@ var AssemblyOutputBuffer = class {
 };
 
 // packages/core/src/services/asset-resource-snapshot.ts
-function assetSourceMediaType(path69, format) {
+function assetSourceMediaType(path70, format) {
   const representation = format?.sourceRepresentations?.find(
-    (item) => item.extensions.some((extension2) => path69.toLowerCase().endsWith(extension2))
+    (item) => item.extensions.some((extension2) => path70.toLowerCase().endsWith(extension2))
   );
   if (representation) {
     return representation.mediaType;
   }
-  const extension = path69.toLowerCase().split(".").pop();
+  const extension = path70.toLowerCase().split(".").pop();
   if (extension === "png") {
     return "image/png";
   }
@@ -14193,7 +14517,7 @@ function resolveAssetResourceSnapshot(format, source2, options, host2) {
       throw new Error(`Asset format '${format.id}' exceeds the resource closure limit.`);
     }
     const requests = [
-      ...declared.map((path69) => ({ key: path69, path: path69, relativeTo: void 0, mediaType: void 0 })),
+      ...declared.map((path70) => ({ key: path70, path: path70, relativeTo: void 0, mediaType: void 0 })),
       ...dynamic
     ];
     let added = false;
@@ -14276,6 +14600,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
   session;
   /** A single asset stage may not allocate or emit more than this many bytes. */
   static MAX_STAGE_BYTES = 16 * 1024 * 1024;
+  /** Paths recorded as binary or resource dependencies during asset conversion. */
   dependencies = /* @__PURE__ */ new Map();
   #files = /* @__PURE__ */ new Map();
   #snapshotBytes = 0;
@@ -14292,23 +14617,26 @@ var AssetAssemblyService = class _AssetAssemblyService {
     this.#emissions.clear();
     this.lastEmission = void 0;
   }
-  /** Return the exact bytes consumed by this build for dependency fingerprints.
-   * @param {string} path Provider identity.
-   * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
+  /**
+   * Return the exact bytes consumed by this build for dependency fingerprints.
+   * @param path Provider identity.
+   * @returns Owned snapshot copy, when the path was read.
    */
-  snapshot(path69) {
-    return this.#files.get(path69)?.slice();
+  snapshot(path70) {
+    return this.#files.get(path70)?.slice();
   }
-  /** Resolve a string operand after define expansion.
-   * @param {Extract<AssetValueNode, { kind: "string" }>} node Quoted path or format operand.
-   * @returns {string} Expanded text.
+  /**
+   * Resolve a string operand after define expansion.
+   * @param node Quoted path or format operand.
+   * @returns Expanded text.
    */
   #text(node) {
     return this.session.defineEngine.resolveDefinesInStringLiteral(node.value);
   }
-  /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
-   * @param {AssetValueNode} node Typed source value.
-   * @returns {unknown} Plain value passed to a format or transform.
+  /**
+   * Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
+   * @param node Typed source value.
+   * @returns Plain value passed to a format or transform.
    */
   #value(node) {
     if (node.kind === "string") {
@@ -14356,50 +14684,54 @@ var AssetAssemblyService = class _AssetAssemblyService {
     }
     return value;
   }
-  /** Resolve a provider path using the current source, macro and include search order.
-   * @param {string} path Source-relative path.
-   * @returns {string} Stable provider identity.
+  /**
+   * Resolve a provider path using the current source, macro and include search order.
+   * @param path Source-relative path.
+   * @returns Stable provider identity.
    */
-  #resolve(path69) {
+  #resolve(path70) {
     const resolved = this.session.fileProvider.resolvePath(
-      path69,
+      path70,
       this.session.includeSource.resolutionOptions
     );
     if (!resolved) {
-      throw new Error(`includeAsset cannot find '${path69}'.`);
+      throw new Error(`includeAsset cannot find '${path70}'.`);
     }
     return resolved;
   }
-  /** Snapshot each dependency once, even if a provider changes during later passes.
-   * @param {string} path Provider identity.
-   * @param {"binary" | "resource"} kind Dependency role.
-   * @returns {Uint8Array} Build-owned bytes.
+  /**
+   * Snapshot each dependency once, even if a provider changes during later passes.
+   * @param path Provider identity.
+   * @param kind Dependency role.
+   * @returns Build-owned bytes.
    */
-  #read(path69, kind) {
-    const cached = this.#files.get(path69);
+  #read(path70, kind) {
+    const cached = this.#files.get(path70);
     if (cached) {
       return cached;
     }
-    const supplied = this.session.fileProvider.readFile(path69);
+    const supplied = this.session.fileProvider.readFile(path70);
     this.#snapshotBytes += supplied.length;
     if (this.#snapshotBytes > 256 * 1024 * 1024) {
       throw new Error("Asset dependency snapshot exceeds 256 MiB.");
     }
     const bytes3 = Uint8Array.from(supplied);
-    this.#files.set(path69, bytes3);
-    this.dependencies.set(path69, kind);
+    this.#files.set(path70, bytes3);
+    this.dependencies.set(path70, kind);
     return bytes3;
   }
-  /** Media type is inferred only from a declared, supported input extension.
-   * @param {string} path Provider identity.
-   * @returns {string} Portable media type.
+  /**
+   * Media type is inferred only from a declared, supported input extension.
+   * @param path Provider identity.
+   * @returns Portable media type.
    */
-  #mediaType(path69, format) {
-    return assetSourceMediaType(path69, format);
+  #mediaType(path70, format) {
+    return assetSourceMediaType(path70, format);
   }
-  /** Canonical serialization makes equivalent option objects share one conversion.
-   * @param {unknown} value JSON-compatible request value.
-   * @returns {string} Stable identity fragment.
+  /**
+   * Canonical serialization makes equivalent option objects share one conversion.
+   * @param value JSON-compatible request value.
+   * @returns Stable identity fragment.
    */
   #stable(value) {
     if (Array.isArray(value)) {
@@ -14410,10 +14742,11 @@ var AssetAssemblyService = class _AssetAssemblyService {
     }
     return JSON.stringify(value);
   }
-  /** Apply a transform's closed scalar schema before it can read resources.
-   * @param {AssetTransformContribution} provider Registered transform.
-   * @param {Readonly<Record<string, unknown>>} options Source options.
-   * @returns {string[]} Resource-valued option paths.
+  /**
+   * Apply a transform's closed scalar schema before it can read resources.
+   * @param provider Registered transform.
+   * @param options Source options.
+   * @returns Resource-valued option paths.
    */
   #validateTransformOptions(provider, options) {
     const schema2 = provider.optionSchema;
@@ -14459,18 +14792,19 @@ var AssetAssemblyService = class _AssetAssemblyService {
   /** Resolve a bounded resource closure once per build. Provider callbacks cannot mutate cached bytes. */
   #resources(format, source2, options) {
     return resolveAssetResourceSnapshot(format, source2, options, {
-      resolve: (path69, declaringResource) => {
+      resolve: (path70, declaringResource) => {
         if (declaringResource) {
-          return this.session.fileProvider.resolvePath(path69, { currentFile: declaringResource });
+          return this.session.fileProvider.resolvePath(path70, { currentFile: declaringResource });
         }
-        return this.#resolve(path69);
+        return this.#resolve(path70);
       },
-      read: (path69) => this.#read(path69, "resource"),
-      mediaType: (path69) => this.#mediaType(path69, format)
+      read: (path70) => this.#read(path70, "resource"),
+      mediaType: (path70) => this.#mediaType(path70, format)
     });
   }
-  /** Resolve input and declared resource paths for tooling without encoding bytes.
-   * @param {ParsedAssetCall} call Typed source directive.
+  /**
+   * Resolve input and declared resource paths for tooling without encoding bytes.
+   * @param call Typed source directive.
    */
   discoverDependencies(call) {
     const options = Object.fromEntries(
@@ -14526,9 +14860,10 @@ var AssetAssemblyService = class _AssetAssemblyService {
       }
     }
   }
-  /** Convert and select one complete byte stream before touching output state.
-   * @param {ParsedAssetCall} call Typed source directive.
-   * @returns {Uint8Array} Snapshot-owned bytes shared across assembly passes.
+  /**
+   * Convert and select one complete byte stream before touching output state.
+   * @param call Typed source directive.
+   * @returns Snapshot-owned bytes shared across assembly passes.
    */
   materialize(call) {
     const options = Object.fromEntries(
@@ -14647,13 +14982,13 @@ var AssetAssemblyService = class _AssetAssemblyService {
       }
       const names = [.../* @__PURE__ */ new Set([...schemaResources, ...declared])];
       for (const name4 of names) {
-        const path69 = this.#resolve(name4);
-        transformResourcePaths[name4] = path69;
+        const path70 = this.#resolve(name4);
+        transformResourcePaths[name4] = path70;
         transformResources[name4] = {
-          bytes: this.#read(path69, "resource"),
-          mediaType: this.#mediaType(path69)
+          bytes: this.#read(path70, "resource"),
+          mediaType: this.#mediaType(path70)
         };
-        transformResourceIdentities.push(`${name4}\0${path69}`);
+        transformResourceIdentities.push(`${name4}\0${path70}`);
       }
       transforms.push({
         provider: transform,
@@ -14746,6 +15081,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
 
 // packages/core/src/services/command-lowering-service.ts
 var CommandLoweringService = class {
+  /** Assembler callbacks for directive lookup, keyword canonicalization and architecture selection. */
   host;
   /** Command snapshots are immutable; weak ownership releases included/reparsed programs. */
   statements = /* @__PURE__ */ new WeakMap();
@@ -14859,8 +15195,8 @@ var CommandLoweringService = class {
   }
   /**
    * Lowers a normalized command into the execution-layer representation.
-   * @param {NormalizedCommand} command The normalized command node.
-   * @returns {LoweredCommand} The lowered execution work unit.
+   * @param command The normalized command node.
+   * @returns The lowered execution work unit.
    */
   lowerCommand(command) {
     const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
@@ -14898,8 +15234,8 @@ var CommandLoweringService = class {
    * Commands retain their immutable front-end snapshots. Legacy preprocessing
    * creates its mutable execution copy at dispatch time, avoiding a redundant
    * clone for every stage-owned lowered node.
-   * @param {ExecutableNode} node The node to lower.
-   * @returns {LoweredExecutableNode} The lowered node.
+   * @param node The node to lower.
+   * @returns The lowered node.
    */
   lowerExecutableNode(node, scope) {
     incrementInternalCounter("runtimeNodesLowered");
@@ -14983,8 +15319,8 @@ var CommandLoweringService = class {
   }
   /**
    * Lowers a full program model into a stage-owned execution program.
-   * @param {ProgramModel} program The program to lower.
-   * @returns {LoweredProgram} The lowered program.
+   * @param program The program to lower.
+   * @returns The lowered program.
    */
   lowerProgram(program) {
     incrementInternalCounter("loweredProgramBuilds");
@@ -15048,13 +15384,14 @@ var DefineEngine = class {
   dispatch(fragment) {
     this.host.processSourceFragment(fragment);
   }
+  /** True when a define value contains only literal numbers and math operators. */
   isPureMathExpression(value) {
     return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|-]|\s)+$/.test(value);
   }
   /**
    * Handles a define command.
-   * @param {NormalizedCommand} commandNode The command node to handle.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   * @param commandNode The command node to handle.
+   * @returns `true` if the command was handled, `false` otherwise.
    */
   handleCommand(commandNode) {
     const operation2 = commandNode.parsed.operation;
@@ -15070,7 +15407,7 @@ var DefineEngine = class {
   }
   /**
    * Handles a define command.
-   * @param {string} command The command to handle.
+   * @param command The command to handle.
    * @example
    * !identifier = value // Basic assignment
    * !identifier += value // Append to existing value
@@ -15121,8 +15458,8 @@ var DefineEngine = class {
   }
   /**
    * Resolves nested defines in a string.
-   * @param {string} content The content to process.
-   * @returns {string} The processed content with nested defines resolved.
+   * @param content The content to process.
+   * @returns The processed content with nested defines resolved.
    */
   processNestedDefines(content) {
     if (!content.includes("!")) {
@@ -15141,8 +15478,8 @@ var DefineEngine = class {
   }
   /**
    * Resolves one level of defines in a string.
-   * @param {string} content The content to process.
-   * @returns {string} The processed content with one level of defines resolved.
+   * @param content The content to process.
+   * @returns The processed content with one level of defines resolved.
    */
   resolveOneLevelOfDefines(content) {
     const template = this.template(content, "none");
@@ -15171,8 +15508,8 @@ var DefineEngine = class {
   }
   /**
    * Resolves regular defines in a string.
-   * @param {string} content The content to process.
-   * @returns {string} The processed content with regular defines resolved.
+   * @param content The content to process.
+   * @returns The processed content with regular defines resolved.
    */
   resolveRegularDefines(content) {
     return fragmentText(this.resolveRegularFragment(sourceFragment(content)));
@@ -15195,8 +15532,8 @@ var DefineEngine = class {
   }
   /**
    * Resolves defines in a string literal.
-   * @param {string} content The content to process.
-   * @returns {string} The processed content with defines in string literal resolved.
+   * @param content The content to process.
+   * @returns The processed content with defines in string literal resolved.
    */
   resolveDefinesInStringLiteral(content) {
     const template = this.template(content, "string");
@@ -15218,8 +15555,8 @@ var DefineEngine = class {
   }
   /**
    * Processes a value with braced defines.
-   * @param {string} value The value to process.
-   * @returns {string} The processed value with braced defines resolved.
+   * @param value The value to process.
+   * @returns The processed value with braced defines resolved.
    */
   processValueWithBracedDefines(value) {
     const template = this.template(value, "none");
@@ -15240,9 +15577,9 @@ var DefineEngine = class {
   }
   /**
    * Applies a define operation.
-   * @param {string} identifier The identifier to apply the operation to.
-   * @param {string} operator The operator to apply.
-   * @param {string} initialValue The initial value to apply the operation to.
+   * @param identifier The identifier to apply the operation to.
+   * @param operator The operator to apply.
+   * @param initialValue The initial value to apply the operation to.
    */
   applyDefineOperation(identifier3, operator, initialValue, source2) {
     let value = initialValue;
@@ -15301,7 +15638,7 @@ var DefineEngine = class {
   }
   /**
    * Applies an `undef` operation.
-   * @param {string} command The normalized undef command.
+   * @param command The normalized undef command.
    */
   applyUndefOperation(command) {
     this.handleDefineCommand(command);
@@ -15316,7 +15653,7 @@ var DirectiveRuntimeService = class {
   host;
   /**
    * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
-   * @param {string[]} words The character mapping command words.
+   * @param words The character mapping command words.
    * @throws {Error} If the format is incorrect.
    */
   handleCharacterMapping(words) {
@@ -15336,8 +15673,8 @@ var DirectiveRuntimeService = class {
   /**
    * Processes a string and maps characters to their corresponding values in `characterMappings`.
    * If a character is not found in `characterMappings`, its charCode is used instead.
-   * @param {string} input The string to process.
-   * @returns {number[]} An array of numbers representing the mapped characters.
+   * @param input The string to process.
+   * @returns An array of numbers representing the mapped characters.
    */
   processStringWithMapping(input2) {
     return Array.from(input2).map(
@@ -15346,7 +15683,7 @@ var DirectiveRuntimeService = class {
   }
   /**
    * Handles `org`.
-   * @param {string[]} params The directive parameters.
+   * @param params The directive parameters.
    */
   handleOrg(params) {
     if (params.length !== 1) {
@@ -15369,8 +15706,8 @@ var DirectiveRuntimeService = class {
   }
   /**
    * Handles data directives.
-   * @param {string} type The data directive keyword.
-   * @param {string[]} params The directive parameters.
+   * @param type The data directive keyword.
+   * @param params The directive parameters.
    */
   handleDataDirective(type, params, numeric) {
     if (!Array.isArray(params) || params.length === 0) {
@@ -15481,8 +15818,8 @@ var DirectiveRuntimeService = class {
   }
   /**
    * Writes a value using the data directive byte width.
-   * @param {number} len The byte width.
-   * @param {number} value The value to write.
+   * @param len The byte width.
+   * @param value The value to write.
    */
   writeDataByLength(len, value) {
     if (typeof len !== "number") {
@@ -15518,8 +15855,8 @@ var DirectiveRuntimeService = class {
   }
   /**
    * Estimates data size with the same expansion order as emission, without resolving final values.
-   * @param {number} len Bytes per numeric item (1–4). String characters each occupy one item.
-   * @param {string[]} params Source operands, including defines that may expand to data lists.
+   * @param len Bytes per numeric item (1–4). String characters each occupy one item.
+   * @param params Source operands, including defines that may expand to data lists.
    */
   estimateDataDirectiveSize(len, params) {
     if (len !== 1 && len !== 2 && len !== 3 && len !== 4) {
@@ -15637,7 +15974,9 @@ var IncludeSourceService = class {
     this.host = host2;
   }
   host;
+  /** Memoized include resolution keyed by active file, paths, and requested path. */
   resolvedPathCache = /* @__PURE__ */ new Map();
+  /** Memoized text reads keyed by encoding and resolved path. */
   textCache = /* @__PURE__ */ new Map();
   /**
    * Starts a new assembly file snapshot and drops content retained by an older build.
@@ -15654,9 +15993,9 @@ var IncludeSourceService = class {
   }
   /**
    * Reads a source-relative binary or text file.
-   * @param {string} filePath The path to read.
-   * @param {BufferEncoding} [encoding] Optional text encoding.
-   * @returns {Uint8Array | string} The file contents.
+   * @param filePath The path to read.
+   * @param [encoding] Optional text encoding.
+   * @returns The file contents.
    */
   readFile(filePath, encoding) {
     try {
@@ -15678,8 +16017,8 @@ var IncludeSourceService = class {
   }
   /**
    * Resolves a source include target.
-   * @param {string} filename The target filename.
-   * @returns {string} The resolved provider path.
+   * @param filename The target filename.
+   * @returns The resolved provider path.
    */
   resolveIncludePath(filename) {
     if (filename == null) {
@@ -15693,7 +16032,7 @@ var IncludeSourceService = class {
   }
   /**
    * Marks and assembles an `include` target.
-   * @param {string} filename The target filename.
+   * @param filename The target filename.
    */
   includeFile(filename) {
     const resolvedPath = this.resolveIncludePath(filename);
@@ -15724,7 +16063,7 @@ var IncludeSourceService = class {
   }
   /**
    * Resolves, parses, lowers, and executes one source file.
-   * @param {string} filename The target filename.
+   * @param filename The target filename.
    */
   assembleFile(filename) {
     const resolvedPath = this.resolveIncludePath(filename);
@@ -15777,6 +16116,7 @@ var IncludeSourceService = class {
       this.host.currentFile = this.host.includeStack.pop() ?? "";
     }
   }
+  /** Snapshot of host path context used for include resolution cache keys. */
   get resolutionOptions() {
     return {
       currentFile: this.host.currentFile,
@@ -15786,8 +16126,8 @@ var IncludeSourceService = class {
   }
   /**
    * Resolves a path once for the active source and include-path context.
-   * @param {string} filePath The source-relative path to resolve.
-   * @returns {string | undefined} The resolved provider path.
+   * @param filePath The source-relative path to resolve.
+   * @returns The resolved provider path.
    */
   resolvePath(filePath) {
     const options = this.resolutionOptions;
@@ -15810,9 +16150,9 @@ var IncludeSourceService = class {
   }
   /**
    * Reads source text once per assembly snapshot.
-   * @param {string} resolvedPath The resolved provider path.
-   * @param {BufferEncoding} encoding The requested text encoding.
-   * @returns {string} The cached or newly read text.
+   * @param resolvedPath The resolved provider path.
+   * @param encoding The requested text encoding.
+   * @returns The cached or newly read text.
    */
   readTextFile(resolvedPath, encoding) {
     const key3 = `${encoding}\0${resolvedPath}`;
@@ -15840,7 +16180,9 @@ function occurrence(source2) {
   return { file: source2.file, line: source2.line, span: source2.span, text: source2.raw };
 }
 var MacroEngine = class {
+  /** Hosting assembler state mutated during macro capture and expansion. */
   host;
+  /** Stack of active if/while/for frames during expansion. */
   macroExpansionControlStack = [];
   /** Weak ownership releases definitions when an assembly snapshot is discarded. */
   templates = /* @__PURE__ */ new WeakMap();
@@ -15849,14 +16191,14 @@ var MacroEngine = class {
   }
   /**
    * Checks whether the current macro expansion line is in an active branch.
-   * @returns {boolean} `true` when the current expansion path is active.
+   * @returns `true` when the current expansion path is active.
    */
   isMacroExpansionActive() {
     return this.macroExpansionControlStack.every((entry) => entry.active);
   }
   /**
    * Checks whether the current macro expansion line is inside a deferred loop body.
-   * @returns {boolean} `true` when loop-body commands should defer placeholder resolution.
+   * @returns `true` when loop-body commands should defer placeholder resolution.
    */
   isMacroExpansionLoopActive() {
     return this.macroExpansionControlStack.some(
@@ -15865,8 +16207,8 @@ var MacroEngine = class {
   }
   /**
    * Evaluates a macro control-flow condition using the assembler expression engine.
-   * @param {string} expression The expression text to evaluate.
-   * @returns {boolean} The boolean result.
+   * @param expression The expression text to evaluate.
+   * @returns The boolean result.
    */
   evaluateMacroControlExpression(expression2) {
     const trimmed = removeInlineComment(expression2).trim();
@@ -15877,7 +16219,7 @@ var MacroEngine = class {
   }
   /**
    * Updates macro expansion control state after dispatching a control-flow line.
-   * @param {string} line The fully expanded line text.
+   * @param line The fully expanded line text.
    */
   updateMacroExpansionControlState(line) {
     const trimmed = removeInlineComment(line).trim();
@@ -15986,7 +16328,7 @@ var MacroEngine = class {
   }
   /**
    * Calls a macro.
-   * @param {string} invocation The invocation to call.
+   * @param invocation The invocation to call.
    */
   callMacro(invocation, source2) {
     const operation2 = parseCommandOperation(
@@ -16145,11 +16487,11 @@ var MacroEngine = class {
   }
   /**
    * Expands a macro line.
-   * @param {string} line The line to expand.
-   * @param {Map<string, string>} fixedArgs The fixed arguments.
-   * @param {string[]} variadicArgs The variadic arguments.
-   * @param {number} variadicCount The variadic count.
-   * @returns {string} The expanded line.
+   * @param line The line to expand.
+   * @param fixedArgs The fixed arguments.
+   * @param variadicArgs The variadic arguments.
+   * @param variadicCount The variadic count.
+   * @returns The expanded line.
    */
   expandMacroLine(line, fixedArgs, variadicArgs, variadicCount, template) {
     return fragmentText(
@@ -16322,13 +16664,13 @@ var MacroEngine = class {
     );
     return bindMacroFragment(void 0, fragment, "variadic", (part) => {
       const binding = this.resolveVariadicBinding(part.payload, args);
-      const argument = argumentsOrigin.filter((origin) => origin.parameter === void 0)[binding.index];
+      const argument = argumentsOrigin.filter((origin) => origin.parameter === void 0).at(binding.index);
       return sourceFragment(binding.value, argument ? [argument.location] : []);
     });
   }
   /**
    * Processes a macro line.
-   * @param {string} line The line to process.
+   * @param line The line to process.
    */
   processMacroLine(line, template) {
     this.processMacroFragment(
@@ -16414,12 +16756,19 @@ var ModuleAssembly = class {
   }
   id;
   defaultAddressSpace;
+  /** Mutable section byte cursors keyed by section name. */
   sections = /* @__PURE__ */ new Map();
+  /** Module symbol table including imports, exports, and locals. */
   symbols = /* @__PURE__ */ new Map();
+  /** Pending relocation sites recorded during emission. */
   fixups = [];
+  /** Source ranges mapped to section offsets for debug metadata. */
   ranges = [];
+  /** Typed field metadata attached to emitted data. */
   fields = [];
+  /** Asset emission records linked to module output. */
   assets = [];
+  /** Instruction metadata captured for link-time validation. */
   instructions = [];
   definitions = /* @__PURE__ */ new Map();
   exports = /* @__PURE__ */ new Set();
@@ -16491,6 +16840,7 @@ var ModuleAssembly = class {
   position(offset = this.previewOffset ?? this.current.cursor) {
     return { section: this.sectionName, offset };
   }
+  /** Kind of the currently selected section. */
   get sectionKind() {
     return this.current.kind;
   }
@@ -16510,6 +16860,7 @@ var ModuleAssembly = class {
     this.sections.set(this.sectionName, { ...this.current, alignment: combined });
     return (alignment - this.current.cursor % alignment) % alignment;
   }
+  /** Builds a link expression pointing at the current module section offset. */
   location(offset = this.position().offset) {
     return { kind: "section", module: this.id, ...this.position(offset) };
   }
@@ -16574,6 +16925,7 @@ var ModuleAssembly = class {
       source: source2
     });
   }
+  /** True when the symbol received a definition during the active stage. */
   isDefinedThisStage(name4) {
     return this.definitions.has(name4);
   }
@@ -16740,10 +17092,11 @@ var ModuleAssembly = class {
       fields: this.fields,
       assets: this.assets,
       instructions: this.instructions,
-      sections: [...this.sections.values()].filter((section) => section.size || section.name !== ".text").map(({ cursor: _cursor, bytes: bytes3, ...section }) => ({
-        ...section,
-        bytes: section.kind === "bss" ? new Uint8Array() : Uint8Array.from({ length: section.size }, (_, index) => bytes3[index] ?? 0)
-      }))
+      sections: [...this.sections.values()].filter((section) => section.size || section.name !== ".text").map(
+        ({ cursor: _cursor, bytes: bytes3, ...section }) => Object.assign(section, {
+          bytes: section.kind === "bss" ? new Uint8Array() : Uint8Array.from({ length: section.size }, (_, index) => bytes3[index] ?? 0)
+        })
+      )
     });
   }
 };
@@ -16754,6 +17107,7 @@ var ModuleFileProvider = class {
     this.provider = provider;
   }
   provider;
+  /** Immutable byte snapshots retained for the current build pass. */
   snapshots = /* @__PURE__ */ new Map();
   bytes = 0;
   /** A new assembly observes fresh inputs; later passes share the first successful read. */
@@ -16775,9 +17129,11 @@ var ModuleFileProvider = class {
     this.bytes += bytes3.length - (previous?.length ?? 0);
     this.snapshots.set(filename, bytes3.slice());
   }
+  /** Delegates path resolution to the wrapped provider without caching. */
   resolvePath(filename, options) {
     return this.provider.resolvePath(filename, options);
   }
+  /** Delegates file metadata queries to the wrapped provider. */
   stat(filename) {
     return this.provider.stat(filename);
   }
@@ -16790,6 +17146,7 @@ var ModuleFileProvider = class {
     }
     return bytes3.slice();
   }
+  /** Decodes a retained snapshot using the same copy-on-read boundary as binary reads. */
   readTextFile(filename, encoding = "utf8") {
     const bytes3 = this.readFile(filename);
     if (typeof Buffer !== "undefined") {
@@ -16807,7 +17164,7 @@ var OutputWriterService = class {
   host;
   /**
    * Advances the logical write position.
-   * @param {number} num The number of bytes to step.
+   * @param num The number of bytes to step.
    */
   step(num) {
     if (num === 0) {
@@ -16837,7 +17194,7 @@ var OutputWriterService = class {
   }
   /**
    * Writes a single byte at the current logical position.
-   * @param {number} num The value to write.
+   * @param num The value to write.
    */
   write1(num) {
     if (Number.isNaN(num)) {
@@ -16898,7 +17255,7 @@ var OutputWriterService = class {
   }
   /**
    * Writes a 16-bit value to output.
-   * @param {number} num The value to write.
+   * @param num The value to write.
    */
   write2(num) {
     this.validateWrite(2);
@@ -16907,7 +17264,7 @@ var OutputWriterService = class {
   }
   /**
    * Writes a 24-bit value to output.
-   * @param {number} num The value to write.
+   * @param num The value to write.
    */
   write3(num) {
     this.validateWrite(3);
@@ -16917,7 +17274,7 @@ var OutputWriterService = class {
   }
   /**
    * Writes a 32-bit value to output.
-   * @param {number} num The value to write.
+   * @param num The value to write.
    */
   write4(num) {
     this.validateWrite(4);
@@ -16929,9 +17286,9 @@ var OutputWriterService = class {
   /**
    * Writes the low 1–4 bytes of a safe integer, using two's complement for negatives.
    * Invalid arguments throw before lifecycle hooks, output, or the cursor change.
-   * @param {number} num Safe integer; high bits outside the selected width are discarded.
-   * @param {number} width Integral byte width from 1 through 4; use writeBytes for wider values.
-   * @param {"little" | "big"} endianness Byte order, defaulting to little-endian.
+   * @param num Safe integer; high bits outside the selected width are discarded.
+   * @param width Integral byte width from 1 through 4; use writeBytes for wider values.
+   * @param endianness Byte order, defaulting to little-endian.
    */
   writeValue(num, width, endianness = "little") {
     if (!Number.isInteger(width) || width < 1 || width > 4) {
@@ -16951,7 +17308,7 @@ var OutputWriterService = class {
   }
   /**
    * Writes a sequence of already encoded bytes.
-   * @param {readonly number[]} values Bytes to write.
+   * @param values Bytes to write.
    */
   writeBytes(values) {
     this.validateWrite(values.length);
@@ -16961,7 +17318,7 @@ var OutputWriterService = class {
   }
   /**
    * Runs active address-space and lifecycle validation for a write.
-   * @param {number} length The length of the value to write.
+   * @param length The length of the value to write.
    */
   validateWrite(length) {
     if (this.host.moduleAssembly) {
@@ -16982,8 +17339,8 @@ var OutputWriterService = class {
   }
   /**
    * Converts a logical address to an output offset.
-   * @param {number} addr The logical address.
-   * @returns {number} The mapped output offset.
+   * @param addr The logical address.
+   * @returns The mapped output offset.
    */
   toOutputOffset(addr) {
     if (this.host.moduleAssembly) {
@@ -16993,8 +17350,8 @@ var OutputWriterService = class {
   }
   /**
    * Converts an output offset to a logical address.
-   * @param {number} addr The output offset.
-   * @returns {number} The mapped logical address.
+   * @param addr The output offset.
+   * @returns The mapped logical address.
    */
   fromOutputOffset(addr) {
     return this.host.pluginAddressSpace.fromOutputOffset(addr);
@@ -17009,9 +17366,9 @@ var OutputWriterService = class {
   }
   /**
    * Advances and normalizes a logical position.
-   * @param {number} inaddr The logical address to advance.
-   * @param {number} step The number of bytes to step.
-   * @returns {number} The fixed address.
+   * @param inaddr The logical address to advance.
+   * @param step The number of bytes to step.
+   * @returns The fixed address.
    */
   advanceLogicalAddress(inaddr, step = 0) {
     return this.host.pluginAddressSpace.advance(inaddr, step);
@@ -17271,12 +17628,15 @@ var DataStructEngine = class {
   host;
   structs;
   table;
+  /** True while a dataStructs table block is open. */
   get inTable() {
     return this.table !== void 0;
   }
+  /** Clears table sequencing state without validating row counts. */
   reset() {
     this.table = void 0;
   }
+  /** Ensures no dataStructs table remains open at session end. */
   finish() {
     if (this.table) {
       throw new Error(`Missing endDataStructs for '${this.table.name}'.`);
@@ -17297,6 +17657,7 @@ var DataStructEngine = class {
       fields: node.fields
     };
   }
+  /** Parses and opens a dataStructs table from directive words. */
   begin(words) {
     this.executeBegin(checkedDeclaration(parseDeclarationNode(words.join(" "), words)));
   }
@@ -17310,6 +17671,7 @@ var DataStructEngine = class {
     }
     this.table = { name: node.name, rows: 0 };
   }
+  /** Closes the active table using the parsed end directive argument count. */
   end(words) {
     this.executeEnd(words.length - 1);
   }
@@ -17328,8 +17690,8 @@ var DataStructEngine = class {
   }
   /**
    * Resolve an addressed record, keeping the established Asar index/stride rules.
-   * @param {RecordReference} reference Previously declared name with an unevaluated logical index.
-   * @returns {{ definition: StructDefinition; index: number }} Layout and checked index.
+   * @param reference Previously declared name with an unevaluated logical index.
+   * @returns Layout and checked index.
    */
   resolveRecord(reference2) {
     const definition = this.host.structs.get(reference2.name);
@@ -17384,6 +17746,7 @@ var DataStructEngine = class {
     }
     return fields2;
   }
+  /** Emits one indexed struct row from parsed declaration words. */
   emit(words) {
     const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
     if (node?.kind !== "dataStruct") {
@@ -17506,11 +17869,12 @@ var StructEngine = class {
     this.data = new DataStructEngine(host2, this);
   }
   host;
+  /** Engine emitting indexed data struct tables for defined layouts. */
   data;
   /**
    * Handles a struct mode command.
-   * @param {NormalizedCommand} command The command to handle.
-   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   * @param command The command to handle.
+   * @returns `true` if the command was handled, `false` otherwise.
    */
   handleStructMode(command) {
     const currentStruct = this.host.currentStruct;
@@ -17576,7 +17940,7 @@ var StructEngine = class {
   }
   /**
    * Handles a struct command.
-   * @param {string[]} words The words of the command.
+   * @param words The words of the command.
    */
   handleStruct(words) {
     const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
@@ -17617,7 +17981,7 @@ var StructEngine = class {
   }
   /**
    * Handles an endstruct command.
-   * @param {string[]} words The words of the command.
+   * @param words The words of the command.
    */
   handleEndStruct(words) {
     const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
@@ -17685,8 +18049,8 @@ var StructEngine = class {
   }
   /**
    * Checks whether a reference starts with a known struct name.
-   * @param {string} labelRef The reference to inspect.
-   * @returns {boolean} Whether the reference belongs to a known struct.
+   * @param labelRef The reference to inspect.
+   * @returns Whether the reference belongs to a known struct.
    */
   hasStructReference(labelRef) {
     if (!/^[A-Z_a-z]\w*(?:\[[^\]]+])?(?:\.[A-Z_a-z]\w*(?:\[[^\]]+])?)*$/.test(labelRef)) {
@@ -17707,11 +18071,11 @@ var StructEngine = class {
     return root.length > 0 && this.host.structs.has(root);
   }
   /** Resolve a parsed path directly; index values are refreshed in the caller's active stage. */
-  resolveStructPath(path69, evaluate) {
-    const names = [path69.root];
+  resolveStructPath(path70, evaluate) {
+    const names = [path70.root];
     let indexNode;
     const members = [];
-    for (const segment of path69.segments) {
+    for (const segment of path70.segments) {
       if (segment.kind === "index") {
         if (indexNode) {
           throw new Error("Multiple struct indexes are not supported.");
@@ -17786,8 +18150,8 @@ var StructEngine = class {
   }
   /**
    * Resolves a struct label.
-   * @param {string} labelRef The label to resolve.
-   * @returns {number} The resolved address.
+   * @param labelRef The label to resolve.
+   * @returns The resolved address.
    */
   resolveStructLabel(labelRef) {
     const refParts = labelRef.split(".");
@@ -17942,7 +18306,7 @@ var SymbolScopeService = class {
   }
   /**
    * Returns the current ca65-style object file name (last `.asm` on the include stack).
-   * @returns {string} The object-file basename, or empty when unknown.
+   * @returns The object-file basename, or empty when unknown.
    */
   objectFileKey() {
     const chain = [...this.host.includeStack, this.host.currentFile];
@@ -17957,8 +18321,8 @@ var SymbolScopeService = class {
   /**
    * Qualifies a symbol for the active syntax profile's file-local rule.
    * Exported/imported names and cheap/sublabels stay unqualified.
-   * @param {string} name The source symbol name.
-   * @returns {string} The storage key.
+   * @param name The source symbol name.
+   * @returns The storage key.
    */
   qualifySymbolName(name4) {
     if (!this.host.syntaxProfile.fileLocalSymbols) {
@@ -17975,9 +18339,9 @@ var SymbolScopeService = class {
   }
   /**
    * Adds a namespace inside a file-local qualifier (`unit::Namespace_Label`).
-   * @param {string} namespacePrefix The flattened namespace prefix.
-   * @param {string} label The already-qualified or plain label.
-   * @returns {string} The namespace-qualified storage key.
+   * @param namespacePrefix The flattened namespace prefix.
+   * @param label The already-qualified or plain label.
+   * @returns The namespace-qualified storage key.
    */
   qualifyNamespaceAlias(namespacePrefix, label) {
     if (this.host.syntaxProfile.fileLocalSymbols) {
@@ -17990,8 +18354,8 @@ var SymbolScopeService = class {
   }
   /**
    * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
-   * @param {string} name The label token, without a trailing colon.
-   * @returns {string} The rewritten name.
+   * @param name The label token, without a trailing colon.
+   * @returns The rewritten name.
    */
   toCheapDotLabel(name4) {
     const prefix = this.host.syntaxProfile.cheapLocalPrefix;
@@ -18000,6 +18364,7 @@ var SymbolScopeService = class {
     }
     return name4;
   }
+  /** Walks underscore segments to find the nearest hierarchy-modifying ancestor label. */
   findNearestHierarchyAncestor(label) {
     for (let i = label.length - 1; i >= 0; i--) {
       if (label[i] !== "_") {
@@ -18016,6 +18381,7 @@ var SymbolScopeService = class {
     }
     return null;
   }
+  /** Builds outer-to-inner label ancestry, stopping at the active global root when applicable. */
   getHierarchyChain(label) {
     const rootLabel = this.host.currentGlobalParentLabel;
     const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
@@ -18035,6 +18401,7 @@ var SymbolScopeService = class {
     }
     return chain;
   }
+  /** Lists every strict underscore prefix of a label from longest to shortest. */
   getAncestorPrefixes(label) {
     const prefixes = [];
     for (let i = label.length - 1; i >= 0; i--) {
@@ -18048,6 +18415,7 @@ var SymbolScopeService = class {
     }
     return prefixes;
   }
+  /** Resolves the parent label for cheap-local references given leading dot count. */
   getScopedParentLabel(dotCount) {
     const current = this.host.currentParentLabel;
     if (dotCount === 1) {
@@ -18069,8 +18437,8 @@ var SymbolScopeService = class {
   }
   /**
    * Checks if a label is in scope.
-   * @param {string} identifier The label to check.
-   * @returns {boolean} `true` if the label is in scope, `false` otherwise.
+   * @param identifier The label to check.
+   * @returns `true` if the label is in scope, `false` otherwise.
    */
   hasLabelInScope(identifier3) {
     const qualified = this.qualifySymbolName(identifier3);
@@ -18078,8 +18446,8 @@ var SymbolScopeService = class {
   }
   /**
    * Handles a relative label.
-   * @param {string} label The label to handle.
-   * @returns {number} The address of the label.
+   * @param label The label to handle.
+   * @returns The address of the label.
    */
   handleRelativeLabel(label) {
     const isPositive = label.includes("+");
@@ -18152,7 +18520,7 @@ var SymbolScopeService = class {
   /**
    * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
    * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
-   * @returns {number} The address of the unnamed label.
+   * @returns The address of the unnamed label.
    */
   handleUnnamedLabel() {
     const targetAddress = this.host.currentTargetAddress;
@@ -18184,9 +18552,9 @@ var SymbolScopeService = class {
   }
   /**
    * Resolves a ca65 unnamed-label reference (`:+`, `:++`, `:-`, `:--`).
-   * @param {string} label The reference token.
-   * @param {number} [currentAddressOverride] PC to search from.
-   * @returns {number} The target address.
+   * @param label The reference token.
+   * @param [currentAddressOverride] PC to search from.
+   * @returns The target address.
    */
   findUnnamedLabel(label, currentAddressOverride) {
     const parsed = parseUnnamedLabelReference(label);
@@ -18271,9 +18639,9 @@ var SymbolScopeService = class {
   }
   /**
    * Finds the next label.
-   * @param {string} label The label to find.
-   * @param {number} currentAddressOverride The current address to override.
-   * @returns {number} The address of the next label.
+   * @param label The label to find.
+   * @param currentAddressOverride The current address to override.
+   * @returns The address of the next label.
    */
   findNextLabel(label, currentAddressOverride) {
     const isPositive = label.includes("+");
@@ -18303,9 +18671,9 @@ var SymbolScopeService = class {
   }
   /**
    * Finds the previous label.
-   * @param {string} label The label to find.
-   * @param {number} currentAddressOverride The current address to override.
-   * @returns {number} The address of the previous label.
+   * @param label The label to find.
+   * @param currentAddressOverride The current address to override.
+   * @returns The address of the previous label.
    */
   findPreviousLabel(label, currentAddressOverride) {
     const isPositive = label.includes("+");
@@ -18335,12 +18703,12 @@ var SymbolScopeService = class {
   }
   /**
    * Sets a label.
-   * @param {string} label The label to set.
-   * @param {number} value The value of the label.
-   * @param {boolean} isStatic Whether the label is static.
-   * @param {boolean} isMacroLabel Whether the label is a macro label.
-   * @param {boolean} isGlobal Whether the label is global.
-   * @param {boolean} modifiesHierarchy Whether the label modifies the hierarchy.
+   * @param label The label to set.
+   * @param value The value of the label.
+   * @param isStatic Whether the label is static.
+   * @param isMacroLabel Whether the label is a macro label.
+   * @param isGlobal Whether the label is global.
+   * @param modifiesHierarchy Whether the label modifies the hierarchy.
    */
   setLabel(label, value, isStatic = false, isMacroLabel = false, isGlobal = false, modifiesHierarchy = true) {
     let fullLabel = label;
@@ -18483,8 +18851,8 @@ var SymbolScopeService = class {
   }
   /**
    * Resolves a struct member.
-   * @param {string} compoundId The compound ID of the struct member.
-   * @returns {number} The address of the struct member.
+   * @param compoundId The compound ID of the struct member.
+   * @returns The address of the struct member.
    */
   resolveStructMember(compoundId) {
     const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
@@ -18536,9 +18904,9 @@ var SymbolScopeService = class {
   }
   /**
    * Gets the value of a label.
-   * @param {string} label The label to get the value of.
-   * @param {boolean} requireStatic Whether the label must be static.
-   * @returns {number} The value of the label.
+   * @param label The label to get the value of.
+   * @param requireStatic Whether the label must be static.
+   * @returns The value of the label.
    */
   getLabelValue(label, requireStatic) {
     const value = this.tryGetLabelValue(label, requireStatic);
@@ -18552,9 +18920,9 @@ var SymbolScopeService = class {
   }
   /**
    * Tries to get a scoped label value without allocating an Error for a miss.
-   * @param {string} label The label to get the value of.
-   * @param {boolean} requireStatic Whether the label must be static.
-   * @returns {number | undefined} The value, or undefined when not found.
+   * @param label The label to get the value of.
+   * @param requireStatic Whether the label must be static.
+   * @returns The value, or undefined when not found.
    */
   tryGetLabelValue(label, requireStatic) {
     if (parseUnnamedLabelReference(label)) {
@@ -18693,9 +19061,9 @@ var SymbolScopeService = class {
   }
   /**
    * Gets the value of a label directly.
-   * @param {string} label The label to get the value of.
-   * @param {boolean} requireStatic Whether the label must be static.
-   * @returns {number} The value of the label.
+   * @param label The label to get the value of.
+   * @param requireStatic Whether the label must be static.
+   * @returns The value of the label.
    */
   getLabelValueDirect(label, requireStatic) {
     const value = this.tryGetLabelValueDirect(label, requireStatic);
@@ -18709,9 +19077,9 @@ var SymbolScopeService = class {
   }
   /**
    * Tries a direct label lookup without allocating an Error for ordinary misses.
-   * @param {string} label The label to get the value of.
-   * @param {boolean} requireStatic Whether the label must be static.
-   * @returns {number | undefined} The value, or undefined when not found.
+   * @param label The label to get the value of.
+   * @param requireStatic Whether the label must be static.
+   * @returns The value, or undefined when not found.
    */
   tryGetLabelValueDirect(label, requireStatic) {
     if (label.includes("_") && !label.includes(":")) {
@@ -18747,9 +19115,9 @@ var SymbolScopeService = class {
   }
   /**
    * Gets the size of a struct or extension.
-   * @param {string} identifier The identifier of the struct or extension.
-   * @param {boolean} [baseOnly] If true, returns only the base size without extensions.
-   * @returns {number} The size of the struct or extension.
+   * @param identifier The identifier of the struct or extension.
+   * @param [baseOnly] If true, returns only the base size without extensions.
+   * @returns The size of the struct or extension.
    * @throws {Error} If the struct or extension doesn't exist.
    */
   getObjectSize(identifier3, baseOnly = false) {
@@ -18795,9 +19163,9 @@ var SymbolScopeService = class {
   /**
    * Returns the outline container for a stored label name.
    * Sublabels nest under their parent. Namespaced labels nest under the namespace.
-   * @param {string} fullLabel The stored label name.
-   * @param {boolean} isGlobal Whether the label is global.
-   * @returns {string | undefined} The container name, if any.
+   * @param fullLabel The stored label name.
+   * @param isGlobal Whether the label is global.
+   * @returns The container name, if any.
    */
   symbolContainerName(fullLabel, isGlobal) {
     const parent = this.host.labelParents.get(fullLabel);
@@ -18811,7 +19179,7 @@ var SymbolScopeService = class {
   }
   /**
    * Handles a label definition.
-   * @param {string} labelName The name of the label.
+   * @param labelName The name of the label.
    */
   handleLabelDefinition(labelName) {
     labelName = this.toCheapDotLabel(labelName);
@@ -18915,9 +19283,11 @@ var Assembler = class _Assembler {
   /** A synchronous assignment borrows the existing scope writer while replacing only its numeric binding. */
   moduleAssignmentValue;
   /** Stable symbol-scope identity, independent of include basenames or final placement. */
+  /** Stable module id when section-relative assembly is enabled. */
   get moduleIdentity() {
     return this.moduleAssembly?.id;
   }
+  /** Active section name when writing relocatable module bytes. */
   get moduleSection() {
     return this.moduleAssembly?.position().section;
   }
@@ -18929,35 +19299,53 @@ var Assembler = class _Assembler {
   currentTargetStartAddress = 0;
   /** The current target base start address. `realstartpos` */
   currentTargetBaseStartAddress = 0;
+  /** Total bytes emitted in the active stage cursor. */
   bytes = 0;
+  /** Saved base addresses for nested `pushbase`/`pullbase` pairs. */
   pushBaseStack = [];
   outputBuffer = new AssemblyOutputBuffer();
   /**
    * Mutable output; large contiguous session-owned images may use typed views. Reacquire a view after
    * growing writes; assigned arrays retain their growth behavior and assigned typed arrays stay fixed.
    */
+  /** Live output buffer view; reacquire after growth when using typed arrays. */
   get outputBytes() {
     return this.outputBuffer.bytes;
   }
+  /** Replaces the entire output buffer backing store. */
   set outputBytes(value) {
     this.outputBuffer.replace(value);
   }
   /** Byte used when expanding a sparse output range. */
   outputFillByte = 0;
+  /** Stack of active `while` and typed `for` loop frames. */
   whileStatus = [];
+  /** Saved namespace prefixes for nested namespace directives. */
   namespaceStack = [];
+  /** Active namespace prefix applied to newly defined symbols. */
   currentNamespace = "";
+  /** Whether dotted namespace segments accumulate on a nesting path. */
   namespaceNestingEnabled = false;
+  /** Path segments accumulated when namespace nesting is enabled. */
   namespaceNestingPath = [];
   // Current macro tracking
+  /** Name of the macro currently being expanded, if any. */
   currentMacroName = "";
+  /** Variadic argument count for the active macro expansion. */
   currentVariadicCount = void 0;
+  /** Captured variadic argument strings for the active macro expansion. */
   currentVariadicArgs = [];
+  /** Macro definitions registered during this session. */
   macros = /* @__PURE__ */ new Map();
+  /** Shared numeric expression evaluator for directives and operands. */
   mathCore;
+  /** Operand parser and evaluator bound to this session's symbol state. */
   operandResolver;
+  /** Byte-to-source metadata collected when {@link collectSourceMetadata} is enabled. */
   addressToLineMapping = new AddressToLineMapping();
+  /** Path of the source file currently being executed. */
   currentFile = "";
+  /** Zero-based line index within {@link currentFile}. */
   currentLine = 0;
   /** Invocation-local provenance. Buffered nodes snapshot it before this scope ends. */
   currentSourceOrigin;
@@ -18965,16 +19353,24 @@ var Assembler = class _Assembler {
   traceListener = null;
   /** Active command contexts so nested byte writes inherit the right source line. */
   traceCommandStack = [];
+  /** Textual define bindings established by define directives. */
   defines = /* @__PURE__ */ new Map();
   /** Bare numeric values exposed only while executing typed `for` loops. */
   activeLoopVariables = /* @__PURE__ */ new Map();
   // Character mapping support
+  /** Character-to-byte mappings for the active text table. */
   characterMappings = /* @__PURE__ */ new Map();
+  /** Name of the character table currently selected. */
   currentTable = null;
+  /** Saved character mapping tables for nested table directives. */
   tableStack = [];
+  /** Canonical architecture id selected for encoding. */
   arch = "";
+  /** Saved program counters for nested `pushpc`/`pullpc` pairs. */
   pushpcStack = [];
+  /** Nesting depth counter paired with {@link pushpcStack}. */
   pushpcnum = 0;
+  /** Primary label value table for the active stage. */
   labelTable = /* @__PURE__ */ new Map();
   /** ca65 `.export` / `.import` names that stay session-global. */
   globalSymbols = /* @__PURE__ */ new Set();
@@ -18982,61 +19378,99 @@ var Assembler = class _Assembler {
   forwardLabels = {};
   /** Track multiple `-` labels */
   backwardLabels = {};
+  /** Repeat unit size for pad directives in bytes. */
   padUnit = 1;
+  /** Fill pattern bytes cycled during pad emission. */
   padbyte = [];
+  /** Struct definitions registered during this session. */
   structs = /* @__PURE__ */ new Map();
+  /** Struct currently being defined, if any. */
   currentStruct = null;
+  /** Saved PCs while defining struct layouts in place. */
   savedPCStack = [];
   /** Initialize fill pattern */
   fillbyte = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  /** Optional base ROM image copied at session construction. */
   baseImage;
   // Add a static property to hold our CRC table.
+  /** Lazily initialized CRC table shared by include fingerprinting. */
   static crcTable = null;
+  /** Metadata for files already included in this session. */
   includedFiles = /* @__PURE__ */ new Map();
+  /** Stack of include paths for nested include directives. */
   includeStack = [];
+  /** Search paths consulted when resolving include targets. */
   includePaths = ["./"];
+  /** Monotonic id distinguishing anonymous labels across macro expansions. */
   macroLabelInstance = 0;
   // Tracks the current macro instance
+  /** Whether execution is inside a macro expansion body. */
   inMacroExpansion = false;
   // Flag to track if we're inside a macro expansion
+  /** Most recently defined parent label for local label resolution. */
   currentParentLabel = "";
   // Track the most recent parent label
+  /** Whether {@link currentParentLabel} was declared as global. */
   currentParentIsGlobal = false;
   // Track if the parent label is global
+  /** Active top-level parent used to resolve single-dot local labels. */
   currentGlobalParentLabel = "";
   // Track the active top-level parent for single-dot labels
+  /** Explicit parent links for labels that do not encode ancestry in their names. */
   labelParents = /* @__PURE__ */ new Map();
   // Track explicit label ancestry without relying on underscores
+  /** When true, label reads must resolve to defined values immediately. */
   requireStaticLabelLookup = false;
   /** Session syntax values indexed by opaque builder identities, with source keys owned by the builder. */
   passProgramCache = /* @__PURE__ */ new Map();
+  /** Directive handlers registered for this session's target and plugins. */
   directiveRegistry;
+  /** Architecture encoder registry bound to the active target. */
   architectureRegistry;
+  /** Frozen plugin environment shared across sessions. */
   environment;
+  /** Resolved target contribution id for this session. */
   targetId;
+  /** Validated target options frozen at construction. */
   targetOptions;
+  /** Active syntax profile controlling label and directive normalization. */
   syntaxProfile;
+  /** Core directive groups exposed to plugins for this session. */
   coreDirectiveGroups;
+  /** Mutable plugin-owned session state store. */
   pluginState;
+  /** Target address-space policy used for writes and label widths. */
   pluginAddressSpace;
+  /** Target output format policy for container sizing and checksum rules. */
   pluginOutputFormat;
   activeLifecycles;
+  /** Facade exposing cursor write helpers to directives. */
   cursorAddress;
+  /** Synchronous file provider used for includes and expression file reads. */
   fileProvider;
   /** Binary/resource dependencies and converted bytes owned by the active build. */
   assetAssembly = new AssetAssemblyService(this);
   /** Tooling-only path discovery avoids conversion on edit bursts. */
+  /** When true, asset includes record edges without converting bytes. */
   deferAssetConversion = false;
   /** Once an active asset is skipped, subsequent layout values cannot validate assertions in this pass. */
   #hasDeferredAssetLayout = false;
+  /** Front-end parser and command factory for this session. */
   frontEndService;
+  /** Incremental program model builder backing editor tooling. */
   programModelBuilder;
+  /** Lowers normalized commands into executable runtime nodes. */
   commandLoweringService;
+  /** Mutable parse state reused across incremental program builds. */
   incrementalProgramParseState;
   services;
+  /** Cached mutable snapshots for each executed assembly stage. */
   stageExecutionStates = /* @__PURE__ */ new Map();
+  /** Diagnostics accumulated during the current or most recent build. */
   diagnostics = [];
+  /** Symbol definitions recorded for tooling and cross-reference analysis. */
   symbolDefinitions = [];
+  /** Symbol references recorded for tooling and cross-reference analysis. */
   symbolReferences = [];
   /** Deduplication index for {@link symbolDefinitions} — O(1) vs. the former O(n) `.some()` scan. */
   #symbolDefinitionKeys = /* @__PURE__ */ new Set();
@@ -19049,7 +19483,9 @@ var Assembler = class _Assembler {
   referenceEpoch = 0;
   /** Deduplication index for {@link includeEdges} — O(1) vs. O(n) `.some()` scan. */
   #includeEdgeKeys = /* @__PURE__ */ new Set();
+  /** Include graph edges recorded for tooling analysis. */
   includeEdges = [];
+  /** Whether byte-to-source metadata is collected during emission. */
   collectSourceMetadata;
   /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
   followIncludes = true;
@@ -19071,40 +19507,52 @@ var Assembler = class _Assembler {
       this.#pluginBorrowDepth--;
     }
   }
+  /** Define directive engine for this session. */
   get defineEngine() {
     return this.services.defineEngine;
   }
+  /** Runtime dispatcher for structural directives. */
   get directiveRuntime() {
     return this.services.directiveRuntime;
   }
+  /** Active logical address width in bytes from the target address space. */
   get addressWidth() {
     return this.pluginAddressSpace.addressWidth;
   }
+  /** Architecture ids available on the active target. */
   get availableArchitectures() {
     return new Set(this.environment.getTarget(this.targetId)?.architectures ?? []);
   }
+  /** Human-readable target name for diagnostics. */
   get targetDisplayName() {
     return this.environment.getTarget(this.targetId)?.displayName ?? this.targetId;
   }
+  /** Shared front-end command parsing service. */
   get frontEndCommandService() {
     return this.services.frontEndCommandService;
   }
+  /** Include and incsrc handling service. */
   get includeSource() {
     return this.services.includeSource;
   }
+  /** Macro definition and expansion engine. */
   get macroEngine() {
     return this.services.macroEngine;
   }
+  /** Label and symbol scope service. */
   get symbolScope() {
     return this.services.symbolScope;
   }
+  /** Byte-oriented output writer bound to the session buffer. */
   get outputWriter() {
     return this.services.outputWriter;
   }
+  /** Struct definition and initializer engine. */
   get structEngine() {
     return this.services.structEngine;
   }
   // Core assembler wrapper helpers
+  /** Alias for {@link currentTargetAddress} used by legacy directive helpers. */
   get currentAddress() {
     return this.currentTargetAddress;
   }
@@ -19153,7 +19601,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Sets write position.
-   * @param {number} address The address.
+   * @param address The address.
    */
   setWritePosition(address3) {
     this.currentTargetAddress = address3;
@@ -19169,7 +19617,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Enters struct definition.
-   * @param {number} base The base.
+   * @param base The base.
    */
   enterStructDefinition(base) {
     this.savedPCStack.push(this.currentTargetAddress);
@@ -19196,36 +19644,41 @@ var Assembler = class _Assembler {
   }
   /**
    * Increments bytes written.
-   * @param {number} num The num.
+   * @param num The num.
    */
   incrementBytesWritten(num) {
     this.bytes += num;
   }
+  /** Whether the active stage sizes instructions without emitting bytes. */
   get mode() {
     return this.getActiveStageCapabilities().instructionMode;
   }
+  /** Whether byte writes are permitted in the active stage. */
   get canEmitBytes() {
     return this.getActiveStageCapabilities().canEmitBytes;
   }
+  /** Whether the active stage may finalize output and enforce completion checks. */
   get canFinalize() {
     return this.getActiveStageCapabilities().canFinalize;
   }
+  /** Whether unresolved labels are errors in the active stage. */
   get enforceResolvedLabels() {
     return this.getActiveStageCapabilities().enforceResolvedLabels;
   }
+  /** Whether the active stage collects definitions without emitting program bytes. */
   get isDefinitionCollectionStage() {
     return this.getActiveStageCapabilities().isDefinitionCollectionStage;
   }
   /**
    * Reports whether structured tracing is active for this assembly session.
-   * @returns {boolean} Whether a trace listener is installed.
+   * @returns Whether a trace listener is installed.
    */
   get isTracing() {
     return this.traceListener !== null;
   }
   /**
    * Traces write.
-   * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
+   * @param event The event.
    */
   traceWrite(event) {
     const sourceIndex = this.traceCommandStack.length - 1;
@@ -19242,7 +19695,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Installs or clears the structured trace listener.
-   * @param {AssemblerTraceListener | null} listener The listener to receive trace events.
+   * @param listener The listener to receive trace events.
    */
   setTraceListener(listener) {
     this.traceListener = listener;
@@ -19263,8 +19716,8 @@ var Assembler = class _Assembler {
   /**
    * Records a directed include-graph edge if it has not already been recorded.
    * Includes execute once per pass, so edges are de-duplicated by file pair.
-   * @param {string} fromFile The file issuing the include directive.
-   * @param {string} toFile The resolved path of the included file.
+   * @param fromFile The file issuing the include directive.
+   * @param toFile The resolved path of the included file.
    */
   recordIncludeEdge(fromFile, toFile) {
     if (!this.collectSourceMetadata) {
@@ -19282,8 +19735,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Returns the current source location.
-   * @param {SourceSpan} [span] Optional source span override.
-   * @returns {AssemblySourceLocation} The current source location.
+   * @param [span] Optional source span override.
+   * @returns The current source location.
    */
   getCurrentSourceLocation(span) {
     return createAssemblySourceLocation(
@@ -19295,10 +19748,10 @@ var Assembler = class _Assembler {
   }
   /**
    * Converts and records an unknown error.
-   * @param {unknown} error The error to normalize.
-   * @param {SourceSpan} [span] Optional source span override.
-   * @param {string} [stage] Optional stage name.
-   * @returns {AssemblyDiagnostic} The recorded diagnostic.
+   * @param error The error to normalize.
+   * @param [span] Optional source span override.
+   * @param [stage] Optional stage name.
+   * @returns The recorded diagnostic.
    */
   reportErrorDiagnostic(error, span, stage) {
     const diagnostic = diagnosticFromError(error, this.getCurrentSourceLocation(span), stage);
@@ -19307,14 +19760,14 @@ var Assembler = class _Assembler {
   }
   /**
    * Records a symbol definition if it has not already been recorded.
-   * @param {AssemblySymbolKind} kind The symbol kind.
-   * @param {string} name The symbol name.
-   * @param {{ file?: string; line?: number; span?: SourceSpan; value?: number | string; containerName?: string }} [options] Optional symbol metadata.
-   * @param {string} [options.file] Optional source file override.
-   * @param {number} [options.line] Optional source line override.
-   * @param {SourceSpan} [options.span] Optional precise source span.
-   * @param {number | string} [options.value] Optional resolved symbol value.
-   * @param {string} [options.containerName] Optional owning container name.
+   * @param kind The symbol kind.
+   * @param name The symbol name.
+   * @param [options] Optional symbol metadata.
+   * @param [options.file] Optional source file override.
+   * @param [options.line] Optional source line override.
+   * @param [options.span] Optional precise source span.
+   * @param [options.value] Optional resolved symbol value.
+   * @param [options.containerName] Optional owning container name.
    */
   recordSymbolDefinition(kind, name4, options = {}) {
     if (!this.collectSourceMetadata) {
@@ -19350,13 +19803,13 @@ var Assembler = class _Assembler {
   }
   /**
    * Records a symbol reference if it has not already been recorded.
-   * @param {AssemblySymbolReferenceKind} kind The reference kind.
-   * @param {string} name The reference name.
-   * @param {{ file?: string; line?: number; span?: SourceSpan; containerName?: string }} [options] Optional reference metadata.
-   * @param {string} [options.file] Optional source file override.
-   * @param {number} [options.line] Optional source line override.
-   * @param {SourceSpan} [options.span] Optional precise source span.
-   * @param {string} [options.containerName] Optional owning container name.
+   * @param kind The reference kind.
+   * @param name The reference name.
+   * @param [options] Optional reference metadata.
+   * @param [options.file] Optional source file override.
+   * @param [options.line] Optional source line override.
+   * @param [options.span] Optional precise source span.
+   * @param [options.containerName] Optional owning container name.
    */
   recordSymbolReference(kind, name4, options = {}) {
     if (!this.collectSourceMetadata) {
@@ -19402,8 +19855,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Collects expression references.
-   * @param {ExpressionNode | undefined} expression The expression.
-   * @param {SourceSpan} [fallbackSpan] The fallback span.
+   * @param expression The expression.
+   * @param [fallbackSpan] The fallback span.
    */
   collectExpressionReferences(expression2, fallbackSpan) {
     if (!expression2) {
@@ -19457,8 +19910,8 @@ var Assembler = class _Assembler {
   /**
    * Records one reference per struct-path segment so `obj.timer` can target
    * the struct root and the field independently.
-   * @param {ReferenceExpressionNode} expression The struct-rooted reference.
-   * @param {SourceSpan} [fallbackSpan] The fallback span.
+   * @param expression The struct-rooted reference.
+   * @param [fallbackSpan] The fallback span.
    */
   collectStructReferenceSegments(expression2, fallbackSpan) {
     switch (expression2.type) {
@@ -19491,8 +19944,8 @@ var Assembler = class _Assembler {
    * Strips `[...]` so `obj[19].ext.index` yields `ext` for `index`.
    * Define roots (`!obj_arthur.flags2`) resolve through the define value
    * (`obj_start+obj[0]`) to the actual struct name.
-   * @param {ReferenceExpressionNode} object The object of a member access.
-   * @returns {string | undefined} The container name.
+   * @param object The object of a member access.
+   * @returns The container name.
    */
   structSegmentContainerName(object7) {
     switch (object7.type) {
@@ -19511,9 +19964,9 @@ var Assembler = class _Assembler {
   }
   /**
    * Finds a known struct name in a define's expansion, walking nested defines.
-   * @param {string | undefined} name The define name.
-   * @param {Set<string>} [seen] Define names already visited.
-   * @returns {string | undefined} The struct name, if any.
+   * @param name The define name.
+   * @param [seen] Define names already visited.
+   * @returns The struct name, if any.
    */
   structNameFromDefine(name4, seen = /* @__PURE__ */ new Set()) {
     if (!name4 || seen.has(name4)) {
@@ -19529,9 +19982,9 @@ var Assembler = class _Assembler {
   /**
    * Walks an expression right-to-left looking for a known struct identifier.
    * `obj_start+obj[0]` yields `obj`.
-   * @param {ExpressionNode} node The expression to search.
-   * @param {Set<string>} seen Define names already visited.
-   * @returns {string | undefined} The struct name, if any.
+   * @param node The expression to search.
+   * @param seen Define names already visited.
+   * @returns The struct name, if any.
    */
   structNameFromExpression(node, seen) {
     switch (node.type) {
@@ -19566,8 +20019,8 @@ var Assembler = class _Assembler {
   /**
    * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
    * segments so each part can be targeted independently.
-   * @param {string} name The identifier text.
-   * @returns {{ name: string; containerName?: string }[] | undefined} Segments, if this is a known sublabel.
+   * @param name The identifier text.
+   * @returns Segments, if this is a known sublabel.
    */
   hierarchicalLabelReferences(name4) {
     if (!name4.includes("_") || !this.labelTable.has(name4)) {
@@ -19597,7 +20050,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Collects command references.
-   * @param {NormalizedCommand} command The command.
+   * @param command The command.
    */
   collectCommandReferences(command) {
     incrementInternalCounter("referenceCollections");
@@ -19734,12 +20187,12 @@ var Assembler = class _Assembler {
   }
   /**
    * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
-   * @param {ProgramModel} program The program model to analyze.
-   * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-   * @param {boolean} [options.followIncludes] Whether to follow includes.
-   * @param {Array<AssemblyStageName>} [options.stages] Optional stages to run.
-   * @param {boolean} [options.collectSourceMetadata] Whether to collect source metadata.
-   * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
+   * @param program The program model to analyze.
+   * @param [options] Optional analysis options.
+   * @param [options.followIncludes] Whether to follow includes.
+   * @param [options.stages] Optional stages to run.
+   * @param [options.collectSourceMetadata] Whether to collect source metadata.
+   * @returns The accumulated diagnostics and symbols.
    */
   collectProgramAnalysis(program, options = {}) {
     this.clearAnalysisArtifacts();
@@ -19770,7 +20223,7 @@ var Assembler = class _Assembler {
    * Creates an isolated assembler session suitable for editor-style analysis.
    * This keeps batch assembly state and tooling state from leaking into each
    * other while still sharing the same file provider and directive registry.
-   * @returns {Assembler} A configured analysis session.
+   * @returns A configured analysis session.
    */
   createToolingSession() {
     const session = measureInternalPhase(
@@ -19801,8 +20254,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Creates directive handlers bound to a fresh session's family capabilities.
-   * @param {Assembler} session The session that should receive directive calls.
-   * @returns {DirectiveRegistry} A registry bound to the provided session.
+   * @param session The session that should receive directive calls.
+   * @returns A registry bound to the provided session.
    */
   cloneDirectiveRegistryForSession(session) {
     const operandResolver = session.operandResolver;
@@ -19967,6 +20420,10 @@ var Assembler = class _Assembler {
     }
     return registry5;
   }
+  /**
+   * Runs tooling analysis on an already-built program in an isolated session.
+   * @param program Parsed program model to analyze.
+   */
   analyzeProgram(program) {
     const session = this.createToolingSession();
     try {
@@ -19977,11 +20434,11 @@ var Assembler = class _Assembler {
   }
   /**
    * Builds and analyzes raw source without throwing on the first error.
-   * @param {string} source The source to analyze.
-   * @param {string} [sourceFile] Optional source file override.
-   * @param {number} [startLine] Optional starting line number.
-   * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-   * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
+   * @param source The source to analyze.
+   * @param [sourceFile] Optional source file override.
+   * @param [startLine] Optional starting line number.
+   * @param [options] Optional analysis options.
+   * @returns The analysis result and program model.
    */
   analyzeSource(source2, sourceFile3 = this.currentFile, startLine = 0, options = {}) {
     const session = this.createToolingSession();
@@ -19998,6 +20455,11 @@ var Assembler = class _Assembler {
       session.dispose();
     }
   }
+  /**
+   * Analyzes multiple source documents sequentially in fresh tooling sessions.
+   * @param documents Source buffers with paths and optional start lines.
+   * @param options Analysis options applied to each document.
+   */
   analyzeWorkspace(documents, options = {}) {
     const results = [];
     for (const document2 of documents) {
@@ -20548,6 +21010,11 @@ var Assembler = class _Assembler {
     }
     this.moduleAssembly.recordRange(this.moduleSource(), "reservation", count2, start);
   }
+  /**
+   * Aligns the module write cursor within the active section.
+   * @param boundary Byte alignment boundary.
+   * @param fill Fill byte used for padding when emitting.
+   */
   alignModule(boundary2, fill = 0) {
     if (!this.moduleAssembly) {
       throw new Error("Module alignment requires section-relative assembly.");
@@ -20575,6 +21042,7 @@ var Assembler = class _Assembler {
       this.outputWriter.writeValue(this.operandResolver.getnum(expression2), width, endianness);
     }
   }
+  /** Records one emitted module byte against the current range kind, including asset tails. */
   recordModuleWrite() {
     let kind = this.moduleRangeKind;
     if (this.moduleAssetRemaining > 0) {
@@ -20622,15 +21090,15 @@ var Assembler = class _Assembler {
       "section",
       ({ text: text4 }) => {
         const entries3 = parseDataList(text4.replace(/^\S+\s*/, ""));
-        const nameNode = entries3[0]?.expression;
-        const kindNode = entries3[1]?.expression;
+        const nameNode = entries3.at(0)?.expression;
+        const kindNode = entries3.at(1)?.expression;
         if (entries3.length > 3) {
           throw new Error("SECTION accepts name, kind, and alignment.");
         }
         return {
           name: sectionName(nameNode),
           kind: kindNode ? sectionName(kindNode) : "code",
-          alignment: entries3[2]?.expression
+          alignment: entries3.at(2)?.expression
         };
       },
       syntaxRecord({
@@ -20763,6 +21231,11 @@ var Assembler = class _Assembler {
       this.addressToLineMapping.fileList.filter(({ name: name4 }) => paths.has(name4)).map(({ name: name4, sha256: sha2564, size, crc }) => ({ path: name4, sha256: sha2564, size, crc32: crc }))
     );
   }
+  /**
+   * Invokes a named hook on every active plugin lifecycle in registration order.
+   * @param hookName Hook label used when wrapping plugin errors.
+   * @param invoke Callback receiving each lifecycle instance.
+   */
   runLifecycleHook(hookName, invoke) {
     for (const { record: record7, instance } of this.activeLifecycles) {
       try {
@@ -20778,6 +21251,12 @@ var Assembler = class _Assembler {
       }
     }
   }
+  /**
+   * Runs plugin `beforeDirective` middleware until one handler consumes the directive.
+   * @param keyword Canonical directive keyword being dispatched.
+   * @param command Normalized command under dispatch.
+   * @param syntax Parsed syntax snapshot when already available.
+   */
   runBeforeDirective(keyword, command, syntax2 = command.syntax ?? this.directiveRegistry.parseSyntax(command)) {
     for (const { record: record7, instance, directiveKeywords } of this.activeLifecycles) {
       if (!instance.beforeDirective || directiveKeywords && !directiveKeywords.has(keyword)) {
@@ -20822,10 +21301,10 @@ var Assembler = class _Assembler {
   }
   /**
    * Resolves ambiguous `endif` handling through active dialect lifecycles.
-   * @param {"for" | "while"} [loopType] The innermost loop type.
-   * @param {number} [loopStartLine] The innermost loop start line.
-   * @param {number} [ifStartLine] The innermost conditional start line.
-   * @returns {boolean} Whether `endif` should close the innermost while loop.
+   * @param [loopType] The innermost loop type.
+   * @param [loopStartLine] The innermost loop start line.
+   * @param [ifStartLine] The innermost conditional start line.
+   * @returns Whether `endif` should close the innermost while loop.
    */
   shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine) {
     let result = false;
@@ -20843,6 +21322,11 @@ var Assembler = class _Assembler {
     });
     return result;
   }
+  /**
+   * Selects the session architecture and notifies plugin lifecycles.
+   * @param architecture Architecture id or alias to activate.
+   * @param sourceAlias Original alias text preserved for lifecycle hooks.
+   */
   selectArchitecture(architecture, sourceAlias = architecture) {
     const resolved = this.environment.resolveArchitectureId(this.targetId, architecture);
     if (!resolved) {
@@ -20868,6 +21352,11 @@ var Assembler = class _Assembler {
       })
     );
   }
+  /**
+   * Validates and notifies plugins before a multi-byte write at a logical address.
+   * @param logicalAddress Target logical address of the write.
+   * @param width Write width in bytes.
+   */
   beforeWrite(logicalAddress, width) {
     this.pluginAddressSpace.validateWrite?.(logicalAddress, width);
     this.runLifecycleHook(
@@ -20882,8 +21371,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Records one emitted byte against the active command source.
-   * @param {number} logicalAddress Logical byte address.
-   * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
+   * @param logicalAddress Logical byte address.
+   * @param outputOffset Physical output offset, or a negative value when unmapped.
    */
   recordSourceWrite(logicalAddress, outputOffset) {
     if (!this.collectSourceMetadata) {
@@ -20983,6 +21472,12 @@ var Assembler = class _Assembler {
       );
     }
   }
+  /**
+   * Reads an unsigned little-endian integer from a byte slice.
+   * @param bytes Source buffer.
+   * @param pos Starting byte index.
+   * @param width Width in bytes, at most four.
+   */
   readLittleEndian(bytes3, pos, width) {
     if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes3.length) {
       return void 0;
@@ -20995,10 +21490,10 @@ var Assembler = class _Assembler {
   }
   /**
    * Check a byte interval after truncating its position and size to integers.
-   * @param {number} sourceLength Available source bytes.
-   * @param {number} position Zero-based byte offset.
-   * @param {number} size Requested byte count, which may be zero.
-   * @returns {number} Numeric 1 or 0 for use by assembly expressions.
+   * @param sourceLength Available source bytes.
+   * @param position Zero-based byte offset.
+   * @param size Requested byte count, which may be zero.
+   * @returns Numeric 1 or 0 for use by assembly expressions.
    */
   canReadByteRange(sourceLength, position, size) {
     const pos = Math.trunc(position);
@@ -21007,12 +21502,12 @@ var Assembler = class _Assembler {
   }
   /**
    * Read an unsigned little-endian value after truncating offset and width.
-   * @param {Uint8Array} source Borrowed input bytes, never modified.
-   * @param {number} position Zero-based byte offset.
-   * @param {number} size Width in bytes, used by the 1–4-byte expression readers.
-   * @param {number | undefined} defaultValue Returned for an out-of-bounds read when supplied.
-   * @param {string} errorMessage Error thrown for an out-of-bounds read without a default.
-   * @returns {number} Unsigned value or the supplied default.
+   * @param source Borrowed input bytes, never modified.
+   * @param position Zero-based byte offset.
+   * @param size Width in bytes, used by the 1–4-byte expression readers.
+   * @param defaultValue Returned for an out-of-bounds read when supplied.
+   * @param errorMessage Error thrown for an out-of-bounds read without a default.
+   * @returns Unsigned value or the supplied default.
    */
   readByteRange(source2, position, size, defaultValue, errorMessage) {
     const pos = Math.trunc(position);
@@ -21026,6 +21521,10 @@ var Assembler = class _Assembler {
     }
     return value;
   }
+  /**
+   * Resolves an include or expression path against session search paths.
+   * @param filename Candidate path from source.
+   */
   resolveReadablePath(filename) {
     return this.fileProvider.resolvePath(filename, {
       currentFile: this.currentFile,
@@ -21033,6 +21532,10 @@ var Assembler = class _Assembler {
       macroSourceFile: this.currentMacroSourceFile
     });
   }
+  /**
+   * Resolves a label identifier for expression evaluation, including loop bindings.
+   * @param identifier Label or symbol text from an expression.
+   */
   resolveExpressionHostLabel(identifier3) {
     const trimmed = identifier3.trim();
     const loopValue = this.activeLoopVariables.get(trimmed);
@@ -21048,6 +21551,11 @@ var Assembler = class _Assembler {
     }
     return this.symbolScope.getLabelValue(identifier3, this.requireStaticLabelLookup);
   }
+  /**
+   * Returns the byte size of a struct or label object referenced in an expression.
+   * @param identifier Object or label name.
+   * @param baseOnly When true, ignore trailing field selectors.
+   */
   getExpressionObjectSize(identifier3, baseOnly = false) {
     if (baseOnly && (identifier3 === "..." || identifier3 === "\u2026")) {
       if (this.inMacroExpansion && this.currentVariadicCount !== void 0) {
@@ -21057,6 +21565,10 @@ var Assembler = class _Assembler {
     }
     return this.symbolScope.getObjectSize(identifier3, baseOnly);
   }
+  /**
+   * Looks up a textual define or active typed `for` loop counter by name.
+   * @param varName Define or loop variable name.
+   */
   lookupDefineValue(varName) {
     const defineValue = this.defines.get(varName);
     if (defineValue !== void 0) {
@@ -21070,16 +21582,28 @@ var Assembler = class _Assembler {
     }
     return void 0;
   }
+  /** Source file path of the macro currently being expanded, when applicable. */
   get currentMacroSourceFile() {
     if (!this.inMacroExpansion || !this.currentMacroName) {
       return void 0;
     }
     return this.macros.get(this.currentMacroName)?.sourceFile;
   }
+  /**
+   * Returns how many bytes can be read from the base or output image at a logical address.
+   * @param position Logical start address.
+   * @param size Requested read width in bytes.
+   */
   canReadBaseImage(position, size) {
     const sourceLength = this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
     return this.canReadByteRange(sourceLength, position, size);
   }
+  /**
+   * Reads an unsigned integer from the base or output image at a logical address.
+   * @param position Logical start address.
+   * @param size Read width in bytes.
+   * @param defaultValue Value returned when the read is out of bounds.
+   */
   readBaseImage(position, size, defaultValue) {
     const pos = Math.trunc(position);
     const pcPos = this.outputWriter.toOutputOffset(pos);
@@ -21099,6 +21623,12 @@ var Assembler = class _Assembler {
       `read${Math.trunc(size)} out of bounds at ${pos}`
     );
   }
+  /**
+   * Returns how many bytes can be read from a resolved expression file path.
+   * @param filename Path token from an expression.
+   * @param position Byte offset within the file.
+   * @param size Requested read width in bytes.
+   */
   canReadExpressionFile(filename, position, size) {
     const resolvedPath = this.resolveReadablePath(filename);
     if (!resolvedPath) {
@@ -21110,6 +21640,13 @@ var Assembler = class _Assembler {
     }
     return this.canReadByteRange(fileSize, position, size);
   }
+  /**
+   * Reads an unsigned integer from a file resolved for expression evaluation.
+   * @param filename Path token from an expression.
+   * @param position Byte offset within the file.
+   * @param size Read width in bytes.
+   * @param defaultValue Value returned when the path or range is invalid.
+   */
   readExpressionFile(filename, position, size, defaultValue) {
     const pos = Math.trunc(position);
     const resolvedPath = this.resolveReadablePath(filename);
@@ -21130,7 +21667,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Installs the active target's expression contributions into this session.
-   * @param {readonly string[]} setIds Resolved expression-set contribution IDs.
+   * @param setIds Resolved expression-set contribution IDs.
    */
   installExpressionFunctions(setIds) {
     for (const setId of setIds) {
@@ -21178,6 +21715,7 @@ var Assembler = class _Assembler {
       }
     }
   }
+  /** Expression evaluation callbacks wired to this session's symbol and output state. */
   expressionHost = {
     resolveReference: (reference2) => this.resolveStructuredReference(reference2, this.requireStaticLabelLookup),
     bindExpressionTemplate: (template) => this.resolveExpressionNode(template),
@@ -21228,23 +21766,23 @@ var Assembler = class _Assembler {
   };
   /**
    * Advances the logical program counter.
-   * @param {number} num Number of logical address units to advance.
+   * @param num Number of logical address units to advance.
    */
   step(num) {
     this.outputWriter.step(num);
   }
   /**
    * Writes a single architecture byte to output.
-   * @param {number} num Byte value to write.
+   * @param num Byte value to write.
    */
   writeArchitectureByte(num) {
     this.outputWriter.write1(num);
   }
   /**
    * Fills a section of output data with a value.
-   * @param {number} start The starting address.
-   * @param {number} value The value to fill with.
-   * @param {number} length The length of the section to fill.
+   * @param start The starting address.
+   * @param value The value to fill with.
+   * @param length The length of the section to fill.
    */
   fillOutputBytes(start, value, length) {
     this.outputBuffer.fill(start, value, length);
@@ -21257,6 +21795,10 @@ var Assembler = class _Assembler {
     }
     this.outputBuffer.write(offset, value);
   }
+  /**
+   * Builds a throwaway stage snapshot from the live session without caching it.
+   * @param stage Assembly stage whose descriptor seeds the snapshot.
+   */
   createEphemeralStageExecutionState(stage) {
     const descriptor3 = this.getStageDescriptor(stage);
     return {
@@ -21291,7 +21833,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Synchronizes active stage execution state.
-   * @param {AssemblyStageName} stage The stage.
+   * @param stage The stage.
    */
   syncActiveStageExecutionState(stage) {
     const descriptor3 = this.getStageDescriptor(stage);
@@ -21302,10 +21844,12 @@ var Assembler = class _Assembler {
     this.activeStageExecutionState.stage = descriptor3.stage;
     this.activeStageExecutionState.capabilities = descriptor3.capabilities;
   }
+  /** Returns capabilities for the active stage, defaulting to definition collection. */
   getActiveStageCapabilities() {
     this.activeStageExecutionState ??= this.createEphemeralStageExecutionState("collectDefinitions");
     return this.activeStageExecutionState.capabilities;
   }
+  /** Assembly stage currently driving execution and tracing. */
   get traceStage() {
     return this.activeStageExecutionState?.stage ?? "collectDefinitions";
   }
@@ -21331,6 +21875,9 @@ var Assembler = class _Assembler {
     this.executeLoweredNode(node);
     return true;
   }
+  /**
+   * Resolves the canonical architecture name and registry definition for {@link arch}.
+   */
   resolveActiveArchitecture() {
     const normalized = this.arch.toLowerCase();
     const canonical2 = this.architectureRegistry.getCanonicalName(normalized);
@@ -21342,8 +21889,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Resolves target-specific directive prefixes without teaching the registry a dialect.
-   * @param {string} keyword Source directive keyword.
-   * @returns {string} Canonical registry keyword.
+   * @param keyword Source directive keyword.
+   * @returns Canonical registry keyword.
    */
   canonicalizeDirectiveKeyword(keyword) {
     const normalized = keyword.toLowerCase();
@@ -21356,8 +21903,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Returns whether the active syntax profile treats a token as a named label.
-   * @param {string} candidate Candidate token.
-   * @returns {boolean} Whether the token is a named label.
+   * @param candidate Candidate token.
+   * @returns Whether the token is a named label.
    */
   isNamedLabelToken(candidate) {
     if (candidate === ":") {
@@ -21367,36 +21914,36 @@ var Assembler = class _Assembler {
   }
   /**
    * Writes 1, 2, 3, or 4 bytes to output.
-   * @param {number} num - The byte to write.
+   * @param num The byte to write.
    */
   write1(num) {
     this.outputWriter.write1(num);
   }
   /**
    * Writes 2.
-   * @param {number} num The num.
+   * @param num The num.
    */
   write2(num) {
     this.outputWriter.write2(num);
   }
   /**
    * Writes 3.
-   * @param {number} num The num.
+   * @param num The num.
    */
   write3(num) {
     this.outputWriter.write3(num);
   }
   /**
    * Writes 4.
-   * @param {number} num The num.
+   * @param num The num.
    */
   write4(num) {
     this.outputWriter.write4(num);
   }
   /**
    * Reads 1, 2, or 3 bytes from the configured output image.
-   * @param {number} logicalPosition The logical address to read from.
-   * @returns {number} The byte read from the output image.
+   * @param logicalPosition The logical address to read from.
+   * @returns The byte read from the output image.
    */
   read1(logicalPosition) {
     const addr = this.outputWriter.toOutputOffset(logicalPosition);
@@ -21405,6 +21952,10 @@ var Assembler = class _Assembler {
     }
     return this.outputBytes[addr];
   }
+  /**
+   * Reads a little-endian 16-bit value from the output image at a logical address.
+   * @param logicalPosition Logical address to read.
+   */
   read2(logicalPosition) {
     const addr = this.outputWriter.toOutputOffset(logicalPosition);
     if (addr < 0 || addr + 2 > this.outputBytes.length) {
@@ -21412,6 +21963,10 @@ var Assembler = class _Assembler {
     }
     return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8;
   }
+  /**
+   * Reads a little-endian 24-bit value from the output image at a logical address.
+   * @param logicalPosition Logical address to read.
+   */
   read3(logicalPosition) {
     const addr = this.outputWriter.toOutputOffset(logicalPosition);
     if (addr < 0 || addr + 3 > this.outputBytes.length) {
@@ -21419,6 +21974,13 @@ var Assembler = class _Assembler {
     }
     return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8 | this.outputBytes[addr + 2] << 16;
   }
+  /**
+   * Parses one raw source line into a normalized command via the front-end service.
+   * @param command Raw line text.
+   * @param sourceFile Containing file path.
+   * @param sourceLine Zero-based line index.
+   * @param allowEmpty When true, empty lines produce a command node instead of null.
+   */
   createNormalizedCommandFromRaw(command, sourceFile3, sourceLine, allowEmpty = false) {
     return this.frontEndService.createNormalizedCommandFromRaw(
       command,
@@ -21429,8 +21991,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Applies a `!name =` assignment without routing it through the incremental if-tree.
-   * @param {string} command The define assignment command.
-   * @returns {boolean} `true` when the define engine handled the command.
+   * @param command The define assignment command.
+   * @returns `true` when the define engine handled the command.
    */
   applyDefineAssignment(command) {
     const commandNode = this.createNormalizedCommandFromRaw(
@@ -21446,8 +22008,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Asar `'X' = $nn` / `"X" = $nn` table entries, including `''' = $2A` for apostrophe.
-   * @param {string} command Raw command text.
-   * @returns {boolean} `true` when the line was a character mapping.
+   * @param command Raw command text.
+   * @returns `true` when the line was a character mapping.
    */
   tryHandleCharacterMapping(command) {
     const parsed = this.createNormalizedCommandFromRaw(
@@ -21497,8 +22059,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Processes a command from an internal re-entrant source.
-   * @param {string} command - The command to process.
-   * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
+   * @param command The command to process.
+   * @param [preprocessed] Whether comments and continuations were already normalized.
    */
   processCommand(command, preprocessed = false, template) {
     this.processSourceFragment(
@@ -21680,6 +22242,11 @@ var Assembler = class _Assembler {
       );
     }
   }
+  /**
+   * Lowers a program once per stage state and caches the result on that state.
+   * @param stageState Stage snapshot owning the lowered program cache.
+   * @param program Parsed program to lower.
+   */
   getOrCreateLoweredProgram(stageState, program) {
     stageState.loweredProgram ??= measureInternalPhase(
       "lowerProgram",
@@ -21689,7 +22256,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Dispatches lowered node.
-   * @param {LoweredCommand} lowered The lowered.
+   * @param lowered The lowered.
    */
   dispatchLoweredNode(lowered) {
     if (lowered.kind === "pluginSyntax") {
@@ -21733,7 +22300,7 @@ var Assembler = class _Assembler {
   /** Classification retains its stage-entry ordering; no prepared values enter the syntax cache. */
   prepareTypedInstruction(node) {
     const definition = this.resolveActiveArchitecture().definition;
-    if (!definition?.encoder.typed?.prepare || !definition.operandGrammar) {
+    if (!definition?.encoder.typed?.prepare) {
       return;
     }
     let operands;
@@ -21969,7 +22536,7 @@ var Assembler = class _Assembler {
    * Parses a function definition of the form:
    *   function name(param1, param2...) = expression
    * Possibly spanning multiple lines joined by backslashes.
-   * @param {string} defLine - The function definition line.
+   * @param defLine The function definition line.
    */
   parseFunctionDefinition(defLine) {
     this.mathCore.parseFunctionDefinition(defLine);
@@ -21980,7 +22547,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Adds a mapping of the current address to the source line number.
-   * @param {number} address The logical address to add to the mapping.
+   * @param address The logical address to add to the mapping.
    */
   addAddressToLine(address3) {
     incrementInternalCounter("addressMappings");
@@ -21991,8 +22558,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Evaluates a range expression and returns the result.
-   * @param {string} expr The expression to evaluate.
-   * @returns {number} The result of the expression.
+   * @param expr The expression to evaluate.
+   * @returns The result of the expression.
    */
   evaluateRangeExpression(expr) {
     const resolvedExpr = this.resolveExpressionInput(expr);
@@ -22003,15 +22570,15 @@ var Assembler = class _Assembler {
   }
   /**
    * Replace include search paths before assembly. Retains the array without copying.
-   * @param {string[]} paths Provider-specific search paths. Node resolves relative paths from cwd.
+   * @param paths Provider-specific search paths. Node resolves relative paths from cwd.
    */
   setIncludePaths(paths) {
     this.includePaths = paths;
   }
   /**
    * Evaluates an expression for conditionals (if, while).
-   * @param {string} expression - The expression to evaluate.
-   * @returns {boolean} True if the expression is true, false otherwise.
+   * @param expression The expression to evaluate.
+   * @returns True if the expression is true, false otherwise.
    */
   evaluateExpression(expression2) {
     let resolvedExpr;
@@ -22032,8 +22599,8 @@ var Assembler = class _Assembler {
   /**
    * Evaluate an assertion, or defer it when skipped asset bytes make its inputs provisional.
    * Literal arithmetic and expanded numeric defines remain checkable during editor analysis.
-   * @param {string | ExpressionNode} expression Assertion condition.
-   * @returns {boolean | undefined} The condition result, or undefined until a build resolves the layout.
+   * @param expression Assertion condition.
+   * @returns The condition result, or undefined until a build resolves the layout.
    */
   evaluateAssertion(expression2) {
     if (this.#hasDeferredAssetLayout) {
@@ -22047,8 +22614,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Parses string input into an expression node and resolves nested references/defines.
-   * @param {string | ExpressionNode} expression The expression source or parsed node.
-   * @returns {ExpressionNode} The resolved expression tree.
+   * @param expression The expression source or parsed node.
+   * @returns The resolved expression tree.
    */
   resolveExpressionInput(expression2) {
     const parsed = typeof expression2 === "string" ? this.frontEndService.parseAssemblyExpression(expression2.trim()) : expression2;
@@ -22056,8 +22623,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Recursively resolves define references and nested reference-expression nodes.
-   * @param {ExpressionNode} expression The expression node to resolve.
-   * @returns {ExpressionNode} The resolved expression node.
+   * @param expression The expression node to resolve.
+   * @returns The resolved expression node.
    */
   resolveExpressionNode(expression2) {
     if (isReferenceExpressionNode(expression2)) {
@@ -22122,8 +22689,8 @@ var Assembler = class _Assembler {
    * Resolves reference-style expressions such as identifiers, define references,
    * member access, and indexed access into either simpler reference nodes or
    * raw/math expressions when defines collapse them further.
-   * @param {ReferenceExpressionNode} expression The reference expression to resolve.
-   * @returns {ExpressionNode} The resolved expression tree.
+   * @param expression The reference expression to resolve.
+   * @returns The resolved expression tree.
    */
   resolveReferenceExpressionNode(expression2) {
     switch (expression2.type) {
@@ -22175,9 +22742,9 @@ var Assembler = class _Assembler {
   }
   /**
    * Resolves a reference expression all the way to a numeric value.
-   * @param {ReferenceExpressionNode} expression The reference expression to evaluate.
-   * @param {boolean} [requireStatic] Whether labels must be static.
-   * @returns {number} The numeric value of the reference.
+   * @param expression The reference expression to evaluate.
+   * @param [requireStatic] Whether labels must be static.
+   * @returns The numeric value of the reference.
    */
   evaluateReferenceExpressionNode(expression2, requireStatic = false) {
     const resolved = this.resolveReferenceLabelValue(expression2, requireStatic);
@@ -22189,9 +22756,9 @@ var Assembler = class _Assembler {
   /**
    * Resolves a reference expression to either a numeric value or a normalized
    * label/struct lookup target, depending on how far the expression collapses.
-   * @param {ReferenceExpressionNode} expression The reference expression to resolve.
-   * @param {boolean} [requireStatic] Whether labels must be static.
-   * @returns {number | string} The resolved numeric value.
+   * @param expression The reference expression to resolve.
+   * @param [requireStatic] Whether labels must be static.
+   * @returns The resolved numeric value.
    */
   resolveReferenceLabelValue(expression2, requireStatic = false) {
     const resolved = this.resolveReferenceExpressionNode(expression2);
@@ -22226,25 +22793,25 @@ var Assembler = class _Assembler {
           value: this.symbolScope.resolveRelativeReference(resolved, relativeAddress)
         };
       }
-      const path69 = referencePath(resolved);
-      if (!path69) {
+      const path70 = referencePath(resolved);
+      if (!path70) {
         throw new Error("Unbound define reference.");
       }
-      if (!path69.segments.length) {
-        const loopValue = this.activeLoopVariables.get(path69.root);
+      if (!path70.segments.length) {
+        const loopValue = this.activeLoopVariables.get(path70.root);
         if (loopValue !== void 0) {
           return { kind: "resolved", value: loopValue };
         }
       }
       const structValue = this.structEngine.resolveStructPath(
-        path69,
+        path70,
         (node) => this.mathCore.math(this.resolveExpressionNode(node))
       );
       if (structValue !== void 0) {
         return { kind: "resolved", value: structValue };
       }
-      let name4 = path69.root;
-      for (const segment of path69.segments) {
+      let name4 = path70.root;
+      for (const segment of path70.segments) {
         if (segment.kind === "member") {
           name4 += `.${segment.name}`;
         } else {
@@ -22283,8 +22850,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Resolves standalone relative-label tokens used in define contexts.
-   * @param {string} input The token to resolve.
-   * @returns {string | undefined} The resolved address string, if applicable.
+   * @param input The token to resolve.
+   * @returns The resolved address string, if applicable.
    */
   tryResolveRelativeLabelToken(input2) {
     if (input2 !== "+" && input2 !== "-" && input2 !== "?+" && input2 !== "?-") {
@@ -22312,8 +22879,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Resolves direct `!name` define references that are not assignments.
-   * @param {string} input The token to resolve.
-   * @returns {string | undefined} The resolved define value, if applicable.
+   * @param input The token to resolve.
+   * @returns The resolved define value, if applicable.
    */
   tryResolveDirectDefineReference(input2) {
     if (!input2.startsWith("!") || input2.includes(" ") || input2.includes("=") || input2.includes("{")) {
@@ -22324,8 +22891,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Resolves macro-label references such as `?label` or `#+?label`.
-   * @param {string} input The token to resolve.
-   * @returns {string | undefined} The resolved macro-label value, if applicable.
+   * @param input The token to resolve.
+   * @returns The resolved macro-label value, if applicable.
    */
   tryResolveMacroLabelReference(input2) {
     const prefixMatch = input2.match(/^(#\?|\?|#\?\.|\?\+|\?-)(.*)/);
@@ -22338,8 +22905,8 @@ var Assembler = class _Assembler {
   /**
    * Resolves bare label-like tokens before the generic character-by-character
    * define scanner runs.
-   * @param {string} input The token to resolve.
-   * @returns {string | undefined} The resolved label value, if applicable.
+   * @param input The token to resolve.
+   * @returns The resolved label value, if applicable.
    */
   tryResolveBareLabelReference(input2) {
     if (!isBareLabelReference(input2)) {
@@ -22356,8 +22923,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Resolves all define replacements in a given string.
-   * @param {string} input The string to resolve defines in.
-   * @returns {string} The string with defines resolved.
+   * @param input The string to resolve defines in.
+   * @returns The string with defines resolved.
    */
   resolvedefines(input2) {
     const relative5 = this.tryResolveRelativeLabelToken(input2);
@@ -22408,7 +22975,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Handles activate stage.
-   * @param {AssemblyStageName} stage The stage.
+   * @param stage The stage.
    */
   activateStage(stage) {
     this.syncActiveStageExecutionState(stage);
@@ -22483,7 +23050,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Sets the current file being processed.
-   * @param {string} filename - The filename to set.
+   * @param filename The filename to set.
    */
   setCurrentFile(filename) {
     this.currentFile = filename;
@@ -22492,11 +23059,15 @@ var Assembler = class _Assembler {
   }
   /**
    * Sets the current line number.
-   * @param {number} line - The line number to set.
+   * @param line The line number to set.
    */
   setCurrentLine(line) {
     this.currentLine = line;
   }
+  /**
+   * Maps a stage name to its execution capabilities without mutating session state.
+   * @param stage Assembly stage identifier.
+   */
   getStageDescriptor(stage) {
     if (stage === "collectDefinitions") {
       return {
@@ -22533,6 +23104,10 @@ var Assembler = class _Assembler {
       }
     };
   }
+  /**
+   * Deep-copies anonymous forward/backward label stacks for stage isolation.
+   * @param source Label stacks keyed by relative depth.
+   */
   cloneRelativeLabels(source2) {
     const clone = {};
     for (const [depth, entries3] of Object.entries(source2)) {
@@ -22540,6 +23115,10 @@ var Assembler = class _Assembler {
     }
     return clone;
   }
+  /**
+   * Builds a fresh stage snapshot seeded from the previous stage when applicable.
+   * @param stage Assembly stage to initialize.
+   */
   createStageExecutionState(stage) {
     const descriptor3 = this.getStageDescriptor(stage);
     let previousStage;
@@ -22601,7 +23180,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Applies stage execution state.
-   * @param {StageExecutionState} stageState The stage state.
+   * @param stageState The stage state.
    */
   applyStageExecutionState(stageState) {
     this.pluginState.restore(this.pluginState.cloneSnapshot(stageState.pluginState));
@@ -22626,7 +23205,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Captures stage execution state.
-   * @param {StageExecutionState} stageState The stage state.
+   * @param stageState The stage state.
    */
   captureStageExecutionState(stageState) {
     stageState.pluginState = this.pluginState.cloneSnapshot();
@@ -22655,6 +23234,10 @@ var Assembler = class _Assembler {
       macroLabelInstance: this.macroLabelInstance
     };
   }
+  /**
+   * Returns a cached stage snapshot, creating it on first use.
+   * @param stage Assembly stage key.
+   */
   getOrCreateStageExecutionState(stage) {
     const existing = this.stageExecutionStates.get(stage);
     if (existing) {
@@ -22664,6 +23247,12 @@ var Assembler = class _Assembler {
     this.stageExecutionStates.set(stage, created);
     return created;
   }
+  /**
+   * Parses source into a program model using the session front-end grammar.
+   * @param source Raw assembly source text.
+   * @param sourceFile Path attributed to the buffer.
+   * @param startLine Zero-based line offset for embedded fragments.
+   */
   buildProgramModel(source2, sourceFile3 = this.currentFile, startLine = 0) {
     return withSourceSyntax(
       () => measureInternalPhase("buildProgramModel", () => {
@@ -22672,6 +23261,11 @@ var Assembler = class _Assembler {
       })
     );
   }
+  /**
+   * Executes one assembly stage against a parsed program, updating session state in place.
+   * @param stage Stage to run.
+   * @param program Program whose grammar must match the current front-end identity.
+   */
   runStage(stage, program) {
     if (program.grammarIdentity !== void 0 && program.grammarIdentity !== this.frontEndService.grammarIdentity) {
       throw new Error("Source grammar changed; parse the source again before execution.");
@@ -22708,7 +23302,7 @@ var Assembler = class _Assembler {
   /**
    * Run definition collection, layout resolution, and byte emission synchronously in that order.
    * Throws at the first unrecovered failure. Partial state/output is not a successful binary.
-   * @param {ProgramModel} program Parsed source model produced for this target's syntax.
+   * @param program Parsed source model produced for this target's syntax.
    */
   assembleProgram(program) {
     const definitions = this.runStage("collectDefinitions", program);
@@ -22726,10 +23320,10 @@ var Assembler = class _Assembler {
   /**
    * Parse and run all three assembly stages. Includes are read through the configured provider.
    * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
-   * @param {string} source Assembly source text, not a filename.
-   * @param {string} [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
-   * @param {number} [startLine] Zero-based line offset. Defaults to zero.
-   * @returns {ProgramModel} Parsed model used for this build.
+   * @param source Assembly source text, not a filename.
+   * @param [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
+   * @param [startLine] Zero-based line offset. Defaults to zero.
+   * @returns Parsed model used for this build.
    */
   assembleSource(source2, sourceFile3 = this.currentFile, startLine = 0) {
     const program = this.buildProgramModel(source2, sourceFile3, startLine);
@@ -22741,9 +23335,9 @@ var Assembler = class _Assembler {
   }
   /**
    * Writes a repeated byte into the output buffer.
-   * @param {number} start The starting address of the block to write.
-   * @param {number} value The byte value to write.
-   * @param {number} [length] The length of the block to write.
+   * @param start The starting address of the block to write.
+   * @param value The byte value to write.
+   * @param [length] The length of the block to write.
    */
   writeOutputBytes(start, value, length = 1) {
     if (this.moduleAssembly) {
@@ -22756,8 +23350,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Expands the output buffer and fills it with a specified byte.
-   * @param {number} newSize The new output size.
-   * @param {number} fillByte The byte used for the new range.
+   * @param newSize The new output size.
+   * @param fillByte The byte used for the new range.
    */
   expandOutput(newSize, fillByte) {
     if (this.moduleAssembly) {
@@ -22782,7 +23376,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Materialize the target format's current bytes without assembling or finalizing again.
-   * @returns {Uint8Array} Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
+   * @returns Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
    */
   getBinaryOutput = () => {
     if (this.moduleAssembly) {
@@ -22797,7 +23391,7 @@ var Assembler = class _Assembler {
   };
   /**
    * Lowers completed runtime nodes and executes them through the production executor.
-   * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
+   * @param nodes The runtime nodes to lower and execute.
    */
   lowerAndExecuteRuntimeNodes(nodes) {
     const loweredNodes = nodes.map((node) => this.commandLoweringService.lowerExecutableNode(node));
@@ -22809,6 +23403,10 @@ var Assembler = class _Assembler {
       );
     }
   }
+  /**
+   * Evaluates numeric start and end bounds for a lowered `for` loop header.
+   * @param forBlock Lowered loop node carrying parsed and cached bounds.
+   */
   resolveForLoopBounds(forBlock) {
     const parsedForLoop = forBlock.header?.parsed.forLoop;
     const variable = forBlock.variable ?? parsedForLoop?.variable;
@@ -22824,8 +23422,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Executes for loop iterations.
-   * @param {LoweredLoopNode} forBlock The for block.
-   * @param {() => void} executeBody The execute body.
+   * @param forBlock The for block.
+   * @param executeBody The execute body.
    */
   executeForLoopIterations(forBlock, executeBody) {
     const { variable, start, end } = this.resolveForLoopBounds(forBlock);
@@ -22854,7 +23452,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Executes lowered loop.
-   * @param {LoweredLoopNode} loopBlock The loop block.
+   * @param loopBlock The loop block.
    */
   executeLoweredLoop(loopBlock) {
     if (loopBlock.loopType === "for") {
@@ -22865,17 +23463,17 @@ var Assembler = class _Assembler {
   }
   /**
    * Executes lowered for loop.
-   * @param {LoweredLoopNode} forBlock The for block.
+   * @param forBlock The for block.
    */
   executeLoweredForLoop(forBlock) {
     this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
   }
   /**
    * Executes while loop commands.
-   * @param {LoweredLoopNode} whileBlock The while block.
-   * @param {TCommand[]} commands The commands.
-   * @param {(command: TCommand) => string | null} getDefineTarget The get define target.
-   * @param {(command: TCommand) => void} executeCommand The execute command.
+   * @param whileBlock The while block.
+   * @param commands The commands.
+   * @param getDefineTarget The get define target.
+   * @param executeCommand The execute command.
    */
   executeWhileLoopCommands(whileBlock, commands, getDefineTarget, executeCommand) {
     const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
@@ -22907,7 +23505,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Executes lowered while loop.
-   * @param {LoweredLoopNode} whileBlock The while block.
+   * @param whileBlock The while block.
    */
   executeLoweredWhileLoop(whileBlock) {
     this.executeWhileLoopCommands(
@@ -22917,20 +23515,21 @@ var Assembler = class _Assembler {
       (cmd) => this.executeLoweredNodeWithRecovery(cmd)
     );
   }
+  /**
+   * Returns the normalized source span for diagnostics on a lowered executable node.
+   * @param node Lowered command or loop header node.
+   */
   getLoweredNodeSpan(node) {
     if ("source" in node) {
       return node.source.normalizedSpan;
     }
-    if (node.kind === "loop" || node.kind === "conditional" || node.kind === "capture") {
-      return node.header?.source.normalizedSpan;
-    }
-    return void 0;
+    return node.header?.source.normalizedSpan;
   }
   /**
    * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
-   * @param {TNode} node The node to execute.
-   * @param {(node: TNode) => SourceSpan | undefined} getSpan Resolves the node span for diagnostics.
-   * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
+   * @param node The node to execute.
+   * @param getSpan Resolves the node span for diagnostics.
+   * @param executeNode Executes the node with its native dispatcher.
    */
   executeWithAnalysisRecovery(node, getSpan, executeNode) {
     if (!this.analysisErrorRecoveryEnabled) {
@@ -22945,7 +23544,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Executes lowered node with recovery.
-   * @param {LoweredExecutableNode} node The node.
+   * @param node The node.
    */
   executeLoweredNodeWithRecovery(node) {
     const command = node.kind === "loop" || node.kind === "conditional" || node.kind === "capture" ? node.header : node.command;
@@ -22968,7 +23567,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Executes lowered node.
-   * @param {LoweredExecutableNode} node The node.
+   * @param node The node.
    */
   executeLoweredNode(node) {
     const sourceCommand = node.kind === "loop" || node.kind === "conditional" || node.kind === "capture" ? node.header : node.command;
@@ -23139,7 +23738,7 @@ var Assembler = class _Assembler {
       return;
     }
     if (node.kind === "typedInstruction") {
-      if (node.command && this.collectSourceMetadata) {
+      if (this.collectSourceMetadata) {
         this.collectCommandReferences(node.command);
       }
     }
@@ -23162,7 +23761,7 @@ var Assembler = class _Assembler {
   }
   /**
    * Executes lowered node stream.
-   * @param {LoweredExecutableNode[]} nodes The nodes.
+   * @param nodes The nodes.
    */
   executeLoweredNodeStream(nodes) {
     for (const node of nodes) {
@@ -23182,8 +23781,8 @@ var Assembler = class _Assembler {
   }
   /**
    * Executes conditional branches.
-   * @param {Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[]; }>} branches The branches.
-   * @param {(commands: TCommand[]) => void} executeCommands The execute commands.
+   * @param branches The branches.
+   * @param executeCommands The execute commands.
    */
   executeConditionalBranches(branches, executeCommands) {
     for (const branch of branches) {
@@ -23344,20 +23943,24 @@ var RelocatableInstruction = class {
 // packages/core/src/decoder-types.ts
 var Uint8ArrayDecoderSource = class {
   #bytes;
+  /**
+   * Copies the provided bytes into private storage.
+   * @param bytes Source bytes; values are wrapped modulo 256 by `Uint8Array.from`.
+   */
   constructor(bytes3) {
     this.#bytes = Uint8Array.from(bytes3);
   }
   /**
    * The length of the byte source.
-   * @returns {number} The length of the byte source.
+   * @returns The length of the byte source.
    */
   get length() {
     return this.#bytes.length;
   }
   /**
    * Reads a byte from the byte source.
-   * @param {number} offset The offset to read from.
-   * @returns {number | undefined} The byte at the offset, or undefined if the offset is out of bounds.
+   * @param offset The offset to read from.
+   * @returns The byte at the offset, or undefined if the offset is out of bounds.
    */
   readByte(offset) {
     if (!Number.isInteger(offset) || offset < 0 || offset >= this.#bytes.length) {
@@ -23367,9 +23970,9 @@ var Uint8ArrayDecoderSource = class {
   }
   /**
    * Reads bytes from the byte source.
-   * @param {number} offset The offset to read from.
-   * @param {number} length The length to read.
-   * @returns {Uint8Array | undefined} The bytes at the offset and length, or undefined if the offset or length is out of bounds.
+   * @param offset The offset to read from.
+   * @param length The length to read.
+   * @returns The bytes at the offset and length, or undefined if the offset or length is out of bounds.
    */
   readBytes(offset, length) {
     if (!Number.isInteger(offset) || !Number.isInteger(length) || offset < 0 || length < 0) {
@@ -23564,6 +24167,13 @@ function runTypedEncoderEntry(context, encoder, instruction, emit) {
 
 // packages/core/src/linker/types.ts
 var LinkError = class extends Error {
+  /**
+   * Captures a link failure with optional source anchoring and partial placement state.
+   * @param code Stable machine-readable failure code.
+   * @param message Human-readable explanation prefixed with source location when present.
+   * @param source Optional source occurrence tied to the failure.
+   * @param allocations Partial allocations computed before the failure.
+   */
   constructor(code, message, source2, allocations = []) {
     const location2 = source2 ? `${source2.file}:${source2.line}: ` : "";
     super(`${location2}${message}`);
@@ -23574,6 +24184,7 @@ var LinkError = class extends Error {
   code;
   source;
   allocations;
+  /** Stable error name for instanceof checks across bundle boundaries. */
   name = "LinkError";
 };
 
@@ -23785,8 +24396,9 @@ var RomImage = class _RomImage {
   #fileBytes;
   #contentBytes;
   /**
-   * @param {Uint8Array} bytes Complete file bytes. Copied immediately.
-   * @param {RomLoadOptions & { readonly sourcePath?: string }} [options] Header override and optional origin path.
+   * Copy file bytes and split off the copier and container headers.
+   * @param bytes Complete file bytes. Copied immediately.
+   * @param [options] Header override and optional origin path.
    */
   constructor(bytes3, options = {}) {
     this.#fileBytes = Uint8Array.from(bytes3);
@@ -23812,31 +24424,33 @@ var RomImage = class _RomImage {
   }
   /**
    * Reads a ROM from disk and records `sourcePath`.
-   * @param {string} file Path to the ROM file.
-   * @param {RomLoadOptions} [options] Optional explicit copier-header size.
-   * @returns {RomImage} Loaded image.
+   * @param file Path to the ROM file.
+   * @param [options] Optional explicit copier-header size.
+   * @returns Loaded image.
    */
   static load(file, options = {}) {
     return new _RomImage(fs.readFileSync(file), { ...options, sourcePath: file });
   }
   /**
    * Headerless cartridge length in bytes.
-   * @returns {number} The headerless cartridge length in bytes.
+   * @returns The headerless cartridge length in bytes.
    */
   get length() {
     return this.#contentBytes.length;
   }
   /**
-   * @param {number} offset Headerless file offset.
-   * @returns {number | undefined} Byte value, or `undefined` when out of range.
+   * Read one content byte without throwing on invalid offsets.
+   * @param offset Headerless file offset.
+   * @returns Byte value, or `undefined` when out of range.
    */
   readByte(offset) {
     return Number.isInteger(offset) && offset >= 0 && offset < this.length ? this.#contentBytes[offset] : void 0;
   }
   /**
-   * @param {number} offset Headerless file offset.
-   * @param {number} length Number of bytes to copy.
-   * @returns {Uint8Array | undefined} A copy of the slice, or `undefined` when out of range.
+   * Copy a content range; partial ranges are rejected rather than truncated.
+   * @param offset Headerless file offset.
+   * @param length Number of bytes to copy.
+   * @returns A copy of the slice, or `undefined` when out of range.
    */
   read(offset, length) {
     if (!Number.isInteger(offset) || !Number.isInteger(length) || offset < 0 || length < 0 || offset + length > this.length) {
@@ -23846,21 +24460,21 @@ var RomImage = class _RomImage {
   }
   /**
    * Returns a defensive copy. Callers cannot mutate the loaded image.
-   * @returns {Uint8Array} The headerless ROM content.
+   * @returns The headerless ROM content.
    */
   bytes() {
     return this.#contentBytes.slice();
   }
   /**
    * Returns a defensive copy of the optional 512-byte copier header.
-   * @returns {Uint8Array} The copier header bytes.
+   * @returns The copier header bytes.
    */
   copierHeaderBytes() {
     return this.#fileBytes.slice(0, this.identity.headerSize);
   }
   /**
    * Returns a defensive copy of the complete file, including any copier header.
-   * @returns {Uint8Array} The complete file bytes.
+   * @returns The complete file bytes.
    */
   fileBytes() {
     return this.#fileBytes.slice();
@@ -24209,10 +24823,10 @@ function matchesResearchMapping(mapping, location2, delta = 0) {
 // packages/disassembler/src/analysis/static-analysis.ts
 var DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1e6;
 var DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
-var materializeEvidencePath = (path69) => {
+var materializeEvidencePath = (path70) => {
   const values = [];
-  values.length = path69?.length ?? 0;
-  for (let current = path69; current; current = current.parent) {
+  values.length = path70?.length ?? 0;
+  for (let current = path70; current; current = current.parent) {
     values[current.length - 1] = current.id;
   }
   return values;
@@ -24221,8 +24835,8 @@ var evidencePaths = /* @__PURE__ */ new WeakMap();
 function readEvidencePath() {
   return materializeEvidencePath(evidencePaths.get(this));
 }
-var withEvidencePath = (record7, path69) => {
-  evidencePaths.set(record7, path69);
+var withEvidencePath = (record7, path70) => {
+  evidencePaths.set(record7, path70);
   Object.defineProperty(record7, "evidencePath", { enumerable: true, get: readEvidencePath });
   return record7;
 };
@@ -24265,9 +24879,11 @@ var StaticWorkQueue = class {
       this.push(item);
     }
   }
+  /** Number of work items currently queued for exploration. */
   get length() {
     return this.#values.length;
   }
+  /** Highest-priority work item without removing it from the queue. */
   peek() {
     return this.#values[0]?.item;
   }
@@ -24275,6 +24891,7 @@ var StaticWorkQueue = class {
   clear() {
     this.#values.length = 0;
   }
+  /** Inserts one work item while preserving deterministic heap ordering. */
   push(item) {
     const queued = { item, sequence: this.#nextSequence++ };
     this.#values.push(queued);
@@ -24289,6 +24906,7 @@ var StaticWorkQueue = class {
     }
     this.#values[index] = queued;
   }
+  /** Removes and returns the highest-priority work item. */
   shift() {
     const firstSlot = this.#values.length > 0 ? this.#values[0] : void 0;
     const last = this.#values.pop();
@@ -24533,7 +25151,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
     }
     ownedByNode.set(nodeId, byteOffsets);
     const outgoingState = adapter.transfer(instruction, incomingState);
-    const path69 = {
+    const path70 = {
       id: nodeId,
       parent: item.path,
       length: (item.path?.length ?? 0) + 1
@@ -24557,7 +25175,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
           entryPoint: item.entryPoint,
           evidence: nodeEvidence
         },
-        path69
+        path70
       )
     );
     if (item.predecessor && item.edgeKind) {
@@ -24626,7 +25244,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         context,
         entryPoint: item.entryPoint,
         evidence: targetEvidence,
-        path: path69,
+        path: path70,
         edgeKind: kind,
         predecessor: nodeId,
         indirect: target.indirect,
@@ -24646,7 +25264,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
                 evidence: targetEvidence,
                 evidencePredecessor: nodeId
               },
-              path69
+              path70
             )
           );
         }
@@ -24667,7 +25285,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
             kind: "call-context-limit",
             address: instruction.address,
             limit: maxCallDepth,
-            message: `Call context at $${hexAddress(instruction.address)} exceeds depth ${maxCallDepth}.`
+            message: `Call context at $${hexAddress(instruction.address)} exceeds depth ${maxCallDepth}; exploration continues with older call history discarded.`
           });
           scheduleTarget(target, maxCallDepth === 0 ? [] : nextContext.slice(-maxCallDepth));
         } else {
@@ -24686,7 +25304,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
           context: item.context.slice(0, -1),
           entryPoint: item.entryPoint,
           evidence: nodeEvidence,
-          path: path69,
+          path: path70,
           edgeKind: "return",
           predecessor: nodeId
         });
@@ -24698,7 +25316,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
         context: item.context,
         entryPoint: item.entryPoint,
         evidence: nodeEvidence,
-        path: path69,
+        path: path70,
         edgeKind: "fallthrough",
         predecessor: nodeId
       });
@@ -25064,9 +25682,10 @@ var TraceCache = class {
   constructor(metrics) {
     this.#metrics = metrics;
   }
-  /** Look up a value. Undefined is reserved for misses.
-   * @param {string} key Complete semantic key, never a lossy coordinate projection.
-   * @returns {T | undefined} Retained value, or a cache miss.
+  /**
+   * Look up a value. Undefined is reserved for misses.
+   * @param key Complete semantic key, never a lossy coordinate projection.
+   * @returns Retained value, or a cache miss.
    */
   get(key3) {
     const value = this.#entries.get(key3);
@@ -25079,11 +25698,12 @@ var TraceCache = class {
     }
     return value;
   }
-  /** Insert a missing key, returning the displaced entry so its owner can flush it.
+  /**
+   * Insert a missing key, returning the displaced entry so its owner can flush it.
    * Existing keys must be updated through their caller-owned mutable value instead.
-   * @param {string} key Previously missing semantic key.
-   * @param {T} value Defined value whose ownership stays with the caller.
-   * @returns {object | undefined} Displaced key/value, or undefined while filling unused capacity.
+   * @param key Previously missing semantic key.
+   * @param value Defined value whose ownership stays with the caller.
+   * @returns Displaced key/value, or undefined while filling unused capacity.
    */
   insert(key3, value) {
     let displaced;
@@ -25110,8 +25730,9 @@ var TraceCache = class {
     this.#entries.set(key3, value);
     return displaced;
   }
-  /** Iterate the retained working set, for a final durable delta flush.
-   * @returns {MapIterator} Live entries. Do not insert while iterating.
+  /**
+   * Iterate the retained working set, for a final durable delta flush.
+   * @returns Live entries. Do not insert while iterating.
    */
   entries() {
     return this.#entries.entries();
@@ -26324,8 +26945,9 @@ var createRuntimeTransferAccumulator = () => {
     }
   };
   return {
-    /** Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
-     * @param {RuntimeBusAccess | RuntimeTransferBoundary} event Already validated ordered event.
+    /**
+     * Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
+     * @param event Already validated ordered event.
      */
     push: (event) => {
       if (event.actor === "cpu") {
@@ -26393,8 +27015,9 @@ var createRuntimeTransferAccumulator = () => {
       retain({ ...current, end: event, status });
       open5.delete(key3);
     },
-    /** Close remaining windows without claiming completion or an attempted slot count.
-     * @returns {RuntimeTransferSummary} Bounded report with exact lifetime window counts.
+    /**
+     * Close remaining windows without claiming completion or an attempted slot count.
+     * @returns Bounded report with exact lifetime window counts.
      */
     finish: () => {
       for (const current of open5.values()) {
@@ -26843,8 +27466,8 @@ var RecordIdSet = class {
   #insert;
   /**
    * Claim an ID while keeping the in-memory prefix small.
-   * @param {string} id Complete record identity.
-   * @returns {boolean} False only for an exact duplicate.
+   * @param id Complete record identity.
+   * @returns False only for an exact duplicate.
    */
   add(id2) {
     if (this.#insert) {
@@ -29477,14 +30100,14 @@ var prepareGraph = (db) => {
   for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
     if (row.kind === "cfg-node") {
       const node = requireNode(row.payload);
-      const path69 = node.evidencePath.length ? node.evidencePath : [node.id];
+      const path70 = node.evidencePath.length ? node.evidencePath : [node.id];
       let owner = node.functionEntry;
-      for (let i = path69.length - 1; i >= 0; i--) {
+      for (let i = path70.length - 1; i >= 0; i--) {
         if (owner) {
           break;
         }
-        if (entries3.has(path69[i])) {
-          owner = path69[i];
+        if (entries3.has(path70[i])) {
+          owner = path70[i];
           break;
         }
       }
@@ -30306,9 +30929,10 @@ var SqliteRuntimeWriter = class {
     );
     this.#insertIdentity = db.prepare("INSERT INTO runtime_identities(value) VALUES(?)");
   }
-  /** Append one validated logical record. Only exact trace pairs share a count/provenance link.
-   * @param {RuntimeEvidenceRecord} record Validated source fact with a stable external ID.
-   * @param {Function} intern Transaction-owned prefix/evidence dictionary allocator.
+  /**
+   * Append one validated logical record. Only exact trace pairs share a count/provenance link.
+   * @param record Validated source fact with a stable external ID.
+   * @param intern Transaction-owned prefix/evidence dictionary allocator.
    */
   insert(record7, intern) {
     const identity3 = sqliteRuntimeIdentity(record7.id);
@@ -30518,6 +31142,7 @@ var SqliteRuntimeTraceBatch = class {
     `);
     this.#rows = 0;
   }
+  /** Flush pending rows and drop the staging table; throws if a paired state is still missing or the transaction ended. */
   finish() {
     if (this.#finished || !this.#db.isTransaction) {
       throw new Error("Runtime trace batch is no longer active.");
@@ -31442,8 +32067,8 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
    * Opens or creates a project database.
    * Opening validates physical format, not every semantic record, and may create SQLite journal files.
    * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
-   * @param {string} file SQLite path. Parent directory must already exist.
-   * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
+   * @param file SQLite path. Parent directory must already exist.
+   * @param [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
    */
   constructor(file, createSchema = true) {
     if (!createSchema && !fs6.existsSync(file)) {
@@ -31534,9 +32159,9 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Intern exact text with a bounded cache. Callers hold the SQLite writer lock.
-   * @param {string} table One of the two prepared dictionary tables.
-   * @param {string} value Exact prefix or serialized evidence list.
-   * @returns {number} Transactionally created or existing dictionary rowid.
+   * @param table One of the two prepared dictionary tables.
+   * @param value Exact prefix or serialized evidence list.
+   * @returns Transactionally created or existing dictionary rowid.
    */
   #intern(table, value) {
     const key3 = `${table}:${value}`;
@@ -31636,9 +32261,9 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
    * Throwing rolls back records and manifest changes. Promise/thenable results are rejected. Perform
    * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
    * the manifest themselves when changing semantic records. Prefer the commitAnalysisProject APIs.
-   * @param {Function} action Synchronous work. Cursors must be consumed before returning.
-   * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
-   * @returns {T} Callback result after a successful commit.
+   * @param action Synchronous work. Cursors must be consumed before returning.
+   * @param [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
+   * @returns Callback result after a successful commit.
    */
   transaction(action, write = true) {
     if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
@@ -31676,10 +32301,10 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   /**
    * Index trace chunks in temporary or privately staged disk counters. This transaction never
    * reads or writes the destination project, allowing other writers during asynchronous parsing.
-   * @param {Function} action Async parser using only the supplied counter index.
-   * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-   * @param {SqliteTraceStage} stage Optional private counters retained across publication failures.
-   * @returns {Promise} Parser result after counters commit. Staged counters survive connection close.
+   * @param action Async parser using only the supplied counter index.
+   * @param metrics Optional caller-owned diagnostic counters.
+   * @param stage Optional private counters retained across publication failures.
+   * @returns Parser result after counters commit. Staged counters survive connection close.
    */
   async indexTrace(action, metrics, stage) {
     const database = stage?.database ?? this.#database;
@@ -31783,10 +32408,11 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       throw new Error("Analysis mutation requires a transaction.");
     }
   }
-  /** Apply a selected metadata edit by stable ID. Omitted records are never deleted.
+  /**
+   * Apply a selected metadata edit by stable ID. Omitted records are never deleted.
    * Validation and optimistic revision checks belong to the publication API.
-   * @param {AnalysisProjectShards} before Original selected view.
-   * @param {AnalysisProjectShards} after Edited selected view.
+   * @param before Original selected view.
+   * @param after Edited selected view.
    */
   patchMetadata(before, after) {
     this.#requireTransaction();
@@ -31974,7 +32600,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
    * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
    * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
    * Semantic validation belongs to the project publication API. This method must run in its transaction.
-   * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
+   * @param shards Validated replacements for explicitly named tables.
    */
   replaceTables(shards) {
     this.#requireTransaction();
@@ -32069,7 +32695,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Replace runtime by interned external identities, including virtual paired-state records.
-   * @param {Array} records Complete semantic runtime replacement. Duplicate IDs remain errors.
+   * @param records Complete semantic runtime replacement. Duplicate IDs remain errors.
    */
   #replaceRuntime(records) {
     this.#database.exec(
@@ -32100,8 +32726,8 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   /**
    * Insert a content-addressed runtime fact once. An ID collision with different content is an
    * error, never a silent no-op. Count values are already aggregated within the source capture.
-   * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
-   * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
+   * @param record Fully aggregated fact with a source-derived stable ID.
+   * @returns True when inserted. Identical facts return false and conflicting facts throw.
    */
   insertRuntime(record7) {
     this.#requireTransaction();
@@ -32118,12 +32744,13 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
     this.#insertRecord("runtime", record7);
     return true;
   }
-  /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
+  /**
+   * Prepare a unique-record batch in one source namespace, inside the publication transaction.
    * New namespaces need no per-record existence query. SQL uniqueness still rejects repeated IDs.
    * Existing/partially pruned sources use full idempotency and collision checks for every record.
    * The callback must not escape its transaction. Any insertion error must abort the whole batch.
-   * @param {string} prefix Exact ID prefix including its final colon.
-   * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
+   * @param prefix Exact ID prefix including its final colon.
+   * @returns Transaction-scoped inserter for validated records with unique suffixes.
    */
   runtimeBatchInserter(prefix) {
     this.#requireTransaction();
@@ -32216,8 +32843,8 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Store manifest and counter in the same transaction as the changed records.
-   * @param {object} manifest Semantic project identity for this publication.
-   * @returns {AnalysisProjectManifest} Manifest containing the incremented counter.
+   * @param manifest Semantic project identity for this publication.
+   * @returns Manifest containing the incremented counter.
    */
   publishManifest(manifest) {
     this.#requireTransaction();
@@ -32235,7 +32862,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   /**
    * Current publication counter, or zero before initial publication. It is not a schema version.
    * Read it with related records inside transaction to retain one consistent snapshot.
-   * @returns {number} Stored revision.
+   * @returns Stored revision.
    */
   revision() {
     const row = this.#database.prepare("SELECT v FROM meta WHERE k='revision'").get();
@@ -32244,7 +32871,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   /**
    * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
    * Use a transaction when combining it with other reads. This does not validate the entire project.
-   * @returns {AnalysisProjectManifest} Pointer manifest.
+   * @returns Pointer manifest.
    */
   manifest() {
     const row = this.#database.prepare("SELECT v FROM meta WHERE k='manifest'").get();
@@ -32260,8 +32887,8 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
-   * @param {Array} kinds Runtime discriminators to include. Empty selects nothing.
-   * @returns {IterableIterator} Cursor consumed within the owning read transaction.
+   * @param kinds Runtime discriminators to include. Empty selects nothing.
+   * @returns Cursor consumed within the owning read transaction.
    * @yields {RuntimeEvidenceRecord} One matching decoded fact.
    */
   *runtimeRecordsByKinds(kinds) {
@@ -32278,7 +32905,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   /**
    * Stream runtime facts without retaining the complete table. Consume before the owning transaction
    * returns or the connection closes. An escaped iterator does not preserve its original snapshot.
-   * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
+   * @returns One reconstructed runtime row at a time.
    * @yields {RuntimeEvidenceRecord} One runtime fact.
    */
   *runtimeRecords() {
@@ -32330,16 +32957,18 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
     );
     return { records, ...rows2.length > limit ? { next: String(rows2[limit - 1].id) } : {} };
   }
-  /** Validate a query view against this read snapshot, including every included provenance reference.
-   * @param {AnalysisProjectShards} shards Selected records, with unused collections empty.
+  /**
+   * Validate a query view against this read snapshot, including every included provenance reference.
+   * @param shards Selected records, with unused collections empty.
    */
   validateView(shards) {
     validateLoadedShards(shards, this.manifest());
   }
-  /** Merge an already-parsed offline batch by stable IDs without loading saved runtime history.
+  /**
+   * Merge an already-parsed offline batch by stable IDs without loading saved runtime history.
    * The caller owns revision checking and publication in the surrounding writer transaction.
-   * @param {RuntimeEvidenceBatch} batch Imported facts and metadata.
-   * @returns {object} Whether anything changed and per-collection additions/updates.
+   * @param batch Imported facts and metadata.
+   * @returns Whether anything changed and per-collection additions/updates.
    */
   mergeEvidenceBatch(batch) {
     this.#requireTransaction();
@@ -32371,9 +33000,10 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       updated: merged.updated
     };
   }
-  /** Produce an explicit complete evidence report one qualified PC at a time.
+  /**
+   * Produce an explicit complete evidence report one qualified PC at a time.
    * Only report output accumulates. Unused instruction/memory histories and CFG contexts are never loaded.
-   * @returns {object} Runtime record count, conflicts, and metadata explanations.
+   * @returns Runtime record count, conflicts, and metadata explanations.
    */
   inspectEvidence() {
     const shards = {
@@ -32409,9 +33039,10 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       explanations: inspectRuntimeEvidence(shards).explanations
     };
   }
-  /** Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
-   * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
-   * @returns {AnalysisProjectShards} Bounded choice view and complete small provenance catalog.
+  /**
+   * Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
+   * @param [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
+   * @returns Bounded choice view and complete small provenance catalog.
    */
   evidenceChoices(selected) {
     const shards = {
@@ -32463,11 +33094,12 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
     }
     return shards;
   }
-  /** Find candidate evidence IDs still owned by retained runtime observations.
+  /**
+   * Find candidate evidence IDs still owned by retained runtime observations.
    * Reads the small provenance dictionary and physical observation rows without decoding histories.
    * Caller holds the same read snapshot as the metadata being used for a replacement publication.
-   * @param {readonly string[]} ids Evidence candidates; empty input performs no query.
-   * @returns {string[]} Referenced candidate IDs in stable order, bounded by the input size.
+   * @param ids Evidence candidates; empty input performs no query.
+   * @returns Referenced candidate IDs in stable order, bounded by the input size.
    */
   runtimeEvidenceReferences(ids) {
     if (ids.length === 0) {
@@ -32479,10 +33111,11 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
         AND EXISTS (SELECT 1 FROM runtime_observations WHERE evidence_id=sets.id)
       ORDER BY ref.value`).all(JSON.stringify(ids)).map((row) => String(row.id));
   }
-  /** Explain one record with an exact reference count and a bounded reverse-reference preview.
-   * @param {ShardKind} kind Selected collection.
-   * @param {string} id Stable semantic record ID.
-   * @returns {ProjectEvidenceExplanation} Full direct provenance/conflicts, at most 200 reverse links.
+  /**
+   * Explain one record with an exact reference count and a bounded reverse-reference preview.
+   * @param kind Selected collection.
+   * @param id Stable semantic record ID.
+   * @returns Full direct provenance/conflicts, at most 200 reverse links.
    */
   explainEvidence(kind, id2) {
     const signature = "1";
@@ -32535,8 +33168,9 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       return { ...base, referencedBy, referencedByTotal };
     }, false);
   }
-  /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
-   * @returns {object} Functions, calls, unresolved sites, and ownership.
+  /**
+   * Persisted call graph plus current labels, without retaining CFG contexts between requests.
+   * @returns Functions, calls, unresolved sites, and ownership.
    */
   callGraph() {
     this.assertCurrentAnalysis();
@@ -32577,15 +33211,16 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       )
     };
   }
-  /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
+  /**
+   * Cache a compact target-specific result. Callers declare every persisted input it consumes.
    * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
    * Concurrent input changes discard cache publication. Results still belong to one read snapshot.
-   * @param {string} key Internal stable query name.
-   * @param {string} signature Layout/configuration fingerprint.
-   * @param {readonly ShardKind[]} dependencies Source collections.
-   * @param {Function} compute Synchronous reader. Must not open another transaction.
-   * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
-   * @returns {T} Current projected value.
+   * @param key Internal stable query name.
+   * @param signature Layout/configuration fingerprint.
+   * @param dependencies Source collections.
+   * @param compute Synchronous reader. Must not open another transaction.
+   * @param [publish] Optional short SQL publication for derived rows built in temporary tables.
+   * @returns Current projected value.
    */
   cachedProjection(key3, signature, dependencies, compute2, publish3, restore) {
     const cached = readQueryCache(this.#database, key3, signature);
@@ -32609,11 +33244,12 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
     });
     return result;
   }
-  /** Select a bounded CFG navigation window through its address index.
-   * @param {string} space Exact logical address space.
-   * @param {number} address Selected PC.
-   * @param {readonly string[]} architectures Optional specification prefixes.
-   * @returns {AnalysisRecord[]} Four preceding and 28 following variants, in address order.
+  /**
+   * Select a bounded CFG navigation window through its address index.
+   * @param space Exact logical address space.
+   * @param address Selected PC.
+   * @param architectures Optional specification prefixes.
+   * @returns Four preceding and 28 following variants, in address order.
    */
   navigationNodes(space, address3, architectures) {
     const matches = architectures.length ? " AND EXISTS(SELECT 1 FROM json_each(?) h WHERE json_extract(analysis_json(payload),'$.specificationId')=h.value OR substr(json_extract(analysis_json(payload),'$.specificationId'),1,length(h.value)+1)=h.value||'.')" : "";
@@ -32631,19 +33267,21 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       (row) => requireMetadataRecord("analysis", parseRecord(row.payload))
     );
   }
-  /** Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
-   * @returns {Array} Half-open ROM-content intervals.
+  /**
+   * Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
+   * @returns Half-open ROM-content intervals.
    */
   codeRanges() {
     return this.#database.prepare(
       "SELECT query_file_offset AS start,MAX(query_file_offset+query_size) AS end FROM analysis INDEXED BY query_instruction_ranges WHERE kind='cfg-node' AND query_file_offset IS NOT NULL GROUP BY query_file_offset"
     ).all().map((row) => ({ start: Number(row.start), end: Number(row.end) }));
   }
-  /** Select processor MMIO observations before decoding payloads.
-   * @param {string} architecture Exact runtime architecture.
-   * @param {string} space Instruction and accessed logical space.
-   * @param {readonly number[]} addresses Exact hardware addresses, including target-approved mirrors.
-   * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations. Counts/provenance stay exact.
+  /**
+   * Select processor MMIO observations before decoding payloads.
+   * @param architecture Exact runtime architecture.
+   * @param space Instruction and accessed logical space.
+   * @param addresses Exact hardware addresses, including target-approved mirrors.
+   * @returns SQL-grouped observations. Counts/provenance stay exact.
    * @yields {RuntimeEvidenceRecord} One role-relevant access variant.
    */
   *runtimeMemoryAtAddresses(architecture, space, addresses) {
@@ -32657,16 +33295,17 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       yield runtimeFromRow({ ...row, count: row.total });
     }
   }
-  /** Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
+  /**
+   * Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
    * The signature includes the ordered state fields and architecture. Aliases remain distinct so
    * the target decoder retains its original precedence and validation rules.
-   * @param {string} architecture Exact instruction architecture.
-   * @param {string} space Exact instruction address space.
-   * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
-   * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
-   * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
-   * @param {Function} [onReadProgress] Representatives staged in storage order; throwing aborts the cursor.
-   * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
+   * @param architecture Exact instruction architecture.
+   * @param space Exact instruction address space.
+   * @param stateFields Only fields the target decoder consumes, including aliases.
+   * @param masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+   * @param [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
+   * @param [onReadProgress] Representatives staged in storage order; throwing aborts the cursor.
+   * @returns SQL cursor over compact variants with exact per-evidence counts.
    * Preparation precedes the consuming read transaction. Standalone iteration owns a snapshot;
    * close a partially consumed cursor to release it.
    */
@@ -32683,12 +33322,13 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       () => this.#clearDictionaryCache()
     );
   }
-  /** Exact execution seed totals grouped by PC, without decoding execution payloads.
+  /**
+   * Exact execution seed totals grouped by PC, without decoding execution payloads.
    * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
    * storage. Static seed selection needs their union, not millions of duplicate PC records.
-   * @param {string} architecture Target processor.
-   * @param {string} space Logical CPU address space.
-   * @returns {RuntimeEvidenceRecord[]} Execution facts reduced to the fields used for seed selection.
+   * @param architecture Target processor.
+   * @param space Logical CPU address space.
+   * @returns Execution facts reduced to the fields used for seed selection.
    */
   runtimeExecutionSeeds(architecture, space) {
     const seeds = /* @__PURE__ */ new Map();
@@ -32736,8 +33376,9 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       this.transaction(() => prepareSourceQueries(this.#database));
     }
   }
-  /** Validated source identities from small catalog tables in the caller's read snapshot.
-   * @returns {object} Manifest and sources ordered by their most recent successful import.
+  /**
+   * Validated source identities from small catalog tables in the caller's read snapshot.
+   * @returns Manifest and sources ordered by their most recent successful import.
    */
   sourceCatalog() {
     const manifest = this.manifest();
@@ -32757,9 +33398,10 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
     );
     return { manifest, sources: buildAnalysisSourceCatalog(shards, importTimes) };
   }
-  /** Exact SQL counts for a catalog source. No baseline or inferred static execution.
-   * @param {string} sourceId Catalog source ID.
-   * @returns {object} Manifest and source counts.
+  /**
+   * Exact SQL counts for a catalog source. No baseline or inferred static execution.
+   * @param sourceId Catalog source ID.
+   * @returns Manifest and source counts.
    */
   sourceSummary(sourceId) {
     const { manifest, sources } = this.sourceCatalog();
@@ -32769,11 +33411,12 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
     }
     return { manifest, summary: readSourceSummary(this.#database, source2) };
   }
-  /** At most 200 SQL-selected contribution rows, decoded within the caller's read transaction.
-   * @param {string} sourceId Catalog source ID.
-   * @param {AnalysisSourceGroup} group Contribution category.
-   * @param {number} offset Nonnegative page offset.
-   * @returns {Array} Bounded source records.
+  /**
+   * At most 200 SQL-selected contribution rows, decoded within the caller's read transaction.
+   * @param sourceId Catalog source ID.
+   * @param group Contribution category.
+   * @param offset Nonnegative page offset.
+   * @returns Bounded source records.
    */
   sourcePage(sourceId, group, offset = 0) {
     const source2 = this.sourceCatalog().sources.find(({ id: id2 }) => id2 === sourceId);
@@ -32784,7 +33427,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Read names, comments and provenance for editing without materializing instruction variants.
-   * @returns {object} Validated editing metadata from the caller's read transaction.
+   * @returns Validated editing metadata from the caller's read transaction.
    */
   annotationEditView() {
     const manifest = this.manifest();
@@ -32801,8 +33444,9 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
     validateLoadedShards(shards, manifest);
     return { manifest, shards };
   }
-  /** Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
-   * @returns {object} Validated manifest, metadata, and an empty runtime collection.
+  /**
+   * Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
+   * @returns Validated manifest, metadata, and an empty runtime collection.
    */
   sourceExportView() {
     this.assertCurrentAnalysis();
@@ -32909,7 +33553,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   /**
    * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
    * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
-   * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
+   * @returns All variants at each explicit output offset.
    * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
    */
   *instructionExportGroups() {
@@ -32941,8 +33585,8 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Read and validate only the requested instruction metadata and bounded runtime details.
-   * @param {readonly AnnotationQueryRange[]} ranges Exact visible source/debugger coordinates.
-   * @returns {SqliteAnnotationView} Small view. Consume inside the caller's read transaction.
+   * @param ranges Exact visible source/debugger coordinates.
+   * @returns Small view. Consume inside the caller's read transaction.
    */
   instructionAnnotationView(ranges) {
     const manifest = this.manifest();
@@ -32952,16 +33596,16 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Exact viewport counts without materializing the detailed instruction projection.
-   * @param {readonly AnnotationQueryRange[]} ranges Current mapped coordinates, validated by the query.
-   * @returns {readonly InstructionExecutionSummaryRow[]} Bounded locations with exact execution totals.
+   * @param ranges Current mapped coordinates, validated by the query.
+   * @returns Bounded locations with exact execution totals.
    */
   instructionExecutionSummary(ranges) {
     return readInstructionExecutionSummary(this.#database, this.manifest(), ranges);
   }
   /**
    * Read selected metadata kinds through the address index instead of loading the complete CFG.
-   * @param {readonly AnalysisRecord["kind"][]} kinds Analysis discriminators to include.
-   * @returns {AnalysisRecord[]} Matching rows in stable ID order.
+   * @param kinds Analysis discriminators to include.
+   * @returns Matching rows in stable ID order.
    */
   analysisByKinds(kinds) {
     if (!kinds.length) {
@@ -32978,10 +33622,10 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   /**
    * Resolve an edit boundary to representative CFG nodes, one per qualified location.
    * Call after preparing query indexes and consume inside a read transaction.
-   * @param {string} addressSpace Exact debug-map/native address space.
-   * @param {number} address Instruction start in that space.
-   * @param {number} [outputOffset] Optional explicit file offset, never an inferred mapper alias.
-   * @returns {AnalysisProjectShards["analysis"]} Location representatives. State variants need not be loaded to edit a comment.
+   * @param addressSpace Exact debug-map/native address space.
+   * @param address Instruction start in that space.
+   * @param [outputOffset] Optional explicit file offset, never an inferred mapper alias.
+   * @returns Location representatives. State variants need not be loaded to edit a comment.
    */
   annotationNodesAt(addressSpace, address3, outputOffset) {
     const rows2 = this.#database.prepare(`SELECT payload FROM analysis WHERE rowid IN (
@@ -32992,8 +33636,8 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Materialize complete record arrays without semantic validation. Run inside a read transaction.
-   * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
-   * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
+   * @param [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
+   * @returns Decoded record arrays owned by the caller.
    */
   loadShards(runtime = true) {
     return {
@@ -33009,7 +33653,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Table counts for reports.
-   * @returns {Readonly<Record<string, number>>} Row counts.
+   * @returns Row counts.
    */
   counts() {
     const tables = [
@@ -33031,7 +33675,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Count analysis kinds without inflating or parsing their compressed payloads.
-   * @returns {Readonly<Record<string, number>>} Counts by analysis record discriminator.
+   * @returns Counts by analysis record discriminator.
    */
   analysisCounts() {
     const result = {};
@@ -33042,7 +33686,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
   /**
    * Summarize per-PC execution facts using stored columns, without reading register history.
-   * @returns {object} Fact count and total observed executions in the owning transaction.
+   * @returns Fact count and total observed executions in the owning transaction.
    */
   runtimeExecutionCounts() {
     const row = this.#database.prepare(
@@ -33053,7 +33697,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   /**
    * Atomically refresh the watcher hint after commit. SQLite is authoritative: a failed hint write
    * is reported as a warning, never as a failed import that could cause an unsafe retry.
-   * @param {string} directory Project root for the watcher hint.
+   * @param directory Project root for the watcher hint.
    */
   writePointer(directory) {
     const temporary = path7.join(directory, `.analysis.json.${randomUUID3()}.tmp`);
@@ -33284,15 +33928,17 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       }
     }
   }
-  /** Current persisted policy. Defaults do not write or change the semantic revision.
-   * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
+  /**
+   * Current persisted policy. Defaults do not write or change the semantic revision.
+   * @returns Validated defaults and persisted overrides.
    */
   storagePolicy() {
     return readStoragePolicy(this.#database);
   }
-  /** Update only explicit policy fields in the caller's writer transaction.
-   * @param {Partial<AnalysisStoragePolicy>} patch Explicit limits, in bytes/days/counts.
-   * @returns {AnalysisStoragePolicy} Complete policy saved without changing the edit revision.
+  /**
+   * Update only explicit policy fields in the caller's writer transaction.
+   * @param patch Explicit limits, in bytes/days/counts.
+   * @returns Complete policy saved without changing the edit revision.
    */
   setStoragePolicy(patch) {
     this.#requireTransaction();
@@ -33300,21 +33946,24 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
     this.#database.prepare("INSERT OR REPLACE INTO meta VALUES('storage-policy',?)").run(JSON.stringify(policy));
     return policy;
   }
-  /** Storage accounting avoids decoding runtime or analysis payloads.
-   * @returns {object} Physical allocation and logical retention counts.
+  /**
+   * Storage accounting avoids decoding runtime or analysis payloads.
+   * @returns Physical allocation and logical retention counts.
    */
   storageSnapshot() {
     return storageSnapshot(this.#database, this.file);
   }
-  /** Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
-   * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
+  /**
+   * Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
+   * @returns Allocated cache bytes, excluding permanent editor/export indexes.
    */
   storageCacheBytes() {
     return optionalCacheBytes(this.#database);
   }
-  /** Durable receipt lookup survives source-file removal and cache eviction.
-   * @param {string} sha256 Canonical capture identity.
-   * @returns {object | undefined} Retained import identity and counts.
+  /**
+   * Durable receipt lookup survives source-file removal and cache eviction.
+   * @param sha256 Canonical capture identity.
+   * @returns Retained import identity and counts.
    */
   captureReceipt(sha2564) {
     return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha2564);
@@ -33327,8 +33976,9 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   captureCatalog() {
     return this.#database.prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256").all();
   }
-  /** Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
-   * @param {ImportReport} report Successfully validated native trace import.
+  /**
+   * Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
+   * @param report Successfully validated native trace import.
    */
   recordCaptureReceipt(report2) {
     this.#requireTransaction();
@@ -33349,8 +33999,9 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
       report2.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0
     );
   }
-  /** Drop disposable projections after publication, then recycle WAL without waiting on active readers.
-   * @returns {object} Cache eviction totals and whether readers delayed WAL truncation.
+  /**
+   * Drop disposable projections after publication, then recycle WAL without waiting on active readers.
+   * @returns Cache eviction totals and whether readers delayed WAL truncation.
    */
   maintainStorage() {
     const caches = this.transaction(() => maintainStorageCaches(this.#database));
@@ -34532,7 +35183,7 @@ var HalfOpenIntervalIndex = class {
   #prefixMaximumEnd;
   /**
    * Builds an immutable search index from already-owned interval values.
-   * @param {readonly Value[]} values Non-negative safe half-open intervals in semantic input order.
+   * @param values Non-negative safe half-open intervals in semantic input order.
    * @throws {Error} When an interval is empty, reversed, negative, or outside safe integers.
    */
   constructor(values) {
@@ -34554,8 +35205,8 @@ var HalfOpenIntervalIndex = class {
   }
   /**
    * Returns every interval containing one safe non-negative point, in input order.
-   * @param {number} point Safe non-negative point to query.
-   * @returns {readonly Value[]} Matching intervals in their original input order.
+   * @param point Safe non-negative point to query.
+   * @returns Matching intervals in their original input order.
    */
   at(point) {
     if (!Number.isSafeInteger(point) || point < 0) {
@@ -34565,9 +35216,9 @@ var HalfOpenIntervalIndex = class {
   }
   /**
    * Returns every interval intersecting a valid half-open query, in input order.
-   * @param {number} start Inclusive safe non-negative query start.
-   * @param {number} end Exclusive safe query end greater than `start`.
-   * @returns {readonly Value[]} Matching intervals in their original input order.
+   * @param start Inclusive safe non-negative query start.
+   * @param end Exclusive safe query end greater than `start`.
+   * @returns Matching intervals in their original input order.
    */
   overlapping(start, end) {
     if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
@@ -34702,6 +35353,11 @@ var AssetRegistry = class {
   #importers = /* @__PURE__ */ new Map();
   #encoders = /* @__PURE__ */ new Map();
   #mediaTypes = /* @__PURE__ */ new Map();
+  /**
+   * Register an importer and claim its media types.
+   * @param importer Importer with a namespaced unused ID, a version, and unclaimed media types.
+   * @returns This registry for chaining.
+   */
   registerImporter(importer) {
     if (!isNamespacedId(importer.id) || !importer.version || importer.mediaTypes.length === 0 || this.#importers.has(importer.id)) {
       throw new Error(`Invalid or duplicate asset importer '${importer.id}'.`);
@@ -34715,6 +35371,7 @@ var AssetRegistry = class {
     importer.mediaTypes.forEach((type) => this.#mediaTypes.set(type, importer));
     return this;
   }
+  /** Register one encoder; duplicate ids reject registration. */
   registerEncoder(encoder) {
     if (!isNamespacedId(encoder.id) || !encoder.version || !encoder.primaryOutput || encoder.inputKinds.length === 0 || this.#encoders.has(encoder.id)) {
       throw new Error(`Invalid or duplicate asset encoder '${encoder.id}'.`);
@@ -34722,6 +35379,7 @@ var AssetRegistry = class {
     this.#encoders.set(encoder.id, encoder);
     return this;
   }
+  /** Resolve the importer registered for a MIME type. */
   importerFor(mediaType) {
     const importer = this.#mediaTypes.get(mediaType);
     if (!importer) {
@@ -34729,6 +35387,7 @@ var AssetRegistry = class {
     }
     return importer;
   }
+  /** Resolve a registered encoder by id. */
   encoderFor(id2) {
     const encoder = this.#encoders.get(id2);
     if (!encoder) {
@@ -45859,12 +46518,13 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
       if (frame.paletteGroup !== void 0 && (!Number.isInteger(frame.paletteGroup) || frame.paletteGroup < 0 || frame.paletteGroup >= layout2.paletteRefs.length)) {
         throw new Error(`Frame ${frame.id} has an invalid display palette group.`);
       }
-      if (Array.isArray(frame.blocks))
+      if (Array.isArray(frame.blocks)) {
         for (const block of frame.blocks) {
           if (block.paletteGroup !== void 0 && (!Number.isInteger(block.paletteGroup) || block.paletteGroup < 0 || block.paletteGroup >= layout2.paletteRefs.length)) {
             throw new Error(`Block ${frame.id}/${block.id} has an invalid display palette group.`);
           }
         }
+      }
     }
   }
   const names = whole ? Object.keys(layout2.segments) : [segmentName ?? ""];
@@ -46491,16 +47151,16 @@ function encodeBossTilemap(data, tag = 1) {
 }
 
 // packages/assets/src/secret-of-mana/som-dialogue-command.ts
-function encodeSomDialogueCommand(token) {
+function encodeSomDialogueCommand(text4) {
   const names = ["${boy}", "${girl}", "${sprite}"];
-  const index = names.indexOf(token);
+  const index = names.indexOf(text4);
   if (index >= 0) {
     return { family: "party-name", bytes: Uint8Array.of(87, index) };
   }
-  if (token === "${wait}") {
+  if (text4 === "${wait}") {
     return { family: "wait", bytes: Uint8Array.of(40, 0) };
   }
-  const wait = /^\${wait:(0|[1-9]\d*)}$/.exec(token);
+  const wait = /^\${wait:(0|[1-9]\d*)}$/.exec(text4);
   if (wait) {
     const count2 = Number(wait[1]);
     if (!Number.isSafeInteger(count2) || count2 > 255) {
@@ -46513,11 +47173,11 @@ function encodeSomDialogueCommand(token) {
     ["${closeDialogue}", 81],
     ["${clearDialogue}", 82]
   ]);
-  const opcode = windows.get(token);
+  const opcode = windows.get(text4);
   if (opcode !== void 0) {
     return { family: "text-window", bytes: Uint8Array.of(opcode) };
   }
-  throw new Error(`Unsupported dialogue command token ${token}.`);
+  throw new Error(`Unsupported dialogue command token ${text4}.`);
 }
 
 // packages/assets/src/secret-of-mana/som-dialogue.ts
@@ -46571,7 +47231,7 @@ function expandSomDialogue(bytes3, dictionary) {
       index = byte - 195;
     }
     if (index !== void 0) {
-      const pair = dictionary[index];
+      const pair = dictionary.at(index);
       if (!pair) {
         throw new Error(`Missing SoM dialogue pair ${index}.`);
       }
@@ -46670,7 +47330,7 @@ function encodeSomDialogue(text4, dictionary, options = {}) {
     if (index === void 0) {
       continue;
     }
-    const pair = dictionary[index];
+    const pair = dictionary.at(index);
     if (!pair) {
       throw new Error(`Missing SoM dialogue pair ${index}.`);
     }
@@ -49991,41 +50651,50 @@ var Cursor = class {
     this.view = new DataView(bytes3.buffer, bytes3.byteOffset, bytes3.byteLength);
   }
   bytes;
+  /** Little-endian view over the bounded byte slice. */
   view;
   /** Byte offset within this cursor's bounded payload. */
   position = 0;
+  /** Advance the cursor and return an owned subarray of exactly `length` bytes. */
   take(length) {
     integer2(length, "Aseprite field size", 0, this.bytes.length - this.position);
     const value = this.bytes.subarray(this.position, this.position + length);
     this.position += length;
     return value;
   }
+  /** Read one unsigned byte. */
   u8() {
     return this.take(1)[0];
   }
+  /** Read one little-endian unsigned 16-bit integer. */
   u16() {
     const offset = this.position;
     this.take(2);
     return this.view.getUint16(offset, true);
   }
+  /** Read one little-endian signed 16-bit integer. */
   i16() {
     const offset = this.position;
     this.take(2);
     return this.view.getInt16(offset, true);
   }
+  /** Read one little-endian unsigned 32-bit integer. */
   u32() {
     const offset = this.position;
     this.take(4);
     return this.view.getUint32(offset, true);
   }
+  /** Read one little-endian signed 32-bit integer. */
   i32() {
     const offset = this.position;
     this.take(4);
     return this.view.getInt32(offset, true);
   }
+  /** Read a UTF-8 string prefixed by a uint16 byte length. */
   text() {
     return decoder.decode(this.take(this.u16()));
   }
+  /** Require the cursor to consume the entire bounded payload. */
   finish() {
     if (this.position !== this.bytes.length) {
       throw new Error("Unexpected Aseprite chunk payload.");
@@ -50033,32 +50702,39 @@ var Cursor = class {
   }
 };
 var Fields = class {
+  /** Appended field fragments concatenated by `build`. */
   parts = [];
   /** Reserved bytes are checked while appending, before allocating the combined payload. */
   length = 0;
+  /** Append raw bytes after checking the combined output size limit. */
   raw(bytes3) {
     this.length = boundedSum(this.length, bytes3.length, ATLAS_FILE_LIMIT2, "Aseprite output size");
     this.parts.push(bytes3);
     return this;
   }
+  /** Append one unsigned byte. */
   u8(value) {
     return this.raw(Uint8Array.of(value));
   }
+  /** Append one little-endian unsigned 16-bit integer. */
   u16(value) {
     const bytes3 = new Uint8Array(2);
     new DataView(bytes3.buffer).setUint16(0, value, true);
     return this.raw(bytes3);
   }
+  /** Append one little-endian unsigned 32-bit integer. */
   u32(value) {
     const bytes3 = new Uint8Array(4);
     new DataView(bytes3.buffer).setUint32(0, value, true);
     return this.raw(bytes3);
   }
+  /** Append a UTF-8 string prefixed by its uint16 byte length. */
   text(value) {
     const bytes3 = new TextEncoder().encode(value);
     integer2(bytes3.length, "Aseprite text size", 0, 65535);
     return this.u16(bytes3.length).raw(bytes3);
   }
+  /** Concatenate appended parts into one owned buffer. */
   build() {
     const bytes3 = new Uint8Array(this.length);
     let offset = 0;
@@ -51753,6 +52429,7 @@ var AssetSourceCodecRegistry = class {
   get revision() {
     return this.#revision;
   }
+  /** Register one codec; ambiguous extensions reject registration. */
   register(codec) {
     if (!codec.id || this.#codecs.has(codec.id) || typeof codec.matches !== "function" || typeof codec.decode !== "function" || typeof codec.encode !== "function" || typeof codec.embeddedIdentity !== "boolean" || !Number.isSafeInteger(codec.version) || codec.version < 1 || !/^[\w+.-]+\/[\w+.-]+$/.test(codec.mediaType) || !codec.extensions.length || codec.extensions.some((extension) => !/^\.[\d.a-z-]+$/i.test(extension))) {
       throw new Error(`Invalid or duplicate source codec '${codec.id}'.`);
@@ -51782,6 +52459,7 @@ var AssetSourceCodecRegistry = class {
     this.#revision++;
     return this;
   }
+  /** Resolve a registered codec by id. */
   get(id2) {
     const codec = this.#codecs.get(id2);
     if (!codec) {
@@ -52539,8 +53217,8 @@ function somSourceDependencies(_source, options, resources2, codecs = indexedSou
       return requests;
     }
     const binding = readAssetSourceBinding(resources2[name4].bytes);
-    for (const [key3, path69] of Object.entries(binding.resources)) {
-      requests.push({ key: bindingResourceKey(name4, key3), path: path69, relativeTo: name4 });
+    for (const [key3, path70] of Object.entries(binding.resources)) {
+      requests.push({ key: bindingResourceKey(name4, key3), path: path70, relativeTo: name4 });
     }
     if (name4 !== options.sourceBinding) {
       requests.push({
@@ -52837,6 +53515,43 @@ function encodeWorldRow(bytes3) {
   return Uint8Array.from(output);
 }
 
+// packages/game-secret-of-mana/src/world-overview.ts
+var WORLD_TILE_SIDE = 512;
+var WORLD_OVERVIEW_SIDE = WORLD_TILE_SIDE / 2;
+var WORLD_OVERVIEW_COLOR_COUNT = 192;
+var PALETTE_COLUMNS = 16;
+function worldOverviewRgba(pixels2) {
+  const rgba = new Uint8Array(pixels2.length * 4);
+  const toByte = (value) => value << 3 | value >> 2;
+  for (let i = 0; i < pixels2.length; i++) {
+    const color = pixels2[i];
+    rgba.set(
+      [toByte((color & 7) << 2), toByte((color & 56) >>> 1), toByte((color & 192) >>> 3), 255],
+      i * 4
+    );
+  }
+  return rgba;
+}
+function convertWorldOverviewColors(source2) {
+  if (source2.mediaType !== "image/png") {
+    throw new Error("Flammie overview colors require a PNG.");
+  }
+  const image = readAssetPng(source2.bytes).toRGBA({ copy: false });
+  if (image.width !== PALETTE_COLUMNS || image.height !== WORLD_OVERVIEW_COLOR_COUNT / PALETTE_COLUMNS) {
+    throw new Error("Flammie overview colors require 16 \xD7 12 opaque swatches.");
+  }
+  const colors = new Uint8Array(WORLD_OVERVIEW_COLOR_COUNT);
+  for (let id2 = 0; id2 < colors.length; id2++) {
+    const [r, g, b, a] = image.rgba.subarray(id2 * 4, id2 * 4 + 4);
+    colors[id2] = r >>> 5 | g >>> 5 << 3 | b >>> 6 << 6;
+    const [nativeR, nativeG, nativeB] = worldOverviewRgba(colors.subarray(id2, id2 + 1));
+    if (a !== 255 || r !== nativeR || g !== nativeG || b !== nativeB) {
+      throw new Error(`Flammie overview swatch ${id2} is outside the native direct-color gamut.`);
+    }
+  }
+  return { primaryOutput: "colors", outputs: { colors: { bytes: colors } } };
+}
+
 // packages/game-secret-of-mana/src/assembly.ts
 var registry2 = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
@@ -53066,6 +53781,16 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
         convert: convertRoomAsset
       });
       context.registerAssetFormat({
+        id: "som.world.overview-colors",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        optionSchema: {
+          tiles: { summary: "Extracted indexed 512 \xD7 512 world tile grid for preview." }
+        },
+        resourcePaths: (options) => typeof options.tiles === "string" ? [options.tiles] : [],
+        convert: convertWorldOverviewColors
+      });
+      context.registerAssetFormat({
         id: "som.palette.bgr555",
         version: "1.1.0",
         resourceDependencies: (source2, options, resources2) => somSourceDependencies(source2, options, resources2, sourceCodecs),
@@ -53103,7 +53828,7 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
         resourceDependencies: (source2, options, resources2) => somSourceDependencies(source2, options, resources2, sourceCodecs),
         targets: ["snes.sfc"],
         resourcePaths: (options) => [options.layout, options.palettes, options.native].filter(
-          (path69) => typeof path69 === "string"
+          (path70) => typeof path70 === "string"
         ),
         convert: (source2, options, resources2) => convertBossImage2(source2, options, resources2, sourceCodecs)
       });
@@ -53113,7 +53838,7 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
         sourceRepresentations: sourceCodecs.representations(),
         resourceDependencies: (source2, options, resources2) => somSourceDependencies(source2, options, resources2, sourceCodecs),
         targets: ["snes.sfc"],
-        resourcePaths: (options) => [options.layout, options.palettes].filter((path69) => typeof path69 === "string"),
+        resourcePaths: (options) => [options.layout, options.palettes].filter((path70) => typeof path70 === "string"),
         convert(source2, options, resources2) {
           const catalog = readSpritePaletteCatalog(options, resources2);
           const normalized = options.sourceBinding !== void 0 || options.paletteSources !== void 0 ? normalizeSomSource(source2, options, resources2, catalog, sourceCodecs) : { source: source2, layout: readFrameLayout(options, resources2), catalog };
@@ -53507,8 +54232,8 @@ var NodePluginLoader = class {
    * disposes the old environment before activation. Activation failure leaves no replacement.
    * Module contents, logger identity, and bundled plugin object identity are not cache keys.
    * Node's module cache is retained. Failures reject with PluginError or cleanup AggregateError.
-   * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
-   * @returns {Promise<LoadedProjectEnvironment>} A borrowed handle owned by this loader until disposal or replacement.
+   * @param options Project location, trusted plugins, and host precedence settings.
+   * @returns A borrowed handle owned by this loader until disposal or replacement.
    */
   async loadProjectEnvironment(options) {
     const cwd = path16.resolve(options.cwd);
@@ -54449,8 +55174,8 @@ var buildInstruction = (specification2, bytes3, context, state) => {
 var Cpu65816Decoder = class {
   /**
    * Decodes a 65816 instruction.
-   * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
-   * @returns {ArchitectureDecodeResult} The decode result.
+   * @param context The decode context.
+   * @returns The decode result.
    */
   decode(context) {
     const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
@@ -54797,8 +55522,9 @@ function parse65816Operands(mnemonic, text4) {
     commaIndex: true
   };
   const common = parseInstructionOperands(mnemonic, text4, grammar2);
-  const structural = common.operands[0]?.kind === "template" ? common.operands[0].structure : common;
-  const whole = expansionPlan(text4, 0), shape = structural.operands[0];
+  const first = common.operands.at(0);
+  const structural = first?.kind === "template" ? first.structure : common;
+  const whole = expansionPlan(text4, 0), shape = structural.operands.at(0);
   let scalar3 = whole.scalar;
   if (shape?.kind === "immediate") {
     scalar3 = shape.value;
@@ -55372,6 +56098,11 @@ var buildInstruction2 = (specification2, bytes3, context) => {
   };
 };
 var Spc700Decoder = class {
+  /**
+   * Decodes one SPC700 instruction using the fixed 256-entry opcode matrix.
+   * @param context Byte source, offset, and optional direct-page decode state.
+   * @returns A decoded instruction or a bounds/opcode error.
+   */
   decode(context) {
     const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
     const opcode = context.source.readByte(context.offset);
@@ -55423,9 +56154,11 @@ function parseSpcOperands(mnemonic, text4) {
     bitSelectors: true
   };
   const common = parseInstructionOperands(mnemonic, text4, grammar2);
-  const structural = common.operands[0]?.kind === "template" ? common.operands[0].structure : common;
-  const parts2 = operandParts2(text4).map((part, i) => {
-    const shape = structural.operands[i];
+  const first = common.operands.at(0);
+  const structural = first?.kind === "template" ? first.structure : common;
+  const parts2 = [];
+  for (const [i, part] of operandParts2(text4).entries()) {
+    const shape = structural.operands.at(i);
     let body = part.text, scalar3 = operandScalarSyntax(body, part.start);
     if (shape?.kind === "immediate") {
       scalar3 = shape.value;
@@ -55446,7 +56179,7 @@ function parseSpcOperands(mnemonic, text4) {
     const bitHex = /^\$([\da-f]+)$/i.exec(bitBody);
     const hex14 = /^\$([\da-f]+)$/i.exec(display);
     const reg = /^(a|x|y|ya|sp|p|psw|c)$/i.exec(part.text);
-    return {
+    parts2.push({
       ...shape ? { shape } : {},
       scalar: scalar3,
       wholeScalar: part.text.startsWith("!$") ? {
@@ -55470,8 +56203,8 @@ function parseSpcOperands(mnemonic, text4) {
       ...dotted ? { bit: Number(dotted[2]) } : {},
       invert,
       ...bitHex ? { bitValue: Number.parseInt(bitHex[1], 16) } : {}
-    };
-  });
+    });
+  }
   const op3 = mnemonic.toUpperCase(), dot = op3.indexOf(".");
   const name4 = dot < 0 ? op3 : op3.slice(0, dot);
   const width = dot < 0 ? void 0 : { B: 1, W: 2, L: 3, D: 4 }[op3[dot + 1]];
@@ -56281,6 +57014,11 @@ var prefixAlt = (opcode) => {
   return opcode >= 61 && opcode <= 63 && isSuperFxAltState(alt) ? alt : void 0;
 };
 var SuperFxDecoder = class {
+  /**
+   * Decodes one GSU instruction, fusing ALT prefixes and macro selector sequences when present.
+   * @param context Byte source, offset, and optional GSU decode state.
+   * @returns A decoded instruction or a bounds/state error.
+   */
   decode(context) {
     const opcode = context.source.readByte(context.offset);
     if (opcode === void 0) {
@@ -56723,11 +57461,17 @@ var generic = {
 var family = (op3, values) => values.split(" ").includes(op3);
 var modeId = (key3) => cpu65816Modes[key3]?.id ?? key3;
 var Typed65816 = class {
+  /**
+   * Creates a 65816 encoder with optional direct-page width optimization.
+   * @param optimizeDirectPage When true, same-bank labels may encode as DP addresses.
+   */
   constructor(optimizeDirectPage = () => false) {
     this.optimizeDirectPage = optimizeDirectPage;
   }
   optimizeDirectPage;
+  /** Relocatable object emission covers the shared 65816 opcode matrix. */
   supportsRelocatable = true;
+  /** Operand binding failures surface at the final read, not during width collection. */
   deferOperandBindingErrors = true;
   /** True selects 16-bit expression immediates; lexical widths can override this hint. */
   m16 = false;
@@ -56735,19 +57479,36 @@ var Typed65816 = class {
   x16 = false;
   /** SEP/REP update hints only while smart tracking is enabled. */
   smartMode = true;
+  /** Clears M/X width hints at the start of each assembly pass. */
   beginPass() {
     this.m16 = false;
     this.x16 = false;
   }
+  /**
+   * Sets the accumulator immediate-width hint used when expressions follow M flag state.
+   * @param value True selects 16-bit accumulator immediates.
+   */
   setAccumulatorWidth(value) {
     this.m16 = value;
   }
+  /**
+   * Sets the index immediate-width hint used when expressions follow X flag state.
+   * @param value True selects 16-bit index immediates.
+   */
   setIndexWidth(value) {
     this.x16 = value;
   }
+  /**
+   * Enables or disables REP/SEP smart tracking of M and X flag hints.
+   * @param value When false, width hints ignore SEP/REP operands.
+   */
   setSmartMode(value) {
     this.smartMode = value;
   }
+  /**
+   * Stores the classified operand tuple for reuse during encoding.
+   * @param frame Active resolution frame for the occurrence.
+   */
   prepare(frame) {
     if (frame.isRelocatable) {
       frame.choose("65816-module-preparation", 0);
@@ -56766,9 +57527,20 @@ var Typed65816 = class {
       r.explicitDp
     );
   }
+  /**
+   * Returns the byte size chosen for the current instruction form.
+   * @param frame Active resolution frame for the occurrence.
+   * @returns Encoded instruction length in bytes, or `-1` when unrecognized.
+   */
   estimate(frame) {
     return this.run(frame);
   }
+  /**
+   * Emits opcode bytes when `context` is supplied; otherwise sizes only.
+   * @param frame Active resolution frame for the occurrence.
+   * @param context Emission sink and diagnostics for the emit pass.
+   * @returns True when a recognized form produced bytes.
+   */
   encode(frame, context) {
     return this.run(frame, context) >= 0;
   }
@@ -57127,10 +57899,8 @@ var Typed65816 = class {
         write(void 0);
         throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
       }
-      if (emit) {
-        write(opcode(selected));
-        write(read(false, !x), width);
-      }
+      write(opcode(selected));
+      write(read(false, !x), width);
       return select(selected, width + 1);
     }
     if (load) {
@@ -57488,7 +58258,9 @@ var modulePatterns = spc700Specifications.map((specification2) => ({
   ).spc700.parts
 }));
 var TypedSpc700 = class {
+  /** Relocatable object emission covers the full opcode matrix. */
   supportsRelocatable = true;
+  /** Operand binding failures surface at the final read, not during width collection. */
   deferOperandBindingErrors = true;
   /** Preserve per-slot observations before the whole-fragment width probe. */
   prepare(frame) {
@@ -57501,9 +58273,20 @@ var TypedSpc700 = class {
     expandOperandPlan(syntax2.whole, frame);
     chooseOperandPreparation(frame, "spc700-preparation", parts2);
   }
+  /**
+   * Returns the byte size chosen for the current instruction form.
+   * @param frame Active resolution frame for the occurrence.
+   * @returns Encoded instruction length in bytes.
+   */
   estimate(frame) {
     return this.run(frame);
   }
+  /**
+   * Emits opcode bytes when `context` is supplied; otherwise sizes only.
+   * @param frame Active resolution frame for the occurrence.
+   * @param context Emission sink and diagnostics for the emit pass.
+   * @returns True when a recognized form produced bytes.
+   */
   encode(frame, context) {
     return this.run(frame, context) > 0;
   }
@@ -57559,7 +58342,7 @@ var TypedSpc700 = class {
         width: hex14 && digits <= 2 ? 1 : 2
       };
     });
-    const a = parts2[0], b = parts2[1], n = parts2.length;
+    const a = parts2.at(0), b = parts2.at(1), n = parts2.length;
     const write = (value, width2 = 1) => {
       if (width2 === 2) {
         context?.emission.write2(value);
@@ -57725,7 +58508,7 @@ var TypedSpc700 = class {
         return choose("alu", b?.mode === "indexedY" ? 3 : 1 + (b?.hex ? b.width : lexicalWidth(b)));
       }
     }
-    if (n === 1) {
+    if (n === 1 && a) {
       if (code("rel") !== void 0) {
         write(code("rel"));
         const target = branchTarget(a, frame.currentAddress() + 1);
@@ -57786,7 +58569,7 @@ var TypedSpc700 = class {
         return output("regYA");
       }
     }
-    if (n === 2) {
+    if (n === 2 && a && b) {
       if (syntax2.bitFamily === "BBS" || syntax2.bitFamily === "BBC") {
         const bit2 = a.part.bit ?? syntax2.bit;
         if (bit2 === void 0) {
@@ -58041,7 +58824,7 @@ var TypedSpc700 = class {
         }
       }
     }
-    if (emit && syntax2.bitFamily === "MOV" && n === 2) {
+    if (emit && syntax2.bitFamily === "MOV" && n === 2 && a) {
       if (frame.bindingFailure?.reason === "other") {
         throw new Error(frame.bindingFailure.message);
       }
@@ -58142,7 +58925,7 @@ var TypedSpc700 = class {
       }
       return score;
     };
-    const pattern = candidates.filter((candidate) => widthScore(candidate) >= 0).toSorted((a, b) => widthScore(b) - widthScore(a))[0];
+    const pattern = candidates.filter((candidate) => widthScore(candidate) >= 0).toSorted((a, b) => widthScore(b) - widthScore(a)).at(0);
     if (!pattern) {
       throw frame.error(`${op3} has no matching relocatable SPC700 operand form.`);
     }
@@ -58402,12 +59185,22 @@ var INDIRECT_OPS = {
 var shortRam = (value) => (value & 1) === 0 && value < 512;
 var signedByte2 = (value) => (value & 65535) < 128 || (value & 65535) >= 65408;
 var TypedSuperFx = class {
+  /**
+   * Creates a Super FX encoder with optional Asar short-RAM MOVE dialect.
+   * @param asarMoveShortAddress When true, auto-MOVE stores the raw RAM byte instead of `addr >> 1`.
+   */
   constructor(asarMoveShortAddress = () => false) {
     this.asarMoveShortAddress = asarMoveShortAddress;
   }
   asarMoveShortAddress;
+  /** Relocatable object emission covers automatic MOVE and branch forms. */
   supportsRelocatable = true;
+  /** Operand binding failures surface at the final read, not during width collection. */
   deferOperandBindingErrors = true;
+  /**
+   * Records per-part width observations before whole-operand classification.
+   * @param frame Active resolution frame for the occurrence.
+   */
   prepare(frame) {
     if (frame.isRelocatable) {
       frame.choose("superfx-module-preparation", 0);
@@ -58424,9 +59217,20 @@ var TypedSuperFx = class {
     }
     chooseOperandPreparation(frame, "superfx-preparation", parts2);
   }
+  /**
+   * Returns the byte size chosen for the current instruction form.
+   * @param frame Active resolution frame for the occurrence.
+   * @returns Encoded instruction length in bytes.
+   */
   estimate(frame) {
     return this.run(frame);
   }
+  /**
+   * Emits opcode bytes when `context` is supplied; otherwise sizes only.
+   * @param frame Active resolution frame for the occurrence.
+   * @param context Emission sink and diagnostics for the emit pass.
+   * @returns True when a recognized form produced bytes.
+   */
   encode(frame, context) {
     return this.run(frame, context) > 0;
   }
@@ -58532,7 +59336,7 @@ var TypedSuperFx = class {
       write(encoding.base + reg);
       return choose("register", encoding.prefix === void 0 ? 1 : 2);
     };
-    const left = parts2[0], right = parts2[1];
+    const left = parts2.at(0), right = parts2.at(1);
     if (parts2.length <= 1 && hasOwn(SHORT_BRANCH_OPCODES, op3)) {
       if (emit && left) {
         const value = read(left, true);
@@ -58566,7 +59370,7 @@ var TypedSuperFx = class {
       }
       return choose("unknown", emit ? 0 : 1);
     }
-    if (parts2.length !== 2) {
+    if (parts2.length !== 2 || !left || !right) {
       return choose("unknown", emit ? 0 : 1);
     }
     const l = left.register, r = right.register, li = left.indirectRegister, ri = right.indirectRegister;
@@ -58947,7 +59751,7 @@ var SnesSpcRuntimeService = class {
    *
    * `custom` with a macro name is recognized as Asar syntax but not implemented.
    *
-   * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
+   * @param words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
    */
   handleSpcblock(words) {
     this.executeSpcblock(parseSpcBlock(words));
@@ -58994,7 +59798,7 @@ var SnesSpcRuntimeService = class {
    *
    * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.
    *
-   * @param {readonly string[]} words Tokenized line.
+   * @param words Tokenized line.
    */
   handleEndSpcblock(words) {
     this.executeEndSpcblock(parseEndSpcBlock(words));
@@ -59139,7 +59943,7 @@ function parseSnesDirective(id2, { words }) {
       return { operation: "width", register: "index", wide: true };
     case "ca65.accu":
     case "ca65.index": {
-      const width = words[1]?.trim();
+      const width = words.at(1)?.trim();
       if (width !== "8" && width !== "16") {
         throw new Error(`${keyword} requires an argument of 8 or 16, got: ${width ?? "<none>"}`);
       }
@@ -59333,7 +60137,6 @@ var Arch65816 = class {
   /**
    * Resets M/X size flags at the start of each assembly stage.
    * `smartMode` is intentionally NOT reset so `.smart off` persists across stages.
-   * @returns {void}
    */
   beginPass() {
     this.m16 = false;
@@ -59342,8 +60145,7 @@ var Arch65816 = class {
   /**
    * Sets the accumulator (M-flag) width hint.
    * Used by the ca65-compatible `.a8` and `.a16` directives.
-   * @param {boolean} is16 True for 16-bit accumulator, false for 8-bit.
-   * @returns {void}
+   * @param is16 True for 16-bit accumulator, false for 8-bit.
    */
   setAccumulatorWidth(is16) {
     this.m16 = is16;
@@ -59351,8 +60153,7 @@ var Arch65816 = class {
   /**
    * Sets the index register (X-flag) width hint.
    * Used by the ca65-compatible `.i8` and `.i16` directives.
-   * @param {boolean} is16 True for 16-bit index registers, false for 8-bit.
-   * @returns {void}
+   * @param is16 True for 16-bit index registers, false for 8-bit.
    */
   setIndexWidth(is16) {
     this.x16 = is16;
@@ -59360,8 +60161,7 @@ var Arch65816 = class {
   /**
    * Enables or disables automatic M/X tracking via `SEP`/`REP` instructions.
    * Used by the ca65-compatible `.smart` directive.
-   * @param {boolean} enabled True to enable smart mode (default), false to disable.
-   * @returns {void}
+   * @param enabled True to enable smart mode (default), false to disable.
    */
   setSmartMode(enabled) {
     this.smartMode = enabled;
@@ -59561,9 +60361,9 @@ var snesRomAddressSpace = {
    * CPU bus → ROM file offset. Returns `-1` for WRAM, SRAM, or unmapped holes.
    * Formulas match Asar's `snestopc` (not a hardware bus trace).
    *
-   * @param {number} address The address to convert.
-   * @param {AddressSpaceContext} context The address space context.
-   * @returns {number} The output offset.
+   * @param address The address to convert.
+   * @param context The address space context.
+   * @returns The output offset.
    */
   toOutputOffset(address3, context) {
     if (address3 < 0 || address3 > 16777215) {
@@ -59627,9 +60427,9 @@ var snesRomAddressSpace = {
    * Inverse of {@link snesRomAddressSpace.toOutputOffset}: file offset → a
    * canonical CPU address (usually the FastROM mirror). `-1` if the offset
    * cannot exist for this mapper.
-   * @param {number} offset The offset to convert.
-   * @param {AddressSpaceContext} context The address space context.
-   * @returns {number} The canonical CPU address.
+   * @param offset The offset to convert.
+   * @param context The address space context.
+   * @returns The canonical CPU address.
    */
   fromOutputOffset(offset, context) {
     if (offset < 0) {
@@ -63170,7 +63970,7 @@ function verifySnesAssetRequirements(requirements, entries3, catalog) {
         const option = entry.call?.options[key3];
         return option?.kind === "string" && option.value === value;
       })
-    ).sort((a, b) => a.start - b.start);
+    ).toSorted((a, b) => a.start - b.start);
     for (const entry of matching) {
       if (entry.start > covered) {
         break;
@@ -63674,8 +64474,8 @@ var SnesStructExpressionResolver = class {
   }
   /**
    * Check every intermediate value and preserve explicit grouping in the generated assembly.
-   * @param {unknown} input Single-line expression, at most 1,024 characters and 128 AST nodes.
-   * @returns {SnesStructExpression} Native source and exact integer value with referenced owners.
+   * @param input Single-line expression, at most 1,024 characters and 128 AST nodes.
+   * @returns Native source and exact integer value with referenced owners.
    */
   resolve(input2) {
     if (typeof input2 !== "string" || !input2.trim() || input2.length > 1024 || /[\n\r#;]/.test(input2)) {
@@ -66393,16 +67193,16 @@ function publish2(repository, journal, signal, onStage) {
   try {
     for (let i = 0; i < files.length; i++) {
       signal?.throwIfAborted();
-      const item = journal.files[i], file = sourceFile(repository, item.path), hash3 = currentHash(file);
-      if (hash3 !== item.before && hash3 !== item.after) {
+      const item = journal.files[i], file = sourceFile(repository, item.path), observed = currentHash(file);
+      if (observed !== item.before && observed !== item.after) {
         throw new Error(`Source changed during publication: ${item.path}.`);
       }
-      if (hash3 !== item[journal.direction]) {
+      if (observed !== item[journal.direction]) {
         const bytes3 = stagedBytes(repository, journal, i, journal.direction);
         if (bytes3 === null) {
           fs17.unlinkSync(file);
           syncDirectory(path21.dirname(file));
-        } else if (hash3 === null) {
+        } else if (observed === null) {
           const temporary = path21.join(path21.dirname(file), `.source-create-${randomUUID4()}`);
           try {
             durableReplace(temporary, bytes3, 420);
@@ -67395,6 +68195,7 @@ var SourceSnapshotIndex = class {
     assertSourceObjectId(tree);
     return tree;
   }
+  /** Release the private scratch index and any temporary Git state. */
   dispose() {
     this.#scratch.dispose();
   }
@@ -68468,7 +69269,7 @@ function portableValue(value, depth = 0, budget = { nodes: 0 }) {
       ])
     };
   }
-  if (typeof value === "object" && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
+  if (typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
     const result = {};
     for (const key3 of Object.keys(value).toSorted()) {
       if (key3 === "$uttoriMap") {
@@ -68872,11 +69673,11 @@ function assertAssemblyModule(input2) {
   const dependencies = /* @__PURE__ */ new Set();
   for (const item of list(module.dependencies, "Dependencies")) {
     const dependency = record5(item, "Dependency");
-    const path69 = textValue(dependency.path, "Dependency path");
-    if (dependencies.has(path69)) {
+    const path70 = textValue(dependency.path, "Dependency path");
+    if (dependencies.has(path70)) {
       throw new Error("Duplicate dependency identity.");
     }
-    dependencies.add(path69);
+    dependencies.add(path70);
     if (dependency.size !== void 0) {
       integer7(dependency.size, "Dependency size");
     }
@@ -68921,7 +69722,7 @@ function decodeObject(bytes3) {
       throw new Error("Noncanonical or overlapping section payloads.");
     }
     consumed += size;
-    return { ...fields2, bytes: payload.slice(start, start + size) };
+    return Object.assign(fields2, { bytes: payload.slice(start, start + size) });
   });
   if (consumed !== payload.length) {
     throw new Error("Unowned object payload bytes.");
@@ -69327,6 +70128,7 @@ var LinkSymbols = class {
     }
   }
   recipe;
+  /** Final section placements keyed by module/section allocation identity. */
   allocations;
   modules = /* @__PURE__ */ new Map();
   exports = /* @__PURE__ */ new Map();
@@ -69346,6 +70148,7 @@ var LinkSymbols = class {
     }
     return linkInteger(allocation.runAddress + offset);
   }
+  /** Recursively reduces link expressions with cycle detection and depth limits. */
   evaluate(expression2, source2, depth = 0) {
     try {
       if (depth > 128) {
@@ -69706,7 +70509,7 @@ var LINKER_VERSION = "1";
 function linkObjects(options) {
   options.signal?.throwIfAborted();
   assertLinkRecipe(options.recipe);
-  if (options.toolchainSha256 !== void 0 && !/^[a-f0-9]{64}$/.test(options.toolchainSha256)) {
+  if (options.toolchainSha256 !== void 0 && !/^[\da-f]{64}$/.test(options.toolchainSha256)) {
     throw new LinkError("toolchain-identity", "Toolchain identity must be a SHA-256 digest.");
   }
   const recipe = structuredClone(options.recipe);
@@ -69873,20 +70676,20 @@ function linkedDebugMap(modules, symbols, output, target) {
       new Map(module.dependencies.map((input2) => [input2.path, input2]))
     ])
   );
-  const sourceId = (module, path69) => {
-    const key3 = allocationKey(module.id, path69);
+  const sourceId = (module, path70) => {
+    const key3 = allocationKey(module.id, path70);
     let id2 = sourceIds.get(key3);
     if (id2 === void 0) {
-      const dependency = dependencies.get(module.id)?.get(path69);
+      const dependency = dependencies.get(module.id)?.get(path70);
       if (!dependency) {
         throw new LinkError(
           "source-metadata",
-          `Module '${module.id}' has no dependency receipt for '${path69}'.`
+          `Module '${module.id}' has no dependency receipt for '${path70}'.`
         );
       }
       id2 = mapping.fileList.length;
       mapping.fileList.push({
-        name: path69,
+        name: path70,
         sha256: dependency.sha256,
         size: dependency.size ?? 0,
         crc: dependency.crc32 ?? 0
@@ -76760,6 +77563,11 @@ var Cpu6502Decoder = class {
   }
   cpu;
   #forms;
+  /**
+   * Decodes one instruction at `context.offset`.
+   * @param context Byte source, offset, and 16-bit logical PC.
+   * @returns Decoded instruction, or an error for an invalid PC, missing/truncated bytes, or an opcode absent from this CPU's table.
+   */
   decode(context) {
     const { source: source2, offset, logicalAddress } = context;
     if (!Number.isInteger(logicalAddress) || logicalAddress < 0 || logicalAddress > 65535) {
@@ -76800,7 +77608,7 @@ var Cpu6502Decoder = class {
         message: "Truncated 6502 instruction."
       };
     }
-    let value = bytes3[1] ?? 0;
+    let value = bytes3.at(1) ?? 0;
     if (size === 3) {
       value |= bytes3[2] << 8;
     }
@@ -76876,7 +77684,7 @@ function formatCpu6502Instruction(instruction, addressExpression) {
   if (!form.canonical) {
     return `.byte ${[...instruction.bytes].map((byte) => hex12(byte)).join(", ")} ; ${form.mnemonic}`;
   }
-  const operand = instruction.operands[0];
+  const operand = instruction.operands.at(0);
   const value = operand?.value ?? 0;
   let text4 = "";
   let suffix = "";
@@ -77001,10 +77809,10 @@ function nesPrgOffset(rom, address3, state) {
   if (window2 === 3) {
     bank = count2 - 1;
   } else if (window2 === 1) {
-    bank = state.banks[7];
+    bank = state.banks.at(7);
   } else if (state.prgMode !== null) {
     const fixed = window2 === 2 && state.prgMode === 0 || window2 === 0 && state.prgMode === 1;
-    bank = fixed ? count2 - 2 : state.banks[6];
+    bank = fixed ? count2 - 2 : state.banks.at(6);
   }
   if (bank === null || bank === void 0) {
     return void 0;
@@ -77496,15 +78304,26 @@ import fs36 from "node:fs";
 // packages/plugin-65xx/src/nes/cartridge.ts
 var NesCartridge = class {
   #bytes;
+  /** iNES mapper number derived from the header. */
   mapper;
+  /** Whether the header advertises battery-backed PRG RAM. */
   battery;
+  /** Nametable mirroring mode declared in the header. */
   mirroring;
+  /** Optional 512-byte trainer section immediately after the header. */
   trainer;
+  /** PRG ROM section layout within the image. */
   prg;
+  /** CHR ROM section layout within the image. */
   chr;
+  /** Bytes after PRG and CHR, when present in the supplied image. */
   trailing;
   /** Legacy zero means unspecified; mapper-specific defaults belong to the machine profile. */
   declaredPrgRamSize;
+  /**
+   * Parse a complete iNES image and freeze section layout derived from the header.
+   * @param input Full cartridge bytes including the 16-byte header.
+   */
   constructor(input2) {
     this.#bytes = Uint8Array.from(input2);
     const bytes3 = this.#bytes;
@@ -77533,15 +78352,29 @@ var NesCartridge = class {
     }
     this.trailing = Object.freeze({ offset: end, size: bytes3.length - end });
   }
+  /** Total byte length of the parsed cartridge image. */
   get size() {
     return this.#bytes.length;
   }
+  /**
+   * Copy the full cartridge image so callers cannot mutate the parsed original.
+   * @returns Defensive copy of all cartridge bytes.
+   */
   bytes() {
     return this.#bytes.slice();
   }
+  /**
+   * Copy the 16-byte iNES header prefix.
+   * @returns Header bytes independent of the internal buffer.
+   */
   header() {
     return this.#bytes.slice(0, 16);
   }
+  /**
+   * Copy one parsed section range from the cartridge image.
+   * @param section Offset and size describing a contiguous cartridge range.
+   * @returns Bytes for the requested section only.
+   */
   section(section) {
     return this.#bytes.slice(section.offset, section.offset + section.size);
   }
@@ -77737,18 +78570,24 @@ function analyzeNesProject(options) {
   }));
   records.push(...observed);
   records.push(
-    ...result.edges.filter((edge) => result.nodes.some((node) => node.id === edge.from)).map((edge) => ({
-      id: `nes:${edge.id}`,
-      kind: "cfg-edge",
-      addressSpace: "nes.cpu",
-      from: `nes:${edge.from}`,
-      fromAddress: edge.fromAddress,
-      ...edge.to && result.nodes.some((node) => node.id === edge.to) ? { to: `nes:${edge.to}` } : {},
-      toAddress: edge.toAddress,
-      edgeKind: edge.kind,
-      indirect: edge.indirect,
-      evidence: [.../* @__PURE__ */ new Set([evidence.id, ...edge.evidence])]
-    }))
+    ...result.edges.filter((edge) => result.nodes.some((node) => node.id === edge.from)).map(
+      (edge) => Object.assign(
+        {
+          id: `nes:${edge.id}`,
+          kind: "cfg-edge",
+          addressSpace: "nes.cpu",
+          from: `nes:${edge.from}`,
+          fromAddress: edge.fromAddress
+        },
+        edge.to && result.nodes.some((node) => node.id === edge.to) ? { to: `nes:${edge.to}` } : {},
+        {
+          toAddress: edge.toAddress,
+          edgeKind: edge.kind,
+          indirect: edge.indirect,
+          evidence: [.../* @__PURE__ */ new Set([evidence.id, ...edge.evidence])]
+        }
+      )
+    )
   );
   records.push(
     ...result.functions.map((fn) => ({
@@ -77855,12 +78694,11 @@ function analyzeNesProject(options) {
     const node = result.nodes.find(
       (candidate) => candidate.fileOffset <= range2.start && candidate.fileOffset + candidate.size > range2.start
     );
-    return {
-      ...range2,
+    return Object.assign({}, range2, {
       addressSpace: "nes.cpu",
       address: node.address,
       recordIds: [`nes:${node.id}`]
-    };
+    });
   });
   return {
     status: result.status,
@@ -78313,7 +79151,7 @@ function nesSourceSegments(rom, _nodes = []) {
 function exportNesSource(rom, nodes, romSha256, research = {}, exportOptions = {}) {
   const segments = nesSourceSegments(rom, nodes);
   const files = [];
-  const add = (path69, value) => files.push({ path: path69, bytes: typeof value === "string" ? Buffer.from(value) : value });
+  const add = (path70, value) => files.push({ path: path70, bytes: typeof value === "string" ? Buffer.from(value) : value });
   const textTables = /* @__PURE__ */ new Map();
   const names = projectSourceLabelNames(
     research.labels ?? [],
@@ -79235,14 +80073,15 @@ function createNesGraphicsProjection() {
     },
     finish(sha2564) {
       const evidence = [`runtime:graphics:${sha2564}`];
-      return [...facts].map(([key3, entry]) => ({
-        ...entry.fact,
-        count: entry.count,
-        kind: "runtime-graphics-access",
-        architecture: "65xx.2a03",
-        id: `${evidence[0]}:${key3}`,
-        evidence
-      }));
+      return [...facts].map(
+        ([key3, entry]) => Object.assign({}, entry.fact, {
+          count: entry.count,
+          kind: "runtime-graphics-access",
+          architecture: "65xx.2a03",
+          id: `${evidence[0]}:${key3}`,
+          evidence
+        })
+      );
     }
   };
 }
@@ -80346,20 +81185,20 @@ function ld65LinkRecipe(config, target = "65xx.nes") {
   }
   return {
     target,
-    regions: [...config.memories.values()].map((region) => ({
-      name: region.name,
-      start: region.start,
-      size: region.size,
-      ...region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
-      ...region.fill ? { fillByte: region.fillval } : {},
-      addressSpace: "65xx.ines-address-space"
-    })),
-    placements: [...config.segments.values()].map((segment) => ({
-      section: segment.name,
-      load: segment.load,
-      run: segment.run,
-      ...segment.start !== void 0 ? { start: segment.start } : {}
-    })),
+    regions: [...config.memories.values()].map(
+      (region) => Object.assign(
+        { name: region.name, start: region.start, size: region.size },
+        region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
+        region.fill ? { fillByte: region.fillval } : {},
+        { addressSpace: "65xx.ines-address-space" }
+      )
+    ),
+    placements: [...config.segments.values()].map(
+      (segment) => Object.assign(
+        { section: segment.name, load: segment.load, run: segment.run },
+        segment.start !== void 0 ? { start: segment.start } : {}
+      )
+    ),
     // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
     symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()]
   };
@@ -81678,10 +82517,15 @@ var TypedArch65xx = class {
     }
   }
   cpu;
+  /** 65xx encodings can be emitted into relocatable objects. */
   supportsRelocatable = true;
+  /** Unbound operand templates stay errors at encode time, not parse time. */
   deferOperandBindingErrors = true;
+  /** Assembly forms enabled for this CPU's feature set. */
   forms;
+  /** Editor/LSP instruction catalog derived from `forms`. */
   catalog;
+  /** Lookup of enabled forms grouped by canonical mnemonic. */
   formsByMnemonic = /* @__PURE__ */ new Map();
   /** Failed binding retains parsed punctuation so addressing errors keep precedence over value reads. */
   syntax(frame) {
@@ -81725,6 +82569,7 @@ var TypedArch65xx = class {
     }
     return prepare65xx(this.syntax(frame), frame);
   }
+  /** Return encoded size for the resolved operand frame without emitting bytes. */
   estimate(frame) {
     const state = this.classification(frame);
     const form = this.resolveForm(frame, this.syntax(frame), state);
@@ -82503,13 +83348,16 @@ function register65xxContributions(context) {
           },
           // The flat NES lifecycle fills the complete cartridge with the target byte, including MEMORY gaps.
           // Keep its established output here; ld65LinkRecipe remains available for explicit per-region policies.
-          ...recipe.regions.map((region) => ({
-            ...region,
-            ...region.outputOffset !== void 0 ? {
-              outputOffset: region.outputOffset + nes.header.length,
-              fillByte: nes.fillByte
-            } : {}
-          }))
+          ...recipe.regions.map(
+            (region) => Object.assign(
+              {},
+              region,
+              region.outputOffset !== void 0 ? {
+                outputOffset: region.outputOffset + nes.header.length,
+                fillByte: nes.fillByte
+              } : {}
+            )
+          )
         ]
       };
     }
@@ -83020,11 +83868,6 @@ async function executeSourceOperation(operation2, host2 = defaultSourceHost) {
   readSourceOperation(operation2);
   operation2.signal?.throwIfAborted();
   if (operation2.captures !== void 0) {
-    if (operation2.action !== "import" || operation2.capture !== void 0) {
-      throw new Error(
-        "A capture queue is only valid for import and cannot be combined with capture."
-      );
-    }
     return importSourceCaptures(
       operation2.captures,
       (capture, onProgress) => executeSourceOperation(
@@ -84602,12 +85445,12 @@ async function executeAssetFileOperation(operation2, options = {}) {
 }
 
 // packages/workflows/src/asset-source/operations.ts
-import fs44 from "node:fs";
-import path60 from "node:path";
+import fs45 from "node:fs";
+import path61 from "node:path";
 
 // packages/workflows/src/asset-source-conversion.ts
-import fs43 from "node:fs";
-import path58 from "node:path";
+import fs44 from "node:fs";
+import path59 from "node:path";
 
 // packages/workflows/src/asset-source-edits.ts
 function maskComments(text4) {
@@ -84700,12 +85543,9 @@ function editAssetCall(text4, location2, options) {
   return text4;
 }
 
-// packages/workflows/src/asset-source-conversion.ts
-function assertBuild(build) {
-  if (build.diagnostics.length) {
-    throw new Error(build.diagnostics.map((item) => item.message).join("\n"));
-  }
-}
+// packages/workflows/src/asset-source-inventory.ts
+import fs43 from "node:fs";
+import path58 from "node:path";
 function assetSourceAssemblyInventory(root) {
   const absoluteRoot = fs43.realpathSync(root);
   const project = parseSourceProject(
@@ -84736,6 +85576,13 @@ function assetSourceAssemblyInventory(root) {
   }
   return files.toSorted();
 }
+
+// packages/workflows/src/asset-source-conversion.ts
+function assertBuild(build) {
+  if (build.diagnostics.length) {
+    throw new Error(build.diagnostics.map((item) => item.message).join("\n"));
+  }
+}
 var AssetSourceConversionService = class {
   constructor(adapters, host2 = savedAssetSourceHost, codecs = indexedSourceCodecs()) {
     this.adapters = adapters;
@@ -84750,7 +85597,7 @@ var AssetSourceConversionService = class {
     signal?.throwIfAborted();
     const build = await this.host.inspect(request.directory, void 0, signal);
     assertBuild(build);
-    const file = fs43.realpathSync(path58.resolve(build.root, request.file));
+    const file = fs44.realpathSync(path59.resolve(build.root, request.file));
     const textBytes = build.snapshots.get(file);
     if (!textBytes) {
       throw new Error("The selected file is outside the current assembly context.");
@@ -84782,24 +85629,25 @@ var AssetSourceConversionService = class {
     const current = this.codecs.identify(sourceBytes, { path: source2 });
     return { build, selected, source: source2, current };
   }
+  /** Plan and validate a representation switch for the includeAsset under the cursor. */
   async prepare(request, signal) {
     const { build, selected, source: source2, current } = await this.resolve(request, signal);
-    const projectFile = path58.join(build.root, ".uttori/project.json");
-    const projectBytes = fs43.readFileSync(projectFile);
+    const projectFile = path59.join(build.root, ".uttori/project.json");
+    const projectBytes = fs44.readFileSync(projectFile);
     const inventory2 = assetSourceAssemblyInventory(build.root);
     const target = this.codecs.get(request.representation);
     if (current.id === target.id) {
       throw new Error(`Asset already uses ${target.id}.`);
     }
-    const destination = request.destination ? path58.resolve(build.root, request.destination) : source2.replace(/\.[^.]+$/, target.extensions[0]);
+    const destination = request.destination ? path59.resolve(build.root, request.destination) : source2.replace(/\.[^.]+$/, target.extensions[0]);
     const name4 = (absolute) => {
-      const relative5 = path58.relative(build.root, absolute).split(path58.sep).join("/");
+      const relative5 = path59.relative(build.root, absolute).split(path59.sep).join("/");
       assertSourcePath(relative5);
       return relative5;
     };
     name4(source2);
     const destinationName = name4(destination);
-    if (fs43.existsSync(destination)) {
+    if (fs44.existsSync(destination)) {
       throw new Error(
         `Conversion destination already exists: ${destinationName}. Choose a different destination.`
       );
@@ -84878,7 +85726,7 @@ var AssetSourceConversionService = class {
     const unresolvedDeclarations = inventory2.filter((file) => !build.snapshots.has(file));
     const incompleteScope = unresolvedDeclarations.length > 0;
     changes = changes.filter((change) => {
-      if (change.after === null && (incompleteScope || after.snapshots.has(path58.resolve(build.root, change.path)))) {
+      if (change.after === null && (incompleteScope || after.snapshots.has(path59.resolve(build.root, change.path)))) {
         retained.add(change.path);
         return false;
       }
@@ -84914,22 +85762,22 @@ var AssetSourceConversionService = class {
       throw new Error("Assembly discovery changed during conversion; try again.");
     }
     for (const snapshot of plan2.snapshots) {
-      if (sourceContentHash(fs43.readFileSync(path58.resolve(root, snapshot.path))) !== snapshot.sha256) {
+      if (sourceContentHash(fs44.readFileSync(path59.resolve(root, snapshot.path))) !== snapshot.sha256) {
         throw new Error(`Source changed during conversion: ${snapshot.path}.`);
       }
     }
     for (const change of plan2.changes) {
-      const file = path58.join(root, change.path);
-      const exists = fs43.existsSync(file);
-      if (change.before === null && exists || change.before !== null && (!exists || sourceContentHash(fs43.readFileSync(file)) !== sourceContentHash(change.before))) {
+      const file = path59.join(root, change.path);
+      const exists = fs44.existsSync(file);
+      if (change.before === null && exists || change.before !== null && (!exists || sourceContentHash(fs44.readFileSync(file)) !== sourceContentHash(change.before))) {
         throw new Error(`Conversion has a stale or colliding source path: ${change.path}.`);
       }
     }
     const dirty = this.host.drafts?.().filter(
       (draft) => plan2.snapshots.some(
-        (snapshot) => path58.resolve(root, snapshot.path) === path58.resolve(root, draft.path)
+        (snapshot) => path59.resolve(root, snapshot.path) === path59.resolve(root, draft.path)
       ) || plan2.changes.some(
-        (change) => path58.resolve(root, change.path) === path58.resolve(root, draft.path)
+        (change) => path59.resolve(root, change.path) === path59.resolve(root, draft.path)
       )
     ) ?? [];
     if (dirty.length) {
@@ -84945,8 +85793,8 @@ var AssetSourceConversionService = class {
     const root = opened.repository.root;
     await this.host.beforePublish?.([
       .../* @__PURE__ */ new Set([
-        ...plan2.snapshots.map((snapshot) => path58.resolve(root, snapshot.path)),
-        ...plan2.changes.map((change) => path58.join(root, change.path))
+        ...plan2.snapshots.map((snapshot) => path59.resolve(root, snapshot.path)),
+        ...plan2.changes.map((change) => path59.join(root, change.path))
       ])
     ]);
     const transaction = applySourceFileTransaction(opened.repository, plan2.changes, {
@@ -84966,7 +85814,7 @@ var AssetSourceConversionService = class {
 };
 
 // packages/workflows/src/asset-source/raster-adapter.ts
-import path59 from "node:path";
+import path60 from "node:path";
 var rasterSourceConversionAdapter = {
   id: "indexed.raster",
   supports: (emission) => emission.format.startsWith("snes.tile."),
@@ -84985,17 +85833,17 @@ var rasterSourceConversionAdapter = {
       bytes: await context.codecs.get(context.representation).encode(document2),
       changes: [
         {
-          path: path59.relative(context.build.root, context.source).split(path59.sep).join("/"),
+          path: path60.relative(context.build.root, context.source).split(path60.sep).join("/"),
           before: source2,
           after: null
         }
       ],
       updates: related.map((emission) => ({
         emission,
-        path: path59.relative(
-          path59.dirname(context.build.mapping.fileList[emission.fileIdx].name),
+        path: path60.relative(
+          path60.dirname(context.build.mapping.fileList[emission.fileIdx].name),
           context.destination
-        ).split(path59.sep).join("/"),
+        ).split(path60.sep).join("/"),
         values: {}
       })),
       retained: []
@@ -85070,7 +85918,7 @@ async function executeAssetSourceOperation(value, options = {}) {
     drafts: () => "drafts" in operation2 ? operation2.drafts ?? [] : []
   };
   if (operation2.action === "asset-source-target") {
-    const text4 = fs44.readFileSync(path60.resolve(operation2.directory, operation2.file), "utf8");
+    const text4 = fs45.readFileSync(path61.resolve(operation2.directory, operation2.file), "utf8");
     const commands = preprocessBlockCommands(text4).sourcedCommands;
     const lineCount = text4.split("\n").length;
     const candidate = commands.some((command, index) => {
@@ -85090,11 +85938,11 @@ async function executeAssetSourceOperation(value, options = {}) {
       return void 0;
     }
     const inputs = [...resolved.build.snapshots].map(([file, bytes3]) => ({
-      path: path60.relative(resolved.build.root, file).split(path60.sep).join("/"),
+      path: path61.relative(resolved.build.root, file).split(path61.sep).join("/"),
       sha256: sourceContentHash(bytes3)
     }));
     const cacheable = resolved.build.bundledToolchain === true && inputs.length <= 65536 && resolved.build.mapping.assets.length <= 65536 && inputs.every(
-      (input2) => !path60.isAbsolute(input2.path) && input2.path !== ".." && !input2.path.startsWith("../")
+      (input2) => !path61.isAbsolute(input2.path) && input2.path !== ".." && !input2.path.startsWith("../")
     );
     const menus = [];
     if (cacheable) {
@@ -85106,7 +85954,7 @@ async function executeAssetSourceOperation(value, options = {}) {
           continue;
         }
         const file = resolved.build.mapping.fileList[emission.fileIdx].name;
-        const relative5 = path60.relative(resolved.build.root, file).split(path60.sep).join("/");
+        const relative5 = path61.relative(resolved.build.root, file).split(path61.sep).join("/");
         try {
           let source2 = texts.get(emission.fileIdx);
           if (!source2) {
@@ -85186,7 +86034,7 @@ async function executeAssetSourceOperation(value, options = {}) {
     {
       beforePublish: async (paths) => {
         const dirty = operation2.drafts?.filter(
-          (draft) => paths.includes(path60.resolve(repository.root, draft.path))
+          (draft) => paths.includes(path61.resolve(repository.root, draft.path))
         ) ?? [];
         if (dirty.length) {
           throw new Error("Save relevant conversion documents before completing publication.");
@@ -85211,7 +86059,7 @@ async function executeAssetSourceOperation(value, options = {}) {
 
 // packages/game-secret-of-mana/src/room-adapter.ts
 import { createHash as createHash23 } from "node:crypto";
-import path61 from "node:path";
+import path62 from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // packages/assets/src/secret-of-mana/som-room-interchange.ts
@@ -85810,7 +86658,7 @@ function json(value) {
   return new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
 }
 function relative2(context, absolute) {
-  return name2(path61.relative(context.build.root, absolute).split(path61.sep).join("/"));
+  return name2(path62.relative(context.build.root, absolute).split(path62.sep).join("/"));
 }
 function romOffset(address3) {
   if (!Number.isInteger(address3) || address3 < 12582912 || address3 > 16777215) {
@@ -85884,7 +86732,7 @@ function inspect(context, selection) {
   let stateBytes = 0;
   const rooms = selection.rooms.map((file) => {
     const room = parseRoomAsset({ bytes: source2(file), mediaType: "application/json" }), emissions = context.build.mapping.assets.filter(
-      (entry) => entry.format === "som.room" && context.build.mapping.fileList[entry.assetFileIdx].name === path61.join(context.build.root, file)
+      (entry) => entry.format === "som.room" && context.build.mapping.fileList[entry.assetFileIdx].name === path62.join(context.build.root, file)
     );
     const parts2 = /* @__PURE__ */ new Set();
     for (const entry of emissions) {
@@ -86140,7 +86988,7 @@ var somRoomSourceAdapter = {
     const effects4 = [];
     for (const file of files) {
       for (const emission of context.build.mapping.assets) {
-        if (context.build.mapping.fileList[emission.assetFileIdx].name !== path61.join(context.build.root, file.path)) {
+        if (context.build.mapping.fileList[emission.assetFileIdx].name !== path62.join(context.build.root, file.path)) {
           continue;
         }
         if (emission.format !== "raw" || emission.outputOffset === void 0 || emission.inputStart === void 0 || emission.inputEnd === void 0 || emission.inputEnd - emission.inputStart !== emission.size) {
@@ -86222,10 +87070,10 @@ var somRoomSourceAdapter = {
 
 // packages/game-secret-of-mana/src/source-adapter.ts
 import { randomUUID as randomUUID13 } from "node:crypto";
-import fs45 from "node:fs";
-import path62 from "node:path";
+import fs46 from "node:fs";
+import path63 from "node:path";
 var json2 = (value) => new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
-var relative3 = (from, to) => path62.relative(path62.dirname(from), to).split(path62.sep).join("/");
+var relative3 = (from, to) => path63.relative(path63.dirname(from), to).split(path63.sep).join("/");
 function isRecord48(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -86276,7 +87124,7 @@ var somSourceConversionAdapter = {
     const nativeFiles = /* @__PURE__ */ new Map();
     const updates = [];
     const projectName = (absolute) => {
-      const result = path62.relative(build.root, absolute).split(path62.sep).join("/");
+      const result = path63.relative(build.root, absolute).split(path63.sep).join("/");
       assertSourcePath(result);
       return result;
     };
@@ -86431,9 +87279,9 @@ var somSourceConversionAdapter = {
         values
       });
     }
-    const declaration = path62.join(build.root, "asset-includes.json");
-    if (fs45.existsSync(declaration)) {
-      const before = fs45.readFileSync(declaration);
+    const declaration = path63.join(build.root, "asset-includes.json");
+    if (fs46.existsSync(declaration)) {
+      const before = fs46.readFileSync(declaration);
       if (before.length > 16 * 1024 * 1024) {
         throw new Error("Asset include declarations exceed their budget.");
       }
@@ -86478,7 +87326,7 @@ var somAssetSourceHost = {
 
 // packages/game-secret-of-mana/src/sprite-adapter.ts
 import { createHash as createHash24 } from "node:crypto";
-import path63 from "node:path";
+import path64 from "node:path";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 import { gunzipSync } from "node:zlib";
 
@@ -86759,19 +87607,19 @@ function equal4(a, b) {
   return Buffer.from(a).equals(b);
 }
 function relative4(context, absolute) {
-  const result = path63.relative(context.build.root, absolute).split(path63.sep).join("/");
+  const result = path64.relative(context.build.root, absolute).split(path64.sep).join("/");
   assertSourcePath(result);
   return result;
 }
 function graphics(context, selection) {
   const result = context.build.mapping.assets.filter(
-    (entry) => context.build.mapping.fileList[entry.assetFileIdx]?.name === path63.join(context.build.root, selection.image)
+    (entry) => context.build.mapping.fileList[entry.assetFileIdx]?.name === path64.join(context.build.root, selection.image)
   );
   if (!result.length) {
     throw new Error(`No current emitting include for ${selection.image}.`);
   }
   for (const emission of result) {
-    if (emission.format !== "som.sprite.frames" && emission.format !== "som.boss.graphics" || !emission.conversion || emission.conversion.transforms.length || emission.transforms.length || emission.outputOffset === void 0 || emission.conversion.resources[String(emission.conversion.options.layout)] !== path63.join(context.build.root, selection.layout) || emission.conversion.resources[String(emission.conversion.options.palettes)] !== path63.join(context.build.root, selection.catalog)) {
+    if (emission.format !== "som.sprite.frames" && emission.format !== "som.boss.graphics" || !emission.conversion || emission.conversion.transforms.length || emission.transforms.length || emission.outputOffset === void 0 || emission.conversion.resources[String(emission.conversion.options.layout)] !== path64.join(context.build.root, selection.layout) || emission.conversion.resources[String(emission.conversion.options.palettes)] !== path64.join(context.build.root, selection.catalog)) {
       throw new Error(`Unsupported or incomplete current graphics include: ${selection.image}.`);
     }
     if (emission.format === "som.boss.graphics" && (emission.conversion.options.sizePolicy ?? "fixed") !== "fixed") {
@@ -86869,7 +87717,7 @@ function inspect2(context, selection) {
       user,
       catalog,
       user.id === selection.atlasId ? emitted : context.build.mapping.assets.filter(
-        (entry) => entry.format === "som.boss.graphics" && context.build.mapping.fileList[entry.assetFileIdx]?.name === path63.join(context.build.root, user.image)
+        (entry) => entry.format === "som.boss.graphics" && context.build.mapping.fileList[entry.assetFileIdx]?.name === path64.join(context.build.root, user.image)
       )
     )
   );
@@ -86913,7 +87761,7 @@ function inspect2(context, selection) {
   }
   for (const emission of context.build.mapping.assets) {
     if (all.some(
-      (user) => context.build.mapping.fileList[emission.assetFileIdx]?.name === path63.join(
+      (user) => context.build.mapping.fileList[emission.assetFileIdx]?.name === path64.join(
         context.build.root,
         selection.atlases.find((item) => item.id === user.id).image
       )
@@ -87085,7 +87933,7 @@ var somSpriteSourceAdapter = {
         }
       }
       for (const emission of context.build.mapping.assets.filter(
-        (entry) => entry.format === "som.palette.bgr555" && context.build.mapping.fileList[entry.assetFileIdx]?.name === path63.join(context.build.root, selection.catalog)
+        (entry) => entry.format === "som.palette.bgr555" && context.build.mapping.fileList[entry.assetFileIdx]?.name === path64.join(context.build.root, selection.catalog)
       )) {
         const conversion = emission.conversion;
         if (!conversion || conversion.transforms.length || emission.outputOffset === void 0 || typeof conversion.options.palette !== "string") {
@@ -87306,12 +88154,12 @@ ${assetUsage}`
 }
 
 // packages/cli/src/build.ts
-import path65 from "node:path";
+import path66 from "node:path";
 
 // packages/workflows/src/build.ts
 import { randomUUID as randomUUID14 } from "node:crypto";
-import fs46 from "node:fs";
-import path64 from "node:path";
+import fs47 from "node:fs";
+import path65 from "node:path";
 import { crc32 as crc325 } from "node:zlib";
 
 // packages/plugin-loader-node/src/build-configuration.ts
@@ -87441,7 +88289,7 @@ function readAssemblyBuildOperation(value) {
 
 // packages/workflows/src/source-recipes.ts
 function mergeModuleRecipes(recipes) {
-  const first = recipes[0];
+  const first = recipes.at(0);
   if (!first) {
     throw new Error("Source modules did not provide a link recipe. Supply an explicit recipe.");
   }
@@ -87564,7 +88412,7 @@ function assembleObject(source2, id2, loaded, files, signal, sourceAdapter, reci
     module: { id: id2, ...sourceAdapter ? { sourceAdapter } : {} }
   });
   try {
-    assembler.setIncludePaths([.../* @__PURE__ */ new Set([path64.dirname(source2), ...loaded.includePaths])]);
+    assembler.setIncludePaths([.../* @__PURE__ */ new Set([path65.dirname(source2), ...loaded.includePaths])]);
     assembler.assembleSource(files.readTextFile(source2), source2);
     signal?.throwIfAborted();
     const object7 = encodeObject(assembler.getAssemblyModule());
@@ -87583,10 +88431,10 @@ function assertOutputIsNotInput(file, files) {
   if (files.snapshots.has(file)) {
     throw new Error(`Build output would overwrite an input: ${file}`);
   }
-  if (fs46.existsSync(file)) {
-    const destination = fs46.statSync(file);
+  if (fs47.existsSync(file)) {
+    const destination = fs47.statSync(file);
     for (const input2 of files.snapshots.keys()) {
-      const source2 = fs46.statSync(input2);
+      const source2 = fs47.statSync(input2);
       if (source2.dev === destination.dev && source2.ino === destination.ino) {
         throw new Error(`Build output aliases an input: ${file}`);
       }
@@ -87595,13 +88443,13 @@ function assertOutputIsNotInput(file, files) {
 }
 function publishArtifact(file, bytes3, files) {
   assertOutputIsNotInput(file, files);
-  fs46.mkdirSync(path64.dirname(file), { recursive: true });
-  const temporary = path64.join(path64.dirname(file), `.${path64.basename(file)}.${randomUUID14()}.tmp`);
+  fs47.mkdirSync(path65.dirname(file), { recursive: true });
+  const temporary = path65.join(path65.dirname(file), `.${path65.basename(file)}.${randomUUID14()}.tmp`);
   try {
-    fs46.writeFileSync(temporary, bytes3, { flag: "wx" });
-    fs46.renameSync(temporary, file);
+    fs47.writeFileSync(temporary, bytes3, { flag: "wx" });
+    fs47.renameSync(temporary, file);
   } finally {
-    fs46.rmSync(temporary, { force: true });
+    fs47.rmSync(temporary, { force: true });
   }
 }
 async function readyToPublish(files, controls) {
@@ -87614,18 +88462,18 @@ async function readyToPublish(files, controls) {
 async function executeAssemblyBuildOperation(value, controls = {}, host2 = defaultBuildHost) {
   const operation2 = readAssemblyBuildOperation(value);
   controls.signal?.throwIfAborted();
-  const root = path64.resolve(operation2.directory);
+  const root = path65.resolve(operation2.directory);
   const files = new NodeAssemblySnapshotProvider();
   if (operation2.action === "library") {
     controls.onProgress?.("Indexing serialized library members.");
     const bytes3 = encodeLibrary(
       operation2.objects.map((name4) => ({
-        name: path64.basename(name4),
-        object: files.readFile(path64.resolve(root, name4))
+        name: path65.basename(name4),
+        object: files.readFile(path65.resolve(root, name4))
       }))
     );
     await readyToPublish(files, controls);
-    const outputFile = path64.resolve(root, operation2.output);
+    const outputFile = path65.resolve(root, operation2.output);
     publishArtifact(outputFile, bytes3, files);
     return { kind: "library", outputFile, sha256: artifactHash(bytes3), bytes: bytes3.length };
   }
@@ -87636,7 +88484,7 @@ async function executeAssemblyBuildOperation(value, controls = {}, host2 = defau
     try {
       controls.onProgress?.(`Assembling module ${operation2.module}.`);
       bytes3 = assembleObject(
-        path64.resolve(root, operation2.source),
+        path65.resolve(root, operation2.source),
         operation2.module,
         loaded,
         files,
@@ -87648,7 +88496,7 @@ async function executeAssemblyBuildOperation(value, controls = {}, host2 = defau
       await loaded.dispose();
     }
     await readyToPublish(files, controls);
-    const outputFile = path64.resolve(root, operation2.output);
+    const outputFile = path65.resolve(root, operation2.output);
     publishArtifact(outputFile, bytes3, files);
     return {
       kind: "object",
@@ -87662,20 +88510,20 @@ async function executeAssemblyBuildOperation(value, controls = {}, host2 = defau
 }
 async function buildLinked(operation2, directory, files, controls, host2) {
   if (operation2.selection) {
-    const bytes3 = files.readFile(path64.resolve(directory, operation2.selection.file));
+    const bytes3 = files.readFile(path65.resolve(directory, operation2.selection.file));
     if (artifactHash(bytes3) !== operation2.selection.sha256) {
       throw new Error("Build selection configuration changed. Rebuild with the current manifest.");
     }
   }
-  const manifestFile = path64.resolve(directory, operation2.manifest);
-  const root = path64.dirname(manifestFile);
+  const manifestFile = path65.resolve(directory, operation2.manifest);
+  const root = path65.dirname(manifestFile);
   const manifest = readAssemblyBuildManifest(readJson5(files, manifestFile));
   if (operation2.action === "link" && manifest.modules?.length) {
     throw new Error(
       "Link accepts serialized objects/libraries only. Use build for source modules."
     );
   }
-  const recipeValue = typeof manifest.recipe === "string" ? readJson5(files, path64.resolve(root, manifest.recipe)) : manifest.recipe;
+  const recipeValue = typeof manifest.recipe === "string" ? readJson5(files, path65.resolve(root, manifest.recipe)) : manifest.recipe;
   const fromModules = isModuleRecipeSelection(recipeValue);
   let recipe;
   if (!isModuleRecipeSelection(recipeValue)) {
@@ -87684,13 +88532,13 @@ async function buildLinked(operation2, directory, files, controls, host2) {
   }
   const recipeTarget = recipeValue.target;
   const serialized = (manifest.objects ?? []).map(
-    (name4) => files.readFile(path64.resolve(root, name4))
+    (name4) => files.readFile(path65.resolve(root, name4))
   );
   const objects = [];
   const libraries = (manifest.libraries ?? []).map(
-    (name4) => files.readFile(path64.resolve(root, name4))
+    (name4) => files.readFile(path65.resolve(root, name4))
   );
-  const original = manifest.original ? files.readFile(path64.resolve(root, manifest.original)) : void 0;
+  const original = manifest.original ? files.readFile(path65.resolve(root, manifest.original)) : void 0;
   const loaded = await loadEnvironment(root, manifest.config, recipeTarget, files, host2);
   let result;
   let outputName;
@@ -87710,7 +88558,7 @@ async function buildLinked(operation2, directory, files, controls, host2) {
       controls.onProgress?.(`Assembling module ${module.id}.`);
       objects.push(
         assembleObject(
-          path64.resolve(root, module.source),
+          path65.resolve(root, module.source),
           module.id,
           loaded,
           files,
@@ -87754,7 +88602,7 @@ async function buildLinked(operation2, directory, files, controls, host2) {
   }
   const inputs = [...files.snapshots].map(([file, bytes3]) => ({ path: file, sha256: artifactHash(bytes3) })).toSorted((a, b) => a.path < b.path ? -1 : Number(a.path > b.path));
   const sources = [...result.debugMap.sources];
-  const knownSources = new Set(sources.map((source2) => path64.resolve(source2.path)));
+  const knownSources = new Set(sources.map((source2) => path65.resolve(source2.path)));
   for (const [file, bytes3] of files.snapshots) {
     if (!knownSources.has(file)) {
       sources.push({
@@ -87782,15 +88630,15 @@ async function buildLinked(operation2, directory, files, controls, host2) {
       ...inputs.map((input2) => ({ module: "<build>", ...input2 }))
     ]
   };
-  const outputDirectory = path64.resolve(root, manifest.outputDirectory ?? ".uttori-build");
+  const outputDirectory = path65.resolve(root, manifest.outputDirectory ?? ".uttori-build");
   for (const name4 of ["current.json", "link-publication.lock"]) {
-    assertOutputIsNotInput(path64.join(outputDirectory, name4), files);
+    assertOutputIsNotInput(path65.join(outputDirectory, name4), files);
   }
   let previous;
   try {
-    const pointer = path64.join(outputDirectory, "current.json");
-    if (fs46.statSync(pointer).size <= 1024 * 1024) {
-      previous = JSON.parse(fs46.readFileSync(pointer, "utf8"));
+    const pointer = path65.join(outputDirectory, "current.json");
+    if (fs47.statSync(pointer).size <= 1024 * 1024) {
+      previous = JSON.parse(fs47.readFileSync(pointer, "utf8"));
     }
   } catch {
   }
@@ -87837,18 +88685,18 @@ function parseAssemblyBuildArguments(argv, directory) {
   const positionals = [];
   const flags = /* @__PURE__ */ new Map();
   for (let index = 0; index < tokens.length; index++) {
-    const token = tokens[index];
-    if (token === "--") {
+    const argument = tokens[index];
+    if (argument === "--") {
       positionals.push(...tokens.slice(index + 1));
       break;
     }
-    if (!token.startsWith("--")) {
-      positionals.push(token);
+    if (!argument.startsWith("--")) {
+      positionals.push(argument);
       continue;
     }
-    const equals = token.indexOf("=");
-    const flag = equals < 0 ? token : token.slice(0, equals);
-    const value = equals < 0 ? tokens[++index] : token.slice(equals + 1);
+    const equals = argument.indexOf("=");
+    const flag = equals < 0 ? argument : argument.slice(0, equals);
+    const value = equals < 0 ? tokens[++index] : argument.slice(equals + 1);
     if (action !== "assemble-object" || !["--module", "--config", "--source-adapter"].includes(flag) || !value || value.startsWith("--") || flags.has(flag)) {
       throw new Error(`Invalid or repeated ${flag} option.`);
     }
@@ -87859,7 +88707,7 @@ function parseAssemblyBuildArguments(argv, directory) {
   }
   if (action === "assemble-object" && positionals.length >= 1 && positionals.length <= 2 && flags.has("--module")) {
     const source2 = positionals[0];
-    const parsed = path65.parse(source2);
+    const parsed = path66.parse(source2);
     const sourceAdapter = flags.get("--source-adapter");
     if (sourceAdapter !== void 0 && sourceAdapter !== "asar" && sourceAdapter !== "ca65") {
       throw new Error("--source-adapter must be asar or ca65.");
@@ -87868,7 +88716,7 @@ function parseAssemblyBuildArguments(argv, directory) {
       action,
       directory,
       source: source2,
-      output: positionals[1] ?? path65.join(parsed.dir, `${parsed.name}.uobj`),
+      output: positionals[1] ?? path66.join(parsed.dir, `${parsed.name}.uobj`),
       module: flags.get("--module"),
       ...sourceAdapter ? { sourceAdapter } : {},
       ...flags.has("--config") ? { config: flags.get("--config") } : {}
@@ -87903,29 +88751,29 @@ async function runAssemblyBuildCli(argv) {
 
 // packages/cli/src/output-files.ts
 import { randomUUID as randomUUID15 } from "node:crypto";
-import * as fs47 from "node:fs";
-import path66 from "node:path";
+import * as fs48 from "node:fs";
+import path67 from "node:path";
 var sameFile = (left, right) => {
   if (left === right) {
     return true;
   }
-  if (!fs47.existsSync(left) || !fs47.existsSync(right)) {
+  if (!fs48.existsSync(left) || !fs48.existsSync(right)) {
     return false;
   }
-  const a = fs47.statSync(left);
-  const b = fs47.statSync(right);
+  const a = fs48.statSync(left);
+  const b = fs48.statSync(right);
   return a.ino !== 0 && a.dev === b.dev && a.ino === b.ino;
 };
 var publishOutputFiles = (outputs, protectedFiles) => {
-  const protectedPaths = protectedFiles.filter((file) => fs47.existsSync(file)).map((file) => fs47.realpathSync(file));
+  const protectedPaths = protectedFiles.filter((file) => fs48.existsSync(file)).map((file) => fs48.realpathSync(file));
   const destinations = [];
   const staged = [];
   try {
     for (const output of outputs) {
-      fs47.mkdirSync(path66.dirname(output.file), { recursive: true });
-      let file = path66.join(fs47.realpathSync(path66.dirname(output.file)), path66.basename(output.file));
-      if (fs47.existsSync(file)) {
-        file = fs47.realpathSync(file);
+      fs48.mkdirSync(path67.dirname(output.file), { recursive: true });
+      let file = path67.join(fs48.realpathSync(path67.dirname(output.file)), path67.basename(output.file));
+      if (fs48.existsSync(file)) {
+        file = fs48.realpathSync(file);
       }
       if (protectedPaths.some((input2) => sameFile(input2, file))) {
         throw new Error(`Output '${output.file}' would overwrite an input file.`);
@@ -87933,33 +88781,33 @@ var publishOutputFiles = (outputs, protectedFiles) => {
       if (destinations.some((destination) => sameFile(destination, file))) {
         throw new Error(`Output destinations must be distinct: '${output.file}'.`);
       }
-      if (fs47.existsSync(file) && !fs47.statSync(file).isFile()) {
+      if (fs48.existsSync(file) && !fs48.statSync(file).isFile()) {
         throw new Error(`Output '${output.file}' is not a regular file.`);
       }
       destinations.push(file);
     }
     for (const [index, output] of outputs.entries()) {
       const file = destinations[index];
-      const temporary = path66.join(
-        path66.dirname(file),
-        `.${path66.basename(file)}.uttori-${randomUUID15()}.tmp`
+      const temporary = path67.join(
+        path67.dirname(file),
+        `.${path67.basename(file)}.uttori-${randomUUID15()}.tmp`
       );
-      const mode3 = fs47.existsSync(file) ? fs47.statSync(file).mode & 511 : void 0;
-      const descriptor3 = fs47.openSync(temporary, "wx", mode3);
+      const mode3 = fs48.existsSync(file) ? fs48.statSync(file).mode & 511 : void 0;
+      const descriptor3 = fs48.openSync(temporary, "wx", mode3);
       staged.push({ file, temporary });
       try {
-        fs47.writeFileSync(descriptor3, output.contents);
+        fs48.writeFileSync(descriptor3, output.contents);
       } finally {
-        fs47.closeSync(descriptor3);
+        fs48.closeSync(descriptor3);
       }
     }
     for (const { file, temporary } of staged) {
-      fs47.renameSync(temporary, file);
+      fs48.renameSync(temporary, file);
     }
   } finally {
     for (const { temporary } of staged) {
       try {
-        fs47.rmSync(temporary, { force: true });
+        fs48.rmSync(temporary, { force: true });
       } catch {
       }
     }
@@ -87967,13 +88815,13 @@ var publishOutputFiles = (outputs, protectedFiles) => {
 };
 
 // packages/cli/src/source.ts
-import fs48 from "node:fs";
-import path67 from "node:path";
+import fs49 from "node:fs";
+import path68 from "node:path";
 function readJson6(file) {
-  if (fs48.statSync(file).size > 8 * 1024 * 1024) {
+  if (fs49.statSync(file).size > 8 * 1024 * 1024) {
     throw new Error(`Project contract is too large: ${file}`);
   }
-  return JSON.parse(fs48.readFileSync(file, "utf8"));
+  return JSON.parse(fs49.readFileSync(file, "utf8"));
 }
 function isRecord52(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -88076,7 +88924,7 @@ async function runSourceCli(argv) {
       if (candidate === "--analysis" && argv.length <= 4) {
         research = {
           kind: "analysis",
-          change: argv[3] ? readAnalysisChange(path67.resolve(argv[3])) : void 0
+          change: argv[3] ? readAnalysisChange(path68.resolve(argv[3])) : void 0
         };
       } else if (argv.length > 2) {
         const change = argv[3];
@@ -88503,8 +89351,8 @@ var parseCliArguments = (argv) => {
   };
 };
 var defaultOutputPath = (inputFile, extension) => {
-  const parsed = path68.parse(inputFile);
-  return path68.join(parsed.dir, `${parsed.name}${extension}`);
+  const parsed = path69.parse(inputFile);
+  return path69.join(parsed.dir, `${parsed.name}${extension}`);
 };
 function stringifyCaught2(value) {
   return JSON.stringify(value);
@@ -88521,13 +89369,13 @@ var formatFailure = (error) => {
   return error instanceof Error ? error.message : stringifyCaught2(error) ?? "Unknown error";
 };
 var createAnalysisProject = (parsed, cwd) => {
-  const inputFile = path68.resolve(cwd, parsed.input);
-  if (!fs49.existsSync(inputFile)) {
+  const inputFile = path69.resolve(cwd, parsed.input);
+  if (!fs50.existsSync(inputFile)) {
     console.error(`Error: ROM file '${inputFile}' not found.`);
     return 1;
   }
-  const outputDirectory = parsed.output ? path68.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, ".analysis");
-  if (fs49.existsSync(path68.join(outputDirectory, ANALYSIS_PROJECT_MANIFEST))) {
+  const outputDirectory = parsed.output ? path69.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, ".analysis");
+  if (fs50.existsSync(path69.join(outputDirectory, ANALYSIS_PROJECT_MANIFEST))) {
     console.error(
       `Project creation failed: '${outputDirectory}' already contains an analysis project.`
     );
@@ -88539,7 +89387,7 @@ var createAnalysisProject = (parsed, cwd) => {
       projectDirectory: outputDirectory,
       ...parsed.mapper === void 0 ? {} : { mapper: parsed.mapper },
       ...parsed.headerSize === void 0 ? {} : { headerSize: parsed.headerSize },
-      ...parsed.dizraw === void 0 ? {} : { dizRawFile: path68.resolve(cwd, parsed.dizraw) }
+      ...parsed.dizraw === void 0 ? {} : { dizRawFile: path69.resolve(cwd, parsed.dizraw) }
     });
     console.log(`Success: Analysis project written to '${outputDirectory}'.`);
     if (result.importReport) {
@@ -88554,13 +89402,13 @@ var createAnalysisProject = (parsed, cwd) => {
   }
 };
 var validateProject = (parsed, cwd) => {
-  const directory = path68.resolve(cwd, parsed.input);
+  const directory = path69.resolve(cwd, parsed.input);
   try {
     const loaded = loadAnalysisProjectView(directory, () => ({
       push: () => void 0,
       finish: () => []
     }));
-    const rom = parsed.rom ? RomImage.load(path68.resolve(cwd, parsed.rom), { headerSize: loaded.manifest.rom.headerSize }) : void 0;
+    const rom = parsed.rom ? RomImage.load(path69.resolve(cwd, parsed.rom), { headerSize: loaded.manifest.rom.headerSize }) : void 0;
     if (rom) {
       validateProjectRom(loaded.manifest, rom);
     }
@@ -88574,7 +89422,7 @@ var validateProject = (parsed, cwd) => {
   }
 };
 var importProjectEvidence = async (parsed, cwd) => {
-  const directory = path68.resolve(cwd, parsed.input);
+  const directory = path69.resolve(cwd, parsed.input);
   if (!parsed.rom) {
     console.error("Evidence import failed: --rom is required so project identity can be verified.");
     return 1;
@@ -88592,20 +89440,20 @@ var importProjectEvidence = async (parsed, cwd) => {
         store.close();
       }
     })();
-    const rom = RomImage.load(path68.resolve(cwd, parsed.rom), {
+    const rom = RomImage.load(path69.resolve(cwd, parsed.rom), {
       headerSize: manifest.rom.headerSize
     });
     validateProjectRom(manifest, rom);
     if (!isSnesMapper4(manifest.mapping.mapper)) {
       throw new Error(`Unsupported SNES mapper '${manifest.mapping.mapper}'.`);
     }
-    const filename = path68.resolve(cwd, parsed.instructionTrace);
+    const filename = path69.resolve(cwd, parsed.instructionTrace);
     const result = await importRuntimeTraceIntoProject(
       filename,
       directory,
       {
         projectRomContentSha256: manifest.rom.contentSha256,
-        sourceName: path68.basename(filename),
+        sourceName: path69.basename(filename),
         indexMode: parsed.traceIndex ?? "analysis"
       },
       {
@@ -88632,7 +89480,7 @@ var importProjectEvidence = async (parsed, cwd) => {
   }
 };
 var reportProjectEvidence = (parsed, cwd) => {
-  const directory = path68.resolve(cwd, parsed.input);
+  const directory = path69.resolve(cwd, parsed.input);
   try {
     const store = openAnalysisProjectStore(directory);
     const inspection = (() => {
@@ -88644,9 +89492,9 @@ var reportProjectEvidence = (parsed, cwd) => {
     })();
     const text4 = canonicalJson(inspection);
     if (parsed.output) {
-      const output = path68.resolve(cwd, parsed.output);
-      fs49.mkdirSync(path68.dirname(output), { recursive: true });
-      fs49.writeFileSync(output, text4);
+      const output = path69.resolve(cwd, parsed.output);
+      fs50.mkdirSync(path69.dirname(output), { recursive: true });
+      fs50.writeFileSync(output, text4);
       console.log(`Success: Evidence report written to '${output}'.`);
     } else {
       console.log(text4.trimEnd());
@@ -88658,7 +89506,7 @@ var reportProjectEvidence = (parsed, cwd) => {
   }
 };
 var analyzeProject = (parsed, cwd) => {
-  const directory = path68.resolve(cwd, parsed.input);
+  const directory = path69.resolve(cwd, parsed.input);
   if (!parsed.rom) {
     console.error("Analysis failed: --rom is required so project identity can be verified.");
     return 1;
@@ -88666,7 +89514,7 @@ var analyzeProject = (parsed, cwd) => {
   try {
     const result = analyzeSnesProject({
       projectDirectory: directory,
-      romFile: path68.resolve(cwd, parsed.rom),
+      romFile: path69.resolve(cwd, parsed.rom),
       entryPoints: parsed.entryPoints.map((address3) => ({
         id: `cli-${address3.toString(16).padStart(6, "0")}`,
         address: address3
@@ -88692,13 +89540,13 @@ var analyzeProject = (parsed, cwd) => {
   }
 };
 var assemble = async (parsed, cwd) => {
-  const inputFile = path68.resolve(cwd, parsed.input);
-  if (!fs49.existsSync(inputFile)) {
+  const inputFile = path69.resolve(cwd, parsed.input);
+  if (!fs50.existsSync(inputFile)) {
     console.error(`Error: Input file '${inputFile}' not found.`);
     return 1;
   }
-  const explicitConfig = parsed.configFile ? path68.resolve(cwd, parsed.configFile) : path68.resolve(cwd, PROJECT_CONFIG_FILENAME);
-  const hasProjectConfiguration = fs49.existsSync(explicitConfig);
+  const explicitConfig = parsed.configFile ? path69.resolve(cwd, parsed.configFile) : path69.resolve(cwd, PROJECT_CONFIG_FILENAME);
+  const hasProjectConfiguration = fs50.existsSync(explicitConfig);
   const pluginModules = parsed.plugins.map((module) => ({ module }));
   const overrides = {
     ...parsed.target === void 0 ? {} : { target: parsed.target },
@@ -88729,7 +89577,7 @@ var assemble = async (parsed, cwd) => {
       } : {}
     });
     const fileProvider = new NodeAssemblyFileProvider();
-    const baseImage = parsed.baseImage ? fileProvider.readFile(path68.resolve(cwd, parsed.baseImage)) : void 0;
+    const baseImage = parsed.baseImage ? fileProvider.readFile(path69.resolve(cwd, parsed.baseImage)) : void 0;
     assembler = new Assembler({
       environment: loaded.environment,
       target: loaded.target,
@@ -88742,7 +89590,7 @@ var assemble = async (parsed, cwd) => {
     if (baseImage) {
       assembler.outputBytes = Array.from(baseImage);
     }
-    assembler.setIncludePaths([.../* @__PURE__ */ new Set([path68.dirname(inputFile), ...loaded.includePaths])]);
+    assembler.setIncludePaths([.../* @__PURE__ */ new Set([path69.dirname(inputFile), ...loaded.includePaths])]);
     assembler.setCurrentFile(inputFile);
     if (parsed.verbose) {
       console.log(
@@ -88754,7 +89602,7 @@ var assemble = async (parsed, cwd) => {
     const source2 = fileProvider.readTextFile(inputFile);
     assembler.assembleProgram(assembler.buildProgramModel(source2, inputFile, 0));
     const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
-    const outputFile = parsed.output ? path68.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, extension);
+    const outputFile = parsed.output ? path69.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, extension);
     const output = assembler.getBinaryOutput();
     const outputs = [
       { file: outputFile, contents: output }
@@ -88772,13 +89620,13 @@ var assemble = async (parsed, cwd) => {
           assembler.addressToLineMapping.getFileIndex(dependency);
         }
       }
-      debugMapFile = parsed.debugMap ? path68.resolve(cwd, parsed.debugMap) : `${outputFile}.debug.json`;
+      debugMapFile = parsed.debugMap ? path69.resolve(cwd, parsed.debugMap) : `${outputFile}.debug.json`;
       const debugMap = createDebugMap({
         target: loaded.target,
         output,
         mapping: assembler.addressToLineMapping,
         dependencyKinds: assembler.assetAssembly.dependencies,
-        sourceRoot: path68.dirname(inputFile)
+        sourceRoot: path69.dirname(inputFile)
       });
       outputs.push({ file: debugMapFile, contents: canonicalJson(debugMap) });
     }
@@ -88858,7 +89706,7 @@ var runCommand = async (parsed, cwd) => {
   if (parsed.command === "project-storage") {
     let store;
     try {
-      store = openAnalysisProjectStore(path68.resolve(cwd, parsed.input));
+      store = openAnalysisProjectStore(path69.resolve(cwd, parsed.input));
       const active = store;
       store.transaction(() => {
         if (parsed.storagePolicy) {
@@ -88888,7 +89736,7 @@ var runCommand = async (parsed, cwd) => {
   }
   if (parsed.command === "project-compact") {
     try {
-      const result = compactAnalysisProject(path68.resolve(cwd, parsed.input), {
+      const result = compactAnalysisProject(path69.resolve(cwd, parsed.input), {
         analysisOnly: parsed.analysisOnly,
         onProgress: (message) => console.error(message)
       });

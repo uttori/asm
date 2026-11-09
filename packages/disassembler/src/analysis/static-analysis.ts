@@ -341,9 +341,9 @@ export interface StaticCoverageSummary {
   readonly reachedPercent: number;
 }
 
-/** Why the run stopped before the worklist emptied. */
+/** Bounds that reduced call-history precision or stopped exploration before the worklist emptied. */
 export interface StaticAnalysisIncompleteReason {
-  /** Limit category that terminated the traversal. */
+  /** A call-context bound truncates history and continues; a work bound stops traversal. */
   readonly kind: "call-context-limit" | "work-limit";
   /** Instruction address associated with the limiting event. */
   readonly address: number;
@@ -1006,11 +1006,13 @@ export const analyzeStaticControlFlow = <State>(
           },
         ];
         if (nextContext.length > maxCallDepth) {
+          // Keep exploring the callee with bounded history. Older return frames are lost,
+          // so a drained worklist still reports incomplete caller/return precision.
           addIncomplete({
             kind: "call-context-limit",
             address: instruction.address,
             limit: maxCallDepth,
-            message: `Call context at $${hexAddress(instruction.address)} exceeds depth ${maxCallDepth}.`,
+            message: `Call context at $${hexAddress(instruction.address)} exceeds depth ${maxCallDepth}; exploration continues with older call history discarded.`,
           });
           scheduleTarget(target, maxCallDepth === 0 ? [] : nextContext.slice(-maxCallDepth));
         } else {
