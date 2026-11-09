@@ -4,6 +4,11 @@ export class AssetRegistry {
     #importers = new Map();
     #encoders = new Map();
     #mediaTypes = new Map();
+    /**
+     * Register an importer and claim its media types.
+     * @param importer Importer with a namespaced unused ID, a version, and unclaimed media types.
+     * @returns This registry for chaining.
+     */
     registerImporter(importer) {
         if (!isNamespacedId(importer.id) ||
             !importer.version ||
@@ -20,6 +25,7 @@ export class AssetRegistry {
         importer.mediaTypes.forEach((type) => this.#mediaTypes.set(type, importer));
         return this;
     }
+    /** Register one encoder; duplicate ids reject registration. */
     registerEncoder(encoder) {
         if (!isNamespacedId(encoder.id) ||
             !encoder.version ||
@@ -31,6 +37,7 @@ export class AssetRegistry {
         this.#encoders.set(encoder.id, encoder);
         return this;
     }
+    /** Resolve the importer registered for a MIME type. */
     importerFor(mediaType) {
         const importer = this.#mediaTypes.get(mediaType);
         if (!importer) {
@@ -38,6 +45,7 @@ export class AssetRegistry {
         }
         return importer;
     }
+    /** Resolve a registered encoder by id. */
     encoderFor(id) {
         const encoder = this.#encoders.get(id);
         if (!encoder) {
@@ -46,10 +54,11 @@ export class AssetRegistry {
         return encoder;
     }
 }
-/** Convert supplied bytes without a ROM, assembler, file read, or output write.
- * @param {AssetRegistry} registry Registered importers and encoders.
- * @param {AssetRequest} request Borrowed bytes, resources and options.
- * @returns {AssetResult} Named owned bytes and provider provenance.
+/**
+ * Convert supplied bytes without a ROM, assembler, file read, or output write.
+ * @param registry Registered importers and encoders.
+ * @param request Borrowed bytes, resources and options.
+ * @returns Named owned bytes and provider provenance.
  */
 export function convertAsset(registry, request) {
     const importer = registry.importerFor(request.source.mediaType);

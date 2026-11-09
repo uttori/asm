@@ -35,9 +35,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/ms/index.js
+// ../../node_modules/ms/index.js
 var require_ms = __commonJS({
-  "node_modules/ms/index.js"(exports, module) {
+  "../../node_modules/ms/index.js"(exports, module) {
     var s = 1e3;
     var m = s * 60;
     var h = m * 60;
@@ -151,9 +151,9 @@ var require_ms = __commonJS({
   }
 });
 
-// node_modules/debug/src/common.js
+// ../../node_modules/debug/src/common.js
 var require_common = __commonJS({
-  "node_modules/debug/src/common.js"(exports, module) {
+  "../../node_modules/debug/src/common.js"(exports, module) {
     function setup(env) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -328,9 +328,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/debug/src/browser.js
+// ../../node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "node_modules/debug/src/browser.js"(exports, module) {
+  "../../node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
     exports.load = load;
@@ -498,9 +498,9 @@ var require_browser = __commonJS({
   }
 });
 
-// node_modules/has-flag/index.js
+// ../../node_modules/has-flag/index.js
 var require_has_flag = __commonJS({
-  "node_modules/has-flag/index.js"(exports, module) {
+  "../../node_modules/has-flag/index.js"(exports, module) {
     "use strict";
     module.exports = (flag, argv = process.argv) => {
       const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
@@ -511,9 +511,9 @@ var require_has_flag = __commonJS({
   }
 });
 
-// node_modules/supports-color/index.js
+// ../../node_modules/supports-color/index.js
 var require_supports_color = __commonJS({
-  "node_modules/supports-color/index.js"(exports, module) {
+  "../../node_modules/supports-color/index.js"(exports, module) {
     "use strict";
     var os = __require("os");
     var tty = __require("tty");
@@ -613,9 +613,9 @@ var require_supports_color = __commonJS({
   }
 });
 
-// node_modules/debug/src/node.js
+// ../../node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "node_modules/debug/src/node.js"(exports, module) {
+  "../../node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util = __require("util");
     exports.init = init;
@@ -787,9 +787,9 @@ var require_node = __commonJS({
   }
 });
 
-// node_modules/debug/src/index.js
+// ../../node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "node_modules/debug/src/index.js"(exports, module) {
+  "../../node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -798,15 +798,15 @@ var require_src = __commonJS({
   }
 });
 
-// packages/debug-sidecar-ares/src/sidecar.ts
+// ../debug-sidecar-ares/src/sidecar.ts
 import { createHash as createHash3 } from "node:crypto";
 import { readFile as readFile3 } from "node:fs/promises";
 import path4 from "node:path";
 
-// packages/debug-adapter/src/contracts.ts
+// ../debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
 
-// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 var CRC32_POLYNOMIAL = 3988292384;
 var CRC32C_POLYNOMIAL = 2197175160;
 var reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
@@ -845,7 +845,7 @@ var computeBytes = (bytes) => {
   return ~crc >>> 0;
 };
 
-// packages/capture/src/capture-v2.ts
+// ../capture/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
   if (value !== "nes.cpu-bus-ppu" && value !== "nes.2a03.instructions" && value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
@@ -1074,7 +1074,7 @@ var validateCapturePosition = (value, session, scope) => {
   return value;
 };
 
-// packages/capture/src/capture-context.ts
+// ../capture/src/capture-context.ts
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat, readFile } from "node:fs/promises";
@@ -1147,7 +1147,7 @@ var verifyCaptureContext = async (directory, identity, signal) => {
   }
 };
 
-// packages/debug-adapter/src/sidecar-protocol.ts
+// ../debug-adapter/src/sidecar-protocol.ts
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
 var DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -1410,10 +1410,10 @@ var DebugSidecarMessageQueue = class {
   }
 };
 
-// packages/debug-adapter/src/node-stdio-transport.ts
+// ../debug-adapter/src/node-stdio-transport.ts
 var DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
 
-// packages/debug-adapter/src/sidecar-server.ts
+// ../debug-adapter/src/sidecar-server.ts
 var isStepKind = (value) => value === "instruction" || value === "over" || value === "in" || value === "out";
 var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var record = (value, context) => {
@@ -1768,7 +1768,7 @@ var DebugSidecarServer = class {
   }
 };
 
-// packages/debug-sidecar-ares/src/ares-process-host.ts
+// ../debug-sidecar-ares/src/ares-process-host.ts
 import { spawn } from "node:child_process";
 import { createHash as createHash2 } from "node:crypto";
 import { createReadStream as createReadStream2 } from "node:fs";
@@ -1776,7 +1776,7 @@ import { mkdir, stat } from "node:fs/promises";
 import net2 from "node:net";
 import path2 from "node:path";
 
-// packages/debug-sidecar-ares/src/gdb-rsp-client.ts
+// ../debug-sidecar-ares/src/gdb-rsp-client.ts
 var asError2 = (error) => error instanceof Error ? error : new Error(String(error));
 var checksum = (payload) => {
   let value = 0;
@@ -2161,7 +2161,7 @@ var GdbRspClient = class {
   }
 };
 
-// packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
+// ../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 import net from "node:net";
 var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   #socket;
@@ -2301,7 +2301,7 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
 };
 
-// packages/debug-sidecar-ares/src/ares-process-host.ts
+// ../debug-sidecar-ares/src/ares-process-host.ts
 var ARES_RUNTIME_MANIFEST_VERSION = 1;
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
 var revisionPattern = /^[\dA-Fa-f]{40}$/;
@@ -2823,11 +2823,11 @@ var AresProcessHost = class {
   }
 };
 
-// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
+// ../debug-sidecar-ares/src/ares-rsp-backend.ts
 import { readFile as readFile2 } from "node:fs/promises";
 import path3 from "node:path";
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -2860,7 +2860,7 @@ function sourceLineStarts(text) {
   return starts;
 }
 
-// packages/core/src/ir/expression-parse-state.ts
+// ../core/src/ir/expression-parse-state.ts
 var rawOutcomes = /* @__PURE__ */ new WeakMap();
 function setRawExpressionOutcome(node, outcome2) {
   rawOutcomes.set(node, outcome2);
@@ -2869,7 +2869,7 @@ function expressionOutcomeKey(outcome2) {
   return outcome2.kind === "native" ? "native" : `${outcome2.kind}:${outcome2.reason}`;
 }
 
-// packages/core/src/internal-instrumentation.ts
+// ../core/src/internal-instrumentation.ts
 var activeInstrumentation;
 function recordExpressionParse(site, outcome2) {
   if (syntaxOwner === "execution") {
@@ -2903,12 +2903,12 @@ function recordExecutionParser(kind) {
   }
 }
 
-// packages/core/src/ir/source-fragment.ts
+// ../core/src/ir/source-fragment.ts
 function sourceFragment(text, origins = []) {
   return { segments: [{ text, origins }] };
 }
 
-// packages/core/src/ir/define-template.ts
+// ../core/src/ir/define-template.ts
 function parseDefineTemplate(text, escapes = "basic") {
   const parse2 = (start, end) => {
     const parts2 = [];
@@ -2966,7 +2966,7 @@ function parseDefineTemplate(text, escapes = "basic") {
   return { text, parts: parse2(0, text.length) };
 }
 
-// packages/core/src/ir/expression-call-contracts.ts
+// ../core/src/ir/expression-call-contracts.ts
 var firstSourceArgument = /* @__PURE__ */ new Set([
   "countof",
   "bytesof",
@@ -2986,7 +2986,7 @@ function isSourceTextArgument(name, index) {
   return index === 0 && (firstSourceArgument.has(name) || /^(?:canreadfile|readfile)\d?$/.test(name));
 }
 
-// packages/core/src/ir/expression-operators.ts
+// ../core/src/ir/expression-operators.ts
 var binaryPrecedence = {
   "||": 0,
   "&&": 1,
@@ -3010,7 +3010,7 @@ var binaryPrecedence = {
   "**": 6
 };
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 function attachRootSpan(node, text, source) {
   node.span ??= source ? createTextSpan(
     source.text,
@@ -3843,7 +3843,7 @@ function isBinaryOperator(value) {
   return value in binaryPrecedence;
 }
 
-// packages/core/src/ir/directive-arguments.ts
+// ../core/src/ir/directive-arguments.ts
 function parseDirectiveExpression(text, numeric = true, source) {
   recordExecutionParser("directive");
   if (/![\w{]/.test(text)) {
@@ -3866,7 +3866,7 @@ function dataResolutionExpression(text, node) {
   return node;
 }
 
-// packages/core/src/ir/source-syntax.ts
+// ../core/src/ir/source-syntax.ts
 function copySyntaxValue(value) {
   return copySyntaxTree(value, false);
 }
@@ -3945,7 +3945,7 @@ function copySyntaxTree(value, immutable) {
   return copy(value, 0);
 }
 
-// packages/core/src/ir/syntax-codec.ts
+// ../core/src/ir/syntax-codec.ts
 var syntaxString = (value) => typeof value === "string";
 var syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
 var syntaxBoolean = (value) => typeof value === "boolean";
@@ -4097,7 +4097,7 @@ function syntaxCodec(version, parse2, guard) {
   };
 }
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE = Object.freeze({
   id: "asar",
   preserveLeadingWhitespace: false,
@@ -4129,7 +4129,7 @@ var CA65_SYNTAX_PROFILE = Object.freeze({
   fileLocalSymbols: true
 });
 
-// packages/core/src/services/command-text-service.ts
+// ../core/src/services/command-text-service.ts
 var splitRespectingFunctions = (input) => {
   const result = [];
   let current = "";
@@ -4165,7 +4165,7 @@ var splitRespectingFunctions = (input) => {
   return result;
 };
 
-// packages/core/src/ir/data-node.ts
+// ../core/src/ir/data-node.ts
 function parseDataOperand(text) {
   let value = text.trim();
   const quote = value[0];
@@ -4187,7 +4187,7 @@ function parseDataList(text) {
   return splitRespectingFunctions(text).map(parseDataOperand);
 }
 
-// packages/core/src/ir/link-expression.ts
+// ../core/src/ir/link-expression.ts
 function linkInteger(value) {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`Link expression requires a safe integer: ${value}`);
@@ -4385,7 +4385,7 @@ function compileLinkExpression(expression, context, depth = 0) {
   }
 }
 
-// packages/core/src/ir/parsed-operand.ts
+// ../core/src/ir/parsed-operand.ts
 function parseInstructionOperands(mnemonic, text, grammar2) {
   const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
   let width;
@@ -4632,13 +4632,13 @@ function parseOperand(text, start, grammar2) {
   };
 }
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 2;
 function definePlugin(plugin2) {
   return plugin2;
 }
 
-// packages/core/src/services/source-link-recipe.ts
+// ../core/src/services/source-link-recipe.ts
 function addressedSourceLinkRecipe(options) {
   const regions = [];
   const placements = [];
@@ -4706,7 +4706,7 @@ function addressedSourceLinkRecipe(options) {
   };
 }
 
-// packages/core/src/ir/relocatable-instruction.ts
+// ../core/src/ir/relocatable-instruction.ts
 var RelocatableInstruction = class {
   constructor(frame, context) {
     this.frame = frame;
@@ -4761,7 +4761,7 @@ var RelocatableInstruction = class {
   }
 };
 
-// packages/core/src/decoder-types.ts
+// ../core/src/decoder-types.ts
 var Uint8ArrayDecoderSource = class {
   #bytes;
   /**
@@ -4807,7 +4807,7 @@ var Uint8ArrayDecoderSource = class {
   }
 };
 
-// packages/core/src/linker/types.ts
+// ../core/src/linker/types.ts
 var LinkError = class extends Error {
   /**
    * Captures a link failure with optional source anchoring and partial placement state.
@@ -4830,7 +4830,7 @@ var LinkError = class extends Error {
   name = "LinkError";
 };
 
-// packages/plugin-65xx/src/ca65-profile.ts
+// ../plugin-65xx/src/ca65-profile.ts
 var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
 function isSessionStateKey(value) {
   return value.id.length > 0;
@@ -5022,7 +5022,7 @@ var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
   macroParameterPrefix: "\\"
 });
 
-// packages/plugin-65xx/src/instructions/schema.ts
+// ../plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
   if (expression.allOf?.some((feature) => !features.has(feature))) {
     return false;
@@ -5134,7 +5134,7 @@ function getOperandFields(codec) {
   return [];
 }
 
-// packages/plugin-65xx/src/instructions/variant-tables.generated.ts
+// ../plugin-65xx/src/instructions/variant-tables.generated.ts
 var ca65EaTable = [
   [
     0,
@@ -6693,7 +6693,7 @@ var ca65VariantTables = {
   ]
 };
 
-// packages/plugin-65xx/src/instructions/variants.ts
+// ../plugin-65xx/src/instructions/variants.ts
 var commonModes = {
   0: { mode: "implied" },
   1: { mode: "accumulator" },
@@ -6989,7 +6989,7 @@ var variantFormsByCpuId = Object.freeze({
   [mitsubishiM740Cpu.id]: mitsubishiM740Forms
 });
 
-// packages/plugin-65xx/src/instructions/opcodes.ts
+// ../plugin-65xx/src/instructions/opcodes.ts
 var rows = [
   "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
   "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
@@ -7324,7 +7324,7 @@ function getCpuAssemblyForms(cpu) {
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 
-// packages/plugin-65xx/src/decoder.ts
+// ../plugin-65xx/src/decoder.ts
 var hex = (value, width = 2) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var sizeOf = (form) => form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
 function cpu6502Specifications(cpu) {
@@ -7554,7 +7554,7 @@ function formatCpu6502Instruction(instruction, addressExpression) {
   return `${form.mnemonic}${suffix}${text ? ` ${text}` : ""}`;
 }
 
-// packages/plugin-65xx/src/session-state.ts
+// ../plugin-65xx/src/session-state.ts
 var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
 function isSessionStateKey2(value) {
   return value.id.length > 0;
@@ -7585,7 +7585,7 @@ function resetNes65xxStageState(state) {
   state.segmentRunStart = 0;
 }
 
-// packages/plugin-65xx/src/directives/ca65.ts
+// ../plugin-65xx/src/directives/ca65.ts
 function parameterList(words) {
   const joined = words.slice(1).join(" ");
   const parts2 = [];
@@ -7743,7 +7743,7 @@ function handlePopseg(state) {
   state.currentFlatSegment = segment;
 }
 
-// packages/plugin-65xx/src/linker-config.ts
+// ../plugin-65xx/src/linker-config.ts
 function ld65LinkRecipe(config, target = "65xx.nes") {
   const symbols = [];
   for (const segment of config.segments.values()) {
@@ -7998,7 +7998,7 @@ function parseYesNo(raw) {
   return void 0;
 }
 
-// packages/plugin-65xx/src/target/nes.ts
+// ../plugin-65xx/src/target/nes.ts
 var NES_65XX_TARGET_ID = "65xx.nes";
 var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
@@ -8178,7 +8178,7 @@ function normalizeHeader(configured, imageSize) {
   return header;
 }
 
-// packages/plugin-65xx/src/directives/ca65-syntax.ts
+// ../plugin-65xx/src/directives/ca65-syntax.ts
 var operation = (name) => syntaxLiteral(name);
 var schema = syntaxUnion(
   syntaxRecord({ operation: operation("segment"), name: syntaxString }),
@@ -8499,7 +8499,7 @@ function ca65DirectiveSyntax(id) {
   };
 }
 
-// packages/plugin-65xx/src/instructions/catalog.ts
+// ../plugin-65xx/src/instructions/catalog.ts
 var syntax = {
   implied: "",
   accumulator: "A",
@@ -8583,7 +8583,7 @@ function buildInstructionCatalog(forms) {
   }));
 }
 
-// node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
+// ../../node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
 var Z_BINARY = 0;
 var Z_TEXT = 1;
@@ -12021,7 +12021,7 @@ var Inflate = class {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/data-helpers.js
+// ../../node_modules/@uttori/data-tools/dist/data-helpers.js
 var validateBytes = (uint8, length) => {
   if (uint8.length < length) {
     throw new RangeError(`Insufficient bytes: expected at least ${length}, received ${uint8.length}.`);
@@ -12113,7 +12113,7 @@ var convertFromIeeeExtended = (uint8) => {
   return decodeExtended(sign, exponent, hiMant, loMant);
 };
 
-// node_modules/@uttori/data-tools/dist/underflow-error.js
+// ../../node_modules/@uttori/data-tools/dist/underflow-error.js
 var UnderflowError = class extends Error {
   /**
    * Creates a new UnderflowError.
@@ -12131,7 +12131,7 @@ var UnderflowError = class extends Error {
 };
 var underflow_error_default = UnderflowError;
 
-// node_modules/@uttori/data-tools/dist/data-buffer.js
+// ../../node_modules/@uttori/data-tools/dist/data-buffer.js
 function dataBufferBrand() {
   return /* @__PURE__ */ Symbol.for("uttori.DataBuffer");
 }
@@ -13376,7 +13376,7 @@ var DataBuffer = class _DataBuffer {
 };
 var data_buffer_default = DataBuffer;
 
-// node_modules/@uttori/data-tools/dist/image/bitmap-text.js
+// ../../node_modules/@uttori/data-tools/dist/image/bitmap-text.js
 function freezeGlyphs() {
   return Object.freeze(Object.fromEntries(Object.entries({
     " ": [0, 0, 0, 0, 0, 0, 0],
@@ -13526,7 +13526,7 @@ function drawBitmapText(surface, text, x, y, color, options) {
   return metrics;
 }
 
-// node_modules/@uttori/data-tools/dist/image/rgba-surface.js
+// ../../node_modules/@uttori/data-tools/dist/image/rgba-surface.js
 var DEFAULT_MAX_PIXELS = 4 * 1024 * 1024;
 function colorRGBA(color) {
   if (!Array.isArray(color) && !(color instanceof Uint8Array) || color.length !== 4) {
@@ -13982,7 +13982,7 @@ var RgbaSurface = class _RgbaSurface {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
 var debug2 = () => {
 };
 if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
@@ -15622,7 +15622,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
-// packages/assets/src/limits.ts
+// ../assets/src/limits.ts
 var ASSET_LIMITS = Object.freeze({
   rasterPixels: 4 * 1024 * 1024,
   interchangeSide: 4096,
@@ -15646,7 +15646,7 @@ var ASSET_LIMITS = Object.freeze({
 });
 var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
 
-// packages/assets/src/png.ts
+// ../assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
   maxInputBytes: ASSET_LIMITS.pngBytes,
   maxPixels: ASSET_LIMITS.rasterPixels,
@@ -15681,7 +15681,7 @@ var pngImporter = Object.freeze({
   }
 });
 
-// packages/plugin-65xx/src/nes/assets.ts
+// ../plugin-65xx/src/nes/assets.ts
 var NES_CHR_CODEC = "nes.chr.2bpp";
 var NES_TEXT_CODEC = "nes.text.tiles";
 function encodeNesChrPng(bytes) {
@@ -15772,7 +15772,7 @@ var nesAssetFormats = [
   }
 ];
 
-// packages/plugin-65xx/src/operands/syntax.ts
+// ../plugin-65xx/src/operands/syntax.ts
 var grammar = {
   registers: ["a", "q"],
   indexRegisters: ["x", "y", "z", "s"],
@@ -15980,7 +15980,7 @@ function has65xxPolicy(syntax2) {
   return "policy65xx" in syntax2 && typeof syntax2.policy65xx === "object" && syntax2.policy65xx !== null && "kind" in syntax2.policy65xx && syntax2.policy65xx.kind === "65xx-v1";
 }
 
-// packages/plugin-65xx/src/target/link-target.ts
+// ../plugin-65xx/src/target/link-target.ts
 function createNesSourceLinkRecipe(context, sections) {
   if (context.options.sourceStyle !== "asar") {
     throw new Error("The NES Asar adapter requires sourceStyle: asar in target configuration.");
@@ -16029,7 +16029,7 @@ function createNesLinkTarget() {
   };
 }
 
-// packages/plugin-65xx/src/operands/resolution.ts
+// ../plugin-65xx/src/operands/resolution.ts
 function valueWidth(value) {
   if (!Number.isFinite(value)) {
     return 4;
@@ -16226,7 +16226,7 @@ function selectedScalar(syntax2) {
   return selected ?? syntax2.policy65xx.whole.scalar;
 }
 
-// packages/plugin-65xx/src/typed-architecture.ts
+// ../plugin-65xx/src/typed-architecture.ts
 var directToAbsolute = {
   zeroPage: "absolute",
   zeroPageIndexedX: "absoluteIndexedX",
@@ -16772,7 +16772,7 @@ var TypedArch65xx = class {
   }
 };
 
-// packages/plugin-65xx/src/index.ts
+// ../plugin-65xx/src/index.ts
 var RAW_65XX_TARGET_ID = "65xx.raw";
 var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
@@ -17182,7 +17182,7 @@ var plugin = definePlugin({
   activate: register65xxContributions
 });
 
-// packages/plugin-snes/src/architectures/65816-spec.ts
+// ../plugin-snes/src/architectures/65816-spec.ts
 var mode = (id, syntax2, minimumSize, maximumSize = minimumSize, widthFlag) => ({
   id,
   syntax: syntax2,
@@ -17463,7 +17463,7 @@ var cpu65816Specifications = Object.freeze(
   })
 );
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
+// ../plugin-snes/src/architectures/65816-decoder.ts
 var flagValue = (value) => {
   if (value === true || value === 1) {
     return 1;
@@ -17858,7 +17858,7 @@ function formatCpu65816Instruction(instruction) {
   return text ? `${instruction.mnemonic} ${text}` : instruction.mnemonic;
 }
 
-// packages/debug-sidecar-ares/src/profile.ts
+// ../debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
 var ARES_65816_ADDRESS_SPACE = "snes.cpu";
@@ -17984,7 +17984,7 @@ var ARES_NES_CAPABILITIES = Object.freeze({
   ]
 });
 
-// packages/debug-sidecar-ares/src/trace-details.ts
+// ../debug-sidecar-ares/src/trace-details.ts
 var integer2 = (value, maximum = Number.MAX_SAFE_INTEGER) => {
   if (!/^[\da-f]+$/i.test(value)) {
     throw new Error("Malformed rich trace integer.");
@@ -18065,7 +18065,7 @@ var parseAresTraceDetails = (response, maximum) => {
   };
 };
 
-// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
+// ../debug-sidecar-ares/src/ares-rsp-backend.ts
 var ARES_NAMED_MEMORY_READ_CHUNK_BYTES = 4096;
 var asError3 = (error) => error instanceof Error ? error : new Error(String(error));
 var checkedInteger = (value, context, maximum = Number.MAX_SAFE_INTEGER) => {
@@ -19170,7 +19170,7 @@ var AresRspDebugBackend = class {
   }
 };
 
-// packages/debug-sidecar-ares/src/sidecar.ts
+// ../debug-sidecar-ares/src/sidecar.ts
 var usage = `Usage: uttori-asm-debug-sidecar-ares [options]
 
 Required:

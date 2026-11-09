@@ -8,6 +8,7 @@ import { acceptedSourceGeneration, generationAt, sourceContentHash, sourceCandid
 import { assertNoSourceOperation, assertSourceCheckpoint, assertSourceObjectId, acquireSourceOperationLease, sourceGit, } from "./git.js";
 import { registerSourcePinOwner } from "./pins.js";
 import { SourceSnapshotIndex } from "./snapshot-index.js";
+/** Worktree-local path of the merge recovery journal. */
 const journalFile = (repository) => path.join(repository.stateDirectory, "merge.json");
 /**
  * Prepare one replacement proposal while excluding source publication and merge operations.
@@ -103,12 +104,27 @@ function readJournal(repository) {
     }
     return value;
 }
+/**
+ * Check that a parsed journal is a plain object before reading its fields.
+ * @param value Parsed JSON value.
+ * @returns True for non-null, non-array objects.
+ */
 function isJournalRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/**
+ * Narrow a journal `kind` field to a known merge operation.
+ * @param value Untrusted journal field.
+ * @returns True for `adopt` or `regenerate`.
+ */
 function isMergeKind(value) {
     return value === "adopt" || value === "regenerate";
 }
+/**
+ * Validate the journal format, kind, branch and candidate ref; object IDs are checked separately.
+ * @param value Parsed journal JSON.
+ * @returns True when the structural fields match a workflow-written journal.
+ */
 function isMergeJournal(value) {
     if (!isJournalRecord(value)) {
         return false;
@@ -122,6 +138,12 @@ function isMergeJournal(value) {
         typeof candidateRef === "string" &&
         /^refs\/uttori\/candidates\/[\w-]+$/.test(candidateRef));
 }
+/**
+ * Require a journal object ID field to be a string before format validation.
+ * @param value Untrusted journal field.
+ * @returns The string value.
+ * @throws Error when the field is not a string.
+ */
 function gitObjectId(value) {
     if (typeof value !== "string") {
         throw new Error("Expected a complete Git object ID.");

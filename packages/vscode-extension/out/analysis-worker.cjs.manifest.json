@@ -4,7 +4,7 @@
   "source": "packages/vscode-extension/src/analysis/worker.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/analysis-worker.cjs.licenses.txt",
-  "sha256": "e2b59939f7352a42ab19458ab0f432bd2d1ed00cd9c2c1d1b2e542a88ddb3d15",
+  "sha256": "99603fe0193c421706c4a08615b0a277bc756280ba359ca8d1457622cc2dafcb",
   "noticesSha256": "fcfc842aeb2910110fcdc8fb8c1f8378d0d70310445d6ef4cb3104fc0d0a370f",
   "inputs": [
     {
@@ -201,7 +201,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "3357428093100ad6e3aff2fcf0bb8f676b43c875679a6c80895d80cefb584bfa"
     },
     {
       "file": "packages/capture/src/capture-compression.ts",

@@ -237,7 +237,8 @@ export function validateAsepriteDocument(document) {
         }
     }
 }
-/** Both decoding APIs walk exactly the same structure and allocation budgets.
+/**
+ * Both decoding APIs walk exactly the same structure and allocation budgets.
  * @yields A bounded compressed raster and exact expected decoded length; the driver returns owned decoded bytes.
  */
 function* parseAsepriteDocument(bytes, signal) {

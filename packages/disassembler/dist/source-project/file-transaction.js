@@ -41,6 +41,7 @@ function journalFile(repository) {
     storageDirectories(repository);
     return path.join(repository.stateDirectory, JOURNAL);
 }
+/** Resolve the private staging directory for one publication identity. */
 function stageDirectory(repository, id) {
     storageDirectories(repository, ["file-transactions", id]);
     return path.join(repository.stateDirectory, "file-transactions", id);
@@ -187,19 +188,17 @@ function publish(repository, journal, signal, onStage) {
     try {
         for (let i = 0; i < files.length; i++) {
             signal?.throwIfAborted();
-            const item = journal.files[i], file = sourceFile(repository, item.path), hash = currentHash(file);
-            if (hash !== item.before && hash !== item.after) {
+            const item = journal.files[i], file = sourceFile(repository, item.path), observed = currentHash(file);
+            if (observed !== item.before && observed !== item.after) {
                 throw new Error(`Source changed during publication: ${item.path}.`);
             }
-            // Public ROM/source hashes establish integrity, not secret credentials; constant-time comparison adds no protection.
-            // oxlint-disable-next-line security/detect-possible-timing-attacks
-            if (hash !== item[journal.direction]) {
+            if (observed !== item[journal.direction]) {
                 const bytes = stagedBytes(repository, journal, i, journal.direction);
                 if (bytes === null) {
                     fs.unlinkSync(file);
                     syncDirectory(path.dirname(file));
                 }
-                else if (hash === null) {
+                else if (observed === null) {
                     // Exclusive creation preserves the absence guard if another process races the final publication step.
                     const temporary = path.join(path.dirname(file), `.source-create-${randomUUID()}`);
                     try {

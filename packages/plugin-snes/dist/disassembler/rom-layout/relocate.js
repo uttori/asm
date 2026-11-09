@@ -40,7 +40,13 @@ export function assertSnesSplitReferences(references) {
         }
     }
 }
-/** Require half-open integer ranges before allocation arithmetic or buffer slicing. */
+/**
+ * Require half-open integer ranges before allocation arithmetic or buffer slicing.
+ * @param start Inclusive range start.
+ * @param end Exclusive range end.
+ * @param limit Maximum allowed end offset.
+ * @param name Label used in validation errors.
+ */
 function range(start, end, limit, name) {
     if (!Number.isSafeInteger(start) ||
         !Number.isSafeInteger(end) ||

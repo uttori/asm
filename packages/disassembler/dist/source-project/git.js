@@ -4,7 +4,8 @@ import path from "node:path";
 import { acquireFileLease } from "../internal/durable-files.js";
 import { sourceFilePublicationEpoch } from "./file-transaction.js";
 export { assertSourcePath } from "../internal/source-inputs.js";
-/** Coordinate ordinary source publication with existing native regeneration/merge operations.
+/**
+ * Coordinate ordinary source publication with existing native regeneration/merge operations.
  * The caller owns the lease and must release it in finally; a live process's lease is never stolen.
  */
 export function acquireSourceOperationLease(repository) {

@@ -1,5 +1,6 @@
 import type { IndexedDocumentCel as AsepriteCel, IndexedDocument as AsepriteDocument } from "./indexed-document.js";
 export type { IndexedDocumentMetadata as AsepriteMetadata, IndexedDocumentLayer as AsepriteLayer, IndexedDocumentTileset as AsepriteTileset, IndexedDocumentCel as AsepriteCel, IndexedDocumentFrame as AsepriteFrame, IndexedDocumentTag as AsepriteTag, IndexedDocument as AsepriteDocument, } from "./indexed-document.js";
+/** Resolved cel payload after following linked references. */
 type CelPayload = Exclude<AsepriteCel, {
     kind: "linked";
 }>;

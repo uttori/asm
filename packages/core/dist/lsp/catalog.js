@@ -1,22 +1,23 @@
 import { directiveCatalog, } from "./directive-catalog.js";
 /**
  * Returns the instruction catalog for an architecture.
- * @param {string} architecture The architecture name.
- * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
- * @returns {InstructionDescriptor[]} The instruction descriptors.
+ * @param architecture The architecture name.
+ * @param [provider] Optional extension catalog provider.
+ * @returns The instruction descriptors.
  */
 export function getInstructionCatalog(architecture, provider) {
     return provider?.getInstructionCatalog(architecture) ?? [];
 }
 /**
  * Looks up an instruction descriptor by mnemonic (case-insensitive).
- * @param {string} mnemonic The mnemonic to find.
- * @param {string} architecture The active architecture name.
- * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
- * @returns {InstructionDescriptor | undefined} The descriptor, if known.
+ * @param mnemonic The mnemonic to find.
+ * @param architecture The active architecture name.
+ * @param [provider] Optional extension catalog provider.
+ * @returns The descriptor, if known.
  */
 /** WeakMap cache of pre-built mnemonic maps per instruction catalog array reference. */
 const instructionCatalogMapCache = new WeakMap();
+/** Builds or reuses a mnemonic map for one instruction catalog array. */
 function getInstructionCatalogMap(catalog) {
     let map = instructionCatalogMapCache.get(catalog);
     if (!map) {
@@ -25,19 +26,21 @@ function getInstructionCatalogMap(catalog) {
     }
     return map;
 }
+/** Case-insensitive mnemonic lookup against the active architecture catalog. */
 export function findInstruction(mnemonic, architecture, provider) {
     const upper = mnemonic.toUpperCase();
     return getInstructionCatalogMap(getInstructionCatalog(architecture, provider)).get(upper);
 }
 /**
  * Finds a directive in an explicitly active descriptor catalog.
- * @param {string} keyword The directive keyword.
- * @param {readonly DirectiveDescriptor[]} directives Active directive descriptors.
- * @param {readonly string[]} [directivePrefixes] Prefixes accepted by the active syntax profile.
- * @returns {DirectiveDescriptor | undefined} The matching active directive.
+ * @param keyword The directive keyword.
+ * @param directives Active directive descriptors.
+ * @param [directivePrefixes] Prefixes accepted by the active syntax profile.
+ * @returns The matching active directive.
  */
 /** WeakMap cache of pre-built keyword maps per catalog array reference. */
 const directiveCatalogMapCache = new WeakMap();
+/** Builds or reuses a lowercase keyword map for one directive catalog array. */
 function getDirectiveCatalogMap(directives) {
     let map = directiveCatalogMapCache.get(directives);
     if (!map) {
@@ -46,6 +49,7 @@ function getDirectiveCatalogMap(directives) {
     }
     return map;
 }
+/** Resolves a directive keyword against an active catalog and syntax prefixes. */
 export function findDirectiveInCatalog(keyword, directives = directiveCatalog, directivePrefixes = ["@"]) {
     let canonical = keyword.toLowerCase();
     for (const prefix of directivePrefixes) {
@@ -59,11 +63,11 @@ export function findDirectiveInCatalog(keyword, directives = directiveCatalog, d
 /**
  * Resolves a nested directive operand under the cursor (`bankcross` or `full`
  * in `check bankcross full`). The first token must be a catalogued directive.
- * @param {string} lineText The current source line.
- * @param {string} word The identifier under the cursor.
- * @param {readonly DirectiveDescriptor[]} directives Active directive descriptors.
- * @param {readonly string[]} [directivePrefixes] Prefixes accepted by the active syntax profile.
- * @returns {DirectiveDocs | undefined} The operand docs, if this token is a known operand.
+ * @param lineText The current source line.
+ * @param word The identifier under the cursor.
+ * @param directives Active directive descriptors.
+ * @param [directivePrefixes] Prefixes accepted by the active syntax profile.
+ * @returns The operand docs, if this token is a known operand.
  */
 export function findDirectiveOperand(lineText, word, directives = directiveCatalog, directivePrefixes = ["@"]) {
     const trimmed = (lineText.split(";")[0] ?? lineText).trim();
@@ -99,8 +103,8 @@ export function findDirectiveOperand(lineText, word, directives = directiveCatal
 }
 /**
  * Renders an instruction descriptor as Markdown hover documentation.
- * @param {InstructionDescriptor} descriptor The instruction descriptor.
- * @returns {string} The Markdown documentation.
+ * @param descriptor The instruction descriptor.
+ * @returns The Markdown documentation.
  */
 export function renderInstructionDocs(descriptor) {
     const lines = [];
@@ -125,8 +129,8 @@ export function renderInstructionDocs(descriptor) {
 }
 /**
  * Renders a directive descriptor as Markdown hover documentation.
- * @param {DirectiveDocs} descriptor The directive or operand descriptor.
- * @returns {string} The Markdown documentation.
+ * @param descriptor The directive or operand descriptor.
+ * @returns The Markdown documentation.
  */
 export function renderDirectiveDocs(descriptor) {
     return [
@@ -139,8 +143,8 @@ export function renderDirectiveDocs(descriptor) {
 }
 /**
  * Renders an expression-function descriptor as Markdown hover documentation.
- * @param {ExpressionFunctionDescriptor} descriptor The expression function descriptor.
- * @returns {string} The Markdown documentation.
+ * @param descriptor The expression function descriptor.
+ * @returns The Markdown documentation.
  */
 export function renderExpressionFunctionDocs(descriptor) {
     const parameters = descriptor.signature.parameters.join(", ");
@@ -154,11 +158,11 @@ export function renderExpressionFunctionDocs(descriptor) {
 }
 /**
  * Builds the combined completion entries for an architecture.
- * @param {string} architecture The active architecture name.
- * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
- * @param {readonly DirectiveDescriptor[]} [directives] Active directive descriptors.
- * @param {readonly ExpressionFunctionDescriptor[]} [expressionFunctions] Active expression functions.
- * @returns {CatalogEntry[]} The completion entries.
+ * @param architecture The active architecture name.
+ * @param [provider] Optional extension catalog provider.
+ * @param [directives] Active directive descriptors.
+ * @param [expressionFunctions] Active expression functions.
+ * @returns The completion entries.
  */
 export function buildCompletionEntries(architecture, provider, directives = directiveCatalog, expressionFunctions = []) {
     const entries = [];

@@ -52,7 +52,7 @@ export function expandSomDialogue(bytes, dictionary) {
             index = byte - 0xc3;
         }
         if (index !== undefined) {
-            const pair = dictionary[index];
+            const pair = dictionary.at(index);
             if (!pair) {
                 throw new Error(`Missing SoM dialogue pair ${index}.`);
             }
@@ -166,7 +166,7 @@ export function encodeSomDialogue(text, dictionary, options = {}) {
         if (index === undefined) {
             continue;
         }
-        const pair = dictionary[index];
+        const pair = dictionary.at(index);
         if (!pair) {
             throw new Error(`Missing SoM dialogue pair ${index}.`);
         }
@@ -294,6 +294,7 @@ function hexBytes(value) {
     }
     return Uint8Array.from(value.match(/../g) ?? [], (pair) => Number.parseInt(pair, 16));
 }
+/** Narrow JSON values to plain objects during layout parsing. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }

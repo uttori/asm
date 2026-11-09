@@ -35,7 +35,7 @@ const ORDERED_STAGED_ROWS_SQL = `SELECT i.value AS id,f.kind,f.architecture,f.ad
  * Install a disposable projection and SQL-only change tracking under the caller's writer lock.
  * Every connection with the runtime-history codec participates; change tracking itself is SQL-only.
  * The pending set contains observation IDs, never another copy of register snapshots.
- * @param {DatabaseSync} db Current-format project connection in a write transaction.
+ * @param db Current-format project connection in a write transaction.
  */
 const installSummary = (db) => {
     installQueryCache(db, KEY, []);
@@ -95,12 +95,13 @@ const installSummary = (db) => {
       CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
     }
 };
-/** Stream compact keys, counts and representatives without a blocking sort or aggregate.
+/**
+ * Stream compact keys, counts and representatives without a blocking sort or aggregate.
  * Pending IDs drive incremental joins so an append does not scan unrelated observations. Sort only
  * their compact coordinates by fact ID before decoding, reusing shared compressed history blocks.
  * A full rebuild walks observation storage order to retain locality in compressed history blocks.
- * @param {boolean} incremental Whether to select pending observations instead of all history.
- * @returns {string} Input cursor SQL binding architecture and address space, in that order.
+ * @param incremental Whether to select pending observations instead of all history.
+ * @returns Input cursor SQL binding architecture and address space, in that order.
  */
 export const runtimeSummaryInputSql = (incremental) => {
     const from = incremental
@@ -119,10 +120,11 @@ export const runtimeSummaryInputSql = (incremental) => {
     FROM ${from}
     ${incremental ? "" : "WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?"}`;
 };
-/** Normalize only decoder inputs, preserving aliases, invalid values, null and missing fields.
- * @param {DatabaseSync} db Connection that will evaluate the grouping query.
- * @param {readonly string[]} fields Ordered decoder fields, including supported aliases.
- * @param {StateMasks} masks Bit masks applied only to valid numeric values.
+/**
+ * Normalize only decoder inputs, preserving aliases, invalid values, null and missing fields.
+ * @param db Connection that will evaluate the grouping query.
+ * @param fields Ordered decoder fields, including supported aliases.
+ * @param masks Bit masks applied only to valid numeric values.
  */
 const registerVariantKey = (db, fields, masks) => {
     db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
@@ -149,13 +151,19 @@ const registerVariantKey = (db, fields, masks) => {
         return JSON.stringify([record.bytes, state]);
     });
 };
+/**
+ * Accept an array of finite numbers; byte range is not checked.
+ * @param value Decoded payload field.
+ * @returns True for an array whose every element is a finite number.
+ */
 function isByteList(value) {
     return Array.isArray(value) && value.every(isFiniteNumber);
 }
-/** A base token survives append-only changes; the pending set distinguishes it from a current result.
- * @param {DatabaseSync} db Connection holding the consuming snapshot.
- * @param {string} signature Exact decoder configuration and summary layout.
- * @returns {boolean} Whether every retained instruction is reflected in this configuration.
+/**
+ * A base token survives append-only changes; the pending set distinguishes it from a current result.
+ * @param db Connection holding the consuming snapshot.
+ * @param signature Exact decoder configuration and summary layout.
+ * @returns Whether every retained instruction is reflected in this configuration.
  */
 const isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== undefined &&
     !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
@@ -165,16 +173,16 @@ const isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== unde
  * then a short write publishes only if no input or competing builder changed its ownership token.
  * Failure, cancellation by connection close, or process death leaves the base/pending work retryable.
  * The cursor reuses an existing read transaction or owns one until it closes.
- * @param {DatabaseSync} db Owned current-format project connection.
- * @param {Transaction} transaction Store transaction wrapper; write defaults to true.
- * @param {string} architecture Exact target processor ID.
- * @param {string} space Exact instruction address space.
- * @param {readonly string[]} fields Ordered decoder fields; other registers remain in full evidence.
- * @param {StateMasks} masks Grouping-only masks for valid numeric fields.
- * @param {Function} [onProgress] Cumulative and total observations in this build snapshot; throwing aborts it.
- * @param {Function} [onReadProgress] Representatives staged so far; throwing releases TEMP rows and aborts reading.
- * @param {Function} [resetSnapshot] Clear connection-owned codec/dictionary caches at owned snapshot boundaries.
- * @returns {IterableIterator<RuntimeEvidenceRecord>} One representative per decoder key and evidence list.
+ * @param db Owned current-format project connection.
+ * @param transaction Store transaction wrapper; write defaults to true.
+ * @param architecture Exact target processor ID.
+ * @param space Exact instruction address space.
+ * @param fields Ordered decoder fields; other registers remain in full evidence.
+ * @param masks Grouping-only masks for valid numeric fields.
+ * @param [onProgress] Cumulative and total observations in this build snapshot; throwing aborts it.
+ * @param [onReadProgress] Representatives staged so far; throwing releases TEMP rows and aborts reading.
+ * @param [resetSnapshot] Clear connection-owned codec/dictionary caches at owned snapshot boundaries.
+ * @returns One representative per decoder key and evidence list.
  */
 export const runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks, onProgress, onReadProgress, resetSnapshot) => {
     if (fields.some((field) => !/^\w+$/.test(field))) {

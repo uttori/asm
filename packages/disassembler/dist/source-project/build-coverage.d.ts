@@ -1,7 +1,9 @@
 import type { AddressToLineMapping } from "@uttori/asm-core";
 /** Conversion progress over the immutable original ROM, excluding any newly added capacity. */
 export interface SourceBuildCoverage {
+    /** Content hash of the immutable original ROM used for the coverage contract. */
     readonly romSha256: string;
+    /** Byte length of that original ROM, excluding any expanded output capacity. */
     readonly totalBytes: number;
     /** Unique original bytes still consumed through raw-block includes, even after relocation. */
     readonly remainingBytes: number;
@@ -10,7 +12,9 @@ export interface SourceBuildCoverage {
 }
 /** Small selected-build projection; dependency hashes remain in that build's full receipt. */
 export interface SourceBuildSummary {
+    /** Receipt schema version for persisted build summaries. */
     readonly version: 1;
+    /** Content hash of the selected build inputs recorded in the full receipt. */
     readonly inputSha256: string;
     /** Absent for builds without an original-ROM raw-block contract. */
     readonly coverage?: SourceBuildCoverage;

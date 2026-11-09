@@ -9,15 +9,26 @@ import { loadSomRoomNative, } from "@uttori/asm-assets/secret-of-mana/som-room-n
 import { encodePlanarTiles } from "@uttori/asm-assets/snes";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { assertSourcePath, } from "@uttori/asm-disassembler/source-project";
+/** Accepts a plain object; arrays and null are rejected. */
 function isObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
 }
+/**
+ * Require a plain object declaration.
+ * @param value Untrusted declaration value.
+ * @returns The value as a record.
+ */
 function object(value) {
     if (!isObject(value)) {
         throw new Error("Invalid room declaration.");
     }
     return value;
 }
+/**
+ * Require a portable project-relative source path of at most 1024 UTF-16 units.
+ * @param value Untrusted path value.
+ * @returns The validated path.
+ */
 function name(value) {
     if (typeof value !== "string" || value.length > 1024) {
         throw new Error("Invalid room source name.");
@@ -25,12 +36,24 @@ function name(value) {
     assertSourcePath(value);
     return value;
 }
+/** Byte-exact equality of two buffers. */
 function equal(a, b) {
     return Buffer.from(a).equals(b);
 }
+/**
+ * Serialize as two-space-indented JSON with a trailing newline, matching source formatting.
+ * @param value JSON-compatible value.
+ * @returns UTF-8 bytes.
+ */
 function json(value) {
     return new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
 }
+/**
+ * Convert an absolute build path into a validated project-relative path with forward slashes.
+ * @param context Adapter context supplying the build root.
+ * @param absolute Absolute path inside the build root.
+ * @returns The portable relative path.
+ */
 function relative(context, absolute) {
     return name(path.relative(context.build.root, absolute).split(path.sep).join("/"));
 }
@@ -43,6 +66,7 @@ function romOffset(address) {
 }
 /** Identity binds original ROM offset and bit depth; presentation positions carry no ownership. */
 const identify = (tile) => JSON.stringify([romOffset(tile.address), tile.depth]);
+/** Load native room tiles and declared sources for one SoM room selection. */
 function inspect(context, selection) {
     if (context.build.output.length !== 0x200000) {
         throw new Error("Room native loader requires a headerless 2 MiB USA source build.");

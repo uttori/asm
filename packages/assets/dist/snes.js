@@ -1,4 +1,5 @@
 import { integer, unitCount } from "./validation.js";
+/** Byte offset of one bit plane row within a native planar tile. */
 const planeOffset = (depth, plane, row) => {
     // Ordinary 3bpp stores plane 2 after both interleaved lower planes.
     if (depth === 3 && plane === 2) {
@@ -6,6 +7,7 @@ const planeOffset = (depth, plane, row) => {
     }
     return Math.floor(plane / 2) * 16 + row * 2 + (plane % 2);
 };
+/** Enforce 8×8 shape and per-depth index bounds before encoding. */
 const validateTile = (tile, label, maximum) => {
     if (tile.length !== 8) {
         throw new RangeError(`${label} must contain exactly 8 rows.`);
@@ -17,10 +19,11 @@ const validateTile = (tile, label, maximum) => {
         row.forEach((pixel, x) => integer(pixel, `${label} pixel ${x},${y}`, 0, maximum));
     });
 };
-/** Decode complete planar tiles; the caller retains ownership of input bytes.
- * @param {Uint8Array} bytes Borrowed complete tile stream.
- * @param {PlanarDepth} depth Native bit planes per pixel.
- * @returns {Tile[]} Display-order tiles with separate pixel arrays.
+/**
+ * Decode complete planar tiles; the caller retains ownership of input bytes.
+ * @param bytes Borrowed complete tile stream.
+ * @param depth Native bit planes per pixel.
+ * @returns Display-order tiles with separate pixel arrays.
  */
 export function decodePlanarTiles(bytes, depth) {
     const size = depth * 8;
@@ -34,10 +37,11 @@ export function decodePlanarTiles(bytes, depth) {
         return pixel;
     })));
 }
-/** Encode new planar tiles without a source ROM or fixed output capacity.
- * @param {Tile[]} tiles Display-order pixels, each exactly 8×8.
- * @param {PlanarDepth} depth Native bit planes per pixel.
- * @returns {Uint8Array} Owned planar tile bytes.
+/**
+ * Encode new planar tiles without a source ROM or fixed output capacity.
+ * @param tiles Display-order pixels, each exactly 8×8.
+ * @param depth Native bit planes per pixel.
+ * @returns Owned planar tile bytes.
  */
 export function encodePlanarTiles(tiles, depth) {
     const size = depth * 8;
@@ -54,17 +58,19 @@ export function encodePlanarTiles(tiles, depth) {
     });
     return bytes;
 }
-/** Decode Mode 7's chunky tile bytes, which differ from planar 8bpp.
- * @param {Uint8Array} bytes Borrowed complete tile stream.
- * @returns {Tile[]} Display-order tiles with byte indexes.
+/**
+ * Decode Mode 7's chunky tile bytes, which differ from planar 8bpp.
+ * @param bytes Borrowed complete tile stream.
+ * @returns Display-order tiles with byte indexes.
  */
 export function decodeMode7Tiles(bytes) {
     const count = unitCount(bytes, 64, "Mode 7 tile stream");
     return Array.from({ length: count }, (_, tileIndex) => Array.from({ length: 8 }, (_row, row) => Array.from({ length: 8 }, (_column, column) => bytes[tileIndex * 64 + row * 8 + column])));
 }
-/** Encode Mode 7's row-major byte-per-pixel tiles.
- * @param {Tile[]} tiles Display-order pixels, each exactly 8×8.
- * @returns {Uint8Array} Owned chunky tile bytes.
+/**
+ * Encode Mode 7's row-major byte-per-pixel tiles.
+ * @param tiles Display-order pixels, each exactly 8×8.
+ * @returns Owned chunky tile bytes.
  */
 export function encodeMode7Tiles(tiles) {
     const bytes = new Uint8Array(tiles.length * 64);
@@ -76,9 +82,10 @@ export function encodeMode7Tiles(tiles) {
     });
     return bytes;
 }
-/** Decode exact CGRAM words, including the unused high bit.
- * @param {Uint8Array} bytes Borrowed little-endian CGRAM words.
- * @returns {Bgr555Color[]} 5-bit channels and preserved bit 15.
+/**
+ * Decode exact CGRAM words, including the unused high bit.
+ * @param bytes Borrowed little-endian CGRAM words.
+ * @returns 5-bit channels and preserved bit 15.
  */
 export function decodeBgr555(bytes) {
     const count = unitCount(bytes, 2, "BGR555 palette");
@@ -92,9 +99,10 @@ export function decodeBgr555(bytes) {
         };
     });
 }
-/** Encode fresh CGRAM colors; callers choose any desired palette padding.
- * @param {Bgr555Color[]} colors 5-bit channels and explicit bit 15.
- * @returns {Uint8Array} Owned little-endian CGRAM words.
+/**
+ * Encode fresh CGRAM colors; callers choose any desired palette padding.
+ * @param colors 5-bit channels and explicit bit 15.
+ * @returns Owned little-endian CGRAM words.
  */
 export function encodeBgr555(colors) {
     const bytes = new Uint8Array(colors.length * 2);
@@ -108,9 +116,10 @@ export function encodeBgr555(colors) {
     });
     return bytes;
 }
-/** Decode packed BG map words in storage order; screen layout is a separate concern.
- * @param {Uint8Array} bytes Borrowed little-endian map words.
- * @returns {BgMapEntry[]} Every tile index and attribute field.
+/**
+ * Decode packed BG map words in storage order; screen layout is a separate concern.
+ * @param bytes Borrowed little-endian map words.
+ * @returns Every tile index and attribute field.
  */
 export function decodeBgMap(bytes) {
     const count = unitCount(bytes, 2, "BG tilemap");
@@ -125,9 +134,10 @@ export function decodeBgMap(bytes) {
         };
     });
 }
-/** Encode BG map words without assigning physical screen blocks.
- * @param {BgMapEntry[]} entries Map entries already arranged in storage order.
- * @returns {Uint8Array} Owned little-endian map words.
+/**
+ * Encode BG map words without assigning physical screen blocks.
+ * @param entries Map entries already arranged in storage order.
+ * @returns Owned little-endian map words.
  */
 export function encodeBgMap(entries) {
     const bytes = new Uint8Array(entries.length * 2);
@@ -142,23 +152,26 @@ export function encodeBgMap(entries) {
     });
     return bytes;
 }
-/** Decode byte-indexed Mode 7 maps, retaining index zero as an ordinary value.
- * @param {Uint8Array} bytes Borrowed map index bytes.
- * @returns {number[]} A copied array of tile indexes.
+/**
+ * Decode byte-indexed Mode 7 maps, retaining index zero as an ordinary value.
+ * @param bytes Borrowed map index bytes.
+ * @returns A copied array of tile indexes.
  */
 export function decodeMode7Map(bytes) {
     return [...bytes];
 }
-/** Encode byte-indexed Mode 7 maps.
- * @param {number[]} indexes Tile indexes in native map storage order.
- * @returns {Uint8Array} Owned map bytes.
+/**
+ * Encode byte-indexed Mode 7 maps.
+ * @param indexes Tile indexes in native map storage order.
+ * @returns Owned map bytes.
  */
 export function encodeMode7Map(indexes) {
     return Uint8Array.from(indexes.map((value, index) => integer(value, `Index ${index}`, 0, 255)));
 }
-/** Decode native BRR block fields only; this does not reconstruct PCM.
- * @param {Uint8Array} bytes Borrowed complete nine-byte blocks.
- * @returns {BrrBlock[]} Signed nibbles and exact header fields.
+/**
+ * Decode native BRR block fields only; this does not reconstruct PCM.
+ * @param bytes Borrowed complete nine-byte blocks.
+ * @returns Signed nibbles and exact header fields.
  */
 export function decodeBrrBlocks(bytes) {
     const count = unitCount(bytes, 9, "BRR stream");
@@ -179,9 +192,10 @@ export function decodeBrrBlocks(bytes) {
         };
     });
 }
-/** Encode signed BRR nibbles byte-exactly; PCM encoding is a different, lossy operation.
- * @param {BrrBlock[]} blocks Native BRR headers and signed nibbles.
- * @returns {Uint8Array} Owned nine-byte blocks.
+/**
+ * Encode signed BRR nibbles byte-exactly; PCM encoding is a different, lossy operation.
+ * @param blocks Native BRR headers and signed nibbles.
+ * @returns Owned nine-byte blocks.
  */
 export function encodeBrrBlocks(blocks) {
     const bytes = new Uint8Array(blocks.length * 9);
@@ -203,7 +217,9 @@ export function encodeBrrBlocks(blocks) {
     });
     return bytes;
 }
+/** Narrow untrusted JSON values to plain objects. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Deep-compare native model trees used for encoder fidelity checks. */
 const sameModelValue = (left, right) => {
     if (Object.is(left, right)) {
         return true;
@@ -219,12 +235,14 @@ const sameModelValue = (left, right) => {
     return (keys.length === Object.keys(right).length &&
         keys.every((key) => Object.hasOwn(right, key) && sameModelValue(left[key], right[key])));
 };
+/** Require a finite number before native model field validation. */
 const readNumber = (value, label) => {
     if (typeof value !== "number") {
         throw new TypeError(`${label} must be a number.`);
     }
     return value;
 };
+/** Parse nested tile arrays from an untrusted native model field. */
 const readTiles = (value) => {
     if (!Array.isArray(value)) {
         throw new TypeError("Native tile model 'tiles' must be an array.");
@@ -241,6 +259,7 @@ const readTiles = (value) => {
         });
     });
 };
+/** Parse CGRAM color objects from an untrusted native model field. */
 const readColors = (value) => {
     if (!Array.isArray(value)) {
         throw new TypeError("Native palette model 'colors' must be an array.");
@@ -257,6 +276,7 @@ const readColors = (value) => {
         };
     });
 };
+/** Parse BG map entry objects from an untrusted native model field. */
 const readEntries = (value) => {
     if (!Array.isArray(value)) {
         throw new TypeError("Native tilemap model 'entries' must be an array.");
@@ -274,12 +294,14 @@ const readEntries = (value) => {
         };
     });
 };
+/** Parse Mode 7 index arrays from an untrusted native model field. */
 const readIndexes = (value) => {
     if (!Array.isArray(value)) {
         throw new TypeError("Native tilemap model 'indexes' must be an array.");
     }
     return value.map((entry, index) => readNumber(entry, `Index ${index}`));
 };
+/** Parse BRR block objects from an untrusted native model field. */
 const readBlocks = (value) => {
     if (!Array.isArray(value)) {
         throw new TypeError("Native BRR model 'blocks' must be an array.");
@@ -297,6 +319,7 @@ const readBlocks = (value) => {
         };
     });
 };
+/** Build a registry encoder that round-trips one native model field exactly. */
 const nativeEncoder = (id, kind, output, modelField, encode, decode) => Object.freeze({
     id,
     version: "1.0.0",

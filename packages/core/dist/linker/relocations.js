@@ -145,6 +145,7 @@ function assumptionFor(recipe, module, section) {
     }
     return result;
 }
+/** Enforces fixup range and alignment after the symbol value is known. */
 function checkValue(value, bounds, fixup) {
     if ((bounds.minimum !== undefined && value < bounds.minimum) ||
         (bounds.maximum !== undefined && value > bounds.maximum) ||

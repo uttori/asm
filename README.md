@@ -6,7 +6,7 @@ Build binaries, inspect evidence, regenerate source, and verify byte-identical R
 ## Requirements
 
 - Node.js 26 or newer for npm packages, standalone tools, and development.
-- VS Code 1.140.0 or newer for the extension. It uses the editor's embedded runtime.
+- VS Code 1.145.0 or newer for the extension. It uses the editor's embedded runtime.
 - Live debugging requires a separately installed, manifest-matched ares runtime.
 
 Support starts at the versions currently declared in the package manifests and moves forward.

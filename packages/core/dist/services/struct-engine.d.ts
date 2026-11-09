@@ -5,14 +5,20 @@ import type { ReferencePath } from "../ir/reference-path.js";
 import { DataStructEngine, type DataStructHost } from "./data-struct-engine.js";
 /** Encoding information is separate from Asar's address-only member labels. */
 export interface StructField {
+    /** Member label without the leading dot. */
     name: string;
+    /** Byte offset from the struct base address. */
     offset: number;
+    /** Storage width of one element in bytes. */
     width: number;
+    /** Element count; one for scalars and skip blobs. */
     count: number;
     /** Even db[1] is an array. Skip members are opaque byte arrays. */
     array: boolean;
 }
+/** Mutable struct layout state accumulated while parsing struct members. */
 export interface StructDefinition {
+    /** Struct symbol name in the current namespace. */
     name: string;
     /** The logical start address for the struct. */
     base: number;
@@ -36,6 +42,7 @@ export interface StructDefinition {
         count: number;
     };
 }
+/** Session services shared by struct layout and data struct emission. */
 export type StructHost = DataStructHost & {
     readonly addressWidth: number;
     currentStruct: StructDefinition | null;
@@ -50,19 +57,21 @@ export type StructHost = DataStructHost & {
         containerName?: string;
     }): void;
 };
+/** Parses struct declarations and delegates indexed rows to the data struct engine. */
 export declare class StructEngine {
     readonly host: StructHost;
+    /** Engine emitting indexed data struct tables for defined layouts. */
     readonly data: DataStructEngine;
     constructor(host: StructHost);
     /**
      * Handles a struct mode command.
-     * @param {NormalizedCommand} command The command to handle.
-     * @returns {boolean} `true` if the command was handled, `false` otherwise.
+     * @param command The command to handle.
+     * @returns `true` if the command was handled, `false` otherwise.
      */
     handleStructMode(command: NormalizedCommand): boolean;
     /**
      * Handles a struct command.
-     * @param {string[]} words The words of the command.
+     * @param words The words of the command.
      */
     handleStruct(words: readonly string[]): void;
     /** Bind a declaration's base in the current stage, before changing struct scope. */
@@ -71,7 +80,7 @@ export declare class StructEngine {
     }>): void;
     /**
      * Handles an endstruct command.
-     * @param {string[]} words The words of the command.
+     * @param words The words of the command.
      */
     handleEndStruct(words: readonly string[]): void;
     /** Resolve options in source order; finalize the layout before restoring its enclosing cursor. */
@@ -80,16 +89,16 @@ export declare class StructEngine {
     }>): void;
     /**
      * Checks whether a reference starts with a known struct name.
-     * @param {string} labelRef The reference to inspect.
-     * @returns {boolean} Whether the reference belongs to a known struct.
+     * @param labelRef The reference to inspect.
+     * @returns Whether the reference belongs to a known struct.
      */
     hasStructReference(labelRef: string): boolean;
     /** Resolve a parsed path directly; index values are refreshed in the caller's active stage. */
     resolveStructPath(path: ReferencePath, evaluate: (node: ExpressionNode) => number): number | undefined;
     /**
      * Resolves a struct label.
-     * @param {string} labelRef The label to resolve.
-     * @returns {number} The resolved address.
+     * @param labelRef The label to resolve.
+     * @returns The resolved address.
      */
     resolveStructLabel(labelRef: string): number;
 }

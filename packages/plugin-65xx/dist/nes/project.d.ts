@@ -28,13 +28,11 @@ export declare function analyzeNesProject(options: {
     unresolved: number;
     processedWorkItems: number;
     incompleteReasons: readonly import("@uttori/asm-disassembler").StaticAnalysisIncompleteReason[];
-    addedCode: {
-        start: number;
-        end: number;
+    addedCode: (import("@uttori/asm-disassembler").HalfOpenInterval & {
         addressSpace: string;
         address: number;
         recordIds: string[];
-    }[];
+    })[];
     coverage: import("@uttori/asm-disassembler").StaticCoverageSummary;
 };
 //# sourceMappingURL=project.d.ts.map

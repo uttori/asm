@@ -12,9 +12,12 @@ import { registerLayoutDirectives } from "./layout.js";
 import { registerMiscDirectives } from "./misc.js";
 import { registerNamespaceDirectives } from "./namespace.js";
 import { registerStructBinaryDirectives } from "./struct-binary.js";
+/** Compact cache key combining grammar version strings without ambiguous concatenation. */
 const packIdentity = (value) => `${value.length.toString(36)}:${value}`;
+/** Keyword dispatch table merging imperative handlers and typed syntax grammars. */
 export class DirectiveRegistry {
     directivePrefixes;
+    /** Lowercase keyword to bound handler map including prefix-stripped aliases. */
     handlers = new Map();
     /** Grammar versions are immutable; registration is the only ownership transition. */
     cachedGrammarIdentity;
@@ -171,9 +174,11 @@ export class DirectiveRegistry {
     constructor(directivePrefixes = []) {
         this.directivePrefixes = directivePrefixes;
     }
+    /** Reports whether a handler exists for the keyword after prefix normalization. */
     has(keyword) {
         return this.lookup(keyword) !== undefined;
     }
+    /** Invokes a registered handler when present; returns false when the keyword is unknown. */
     dispatch(keyword, words, raw, command) {
         const handler = this.lookup(keyword);
         if (!handler) {
@@ -184,8 +189,8 @@ export class DirectiveRegistry {
     }
     /**
      * Resolves a directive handler using prefixes supplied by the active syntax profile.
-     * @param {string} keyword The directive keyword.
-     * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
+     * @param keyword The directive keyword.
+     * @returns The handler, if registered.
      */
     lookup(keyword) {
         const direct = this.handlers.get(keyword);
@@ -200,6 +205,7 @@ export class DirectiveRegistry {
         return undefined;
     }
 }
+/** Builds a registry with only the enabled core directive groups and syntax prefixes. */
 export const createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, directivePrefixes = []) => {
     const registry = new DirectiveRegistry(directivePrefixes);
     const enabled = new Set(enabledGroups);

@@ -25,12 +25,14 @@ const binaryPrecedence = Object.freeze({
     "%": 5,
     "**": 6,
 });
+/** Rejects results outside the supported 256-bit magnitude window. */
 const checked = (value) => {
     if (value > MAX_MAGNITUDE || value < -MAX_MAGNITUDE) {
         throw new Error("Debugger expression result exceeds 256 bits.");
     }
     return value;
 };
+/** Parses digit text for the given radix into a bigint. */
 const parseDigits = (digits, radix) => {
     if (digits.length === 0) {
         throw new Error("Debugger expression contains an empty number.");
@@ -43,6 +45,7 @@ const parseDigits = (digits, radix) => {
     }
     return BigInt(digits);
 };
+/** Returns the per-radix digit class used while tokenizing numbers. */
 const digitPattern = (radix) => {
     if (radix === 16) {
         return /[\dA-Fa-f]/;
@@ -52,6 +55,7 @@ const digitPattern = (radix) => {
     }
     return /\d/;
 };
+/** Scans one expression string into postfix-ready tokens with bounds checks. */
 const tokenize = (expression) => {
     if (expression.length === 0) {
         throw new Error("Debugger expression cannot be empty.");
@@ -135,6 +139,7 @@ const tokenize = (expression) => {
     tokens.push({ type: "end" });
     return tokens;
 };
+/** Recursive-descent parser over tokenized register expressions. */
 class DebugExpressionParser {
     #tokens;
     #registers;
@@ -143,6 +148,7 @@ class DebugExpressionParser {
         this.#tokens = tokens;
         this.#registers = registers;
     }
+    /** Parses the full token stream into one evaluated result. */
     parse() {
         const result = this.#expression(0, 0);
         if (this.#peek().type !== "end") {
@@ -289,15 +295,15 @@ class DebugExpressionParser {
 }
 /**
  * Evaluates a bounded, side-effect-free native integer expression against stopped registers.
- * @param {string} expression Native expression using register names and integer operators.
- * @param {readonly DebugRegister[]} registers Registers from the selected stopped frame.
- * @returns {DebugExpressionResult} Exact integer result and direct-register width, when applicable.
+ * @param expression Native expression using register names and integer operators.
+ * @param registers Registers from the selected stopped frame.
+ * @returns Exact integer result and direct-register width, when applicable.
  */
 export const evaluateDebugExpression = (expression, registers) => new DebugExpressionParser(tokenize(expression.trim()), registers).parse();
 /**
  * Formats a debugger integer without losing values above JavaScript's safe-number range.
- * @param {bigint} value Evaluated integer.
- * @returns {string} Signed hexadecimal display string.
+ * @param value Evaluated integer.
+ * @returns Signed hexadecimal display string.
  */
 export const formatDebugExpressionValue = (value) => value < 0n ? `-0x${(-value).toString(16)}` : `0x${value.toString(16)}`;
 //# sourceMappingURL=debug-expression.js.map

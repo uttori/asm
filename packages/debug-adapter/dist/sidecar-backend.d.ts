@@ -12,11 +12,13 @@ export interface SidecarDebugBackendOptions {
 /** Typed `DebugBackend` implementation over the authenticated sidecar client. */
 export declare class SidecarDebugBackend implements DebugBackend {
     #private;
+    /** Fixed sidecar-backed protocol revision. */
     readonly protocolVersion: 1;
+    /** Capabilities verified on initialize, which may refine configured expectations. */
     get capabilities(): DebugBackendCapabilities;
     /**
      * Creates a backend with capabilities declared before DAP initialization and verified on connect.
-     * @param {SidecarDebugBackendOptions} options Sidecar identity, capability manifest, and factory.
+     * @param options Sidecar identity, capability manifest, and factory.
      */
     constructor(options: SidecarDebugBackendOptions);
     /** @inheritdoc */
@@ -45,6 +47,7 @@ export declare class SidecarDebugBackend implements DebugBackend {
     disassemble(requestedAddress: DebugAddress, count: number): Promise<readonly DebugInstruction[]>;
     /** @inheritdoc */
     capture(request: CaptureRequestV2): Promise<CaptureResultV2>;
+    /** @inheritdoc */
     startTrace(options: DebugTraceStartOptions): Promise<void>;
     /** @inheritdoc */
     readTrace(maxEvents: number): Promise<DebugTraceBatch>;

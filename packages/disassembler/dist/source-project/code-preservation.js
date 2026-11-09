@@ -1,3 +1,4 @@
+/** Merge overlapping half-open intervals after sorting by start offset. */
 const union = (ranges) => {
     const merged = [];
     for (const range of ranges.toSorted((left, right) => left.start - right.start)) {
@@ -18,9 +19,9 @@ const union = (ranges) => {
  * Finds previously decoded ROM bytes missing from a replacement analysis or export.
  * Compares interval coverage, so gains elsewhere cannot hide losses or mirrored CFG variants
  * inflate their size. Adjacent instructions may change boundaries without losing coverage.
- * @param {readonly HalfOpenInterval[]} previous Previously accepted ROM code intervals.
- * @param {readonly HalfOpenInterval[]} next Candidate ROM code intervals.
- * @returns {readonly HalfOpenInterval[]} Disjoint lost code ranges in ROM offset order.
+ * @param previous Previously accepted ROM code intervals.
+ * @param next Candidate ROM code intervals.
+ * @returns Disjoint lost code ranges in ROM offset order.
  */
 export const lostCodeRanges = (previous, next) => {
     const retained = union(next);

@@ -4,30 +4,54 @@ import { createReadStream } from "node:fs";
 import { mkdir, stat } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
-import { DEBUG_SIDECAR_SESSION_ENV } from "@uttori/asm-debug-adapter";
+import { DEBUG_SIDECAR_SESSION_ENV, } from "@uttori/asm-debug-adapter";
 import { GdbRspClient } from "./gdb-rsp-client.js";
 import { NodeTcpGdbRspTransport } from "./node-tcp-gdb-rsp-transport.js";
+/** Only ares runtime manifest schema version accepted by `parseAresRuntimeManifest`. */
 export const ARES_RUNTIME_MANIFEST_VERSION = 1;
 const sha256Pattern = /^[\dA-Fa-f]{64}$/;
 const revisionPattern = /^[\dA-Fa-f]{40}$/;
+/**
+ * Validates a hex SHA-256 digest.
+ * @param value Candidate digest.
+ * @param name Field name used in the error message.
+ * @returns Lowercased digest.
+ */
 const checkedSha256 = (value, name) => {
     if (!sha256Pattern.test(value)) {
         throw new Error(`${name} must be a 64-digit SHA-256 value.`);
     }
     return value.toLowerCase();
 };
+/**
+ * Validates a full 40-digit git revision.
+ * @param value Candidate revision.
+ * @param name Field name used in the error message.
+ * @returns Lowercased revision.
+ */
 const checkedRevision = (value, name) => {
     if (!revisionPattern.test(value)) {
         throw new Error(`${name} must be a 40-digit git revision.`);
     }
     return value.toLowerCase();
 };
+/**
+ * Requires an absolute host path.
+ * @param value Candidate path.
+ * @param name Field name used in the error message.
+ * @returns Normalized absolute path.
+ */
 const checkedAbsolutePath = (value, name) => {
     if (!path.isAbsolute(value)) {
         throw new Error(`${name} must be an absolute path.`);
     }
     return path.normalize(value);
 };
+/**
+ * Rejects manifest resource paths that are absolute, non-normalized, backslashed, or escape the runtime root.
+ * @param value Manifest resource path.
+ * @returns The unchanged path.
+ */
 const checkedResourcePath = (value) => {
     if (value === "." ||
         value.includes("\\") ||
@@ -38,7 +62,18 @@ const checkedResourcePath = (value) => {
     }
     return value;
 };
+/**
+ * Normalizes a thrown value.
+ * @param error Caught value.
+ * @returns The value itself when it is an Error, otherwise an Error wrapping its string form.
+ */
 const errorValue = (error) => error instanceof Error ? error : new Error(String(error));
+/**
+ * Races a promise against an unref'd timer. Rejections of `promise` are not observed.
+ * @param promise Promise to wait for.
+ * @param timeoutMs Deadline in milliseconds.
+ * @returns The resolved value, or undefined when the deadline passes first.
+ */
 const waitWithTimeout = async (promise, timeoutMs) => new Promise((resolve) => {
     const timer = setTimeout(() => resolve(undefined), timeoutMs);
     timer.unref();
@@ -48,10 +83,15 @@ const waitWithTimeout = async (promise, timeoutMs) => new Promise((resolve) => {
         return;
     });
 });
+/** Node `child_process` implementation with stdin ignored and stdout/stderr piped to the launch observer. */
 class NodeAresProcessHandle {
     #child;
     #exit;
     #exited = false;
+    /**
+     * Spawns the child immediately without a shell.
+     * @param options Command, arguments, environment, and output sink.
+     */
     constructor(options) {
         let spawnError;
         this.#child = spawn(options.command, [...options.args], {
@@ -73,21 +113,36 @@ class NodeAresProcessHandle {
             });
         });
     }
+    /** OS process id, or undefined when spawning failed. */
     get pid() {
         return this.#child.pid;
     }
+    /** True after the child's `close` event. */
     get exited() {
         return this.#exited;
     }
+    /**
+     * Waits for the child's `close` event.
+     * @returns Exit status, including any earlier spawn error.
+     */
     waitForExit() {
         return this.#exit;
     }
+    /**
+     * Signals the child unless it has already closed.
+     * @param signal Graceful `SIGTERM` or forced `SIGKILL`.
+     */
     kill(signal) {
         if (!this.#exited) {
             this.#child.kill(signal);
         }
     }
 }
+/**
+ * Streams a file through SHA-256.
+ * @param file File path.
+ * @returns Lowercase hex digest.
+ */
 const nodeSha256 = async (file) => {
     const digest = createHash("sha256");
     for await (const chunk of createReadStream(file)) {
@@ -98,6 +153,10 @@ const nodeSha256 = async (file) => {
     }
     return digest.digest("hex");
 };
+/**
+ * Binds an ephemeral 127.0.0.1 port and closes it again. Another process may claim the port before ares binds it.
+ * @returns Port number that was free at bind time.
+ */
 const reserveLoopbackPort = async () => {
     const server = net.createServer();
     await new Promise((resolve, reject) => {
@@ -136,7 +195,17 @@ export const nodeAresProcessRuntime = Object.freeze({
         timer.unref();
     }),
 });
+/**
+ * Tests for a non-null, non-array object.
+ * @param value Untrusted value.
+ * @returns True when `value` can be read as a string-keyed record.
+ */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/**
+ * Requires a manifest object or resource entry.
+ * @param value Untrusted value.
+ * @returns The value as a record.
+ */
 const manifestRecord = (value) => {
     if (!isRecord(value)) {
         throw new Error("Ares runtime manifest must be an object.");
@@ -156,6 +225,11 @@ const NODE_PLATFORMS = [
     "cygwin",
     "netbsd",
 ];
+/**
+ * Narrows a manifest platform string to a known Node platform.
+ * @param value Manifest platform.
+ * @returns Matching Node platform.
+ */
 const manifestPlatform = (value) => {
     const platform = NODE_PLATFORMS.find((candidate) => candidate === value);
     if (!platform) {
@@ -163,6 +237,12 @@ const manifestPlatform = (value) => {
     }
     return platform;
 };
+/**
+ * Requires a non-empty manifest string.
+ * @param value Untrusted field value.
+ * @param name Field name used in the error message.
+ * @returns The string.
+ */
 const manifestString = (value, name) => {
     if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${name} must be a non-empty string.`);
@@ -171,8 +251,8 @@ const manifestString = (value, name) => {
 };
 /**
  * Parses and freezes an untrusted versioned ares runtime manifest.
- * @param {unknown} value Parsed JSON-like value.
- * @returns {AresRuntimeManifest} Validated immutable runtime identity.
+ * @param value Parsed JSON-like value.
+ * @returns Validated immutable runtime identity.
  */
 export const parseAresRuntimeManifest = (value) => {
     const manifest = manifestRecord(value);
@@ -240,7 +320,10 @@ export class AresProcessHost {
     #port;
     #output = Buffer.alloc(0);
     #lifecycleTail = Promise.resolve();
-    /** @param {AresProcessHostOptions} options Paths, manifest, bounds, and platform runtime. */
+    /**
+     * Validates paths, manifest, and bounds without launching or hashing anything.
+     * @param options Paths, manifest, bounds, and platform runtime.
+     */
     constructor(options) {
         this.#executable = checkedAbsolutePath(options.executable, "Ares executable");
         this.#rom = checkedAbsolutePath(options.rom, "Ares ROM");
@@ -282,22 +365,31 @@ export class AresProcessHost {
             }
         }
     }
-    /** @returns {AresRuntimeManifest} Normalized immutable launch identity. */
+    /**
+     * Manifest parsed at construction.
+     * @returns Normalized immutable launch identity.
+     */
     get manifest() {
         return this.#manifest;
     }
-    /** @returns {number | undefined} PID of the current emulator process. */
+    /**
+     * Process id of the owned emulator.
+     * @returns PID of the current emulator process, or undefined when none is running.
+     */
     get pid() {
         return this.#process?.pid;
     }
-    /** @returns {string} Bounded tail of emulator stdout and stderr, never protocol stdout. */
+    /**
+     * Stream-tagged output captured since the latest launch, truncated to `maxOutputBytes`.
+     * @returns Bounded tail of emulator stdout and stderr, never protocol stdout.
+     */
     get output() {
         return this.#output.toString("utf8");
     }
     /**
      * Starts a fresh verified emulator for reset connects or reconnects to the preserved process.
-     * @param {DebugBackendConnectOptions} options Backend reset policy.
-     * @returns {Promise<GdbRspClient>} Connected, not-yet-started private RSP client.
+     * @param options Backend reset policy.
+     * @returns Connected, not-yet-started private RSP client.
      */
     createClient(options) {
         return this.#serializeLifecycle(async () => {
@@ -321,7 +413,10 @@ export class AresProcessHost {
             }
         });
     }
-    /** @returns {Promise<void>} Bounded graceful/forced cleanup of the owned emulator process. */
+    /**
+     * Sends SIGTERM, then SIGKILL after `shutdownTimeoutMs`. Serialized with `createClient`.
+     * @returns Bounded graceful/forced cleanup of the owned emulator process.
+     */
     terminate() {
         return this.#serializeLifecycle(() => this.#terminateCurrent());
     }

@@ -11,28 +11,34 @@ export const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
 /** Default and maximum distinct-fact budget when counters or output records remain on the heap. */
 export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8_000_000;
 const MAX_RUNTIME_TRACE_INDEX_RECORDS = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
+/** Distinguish plain object rows from arrays during trace validation. */
 function isRowRecord(value) {
     return !Array.isArray(value);
 }
+/** Require an object record or throw with a validation context label. */
 const record = (value, context) => {
     if (typeof value !== "object" || value === null || !isRowRecord(value)) {
         throw new Error(`${context} must be an object.`);
     }
     return value;
 };
+/** Require a non-empty string or throw with a validation context label. */
 const string = (value, context) => {
     if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${context} must be a non-empty string.`);
     }
     return value;
 };
+/** Require a safe integer at or above a minimum bound. */
 const integer = (value, context, minimum = 0) => {
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
     }
     return value;
 };
+/** Hash UTF-8 text to a lowercase hex SHA-256 digest. */
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+/** Canonicalize JSON-compatible values and hash them for trace identity fields. */
 const sha256Identity = (value, context) => {
     const identity = string(value, context);
     if (!/^[\da-f]{64}$/.test(identity)) {
@@ -40,11 +46,12 @@ const sha256Identity = (value, context) => {
     }
     return identity;
 };
+/** Format a program counter as an upper-case six-digit hex string. */
 const hex = (value) => value.toString(16).toUpperCase().padStart(6, "0");
 /**
  * Validate the small trace envelope independently of its event stream.
- * @param {unknown} value Untrusted metadata.
- * @returns {RuntimeInstructionTraceMetadata} Normalized identity.
+ * @param value Untrusted metadata.
+ * @returns Normalized identity.
  */
 export const validateRuntimeInstructionTraceMetadata = (value) => {
     const artifact = record(value, "Instruction trace artifact");
@@ -72,7 +79,7 @@ export const validateRuntimeInstructionTraceMetadata = (value) => {
 };
 /**
  * Create validation state spanning chunk boundaries without retaining earlier events.
- * @returns {(value: unknown) => RuntimeInstructionTraceChunk} Next-chunk validator.
+ * @returns Next-chunk validator.
  */
 export const createRuntimeTraceChunkValidator = () => {
     let index = 0;
@@ -128,8 +135,8 @@ export const createRuntimeTraceChunkValidator = () => {
 };
 /**
  * Validates untrusted trace data without importing project facts.
- * @param {unknown} value Untrusted trace.
- * @returns {RuntimeInstructionTraceArtifact} Normalized trace.
+ * @param value Untrusted trace.
+ * @returns Normalized trace.
  */
 export const validateRuntimeInstructionTrace = (value) => {
     const metadata = validateRuntimeInstructionTraceMetadata(value);
@@ -142,9 +149,9 @@ export const validateRuntimeInstructionTrace = (value) => {
 /**
  * Converts one explicitly supplied native trace artifact into merge-ready runtime evidence.
  * This function is pure: callers must separately invoke `mergeRuntimeEvidence` and persist the project.
- * @param {RuntimeInstructionTraceArtifact} value Untrusted native trace artifact.
- * @param {RuntimeInstructionTraceImportContext} context Selected project and source identity.
- * @returns {RuntimeInstructionTraceImportResult} Deterministic batch and loss diagnostics.
+ * @param value Untrusted native trace artifact.
+ * @param context Selected project and source identity.
+ * @returns Deterministic batch and loss diagnostics.
  */
 export const importRuntimeInstructionTrace = (value, context) => {
     const artifact = record(value, "Instruction trace artifact");
@@ -160,10 +167,10 @@ export const importRuntimeInstructionTrace = (value, context) => {
 /**
  * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
  * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
- * @param {string} mode Full snapshots or compact analysis state.
- * @param {number} requested Explicit caller budget, if any.
- * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
- * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
+ * @param mode Full snapshots or compact analysis state.
+ * @param requested Explicit caller budget, if any.
+ * @param storage Optional counter storage and final record sink.
+ * @returns Positive safe integer limit, or throws for an invalid or unsafe memory budget.
  */
 export const runtimeTraceIndexRecordLimit = (mode, requested, storage) => {
     if (mode !== "full" && mode !== "analysis") {
@@ -185,7 +192,7 @@ export const runtimeTraceIndexRecordLimit = (mode, requested, storage) => {
 };
 /**
  * Default index for callers explicitly requesting an in-memory evidence batch.
- * @returns {RuntimeTraceFactIndex} Counter map released by importer completion or failure.
+ * @returns Counter map released by importer completion or failure.
  */
 const createMemoryFactIndex = () => {
     const records = new Map();
@@ -207,10 +214,10 @@ const createMemoryFactIndex = () => {
  * Aggregate a trace one validated chunk at a time, preserving canonical import identities.
  * The default memory index grows with distinct facts. Callers can supply a disk index and sink.
  * Paired code/state facts share one accumulator until finalization. Record budgets do not bound bytes.
- * @param {RuntimeInstructionTraceMetadata} value Trace identity.
- * @param {RuntimeInstructionTraceImportContext} context Destination identity.
- * @param {RuntimeTraceImporterStorage} [storage] Caller-owned counter index and optional bounded record sink.
- * @returns {RuntimeInstructionTraceImporter} Incremental importer. Finish only after the file validates.
+ * @param value Trace identity.
+ * @param context Destination identity.
+ * @param [storage] Caller-owned counter index and optional bounded record sink.
+ * @returns Incremental importer. Finish only after the file validates.
  */
 export const createRuntimeInstructionTraceImporter = (value, context, storage) => {
     const artifact = validateRuntimeInstructionTraceMetadata(value);

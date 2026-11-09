@@ -1,7 +1,8 @@
-/** Permute the low VRAM word-address bit groups selected by VMAIN's full-graphic mapping.
- * @param {number} address Sixteen-bit VMADD word address.
- * @param {number} mapping Two-bit VMAIN mapping selector.
- * @returns {number} Mapped word address, before the emulator's physical VRAM mask.
+/**
+ * Permute the low VRAM word-address bit groups selected by VMAIN's full-graphic mapping.
+ * @param address Sixteen-bit VMADD word address.
+ * @param mapping Two-bit VMAIN mapping selector.
+ * @returns Mapped word address, before the emulator's physical VRAM mask.
  */
 const mapVram = (address, mapping) => {
     if (mapping === 0) {
@@ -12,11 +13,12 @@ const mapVram = (address, mapping) => {
     const blockMask = (1 << (bits + 3)) - 1;
     return (address & ~blockMask) | ((address & lowMask) << 3) | ((address >> bits) & 7);
 };
-/** Interpret a validated, complete ordered SNES bus stream without assuming power-on PPU state.
+/**
+ * Interpret a validated, complete ordered SNES bus stream without assuming power-on PPU state.
  * Reads advance the relevant port pointers/flip-flops but are not reported as writes. OAM
  * tracking requires observed forced blank and a subsequent address reset: rendering can reset
  * its pointer internally, and the two ares PPUs redirect active-display OAM differently.
- * @returns {object} Session-local accumulator. The importer owns validation and publication.
+ * @returns Session-local accumulator. The importer owns validation and publication.
  */
 export const createRuntimeGraphicsAccumulator = () => {
     let forcedBlank = null;
@@ -40,9 +42,10 @@ export const createRuntimeGraphicsAccumulator = () => {
     const activity = new Map();
     const writes = [];
     let omittedWrites = 0;
-    /** Advance after the selected low/high port, including reads and rendering-suppressed writes.
-     * @param {number} byte Low port zero or high port one.
-     * @returns {void} Invalidates partial address knowledge when an unknown carry/increment is possible.
+    /**
+     * Advance after the selected low/high port, including reads and rendering-suppressed writes.
+     * @param byte Low port zero or high port one.
+     * @returns Invalidates partial address knowledge when an unknown carry/increment is possible.
      */
     const advanceVram = (byte) => {
         if (vmain === null) {
@@ -57,8 +60,9 @@ export const createRuntimeGraphicsAccumulator = () => {
             }
         }
     };
-    /** CGRAM reads and writes share a flip-flop. Only the high phase increments the color index.
-     * @returns {void} Preserves unknown phase/address instead of guessing alignment.
+    /**
+     * CGRAM reads and writes share a flip-flop. Only the high phase increments the color index.
+     * @returns Preserves unknown phase/address instead of guessing alignment.
      */
     const advanceCgram = () => {
         if (cgramHigh === null) {
@@ -71,9 +75,10 @@ export const createRuntimeGraphicsAccumulator = () => {
             cgramHigh = !cgramHigh;
         }
     };
-    /** Accumulate all writes while retaining only a bounded example list.
-     * @param {RuntimeGraphicsWrite} write Fresh interpretation with at most two candidate bytes.
-     * @returns {void} Updates fixed actor/channel/target groups.
+    /**
+     * Accumulate all writes while retaining only a bounded example list.
+     * @param write Fresh interpretation with at most two candidate bytes.
+     * @returns Updates fixed actor/channel/target groups.
      */
     const record = (write) => {
         const key = `${write.actor}:${write.channel}:${write.target}`;
@@ -107,9 +112,10 @@ export const createRuntimeGraphicsAccumulator = () => {
             omittedWrites++;
         }
     };
-    /** Consume actual bus operations, recognizing PPU mirrors only in banks 00–3f and 80–bf.
-     * @param {RuntimeBusAccess} access Validated access in global capture order.
-     * @returns {void} Mutates bounded PPU state and reports only writes to graphics data ports.
+    /**
+     * Consume actual bus operations, recognizing PPU mirrors only in banks 00–3f and 80–bf.
+     * @param access Validated access in global capture order.
+     * @returns Mutates bounded PPU state and reports only writes to graphics data ports.
      */
     const push = (access) => {
         if ((access.address & 0x400000) !== 0) {

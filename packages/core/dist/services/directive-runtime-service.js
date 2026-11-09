@@ -3,6 +3,7 @@ import { bindDataOperand, parseDataList } from "../ir/data-node.js";
 import { parseDeclarationNode } from "../ir/declaration-node.js";
 import { parseDirectiveExpression } from "../ir/directive-arguments.js";
 import { literalDataOperands } from "../ir/statement-node.js";
+/** Shared directive handlers for org, data, and character mapping commands. */
 export class DirectiveRuntimeService {
     host;
     constructor(host) {
@@ -10,7 +11,7 @@ export class DirectiveRuntimeService {
     }
     /**
      * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
-     * @param {string[]} words The character mapping command words.
+     * @param words The character mapping command words.
      * @throws {Error} If the format is incorrect.
      */
     handleCharacterMapping(words) {
@@ -31,15 +32,15 @@ export class DirectiveRuntimeService {
     /**
      * Processes a string and maps characters to their corresponding values in `characterMappings`.
      * If a character is not found in `characterMappings`, its charCode is used instead.
-     * @param {string} input The string to process.
-     * @returns {number[]} An array of numbers representing the mapped characters.
+     * @param input The string to process.
+     * @returns An array of numbers representing the mapped characters.
      */
     processStringWithMapping(input) {
         return Array.from(input).map((char) => this.host.characterMappings.get(char) ?? char.charCodeAt(0));
     }
     /**
      * Handles `org`.
-     * @param {string[]} params The directive parameters.
+     * @param params The directive parameters.
      */
     handleOrg(params) {
         if (params.length !== 1) {
@@ -63,8 +64,8 @@ export class DirectiveRuntimeService {
     }
     /**
      * Handles data directives.
-     * @param {string} type The data directive keyword.
-     * @param {string[]} params The directive parameters.
+     * @param type The data directive keyword.
+     * @param params The directive parameters.
      */
     handleDataDirective(type, params, numeric) {
         if (!Array.isArray(params) || params.length === 0) {
@@ -177,8 +178,8 @@ export class DirectiveRuntimeService {
     }
     /**
      * Writes a value using the data directive byte width.
-     * @param {number} len The byte width.
-     * @param {number} value The value to write.
+     * @param len The byte width.
+     * @param value The value to write.
      */
     writeDataByLength(len, value) {
         if (typeof len !== "number") {
@@ -215,8 +216,8 @@ export class DirectiveRuntimeService {
     }
     /**
      * Estimates data size with the same expansion order as emission, without resolving final values.
-     * @param {number} len Bytes per numeric item (1–4). String characters each occupy one item.
-     * @param {string[]} params Source operands, including defines that may expand to data lists.
+     * @param len Bytes per numeric item (1–4). String characters each occupy one item.
+     * @param params Source operands, including defines that may expand to data lists.
      */
     estimateDataDirectiveSize(len, params) {
         if (len !== 1 && len !== 2 && len !== 3 && len !== 4) {

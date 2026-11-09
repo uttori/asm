@@ -1,3 +1,8 @@
+/**
+ * Accept only non-null, non-array objects.
+ * @param value Candidate value.
+ * @returns Whether value is a plain record.
+ */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }

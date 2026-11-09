@@ -1,5 +1,6 @@
 import { runtimeFromRow } from "./sqlite-records.js";
-/** Join the retained SQLite facts by architecture, CPU PC and physical fetch identity.
+/**
+ * Join the retained SQLite facts by architecture, CPU PC and physical fetch identity.
  * CPU records are aggregated inside SQL; a query-local cache avoids repeating joins for each port value.
  */
 export function queryGraphicsEvidence(db, query) {

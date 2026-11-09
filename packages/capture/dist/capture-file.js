@@ -2,12 +2,18 @@ import { open, lstat } from "node:fs/promises";
 import { setImmediate as yieldToMessages } from "node:timers/promises";
 import { CaptureFrameReader } from "./capture-file-reader.js";
 import { captureCrc32c, captureU64, captureSession, captureScope, captureChunkRecords, decodeCaptureChunk, validateCapturePosition, } from "./capture-v2.js";
+/**
+ * Narrow to a plain JSON object; arrays are rejected.
+ * @param value Decoded JSON value.
+ * @returns Whether fields can be read by key.
+ */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /** Preserve consumer failures instead of interpreting them as recoverable archive truncation. */
 const consumerRejected = (failed) => failed;
 /** Only physical EOF permits opt-in prefix recovery; malformed checksums and frames remain errors. */
 class CaptureTruncationError extends Error {
 }
+/** Reject capture metadata that lacks a supported CPU scope or exact ROM/producer identity. */
 export function validateCaptureMetadata(m) {
     if (!isRecord(m)) {
         throw new Error("Capture requires a supported CPU scope and exact ROM/producer identity.");
@@ -29,8 +35,8 @@ export function validateCaptureMetadata(m) {
 }
 /**
  * Reject oversized input before reading. Recovery tools remain unlimited unless given a budget.
- * @param {number} size File size or proposed read end, in bytes.
- * @param {CaptureFileReadOptions} options Optional positive safe-integer byte limit.
+ * @param size File size or proposed read end, in bytes.
+ * @param options Optional positive safe-integer byte limit.
  */
 const checkCaptureSize = (size, options) => {
     const limit = options.maxBytes ?? Number.MAX_SAFE_INTEGER;
@@ -43,8 +49,8 @@ const checkCaptureSize = (size, options) => {
 };
 /**
  * Validate the bounded header before choosing a consumer or accepting any scoped chunks.
- * @param {unknown} value Decoded, checksummed JSON header.
- * @returns {CaptureFileHeader} Supported archive identity and ownership contract.
+ * @param value Decoded, checksummed JSON header.
+ * @returns Supported archive identity and ownership contract.
  */
 function headerAllocationAccepted(value) {
     return (typeof value === "number" &&
@@ -52,6 +58,7 @@ function headerAllocationAccepted(value) {
         value >= 4718656 &&
         value <= 64 * 1024 * 1024);
 }
+/** Reject a header that is missing required identities or exceeds size bounds. */
 function assertCaptureFileHeader(value) {
     if (!isRecord(value)) {
         throw new Error("Missing capture session header.");
@@ -80,16 +87,17 @@ function assertCaptureFileHeader(value) {
         throw new Error("Unsupported capture session contract.");
     }
 }
+/** Parse and return a capture header, throwing on an invalid shape. */
 const validateCaptureFileHeader = (value) => {
     assertCaptureFileHeader(value);
     return value;
 };
 /**
  * Read exactly one bounded frame component. Short reads must never become zero-filled valid data.
- * @param {FileHandle} handle Caller-owned open archive handle.
- * @param {number} length Validated frame component length, in bytes.
- * @param {number} offset Absolute file byte offset.
- * @returns {Promise<Buffer>} Fully initialized bytes. Premature EOF rejects the read.
+ * @param handle Caller-owned open archive handle.
+ * @param length Validated frame component length, in bytes.
+ * @param offset Absolute file byte offset.
+ * @returns Fully initialized bytes. Premature EOF rejects the read.
  */
 const readCaptureBytes = async (handle, length, offset) => {
     const bytes = Buffer.allocUnsafe(length);
@@ -105,9 +113,9 @@ const readCaptureBytes = async (handle, length, offset) => {
 };
 /**
  * Read only the checksummed session header, without scanning the archive's event chunks.
- * @param {string} file ACT2 archive path.
- * @param {CaptureFileReadOptions} options Byte budget and cancellation.
- * @returns {Promise<CaptureFileHeader>} Validated identity. Completion is checked during consumption.
+ * @param file ACT2 archive path.
+ * @param options Byte budget and cancellation.
+ * @returns Validated identity. Completion is checked during consumption.
  */
 export const readCaptureFileHeader = async (file, options = {}) => {
     options.signal?.throwIfAborted();
@@ -135,10 +143,10 @@ export const readCaptureFileHeader = async (file, options = {}) => {
 };
 /**
  * Scan bounded frames, delivering only chunks backed by validated checkpoints.
- * @param {string} file Archive or partial artifact.
- * @param {Function} accept Optional committed-chunk consumer.
- * @param {CaptureFileReadOptions} options Scan budget, cancellation and progress. Consumer failures propagate.
- * @returns {Promise<CaptureRecovery>} Validated prefix and terminal integrity.
+ * @param file Archive or partial artifact.
+ * @param accept Optional committed-chunk consumer.
+ * @param options Scan budget, cancellation and progress. Consumer failures propagate.
+ * @returns Validated prefix and terminal integrity.
  */
 export const recoverCaptureFile = async (file, accept, options = {}) => {
     options.signal?.throwIfAborted();
@@ -304,10 +312,10 @@ export const recoverCaptureFile = async (file, accept, options = {}) => {
 };
 /**
  * Stream a verified complete archive into the existing instruction importer format.
- * @param {string} archive Complete ACT2 artifact.
- * @param {string} destination New JSON artifact.
- * @param {boolean} reserved Whether the recorder already reserved an empty destination.
- * @returns {Promise<void>} Settlement after the export is synced and closed.
+ * @param archive Complete ACT2 artifact.
+ * @param destination New JSON artifact.
+ * @param reserved Whether the recorder already reserved an empty destination.
+ * @returns Settlement after the export is synced and closed.
  */
 export const exportCaptureJson = async (archive, destination, reserved = false) => {
     // Validate before creating a complete-looking legacy artifact. Recovery callers
@@ -364,11 +372,13 @@ export const exportCaptureJson = async (archive, destination, reserved = false) 
         await h.close();
     }
 };
-/** Append-only native archive cursor. Reads only the producer's synced byte prefix,
+/**
+ * Append-only native archive cursor. Reads only the producer's synced byte prefix,
  * retaining one bounded chunk and an open inode across no-clobber publication.
  * Every callback is provisional until END2 and the published path both validate.
  */
 export class NativeCaptureFileCursor {
+    /** Parsed or declared header bytes. */
     header;
     #handle;
     #options;
@@ -387,10 +397,11 @@ export class NativeCaptureFileCursor {
         this.#identity = identity;
         this.#options = options;
     }
-    /** Open a prepared native partial file, or a completed archive for replay tests.
-     * @param {string} file Native-owned append-only file path.
-     * @param {CaptureFileReadOptions} options Byte budget and cancellation.
-     * @returns {Promise<NativeCaptureFileCursor>} Cursor pinning the checksummed session header and inode.
+    /**
+     * Open a prepared native partial file, or a completed archive for replay tests.
+     * @param file Native-owned append-only file path.
+     * @param options Byte budget and cancellation.
+     * @returns Cursor pinning the checksummed session header and inode.
      */
     static async open(file, options = {}) {
         options.signal?.throwIfAborted();
@@ -415,26 +426,30 @@ export class NativeCaptureFileCursor {
             throw error;
         }
     }
-    /** Byte offset includes only the header and consumed, checkpointed chunks.
-     * @returns {number} Consumed file bytes, for bounded backlog accounting.
+    /**
+     * Byte offset includes only the header and consumed, checkpointed chunks.
+     * @returns Consumed file bytes, for bounded backlog accounting.
      */
     get readBytes() {
         return this.#offset;
     }
+    /** Derived observedEvents value for callers. */
     get observedEvents() {
         return String(this.#event);
     }
+    /** Derived complete value for callers. */
     get complete() {
         return this.#complete;
     }
-    /** Read at most maxChunks (default 16) from a validated native status. Growth beyond
+    /**
+     * Read at most maxChunks (default 16) from a validated native status. Growth beyond
      * that durable watermark is ignored even if an unsynced ACK2 is already visible.
      * A failure permanently poisons the cursor. Callers must discard staged facts.
-     * @param {NativeCaptureFilePosition} value Native producer's latest durable watermark.
-     * @param {Function} accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
-     * @param {number} maxChunks Maximum chunks per slice, in [1, 256].
-     * @param {string} publishedFile Final path whose inode must agree before completion.
-     * @returns {Promise<void>} Settlement of one bounded read slice.
+     * @param value Native producer's latest durable watermark.
+     * @param accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
+     * @param maxChunks Maximum chunks per slice, in [1, 256].
+     * @param publishedFile Final path whose inode must agree before completion.
+     * @returns Settlement of one bounded read slice.
      */
     async readThrough(value, accept, maxChunks = 16, publishedFile) {
         if (this.#failed) {
@@ -580,6 +595,7 @@ export class NativeCaptureFileCursor {
         await this.#handle.close();
     }
 }
+/** Map a capture cursor to the native writer position used for recovery. */
 export const nativePosition = (value, session, scope) => {
     const position = validateCapturePosition(value, session, scope);
     if (!isRecord(value)) {

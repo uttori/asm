@@ -22,18 +22,18 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// packages/vscode-extension/src/editor-info/worker.ts
+// src/editor-info/worker.ts
 var import_node_worker_threads = require("node:worker_threads");
 
-// packages/vscode-extension/src/editor-info/provider.ts
+// src/editor-info/provider.ts
 var import_node_crypto2 = require("node:crypto");
 var import_promises = require("node:fs/promises");
 var path = __toESM(require("node:path"), 1);
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var import_node_crypto = require("node:crypto");
 
-// packages/core/src/canonical-json.ts
+// ../core/src/canonical-json.ts
 var compareKeys = (a, b) => a.localeCompare(b);
 var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var canonicalValue = (value) => {
@@ -74,7 +74,7 @@ var canonicalValue = (value) => {
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
 var DEBUG_MAP_SCHEMA_VERSION = 1;
 var sha256 = (value) => (0, import_node_crypto.createHash)("sha256").update(value).digest("hex");
@@ -102,7 +102,7 @@ var validateDebugMap = (map, output) => {
   return issues;
 };
 
-// packages/vscode-extension/src/editor-info/provider.ts
+// src/editor-info/provider.ts
 function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -608,7 +608,7 @@ var EditorInformationProvider = class {
   }
 };
 
-// packages/vscode-extension/src/editor-info/worker.ts
+// src/editor-info/worker.ts
 if (!import_node_worker_threads.parentPort) {
   throw new Error("Source information worker needs its host message port.");
 }

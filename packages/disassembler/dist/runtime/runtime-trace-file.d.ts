@@ -13,33 +13,33 @@ export interface RuntimeTraceFileOptions {
 }
 /**
  * Read identity before selecting a matching project. Normal recorder headers require one block.
- * @param {string} file Trace path.
- * @param {RuntimeTraceFileOptions} options Read budget and cancellation.
- * @returns {Promise<RuntimeInstructionTraceMetadata>} Validated envelope (body checked on import).
+ * @param file Trace path.
+ * @param options Read budget and cancellation.
+ * @returns Validated envelope (body checked on import).
  */
 export declare const readRuntimeTraceFileMetadata: (file: string, options?: RuntimeTraceFileOptions) => Promise<RuntimeInstructionTraceMetadata>;
 /**
  * Read and normalize ordered chunks for callers that need standalone validated data.
- * @param {string} file Trace JSON path.
- * @param {RuntimeInstructionTraceMetadata} metadata Expected envelope identity.
- * @param {RuntimeTraceFileOptions} options Input limits, cancellation and progress.
+ * @param file Trace JSON path.
+ * @param metadata Expected envelope identity.
+ * @param options Input limits, cancellation and progress.
  * @yields {RuntimeInstructionTraceChunk} One normalized chunk. The tail is checked on exhaustion.
  */
 export declare function readRuntimeTraceFileChunks(file: string, metadata: RuntimeInstructionTraceMetadata, options?: RuntimeTraceFileOptions): AsyncGenerator<RuntimeInstructionTraceChunk>;
 /**
  * Open a bounded JSON source for an importer that already validates every chunk. Keeping validation
  * at the consumer avoids cloning all addresses, bytes, registers and bus accesses twice per read.
- * @param {string} file Trace JSON path.
- * @param {RuntimeTraceFileOptions} options Input limits, cancellation and progress.
- * @returns {Promise<RuntimeTraceSource>} Metadata plus a reader that checks the complete envelope.
+ * @param file Trace JSON path.
+ * @param options Input limits, cancellation and progress.
+ * @returns Metadata plus a reader that checks the complete envelope.
  */
 export declare const createRuntimeTraceFileSource: (file: string, options?: RuntimeTraceFileOptions) => Promise<RuntimeTraceSource>;
 /**
  * Import a native trace without allocating a file-sized string or retaining earlier chunks.
- * @param {string} file Trace path.
- * @param {RuntimeInstructionTraceImportContext} context Selected project identity.
- * @param {RuntimeTraceFileOptions} options Read budget and progress.
- * @returns {Promise<RuntimeInstructionTraceImportResult>} Merge-ready facts after full validation.
+ * @param file Trace path.
+ * @param context Selected project identity.
+ * @param options Read budget and progress.
+ * @returns Merge-ready facts after full validation.
  */
 export declare const importRuntimeInstructionTraceFile: (file: string, context: RuntimeInstructionTraceImportContext, options?: RuntimeTraceFileOptions) => Promise<RuntimeInstructionTraceImportResult>;
 //# sourceMappingURL=runtime-trace-file.d.ts.map

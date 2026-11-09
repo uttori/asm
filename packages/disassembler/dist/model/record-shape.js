@@ -1,17 +1,22 @@
 import { isResearchMapping } from "./research-mapping.js";
 /** Structural checks for stored JSON. Address bounds and provenance stay in project validation. */
+/** True when value is a non-array object record. */
 export function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** True when value is an array whose every element is a string. */
 export function isStringArray(value) {
     return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
+/** True when value is a finite number. */
 export function isFiniteNumber(value) {
     return typeof value === "number" && Number.isFinite(value);
 }
+/** True when value is an array whose every element is a finite number. */
 function isFiniteNumberArray(value) {
     return Array.isArray(value) && value.every(isFiniteNumber);
 }
+/** True when value is JSON-safe for codec option storage. */
 function isJsonValue(value) {
     if (value === null || typeof value === "string" || typeof value === "boolean") {
         return true;
@@ -24,22 +29,28 @@ function isJsonValue(value) {
     }
     return isRecord(value) && Object.values(value).every(isJsonValue);
 }
+/** True when value is absent or a string. */
 function allowsString(value) {
     return value === undefined || typeof value === "string";
 }
+/** True when value is absent or a finite number. */
 function allowsFinite(value) {
     return value === undefined || isFiniteNumber(value);
 }
+/** True when value is absent or a boolean. */
 function allowsBoolean(value) {
     return value === undefined || typeof value === "boolean";
 }
+/** True when value is a record whose values are all finite numbers. */
 function isNumberRecord(value) {
     return isRecord(value) && Object.values(value).every(isFiniteNumber);
 }
+/** True when attribute values are strings, numbers, or booleans only. */
 function isAttributeRecord(value) {
     return (isRecord(value) &&
         Object.values(value).every((entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)));
 }
+/** True when value is an array of object records. */
 function isRecordArray(value) {
     return Array.isArray(value) && value.every(isRecord);
 }
@@ -61,9 +72,11 @@ const CLASSIFICATIONS = [
     "empty",
     "text",
 ];
+/** True when value is a supported interval classification literal. */
 function isClassification(value) {
     return CLASSIFICATIONS.some((candidate) => candidate === value);
 }
+/** True when value is absent or a compact annotation CPU-state record. */
 function isAnnotationState(value) {
     if (value === undefined) {
         return true;
@@ -92,11 +105,13 @@ function isAnnotationState(value) {
     }
     return true;
 }
+/** True when value is absent or a valid control-flow point hint list. */
 function isPoints(value) {
     return (value === undefined ||
         (Array.isArray(value) &&
             value.every((point) => point === "in" || point === "out" || point === "end" || point === "read")));
 }
+/** True when required codec identity fields are present and options are JSON-safe. */
 function isCodecFields(value) {
     if (typeof value.codecId !== "string" || typeof value.codecVersion !== "string") {
         return false;
@@ -111,6 +126,7 @@ function isCodecFields(value) {
     }
     return value.options === undefined || isJsonValue(value.options);
 }
+/** True when value satisfies the stored asset codec annotation shape. */
 function isAsset(value) {
     if (!isRecord(value) || !isCodecFields(value)) {
         return false;
@@ -126,9 +142,11 @@ function isAsset(value) {
         allowsFinite(compression.bankEnd) &&
         allowsFinite(compression.fillByte));
 }
+/** True when value carries stable record identity and evidence identifiers. */
 function hasIdentity(value) {
     return typeof value.id === "string" && isStringArray(value.evidence);
 }
+/** True when value matches the persisted project label schema. */
 export function isProjectLabel(value) {
     return (isRecord(value) &&
         hasIdentity(value) &&
@@ -145,6 +163,7 @@ export function isProjectLabel(value) {
         allowsString(value.author) &&
         allowsString(value.confidence));
 }
+/** True when value matches the persisted project comment schema. */
 export function isProjectComment(value) {
     return (isRecord(value) &&
         hasIdentity(value) &&
@@ -156,6 +175,7 @@ export function isProjectComment(value) {
             value.placement === "before" ||
             value.placement === "inline-instruction"));
 }
+/** True when value matches the persisted project region schema. */
 export function isProjectRegion(value) {
     return (isRecord(value) &&
         hasIdentity(value) &&
@@ -169,6 +189,7 @@ export function isProjectRegion(value) {
         allowsFinite(value.priority) &&
         (value.attributes === undefined || isAttributeRecord(value.attributes)));
 }
+/** True when value matches the persisted interval annotation schema. */
 export function isIntervalAnnotation(value) {
     return (isRecord(value) &&
         hasIdentity(value) &&
@@ -182,6 +203,7 @@ export function isIntervalAnnotation(value) {
         isPoints(value.points) &&
         (value.asset === undefined || isAsset(value.asset)));
 }
+/** True when value is absent or a valid evidence artifact descriptor. */
 function isArtifact(value) {
     if (value === undefined) {
         return true;
@@ -193,6 +215,7 @@ function isArtifact(value) {
         allowsString(value.formatVersion) &&
         allowsString(value.mapper));
 }
+/** True when value matches the persisted evidence record schema. */
 export function isEvidenceRecord(value) {
     return (isRecord(value) &&
         typeof value.id === "string" &&
@@ -210,12 +233,14 @@ export function isEvidenceRecord(value) {
         allowsString(value.detail) &&
         isArtifact(value.artifact));
 }
+/** True when value describes one unsupported import field aggregate. */
 function isLossItem(value) {
     return (isRecord(value) &&
         typeof value.field === "string" &&
         isFiniteNumber(value.count) &&
         typeof value.reason === "string");
 }
+/** True when value matches the persisted import report schema. */
 export function isImportReport(value) {
     return (isRecord(value) &&
         typeof value.id === "string" &&
@@ -229,6 +254,7 @@ export function isImportReport(value) {
         value.unsupported.every(isLossItem) &&
         isStringArray(value.warnings));
 }
+/** True when value matches a persisted CFG node record. */
 function isControlFlowNode(value) {
     return (isRecord(value) &&
         value.kind === "cfg-node" &&
@@ -251,6 +277,7 @@ function isControlFlowNode(value) {
         allowsString(value.evidencePredecessor) &&
         isStringArray(value.evidencePath));
 }
+/** True when value matches a persisted CFG edge record. */
 function isControlFlowEdge(value) {
     return (isRecord(value) &&
         value.kind === "cfg-edge" &&
@@ -265,6 +292,7 @@ function isControlFlowEdge(value) {
         allowsString(value.override) &&
         allowsString(value.explanation));
 }
+/** True when value matches a persisted function candidate record. */
 function isFunctionRecord(value) {
     return (isRecord(value) &&
         value.kind === "function" &&
@@ -274,6 +302,7 @@ function isFunctionRecord(value) {
         typeof value.source === "string" &&
         isStringArray(value.evidencePath));
 }
+/** True when value matches a persisted analysis conflict record. */
 function isConflictRecord(value) {
     return (isRecord(value) &&
         value.kind === "conflict" &&
@@ -285,6 +314,7 @@ function isConflictRecord(value) {
         typeof value.message === "string" &&
         isStringArray(value.nodes));
 }
+/** True when value matches a persisted unresolved flow record. */
 function isUnresolvedRecord(value) {
     return (isRecord(value) &&
         value.kind === "unresolved" &&
@@ -295,6 +325,7 @@ function isUnresolvedRecord(value) {
         typeof value.indirect === "boolean" &&
         typeof value.reason === "string");
 }
+/** True when value matches a persisted analysis summary record. */
 function isSummaryRecord(value) {
     return (isRecord(value) &&
         value.kind === "summary" &&
@@ -305,6 +336,7 @@ function isSummaryRecord(value) {
         isFiniteNumber(value.processedWorkItems) &&
         isRecordArray(value.incompleteReasons));
 }
+/** True when value matches a persisted target override record. */
 function isTargetOverride(value) {
     return (isRecord(value) &&
         value.kind === "target-override" &&
@@ -314,6 +346,7 @@ function isTargetOverride(value) {
         isFiniteNumber(value.address) &&
         isFiniteNumberArray(value.targets));
 }
+/** True when value matches a persisted named target set record. */
 function isTargetSet(value) {
     return (isRecord(value) &&
         value.kind === "target-set" &&
@@ -323,6 +356,7 @@ function isTargetSet(value) {
         typeof value.name === "string" &&
         isFiniteNumberArray(value.targets));
 }
+/** True when value matches any discriminated analysis shard record. */
 export function isAnalysisRecord(value) {
     if (!isRecord(value)) {
         return false;
@@ -348,45 +382,53 @@ export function isAnalysisRecord(value) {
             return false;
     }
 }
+/** Throws with a shard-specific message when validation fails. */
 function reject(kind) {
     throw new Error(`Invalid stored ${kind} record.`);
 }
+/** Parses value as a project label or throws. */
 export function requireProjectLabel(value) {
     if (!isProjectLabel(value)) {
         reject("label");
     }
     return value;
 }
+/** Parses value as a project comment or throws. */
 export function requireProjectComment(value) {
     if (!isProjectComment(value)) {
         reject("comment");
     }
     return value;
 }
+/** Parses value as a project region or throws. */
 export function requireProjectRegion(value) {
     if (!isProjectRegion(value)) {
         reject("region");
     }
     return value;
 }
+/** Parses value as an interval annotation or throws. */
 export function requireIntervalAnnotation(value) {
     if (!isIntervalAnnotation(value)) {
         reject("annotation");
     }
     return value;
 }
+/** Parses value as an evidence record or throws. */
 export function requireEvidenceRecord(value) {
     if (!isEvidenceRecord(value)) {
         reject("evidence");
     }
     return value;
 }
+/** Parses value as an import report or throws. */
 export function requireImportReport(value) {
     if (!isImportReport(value)) {
         reject("import");
     }
     return value;
 }
+/** Parses value as an analysis shard record or throws. */
 export function requireAnalysisRecord(value) {
     if (!isAnalysisRecord(value)) {
         reject("analysis");

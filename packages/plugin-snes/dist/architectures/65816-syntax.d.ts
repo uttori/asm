@@ -2,6 +2,7 @@ import type { ParsedInstructionOperands, OperandScalar, ParsedOperand } from "@u
 import { type ExpansionPlan } from "./operand-plans.js";
 /** Lexical facts retained separately from stage-local values and processor flags. */
 export interface Syntax65816 extends ParsedInstructionOperands {
+    /** Parsed 65816 operand bundle carried through classification and encoding. */
     readonly cpu65816: {
         readonly kind: "cpu65816-v2";
         readonly mnemonic: string;

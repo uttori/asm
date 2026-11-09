@@ -1,5 +1,10 @@
 import { parseDirectiveExpression } from "@uttori/asm-core/plugin";
 import { shouldAutoCloseSpcblock } from "../asar/compatibility.js";
+/**
+ * Tokenizes an `spcblock` directive line into a validated syntax payload.
+ * @param words Tokenized directive words beginning with `spcblock`.
+ * @returns Parsed block open payload.
+ */
 export function parseSpcBlock(words) {
     if (words.length < 2) {
         throw new Error("spcblock requires at least a destination address.");
@@ -22,6 +27,11 @@ export function parseSpcBlock(words) {
     }
     return { destination: parseDirectiveExpression(words[1]), destinationText: words[1], modeError };
 }
+/**
+ * Tokenizes an `endspcblock` directive line into trailer operands or errors.
+ * @param words Tokenized directive words beginning with `endspcblock`.
+ * @returns Parsed block close payload.
+ */
 export function parseEndSpcBlock(words) {
     if (words.length === 3) {
         if (words[1].toLowerCase() !== "execute") {
@@ -66,7 +76,7 @@ export class SnesSpcRuntimeService {
      *
      * `custom` with a macro name is recognized as Asar syntax but not implemented.
      *
-     * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
+     * @param words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
      */
     handleSpcblock(words) {
         this.executeSpcblock(parseSpcBlock(words));
@@ -110,7 +120,7 @@ export class SnesSpcRuntimeService {
      *
      * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.
      *
-     * @param {readonly string[]} words Tokenized line.
+     * @param words Tokenized line.
      */
     handleEndSpcblock(words) {
         this.executeEndSpcblock(parseEndSpcBlock(words));

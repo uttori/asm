@@ -2,7 +2,7 @@
 
 Assembly language support powered by [uttori-asm](https://github.com/uttori/asm), currently bundled with the first-party SNES target and 65xx (NES, 6502-like) targets.
 
-Requires VS Code 1.140.0 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
+Requires VS Code 1.145.0 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
 
 The extension, workers, language server, and embedded sidecars run on VS Code's bundled runtime. Installing the extension does not require a separate Node executable. Building this repository and using its standalone npm tools requires Node 26. Extension packaging builds its embedded tools directly from source for the editor runtime, independently of the Node 26 bundles.
 

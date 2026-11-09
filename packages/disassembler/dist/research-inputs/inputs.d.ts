@@ -1,20 +1,30 @@
 import type { AnalysisProjectShards } from "../model/project-types.js";
 /** Only explicit human decisions belong in these files; captures and derived CFG do not. */
 export declare const RESEARCH_COLLECTIONS: readonly ["labels", "comments", "annotations", "regions", "analysis", "evidence"];
+/** One editable research shard kind that may appear in authoring documents. */
 export type ResearchCollection = (typeof RESEARCH_COLLECTIONS)[number];
+/** Native record shape stored in the selected research collection. */
 export type ResearchRecord = AnalysisProjectShards[ResearchCollection][number];
 /** Null suppresses an imported record. Removing the decision restores the imported observation. */
 export interface ResearchDecision {
+    /** Shard that owns the decision's stable record id. */
     readonly collection: ResearchCollection;
+    /** Stable record id the decision overrides or suppresses. */
     readonly id: string;
+    /** Replacement record, or null to suppress an imported observation. */
     readonly value: ResearchRecord | null;
 }
 /** A reviewable subject/bank document. Identity is tied to original ROM content, never relocation. */
 export interface ResearchDocument {
+    /** Authoring document discriminator. */
     readonly format: "uttori-research";
+    /** Schema version for research JSON on disk. */
     readonly version: 1;
+    /** Project slug the decisions belong to. */
     readonly project: string;
+    /** Original ROM content hash the decisions are bound to. */
     readonly romSha256: string;
+    /** Explicit human decisions authored in this file. */
     readonly decisions: readonly ResearchDecision[];
 }
 /** Optional resource ceilings for selected Git research inputs; omitted ceilings are unrestricted. */
@@ -30,14 +40,22 @@ export interface ResearchInputLimits {
 export declare const RESEARCH_INPUT_LIMIT_NAMES: readonly ["researchDocumentBytes", "researchBytes", "researchFiles"];
 /** A validated, deterministic selection of Git inputs; the hash is independent of JSON whitespace. */
 export interface ResearchSnapshot {
+    /** Project slug shared by every selected authoring document. */
     readonly project: string;
+    /** Original ROM content hash shared by every selected authoring document. */
     readonly romSha256: string;
+    /** Canonical identity hash over project, ROM, and sorted decisions. */
     readonly hash: string;
+    /** Selected authoring files with parsed documents and content hashes. */
     readonly files: readonly {
+        /** Repository-relative path of one selected JSON authoring file. */
         readonly path: string;
+        /** Content hash of the exact bytes read for that file. */
         readonly sha256: string;
+        /** Parsed document whose decisions participate in the snapshot. */
         readonly document: ResearchDocument;
     }[];
+    /** Flattened, deduplicated decisions sorted for stable hashing. */
     readonly decisions: readonly ResearchDecision[];
 }
 /** Recheck identities at the storage boundary, including snapshots supplied by JavaScript callers. */

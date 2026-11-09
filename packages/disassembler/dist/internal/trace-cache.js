@@ -1,4 +1,5 @@
-/** A fixed 4,096-entry working set with deterministic pseudo-random replacement.
+/**
+ * A fixed 4,096-entry working set with deterministic pseudo-random replacement.
  * Clear-all loses every useful entry. FIFO/LRU repeatedly evicts the next needed
  * key in a rotating 4,097-key trace. Single random victims break that pattern
  * without growing the cache or updating recency on every hit. All-unique scans
@@ -14,9 +15,10 @@ export class TraceCache {
     constructor(metrics) {
         this.#metrics = metrics;
     }
-    /** Look up a value. Undefined is reserved for misses.
-     * @param {string} key Complete semantic key, never a lossy coordinate projection.
-     * @returns {T | undefined} Retained value, or a cache miss.
+    /**
+     * Look up a value. Undefined is reserved for misses.
+     * @param key Complete semantic key, never a lossy coordinate projection.
+     * @returns Retained value, or a cache miss.
      */
     get(key) {
         const value = this.#entries.get(key);
@@ -30,11 +32,12 @@ export class TraceCache {
         }
         return value;
     }
-    /** Insert a missing key, returning the displaced entry so its owner can flush it.
+    /**
+     * Insert a missing key, returning the displaced entry so its owner can flush it.
      * Existing keys must be updated through their caller-owned mutable value instead.
-     * @param {string} key Previously missing semantic key.
-     * @param {T} value Defined value whose ownership stays with the caller.
-     * @returns {object | undefined} Displaced key/value, or undefined while filling unused capacity.
+     * @param key Previously missing semantic key.
+     * @param value Defined value whose ownership stays with the caller.
+     * @returns Displaced key/value, or undefined while filling unused capacity.
      */
     insert(key, value) {
         let displaced;
@@ -65,8 +68,9 @@ export class TraceCache {
         this.#entries.set(key, value);
         return displaced;
     }
-    /** Iterate the retained working set, for a final durable delta flush.
-     * @returns {MapIterator} Live entries. Do not insert while iterating.
+    /**
+     * Iterate the retained working set, for a final durable delta flush.
+     * @returns Live entries. Do not insert while iterating.
      */
     entries() {
         return this.#entries.entries();

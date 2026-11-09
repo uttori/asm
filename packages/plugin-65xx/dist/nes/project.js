@@ -190,15 +190,15 @@ export function analyzeNesProject(options) {
     records.push(...observed);
     records.push(...result.edges
         .filter((edge) => result.nodes.some((node) => node.id === edge.from))
-        .map((edge) => ({
+        .map((edge) => Object.assign({
         id: `nes:${edge.id}`,
         kind: "cfg-edge",
         addressSpace: "nes.cpu",
         from: `nes:${edge.from}`,
         fromAddress: edge.fromAddress,
-        ...(edge.to && result.nodes.some((node) => node.id === edge.to)
-            ? { to: `nes:${edge.to}` }
-            : {}),
+    }, edge.to && result.nodes.some((node) => node.id === edge.to)
+        ? { to: `nes:${edge.to}` }
+        : {}, {
         toAddress: edge.toAddress,
         edgeKind: edge.kind,
         indirect: edge.indirect,
@@ -302,12 +302,11 @@ export function analyzeNesProject(options) {
         .map((record) => ({ start: record.fileOffset, end: record.fileOffset + record.size }));
     const addedCode = lostCodeRanges(result.nodes.map((node) => ({ start: node.fileOffset, end: node.fileOffset + node.size })), previous).map((range) => {
         const node = result.nodes.find((candidate) => candidate.fileOffset <= range.start && candidate.fileOffset + candidate.size > range.start);
-        return {
-            ...range,
+        return Object.assign({}, range, {
             addressSpace: "nes.cpu",
             address: node.address,
             recordIds: [`nes:${node.id}`],
-        };
+        });
     });
     return {
         status: result.status,

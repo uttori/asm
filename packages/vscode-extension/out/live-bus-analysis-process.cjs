@@ -35,10 +35,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 var CRC32_POLYNOMIAL, CRC32C_POLYNOMIAL, reflectedTable, sliceTable, CRC32_TABLE, CRC32C_TABLE, crc32Slices, crc32cSlices, i0, i1, i2, i3, i4, i5, i6, i7, c0, c1, c2, c3, c4, c5, c6, c7, crc32cBytes;
 var init_data_hash_crc32 = __esm({
-  "node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
+  "../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
     CRC32_POLYNOMIAL = 3988292384;
     CRC32C_POLYNOMIAL = 2197175160;
     reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
@@ -84,7 +84,7 @@ var init_data_hash_crc32 = __esm({
   }
 });
 
-// packages/capture/src/capture-compression.ts
+// ../capture/src/capture-compression.ts
 function validateFrame(frame, decodedBytes) {
   if (frame.length < 6 || frame.readUInt32LE(0) !== 4247762216) {
     throw new Error("Invalid capture Zstandard frame.");
@@ -172,7 +172,7 @@ function decodeCaptureChunkBytes(bytes) {
 }
 var import_node_zlib, chunkBytes;
 var init_capture_compression = __esm({
-  "packages/capture/src/capture-compression.ts"() {
+  "../capture/src/capture-compression.ts"() {
     "use strict";
     import_node_zlib = require("node:zlib");
     init_data_hash_crc32();
@@ -180,19 +180,19 @@ var init_capture_compression = __esm({
   }
 });
 
-// packages/capture/src/capture-nes-mapper.ts
+// ../capture/src/capture-nes-mapper.ts
 function validateNesMapper(mapper) {
   if (mapper.length !== 18 || ![0, 4].includes(mapper[0]) || mapper[1] !== 0 || mapper[2] > 7 || mapper[3] > 1 || mapper[4] > 1 || mapper[13] > 1 || mapper[14] > 1 || mapper[15] > 1 || mapper[17] > 1) {
     throw new Error("Invalid NES mapper dictionary.");
   }
 }
 var init_capture_nes_mapper = __esm({
-  "packages/capture/src/capture-nes-mapper.ts"() {
+  "../capture/src/capture-nes-mapper.ts"() {
     "use strict";
   }
 });
 
-// packages/capture/src/capture-nes-timeline.ts
+// ../capture/src/capture-nes-timeline.ts
 function irq(r, at) {
   if (r[at + 2] > 1 || r[at + 3] > 1 || r[at + 4] > 1 || r[at + 5] > 6 || r[at + 6] > 7 || r[at + 7] > 1) {
     throw new Error("Invalid NES mapper IRQ state.");
@@ -242,13 +242,13 @@ function decodeNesTimeline(r) {
   };
 }
 var init_capture_nes_timeline = __esm({
-  "packages/capture/src/capture-nes-timeline.ts"() {
+  "../capture/src/capture-nes-timeline.ts"() {
     "use strict";
     init_capture_nes_mapper();
   }
 });
 
-// packages/capture/src/capture-nes-ppu.ts
+// ../capture/src/capture-nes-ppu.ts
 function decodeNesPPUState(bytes, offset) {
   const state = {
     v: bytes.readUInt16LE(offset),
@@ -350,7 +350,7 @@ function decodeNesBusRecords(b, first, count) {
 }
 var physical;
 var init_capture_nes_ppu = __esm({
-  "packages/capture/src/capture-nes-ppu.ts"() {
+  "../capture/src/capture-nes-ppu.ts"() {
     "use strict";
     init_capture_nes_mapper();
     init_capture_nes_timeline();
@@ -358,7 +358,7 @@ var init_capture_nes_ppu = __esm({
   }
 });
 
-// packages/capture/src/target-payload.ts
+// ../capture/src/target-payload.ts
 function readCaptureTargetPayload(codec, version, state) {
   if (version !== 1 || codec !== "snes.65816" && codec !== "nes.2a03") {
     throw new Error("Unsupported capture target codec/version.");
@@ -401,7 +401,7 @@ function isNesState(state) {
 }
 var snesLimits, nesLimits;
 var init_target_payload = __esm({
-  "packages/capture/src/target-payload.ts"() {
+  "../capture/src/target-payload.ts"() {
     "use strict";
     snesLimits = {
       a: 65535,
@@ -444,7 +444,7 @@ var init_target_payload = __esm({
   }
 });
 
-// packages/capture/src/capture-v2.ts
+// ../capture/src/capture-v2.ts
 function isFieldRecord(value) {
   return typeof value === "object" && value !== null;
 }
@@ -625,7 +625,7 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
 }
 var maxU64, captureScope, captureU64, captureSession, validateCapturePosition, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
 var init_capture_v2 = __esm({
-  "packages/capture/src/capture-v2.ts"() {
+  "../capture/src/capture-v2.ts"() {
     "use strict";
     init_data_hash_crc32();
     init_capture_compression();
@@ -832,10 +832,10 @@ var init_capture_v2 = __esm({
   }
 });
 
-// packages/capture/src/capture-file-reader.ts
+// ../capture/src/capture-file-reader.ts
 var CaptureFrameReader;
 var init_capture_file_reader = __esm({
-  "packages/capture/src/capture-file-reader.ts"() {
+  "../capture/src/capture-file-reader.ts"() {
     "use strict";
     CaptureFrameReader = class {
       #read;
@@ -897,7 +897,7 @@ var init_capture_file_reader = __esm({
   }
 });
 
-// packages/capture/src/capture-file.ts
+// ../capture/src/capture-file.ts
 function validateCaptureMetadata(m) {
   if (!isRecord(m)) {
     throw new Error("Capture requires a supported CPU scope and exact ROM/producer identity.");
@@ -930,7 +930,7 @@ function assertCaptureFileHeader(value) {
 }
 var import_promises, import_promises2, isRecord, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, NativeCaptureFileCursor, nativePosition;
 var init_capture_file = __esm({
-  "packages/capture/src/capture-file.ts"() {
+  "../capture/src/capture-file.ts"() {
     "use strict";
     import_promises = require("node:fs/promises");
     import_promises2 = require("node:timers/promises");
@@ -1213,15 +1213,15 @@ var init_capture_file = __esm({
   }
 });
 
-// packages/capture/src/index.ts
+// ../capture/src/index.ts
 var init_src = __esm({
-  "packages/capture/src/index.ts"() {
+  "../capture/src/index.ts"() {
     "use strict";
     init_capture_file();
   }
 });
 
-// packages/vscode-extension/src/runtime/live-bus-analysis-process.ts
+// src/runtime/live-bus-analysis-process.ts
 var live_bus_analysis_process_exports = {};
 __export(live_bus_analysis_process_exports, {
   handleLiveBusProcessMessage: () => handleLiveBusProcessMessage,
@@ -1231,12 +1231,12 @@ module.exports = __toCommonJS(live_bus_analysis_process_exports);
 var import_promises3 = require("node:timers/promises");
 init_src();
 
-// packages/disassembler/src/model/project-types.ts
+// ../disassembler/src/model/project-types.ts
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// packages/disassembler/src/model/evidence-pool.ts
+// ../disassembler/src/model/evidence-pool.ts
 var EvidencePool = class {
   #strings = /* @__PURE__ */ new Map();
   #lists = /* @__PURE__ */ new Map();
@@ -1272,7 +1272,7 @@ var EvidencePool = class {
   }
 };
 
-// packages/disassembler/src/model/analysis-ownership.ts
+// ../disassembler/src/model/analysis-ownership.ts
 function validateAnalysisOwnership(records, scope = "complete") {
   if (!records.some(
     (record3) => record3.kind === "cfg-node" && (record3.functionEntry !== void 0 || record3.evidencePredecessor !== void 0)
@@ -1326,7 +1326,7 @@ function validateAnalysisOwnership(records, scope = "complete") {
   }
 }
 
-// packages/disassembler/src/model/project-labels.ts
+// ../disassembler/src/model/project-labels.ts
 var validateSourceLabelName = (name2) => {
   if (typeof name2 !== "string" || name2.length > 256 || !/^[A-Z_a-z]\w*$/.test(name2)) {
     throw new Error(
@@ -1335,7 +1335,7 @@ var validateSourceLabelName = (name2) => {
   }
 };
 
-// packages/core/src/canonical-json.ts
+// ../core/src/canonical-json.ts
 var compareKeys = (a, b) => a.localeCompare(b);
 var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var canonicalValue = (value) => {
@@ -1381,7 +1381,7 @@ var canonicalEquals = (left, right) => left === right || canonicalJsonCompact(le
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
-// packages/disassembler/src/model/trace-detail.ts
+// ../disassembler/src/model/trace-detail.ts
 function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -1488,7 +1488,7 @@ var validateRuntimeInstructionDetails = (value, count) => {
   });
 };
 
-// packages/disassembler/src/model/runtime-ppu-effect.ts
+// ../disassembler/src/model/runtime-ppu-effect.ts
 function isEffectRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -1566,7 +1566,7 @@ var normalizeRuntimePPUEffect = (effect, access) => {
   };
 };
 
-// packages/disassembler/src/model/runtime-bus-types.ts
+// ../disassembler/src/model/runtime-bus-types.ts
 function isInteger3(value) {
   return typeof value === "number" && Number.isInteger(value);
 }
@@ -1611,7 +1611,7 @@ var validateRuntimeBusFact = (fact) => {
   return void 0;
 };
 
-// packages/disassembler/src/analysis/analysis-sources.ts
+// ../disassembler/src/analysis/analysis-sources.ts
 var sorted = (values) => [...new Set(values)].toSorted();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
@@ -1672,7 +1672,7 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
-// packages/disassembler/src/model/research-mapping.ts
+// ../disassembler/src/model/research-mapping.ts
 function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -1706,7 +1706,7 @@ function isResearchMapping(value) {
   return record3.fileOffset !== void 0 || fields > 0;
 }
 
-// packages/disassembler/src/analysis/project-evidence.ts
+// ../disassembler/src/analysis/project-evidence.ts
 var evidenceReferences = (shards, evidenceId) => [
   ...shards.analysis.filter((record3) => record3.evidence.includes(evidenceId)).map((record3) => `analysis:${record3.id}`),
   ...shards.annotations.filter((record3) => record3.evidence.includes(evidenceId)).map((record3) => `annotations:${record3.id}`),
@@ -1743,7 +1743,7 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   return { shard, record: record3, evidence, referencedBy, conflicts };
 };
 
-// packages/disassembler/src/runtime/runtime-evidence.ts
+// ../disassembler/src/runtime/runtime-evidence.ts
 var emptyCounts = () => ({
   analysis: 0,
   annotations: 0,
@@ -1999,7 +1999,7 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// packages/disassembler/src/internal/trace-cache.ts
+// ../disassembler/src/internal/trace-cache.ts
 var TraceCache = class {
   #entries = /* @__PURE__ */ new Map();
   /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
@@ -2072,7 +2072,7 @@ var TraceCache = class {
   }
 };
 
-// packages/disassembler/src/runtime/runtime-analysis-profile.ts
+// ../disassembler/src/runtime/runtime-analysis-profile.ts
 var SNES_ANALYSIS_TRACE_PROFILE = "65816-analysis-v3";
 var SNES_ANALYSIS_STATE_FIELDS = ["p", "P", "e", "E", "db", "DB", "d", "D"];
 var SNES_ANALYSIS_STATE_MASKS = {
@@ -2095,10 +2095,10 @@ function snesAnalysisTraceState(state) {
   return result;
 }
 
-// packages/disassembler/src/runtime/runtime-bus-trace.ts
+// ../disassembler/src/runtime/runtime-bus-trace.ts
 var import_node_crypto = require("node:crypto");
 
-// packages/disassembler/src/runtime/runtime-graphics.ts
+// ../disassembler/src/runtime/runtime-graphics.ts
 var mapVram = (address, mapping) => {
   if (mapping === 0) {
     return address;
@@ -2325,7 +2325,7 @@ var createRuntimeGraphicsAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-ppu.ts
+// ../disassembler/src/runtime/runtime-ppu.ts
 var createRuntimePPUAccumulator = () => {
   let portWrites = 0, written = 0, blocked = 0, latched = 0, byteWrites = 0, renderingRestricted = 0;
   const writes = [];
@@ -2379,7 +2379,7 @@ var createRuntimePPUAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-transfer.ts
+// ../disassembler/src/runtime/runtime-transfer.ts
 function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -2583,7 +2583,7 @@ var createRuntimeTransferAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-bus-trace.ts
+// ../disassembler/src/runtime/runtime-bus-trace.ts
 function isRowRecord(value) {
   return !Array.isArray(value);
 }
@@ -2999,11 +2999,11 @@ ${JSON.stringify(meta)}
   return { push, finish };
 };
 
-// packages/disassembler/src/project/project-store.ts
+// ../disassembler/src/project/project-store.ts
 var fs4 = __toESM(require("node:fs"), 1);
 var import_node_path3 = __toESM(require("node:path"), 1);
 
-// packages/disassembler/src/internal/record-id-set.ts
+// ../disassembler/src/internal/record-id-set.ts
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_os = __toESM(require("node:os"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
@@ -3066,7 +3066,7 @@ var RecordIdSet = class {
   }
 };
 
-// packages/disassembler/src/model/runtime-graphics-fact.ts
+// ../disassembler/src/model/runtime-graphics-fact.ts
 var record = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var unsigned2 = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
 var name = (value) => typeof value === "string" && /^[A-Za-z][\w.-]{0,63}$/.test(value);
@@ -3092,7 +3092,7 @@ function isRuntimeGraphicsFact(value) {
   );
 }
 
-// packages/disassembler/src/model/project-validation.ts
+// ../disassembler/src/model/project-validation.ts
 function isObject(value) {
   return typeof value === "object" && value !== null;
 }
@@ -3572,7 +3572,7 @@ var validateLoadedShards = (shards, project, analysisScope = "complete") => {
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// packages/disassembler/src/model/record-shape.ts
+// ../disassembler/src/model/record-shape.ts
 function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -3833,11 +3833,11 @@ function requireMetadataRecord(kind, value) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/storage/sqlite-payload.ts
 var import_node_util = require("node:util");
 var import_node_zlib3 = require("node:zlib");
 
-// packages/disassembler/src/storage/sqlite-runtime-payload.ts
+// ../disassembler/src/storage/sqlite-runtime-payload.ts
 var import_node_zlib2 = require("node:zlib");
 var MAGIC = Buffer.from([85, 65, 82, 1]);
 var FIELDS = [
@@ -3944,7 +3944,7 @@ var decodePackedRuntimePayload = (bytes) => {
   return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
 };
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/storage/sqlite-payload.ts
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
 var HEADER = Buffer.from([85, 65, 80, 1]);
 var HEADER_BYTES2 = 8;
@@ -4035,7 +4035,7 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// packages/disassembler/src/storage/sqlite-records.ts
+// ../disassembler/src/storage/sqlite-records.ts
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) {
     return -1;
@@ -4544,17 +4544,17 @@ var analysisAddress = (record3) => {
   return { addressSpace: null, address: null };
 };
 
-// packages/disassembler/src/storage/sqlite-store.ts
+// ../disassembler/src/storage/sqlite-store.ts
 var import_node_crypto5 = require("node:crypto");
 var import_node_fs3 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
 var import_node_sqlite2 = require("node:sqlite");
 
-// packages/disassembler/src/internal/source-inputs.ts
+// ../disassembler/src/internal/source-inputs.ts
 var import_node_crypto2 = require("node:crypto");
 var sourceContentHash = (value) => (0, import_node_crypto2.createHash)("sha256").update(value).digest("hex");
 
-// packages/disassembler/src/model/target-state.ts
+// ../disassembler/src/model/target-state.ts
 function record2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -4597,7 +4597,7 @@ function readAnalysisTargetState(architecture, value) {
   throw new Error(`Invalid state fields for architecture '${architecture}'.`);
 }
 
-// packages/disassembler/src/model/metadata-validation.ts
+// ../disassembler/src/model/metadata-validation.ts
 function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -4740,7 +4740,7 @@ var validateEditableMetadataRecord = (shard, record3) => {
   }
 };
 
-// packages/disassembler/src/research-inputs/inputs.ts
+// ../disassembler/src/research-inputs/inputs.ts
 var isArray = (value) => Array.isArray(value);
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -4846,7 +4846,7 @@ function validateResearchDecision(decision) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-annotation-query.ts
+// ../disassembler/src/storage/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 function isPartialInstruction(value) {
   if (!isRecord6(value)) {
@@ -5303,7 +5303,7 @@ var readInstructionExecutionSummary = (database, manifest, ranges) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-graph-query.ts
+// ../disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
   const record3 = requireAnalysisRecord(parseSqlitePayload(value));
   if (record3.kind !== "cfg-node") {
@@ -5539,7 +5539,7 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// packages/disassembler/src/storage/sqlite-graphics-query.ts
+// ../disassembler/src/storage/sqlite-graphics-query.ts
 function queryGraphicsEvidence(db, query) {
   const limit = query.limit ?? 500;
   if (!Number.isInteger(limit) || limit < 1 || limit > 2e3 || [query.pc, query.physicalOffset].some(
@@ -5604,7 +5604,7 @@ function queryGraphicsEvidence(db, query) {
   return result;
 }
 
-// packages/disassembler/src/storage/sqlite-query-cache.ts
+// ../disassembler/src/storage/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 var installQueryCache = (db, key3, dependencies) => {
   if (!/^[\d_a-z]+$/.test(key3)) {
@@ -5655,7 +5655,7 @@ var writeQueryCache = (db, key3, signature, value) => {
   );
 };
 
-// packages/disassembler/src/storage/sqlite-research-inputs.ts
+// ../disassembler/src/storage/sqlite-research-inputs.ts
 var SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   collection TEXT NOT NULL, id TEXT NOT NULL, baseline BLOB, projected BLOB,
   PRIMARY KEY(collection,id)
@@ -5773,7 +5773,7 @@ function projectResearchInputs(database, snapshot, insert) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-runtime-facts.ts
+// ../disassembler/src/storage/sqlite-runtime-facts.ts
 var RUNTIME_DESCRIPTOR_COLUMNS = [
   "kind",
   "architecture",
@@ -5862,10 +5862,10 @@ WHEN EXISTS(SELECT 1 FROM runtime_identities
 BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
 `;
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
 var import_node_crypto3 = require("node:crypto");
 
-// packages/disassembler/src/storage/sqlite-runtime-history.ts
+// ../disassembler/src/storage/sqlite-runtime-history.ts
 var import_node_util2 = require("node:util");
 var import_node_zlib4 = require("node:zlib");
 function historyPayload(value) {
@@ -6048,7 +6048,7 @@ var collectRuntimeHistory = (db) => {
       SELECT 1 FROM runtime_fact_rows f WHERE f.descriptor_id=runtime_descriptors.did);`);
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
 var runtimeFactFingerprint = (record3, columns2) => (0, import_node_crypto3.createHash)("sha256").update(
   JSON.stringify(
     {
@@ -6287,7 +6287,7 @@ var SqliteRuntimeWriter = class {
   }
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-batch.ts
+// ../disassembler/src/storage/sqlite-runtime-batch.ts
 var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL = `
   INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready)
     SELECT f.fid,b.prefix_id,i.iid,b.evidence_id,b.count,b.state_prefix_id,b.query_ready
@@ -6441,7 +6441,7 @@ var SqliteRuntimeTraceBatch = class {
   }
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-summary.ts
+// ../disassembler/src/storage/sqlite-runtime-summary.ts
 var import_node_crypto4 = require("node:crypto");
 var KEY = "instruction_variants";
 var BUILD = "instruction_variants_build";
@@ -6703,7 +6703,7 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
   })();
 };
 
-// packages/disassembler/src/storage/sqlite-source-export.ts
+// ../disassembler/src/storage/sqlite-source-export.ts
 function isUnknownArray3(value) {
   return Array.isArray(value);
 }
@@ -6797,7 +6797,7 @@ function* sourceExportCacheRecords(database) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-source-query.ts
+// ../disassembler/src/storage/sqlite-source-query.ts
 function isRecord10(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -6974,7 +6974,7 @@ var readSourcePage = (db, source, group, offset = 0) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-storage-policy.ts
+// ../disassembler/src/storage/sqlite-storage-policy.ts
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 function errorCode(error) {
   if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
@@ -7160,7 +7160,7 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// packages/disassembler/src/storage/sqlite-store.ts
+// ../disassembler/src/storage/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 var ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 var SCHEMA2 = `
@@ -9305,7 +9305,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
 };
 
-// packages/disassembler/src/project/project-store.ts
+// ../disassembler/src/project/project-store.ts
 function isUntrustedManifest(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -9347,7 +9347,7 @@ var openAnalysisProjectStore = (directory) => {
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
-// packages/disassembler/src/project/project-transaction.ts
+// ../disassembler/src/project/project-transaction.ts
 var import_node_crypto6 = require("node:crypto");
 var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
 var ANALYSIS_PROJECT_REVISION_VERSION = 1;
@@ -9375,7 +9375,7 @@ var assertAnalysisProjectRevision = (store, expected) => {
   }
 };
 
-// packages/disassembler/src/project/runtime-bus-project.ts
+// ../disassembler/src/project/runtime-bus-project.ts
 var import_node_fs4 = __toESM(require("node:fs"), 1);
 var captureFileIdentity = (file) => {
   const stat = import_node_fs4.default.statSync(file, { bigint: true });
@@ -9532,7 +9532,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
   }
 };
 
-// packages/vscode-extension/src/runtime/live-bus-analysis-process.ts
+// src/runtime/live-bus-analysis-process.ts
 function captureCursorComplete(cursor) {
   return cursor.complete;
 }

@@ -10,6 +10,7 @@ export const somAssetAdapters = Object.freeze([
     registerAssetAdapter(somSpriteSourceAdapter),
     registerAssetAdapter(somRoomSourceAdapter),
 ]);
+/** Native conversion adapters for SoM sprite and room source files. */
 export const somSourceAdapters = Object.freeze([
     somSourceConversionAdapter,
 ]);
@@ -19,10 +20,12 @@ export const executeAssetOperation = (value, options = {}) => execute(value, {
     host: options.host ?? somAssetSourceHost,
     adapters: [...somAssetAdapters, ...(options.adapters ?? [])],
 });
+/** Convert SoM asset source through the bundled host and adapters. */
 export const executeAssetSourceOperation = (value, options = {}) => convert(value, {
     ...options,
     host: options.host ?? somAssetSourceHost,
     adapters: [...somSourceAdapters, ...(options.adapters ?? [])],
 });
+/** Build a conversion service that uses the SoM host unless another is supplied. */
 export const createAssetSourceConversionService = (host) => create(host ?? somAssetSourceHost, somSourceAdapters);
 //# sourceMappingURL=workflows.js.map

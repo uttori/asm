@@ -16,8 +16,8 @@ import { indexSnesStructFields, loadSnesStructMap, planSnesStructRomFields, rend
 import { indexSnesTypedData, snesTypedDataAt, renderSnesTypedData, } from "./typed-data.js";
 /**
  * Accepts an encoded direct-transfer mode.
- * @param {string} value Instruction addressing mode.
- * @returns {boolean} True for absolute, absolute long, relative, or relative long.
+ * @param value Instruction addressing mode.
+ * @returns True for absolute, absolute long, relative, or relative long.
  */
 function isSourceFlowMode(value) {
     return (value === "absolute" ||
@@ -27,9 +27,9 @@ function isSourceFlowMode(value) {
 }
 /**
  * Resolve direct control flow in the exported program bank without interpreting indirect pointers.
- * @param {DecodedInstruction} instruction ROM-matched instruction with encoded operands and references.
- * @param {number} sourceAddress 24-bit CPU address where the instruction will be emitted.
- * @returns {SourceFlowTarget | undefined} Direct destination with its encoded addressing mode, or undefined for other operands.
+ * @param instruction ROM-matched instruction with encoded operands and references.
+ * @param sourceAddress 24-bit CPU address where the instruction will be emitted.
+ * @returns Direct destination with its encoded addressing mode, or undefined for other operands.
  */
 const sourceFlowTarget = (instruction, sourceAddress) => {
     const { mode } = instruction;
@@ -57,11 +57,11 @@ const sourceFlowTarget = (instruction, sourceAddress) => {
 };
 /**
  * Replace only a direct transfer operand, preserving near width and an encoded long-call mirror.
- * @param {string} source Formatted instruction text before trailing comments are attached.
- * @param {SourceFlowTarget} flow Direct destination resolved for the emitted instruction's bank.
- * @param {string} name Symbol present at the destination's final emitted span boundary.
- * @param {number} labelAddress 24-bit CPU address assigned to that emitted symbol.
- * @returns {string} Symbolic instruction text retaining the original transfer width and bus-address alias.
+ * @param source Formatted instruction text before trailing comments are attached.
+ * @param flow Direct destination resolved for the emitted instruction's bank.
+ * @param name Symbol present at the destination's final emitted span boundary.
+ * @param labelAddress 24-bit CPU address assigned to that emitted symbol.
+ * @returns Symbolic instruction text retaining the original transfer width and bus-address alias.
  */
 const renderFlowLabel = (source, flow, name, labelAddress) => {
     let operand = name;
@@ -80,6 +80,10 @@ const renderFlowLabel = (source, flow, name, labelAddress) => {
     }
     return `${source.slice(0, source.indexOf(" "))} ${operand}`;
 };
+/**
+ * Accept version-1 asset include map documents from project JSON.
+ * @param value Parsed JSON root.
+ */
 function isAssetIncludeFile(value) {
     if (typeof value !== "object" || value === null) {
         return false;
@@ -89,6 +93,10 @@ function isAssetIncludeFile(value) {
     }
     return "entries" in value && Array.isArray(value.entries);
 }
+/**
+ * Validate one half-open ROM span and includeAsset directive entry.
+ * @param value Candidate entry object from JSON.
+ */
 function isAssetIncludeEntry(value) {
     if (typeof value !== "object" || value === null) {
         return false;
@@ -108,8 +116,8 @@ function isAssetIncludeEntry(value) {
 }
 /**
  * Load exact ROM span replacements without making the exporter game-specific.
- * @param {string} directory Export source directory containing the optional project-owned map.
- * @returns {AssetIncludeMap | undefined} Validated replacements or undefined when the project has none.
+ * @param directory Export source directory containing the optional project-owned map.
+ * @returns Validated replacements or undefined when the project has none.
  */
 const loadAssetIncludeMap = (directory) => {
     const file = path.join(directory, "asset-includes.json");
@@ -143,11 +151,11 @@ const loadAssetIncludeMap = (directory) => {
 };
 /**
  * Replace complete non-code spans, retaining interior comments without swallowing named boundaries.
- * @param {PlannedSpan[]} planned Native spans from code, annotations and struct bindings.
- * @param {AssetIncludeMap | undefined} map Project-owned includes with half-open ROM file offsets.
- * @param {ReadonlyMap<number, NamedLine[]>} metadata Labels retain physical boundaries; displaced comments retain relative offsets.
- * @param {number} bankSize ROM bytes per emitted bank for the active mapper.
- * @returns {PlannedSpan[]} Spans with includes substituted and uncovered raw bytes retained.
+ * @param planned Native spans from code, annotations and struct bindings.
+ * @param map Project-owned includes with half-open ROM file offsets.
+ * @param metadata Labels retain physical boundaries; displaced comments retain relative offsets.
+ * @param bankSize ROM bytes per emitted bank for the active mapper.
+ * @returns Spans with includes substituted and uncovered raw bytes retained.
  */
 const applyAssetIncludes = (planned, map, metadata, bankSize) => {
     if (!map) {
@@ -225,8 +233,11 @@ const applyAssetIncludes = (planned, map, metadata, bankSize) => {
     }
     return result;
 };
+/** Format ROM offsets and immediate bytes for structured header emission. */
 const hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+/** Render a comma-separated list of `$XX` byte literals. */
 const byteList = (bytes) => [...bytes].map((byte) => hex(byte, 2)).join(", ");
+/** Encode printable header bytes as an assembler string when every byte is ASCII. */
 const asciiString = (bytes) => {
     if (![...bytes].every((byte) => byte >= 0x20 && byte <= 0x7e)) {
         return undefined;
@@ -237,6 +248,7 @@ const asciiString = (bytes) => {
         .replaceAll('"', '\\"');
     return `"${value}"`;
 };
+/** Human-readable ROM or RAM capacity for header comments. */
 const capacity = (bytes) => {
     if (bytes === undefined) {
         return "invalid size code";
@@ -252,6 +264,14 @@ const capacity = (bytes) => {
     }
     return `${bytes} bytes`;
 };
+/**
+ * Emit a multi-byte header field with optional ASCII string encoding.
+ * @param start ROM offset of the first byte.
+ * @param bytes Raw field bytes from the cartridge.
+ * @param symbol Label symbol for the field.
+ * @param comment Trailing comment describing the field.
+ * @param preferAscii When true, emit a string literal for all-printable bytes.
+ */
 const bytesField = (start, bytes, symbol, comment, preferAscii = false) => ({
     start,
     end: start + bytes.length,
@@ -261,19 +281,22 @@ const bytesField = (start, bytes, symbol, comment, preferAscii = false) => ({
         `  db ${(preferAscii ? asciiString(bytes) : undefined) ?? byteList(bytes)} ; ${comment}`,
     ],
 });
+/** Emit a single-byte header field as `db`. */
 const byteField = (start, value, symbol, comment) => bytesField(start, Uint8Array.of(value), symbol, comment);
+/** Emit a little-endian 16-bit header or vector word as `dw`. */
 const wordField = (start, value, symbol, comment, role = "snes-header") => ({
     start,
     end: start + 2,
     role,
     lines: [`${symbol}:`, `  dw ${hex(value, 4)} ; ${comment}`],
 });
+/** Escape a string for use inside an assembler comment. */
 const asciiComment = (value) => `"${value.replaceAll('"', '\\"')}"`;
 /**
  * Builds field-aligned source for the selected internal/expanded header and all vector words.
- * @param {RomImage} rom Immutable headerless ROM view.
- * @param {SnesMapper} mapper Selected cartridge mapping family.
- * @returns {StructuredRomLayout | undefined} Structured fields when a header is in range.
+ * @param rom Immutable headerless ROM view.
+ * @param mapper Selected cartridge mapping family.
+ * @returns Structured fields when a header is in range.
  */
 const structuredRomLayout = (rom, mapper) => {
     const header = parseSnesInternalRomHeader(rom, mapper);
@@ -309,6 +332,7 @@ const structuredRomLayout = (rom, mapper) => {
         byStart: new Map(sorted.map((field) => [field.start, field])),
     };
 };
+/** Extract a concrete number from a known analysis-state payload field. */
 const known = (value) => {
     if (!value || typeof value !== "object") {
         return undefined;
@@ -324,6 +348,7 @@ const knownFlag = (value) => {
     }
     return flag === 0 ? 0 : 1;
 };
+/** Project stored annotation CPU state onto decoder width and bank inputs. */
 const decodeState = (record) => ({
     ...(knownFlag(record.e) === undefined ? {} : { e: knownFlag(record.e) }),
     ...(knownFlag(record.m) === undefined ? {} : { m: knownFlag(record.m) }),
@@ -334,13 +359,13 @@ const decodeState = (record) => ({
 });
 /**
  * Formats one decoded instruction with explicit native operand-width qualification.
- * @param {DecodedInstruction} instruction Decoded 65816 instruction.
- * @param {ReadonlyMap<number, SnesRamMapVariable>} [ramVariables] Canonical WRAM and explicit SRAM CPU locations to name.
- * @param {number} [sourceAddress] Canonical address where generated source places the instruction.
- * @param {ReadonlyMap<number, string>} [sourceLabels] Explicit names at exact exported addresses.
- * @param {ReadonlyMap<number, string>} [structFields] Native struct expressions at known data addresses.
- * @param {ReadonlyMap<number, string>} [indexedStructFields] Struct expressions including explicitly biased array bases.
- * @returns {string} Native source with a `.b`, `.w`, or `.l` suffix where width is selectable.
+ * @param instruction Decoded 65816 instruction.
+ * @param [ramVariables] Canonical WRAM and explicit SRAM CPU locations to name.
+ * @param [sourceAddress] Canonical address where generated source places the instruction.
+ * @param [sourceLabels] Explicit names at exact exported addresses.
+ * @param [structFields] Native struct expressions at known data addresses.
+ * @param [indexedStructFields] Struct expressions including explicitly biased array bases.
+ * @returns Native source with a `.b`, `.w`, or `.l` suffix where width is selectable.
  */
 export const formatSnes65816SourceInstruction = (instruction, ramVariables, sourceAddress, sourceLabels, structFields, indexedStructFields) => {
     const decodedOperand = instruction.operands.length > 0 ? instruction.operands[0] : undefined;
@@ -459,13 +484,14 @@ export const formatSnes65816SourceInstruction = (instruction, ramVariables, sour
     }
     return `${mnemonic}${suffix}${renderedOperand}`;
 };
+/** Map internal mapper ids to assembler `.mapper` directive spellings. */
 const mapperDirective = (mapper) => mapper === "bigsa1rom" ? "fullsa1rom" : mapper;
 /**
  * Classifies one already-cut export span without rescanning every project annotation.
- * @param {number} start Inclusive ROM file offset.
- * @param {number} end Exclusive ROM file offset.
- * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations File-space annotation index shared by the export.
- * @returns {SourceExportSpanRole} Stable source-emission role for the complete span.
+ * @param start Inclusive ROM file offset.
+ * @param end Exclusive ROM file offset.
+ * @param annotations File-space annotation index shared by the export.
+ * @returns Stable source-emission role for the complete span.
  */
 const roleAt = (start, end, annotations) => {
     // planSpans cuts at annotation boundaries, so an indexed point lookup plus containment check is
@@ -477,6 +503,13 @@ const roleAt = (start, end, annotations) => {
     }
     return "raw";
 };
+/**
+ * Translate a project address-space address to a headerless ROM offset.
+ * @param addressSpace Project address space id.
+ * @param address Address within that space.
+ * @param mapper Cartridge mapper for CPU bus translation.
+ * @param romSize Headerless ROM size rejecting out-of-range offsets.
+ */
 const toFileOffset = (addressSpace, address, mapper, romSize) => {
     if (addressSpace === SNES_FILE_ADDRESS_SPACE) {
         return address < romSize ? address : undefined;
@@ -489,11 +522,11 @@ const toFileOffset = (addressSpace, address, mapper, romSize) => {
 };
 /**
  * Validate annotation names against generated functions, hardware definitions, and RAM names.
- * @param {AnalysisProjectShards} shards Validated native project metadata.
- * @param {SnesMapper} mapper Selected ROM mapping.
- * @param {number} romSize Headerless ROM size.
- * @param {readonly string[]} ramNames Global symbols from RAM, layouts, bindings, and constants.
- * @returns {ReadonlyMap<string, string>} Unique assembly names keyed by native label id.
+ * @param shards Validated native project metadata.
+ * @param mapper Selected ROM mapping.
+ * @param romSize Headerless ROM size.
+ * @param ramNames Global symbols from RAM, layouts, bindings, and constants.
+ * @returns Unique assembly names keyed by native label id.
  */
 export const snesSourceLabelNames = (shards, mapper, romSize, ramNames = []) => {
     const offsets = new Set(shards.labels.map((label) => toFileOffset(label.addressSpace, label.address, mapper, romSize)));
@@ -531,6 +564,13 @@ export const snesSourceLabelNames = (shards, mapper, romSize, ramNames = []) => 
     }
     return projectSourceLabelNames(shards.labels, reserved);
 };
+/**
+ * Index research labels, comments and inferred markers by ROM file offset.
+ * @param shards Project metadata supplying annotations and regions.
+ * @param mapper Cartridge mapper for address translation.
+ * @param romSize Headerless ROM size.
+ * @param names Resolved export label names keyed by label id.
+ */
 const metadataLines = (shards, mapper, romSize, names) => {
     const values = new Map();
     const append = (offset, line) => {
@@ -578,10 +618,10 @@ const metadataLines = (shards, mapper, romSize, names) => {
 };
 /**
  * Keep label descriptions above labels and other annotations at the owner's indentation.
- * @param {readonly NamedLine[] | undefined} lines Native metadata at this exact address.
- * @param {boolean} [hasInstruction] Whether inline instruction comments will be emitted separately.
- * @param {string} [bodyIndent] Empty for named data; two spaces for instruction bodies.
- * @returns {string[]} Source lines preserving metadata order and label ownership.
+ * @param lines Native metadata at this exact address.
+ * @param [hasInstruction] Whether inline instruction comments will be emitted separately.
+ * @param [bodyIndent] Empty for named data; two spaces for instruction bodies.
+ * @returns Source lines preserving metadata order and label ownership.
  */
 const renderedMetadata = (lines, hasInstruction = false, bodyIndent = "  ") => {
     if (!lines) {
@@ -629,17 +669,17 @@ const rawClassifications = new Set([
 /**
  * Only the ROM-matched runtime-code namespace establishes an observed instruction extent.
  * Static propagation may inherit the same evidence IDs without observing those bytes.
- * @param {InstructionExportRecord} node Candidate from native runtime/static analysis.
- * @param {ReadonlySet<string>} runtimeEvidence IDs of runtime evidence retained by this project.
- * @returns {boolean} Whether the candidate has direct runtime provenance.
+ * @param node Candidate from native runtime/static analysis.
+ * @param runtimeEvidence IDs of runtime evidence retained by this project.
+ * @returns Whether the candidate has direct runtime provenance.
  */
 const isCapturedRomInstruction = (node, runtimeEvidence) => node.id.startsWith("runtime:code:") && node.evidence.some((id) => runtimeEvidence.has(id));
 /**
  * Reports whether project evidence requires one CFG instruction to remain raw bytes.
- * @param {InstructionExportRecord} node Candidate instruction and its ROM extent.
- * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations File-space annotation index shared by the export.
- * @param {ReadonlySet<string>} runtimeEvidence IDs identifying actual runtime evidence sources.
- * @returns {boolean} Whether a data classification or uncontradicted unreached interval blocks emission.
+ * @param node Candidate instruction and its ROM extent.
+ * @param annotations File-space annotation index shared by the export.
+ * @param runtimeEvidence IDs identifying actual runtime evidence sources.
+ * @returns Whether a data classification or uncontradicted unreached interval blocks emission.
  */
 const rejectedByAnnotation = (node, annotations, runtimeEvidence) => {
     // analyzeSnesRuntimeCode assigns this namespace and a fileOffset only after matching captured
@@ -659,19 +699,19 @@ const rejectedByAnnotation = (node, annotations, runtimeEvidence) => {
  * The function still re-decodes and checks each instruction against its recorded specification so
  * an optimization cannot turn uncertain/conflicting bytes into source text.
  * Identical encodings use numeric operands when processor-state variants disagree on symbol names.
- * @param {RomImage} rom Immutable headerless ROM content.
- * @param {SnesMapper} mapper Selected mapper used for continuity checks.
- * @param {AnalysisProjectShards} shards Validated project evidence.
- * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Metadata keyed by ROM file offset.
- * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations Reusable file-space annotation index.
- * @param {ReadonlyMap<number, SnesRamMapVariable>} ramVariables Canonical WRAM and explicit SRAM CPU locations to name.
- * @param {StructuredRomLayout | undefined} structure Header/vector interval excluded from code.
- * @param {ReadonlyMap<number, string>} [sourceLabels] Friendly names at exact exported addresses.
- * @param {ReadonlyMap<number, string>} [structFields] Addressed struct fields for RAM and ROM data.
- * @param {ReadonlyMap<number, string>} [indexedStructFields] Addressed fields including biased array bases.
- * @param {Iterable} [instructionGroups] Complete SQL-ordered groups, avoiding a full CFG array.
- * @param {ReadonlyMap<number, SnesStructInstructionUse>} [instructionUses] Byte-checked explicit uses by ROM offset.
- * @returns {ReadonlyMap<number, PlannedInstruction>} Safe instructions keyed by start offset.
+ * @param rom Immutable headerless ROM content.
+ * @param mapper Selected mapper used for continuity checks.
+ * @param shards Validated project evidence.
+ * @param metadata Metadata keyed by ROM file offset.
+ * @param annotations Reusable file-space annotation index.
+ * @param ramVariables Canonical WRAM and explicit SRAM CPU locations to name.
+ * @param structure Header/vector interval excluded from code.
+ * @param [sourceLabels] Friendly names at exact exported addresses.
+ * @param [structFields] Addressed struct fields for RAM and ROM data.
+ * @param [indexedStructFields] Addressed fields including biased array bases.
+ * @param [instructionGroups] Complete SQL-ordered groups, avoiding a full CFG array.
+ * @param [instructionUses] Byte-checked explicit uses by ROM offset.
+ * @returns Safe instructions keyed by start offset.
  */
 const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables, structure, sourceLabels, structFields, indexedStructFields, instructionGroups, instructionUses) => {
     const decoder = new Cpu65816Decoder();
@@ -898,9 +938,9 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
 /**
  * Omit inferred entry markers disproved by accepted instruction interiors, leaving native
  * records intact. Resolve overlaps first so a rejected runtime candidate cannot hide metadata.
- * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Original source metadata by ROM offset.
- * @param {ReadonlyMap<number, PlannedInstruction>} instructions Final nonoverlapping instruction plan.
- * @returns {ReadonlyMap<number, readonly NamedLine[]>} Metadata whose boundaries can appear in source.
+ * @param metadata Original source metadata by ROM offset.
+ * @param instructions Final nonoverlapping instruction plan.
+ * @returns Metadata whose boundaries can appear in source.
  */
 const reconcileInferredFunctionMarkers = (metadata, instructions) => {
     const index = new HalfOpenIntervalIndex([...instructions.values()]);
@@ -922,15 +962,15 @@ const reconcileInferredFunctionMarkers = (metadata, instructions) => {
  * All instruction, metadata, annotation, region, bank, header, and vector boundaries become cuts
  * before roles are assigned. Because spans cannot cross those boundaries, `roleAt()` can use an
  * indexed point lookup rather than repeatedly scanning the complete annotation shard.
- * @param {RomImage} rom Immutable headerless ROM content.
- * @param {SnesMapper} mapper Selected mapper and bank layout.
- * @param {AnalysisProjectShards} shards Validated project evidence supplying cuts.
- * @param {ReadonlyMap<number, PlannedInstruction>} instructions Safe native-source instructions.
- * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Metadata keyed by file offset.
- * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations Reusable file-space annotation index.
- * @param {StructuredRomLayout | undefined} structure Field-aligned header/vector source plan.
- * @param {readonly SnesStructRomField[]} structFields Physical fields in explicitly bound ROM arrays.
- * @returns {readonly PlannedSpan[]} Complete, ordered, non-overlapping export plan.
+ * @param rom Immutable headerless ROM content.
+ * @param mapper Selected mapper and bank layout.
+ * @param shards Validated project evidence supplying cuts.
+ * @param instructions Safe native-source instructions.
+ * @param metadata Metadata keyed by file offset.
+ * @param annotations Reusable file-space annotation index.
+ * @param structure Field-aligned header/vector source plan.
+ * @param structFields Physical fields in explicitly bound ROM arrays.
+ * @returns Complete, ordered, non-overlapping export plan.
  */
 const planSpans = (rom, mapper, shards, instructions, metadata, annotations, structure, structFields, typedData) => {
     const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
@@ -1036,12 +1076,12 @@ const planSpans = (rom, mapper, shards, instructions, metadata, annotations, str
  * Regroup only whole records. The field plan remains the authority for safety:
  * bank cuts, interior labels/comments, and region boundaries prevent grouping.
  * In those cases the old assert + db/dw renderer preserves exact byte ownership.
- * @param {readonly PlannedSpan[]} spans Safe field-aligned export plan.
- * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Source labels/comments by file offset.
- * @param {AnalysisProjectShards} shards Region boundaries that must remain visible.
- * @param {SnesMapper} mapper Address mapping and bank size.
- * @param {number} romSize Headerless ROM length.
- * @returns {readonly PlannedSpan[]} Same byte coverage with complete records grouped.
+ * @param spans Safe field-aligned export plan.
+ * @param metadata Source labels/comments by file offset.
+ * @param shards Region boundaries that must remain visible.
+ * @param mapper Address mapping and bank size.
+ * @param romSize Headerless ROM length.
+ * @returns Same byte coverage with complete records grouped.
  */
 const groupStructRecords = (spans, metadata, shards, mapper, romSize) => {
     const protectedCuts = new Set(metadata.keys());
@@ -1082,6 +1122,14 @@ const groupStructRecords = (spans, metadata, shards, mapper, romSize) => {
     }
     return grouped;
 };
+/**
+ * List region ids whose file-space spans cover a planned export interval.
+ * @param start Inclusive ROM offset of the export span.
+ * @param end Exclusive ROM offset of the export span.
+ * @param shards Project regions to test for overlap.
+ * @param mapper Cartridge mapper for address translation.
+ * @param romSize Headerless ROM size.
+ */
 const regionIdsFor = (start, end, shards, mapper, romSize) => shards.regions
     .filter((region) => {
     const regionStart = toFileOffset(region.addressSpace, region.start, mapper, romSize);
@@ -1669,11 +1717,11 @@ const emitSnes65816Source = (project, rom, directory, options, plan) => {
  * bound ROM struct fields become native data source. An optional 512-byte copier
  * header remains an asset. Optional struct bindings also name RAM/ROM operands.
  * Checksums are preserved, not recomputed.
- * @param {{ readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards }} project Loaded analysis project.
- * @param {RomImage} rom Immutable ROM used for asset bytes and copier-header extraction.
- * @param {string} directory Immutable input snapshot containing research recipes and build configuration.
- * @param {SnesSourceExportOptions} options Provenance hash and required output sink. The renderer never publishes files.
- * @returns {SourceExportManifest} Rendered file inventory, spans, and rebuild configuration.
+ * @param project Loaded analysis project.
+ * @param rom Immutable ROM used for asset bytes and copier-header extraction.
+ * @param directory Immutable input snapshot containing research recipes and build configuration.
+ * @param options Provenance hash and required output sink. The renderer never publishes files.
+ * @returns Rendered file inventory, spans, and rebuild configuration.
  */
 export const exportSnes65816Source = (project, rom, directory, options) => emitSnes65816Source(project, rom, directory, options, planSnes65816Source(project, rom, directory, options));
 //# sourceMappingURL=source-export.js.map

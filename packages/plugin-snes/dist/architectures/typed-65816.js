@@ -9,6 +9,7 @@ for (const spec of cpu65816Specifications) {
     modes.set(spec.mode, spec.opcode[0]);
     encodings.set(spec.mnemonic, modes);
 }
+/** Signature opcodes whose second byte is not selected from the mode matrix. */
 const generic = {
     BRK: 0,
     COP: 2,
@@ -18,12 +19,16 @@ const generic = {
     SEP: 0xe2,
     WDM: 0x42,
 };
+/** True when `op` appears as a whitespace-separated token in `values`. */
 const family = (op, values) => values.split(" ").includes(op);
+/** Resolves a mode map key to its stable mode id string. */
 const modeId = (key) => cpu65816Modes[key]?.id ?? key;
 /** 65816 flags belong to this encoder instance and reset once per assembly pass. */
 export class Typed65816 {
     optimizeDirectPage;
+    /** Relocatable object emission covers the shared 65816 opcode matrix. */
     supportsRelocatable = true;
+    /** Operand binding failures surface at the final read, not during width collection. */
     deferOperandBindingErrors = true;
     /** True selects 16-bit expression immediates; lexical widths can override this hint. */
     m16 = false;
@@ -31,22 +36,43 @@ export class Typed65816 {
     x16 = false;
     /** SEP/REP update hints only while smart tracking is enabled. */
     smartMode = true;
+    /**
+     * Creates a 65816 encoder with optional direct-page width optimization.
+     * @param optimizeDirectPage When true, same-bank labels may encode as DP addresses.
+     */
     constructor(optimizeDirectPage = () => false) {
         this.optimizeDirectPage = optimizeDirectPage;
     }
+    /** Clears M/X width hints at the start of each assembly pass. */
     beginPass() {
         this.m16 = false;
         this.x16 = false;
     }
+    /**
+     * Sets the accumulator immediate-width hint used when expressions follow M flag state.
+     * @param value True selects 16-bit accumulator immediates.
+     */
     setAccumulatorWidth(value) {
         this.m16 = value;
     }
+    /**
+     * Sets the index immediate-width hint used when expressions follow X flag state.
+     * @param value True selects 16-bit index immediates.
+     */
     setIndexWidth(value) {
         this.x16 = value;
     }
+    /**
+     * Enables or disables REP/SEP smart tracking of M and X flag hints.
+     * @param value When false, width hints ignore SEP/REP operands.
+     */
     setSmartMode(value) {
         this.smartMode = value;
     }
+    /**
+     * Stores the classified operand tuple for reuse during encoding.
+     * @param frame Active resolution frame for the occurrence.
+     */
     prepare(frame) {
         if (frame.isRelocatable) {
             frame.choose("65816-module-preparation", 0);
@@ -56,9 +82,20 @@ export class Typed65816 {
         // The tuple is occurrence-owned. Its scalar expression is already retained by parsed syntax.
         frame.chooseScalars("65816-preparation", 0, r.length, r.value, r.generated, r.flattened, r.mode, r.hexDigits, r.explicitDp);
     }
+    /**
+     * Returns the byte size chosen for the current instruction form.
+     * @param frame Active resolution frame for the occurrence.
+     * @returns Encoded instruction length in bytes, or `-1` when unrecognized.
+     */
     estimate(frame) {
         return this.run(frame);
     }
+    /**
+     * Emits opcode bytes when `context` is supplied; otherwise sizes only.
+     * @param frame Active resolution frame for the occurrence.
+     * @param context Emission sink and diagnostics for the emit pass.
+     * @returns True when a recognized form produced bytes.
+     */
     encode(frame, context) {
         return this.run(frame, context) >= 0;
     }
@@ -445,10 +482,8 @@ export class Typed65816 {
                 write(undefined);
                 throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
             }
-            if (emit) {
-                write(opcode(selected));
-                write(read(false, !x), width);
-            }
+            write(opcode(selected));
+            write(read(false, !x), width);
             return select(selected, width + 1);
         }
         if (load) {

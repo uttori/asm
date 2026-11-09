@@ -5,9 +5,11 @@ const SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   collection TEXT NOT NULL, id TEXT NOT NULL, baseline BLOB, projected BLOB,
   PRIMARY KEY(collection,id)
 ) WITHOUT ROWID;`;
+/** Narrow to a non-null, non-array object. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Allowlist of research collections whose names may be used as SQL identifiers. */
 function isResearchCollection(value) {
     return (value === "labels" ||
         value === "comments" ||

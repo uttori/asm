@@ -4,6 +4,7 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { openAnalysisProjectStore } from "@uttori/asm-disassembler";
 import { sourceFilePublicationEpoch, readSourceLinkBuild, sourceProjectLocalInputs, sourceContentHash, assertSourcePath, readSourceCaptureCatalog, } from "@uttori/asm-disassembler/source-project";
 import { loadNesRom, buildNesSource, inspectNesSource, prepareNesGeneration, analyzeNesProject, importNesPPUCapture, nesGenerationOptionsHash, initializeNesSourceProject, } from "@uttori/asm-plugin-65xx/disassembler";
+/** Require a layout object whose ROM hash matches the opened project. */
 function assertSourceLayout(value, romSha256) {
     if (typeof value !== "object" ||
         value === null ||
@@ -24,8 +25,11 @@ function assertSourceLayout(value, romSha256) {
         throw new Error("Invalid NES source layout contract.");
     }
 }
+/** True for a plain object that can hold JSON object fields. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** True when the value is an array whose elements still need their own checks. */
 const isUnknownArray = (value) => Array.isArray(value);
+/** True when every element is a string. */
 const isStringArray = (value) => Array.isArray(value) && value.every((item) => typeof item === "string");
 /** Read compact contracts with explicit size limits before parsing untrusted workspace JSON. */
 function readJson(file) {
@@ -170,6 +174,7 @@ async function inspectBuiltinProject(project, host, overlays, signal) {
         };
     });
 }
+/** Run a NES graphics query against the project's imported captures. */
 function graphicsNesProject(project, operation) {
     const repository = project.repository;
     if (project.configuration.target !== "65xx.nes") {

@@ -1,9 +1,11 @@
+/** Validates a positive safe integer or throws with context. */
 const positiveInteger = (value, context) => {
     if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${context} must be a positive safe integer.`);
     }
     return value;
 };
+/** Validates a non-empty string identifier or throws with context. */
 const identity = (value, context) => {
     if (value.length === 0) {
         throw new Error(`${context} must be a non-empty string.`);
@@ -15,8 +17,11 @@ const identity = (value, context) => {
  * for native trace producers. Pulling removes events. Stopping never discards unread entries.
  */
 export class DebugTraceBuffer {
+    /** Architecture recorded by every batch from this buffer. */
     architecture;
+    /** Address space of every retained PC. */
     addressSpace;
+    /** Fixed capacity before oldest-first loss. */
     capacity;
     #addresses;
     #head = 0;
@@ -24,18 +29,27 @@ export class DebugTraceBuffer {
     #nextSequence = 1;
     #droppedEvents = 0;
     #active = false;
-    /** @param {DebugTraceBufferOptions} options Trace identity and fixed producer capacity. */
+    /**
+     * Allocates an empty ring with the given identity and capacity.
+     * @param options Trace identity and fixed producer capacity.
+     */
     constructor(options) {
         this.architecture = identity(options.architecture, "Trace architecture");
         this.addressSpace = identity(options.addressSpace, "Trace address space");
         this.capacity = positiveInteger(options.capacity, "Trace capacity");
         this.#addresses = Array.from({ length: this.capacity });
     }
-    /** @returns {boolean} Whether new instruction addresses are currently accepted. */
+    /**
+     * Whether new instruction addresses are currently accepted.
+     * @returns True while recording is active.
+     */
     get active() {
         return this.#active;
     }
-    /** @returns {number} Current retained event count, which never exceeds `capacity`. */
+    /**
+     * Current retained event count, which never exceeds capacity.
+     * @returns Number of addresses waiting to be pulled.
+     */
     get bufferedEvents() {
         return this.#length;
     }
@@ -53,7 +67,7 @@ export class DebugTraceBuffer {
     }
     /**
      * Records one instruction address when active.
-     * @param {number} address Architecture-local logical instruction address.
+     * @param address Architecture-local logical instruction address.
      */
     append(address) {
         if (!this.#active) {
@@ -73,8 +87,8 @@ export class DebugTraceBuffer {
     }
     /**
      * Destructively reads the oldest retained addresses.
-     * @param {number} maxEvents Positive consumer batch bound.
-     * @returns {DebugTraceBatch} Ordered addresses plus explicit cumulative loss state.
+     * @param maxEvents Positive consumer batch bound.
+     * @returns Ordered addresses plus explicit cumulative loss state.
      */
     read(maxEvents) {
         positiveInteger(maxEvents, "Trace batch size");

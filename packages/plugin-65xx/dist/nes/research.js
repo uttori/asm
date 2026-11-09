@@ -140,6 +140,11 @@ export function nesResearchInputs(rom, view) {
         annotations: view.annotations.filter((item) => !item.id.startsWith("nes:")),
     };
 }
+/**
+ * Reject arrays and null before reading persisted mapper JSON.
+ * @param value Decoded JSON fragment.
+ * @returns Whether keyed mapper fields can be read.
+ */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }

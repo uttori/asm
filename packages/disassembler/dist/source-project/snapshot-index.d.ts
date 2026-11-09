@@ -12,6 +12,7 @@ export declare class SourceSnapshotIndex {
         readonly path: string;
         readonly bytes: Uint8Array;
     }[]): Promise<string>;
+    /** Release the private scratch index and any temporary Git state. */
     dispose(): void;
 }
 //# sourceMappingURL=snapshot-index.d.ts.map

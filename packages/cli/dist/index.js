@@ -11,13 +11,18 @@ import { assetUsage, runAssetCli } from "./asset-interchange/cli.js";
 import { assemblyBuildUsage, runAssemblyBuildCli } from "./build.js";
 import { publishOutputFiles } from "./output-files.js";
 import { runSourceCli, sourceUsage } from "./source.js";
+/** True when the token names a supported CLI command. */
 function isCliCommand(value) {
     return Object.hasOwn(commandOptions, value);
 }
+/** True when the token is a SNES mapper identifier accepted by source commands. */
 function isSnesMapper(value) {
     return SNES_MAPPERS.some((mapper) => mapper === value);
 }
-/** Flags are command-specific so a misspelled workflow cannot silently ignore a requested policy. */
+/**
+ * Flags accepted by each subcommand. Unknown flags fail parse instead of being ignored.
+ * `--help` is allowed on every command through `knownOptions`.
+ */
 const commandOptions = {
     assemble: [
         "--config",
@@ -46,8 +51,11 @@ const commandOptions = {
     ],
     "evidence-report": [],
 };
+/** Union of every command flag plus `--help`. Unknown tokens fail parse. */
 const knownOptions = new Set(["--help", ...Object.values(commandOptions).flat()]);
+/** Flags that take no value. Presence sets the corresponding boolean true. */
 const booleanOptions = new Set(["--help", "--verbose", "--debug", "--analysis-only"]);
+/** Commands that accept an optional output path as the second positional. */
 const commandsWithOutput = new Set(["assemble", "disassemble", "evidence-report"]);
 /** Installed executable's help text. All flags are long options. -- ends option parsing. */
 export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
@@ -105,8 +113,8 @@ Terminal signals retain Node's default termination behavior. No graceful cancell
  * Parse arguments without reading files or loading plugins. Unknown/inapplicable flags, boolean
  * values, invalid numeric limits, and excess positionals throw Error. Required input/ROM presence
  * is checked by runCli so a bare --help remains valid. -- treats all following strings as paths.
- * @param {readonly string[]} argv Tokens excluding the Node executable and script name. Not mutated.
- * @returns {CliArguments} New parsed object. List fields and the outer option map are shallow-frozen.
+ * @param argv Tokens excluding the Node executable and script name. Not mutated.
+ * @returns New parsed object. List fields and the outer option map are shallow-frozen.
  */
 export const parseCliArguments = (argv) => {
     const positional = [];
@@ -354,23 +362,23 @@ export const parseCliArguments = (argv) => {
     };
 };
 /**
- * Returns the default output path for a given input file and extension.
- * @param {string} inputFile The input file.
- * @param {string} extension The extension.
- * @returns {string} The default output path.
+ * Replace the input file's extension, keeping its directory and stem.
+ * @param inputFile Source path whose directory and stem are reused.
+ * @param extension Replacement extension, including the leading dot.
+ * @returns Path in the same directory as the input.
  */
 const defaultOutputPath = (inputFile, extension) => {
     const parsed = path.parse(inputFile);
     return path.join(parsed.dir, `${parsed.name}${extension}`);
 };
-/**
- * Formats a failure message for a given error.
- * @param {unknown} error The error.
- * @returns {string} The formatted failure message.
- */
+/** JSON-stringify a thrown value when it is not an Error, returning undefined on circular data. */
 function stringifyCaught(value) {
     return JSON.stringify(value);
 }
+/**
+ * Format a caught assemble/plugin failure for stderr.
+ * PluginError includes plugin, module, and target identity when present.
+ */
 const formatFailure = (error) => {
     if (error instanceof PluginError) {
         const context = [
@@ -384,9 +392,9 @@ const formatFailure = (error) => {
 };
 /**
  * Creates an analysis project from a ROM file.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {number} The exit code.
+ * @param parsed The parsed CLI arguments.
+ * @param cwd The current working directory.
+ * @returns The exit code.
  */
 const createAnalysisProject = (parsed, cwd) => {
     const inputFile = path.resolve(cwd, parsed.input);
@@ -422,9 +430,9 @@ const createAnalysisProject = (parsed, cwd) => {
 };
 /**
  * Validates a project's analysis and ROM identity.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {number} The exit code.
+ * @param parsed The parsed CLI arguments.
+ * @param cwd The current working directory.
+ * @returns The exit code.
  */
 const validateProject = (parsed, cwd) => {
     const directory = path.resolve(cwd, parsed.input);
@@ -452,9 +460,9 @@ const validateProject = (parsed, cwd) => {
 /**
  * Imports a native instruction recording into a verified project.
  * The shared disk importer streams the capture without loading prior runtime history.
- * @param {CliArguments} parsed Parsed command-line arguments.
- * @param {string} cwd Current working directory.
- * @returns {number} Process exit code.
+ * @param parsed Parsed command-line arguments.
+ * @param cwd Current working directory.
+ * @returns Process exit code.
  */
 const importProjectEvidence = async (parsed, cwd) => {
     const directory = path.resolve(cwd, parsed.input);
@@ -509,9 +517,9 @@ const importProjectEvidence = async (parsed, cwd) => {
 };
 /**
  * Prints or writes deterministic runtime conflict and explanation diagnostics.
- * @param {CliArguments} parsed Parsed command-line arguments.
- * @param {string} cwd Current working directory.
- * @returns {number} Process exit code.
+ * @param parsed Parsed command-line arguments.
+ * @param cwd Current working directory.
+ * @returns Process exit code.
  */
 const reportProjectEvidence = (parsed, cwd) => {
     const directory = path.resolve(cwd, parsed.input);
@@ -544,9 +552,9 @@ const reportProjectEvidence = (parsed, cwd) => {
 };
 /**
  * Analyzes a project's 65816 code.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {number} The exit code.
+ * @param parsed The parsed CLI arguments.
+ * @param cwd The current working directory.
+ * @returns The exit code.
  */
 const analyzeProject = (parsed, cwd) => {
     const directory = path.resolve(cwd, parsed.input);
@@ -579,9 +587,9 @@ const analyzeProject = (parsed, cwd) => {
 };
 /**
  * Assembles a source file into a binary output.
- * @param {CliArguments} parsed The parsed CLI arguments.
- * @param {string} cwd The current working directory.
- * @returns {Promise<number>} The exit code.
+ * @param parsed The parsed CLI arguments.
+ * @param cwd The current working directory.
+ * @returns The exit code.
  */
 const assemble = async (parsed, cwd) => {
     const inputFile = path.resolve(cwd, parsed.input);
@@ -718,8 +726,8 @@ const assemble = async (parsed, cwd) => {
  * No AbortSignal or signal handlers are installed: terminal termination can skip cleanup. Use the
  * underlying libraries for cooperative cancellation or structured results. This function neither
  * calls process.exit nor sets process.exitCode. The executable wrapper sets the returned status.
- * @param {readonly string[]} [argv] Argument tokens, defaulting to process.argv.slice(2). Not mutated.
- * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
+ * @param [argv] Argument tokens, defaulting to process.argv.slice(2). Not mutated.
+ * @returns 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv = process.argv.slice(2)) => {
     if (["assemble-object", "library", "link", "build"].includes(argv[0])) {
@@ -758,9 +766,9 @@ export const runCli = async (argv = process.argv.slice(2)) => {
 };
 /**
  * Dispatch a validated invocation. Unexpected failures are reported by runCli's outer boundary.
- * @param {CliArguments} parsed Parsed options with a required input already checked.
- * @param {string} cwd Invocation working directory, captured before asynchronous work.
- * @returns {Promise<number>} Command status after its owned resources are released.
+ * @param parsed Parsed options with a required input already checked.
+ * @param cwd Invocation working directory, captured before asynchronous work.
+ * @returns Command status after its owned resources are released.
  */
 const runCommand = async (parsed, cwd) => {
     if (parsed.command === "disassemble") {

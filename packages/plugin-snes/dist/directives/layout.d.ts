@@ -11,33 +11,33 @@ export declare const MAPPER_KEYWORDS: readonly ["lorom", "hirom", "exlorom", "ex
  * four comma-separated 1 MiB bank indices written into slots 0, 1, 4, 5
  * (Asar's SA-1 LoROM map - not consecutive 0–3).
  *
- * @param {SnesSessionState} state Mutable SNES session.
- * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param state Mutable SNES session.
+ * @param words Tokenized line, keyword first.
  */
 export declare function handleMapper(state: SnesSessionState, words: readonly string[]): void;
 /**
  * `check title` enables `readN` without a default.
  * `check bankcross <on|off|half|full>` sets PC wrap vs linear bank-cross policy.
  *
- * @param {SnesSessionState} state Mutable SNES session.
- * @param {readonly string[]} words Tokenized line.
+ * @param state Mutable SNES session.
+ * @param words Tokenized line.
  */
 export declare function handleCheck(state: SnesSessionState, words: readonly string[]): void;
 /**
  * `optimize dp none|ram|always`. Unknown subcommands are ignored (Asar no-op).
  * Only DP-width inference is implemented. Other `optimize` families are not.
  *
- * @param {SnesSessionState} state Mutable SNES session.
- * @param {readonly string[]} words Tokenized line.
+ * @param state Mutable SNES session.
+ * @param words Tokenized line.
  */
 export declare function handleOptimize(state: SnesSessionState, words: readonly string[]): void;
 /**
  * `startpos <addr>` records the SPC execute address used when `endspcblock`
  * has no `execute` argument. Illegal outside an open `spcblock`.
  *
- * @param {PluginSessionCapabilities} session Host assembler (for expression eval).
- * @param {SnesSessionState} state Mutable SNES session.
- * @param {readonly string[]} words Tokenized line.
+ * @param session Host assembler (for expression eval).
+ * @param state Mutable SNES session.
+ * @param words Tokenized line.
  */
 export declare function handleStartpos(session: PluginSessionCapabilities, state: SnesSessionState, words: readonly string[]): void;
 /** CHECK grammar is independent of session state; errors are reported only when selected. */

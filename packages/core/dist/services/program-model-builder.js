@@ -1,6 +1,7 @@
 import { incrementInternalCounter, recordSyntaxBoundary, recordInternalCounterPeak, } from "../internal-instrumentation.js";
 import { setCommandKind } from "../ir/normalized-command.js";
 import { OccurrenceSyntaxCache } from "./occurrence-syntax-cache.js";
+/** Returns the top stack element without mutating the stack. */
 function stackTop(stack) {
     const topIndex = stack.length - 1;
     return topIndex >= 0 ? stack[topIndex] : undefined;
@@ -23,7 +24,7 @@ export class ProgramModelBuilder {
     }
     /**
      * Creates an incremental parser state for line-by-line assembly.
-     * @returns {IncrementalProgramParseState} The parser state.
+     * @returns The parser state.
      */
     createIncrementalParseState() {
         return {
@@ -36,7 +37,7 @@ export class ProgramModelBuilder {
     }
     /**
      * Resets an incremental parser state in place.
-     * @param {IncrementalProgramParseState} state The parser state.
+     * @param state The parser state.
      */
     resetIncrementalParseState(state) {
         state.roots.length = 0;
@@ -47,10 +48,10 @@ export class ProgramModelBuilder {
     }
     /**
      * Builds a program model from raw source text.
-     * @param {string} source The source block to parse.
-     * @param {string} [sourceFile] Optional source file override.
-     * @param {number} [startLine] Optional starting line number.
-     * @returns {ProgramModel} The parsed program model.
+     * @param source The source block to parse.
+     * @param [sourceFile] Optional source file override.
+     * @param [startLine] Optional starting line number.
+     * @returns The parsed program model.
      */
     buildProgramModel(source, sourceFile = this.host.currentFile, startLine = 0, sourceKind = "physical") {
         const grammar = this.host.grammarIdentity?.() ?? "";
@@ -94,9 +95,9 @@ export class ProgramModelBuilder {
     }
     /**
      * Creates a typed include node from a source file body.
-     * @param {string} file The include file name.
-     * @param {string} source The include source content.
-     * @returns {IncludeProgramNode} The include node.
+     * @param file The include file name.
+     * @param source The include source content.
+     * @returns The include node.
      */
     createIncludeNode(file, source) {
         const program = this.buildProgramModel(source, file, 0);
@@ -104,10 +105,10 @@ export class ProgramModelBuilder {
     }
     /**
      * Returns cached executable nodes for a command stream.
-     * @param {Array<string | SourcedCommand>} commands The command stream.
-     * @param {string} [sourceFile] Optional source file override.
-     * @param {number} [startLine] Optional starting line number.
-     * @returns {ExecutableNode[]} The cached or parsed nodes.
+     * @param commands The command stream.
+     * @param [sourceFile] Optional source file override.
+     * @param [startLine] Optional starting line number.
+     * @returns The cached or parsed nodes.
      */
     getOrBuildPassProgram(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine, sourceKind = "physical") {
         // Structured encoding distinguishes sourced commands, physical spelling and embedded separators.
@@ -140,11 +141,11 @@ export class ProgramModelBuilder {
     /**
      * Consumes one raw command into an incremental parse state and returns newly
      * completed top-level executable nodes.
-     * @param {IncrementalProgramParseState} state The parser state.
-     * @param {string} rawCommand The raw command to consume.
-     * @param {string} [sourceFile] Optional source file override.
-     * @param {number} [sourceLine] Optional source line override.
-     * @returns {ExecutableNode[]} Newly completed top-level nodes.
+     * @param state The parser state.
+     * @param rawCommand The raw command to consume.
+     * @param [sourceFile] Optional source file override.
+     * @param [sourceLine] Optional source line override.
+     * @returns Newly completed top-level nodes.
      */
     consumeIncrementalCommand(state, rawCommand, sourceFile = this.host.currentFile, sourceLine = this.host.currentLine, normalized) {
         if (!normalized) {
@@ -155,10 +156,10 @@ export class ProgramModelBuilder {
     }
     /**
      * Parses a flat command stream into nested executable nodes.
-     * @param {Array<string | SourcedCommand>} commands The command stream.
-     * @param {string} [sourceFile] Optional source file override.
-     * @param {number} [startLine] Optional starting line number.
-     * @returns {ExecutableNode[]} The executable nodes.
+     * @param commands The command stream.
+     * @param [sourceFile] Optional source file override.
+     * @param [startLine] Optional starting line number.
+     * @returns The executable nodes.
      */
     parseCommandStreamToNodes(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine, sourceKind = "physical") {
         recordSyntaxBoundary(sourceKind === "physical" ? "physical-source-parse" : "generated-fragment-parse");
@@ -176,8 +177,8 @@ export class ProgramModelBuilder {
     }
     /**
      * Pushes to current.
-     * @param {IncrementalProgramParseState} state The state.
-     * @param {ExecutableNode} node The node.
+     * @param state The state.
+     * @param node The node.
      */
     pushToCurrent(state, node) {
         const capture = stackTop(state.captures);
@@ -210,10 +211,10 @@ export class ProgramModelBuilder {
     }
     /**
      * Consumes command into state.
-     * @param {IncrementalProgramParseState} state The state.
-     * @param {string} rawCommand The raw command.
-     * @param {string} sourceFile The source file.
-     * @param {number} sourceLine The source line.
+     * @param state The state.
+     * @param rawCommand The raw command.
+     * @param sourceFile The source file.
+     * @param sourceLine The source line.
      */
     consumeCommandIntoState(state, rawCommand, sourceFile, sourceLine, normalized) {
         // Expanded templates may already own parsed syntax and occurrence provenance.
@@ -378,12 +379,14 @@ export class ProgramModelBuilder {
         }
         this.pushToCurrent(state, command);
     }
+    /** Reports whether an executable node has enough metadata to leave the incremental buffer. */
     isNodeComplete(node) {
         if ("source" in node) {
             return true;
         }
         return node.endLine !== undefined;
     }
+    /** Moves fully closed root nodes out of the incremental parse state. */
     drainCompletedRoots(state) {
         let completedCount = 0;
         while (completedCount < state.roots.length &&

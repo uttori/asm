@@ -1,7 +1,9 @@
 import type { ExpressionNode, ReferenceExpressionNode } from "./expression-node.js";
 /** Member and index segments remain separate until the owning symbol/struct service resolves them. */
 export type ReferencePath = {
+    /** Base identifier before member or index chaining. */
     readonly root: string;
+    /** Left-to-right member and index steps after the root identifier. */
     readonly segments: readonly ({
         kind: "member";
         name: string;

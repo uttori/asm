@@ -19,9 +19,11 @@ export function assetSourceMediaType(path, format) {
     }
     return "application/octet-stream";
 }
+/** Narrows JSON fields expected to be non-empty strings. */
 function isName(value) {
     return typeof value === "string" && !!value;
 }
+/** Narrows unknown JSON values to arrays for dependency validation. */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
@@ -36,7 +38,8 @@ function isDependency(value) {
         (!("relativeTo" in value) || value.relativeTo === undefined || isName(value.relativeTo)) &&
         (!("mediaType" in value) || value.mediaType === undefined || isName(value.mediaType)));
 }
-/** A synchronous, bounded closure shared by assembly, dependency discovery and explicit editor previews.
+/**
+ * A synchronous, bounded closure shared by assembly, dependency discovery and explicit editor previews.
  * Each callback gets owned byte/option copies. Paths are read once through the host snapshot; keys
  * can alias bytes but may not change identity or form recursive relative-resource declarations.
  */

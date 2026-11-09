@@ -1,8 +1,10 @@
 import { isNamespacedId } from "./validation.js";
+/** Compare two byte buffers for exact equality. */
 const sameBytes = (left, right) => left.length === right.length && left.every((byte, index) => byte === right[index]);
 /** Registers unique transforms independently of any assembler target. */
 export class TransformRegistry {
     #transforms = new Map();
+    /** Add one transform; duplicate ids reject registration. */
     register(transform) {
         if (!isNamespacedId(transform.id) || !transform.version || this.#transforms.has(transform.id)) {
             throw new Error(`Invalid or duplicate byte transform '${transform.id}'.`);
@@ -10,6 +12,7 @@ export class TransformRegistry {
         this.#transforms.set(transform.id, transform);
         return this;
     }
+    /** Resolve a registered transform by id. */
     get(id) {
         const transform = this.#transforms.get(id);
         if (!transform) {
@@ -18,12 +21,13 @@ export class TransformRegistry {
         return transform;
     }
 }
-/** Encode a chain and verify that each stage decodes to its exact input.
- * @param {TransformRegistry} registry Registered reversible transforms.
- * @param {Uint8Array} input Borrowed original bytes.
- * @param {TransformStep[]} steps Ordered encode stages.
- * @param {number} maxOutputBytes Maximum bytes allowed after any stage.
- * @returns {Uint8Array} Owned final encoded bytes.
+/**
+ * Encode a chain and verify that each stage decodes to its exact input.
+ * @param registry Registered reversible transforms.
+ * @param input Borrowed original bytes.
+ * @param steps Ordered encode stages.
+ * @param maxOutputBytes Maximum bytes allowed after any stage.
+ * @returns Owned final encoded bytes.
  */
 export function transformBytes(registry, input, steps, maxOutputBytes = 16 * 1024 * 1024) {
     if (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 0) {
@@ -45,12 +49,13 @@ export function transformBytes(registry, input, steps, maxOutputBytes = 16 * 102
     }
     return bytes;
 }
-/** Reverse a transform chain with a caller-defined decoded expansion bound.
- * @param {TransformRegistry} registry Registered reversible transforms.
- * @param {Uint8Array} encoded Borrowed final encoded bytes.
- * @param {TransformStep[]} steps Original encode order.
- * @param {number} maxOutputBytes Maximum bytes allowed after any decode stage.
- * @returns {Uint8Array} Owned reconstructed bytes.
+/**
+ * Reverse a transform chain with a caller-defined decoded expansion bound.
+ * @param registry Registered reversible transforms.
+ * @param encoded Borrowed final encoded bytes.
+ * @param steps Original encode order.
+ * @param maxOutputBytes Maximum bytes allowed after any decode stage.
+ * @returns Owned reconstructed bytes.
  */
 export function reverseTransforms(registry, encoded, steps, maxOutputBytes) {
     if (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 0) {

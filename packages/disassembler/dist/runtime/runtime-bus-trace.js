@@ -4,15 +4,18 @@ import { validateRuntimeBusFact, } from "../model/runtime-bus-types.js";
 import { createRuntimeGraphicsAccumulator, } from "./runtime-graphics.js";
 import { createRuntimePPUAccumulator } from "./runtime-ppu.js";
 import { createRuntimeTransferAccumulator, validateRuntimeTransferBoundary, } from "./runtime-transfer.js";
+/** Distinguish plain object rows from arrays during bus trace validation. */
 function isRowRecord(value) {
     return !Array.isArray(value);
 }
+/** On-disk bus trace artifact discriminator. */
 export const RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
 /** Aggregates byte-access variants; ordered timing and raster history are outside this projection. */
 export const RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
-/** Parse a canonical unsigned wire integer without rounding through JavaScript numbers.
- * @param {unknown} value Decimal string, with no sign or leading zeroes.
- * @returns {number | bigint} Exact u64. Common small values avoid BigInt allocation. Invalid input throws.
+/**
+ * Parse a canonical unsigned wire integer without rounding through JavaScript numbers.
+ * @param value Decimal string, with no sign or leading zeroes.
+ * @returns Exact u64. Common small values avoid BigInt allocation. Invalid input throws.
  */
 const unsigned = (value) => {
     if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value)) {
@@ -35,12 +38,15 @@ const unsigned = (value) => {
     }
     return number;
 };
+/** Narrow parsed JSON to a plain object record. */
 function isMetadataRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Accept only supported SNES bus trace capture scopes. */
 function isBusScope(value) {
     return (value === "snes.cpu-bus" || value === "snes.cpu-bus-transfers" || value === "snes.cpu-bus-ppu");
 }
+/** Require a positive canonical unsigned decimal string for clock rationals. */
 function positiveDecimal(value) {
     if (typeof value !== "string" || unsigned(value) === 0) {
         if (typeof value !== "string") {
@@ -50,9 +56,10 @@ function positiveDecimal(value) {
     }
     return value;
 }
-/** Normalize only semantic metadata, excluding archive allocation and file framing.
- * @param {unknown} value Producer metadata, possibly with transport-specific fields.
- * @returns {RuntimeBusTraceMetadata} Fresh canonical identity. Invalid metadata throws.
+/**
+ * Normalize only semantic metadata, excluding archive allocation and file framing.
+ * @param value Producer metadata, possibly with transport-specific fields.
+ * @returns Fresh canonical identity. Invalid metadata throws.
  */
 export const validateRuntimeBusTraceMetadata = (value) => {
     if (!isMetadataRecord(value)) {
@@ -98,14 +105,16 @@ export const validateRuntimeBusTraceMetadata = (value) => {
         },
     };
 };
+/** Narrow unknown values to bus access or transfer boundary events. */
 function isBusTraceEvent(value) {
     return typeof value === "object" && value !== null;
 }
-/** Validate and aggregate a stream with bounded chunks and a caller-owned, optionally disk-backed index.
- * @param {unknown} metadata Producer identity and clock.
- * @param {RuntimeBusTraceImportContext} context Expected ROM and distinct-fact budget.
- * @param {RuntimeTraceImporterStorage} storage Optional SQLite counters and transactional record sink.
- * @returns {object} Single-use push/finish importer. Any failed push permanently prevents publication.
+/**
+ * Validate and aggregate a stream with bounded chunks and a caller-owned, optionally disk-backed index.
+ * @param metadata Producer identity and clock.
+ * @param context Expected ROM and distinct-fact budget.
+ * @param storage Optional SQLite counters and transactional record sink.
+ * @returns Single-use push/finish importer. Any failed push permanently prevents publication.
  */
 export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
     const meta = validateRuntimeBusTraceMetadata(metadata);
@@ -159,9 +168,10 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
     let lastPc = 0;
     let finished = false;
     let failed = false;
-    /** Index one bounded chunk. Counters remain provisional until the source confirms a complete tail.
-     * @param {unknown} chunk Object containing 1–4095 ordered accesses.
-     * @returns {void} Throws and discards the index on any invalid event or exhausted fact budget.
+    /**
+     * Index one bounded chunk. Counters remain provisional until the source confirms a complete tail.
+     * @param chunk Object containing 1–4095 ordered accesses.
+     * @returns Throws and discards the index on any invalid event or exhausted fact budget.
      */
     const push = (chunk) => {
         if (finished || failed) {
@@ -368,8 +378,9 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
             throw error;
         }
     };
-    /** Assign stable source identities and emit records once, inside the caller's publication transaction.
-     * @returns {RuntimeBusTraceImportResult} Aggregates and provenance. Releases the temporary index even if the sink fails.
+    /**
+     * Assign stable source identities and emit records once, inside the caller's publication transaction.
+     * @returns Aggregates and provenance. Releases the temporary index even if the sink fails.
      */
     const finish = () => {
         if (finished || failed) {

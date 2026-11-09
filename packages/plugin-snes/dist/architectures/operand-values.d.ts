@@ -2,9 +2,13 @@ import { type InstructionResolutionFrame } from "@uttori/asm-core";
 import type { ExpansionPlan } from "./operand-plans.js";
 /** Numeric width facts copied into a frame snapshot, never retained by immutable syntax. */
 export interface OperandExpansion {
+    /** Byte width chosen for encoding after width inference and forced sizes. */
     length: number;
+    /** True when classification produced a concrete numeric value without re-evaluating source text. */
     generated: boolean;
+    /** Numeric value from probe, immediate, or math classification when generated. */
     value: number;
+    /** True when a whole-list math expression collapsed delimiter structure. */
     flattened: boolean;
 }
 /** Speculative width reads swallow errors, as unresolved operands must survive definition collection. */

@@ -35,7 +35,9 @@ export interface SnesSessionState {
      * Only slots 0, 1, 4, and 5 are used. The rest stay `-1` (unmapped).
      */
     sa1Banks: number[];
+    /** When false, finalization skips writing the SNES header checksum word. */
     checksumEnabled: boolean;
+    /** Checksum fill algorithm for non-power-of-two ROM sizes. */
     checksumMode: "asar" | "simple";
     /**
      * `full`/`on` = linear PC across `$xxFFFF` → `$xy0000`.
@@ -53,6 +55,7 @@ export interface SnesSessionState {
     optimizeDirectPage: boolean;
     /** Super FX auto-MOVE: Asar stores the raw byte. Hardware LMS/SMS store `addr >> 1`. */
     asarSuperFxMoveShortAddress: boolean;
+    /** Pad byte written into holes and trailing freespace before checksum. */
     outputFillByte: number;
     /** File offset of the `STAR` marker, or `null` if no freespace is open. */
     activeFreespaceStartOffset: number | null;
@@ -60,7 +63,9 @@ export interface SnesSessionState {
     activeFreespaceContentStartOffset: number | null;
     /** Highest written offset in the open freespace region (inclusive). */
     activeFreespaceEndOffset: number | null;
+    /** True while an `spcblock` scope is open and mapper directives are blocked. */
     inSpcBlock: boolean;
+    /** Open block metadata used when `endspcblock` patches size and restores context. */
     spcBlock: SnesSpcBlockData | null;
     /** Architecture to restore on `endspcblock`. */
     spcPreviousArchitecture: string | null;
@@ -77,8 +82,8 @@ export declare const snesSessionStateKey: SessionStateKey<SnesSessionState>;
 /**
  * Deep-clones mutable nested fields so parallel/pass clones cannot share banks
  * or an open SPC block.
- * @param {SnesSessionState} value The session state to clone.
- * @returns {SnesSessionState} A deep-cloned session state.
+ * @param value The session state to clone.
+ * @returns A deep-cloned session state.
  */
 export declare function cloneSnesSessionState(value: SnesSessionState): SnesSessionState;
 //# sourceMappingURL=session-state.d.ts.map

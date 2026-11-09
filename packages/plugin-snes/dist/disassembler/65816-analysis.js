@@ -29,12 +29,22 @@ const EVIDENCE_RANK = {
     runtime: 3,
     manual: 4,
 };
+/**
+ * Select the hardware reset or interrupt entry state for a vector definition.
+ * @param kind Vector state tag from the ROM header table.
+ */
 const vectorState = (kind) => {
     if (kind === "reset") {
         return resetCpu65816State();
     }
     return kind === "native" ? nativeVectorCpu65816State() : emulationVectorCpu65816State();
 };
+/**
+ * Read a little-endian bank-zero vector word from the mapped ROM image.
+ * @param rom Headerless ROM view.
+ * @param mapper Cartridge mapper for file-offset translation.
+ * @param pointer 24-bit CPU address of the vector word.
+ */
 const readVector = (rom, mapper, pointer) => {
     const identity = identifySnesCpuAddress(pointer, createSnesAddressContext(mapper), rom.length);
     if (!identity) {
@@ -48,10 +58,15 @@ const readVector = (rom, mapper, pointer) => {
     const target = low | (high << 8);
     return target === 0 || target === 0xffff ? undefined : target;
 };
+/** Extract a 65816 state overlay stored on a project annotation. */
 const stateOverrideFor = (annotation) => {
     const payload = readAnalysisTargetState(annotation.architecture, annotation.state);
     return payload?.codec === "snes.65816" ? payload.state : undefined;
 };
+/**
+ * Map decoder reference kinds onto static CFG edge kinds.
+ * @param kind Operand reference classification from the decoder.
+ */
 const controlTargetKind = (kind) => {
     if (kind === "branch") {
         return "branch";
@@ -61,6 +76,11 @@ const controlTargetKind = (kind) => {
     }
     return "jump";
 };
+/**
+ * Build static control targets, expanding interrupt instructions to vector targets.
+ * @param instruction Decoded 65816 instruction at the current PC.
+ * @param interruptTargets Resolved vector destinations for interrupt opcodes.
+ */
 const controlsFor = (instruction, interruptTargets) => {
     const controls = instruction.references
         .filter((reference) => reference.kind === "branch" || reference.kind === "call" || reference.kind === "jump")
@@ -76,7 +96,12 @@ const controlsFor = (instruction, interruptTargets) => {
         explanation: "Resolved from the applicable SNES interrupt vector.",
     }));
 };
+/** True when effective addresses depend on index registers or stack-relative forms. */
 const isIndexedOrIndirect = (mode) => mode.includes("Indexed") || mode.includes("Indirect") || mode.startsWith("stackRelative");
+/**
+ * Explain why a data effective address could not be resolved statically.
+ * @param mode Instruction addressing mode string from the decoder.
+ */
 const unresolvedAddressExplanation = (mode) => {
     if (mode.startsWith("direct")) {
         return "Effective address is unresolved because direct page D is unknown.";
@@ -86,6 +111,11 @@ const unresolvedAddressExplanation = (mode) => {
     }
     return "Effective address is unresolved.";
 };
+/**
+ * Explain whether a mapped ROM offset or indexed base was recorded for an operand.
+ * @param indexed True when the mode prevents a single effective address.
+ * @param identity Canonical ROM mapping when the address is direct and in-ROM.
+ */
 const mappedAddressExplanation = (indexed, identity) => {
     if (indexed) {
         return "The encoded address is only a base. An index register or indirection prevents a static effective address.";
@@ -102,10 +132,10 @@ const mappedAddressExplanation = (indexed, identity) => {
  * by the richer address-identity helper. Using the target address-space conversion here avoids
  * allocating up to 256 mirror records for every decoded instruction. The reverse check preserves
  * the former guarantee that the candidate offset is representable for the selected mapper.
- * @param {number} address Logical 65816 address to map.
- * @param {AddressSpaceContext} context Precomputed mapper context shared by the analysis run.
- * @param {number} romSize Headerless ROM size used to reject out-of-bounds offsets.
- * @returns {{ readonly fileOffset: number } | undefined} Canonical in-ROM file identity, if mapped.
+ * @param address Logical 65816 address to map.
+ * @param context Precomputed mapper context shared by the analysis run.
+ * @param romSize Headerless ROM size used to reject out-of-bounds offsets.
+ * @returns Canonical in-ROM file identity, if mapped.
  */
 const mappedRomOffset = (address, context, romSize) => {
     // Performance invariant: do not replace this with identifySnesCpuAddress() in the decode loop.
@@ -116,6 +146,12 @@ const mappedRomOffset = (address, context, romSize) => {
     }
     return snesRomAddressSpace.fromOutputOffset(fileOffset, context) < 0 ? undefined : { fileOffset };
 };
+/**
+ * Summarize data and pointer operands with ROM mapping and hardware classification.
+ * @param instruction Decoded instruction whose references are exported.
+ * @param context Mapper context shared by the analysis run.
+ * @param romSize Headerless ROM size used to reject out-of-range offsets.
+ */
 const effectiveAddressesFor = (instruction, context, romSize) => instruction.references
     .filter((reference) => reference.kind === "data" || reference.kind === "pointer")
     .map((reference) => {
@@ -143,10 +179,13 @@ const effectiveAddressesFor = (instruction, context, romSize) => instruction.ref
         explanation: mappedAddressExplanation(indexed, identity),
     }));
 });
+/** Project a lattice flag onto true/false when exactly 0 or 1 is known. */
 const knownBoolean = (value) => value.kind === "known" && (value.value === 0 || value.value === 1)
     ? value.value === 1
     : undefined;
+/** Extract a concrete integer when the lattice value is known. */
 const knownNumber = (value) => value.kind === "known" ? value.value : undefined;
+/** Serialize known CPU state fields onto interval annotation payloads. */
 const annotationState = (state) => ({
     ...(knownBoolean(state.e) === undefined ? {} : { e: knownBoolean(state.e) }),
     ...(knownBoolean(state.m) === undefined ? {} : { m: knownBoolean(state.m) }),
@@ -157,6 +196,12 @@ const annotationState = (state) => ({
     ...(knownNumber(state.d) === undefined ? {} : { directPage: knownNumber(state.d) }),
     ...(knownNumber(state.s) === undefined ? {} : { stackPointer: knownNumber(state.s) }),
 });
+/**
+ * Convert a static CFG result into publication-ready analysis records.
+ * @param result Completed 65816 control-flow analysis.
+ * @param runEvidence Evidence id identifying this analysis run.
+ * @param retainGraph When false, omit redundant graph path records.
+ */
 const recordsFor = (result, runEvidence, retainGraph) => {
     const evidencePool = new EvidencePool();
     const ids = new Map();
@@ -267,6 +312,11 @@ const recordsFor = (result, runEvidence, retainGraph) => {
     ];
     return withCompactAnalysisOwnership(records, entries);
 };
+/**
+ * Regenerate opcode/operand interval annotations from decoded CFG nodes.
+ * @param result Completed 65816 control-flow analysis.
+ * @param runEvidence Evidence id identifying this analysis run.
+ */
 const annotationsFor = (result, runEvidence) => {
     const output = new Map();
     const stateByOffset = new Map();
@@ -310,10 +360,10 @@ const annotationsFor = (result, runEvidence) => {
  * Seeds from RESET/interrupt vectors, labels, `points: ["in"]` annotations,
  * configured entry points, and target sets. Data-classified intervals block
  * decode. Hardware I/O is never treated as ROM.
- * @param {RomImage} rom Immutable ROM content and identity.
- * @param {SnesMapper} mapper Explicitly detected or user-selected SNES mapper.
- * @param {Snes65816AnalysisOptions} [options] Project annotations, seeds, overrides, and deterministic limits.
- * @returns {Snes65816AnalysisResult} Static CFG, abstract states, project records, annotations, and evidence.
+ * @param rom Immutable ROM content and identity.
+ * @param mapper Explicitly detected or user-selected SNES mapper.
+ * @param [options] Project annotations, seeds, overrides, and deterministic limits.
+ * @returns Static CFG, abstract states, project records, annotations, and evidence.
  */
 export const analyzeSnes65816 = (rom, mapper, options = {}) => {
     const context = createSnesAddressContext(mapper);

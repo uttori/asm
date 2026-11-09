@@ -1,15 +1,17 @@
 import { expandIndexedGrid } from "@uttori/asm-assets/image";
 import { decodeBodyFrame } from "./som-body-frame.js";
-/** True when a block stores a list rather than a ROM address.
- * @param {unknown} value Candidate tile reference.
- * @returns {boolean} Whether `value` is an array.
+/**
+ * True when a block stores a list rather than a ROM address.
+ * @param value Candidate tile reference.
+ * @returns Whether `value` is an array.
  */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
-/** Two finite integers, the shape stored for a frame origin.
- * @param {unknown} value Candidate origin pair.
- * @returns {boolean} Whether `value` is a safe-integer pair.
+/**
+ * Two finite integers, the shape stored for a frame origin.
+ * @param value Candidate origin pair.
+ * @returns Whether `value` is a safe-integer pair.
  */
 function isIntegerPair(value) {
     if (!Array.isArray(value) || value.length !== 2) {
@@ -22,9 +24,10 @@ function isIntegerPair(value) {
     }
     return true;
 }
-/** Canonical comparable fields; descriptive extensions never supply competing geometry.
- * @param {FramePlacement} p One derived tile occurrence.
- * @returns {unknown[]} Fields that must agree between stored and derived geometry.
+/**
+ * Canonical comparable fields; descriptive extensions never supply competing geometry.
+ * @param p One derived tile occurrence.
+ * @returns Fields that must agree between stored and derived geometry.
  */
 function placementValue(p) {
     return [
@@ -45,9 +48,9 @@ function placementValue(p) {
 /**
  * Resolve the adapter's ROM/expanded-slot references, then use the portable grid expander.
  * Existing external references are an explicit read-only inventory, never guessed pixels.
- * @param {FrameLayout} layout Frame atlas sidecar.
- * @param {FrameRecord} frame Pose whose blocks expand into occurrences.
- * @returns {object[]} Derived 8×8 occurrences.
+ * @param layout Frame atlas sidecar.
+ * @param frame Pose whose blocks expand into occurrences.
+ * @returns Derived 8×8 occurrences.
  */
 export function deriveFramePlacements(layout, frame) {
     if (!Array.isArray(frame.blocks) || !frame.blocks.length) {
@@ -145,9 +148,10 @@ export function deriveFramePlacements(layout, frame) {
         }, references[index], display));
     });
 }
-/** Check raw body evidence against editable blocks before interpreting any derived geometry.
- * @param {FrameRecord} frame Pose that may carry a native body record.
- * @returns {void} Nothing; invalid records throw.
+/**
+ * Check raw body evidence against editable blocks before interpreting any derived geometry.
+ * @param frame Pose that may carry a native body record.
+ * @returns Nothing; invalid records throw.
  */
 export function validateNativeFrame(frame) {
     const native = frame.nativeFrame;
@@ -191,10 +195,11 @@ export function validateNativeFrame(frame) {
         }
     }
 }
-/** Validate optional v1 composition as one coherent model; legacy assembly-only layouts remain valid.
- * @param {FrameLayout} layout Frame atlas sidecar.
- * @param {FrameRecord} frame Pose to check.
- * @returns {object[] | undefined} Derived placements when the pose retains composition.
+/**
+ * Validate optional v1 composition as one coherent model; legacy assembly-only layouts remain valid.
+ * @param layout Frame atlas sidecar.
+ * @param frame Pose to check.
+ * @returns Derived placements when the pose retains composition.
  */
 export function validateFrameComposition(layout, frame) {
     const retained = frame.blocks !== undefined ||

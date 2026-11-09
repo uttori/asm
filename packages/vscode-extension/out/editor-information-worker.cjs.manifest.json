@@ -4,12 +4,12 @@
   "source": "packages/vscode-extension/src/editor-info/worker.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/editor-information-worker.cjs.licenses.txt",
-  "sha256": "7b3890b2637577ad850ed8981914686b32c0e4ca9795e4d43ebd93a7ea6717a3",
+  "sha256": "0eff26ecf0906d34b28f2d9b20c979ccdf66bd2d2a18991059bff322dd558da4",
   "noticesSha256": "fcfc842aeb2910110fcdc8fb8c1f8378d0d70310445d6ef4cb3104fc0d0a370f",
   "inputs": [
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "3357428093100ad6e3aff2fcf0bb8f676b43c875679a6c80895d80cefb584bfa"
     },
     {
       "file": "packages/core/src/canonical-json.ts",

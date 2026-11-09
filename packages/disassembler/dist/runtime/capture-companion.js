@@ -2,6 +2,7 @@ import { lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 import { verifyCaptureContext } from "@uttori/asm-capture";
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
+/** Narrow JSON.parse output to a plain object record. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }

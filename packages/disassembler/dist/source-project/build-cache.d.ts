@@ -1,4 +1,5 @@
-/** Reclaim interrupted attempts before another write, preserving the actual current pair.
+/**
+ * Reclaim interrupted attempts before another write, preserving the actual current pair.
  * Unrecognized current pointers defer cleanup until a successful publication establishes ownership.
  */
 export declare function prunePriorSourceBuilds(directory: string, incoming: string, fileName: string): string[];

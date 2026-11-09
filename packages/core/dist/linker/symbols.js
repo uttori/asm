@@ -5,6 +5,7 @@ export const allocationKey = (module, section) => JSON.stringify([module, sectio
 /** Placement-dependent arithmetic is evaluated once per symbol, with an explicit cycle stack. */
 export class LinkSymbols {
     recipe;
+    /** Final section placements keyed by module/section allocation identity. */
     allocations;
     modules = new Map();
     exports = new Map();
@@ -55,6 +56,7 @@ export class LinkSymbols {
         }
         return linkInteger(allocation.runAddress + offset);
     }
+    /** Recursively reduces link expressions with cycle detection and depth limits. */
     evaluate(expression, source, depth = 0) {
         try {
             if (depth > 128) {

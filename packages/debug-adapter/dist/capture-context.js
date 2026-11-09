@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat, open, readdir, readFile, link, unlink } from "node:fs/promises";
 import path from "node:path";
+/** Narrows unknown JSON values to plain objects. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Computes SHA-256 of a file using streaming reads. */
 const digestFile = async (file, signal) => {
     const hash = createHash("sha256");
     for await (const bytes of createReadStream(file, { signal })) {
@@ -13,11 +15,15 @@ const digestFile = async (file, signal) => {
     }
     return hash.digest("hex");
 };
-/** Coordinates paused context boundaries with either ACT2 sink. The native
+/**
+ * Coordinates paused context boundaries with either ACT2 sink. The native
  * companion writes into a newly reserved directory; manifest.json is published
- * only after the ACT2 archive and every companion file are complete and synced. */
+ * only after the ACT2 archive and every companion file are complete and synced.
+ */
 export class CaptureContextRecorder {
+    /** Reserved directory receiving companion context artifacts. */
     directory;
+    /** Capture transport wrapping native calls with context prepare/start/stop. */
     transport;
     #metadata;
     #native;
@@ -95,9 +101,10 @@ export class CaptureContextRecorder {
             return transport(request);
         };
     }
-    /** Publish integrity hashes and trace-relative boundaries after primary publication.
+    /**
+     * Publish integrity hashes and trace-relative boundaries after primary publication.
      * Failures retain all files without claiming a complete context bundle.
-     * @param {CaptureFileSummary} summary Completed primary archive whose session/counters must match.
+     * @param summary Completed primary archive whose session/counters must match.
      */
     async finish(summary) {
         const boundaries = JSON.parse(await readFile(path.join(this.directory, "boundaries.json"), "utf8"));

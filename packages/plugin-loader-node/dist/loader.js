@@ -12,7 +12,14 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { PluginError, PluginManager, } from "@uttori/asm-core/plugin";
 import { PROJECT_CONFIG_FILENAME, readProjectConfiguration, } from "./configuration.js";
+/** Accepts a plain JSON object; arrays and null are rejected. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/**
+ * Copy configured plugin options into a mutable record.
+ * @param value Configured options; undefined yields an empty record.
+ * @param entry Attribution used in the error.
+ * @returns A shallow copy of the options.
+ */
 const toOptionsRecord = (value, entry) => {
     if (value === undefined) {
         return {};
@@ -24,6 +31,11 @@ const toOptionsRecord = (value, entry) => {
     }
     return { ...value };
 };
+/**
+ * Read default.manifest.id from an imported namespace without validating the plugin.
+ * @param namespace Imported module namespace.
+ * @returns The manifest ID, or undefined when the shape does not match.
+ */
 const pluginIdFromNamespace = (namespace) => {
     if (!isRecord(namespace) ||
         !isRecord(namespace.default) ||
@@ -34,6 +46,11 @@ const pluginIdFromNamespace = (namespace) => {
         ? namespace.default.manifest.id
         : undefined;
 };
+/**
+ * Recursively sort object keys so equal values serialize identically. Array order is kept.
+ * @param value JSON-compatible value.
+ * @returns A key-sorted copy of objects and arrays; other values unchanged.
+ */
 const stableValue = (value) => {
     if (Array.isArray(value)) {
         return value.map(stableValue);
@@ -45,10 +62,16 @@ const stableValue = (value) => {
     }
     return value;
 };
+/** Syntactic test for absolute paths, ./, ../, and file: specifiers. Performs no existence check. */
 const isPathSpecifier = (specifier) => path.isAbsolute(specifier) ||
     specifier.startsWith("./") ||
     specifier.startsWith("../") ||
     specifier.startsWith("file:");
+/**
+ * Canonicalize a file URL through realpath so symlinked paths share one identity.
+ * @param url File URL to canonicalize.
+ * @returns The realpath URL, or the input href when the file cannot be resolved.
+ */
 const normalizeFileUrl = async (url) => {
     try {
         return pathToFileURL(await realpath(fileURLToPath(url))).href;
@@ -57,12 +80,21 @@ const normalizeFileUrl = async (url) => {
         return url.href;
     }
 };
+/**
+ * Build a PLUGIN_MODULE_NOT_FOUND error attributed to the configuration entry.
+ * @param request Failing request.
+ * @param message Failure description appended to the attribution.
+ * @param resolvedModule Resolved identity, when resolution succeeded.
+ * @param cause Underlying resolution or import failure.
+ * @returns The attributed PluginError.
+ */
 const moduleLoadError = (request, message, resolvedModule, cause) => new PluginError(`Configuration entry '${request.configEntry}' (${request.module})${resolvedModule ? ` resolved to '${resolvedModule}'` : ""}: ${message}`, {
     code: "PLUGIN_MODULE_NOT_FOUND",
     pluginModule: resolvedModule ?? request.module,
     cause,
 });
-/** Resolve a trusted plugin from its configuration directory to a canonical file URL.
+/**
+ * Resolve a trusted plugin from its configuration directory to a canonical file URL.
  * Package resolution retains host export conditions with import semantics in ESM and CJS hosts.
  * Resolution failures reject with a PluginError naming the configuration entry and its cause.
  */
@@ -107,6 +139,12 @@ const resolveExternalModule = async (request) => {
         throw moduleLoadError(request, "module could not be resolved", undefined, error);
     }
 };
+/**
+ * Attribute an activation failure to the configuration entry of the plugin that raised it.
+ * @param error Failure thrown during activation.
+ * @param modules Resolved modules that were being activated.
+ * @returns A PluginError; non-PluginError failures become PLUGIN_ACTIVATION_FAILED.
+ */
 const wrapActivationError = (error, modules) => {
     if (!(error instanceof PluginError)) {
         return new PluginError("Plugin activation failed.", {
@@ -140,8 +178,8 @@ export class NodePluginLoader {
      * disposes the old environment before activation. Activation failure leaves no replacement.
      * Module contents, logger identity, and bundled plugin object identity are not cache keys.
      * Node's module cache is retained. Failures reject with PluginError or cleanup AggregateError.
-     * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
-     * @returns {Promise<LoadedProjectEnvironment>} A borrowed handle owned by this loader until disposal or replacement.
+     * @param options Project location, trusted plugins, and host precedence settings.
+     * @returns A borrowed handle owned by this loader until disposal or replacement.
      */
     async loadProjectEnvironment(options) {
         const cwd = path.resolve(options.cwd);
@@ -385,8 +423,8 @@ const defaultEnvironments = new Map();
  * Convenience loader shared by absolute cwd. Calls for that cwd share ownership, not references:
  * disposing any current handle disposes its environment for all callers. Reconfiguration replaces it.
  * Use separate NodePluginLoader instances for independent lifetimes. Serialize calls for each cwd.
- * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
- * @returns {Promise<LoadedProjectEnvironment>} A handle to the environment shared by this absolute cwd.
+ * @param options Project location, trusted plugins, and host precedence settings.
+ * @returns A handle to the environment shared by this absolute cwd.
  */
 export const loadProjectEnvironment = async (options) => {
     const key = path.resolve(options.cwd);

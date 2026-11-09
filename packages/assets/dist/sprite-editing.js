@@ -1,21 +1,46 @@
 import { indexedPalette, indexedPaletteChanges } from "./indexed-values.js";
 import { ASSET_LIMITS, boundedSum, rasterArea } from "./limits.js";
 import { integer } from "./validation.js";
+/**
+ * Narrow a value to a plain non-array object.
+ * @param value Untrusted value.
+ * @returns Whether `value` is a non-null, non-array object.
+ */
 function record(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/**
+ * Require a bounded array.
+ * @param value Untrusted value.
+ * @param label Inventory name used in the error message.
+ * @param maximum Largest accepted length.
+ * @returns The same array, unvalidated element-wise.
+ */
 function array(value, label, maximum) {
     if (!Array.isArray(value) || value.length > maximum) {
         throw new Error(`Invalid ${label} inventory.`);
     }
     return value;
 }
+/**
+ * Require a non-empty identity string of at most 1024 characters.
+ * @param value Untrusted value.
+ * @returns The validated identity.
+ */
 function identifier(value) {
     if (typeof value !== "string" || !value.length || value.length > 1024) {
         throw new Error("Invalid sprite owner identity.");
     }
     return value;
 }
+/**
+ * Require an integer number within an inclusive range.
+ * @param value Untrusted value; non-number types are rejected before range checks.
+ * @param label Field name used in the error message.
+ * @param minimum Inclusive lower bound.
+ * @param maximum Inclusive upper bound.
+ * @returns The validated integer.
+ */
 function number(value, label, minimum, maximum) {
     if (typeof value !== "number") {
         throw new Error(`Invalid ${label}.`);
@@ -26,6 +51,11 @@ function number(value, label, minimum, maximum) {
 function colors(value) {
     return indexedPalette(value).map(([r, g, b, a]) => [r, g, b, a]);
 }
+/**
+ * Reject repeated identities.
+ * @param values Identities to check.
+ * @param label Inventory name used in the error message.
+ */
 function uniqueIds(values, label) {
     if (new Set(values).size !== values.length) {
         throw new Error(`Duplicate ${label} identity.`);

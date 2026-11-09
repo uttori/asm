@@ -1,3 +1,9 @@
+/**
+ * Parses an unsigned hexadecimal rich-trace field.
+ * @param value Hex digits without prefix.
+ * @param maximum Inclusive upper bound.
+ * @returns Decoded integer.
+ */
 const integer = (value, maximum = Number.MAX_SAFE_INTEGER) => {
     if (!/^[\da-f]+$/i.test(value)) {
         throw new Error("Malformed rich trace integer.");
@@ -10,9 +16,9 @@ const integer = (value, maximum = Number.MAX_SAFE_INTEGER) => {
 };
 /**
  * Parse bounded native execution observations.
- * @param {string} response Native RSP reply.
- * @param {number} maximum Requested event count.
- * @returns {DebugTraceBatch} Decoded execution observations.
+ * @param response Native RSP reply.
+ * @param maximum Requested event count.
+ * @returns Decoded execution observations.
  */
 export const parseAresTraceDetails = (response, maximum) => {
     const match = /^([01]):([\da-f]+):([\da-f]+):([\da-f]+):(.*)$/i.exec(response);

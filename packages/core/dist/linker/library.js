@@ -2,6 +2,7 @@ import { decodeEnvelope, encodeEnvelope } from "./envelope.js";
 import { decodeObject } from "./object.js";
 import { artifactHash, integer, list, record, stableJson, textValue } from "./value.js";
 const MAGIC = "UASMLIB\0";
+/** Bumps when archive metadata layout is incompatible with prior readers. */
 export const LIBRARY_FORMAT_VERSION = 1;
 /** Build an indexed archive of complete native objects. Member identities and exports are derived, not supplied. */
 export function encodeLibrary(inputs) {
@@ -75,6 +76,7 @@ function exportsOf(module) {
         .map((symbol) => symbol.name)
         .toSorted();
 }
+/** Builds a sorted export-name index mapping to member positions. */
 function indexOf(members) {
     const index = new Map();
     members.forEach((member, position) => {

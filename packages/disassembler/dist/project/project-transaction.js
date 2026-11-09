@@ -26,8 +26,8 @@ export class AnalysisProjectStaleError extends Error {
 }
 /**
  * Derive an optimistic identity from the database, never the potentially stale watcher file.
- * @param {AnalysisProjectManifest} manifest Authoritative manifest read inside a SQLite transaction.
- * @returns {AnalysisProjectRevision} Stable token including the publication counter.
+ * @param manifest Authoritative manifest read inside a SQLite transaction.
+ * @returns Stable token including the publication counter.
  */
 export const analysisProjectRevision = (manifest) => ({
     format: ANALYSIS_PROJECT_REVISION_FORMAT,
@@ -36,8 +36,8 @@ export const analysisProjectRevision = (manifest) => ({
 });
 /**
  * Check a caller's revision inside the transaction that will consume its snapshot.
- * @param {SqliteAnalysisStore} store Connection holding a read or write transaction.
- * @param {AnalysisProjectRevision} expected Revision observed by the editing client.
+ * @param store Connection holding a read or write transaction.
+ * @param expected Revision observed by the editing client.
  */
 export const assertAnalysisProjectRevision = (store, expected) => {
     const actual = analysisProjectRevision(store.manifest());
@@ -47,8 +47,8 @@ export const assertAnalysisProjectRevision = (store, expected) => {
 };
 /**
  * Read complete validated records and their revision in one snapshot.
- * @param {string} directory Existing project root.
- * @returns {AnalysisProjectSnapshot} Complete validated records and their optimistic token.
+ * @param directory Existing project root.
+ * @returns Complete validated records and their optimistic token.
  */
 export const loadAnalysisProjectSnapshot = (directory) => {
     const project = loadAnalysisProject(directory);
@@ -56,9 +56,9 @@ export const loadAnalysisProjectSnapshot = (directory) => {
 };
 /**
  * Read metadata and an optional streamed runtime projection from one database snapshot.
- * @param {string} directory Existing project root.
- * @param {Function} [createProjection] Optional runtime reducer. The default omits runtime.
- * @returns {AnalysisProjectViewSnapshot} Metadata or projection and its optimistic token.
+ * @param directory Existing project root.
+ * @param [createProjection] Optional runtime reducer. The default omits runtime.
+ * @returns Metadata or projection and its optimistic token.
  */
 export const loadAnalysisProjectViewSnapshot = (directory, createProjection) => {
     const project = loadAnalysisProjectView(directory, createProjection);
@@ -67,15 +67,20 @@ export const loadAnalysisProjectViewSnapshot = (directory, createProjection) => 
 /**
  * Validate a complete replacement without changing persistent state. Commit validates it again.
  * Holds the same project reference. Preparation neither binds a destination nor reserves a revision.
- * @param {string} _directory Destination root, retained for the preparation API contract.
- * @param {AnalysisProject} project Caller-owned complete replacement.
- * @returns {PreparedAnalysisProjectTransaction} Validated replacement. The caller retains ownership.
+ * @param _directory Destination root, retained for the preparation API contract.
+ * @param project Caller-owned complete replacement.
+ * @returns Validated replacement. The caller retains ownership.
  */
 export const prepareAnalysisProjectTransaction = (_directory, project) => {
     validateAnalysisProjectManifest(project.manifest);
     validateLoadedShards(project.shards, project.manifest);
     return { project };
 };
+/**
+ * Build a commit result for a published manifest with no maintenance performed.
+ * @param manifest Manifest written by the commit.
+ * @returns Commit identity with zero removed bytes and no warnings.
+ */
 const committed = (manifest) => ({
     manifest,
     revision: analysisProjectRevision(manifest),
@@ -84,11 +89,11 @@ const committed = (manifest) => ({
 /**
  * Publish a validated replacement under SQLite's writer lock. Full writes replace runtime as well.
  * View writes provide only changed metadata tables and cannot erase the omitted runtime history.
- * @param {string} directory Destination project root.
- * @param {AnalysisProject} project Proposed complete semantic view for validation.
- * @param {AnalysisProjectRevision | undefined} expected Required revision, or undefined only for creation.
- * @param {Partial<AnalysisProjectShards>} [updates] Tables to replace. Omitted to replace the full project.
- * @returns {CommittedAnalysisProjectTransaction} Committed identity. Storage or validation errors leave it unchanged.
+ * @param directory Destination project root.
+ * @param project Proposed complete semantic view for validation.
+ * @param expected Required revision, or undefined only for creation.
+ * @param [updates] Tables to replace. Omitted to replace the full project.
+ * @returns Committed identity. Storage or validation errors leave it unchanged.
  */
 const publish = (directory, project, expected, updates = project.shards) => {
     prepareAnalysisProjectTransaction(directory, project);
@@ -126,29 +131,29 @@ const publish = (directory, project, expected, updates = project.shards) => {
 };
 /**
  * Commit a complete prepared replacement against the revision observed by its caller.
- * @param {string} directory Destination project root.
- * @param {AnalysisProjectRevision | undefined} expected Observed revision. Undefined permits initial creation only.
- * @param {PreparedAnalysisProjectTransaction} prepared Caller-owned replacement, revalidated at commit.
- * @returns {CommittedAnalysisProjectTransaction} Committed manifest and revision.
+ * @param directory Destination project root.
+ * @param expected Observed revision. Undefined permits initial creation only.
+ * @param prepared Caller-owned replacement, revalidated at commit.
+ * @returns Committed manifest and revision.
  */
 export const commitPreparedAnalysisProjectTransaction = (directory, expected, prepared) => publish(directory, prepared.project, expected);
 /**
  * Atomically replace all records after rejecting stale readers under the SQLite writer lock.
  * Validation, revision, or SQLite failures leave the previous publication intact. These synchronous
  * APIs have no AbortSignal. Check cancellation before calling, or throw inside a low-level transaction.
- * @param {string} directory Existing project root.
- * @param {AnalysisProjectRevision} expected Revision observed by the editing client.
- * @param {AnalysisProject} project Complete replacement. Runtime is replaced too.
- * @returns {CommittedAnalysisProjectTransaction} Committed manifest and revision.
+ * @param directory Existing project root.
+ * @param expected Revision observed by the editing client.
+ * @param project Complete replacement. Runtime is replaced too.
+ * @returns Committed manifest and revision.
  */
 export const commitAnalysisProjectTransaction = (directory, expected, project) => publish(directory, project, expected);
 /**
  * Replace explicitly supplied metadata tables and preserve omitted tables and all runtime history.
  * Each supplied array is the entire replacement table, including an empty array to clear it.
- * @param {string} directory Existing project root.
- * @param {AnalysisProjectViewSnapshot} snapshot Original metadata view and revision.
- * @param {object} updates Metadata table replacements. Any runtime property is rejected.
- * @returns {CommittedAnalysisProjectTransaction} Committed identity with complete runtime preserved.
+ * @param directory Existing project root.
+ * @param snapshot Original metadata view and revision.
+ * @param updates Metadata table replacements. Any runtime property is rejected.
+ * @returns Committed identity with complete runtime preserved.
  */
 export const commitAnalysisProjectViewUpdate = (directory, snapshot, updates) => {
     if ("runtime" in updates) {
@@ -172,9 +177,9 @@ export const publishAnalysisProject = (directory, project, expected) => publish(
  * Explicitly checkpoint and VACUUM SQLite. Optional analysisOnly retention advances the revision
  * after consolidating SNES snapshots; ordinary compaction preserves logical identity. Temporary
  * space scales with live pages, and active readers can delay the final checkpoint.
- * @param {string} directory Existing SQLite project root.
- * @param {object} [options] Explicit retention selection and synchronous progress/cancellation hook.
- * @returns {CommittedAnalysisProjectTransaction} Published identity and reclaimed main-file bytes.
+ * @param directory Existing SQLite project root.
+ * @param [options] Explicit retention selection and synchronous progress/cancellation hook.
+ * @returns Published identity and reclaimed main-file bytes.
  */
 export const compactAnalysisProject = (directory, options = {}) => {
     const store = openAnalysisProjectStore(directory);

@@ -15,36 +15,36 @@ export declare class PluginSessionStateStore implements SessionStateStore {
     #private;
     /**
      * Creates every registered session-state slot for this session.
-     * @param {readonly OwnedContribution<SessionStateContribution<unknown>>[]} contributions Owned session-state factories, in registration order.
-     * @param {SessionCreationContext} context Target id and options passed to each `create`.
+     * @param contributions Owned session-state factories, in registration order.
+     * @param context Target id and options passed to each `create`.
      * @throws {PluginError} If a slot factory throws (`PLUGIN_ACTIVATION_FAILED`).
      */
     constructor(contributions: readonly OwnedContribution<SessionStateContribution<unknown>>[], context: SessionCreationContext);
     /**
      * Returns the live value for a branded session-state slot.
-     * @param {SessionStateKey<T>} slot The slot key registered by the owning plugin.
-     * @returns {T} The current value for this session.
+     * @param slot The slot key registered by the owning plugin.
+     * @returns The current value for this session.
      * @throws {PluginError} If the slot was not created for this session.
      */
     get<T>(slot: SessionStateKey<T>): T;
     /**
      * Copies every slot via its plugin `clone` hook. Each hook is responsible for copying
      * mutable descendants so later passes cannot mutate earlier stage snapshots.
-     * @param {ReadonlyMap<string, unknown>} [source] Values to clone. Defaults to the live store.
-     * @returns {PluginStateSnapshot} A new map of cloned slot values.
+     * @param [source] Values to clone. Defaults to the live store.
+     * @returns A new map of cloned slot values.
      * @throws {PluginError} If `source` is missing a registered slot, or a `clone` hook throws.
      */
     cloneSnapshot(source?: ReadonlyMap<string, unknown>): PluginStateSnapshot;
     /**
      * Adopts a snapshot from {@link cloneSnapshot} as the live map without copying or validation.
      * Subsequent writes mutate this map. The previous snapshot is not individually disposed.
-     * @param {PluginStateSnapshot} snapshot Previously cloned slot values.
+     * @param snapshot Previously cloned slot values.
      */
     restore(snapshot: PluginStateSnapshot): void;
     /**
      * Runs each slot's optional `resetForStage` hook (stage entry / pass boundary).
      * Slots without a hook are left unchanged.
-     * @param {AssemblyStageName} stage The stage that is about to run.
+     * @param stage The stage that is about to run.
      * @throws {PluginError} If a `resetForStage` hook throws (`PLUGIN_HOOK_FAILED`).
      */
     resetForStage(stage: AssemblyStageName): void;

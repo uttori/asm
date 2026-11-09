@@ -123,10 +123,12 @@ export class InstructionResolutionFrame {
         this.assertActive();
         return this.stage;
     }
+    /** Build an encoder error without releasing the resolution frame. */
     error(message) {
         this.assertActive();
         return this.context.error?.(message) ?? new Error(message);
     }
+    /** Logical address after opcode and operand writes within this frame. */
     currentAddress() {
         this.assertActive();
         return this.context.currentAddress();

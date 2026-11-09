@@ -3,6 +3,11 @@ import { ca65CpuNames, ca65CpuShorthands, ca65SessionStateKey, resolve65xxCpuNam
 import { nes65xxSessionStateKey } from "../session-state.js";
 import { NES_65XX_TARGET_ID } from "../target/nes.js";
 import { closeActiveSegment, handleEndScope, handlePopcpu, handlePopseg, handlePushcpu, handlePushseg, markGlobalSymbol, openSegment, parameterList, } from "./ca65.js";
+/**
+ * Builds the literal schema for one directive operation tag.
+ * @param name Operation tag.
+ * @returns Literal-match schema preserving the tag's string type.
+ */
 const operation = (name) => syntaxLiteral(name);
 const schema = syntaxUnion(syntaxRecord({ operation: operation("segment"), name: syntaxString }), syntaxRecord({ operation: operation("cpu"), name: syntaxString, architecture: syntaxString }), syntaxRecord({ operation: operation("symbols"), names: syntaxArray(syntaxString) }), syntaxRecord({
     operation: operation("data"),

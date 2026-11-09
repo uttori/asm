@@ -1,9 +1,28 @@
 import type { DebugSubscription } from "@uttori/asm-debug-adapter";
 /** Byte transport used by the GDB Remote Serial Protocol client. */
 export interface GdbRspTransport {
+    /**
+     * Writes raw framed bytes in call order.
+     * @param data Bytes to send; may be a full packet, an ack, or the interrupt byte.
+     * @returns Completion once the bytes are accepted by the transport.
+     */
     write(data: Uint8Array): Promise<void>;
+    /**
+     * Closes the connection. Close listeners still fire.
+     * @returns Completion once the transport is closed.
+     */
     close(): Promise<void>;
+    /**
+     * Subscribes to received bytes. Chunk boundaries are arbitrary relative to RSP packets.
+     * @param listener Byte consumer; the view may be reused after it returns.
+     * @returns Disposable subscription.
+     */
     onData(listener: (data: Uint8Array) => void): DebugSubscription;
+    /**
+     * Subscribes to transport closure.
+     * @param listener Receives the failure, or undefined for an orderly close.
+     * @returns Disposable subscription.
+     */
     onClose(listener: (error?: Error) => void): DebugSubscription;
 }
 /** Parsed stop notification from an RSP `S` or `T` packet. */
@@ -27,43 +46,61 @@ export interface GdbRspClientOptions {
 /** Strict, single-flight RSP client for the private ares control channel. */
 export declare class GdbRspClient {
     #private;
-    /** @param {GdbRspClientOptions} options Transport and protocol safety bounds. */
+    /**
+     * Validates bounds and subscribes to the transport. No bytes are sent until `start`.
+     * @param options Transport and protocol safety bounds.
+     */
     constructor(options: GdbRspClientOptions);
-    /** @returns {boolean} Whether the client has permanently closed. */
+    /** Whether the client has permanently closed after a local close, transport loss, or protocol failure. */
     get closed(): boolean;
-    /** @returns {Promise<void>} Completion after writing the required initial acknowledgement byte. */
+    /**
+     * Sends the initial `+` acknowledgement. Must be called exactly once before any request.
+     * @returns Completion after writing the required initial acknowledgement byte.
+     */
     start(): Promise<void>;
     /**
      * Subscribes to asynchronous stop packets.
-     * @param {(event: GdbRspStop) => void} listener Stop-event consumer.
-     * @returns {DebugSubscription} Disposable subscription.
+     * @param listener Stop-event consumer.
+     * @returns Disposable subscription.
      */
     onStop(listener: (event: GdbRspStop) => void): DebugSubscription;
     /**
      * Subscribes to terminal RSP transport or protocol failure.
-     * @param {(error: Error) => void} listener Close-error consumer.
-     * @returns {DebugSubscription} Disposable subscription.
+     * @param listener Close-error consumer.
+     * @returns Disposable subscription.
      */
     onClose(listener: (error: Error) => void): DebugSubscription;
     /**
      * Sends one packet and waits for its non-stop response.
-     * @param {string} command RSP command payload.
-     * @returns {Promise<string>} Response payload.
+     * @param command RSP command payload.
+     * @returns Response payload.
      */
     request(command: string): Promise<string>;
     /**
      * Sends a handshake packet such as `?` whose response is itself a stop packet.
-     * @param {string} command RSP command payload.
-     * @returns {Promise<string>} Stop response payload.
+     * @param command RSP command payload.
+     * @returns Stop response payload.
      */
     requestStop(command: string): Promise<string>;
-    /** @returns {Promise<void>} Completion after writing continue. */
+    /**
+     * Sends `c`. The eventual stop arrives through `onStop`, not as a response.
+     * @returns Completion after writing continue.
+     */
     continue(): Promise<void>;
-    /** @returns {Promise<void>} Completion after writing one-instruction step. */
+    /**
+     * Sends `s`. The resulting stop arrives through `onStop`, not as a response.
+     * @returns Completion after writing one-instruction step.
+     */
     step(): Promise<void>;
-    /** @returns {Promise<void>} Completion after writing the out-of-band interrupt byte. */
+    /**
+     * Sends raw `0x03` to halt a running target. Rejected while a request is pending.
+     * @returns Completion after writing the out-of-band interrupt byte.
+     */
     interrupt(): Promise<void>;
-    /** @returns {Promise<void>} Completion after closing the transport. */
+    /**
+     * Closes the transport and rejects any in-flight request.
+     * @returns Completion after closing the transport.
+     */
     close(): Promise<void>;
 }
 //# sourceMappingURL=gdb-rsp-client.d.ts.map

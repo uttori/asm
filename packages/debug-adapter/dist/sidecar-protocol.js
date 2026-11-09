@@ -43,26 +43,31 @@ export const DEFAULT_DEBUG_SIDECAR_LIMITS = Object.freeze({
     maxQueuedMessages: 1_024,
     maxQueuedBytes: 8_388_608,
 });
+/** Narrows unknown decoded JSON to plain objects. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Checks membership in a readonly string union list. */
 const listed = (values, value) => typeof value === "string" && values.some((item) => item === value);
+/** Narrows to positive safe integers. */
 const positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+/** Narrows to non-negative safe integers. */
 const nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 const sessionPattern = /^[\w-]{32,128}$/;
 /**
  * Creates a 256-bit base64url token intended for a single spawned sidecar session.
- * @returns {string} An unpredictable token safe for environment or inherited-pipe transfer.
+ * @returns An unpredictable token safe for environment or inherited-pipe transfer.
  */
 export const createDebugSidecarSessionToken = () => randomBytes(32).toString("base64url");
 /**
  * Rejects weak, malformed, or accidentally logged/display-oriented session identifiers.
- * @param {unknown} value Candidate token.
- * @returns {asserts value is string} Assertion for a valid token.
+ * @param value Candidate token.
+ * @returns Assertion for a valid token.
  */
 export function assertDebugSidecarSessionToken(value) {
     if (typeof value !== "string" || !sessionPattern.test(value)) {
         throw new Error("Sidecar session token must be 32-128 base64url characters.");
     }
 }
+/** Validates command argument sizes before they reach a native backend. */
 const assertRequestBounds = (command, args, limits) => {
     const record = args ?? {};
     if (!isRecord(record)) {
@@ -95,9 +100,9 @@ const assertRequestBounds = (command, args, limits) => {
 };
 /**
  * Validates an untrusted decoded message before it reaches a backend implementation.
- * @param {unknown} value Candidate envelope.
- * @param {DebugSidecarProtocolLimits} limits Request and framing limits.
- * @returns {asserts value is DebugSidecarMessage} Assertion for a valid protocol envelope.
+ * @param value Candidate envelope.
+ * @param limits Request and framing limits.
+ * @returns Assertion for a valid protocol envelope.
  */
 export function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
     if (!isRecord(value)) {
@@ -153,6 +158,7 @@ const LIMIT_NAMES = [
     "maxQueuedMessages",
     "maxQueuedBytes",
 ];
+/** Ensures limit objects are internally consistent before use. */
 const validateLimits = (limits) => {
     for (const name of LIMIT_NAMES) {
         if (!positiveInteger(limits[name])) {
@@ -165,9 +171,9 @@ const validateLimits = (limits) => {
 };
 /**
  * Encodes one validated message as a four-byte big-endian length plus UTF-8 JSON.
- * @param {DebugSidecarMessage} message Authenticated protocol message.
- * @param {DebugSidecarProtocolLimits} limits Framing and request bounds.
- * @returns {Uint8Array} Portable binary frame suitable for stdio or a loopback socket.
+ * @param message Authenticated protocol message.
+ * @param limits Framing and request bounds.
+ * @returns Portable binary frame suitable for stdio or a loopback socket.
  */
 export const encodeDebugSidecarMessage = (message, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) => {
     validateLimits(limits);
@@ -188,7 +194,7 @@ export class DebugSidecarMessageParser {
     #lastSequence = 0;
     /**
      * Creates one directional stream parser.
-     * @param {DebugSidecarProtocolLimits} limits Framing and request limits.
+     * @param limits Framing and request limits.
      */
     constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
         validateLimits(limits);
@@ -196,8 +202,8 @@ export class DebugSidecarMessageParser {
     }
     /**
      * Adds a transport chunk and returns every complete validated message in order.
-     * @param {Uint8Array} chunk Next stdio or socket bytes.
-     * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
+     * @param chunk Next stdio or socket bytes.
+     * @returns Complete messages decoded from the stream.
      */
     push(chunk) {
         if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
@@ -242,24 +248,29 @@ export class DebugSidecarMessageQueue {
     #bytes = 0;
     /**
      * Creates a bounded outgoing queue.
-     * @param {DebugSidecarProtocolLimits} limits Framing and queue limits.
+     * @param limits Framing and queue limits.
      */
     constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
         validateLimits(limits);
         this.#limits = limits;
     }
-    /** @returns {number} Number of queued protocol messages. */
+    /**
+     * Number of queued protocol messages.
+     * @returns Count of frames waiting for transport write.
+     */
     get length() {
         return this.#frames.length;
     }
-    /** @returns {number} Encoded bytes currently retained for transport backpressure. */
+    /**
+     * Encoded bytes currently retained for transport backpressure.
+     * @returns Sum of queued frame lengths.
+     */
     get bytes() {
         return this.#bytes;
     }
     /**
      * Encodes and appends one message, failing the connection when bounds would be exceeded.
-     * @param {DebugSidecarMessage} message Next ordered message.
-     * @returns {void}
+     * @param message Next ordered message.
      */
     enqueue(message) {
         const frame = encodeDebugSidecarMessage(message, this.#limits);
@@ -272,7 +283,7 @@ export class DebugSidecarMessageQueue {
     }
     /**
      * Removes the oldest encoded frame.
-     * @returns {Uint8Array | undefined} Oldest frame or undefined when empty.
+     * @returns Oldest frame or undefined when empty.
      */
     dequeue() {
         const frame = this.#frames.shift();

@@ -1,10 +1,11 @@
 import { decodeBrrBlocks } from "./snes.js";
-/** SNES BRR integer predictor, matching the truncation order in the SoM reference decoder.
- * @param {number} nibble Signed four-bit residual.
- * @param {number} range Shift from the BRR header.
- * @param {number} filter Predictor selected by the BRR header.
- * @param {PredictorState} state Two prior decoded samples.
- * @returns {number} Decoded signed PCM16 sample.
+/**
+ * SNES BRR integer predictor, matching the truncation order in the SoM reference decoder.
+ * @param nibble Signed four-bit residual.
+ * @param range Shift from the BRR header.
+ * @param filter Predictor selected by the BRR header.
+ * @param state Two prior decoded samples.
+ * @returns Decoded signed PCM16 sample.
  */
 function decodeNibble(nibble, range, filter, state) {
     let value = range <= 12 ? (nibble << range) >> 1 : nibble & ~0x7ff;
@@ -22,11 +23,12 @@ function decodeNibble(nibble, range, filter, state) {
     value = Math.max(-32768, Math.min(32767, value));
     return (value << 17) >> 16;
 }
-/** Decode BRR PCM while preserving predictor history across an optional loop replay.
- * @param {Uint8Array} bytes Complete encoded BRR blocks ending in END.
- * @param {number} loopOffset Optional loop start in BRR bytes, aligned to nine.
- * @param {number} repeatCount Number of extra loop passes to decode for seam review.
- * @returns {Int16Array} Integer PCM samples at the caller's explicit playback rate.
+/**
+ * Decode BRR PCM while preserving predictor history across an optional loop replay.
+ * @param bytes Complete encoded BRR blocks ending in END.
+ * @param loopOffset Optional loop start in BRR bytes, aligned to nine.
+ * @param repeatCount Number of extra loop passes to decode for seam review.
+ * @returns Integer PCM samples at the caller's explicit playback rate.
  */
 export function decodeBrrPcm(bytes, loopOffset, repeatCount = 0) {
     if (bytes.length === 0 || bytes.length % 9 !== 0) {
@@ -70,13 +72,14 @@ export function decodeBrrPcm(bytes, loopOffset, repeatCount = 0) {
     }
     return Int16Array.from(output);
 }
-/** Evaluate one filter/range with exact integer decoding and stable nibble tie-breaking.
- * @param {Int16Array} source Original PCM samples.
- * @param {number} start First sample of this block.
- * @param {number} range Candidate shift.
- * @param {number} filter Candidate predictor.
- * @param {PredictorState} initial Predictor history entering this block.
- * @returns {EncodedBlock} Candidate bytes, exit history, and squared error.
+/**
+ * Evaluate one filter/range with exact integer decoding and stable nibble tie-breaking.
+ * @param source Original PCM samples.
+ * @param start First sample of this block.
+ * @param range Candidate shift.
+ * @param filter Candidate predictor.
+ * @param initial Predictor history entering this block.
+ * @returns Candidate bytes, exit history, and squared error.
  */
 function candidateBlock(source, start, range, filter, initial) {
     let state = initial;
@@ -102,10 +105,11 @@ function candidateBlock(source, start, range, filter, initial) {
     }
     return { range, filter, nibbles, state, squaredError };
 }
-/** Encode whole 16-sample PCM blocks with deterministic range/filter selection.
- * @param {Int16Array} samples Signed PCM16 samples, already padded if requested.
- * @param {boolean} loop Whether the final END block also carries LOOP.
- * @returns {Uint8Array} Headerless BRR data; sample rate and loop offset stay in metadata.
+/**
+ * Encode whole 16-sample PCM blocks with deterministic range/filter selection.
+ * @param samples Signed PCM16 samples, already padded if requested.
+ * @param loop Whether the final END block also carries LOOP.
+ * @returns Headerless BRR data; sample rate and loop offset stay in metadata.
  */
 export function encodeBrrPcm(samples, loop) {
     if (samples.length === 0 || samples.length % 16 !== 0) {

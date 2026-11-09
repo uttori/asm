@@ -34,10 +34,13 @@ export interface SomDialogueEncodeOptions extends SomDialogueLineGeometry {
 export declare function encodeSomDialogue(text: string, dictionary: SomDialogueDictionary, options?: SomDialogueEncodeOptions): Uint8Array;
 /** One consumed native text line; explicit LF and capacity exhaustion both advance the line. */
 export interface SomDialoguePreviewLine {
+    /** Visible Unicode reconstructed from native glyphs. */
     readonly text: string;
     /** Native font codes, including unresolved symbols without inventing Unicode mappings. */
     readonly glyphs: readonly number[];
+    /** Column where this line began before wrapping. */
     readonly initialColumn: number;
+    /** Why line accumulation stopped for this row. */
     readonly ending: "line-break" | "capacity" | "end";
 }
 /** Preview native hard wrapping and report compressed pairs whose second glyph is discarded. */
@@ -54,7 +57,9 @@ export declare function previewSomDialogue(bytes: Uint8Array, dictionary: SomDia
 };
 /** Alternating raw/command slots and editable text retain original field offsets and byte counts. */
 export interface SomDialogueScriptLayout {
+    /** Sidecar discriminator for editable dialogue scripts. */
     readonly format: "som-dialogue-script";
+    /** Sidecar schema revision. */
     readonly version: 1;
     /** ROM dictionary bytes pin the language/version used to pack this script. */
     readonly dictionaryHex: string;
@@ -74,10 +79,15 @@ export declare function readSomDialogueScriptLayout(value: unknown): SomDialogue
 export declare function exportSomDialogueScript(layout: SomDialogueScriptLayout): string;
 /** Byte offsets connect original owners to explicitly planned relocation references. */
 export interface SomDialoguePackedSegment {
+    /** Segment category alternating in the packed script. */
     readonly kind: "raw" | "text";
+    /** Offset in the pre-pack native script. */
     readonly originalOffset: number;
+    /** Byte length in the pre-pack native script. */
     readonly originalLength: number;
+    /** Offset after packing into the output buffer. */
     readonly offset: number;
+    /** Byte length in the packed output buffer. */
     readonly length: number;
     /** Exact unchanged bytes permit interior references to retain their displacement. */
     readonly preserved: boolean;

@@ -22,8 +22,8 @@ const resolveIncludeTarget = ({ path, quote }, expander) => quote
     : expander.resolveRegularDefines(path);
 /**
  * Splits `incbin` tokens into the source operand and optional `->` seek target.
- * @param {string[]} words Directive tokens.
- * @returns {{ sourceWords: string[]; targetLocation: string | undefined }} Source tokens and seek target.
+ * @param words Directive tokens.
+ * @returns Source tokens and seek target.
  * @throws {Error} If `->` is present without a following address or label.
  */
 const splitIncbinArrow = (words) => {
@@ -42,8 +42,8 @@ const splitIncbinArrow = (words) => {
 /**
  * Splits a (possibly quoted) `file` or `file:range` operand.
  * Quoted paths keep colons inside the quotes (`"C:\data.bin"`). The range colon is the one after the closer.
- * @param {string} filenameWithRange Joined source operand.
- * @returns {{ filename: string; rangeStr: string | undefined }} Path and optional range text.
+ * @param filenameWithRange Joined source operand.
+ * @returns Path and optional range text.
  */
 const parseIncbinFilenameAndRange = (filenameWithRange) => {
     const quote = filenameWithRange[0];
@@ -69,10 +69,10 @@ const parseIncbinFilenameAndRange = (filenameWithRange) => {
 };
 /**
  * Treats a range end of `0` as EOF, matching asar.
- * @param {number} startOffset Inclusive start.
- * @param {number} endOffset Exclusive end, or `0` for EOF.
- * @param {number} fileLength Source length.
- * @returns {{ startOffset: number; endOffset: number }} Normalized bounds.
+ * @param startOffset Inclusive start.
+ * @param endOffset Exclusive end, or `0` for EOF.
+ * @param fileLength Source length.
+ * @returns Normalized bounds.
  */
 const applyEofEnd = (startOffset, endOffset, fileLength) => {
     if (endOffset === 0) {
@@ -82,8 +82,8 @@ const applyEofEnd = (startOffset, endOffset, fileLength) => {
 };
 /**
  * Finds the first `-` at parenthesis/quote depth 0 (asar `strqpchr`).
- * @param {string} input Range text.
- * @returns {number} Index of the hyphen, or `-1`.
+ * @param input Range text.
+ * @returns Index of the hyphen, or `-1`.
  */
 const findTopLevelHyphen = (input) => {
     let depth = 0;
@@ -118,7 +118,7 @@ const findTopLevelHyphen = (input) => {
 };
 /**
  * Asar `getnum64` rejects leftover/unbalanced parens as `Emismatched_parentheses`.
- * @param {string} text Math text after stripping one wrapping `(...)`.
+ * @param text Math text after stripping one wrapping `(...)`.
  * @throws {Error} If parentheses are unbalanced.
  */
 const assertIncbinMathParensBalanced = (text) => {
@@ -141,8 +141,8 @@ const assertIncbinMathParensBalanced = (text) => {
 };
 /**
  * Parses unprefixed hex the way asar `strtoul(..., 16)` does.
- * @param {string} text Remaining range text.
- * @returns {{ value: number; rest: string }} Consumed value and leftover.
+ * @param text Remaining range text.
+ * @returns Consumed value and leftover.
  */
 const parseIncbinUnprefixedHex = (text) => {
     const digits = text.match(/^[\dA-Fa-f]*/)[0];
@@ -154,8 +154,8 @@ const parseIncbinUnprefixedHex = (text) => {
  * If start begins with `(`, the hyphen is the first `-` after the matching `)`
  * (paren/quote-aware, so inner minuses in `($010000-DATA)&$00FFFF` stay in the
  * bound). One wrapping `(...)` is stripped from each bound. Empty end is `0` (EOF).
- * @param {string} rangeStr Range text after the filename colon.
- * @returns {{ start: string | number; end: string | number }} Hex literals or math text to evaluate.
+ * @param rangeStr Range text after the filename colon.
+ * @returns Hex literals or math text to evaluate.
  * @throws {Error} If the hyphen form is structurally invalid.
  */
 const parseDeprecatedHyphenIncbinRange = (rangeStr) => {
@@ -198,6 +198,7 @@ const parseDeprecatedHyphenIncbinRange = (rangeStr) => {
     }
     return { start, end };
 };
+/** Builds an expression node for numeric literals or parsed include-range text. */
 const rangeBoundNode = (value) => {
     if (typeof value === "number") {
         return { type: "literal", value: String(value), numericValue: value };
@@ -206,8 +207,8 @@ const rangeBoundNode = (value) => {
 };
 /**
  * Parses `start..end` (preferred) or deprecated `start-end` hyphen ranges.
- * @param {string} rangeStr Range text after the filename colon.
- * @returns {{ start: ExpressionNode; end: ExpressionNode }} Bounds evaluated after the binary is read.
+ * @param rangeStr Range text after the filename colon.
+ * @returns Bounds evaluated after the binary is read.
  * @throws {Error} If the range is malformed. Unbalanced hyphen math keeps asar's `Emismatched_parentheses` id.
  */
 const parseIncbinRange = (rangeStr) => {
@@ -256,11 +257,11 @@ function parseIncbinPayload(words) {
 }
 /**
  * Rejects inverted or out-of-range incbin slices.
- * @param {number} startOffset Inclusive start.
- * @param {number} endOffset Exclusive end.
- * @param {number} fileLength Source length.
- * @param {string} filename Path used in the error.
- * @param {string} [rangeStr] Optional source range used to enrich the diagnostic.
+ * @param startOffset Inclusive start.
+ * @param endOffset Exclusive end.
+ * @param fileLength Source length.
+ * @param filename Path used in the error.
+ * @param [rangeStr] Optional source range used to enrich the diagnostic.
  * @throws {Error} If either bound is outside the file.
  */
 const assertIncbinBounds = (startOffset, endOffset, fileLength, filename, rangeStr) => {
@@ -280,10 +281,10 @@ const assertIncbinBounds = (startOffset, endOffset, fileLength, filename, rangeS
  * incbin "data.bin":$10..$20
  * incbin "data.bin":1-4
  * incbin "data.bin" -> $808000
- * @param {IncludeDirectiveContext} ctx The include-capable directive context.
- * @param {string[]} words Directive tokens.
- * @param {string} [_raw] Raw line, unused.
- * @param {NormalizedCommand} [command] Normalized command. Retained for public adapter compatibility.
+ * @param ctx The include-capable directive context.
+ * @param words Directive tokens.
+ * @param [_raw] Raw line, unused.
+ * @param [command] Normalized command. Retained for public adapter compatibility.
  * @throws {Error} On missing file, bad range, missing `->` target, or unreadable contents.
  */
 export const handleIncbin = (context, words, _raw = "", _command) => executeIncbin(context, parseIncbinPayload(words));
@@ -325,10 +326,10 @@ function executeIncbin({ session, includeSource, operandResolver, runtime, defin
 }
 /**
  * Assembles another source file inline (`incsrc`).
- * @param {IncludeDirectiveContext} ctx The include-capable directive context.
- * @param {string[]} words Directive tokens.
- * @param {string} [_raw] Raw line, unused.
- * @param {NormalizedCommand} [command] Normalized command with optional `includeTarget`.
+ * @param ctx The include-capable directive context.
+ * @param words Directive tokens.
+ * @param [_raw] Raw line, unused.
+ * @param [command] Normalized command with optional `includeTarget`.
  * @throws {Error} If the filename is missing.
  */
 export const handleIncsrc = ({ includeSource, defineEngine }, words, _raw = "", command) => {
@@ -338,10 +339,10 @@ export const handleIncsrc = ({ includeSource, defineEngine }, words, _raw = "", 
 };
 /**
  * Includes and assembles another source file (`include`).
- * @param {IncludeDirectiveContext} ctx The include-capable directive context.
- * @param {string[]} words Directive tokens.
- * @param {string} [_raw] Raw line, unused.
- * @param {NormalizedCommand} [command] Normalized command with optional `includeTarget`.
+ * @param ctx The include-capable directive context.
+ * @param words Directive tokens.
+ * @param [_raw] Raw line, unused.
+ * @param [command] Normalized command with optional `includeTarget`.
  * @throws {Error} If the filename is missing.
  */
 export const handleInclude = ({ includeSource, defineEngine }, words, _raw = "", command) => {
@@ -351,8 +352,8 @@ export const handleInclude = ({ includeSource, defineEngine }, words, _raw = "",
 };
 /**
  * Registers source and binary include directives.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {IncludeDirectiveContext} context The include-capable directive context.
+ * @param registry The directive registry.
+ * @param context The include-capable directive context.
  */
 export const registerIncludeSourceDirectives = (registry, context) => {
     for (const directive of ["incsrc", "include"]) {

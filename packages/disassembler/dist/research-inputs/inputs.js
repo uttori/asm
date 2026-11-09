@@ -8,18 +8,23 @@ import { validateSourceLabelName } from "../model/project-labels.js";
 import { isResearchMapping } from "../model/research-mapping.js";
 /** Check runtime shape without widening typed readonly arrays to any[]. */
 const isArray = (value) => Array.isArray(value);
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Accept any array without narrowing element types. */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
+/** Test membership in the supported research authoring collections. */
 function isResearchCollection(value) {
     return RESEARCH_COLLECTIONS.some((collection) => collection === value);
 }
+/** Accept JavaScript safe integers only. */
 function isSafeInteger(value) {
     return typeof value === "number" && Number.isSafeInteger(value);
 }
+/** Accept only persisted manual-evidence confidence labels. */
 function isConfidence(value) {
     return (value === "certain" ||
         value === "high" ||
@@ -67,7 +72,7 @@ export function validateResearchSnapshot(snapshot) {
         throw new Error("Research snapshot content differs from its identity.");
     }
 }
-/** Byte ordering is stable across hosts and independent of the process's locale. */
+/** Compare collection/id pairs with byte ordering stable across hosts and locales. */
 const compareDecisions = (a, b) => Buffer.compare(Buffer.from(`${a.collection}:${a.id}`), Buffer.from(`${b.collection}:${b.id}`));
 /** Reject unsupported record kinds before the generic project validator accesses their fields. */
 export function validateResearchDecision(decision) {

@@ -361,8 +361,8 @@ const DMA_REGISTERS_BY_OFFSET = new Map(DMA_REGISTER_DEFINITIONS.map((definition
  * ROM mirrors of those banks are never classified as I/O. DMA/HDMA channels
  * Documented DMA/HDMA fields in `$4300–$437F` use the SNESdev `DMAPn`…`NLTRn`
  * spelling, including both addresses of the shared unused byte.
- * @param {number} address 24-bit SNES CPU bus address.
- * @returns {SnesHardwareRegister | undefined} Volatile register identity, or `undefined` if not MMIO.
+ * @param address 24-bit SNES CPU bus address.
+ * @returns Volatile register identity, or `undefined` if not MMIO.
  */
 export const identifySnesHardwareRegister = (address) => {
     const bank = (address >>> 16) & 0xff;
@@ -394,6 +394,7 @@ export const identifySnesHardwareRegister = (address) => {
     }
     return undefined;
 };
+/** Format immediate values for generated define lines. */
 const hex = (value, width) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 /** Architecture-neutral filename. The SNES exporter supplies the register definitions. */
 export const SNES_HARDWARE_DEFINES_SOURCE = "defines.asm";
@@ -401,7 +402,7 @@ export const SNES_HARDWARE_DEFINES_SOURCE = "defines.asm";
  * Returns the complete documented set of CPU-visible register constants used by generated source.
  * DMA channel registers are expanded so repeated `$43x0` access patterns remain obvious and every
  * emitted symbol has its own hover annotation.
- * @returns {readonly SnesHardwareDefine[]} Register definitions in ascending address order.
+ * @returns Register definitions in ascending address order.
  */
 export const snesHardwareDefineRecords = () => {
     const values = [...FIXED_REGISTER_DEFINITIONS, ...FIXED_REGISTER_ALIASES];
@@ -426,7 +427,7 @@ export const snesHardwareDefineRecords = () => {
 };
 /**
  * Returns the complete set of CPU-visible register symbol/address pairs used by generated source.
- * @returns {readonly [string, number][]} Symbol/address pairs in ascending address order.
+ * @returns Symbol/address pairs in ascending address order.
  */
 export const snesHardwareDefines = () => snesHardwareDefineRecords().map(({ symbol, address }) => [symbol, address]);
 const CONTROLLER_MASKS = [
@@ -456,11 +457,16 @@ const INTERRUPT_STATUS_MASKS = [
         description: "Automatic joypad read is in progress.",
     },
 ];
+/**
+ * Render `symbol = $value ; description` lines for built-in constants.
+ * @param constants Constant table to emit.
+ * @param width Hex digit width for the immediate.
+ */
 const renderConstants = (constants, width) => constants.map(({ symbol, value, description }) => `${symbol} = ${hex(value, width)} ; ${description}`);
 /**
  * Renders the built-in SNES register and bit-mask vocabulary included by generated source.
  * These are ordinary symbols, not assembler magic, so projects may add their own aliases.
- * @returns {string} Deterministic native assembly source.
+ * @returns Deterministic native assembly source.
  */
 export const renderSnesHardwareDefines = () => {
     const lines = [

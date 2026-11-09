@@ -7,8 +7,8 @@ import type { DirectiveDescriptor } from "@uttori/asm-core/tooling";
 export declare const directiveCatalog: DirectiveDescriptor[];
 /**
  * Looks up a directive descriptor by keyword (case-insensitive).
- * @param {string} keyword The directive keyword.
- * @returns {DirectiveDescriptor | undefined} The descriptor, if known.
+ * @param keyword The directive keyword.
+ * @returns The descriptor, if known.
  */
 export declare function findDirective(keyword: string): DirectiveDescriptor | undefined;
 //# sourceMappingURL=directive-catalog.d.ts.map

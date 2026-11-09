@@ -2,8 +2,10 @@ import { maximumAddressForWidth } from "../address-width.js";
 import { checkedDeclaration, parseDeclarationNode, } from "../ir/declaration-node.js";
 import { setCommandKind } from "../ir/normalized-command.js";
 import { DataStructEngine } from "./data-struct-engine.js";
+/** Parses struct declarations and delegates indexed rows to the data struct engine. */
 export class StructEngine {
     host;
+    /** Engine emitting indexed data struct tables for defined layouts. */
     data;
     constructor(host) {
         this.host = host;
@@ -11,8 +13,8 @@ export class StructEngine {
     }
     /**
      * Handles a struct mode command.
-     * @param {NormalizedCommand} command The command to handle.
-     * @returns {boolean} `true` if the command was handled, `false` otherwise.
+     * @param command The command to handle.
+     * @returns `true` if the command was handled, `false` otherwise.
      */
     handleStructMode(command) {
         const currentStruct = this.host.currentStruct;
@@ -80,7 +82,7 @@ export class StructEngine {
     }
     /**
      * Handles a struct command.
-     * @param {string[]} words The words of the command.
+     * @param words The words of the command.
      */
     handleStruct(words) {
         const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
@@ -122,7 +124,7 @@ export class StructEngine {
     }
     /**
      * Handles an endstruct command.
-     * @param {string[]} words The words of the command.
+     * @param words The words of the command.
      */
     handleEndStruct(words) {
         const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
@@ -190,8 +192,8 @@ export class StructEngine {
     }
     /**
      * Checks whether a reference starts with a known struct name.
-     * @param {string} labelRef The reference to inspect.
-     * @returns {boolean} Whether the reference belongs to a known struct.
+     * @param labelRef The reference to inspect.
+     * @returns Whether the reference belongs to a known struct.
      */
     hasStructReference(labelRef) {
         // Indices may be decimal (`obj[2]`) or asar hex (`DMA[$00].Parameters`).
@@ -296,8 +298,8 @@ export class StructEngine {
     }
     /**
      * Resolves a struct label.
-     * @param {string} labelRef The label to resolve.
-     * @returns {number} The resolved address.
+     * @param labelRef The label to resolve.
+     * @returns The resolved address.
      */
     resolveStructLabel(labelRef) {
         const refParts = labelRef.split(".");

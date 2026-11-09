@@ -39,19 +39,31 @@ export class WorkspaceIndex {
     dirtyFiles = new Set();
     /** Whether configuration changes require every root to be rebuilt. */
     fullReindexRequired = true;
+    /** Configured analysis entry points for root-anchored indexing. */
     entryPoints;
+    /** Include search paths forwarded to analysis sessions. */
     includePaths;
+    /** Selected architecture contribution identifier. */
     architecture;
+    /** Validated target options bound into analysis identity. */
     targetOptions;
+    /** Default module options when roots do not override them. */
     module;
     /** Owned per-root selections also participate in persistent cache and worker-snapshot identity. */
     moduleRoots;
+    /** Frozen plugin environment shared by every analysis session. */
     environment;
+    /** Target contribution identifier for analysis and catalog lookup. */
     target;
+    /** Tooling catalog derived from the active environment. */
     toolingCatalog;
+    /** Directive metadata exposed to completion and hover providers. */
     directiveCatalog;
+    /** Recognized directive prefix strings for incremental parsing helpers. */
     directivePrefixes;
+    /** Optional timing logger for reindex diagnostics. */
     logger;
+    /** Optional on-disk cache for full root analysis artifacts. */
     cache;
     /** Duration of the most recent {@link reindex} call in milliseconds. */
     lastReindexDurationMs;
@@ -92,7 +104,7 @@ export class WorkspaceIndex {
     #coverageByRoot = new Map();
     /**
      * Creates a workspace index.
-     * @param {WorkspaceIndexOptions} [options] Initial index configuration.
+     * @param [options] Initial index configuration.
      */
     constructor(options) {
         this.environment = options.environment;
@@ -137,7 +149,9 @@ export class WorkspaceIndex {
      */
     static fromSnapshot(options, snapshot, overlays) {
         const index = new WorkspaceIndex(options);
-        if (snapshot.version !== WORKSPACE_ANALYSIS_SNAPSHOT_VERSION ||
+        if (
+        // oxlint-disable-next-line typescript/no-unnecessary-condition -- Snapshots arrive serialized from index workers and may come from another build.
+        snapshot.version !== WORKSPACE_ANALYSIS_SNAPSHOT_VERSION ||
             JSON.stringify(snapshot.module ?? null) !== JSON.stringify(options.module ?? null) ||
             JSON.stringify(normalizeModuleRoots(snapshot.moduleRoots)) !==
                 JSON.stringify(index.moduleRoots) ||
@@ -170,7 +184,7 @@ export class WorkspaceIndex {
     }
     /**
      * Updates index configuration and re-analyses the workspace.
-     * @param {WorkspaceIndexOptions} options The configuration to apply.
+     * @param options The configuration to apply.
      */
     configure(options) {
         if (Object.hasOwn(options, "module")) {
@@ -193,8 +207,8 @@ export class WorkspaceIndex {
     }
     /**
      * Adds or replaces an open editor buffer and re-analyses the workspace.
-     * @param {string} file The absolute path of the document.
-     * @param {string} content The current document text.
+     * @param file The absolute path of the document.
+     * @param content The current document text.
      */
     openDocument(file, content) {
         const resolved = path.resolve(file);
@@ -218,8 +232,8 @@ export class WorkspaceIndex {
     /**
      * Updates the content of an already-open document without re-analysing.
      * Callers can debounce multiple edits before invoking {@link reindex}.
-     * @param {string} file The absolute path of the document.
-     * @param {string} content The new document text.
+     * @param file The absolute path of the document.
+     * @param content The new document text.
      */
     updateDocument(file, content) {
         const resolved = path.resolve(file);
@@ -228,7 +242,7 @@ export class WorkspaceIndex {
     }
     /**
      * Removes an open editor buffer (reverting to disk) and re-analyses.
-     * @param {string} file The absolute path of the document.
+     * @param file The absolute path of the document.
      */
     closeDocument(file) {
         const resolved = path.resolve(file);
@@ -238,15 +252,15 @@ export class WorkspaceIndex {
     }
     /**
      * Marks a disk-backed file as changed for the next debounced reindex.
-     * @param {string} file The changed absolute path.
+     * @param file The changed absolute path.
      */
     invalidateFile(file) {
         this.dirtyFiles.add(path.resolve(file));
     }
     /**
      * Returns the current text for a file, preferring the open buffer.
-     * @param {string} file The absolute path of the file.
-     * @returns {string | undefined} The file text, or undefined when unavailable.
+     * @param file The absolute path of the file.
+     * @returns The file text, or undefined when unavailable.
      */
     getText(file) {
         return this.overlay.get(path.resolve(file));
@@ -255,8 +269,8 @@ export class WorkspaceIndex {
      * Returns the text for a file from the open buffer, falling back to disk.
      * Used by features that must compute precise ranges in files that may not be
      * open in the editor (for example, cross-file rename targets).
-     * @param {string} file The absolute path of the file.
-     * @returns {string | undefined} The file text, or undefined when unreadable.
+     * @param file The absolute path of the file.
+     * @returns The file text, or undefined when unreadable.
      */
     getFileText(file) {
         const resolved = path.resolve(file);
@@ -277,60 +291,60 @@ export class WorkspaceIndex {
     }
     /**
      * Returns the analysis bucket for a file, if it has been analysed.
-     * @param {string} file The absolute path of the file.
-     * @returns {FileAnalysis | undefined} The per-file analysis, or undefined.
+     * @param file The absolute path of the file.
+     * @returns The per-file analysis, or undefined.
      */
     getFileAnalysis(file) {
         return this.fileAnalysis.get(path.resolve(file));
     }
     /**
      * Returns diagnostics for a file.
-     * @param {string} file The absolute path of the file.
-     * @returns {AssemblyDiagnostic[]} The diagnostics for the file.
+     * @param file The absolute path of the file.
+     * @returns The diagnostics for the file.
      */
     getDiagnostics(file) {
         return this.getFileAnalysis(file)?.diagnostics ?? [];
     }
     /**
      * Returns symbol definitions declared in a file.
-     * @param {string} file The absolute path of the file.
-     * @returns {AssemblySymbolDefinition[]} The symbols defined in the file.
+     * @param file The absolute path of the file.
+     * @returns The symbols defined in the file.
      */
     getSymbols(file) {
         return this.getFileAnalysis(file)?.symbols ?? [];
     }
     /**
      * Returns symbol references that occur in a file.
-     * @param {string} file The absolute path of the file.
-     * @returns {AssemblySymbolReference[]} The references in the file.
+     * @param file The absolute path of the file.
+     * @returns The references in the file.
      */
     getReferences(file) {
         return this.getFileAnalysis(file)?.references ?? [];
     }
     /**
      * Returns every symbol definition known across the workspace.
-     * @returns {AssemblySymbolDefinition[]} All workspace symbol definitions.
+     * @returns All workspace symbol definitions.
      */
     getAllSymbols() {
         return this.allSymbols;
     }
     /**
      * Returns every symbol reference known across the workspace.
-     * @returns {AssemblySymbolReference[]} All workspace symbol references.
+     * @returns All workspace symbol references.
      */
     getAllReferences() {
         return this.allReferences;
     }
     /**
      * Returns the merged include-graph edges.
-     * @returns {AssemblyIncludeEdge[]} The include edges across all roots.
+     * @returns The include edges across all roots.
      */
     getIncludeEdges() {
         return this.includeEdges;
     }
     /**
      * Returns the absolute paths of every file with analysis artifacts.
-     * @returns {string[]} The analysed file paths.
+     * @returns The analysed file paths.
      */
     getAnalyzedFiles() {
         return [...this.fileAnalysis.keys()];
@@ -339,8 +353,8 @@ export class WorkspaceIndex {
      * Returns whether a file still needs a full-pass reindex.
      * True when the file is dirty, a full rebuild is pending, or no covering
      * full-pass analysis exists yet.
-     * @param {string} file The absolute path of the file.
-     * @returns {boolean} Whether callers should schedule {@link reindex}.
+     * @param file The absolute path of the file.
+     * @returns Whether callers should schedule {@link reindex}.
      */
     isFileDirtyOrUncovered(file) {
         const resolved = path.resolve(file);
@@ -351,7 +365,7 @@ export class WorkspaceIndex {
     }
     /**
      * Returns a snapshot of index size and last-reindex timing for the project panel.
-     * @returns {WorkspaceIndexStatus} The current status snapshot.
+     * @returns The current status snapshot.
      */
     getStatus() {
         let errorCount = 0;
@@ -376,8 +390,8 @@ export class WorkspaceIndex {
     /**
      * True when a followIncludes analysis already owns this file as a root or include.
      * O(1) — uses the pre-computed {@link #coveredByFullPass} set.
-     * @param {string} file The absolute path of the file.
-     * @returns {boolean} Whether a covering full-pass analysis exists.
+     * @param file The absolute path of the file.
+     * @returns Whether a covering full-pass analysis exists.
      */
     isCoveredByFullPass(file) {
         return this.#coveredByFullPass.has(path.resolve(file));
@@ -386,8 +400,8 @@ export class WorkspaceIndex {
      * True when a different full-pass root already includes this file.
      * Used to avoid analysing included files as standalone roots.
      * O(1) — uses the per-root coverage sets in {@link #coverageByRoot}.
-     * @param {string} file The absolute path of the file.
-     * @returns {boolean} Whether another covering full-pass root exists.
+     * @param file The absolute path of the file.
+     * @returns Whether another covering full-pass root exists.
      */
     isCoveredByOtherFullPassRoot(file) {
         const resolved = path.resolve(file);
@@ -469,9 +483,9 @@ export class WorkspaceIndex {
     }
     /**
      * Determines whether a cached root analysis contains a changed file.
-     * @param {string} root The root source file.
-     * @param {string} file The changed source file.
-     * @returns {boolean} Whether the root must be re-analysed.
+     * @param root The root source file.
+     * @param file The changed source file.
+     * @returns Whether the root must be re-analysed.
      */
     rootDependsOnFile(root, file) {
         const fileSet = this.#rootFileSets.get(root);
@@ -483,9 +497,9 @@ export class WorkspaceIndex {
     }
     /**
      * Analyses one root using the current overlay snapshot.
-     * @param {string} root The root source file.
-     * @param {{ followIncludes?: boolean }} [options] Analysis options.
-     * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
+     * @param root The root source file.
+     * @param [options] Analysis options.
+     * @returns The completed artifacts, or undefined when unavailable.
      */
     analyzeRoot(root, options = {}) {
         const content = this.overlay.get(root) ?? this.readDiskRoot(root);
@@ -565,7 +579,7 @@ export class WorkspaceIndex {
      * Include edges are always merged regardless of coverage (navigation must
      * work even before the full reindex completes).
      *
-     * @param {string[]} roots The active roots in deterministic order.
+     * @param roots The active roots in deterministic order.
      */
     rebuildMergedIndex(roots) {
         this.fileAnalysis.clear();
@@ -602,10 +616,10 @@ export class WorkspaceIndex {
     }
     /**
      * Buckets flat analysis artifacts into their owning files.
-     * @param {string} root The root file that produced these artifacts.
-     * @param {AssemblyDiagnostic[]} diagnostics The diagnostics to bucket.
-     * @param {AssemblySymbolDefinition[]} symbols The symbols to bucket.
-     * @param {AssemblySymbolReference[]} references The references to bucket.
+     * @param root The root file that produced these artifacts.
+     * @param diagnostics The diagnostics to bucket.
+     * @param symbols The symbols to bucket.
+     * @param references The references to bucket.
      */
     ingestArtifacts(root, diagnostics, symbols, references) {
         for (const diagnostic of diagnostics) {
@@ -622,8 +636,8 @@ export class WorkspaceIndex {
     }
     /**
      * Returns (creating if needed) the analysis bucket for a file.
-     * @param {string} file The absolute path of the file.
-     * @returns {FileAnalysis} The mutable analysis bucket.
+     * @param file The absolute path of the file.
+     * @returns The mutable analysis bucket.
      */
     bucketFor(file) {
         const resolved = path.resolve(file);
@@ -636,7 +650,7 @@ export class WorkspaceIndex {
     }
     /**
      * Determines the set of root files to analyse.
-     * @returns {string[]} The absolute root paths.
+     * @returns The absolute root paths.
      */
     resolveRoots() {
         if (this.entryPoints.length > 0) {
@@ -646,8 +660,8 @@ export class WorkspaceIndex {
     }
     /**
      * Reads a root file from disk when it is not open in the editor.
-     * @param {string} root The absolute root path.
-     * @returns {string | undefined} The file text, or undefined when unreadable.
+     * @param root The absolute root path.
+     * @returns The file text, or undefined when unreadable.
      */
     readDiskRoot(root) {
         try {
@@ -663,8 +677,8 @@ export class WorkspaceIndex {
     }
     /**
      * Derives the include search paths for a root, always including its directory.
-     * @param {string} root The absolute root path.
-     * @returns {string[]} The include paths to hand to the assembler.
+     * @param root The absolute root path.
+     * @returns The include paths to hand to the assembler.
      */
     deriveIncludePaths(root) {
         const directory = path.dirname(root);
@@ -673,7 +687,7 @@ export class WorkspaceIndex {
     /**
      * Assembler identity stored alongside cached analysis so a target or include-path
      * change cannot reuse stale artifacts.
-     * @returns {import("./root-analysis-cache.js").RootAnalysisCacheIdentity} The identity.
+     * @returns The identity.
      */
     cacheIdentity() {
         const formats = this.environment
@@ -698,8 +712,8 @@ export class WorkspaceIndex {
     }
     /**
      * Hashes overlay or disk bytes for cache invalidation. Works for text and binary includes.
-     * @param {string} file Absolute path to hash.
-     * @returns {string | undefined} Hex digest, or undefined when unreadable.
+     * @param file Absolute path to hash.
+     * @returns Hex digest, or undefined when unreadable.
      */
     hashFile(file) {
         try {
@@ -719,11 +733,10 @@ export class WorkspaceIndex {
     }
     /**
      * Collects content hashes and mtimes for a root and every file in its include graph.
-     * @param {string} root Absolute root path.
-     * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
-     * @param {Readonly<Record<string, "binary" | "resource">>} assetDependencies Resolved asset inputs.
-     * @returns {{ fileHashes: Record<string, string>; fileMtimes: Record<string, number> } | undefined}
-     *   Path-to-hash and path-to-mtime maps, or undefined when incomplete.
+     * @param root Absolute root path.
+     * @param includeEdges Include edges from the analysis.
+     * @param assetDependencies Resolved asset inputs.
+     * @returns Path-to-hash and path-to-mtime maps, or undefined when incomplete.
      */
     collectFileHashes(root, includeEdges, assetDependencies = {}) {
         const files = new Set([root]);

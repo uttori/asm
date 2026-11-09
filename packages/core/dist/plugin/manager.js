@@ -9,7 +9,9 @@ const noopLogger = {
     warn: () => undefined,
     error: () => undefined,
 };
+/** Returns true when a character is a lowercase letter or digit. */
 const isLowerAlphaNumeric = (character) => (character >= "a" && character <= "z") || (character >= "0" && character <= "9");
+/** Validates plugin and contribution identifiers using lowercase alphanumeric segments. */
 const isValidId = (value, allowLeadingDigit = false) => {
     if (value.length === 0 ||
         !isLowerAlphaNumeric(value[0]) ||
@@ -29,10 +31,15 @@ const isValidId = (value, allowLeadingDigit = false) => {
     }
     return !previousWasSeparator;
 };
+/** Returns true when a string is a dotted contribution identifier. */
 const isValidContributionId = (value) => value.includes(".") && isValidId(value, true);
+/** Narrows unknown values to non-null, non-array objects. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Returns true when the value is an array. */
 const isArray = (value) => Array.isArray(value);
+/** Returns true when plugin options are undefined or an empty object. */
 const isEmptyOptions = (value) => value === undefined || (isRecord(value) && Object.keys(value).length === 0);
+/** Recursively freezes objects, arrays, and function property bags for immutable manifests. */
 const deepFreeze = (value, seen = new Set()) => {
     if ((typeof value !== "object" && typeof value !== "function") ||
         value === null ||
@@ -57,6 +64,7 @@ const deepFreeze = (value, seen = new Set()) => {
     }
     return Object.freeze(value);
 };
+/** Ensures a manifest field is a non-empty string or throws a plugin manifest error. */
 const validateText = (value, field, pluginId) => {
     if (typeof value !== "string" || value.trim() === "") {
         throw new PluginError(`Plugin field '${field}' must be a non-empty string.`, {
@@ -66,6 +74,7 @@ const validateText = (value, field, pluginId) => {
     }
     return value;
 };
+/** Parses and freezes a plugin manifest, validating ids, semver, and dependencies. */
 const validateManifest = (manifest, pluginModule) => {
     if (!isRecord(manifest)) {
         throw new PluginError("Plugin manifest must be an object.", {
@@ -135,8 +144,11 @@ const validateManifest = (manifest, pluginModule) => {
         ...(requires.length === 0 ? {} : { requires }),
     });
 };
+/** Narrows unknown values to plugin activate functions. */
 const isPluginActivate = (value) => typeof value === "function";
+/** Narrows unknown values to plugin validateOptions functions. */
 const isPluginValidateOptions = (value) => typeof value === "function";
+/** Validates a module export object and binds activate/validateOptions to the export. */
 const validatePlugin = (value, pluginModule) => {
     if (!isRecord(value) || !isPluginActivate(value.activate)) {
         throw new PluginError(`Module '${pluginModule ?? "<programmatic>"}' has no valid default plugin export.`, {
@@ -161,6 +173,7 @@ const validatePlugin = (value, pluginModule) => {
         activate: value.activate.bind(value),
     };
 };
+/** Validates a contribution id string or throws a configuration error. */
 const validateContributionId = (id, pluginId) => {
     if (typeof id !== "string" || !isValidContributionId(id)) {
         throw new PluginError(`Plugin '${pluginId}' registered invalid contribution ID '${String(id)}'.`, {
@@ -171,6 +184,7 @@ const validateContributionId = (id, pluginId) => {
     }
     return id;
 };
+/** Ensures contribution aliases, when present, are a non-empty string array. */
 const validateAliases = (aliases, pluginId, contributionId) => {
     if (aliases === undefined) {
         return;
@@ -211,14 +225,14 @@ export class PluginManager {
     }
     /**
      * Inspect successfully activated plugins.
-     * @returns {readonly AssemblerPluginManifest[]} A new array of frozen manifests in activation order.
+     * @returns A new array of frozen manifests in activation order.
      */
     get activatedPlugins() {
         return this.#activated.map((item) => item.manifest);
     }
     /**
      * Validate module default exports, then activate them with the same rules as activatePlugins.
-     * @param {readonly PluginModuleActivationRequest[]} requests Imported namespaces and the options supplied for each plugin.
+     * @param requests Imported namespaces and the options supplied for each plugin.
      */
     async activateModules(requests) {
         const normalized = requests.map((request) => {
@@ -241,7 +255,7 @@ export class PluginManager {
      * Each plugin commits independently: earlier successes remain active if a later one fails.
      * Throws PluginError for invalid input, dependency conflicts, or activation failure.
      * Activation is unavailable after freeze or disposal. Dispose the manager after a failed batch.
-     * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
+     * @param requests Plugins/options to activate, reordered only as dependencies require.
      */
     async activatePlugins(requests) {
         if (this.#disposed) {
@@ -463,6 +477,7 @@ export class PluginManager {
                 "referenceExpressions" in record.value ||
                 (record.value.createTypedEncoder !== undefined &&
                     typeof record.value.createTypedEncoder !== "function") ||
+                // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
                 !record.value.operandGrammar ||
                 typeof record.value.operandGrammar.version !== "string" ||
                 !record.value.operandGrammar.version ||
@@ -511,8 +526,10 @@ export class PluginManager {
                 if (!isArray(directive.keywords) ||
                     directive.keywords.length === 0 ||
                     directive.keywords.some((keyword) => typeof keyword !== "string" || keyword === "") ||
+                    // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
                     directive.phase !== "lowered" ||
                     "createHandler" in directive ||
+                    // oxlint-disable-next-line typescript/no-unnecessary-condition -- Contribution values are untrusted plugin exports validated here.
                     !directive.syntax ||
                     typeof directive.syntax.parse !== "function" ||
                     typeof directive.syntax.bind !== "function" ||
@@ -700,7 +717,7 @@ export class PluginManager {
     /**
      * Validate target references and aliases, then seal registration. Repeated calls return the
      * same environment. Throws PluginError for invalid graphs or a disposed manager.
-     * @returns {AssemblerEnvironment} The validated, shared contribution graph. Resources remain owned by this manager.
+     * @returns The validated, shared contribution graph. Resources remain owned by this manager.
      */
     freeze() {
         if (this.#disposed) {

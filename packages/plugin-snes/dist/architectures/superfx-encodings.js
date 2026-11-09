@@ -1,7 +1,17 @@
+/**
+ * Type-safe `Object.hasOwn` helper for opcode lookup tables.
+ * @param obj Object to test.
+ * @param key Property key candidate.
+ * @returns True when `key` is an own property of `obj`.
+ */
 export const hasOwn = (obj, key) => Object.hasOwn(obj, key);
+/** GSU ALT1 prefix opcode byte (`0x3D`). */
 export const ALT1 = 0x3d;
+/** GSU ALT2 prefix opcode byte (`0x3E`). */
 export const ALT2 = 0x3e;
+/** GSU ALT3 prefix opcode byte (`0x3F`). */
 export const ALT3 = 0x3f;
+/** Primary opcode byte for each implied GSU mnemonic. */
 export const IMPLIED_OPCODES = {
     STOP: 0x00,
     NOP: 0x01,
@@ -27,6 +37,7 @@ export const IMPLIED_OPCODES = {
     GETC: 0xdf,
     GETB: 0xef,
 };
+/** Two-byte GSU forms that share an ALT prefix plus a trailing opcode. */
 export const PREFIXED_OPCODES = {
     RPIX: { prefix: ALT1, opcode: 0x4c },
     CMODE: { prefix: ALT1, opcode: 0x4e },
@@ -38,6 +49,7 @@ export const PREFIXED_OPCODES = {
     ROMB: { prefix: ALT3, opcode: 0xdf },
     GETBS: { prefix: ALT3, opcode: 0xef },
 };
+/** Branch opcode byte for each short GSU conditional mnemonic. */
 export const SHORT_BRANCH_OPCODES = {
     BRA: 0x05,
     BGE: 0x06,
@@ -51,6 +63,7 @@ export const SHORT_BRANCH_OPCODES = {
     BVC: 0x0e,
     BVS: 0x0f,
 };
+/** Register-operand GSU mnemonics mapped to their opcode bases and ALT variants. */
 export const REGISTER_OPS = {
     TO: { base: 0x10 },
     WITH: { base: 0x20 },
@@ -71,6 +84,7 @@ export const REGISTER_OPS = {
     XOR: { prefix: ALT1, base: 0xc0, min: 1, max: 15 },
     CMP: { prefix: ALT3, base: 0x60 },
 };
+/** Immediate-nibble GSU forms under ALT2/ALT3 prefix groups. */
 export const IMMEDIATE_OPS = {
     LINK: { base: 0x90, min: 1, max: 4 },
     ADD: { prefix: ALT2, base: 0x50 },
@@ -83,6 +97,7 @@ export const IMMEDIATE_OPS = {
     UMULT: { prefix: ALT3, base: 0x80 },
     XOR: { prefix: ALT3, base: 0xc0, min: 1, max: 15 },
 };
+/** Indirect RAM pointer opcodes limited to registers R0–R11. */
 export const INDIRECT_OPS = {
     STW: { base: 0x30, min: 0, max: 11 },
     LDW: { base: 0x40, min: 0, max: 11 },

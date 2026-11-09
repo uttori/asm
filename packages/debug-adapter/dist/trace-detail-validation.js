@@ -1,9 +1,12 @@
+/** Narrows unknown values to arrays for structural validation. */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
+/** Narrows unknown values to plain objects excluding arrays. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Rejects opcode byte payloads outside the allowed length and range. */
 function assertInstructionBytes(bytes) {
     if (!isUnknownArray(bytes) || bytes.length < 1 || bytes.length > 16) {
         throw new Error("Invalid trace instruction bytes.");
@@ -14,6 +17,7 @@ function assertInstructionBytes(bytes) {
         }
     }
 }
+/** Rejects register or flag maps with unsupported value types. */
 function assertInstructionState(state) {
     if (!isRecord(state)) {
         throw new Error("Invalid trace instruction state.");
@@ -26,6 +30,7 @@ function assertInstructionState(state) {
         }
     }
 }
+/** Rejects bus access records that violate the trace bus contract. */
 function assertBusAccess(access) {
     if (!isRecord(access)) {
         throw new Error("Invalid trace bus operation.");
@@ -55,11 +60,13 @@ function assertBusAccess(access) {
         throw new Error("Invalid trace bus operation.");
     }
 }
+/** Validates every detail entry in a batch before narrowing the array type. */
 function assertTraceDetails(value) {
     for (const detail of value) {
         assertTraceDetail(detail);
     }
 }
+/** Validates one instruction detail object from an untrusted producer. */
 function assertTraceDetail(detail) {
     if (!isRecord(detail)) {
         throw new Error("Invalid trace instruction bytes.");
@@ -84,9 +91,9 @@ function assertTraceDetail(detail) {
 }
 /**
  * Validate details before they reach a debugger client.
- * @param {unknown} value Untrusted detail array.
- * @param {number} count Expected instruction count.
- * @returns {readonly DebugTraceInstructionDetail[]} Validated details.
+ * @param value Untrusted detail array.
+ * @param count Expected instruction count.
+ * @returns Validated details.
  */
 export function validateDebugTraceDetails(value, count) {
     if (!isUnknownArray(value) || value.length !== count) {

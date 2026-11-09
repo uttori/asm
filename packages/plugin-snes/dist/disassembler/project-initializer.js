@@ -23,6 +23,7 @@ export class SnesProjectInitializationCancelledError extends Error {
         this.name = "SnesProjectInitializationCancelledError";
     }
 }
+/** Return an empty shard bundle used before the first analysis pass. */
 const emptyShards = () => ({
     analysis: [],
     annotations: [],
@@ -33,17 +34,26 @@ const emptyShards = () => ({
     evidence: [],
     imports: [],
 });
+/**
+ * Emit a structured progress event when a callback is configured.
+ * @param options Operation options carrying the progress hook.
+ * @param stage Current initialization stage.
+ * @param message Human-readable status line.
+ */
 const report = (options, stage, message) => options.onProgress?.({ stage, message });
+/** Throw the cancellation error when the supplied signal is already aborted. */
 const throwIfCancelled = (signal) => {
     if (signal?.aborted) {
         throw new SnesProjectInitializationCancelledError();
     }
 };
+/** Reject compressed or misnamed Diz sidecar paths before reading bytes. */
 const assertDizRawFile = (file) => {
     if (path.extname(file).toLowerCase() !== ".dizraw") {
         throw new Error("Only uncompressed .dizraw imports are supported. Compressed .diz input is not supported.");
     }
 };
+/** Read and import one `.dizraw` file against the expected ROM size. */
 const importDizRawFile = (file, rom) => {
     assertDizRawFile(file);
     return importDizRaw(fs.readFileSync(file, "utf8"), {
@@ -51,6 +61,7 @@ const importDizRawFile = (file, rom) => {
         expectedRomSize: rom.length,
     });
 };
+/** Require a missing or empty directory before staging project files. */
 const ensureWritableDestination = (directory) => {
     if (!fs.existsSync(directory)) {
         return;
@@ -63,21 +74,22 @@ const ensureWritableDestination = (directory) => {
         throw new Error(`Destination '${directory}' must be empty.`);
     }
 };
+/** Create a unique sibling temp directory under the destination parent. */
 const temporarySibling = (destination, suffix) => {
     const resolved = path.resolve(destination);
     const parent = path.dirname(resolved);
     fs.mkdirSync(parent, { recursive: true });
     return fs.mkdtempSync(path.join(parent, `.${path.basename(resolved)}.${suffix}-`));
 };
+/** Best-effort recursive delete used when abandoning staging trees. */
 const removeDirectory = (directory) => {
     fs.rmSync(directory, { recursive: true, force: true });
 };
 /**
  * Atomically replaces a missing or empty destination with a completely prepared staging tree.
  * Existing non-empty destinations are never merged or overwritten.
- * @param {string} staging Fully prepared sibling directory.
- * @param {string} destination Missing or empty destination directory.
- * @returns {void}
+ * @param staging Fully prepared sibling directory.
+ * @param destination Missing or empty destination directory.
  */
 const commitStagedDirectory = (staging, destination) => {
     const resolved = path.resolve(destination);
@@ -102,8 +114,8 @@ const commitStagedDirectory = (staging, destination) => {
 /**
  * Loads a ROM and optional DizRaw project without writing anything.
  * The result contains ranked mapper candidates and whether the host must ask the user to choose.
- * @param {ProbeSnesProjectOptions} options ROM, optional DizRaw file, and operation controls.
- * @returns {SnesProjectProbeResult} Ranked detection and import metadata.
+ * @param options ROM, optional DizRaw file, and operation controls.
+ * @returns Ranked detection and import metadata.
  */
 export const probeSnesProject = (options) => {
     throwIfCancelled(options.signal);
@@ -151,8 +163,8 @@ export const probeSnesProject = (options) => {
 };
 /**
  * Creates a native analysis project through a staged sibling directory.
- * @param {CreateSnesAnalysisProjectOptions} options ROM, mapping, import, and destination options.
- * @returns {CreateSnesAnalysisProjectResult} Committed project and import summary.
+ * @param options ROM, mapping, import, and destination options.
+ * @returns Committed project and import summary.
  */
 export const createSnesAnalysisProject = (options) => {
     const projectDirectory = path.resolve(options.projectDirectory);
@@ -235,6 +247,7 @@ export const createSnesAnalysisProject = (options) => {
         throw error;
     }
 };
+/** Collect half-open ROM intervals covered by published CFG nodes. */
 const codeRanges = (records) => records.flatMap((record) => record.kind === "cfg-node" && record.fileOffset !== undefined
     ? [{ start: record.fileOffset, end: record.fileOffset + record.size }]
     : []);
@@ -243,8 +256,8 @@ const codeRanges = (records) => records.flatMap((record) => record.kind === "cfg
  * Completion describes explored work, not proof that all code was found. An incomplete pass that
  * would discard previously decoded code throws before replacing saved analysis. This synchronous
  * operation checks cancellation at phase boundaries and cannot observe queued abort callbacks mid-pass.
- * @param {AnalyzeSnesProjectOptions} options Project, ROM, entry points, and work limits.
- * @returns {AnalyzeSnesProjectResult} Structured analysis counts and completion state.
+ * @param options Project, ROM, entry points, and work limits.
+ * @returns Structured analysis counts and completion state.
  */
 export const analyzeSnesProject = (options) => {
     throwIfCancelled(options.signal);

@@ -1,8 +1,11 @@
 import type { SourceRepository } from "./git.js";
 /** One ordinary source replacement. Paths are project-relative and before/after buffers are borrowed until staging finishes. */
 export interface SourceFileReplacement {
+    /** Project-relative path guarded against symlink and traversal redirection. */
     readonly path: string;
+    /** Observed bytes before publication, retained only until staging completes. */
     readonly before: Uint8Array;
+    /** Replacement bytes to publish when the transaction commits forward. */
     readonly after: Uint8Array;
 }
 /** Null denotes absence, allowing guarded create/remove operations alongside existing replacements. */
@@ -13,14 +16,23 @@ export type SourceFileChange = SourceFileReplacement | {
 };
 /** Durable states survive termination between individual file renames; external readers are not globally atomic. */
 export interface SourceFileTransaction {
+    /** Journal discriminator written before any staged bytes are published. */
     readonly format: "uttori-source-file-transaction";
+    /** Schema version selecting create/remove semantics for null before/after hashes. */
     readonly version: 1 | 2;
+    /** Stable publication identity used for staging directories and recovery. */
     readonly id: string;
+    /** Current durable phase of the multi-file publication workflow. */
     readonly state: "staged" | "publishing" | "completed" | "recovery";
+    /** Which staged hash side publish and recovery should apply next. */
     readonly direction: "after" | "before";
+    /** Per-path content hashes staged for publication and recovery. */
     readonly files: readonly {
+        /** Project-relative path published by this transaction. */
         readonly path: string;
+        /** Content hash observed before publication, or null when the file did not exist. */
         readonly before: string | null;
+        /** Content hash staged for the forward direction, or null when the file should be removed. */
         readonly after: string | null;
     }[];
 }

@@ -1,8 +1,11 @@
 import type { AddressToLineMapping } from "@uttori/asm-core";
 /** One retained raw block, paired with bytes from the immutable original ROM. */
 export interface RawBlockInput {
+    /** Source path used to match linker incbin dependencies. */
     readonly file: string;
+    /** Bytes from the immutable original ROM at import time. */
     readonly original: Uint8Array;
+    /** Current working copy bytes retained by the caller for the duration of the check. */
     readonly current: Uint8Array;
 }
 /**

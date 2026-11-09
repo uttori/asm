@@ -1,13 +1,17 @@
 import { canonicalJsonCompact } from "@uttori/asm-core/canonical-json";
+/** Deduplicates and lexicographically sorts string evidence and id lists. */
 const sortedStrings = (values) => values ? [...new Set(values)].toSorted((left, right) => left.localeCompare(right)) : [];
+/** Deduplicates and numerically sorts offset and address lists. */
 const sortedNumbers = (values) => values ? [...new Set(values)].toSorted((left, right) => left - right) : [];
+/** Canonical JSON key for optional state values used in transition deduplication. */
 const valueKey = (value, present) => present ? canonicalJsonCompact(value) : "<absent>";
+/** Stable map key combining logical address space and address. */
 const locationKey = (addressSpace, address) => `${addressSpace}:${address}`;
 /**
  * Adds one value while preserving lazy allocation for the common empty case.
- * @param {Set<Value> | undefined} target Existing lazy set, if allocated.
- * @param {Value} value Value to add.
- * @returns {Set<Value>} Existing or newly allocated set containing the value.
+ * @param target Existing lazy set, if allocated.
+ * @param value Value to add.
+ * @returns Existing or newly allocated set containing the value.
  */
 const addValue = (target, value) => {
     const values = target ?? new Set();
@@ -16,9 +20,9 @@ const addValue = (target, value) => {
 };
 /**
  * Merges evidence strings without allocating a set when the input contributes nothing.
- * @param {Set<string> | undefined} target Existing lazy evidence set, if allocated.
- * @param {readonly string[]} values Evidence identifiers to merge.
- * @returns {Set<string> | undefined} Updated set, or the original undefined value for empty input.
+ * @param target Existing lazy evidence set, if allocated.
+ * @param values Evidence identifiers to merge.
+ * @returns Updated set, or the original undefined value for empty input.
  */
 const addAll = (target, values) => {
     if (values.length === 0) {
@@ -30,10 +34,12 @@ const addAll = (target, values) => {
     }
     return target;
 };
+/** Reads a nonnegative safe integer field when present and valid. */
 const numberField = (record, name) => {
     const value = record[name];
     return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
 };
+/** Parses opaque CFG effective-address metadata into the public annotation shape. */
 const effectiveAddress = (value) => {
     const operandIndex = numberField(value, "operandIndex");
     if (operandIndex === undefined ||
@@ -55,14 +61,16 @@ const effectiveAddress = (value) => {
         explanation: value.explanation,
     };
 };
+/** Returns project annotation CPU state when the interval carries register assumptions. */
 const annotationState = (annotation) => annotation.state;
+/** Exposes runtime CPU state as a flat record for observation merging. */
 const runtimeState = (record) => record.state;
 /**
  * Finds the first indexed value whose numeric key is at least `target`.
- * @param {readonly T[]} values Sorted indexed values.
- * @param {number} target Inclusive lower-bound key.
- * @param {(value: T) => number} at Numeric key selector.
- * @returns {number} First matching index, or `values.length` when none exists.
+ * @param values Sorted indexed values.
+ * @param target Inclusive lower-bound key.
+ * @param at Numeric key selector.
+ * @returns First matching index, or `values.length` when none exists.
  */
 const lowerBound = (values, target, at) => {
     let low = 0;
@@ -87,10 +95,10 @@ const lowerBound = (values, target, at) => {
  * instead of scanning every instruction for every range. These are working-set invariants: callers
  * still receive concrete, sorted empty arrays and deterministic record order, so laziness must never
  * leak into the public result or weaken exact logical/output identity deduplication.
- * @param {Pick<AnalysisProjectManifest, "addressSpaces">} manifest Validated project address spaces.
- * @param {AnalysisProjectShards} shards Validated native project shards.
- * @param {Function} [runtime] Fresh iterator per pass: point facts establish locations before coverage is attached.
- * @returns {InstructionAnalysisAnnotations} Stable instruction annotations and malformed-metadata notes.
+ * @param manifest Validated project address spaces.
+ * @param shards Validated native project shards.
+ * @param [runtime] Fresh iterator per pass: point facts establish locations before coverage is attached.
+ * @returns Stable instruction annotations and malformed-metadata notes.
  */
 export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => shards.runtime) => {
     const fileAddressSpaces = new Set(manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id));

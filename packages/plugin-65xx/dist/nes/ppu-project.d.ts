@@ -1,5 +1,6 @@
 import { type ResearchSnapshot } from "@uttori/asm-disassembler";
-/** Import a complete PPU archive into a separate, immutable graphics report.
+/**
+ * Import a complete PPU archive into a separate, immutable graphics report.
  * Returns null for other formats/scopes. Graphics observations never seed CPU disassembly.
  * Input deletion belongs to the caller. Reports and SQLite facts remain usable after removal;
  * the archive hash identifies the verified input without requiring its ordered stream to survive.

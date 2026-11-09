@@ -1,7 +1,9 @@
 import { parseDirectiveExpression, syntaxArray, syntaxBoolean, syntaxExpression, syntaxLiteral, syntaxNumber, syntaxOptional, syntaxRecord, syntaxString, syntaxUnion, } from "@uttori/asm-core/plugin";
 import { parseSpcBlock, parseEndSpcBlock } from "../services/spc-runtime.js";
 import { resolveSnesCpuName } from "./cpu-name.js";
+/** Builds a syntax literal guard for a fixed directive operation keyword. */
 const op = (name) => syntaxLiteral(name);
+/** Typed union of every lowered SNES directive payload shape. */
 export const snesDirectiveSchema = syntaxUnion(syntaxRecord({
     operation: op("mapper"),
     mapper: syntaxString,
@@ -75,7 +77,7 @@ export function parseSnesDirective(id, { words }) {
             return { operation: "width", register: "index", wide: true };
         case "ca65.accu":
         case "ca65.index": {
-            const width = words[1]?.trim();
+            const width = words.at(1)?.trim();
             if (width !== "8" && width !== "16") {
                 throw new Error(`${keyword} requires an argument of 8 or 16, got: ${width ?? "<none>"}`);
             }

@@ -1,4 +1,5 @@
 import type { AssemblyModule } from "../relocatable.js";
+/** Bumps when on-disk object metadata layout is incompatible with prior readers. */
 export declare const OBJECT_FORMAT_VERSION = 1;
 /** Write self-contained payloads and typed metadata; mutable asset paths never become external object storage. */
 export declare function encodeObject(module: AssemblyModule): Uint8Array;

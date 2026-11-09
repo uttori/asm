@@ -5,6 +5,11 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import { sourceContentHash } from "./generation.js";
 import { assertSourcePath } from "./git.js";
+/**
+ * Read a Node.js system error code without assuming the thrown value's shape.
+ * @param error Caught value.
+ * @returns The string `code` property, or undefined when absent.
+ */
 function errorCode(error) {
     if (typeof error === "object" &&
         error !== null &&
@@ -14,18 +19,32 @@ function errorCode(error) {
     }
     return undefined;
 }
+/** Lowercase hexadecimal SHA-256 digest. */
 const hashPattern = /^[\da-f]{64}$/;
 /** Runtime array check without widening the validated readonly contract to any[]. */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
+/**
+ * Narrow untrusted catalog JSON to a plain object.
+ * @param value Parsed JSON value.
+ * @returns True for non-null, non-array objects.
+ */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/**
+ * Read an import count only when the report recorded that key itself.
+ * @param counts Imported record counts from an import report.
+ * @param key Count name.
+ * @returns The own count, or undefined so callers can fall back to another key.
+ */
 function observedCount(counts, key) {
     return Object.hasOwn(counts, key) ? counts[key] : undefined;
 }
+/** True for a lowercase hexadecimal SHA-256 string. */
 const validHash = (value) => typeof value === "string" && hashPattern.test(value);
+/** True for a non-negative safe integer count. */
 const validCount = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
 /** Validate names as single portable components; catalog data never selects paths outside a supplied bundle. */
 function validName(value) {
@@ -55,6 +74,13 @@ function catalogPath(root, name) {
     }
     return current;
 }
+/**
+ * Validate catalog structure, ROM identity, budgets and uniqueness of capture and archive bindings.
+ * @param value Untrusted catalog JSON.
+ * @param romSha256 Expected original ROM identity.
+ * @throws Error when the catalog is malformed, oversized, for another ROM, or binds one archive to
+ * conflicting capture identities.
+ */
 function assertSourceCaptureCatalog(value, romSha256) {
     if (!isRecord(value)) {
         throw new Error("Invalid source capture catalog or original-ROM identity.");

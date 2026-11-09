@@ -4,6 +4,7 @@ import { SuperFxDecoder } from "../architectures/superfx-decoder.js";
 import { coverageRecord, effectiveAddressRecords, incompleteReasonRecords, superFxStateRecord, } from "./analysis-record-values.js";
 import { SUPERFX_ROM_ADDRESS_SPACE } from "./superfx-address-space.js";
 import { enterSuperFxAddress, initialSuperFxState, joinSuperFxStates, superFxDecodeState, superFxStateKey, transferSuperFxState, } from "./superfx-state.js";
+/** Classifications that must never be decoded as GSU instructions. */
 const DATA_CLASSIFICATIONS = new Set([
     "data8",
     "data16",
@@ -17,12 +18,17 @@ const DATA_CLASSIFICATIONS = new Set([
     "empty",
     "text",
 ]);
+/**
+ * Test whether an annotated interval covers a GSU address.
+ * @param entry Layout or data span from project annotations.
+ * @param address 24-bit GSU program counter.
+ */
 const contains = (entry, address) => entry.start <= address && address < entry.end;
 /**
  * Applies a SuperFX entry point state override to the initial state.
- * @param {SuperFxAbstractState} state Initial state.
- * @param {SuperFxEntryPoint["state"]} override Entry point state override.
- * @returns {SuperFxAbstractState} State with the override applied.
+ * @param state Initial state.
+ * @param override Entry point state override.
+ * @returns State with the override applied.
  */
 const applyEntryState = (state, override) => {
     if (!override) {
@@ -41,8 +47,8 @@ const applyEntryState = (state, override) => {
 };
 /**
  * Converts a decoded instruction into a set of control targets.
- * @param {DecodedInstruction} instruction Decoded instruction.
- * @returns {readonly StaticControlTarget[]} Control targets.
+ * @param instruction Decoded instruction.
+ * @returns Control targets.
  */
 const controlsFor = (instruction) => instruction.references
     .filter((entry) => entry.kind === "branch" || entry.kind === "call" || entry.kind === "jump")
@@ -51,8 +57,8 @@ const controlsFor = (instruction) => instruction.references
     : {})));
 /**
  * Converts a decoded instruction into a set of effective addresses.
- * @param {DecodedInstruction} instruction Decoded instruction.
- * @returns {readonly StaticEffectiveAddress[]} Effective addresses.
+ * @param instruction Decoded instruction.
+ * @returns Effective addresses.
  */
 const effectiveAddressesFor = (instruction) => instruction.references
     .filter((entry) => entry.kind === "data" || entry.kind === "pointer")
@@ -64,9 +70,9 @@ const effectiveAddressesFor = (instruction) => instruction.references
 }));
 /**
  * Converts a static analysis result into a set of analysis records.
- * @param {StaticAnalysisResult<SuperFxAbstractState>} result Static analysis result.
- * @param {string} runEvidence Evidence string.
- * @returns {readonly AnalysisRecord[]} Analysis records.
+ * @param result Static analysis result.
+ * @param runEvidence Evidence string.
+ * @returns Analysis records.
  */
 const recordsFor = (result, runEvidence) => [
     ...result.nodes.map((node) => ({
@@ -144,9 +150,9 @@ const recordsFor = (result, runEvidence) => [
 ];
 /**
  * Converts a static analysis result into a set of interval annotations.
- * @param {StaticAnalysisResult<SuperFxAbstractState>} result Static analysis result.
- * @param {string} evidence Evidence string.
- * @returns {readonly IntervalAnnotation[]} Interval annotations.
+ * @param result Static analysis result.
+ * @param evidence Evidence string.
+ * @returns Interval annotations.
  */
 const annotationsFor = (result, evidence) => result.nodes.flatMap((node) => {
     const address = node.address.toString(16).padStart(6, "0");
@@ -176,9 +182,9 @@ const annotationsFor = (result, evidence) => result.nodes.flatMap((node) => {
 });
 /**
  * Runs conservative control-flow analysis over one contiguous SuperFX program image.
- * @param {SuperFxRomImage} image Immutable GSU ROM image to analyze.
- * @param {SuperFxAnalysisOptions} options Entry points, annotations, and overrides.
- * @returns {SuperFxAnalysisResult} CFG, evidence, conflicts, and project records.
+ * @param image Immutable GSU ROM image to analyze.
+ * @param options Entry points, annotations, and overrides.
+ * @returns CFG, evidence, conflicts, and project records.
  */
 export const analyzeSuperFxRom = (image, options = {}) => {
     const decoder = new SuperFxDecoder();

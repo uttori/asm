@@ -1,8 +1,9 @@
 import { isOpenStructInitializer } from "./struct-initializer.js";
-/** A quote is escaped only by an odd run of preceding backslashes.
- * @param {string} text Source line.
- * @param {number} index Quote index.
- * @returns {boolean} Whether the quote is escaped.
+/**
+ * A quote is escaped only by an odd run of preceding backslashes.
+ * @param text Source line.
+ * @param index Quote index.
+ * @returns Whether the quote is escaped.
  */
 const isEscapedAt = (text, index) => {
     let slashes = 0;
@@ -43,9 +44,11 @@ export function isOpenStructuredCommand(text) {
 }
 /** One buffered statement owns delimiter/quote state; offsets remain in the untouched source buffer. */
 class StructuredContinuation {
+    /** Whether continuation tracks an asset call or struct/datastruct literal. */
     kind;
     /** Signed delimiter balance; malformed input is left for the normal parser's diagnostics. */
     depth = 0;
+    /** Active quote character while scanning nested structured text. */
     quote = "";
     previous = "";
     slashes = 0;
@@ -98,9 +101,9 @@ class StructuredContinuation {
 /**
  * Removes inline comments from a command line while preserving semicolons
  * inside double-quoted text.
- * @param {string} line The raw command line.
- * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
- * @returns {string} The comment-stripped command line.
+ * @param line The raw command line.
+ * @param [syntaxProfile] Active source syntax profile.
+ * @returns The comment-stripped command line.
  */
 export const removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
     let quote = "";
@@ -124,10 +127,10 @@ export const removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) =
 /**
  * Normalizes a multi-line command block by trimming lines, removing comments,
  * and carrying line-continuation state across calls.
- * @param {string} block Raw block text.
- * @param {string} [commandBuffer] Existing continuation buffer.
- * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
- * @returns {PreprocessBlockCommandsResult} Parsed commands and next buffer value.
+ * @param block Raw block text.
+ * @param [commandBuffer] Existing continuation buffer.
+ * @param [syntaxProfile] Active source syntax profile.
+ * @returns Parsed commands and next buffer value.
  */
 export const preprocessBlockCommands = (block, commandBuffer = "", syntaxProfile = ASAR_SYNTAX_PROFILE) => {
     const lines = block.split("\n");
@@ -233,8 +236,8 @@ export const preprocessBlockCommands = (block, commandBuffer = "", syntaxProfile
  * Splits a command on Asar's ` : ` statement separator, ignoring separators inside quotes.
  * `.split(/\s:\s/)` also splits inside `db "... : ..."` string operands (SMRPG
  * dialogue), turning the tail into a fake instruction such as `1.`.
- * @param {string} command A single command line.
- * @returns {string[]} Statement fragments.
+ * @param command A single command line.
+ * @returns Statement fragments.
  */
 const splitOnInlineStatementSeparator = (command) => {
     if (/^(?:datastruct\b|\[)/i.test(command.trimStart())) {
@@ -286,9 +289,9 @@ const splitOnInlineStatementSeparator = (command) => {
 };
 /**
  * Splits inline `:` command chains into individual commands.
- * @param {string[]} commands Command lines to split.
- * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
- * @returns {string[]} Flattened command list.
+ * @param commands Command lines to split.
+ * @param [syntaxProfile] Active source syntax profile.
+ * @returns Flattened command list.
  */
 export const splitInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
     const output = [];
@@ -314,9 +317,9 @@ export const splitInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFIL
 };
 /**
  * Splits sourced command lines, copying the original line onto every fragment.
- * @param {SourcedCommand[]} commands Sourced command lines to split.
- * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
- * @returns {SourcedCommand[]} Flattened sourced command list.
+ * @param commands Sourced command lines to split.
+ * @param [syntaxProfile] Active source syntax profile.
+ * @returns Flattened sourced command list.
  */
 export const splitSourcedInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
     const output = [];
@@ -329,8 +332,8 @@ export const splitSourcedInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX
 };
 /**
  * Splits a command string into words while preserving quoted segments.
- * @param {string} command The normalized command string.
- * @returns {string[]} Tokenized command words.
+ * @param command The normalized command string.
+ * @returns Tokenized command words.
  */
 export const splitCommandIntoWords = (command) => {
     // A call is one directive even when parentheses touch the keyword. Keep its
@@ -377,8 +380,8 @@ export const splitCommandIntoWords = (command) => {
 /**
  * Splits comma-separated values while respecting quoted text and parenthesized
  * function arguments.
- * @param {string} input Comma-delimited expression text.
- * @returns {string[]} Split values.
+ * @param input Comma-delimited expression text.
+ * @returns Split values.
  */
 export const splitRespectingFunctions = (input) => {
     const result = [];
@@ -419,8 +422,8 @@ export const splitRespectingFunctions = (input) => {
 };
 /**
  * Extracts the variable name from a define statement.
- * @param {string} line The line to extract the variable name from.
- * @returns {string | undefined} The variable name or `undefined` if the line is not a define statement.
+ * @param line The line to extract the variable name from.
+ * @returns The variable name or `undefined` if the line is not a define statement.
  */
 export const getDefineVariable = (line) => {
     const match = line.trim().match(/^!([A-Z_a-z]\w*)\s*=/);
@@ -428,8 +431,8 @@ export const getDefineVariable = (line) => {
 };
 /**
  * Checks whether a character can start a label identifier segment.
- * @param {string} char The single character to test.
- * @returns {boolean} `true` when the character can start an identifier.
+ * @param char The single character to test.
+ * @returns `true` when the character can start an identifier.
  */
 export function isLabelIdentifierStart(char) {
     const code = char.charCodeAt(0);
@@ -437,8 +440,8 @@ export function isLabelIdentifierStart(char) {
 }
 /**
  * Checks whether a character can appear after the first character of a label identifier segment.
- * @param {string} char The single character to test.
- * @returns {boolean} `true` when the character can continue an identifier.
+ * @param char The single character to test.
+ * @returns `true` when the character can continue an identifier.
  */
 export function isLabelIdentifierPart(char) {
     const code = char.charCodeAt(0);
@@ -453,8 +456,8 @@ export function isLabelIdentifierPart(char) {
  * optional numeric index segment, but rejects operators such as `-` or `+`.
  * Purely numeric tokens are also treated as lookup candidates to preserve
  * legacy label-resolution behavior for values like `1`.
- * @param {string} input The token to classify.
- * @returns {boolean} `true` when the token is a bare label-style reference.
+ * @param input The token to classify.
+ * @returns `true` when the token is a bare label-style reference.
  */
 export function isBareLabelReference(input) {
     if (!input) {

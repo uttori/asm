@@ -26,8 +26,11 @@ export type ResearchAnalysisChange = {
 });
 /** A proposal is inert until the editor or terminal applies its exact before-content check. */
 export interface ResearchAnalysisEdit {
+    /** Source-relative research document path that receives the edit. */
     readonly path: string;
+    /** SHA-256 of the document content the edit was prepared against. */
     readonly expectedSha256: string;
+    /** Complete replacement document to write when the content check passes. */
     readonly document: ResearchDocument;
 }
 /**

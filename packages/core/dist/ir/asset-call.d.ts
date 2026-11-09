@@ -25,19 +25,24 @@ export type AssetValueNode = {
 };
 /** One source statement with exactly two string operands and named options. */
 export interface ParsedAssetCall {
+    /** First positional argument: the asset file path as written, with syntax escapes decoded. */
     readonly path: Extract<AssetValueNode, {
         kind: "string";
     }>;
+    /** Second positional argument: the asset format identifier. */
     readonly format: Extract<AssetValueNode, {
         kind: "string";
     }>;
+    /** Named `key: value` options; keys are unique and empty when none are given. */
     readonly options: Readonly<Record<string, AssetValueNode>>;
+    /** Extent from `includeAsset` through the closing parenthesis, excluding any leading label. */
     readonly span: SourceSpan;
 }
-/** Parse only the `includeAsset(...)` form; leave all other commands alone.
- * @param {string} command Normalized source command.
- * @param {number} [line] Zero-based source line for argument spans.
- * @returns {ParsedAssetCall | undefined} Typed call with argument spans, if present.
+/**
+ * Parse only the `includeAsset(...)` form; leave all other commands alone.
+ * @param command Normalized source command.
+ * @param [line] Zero-based source line for argument spans.
+ * @returns Typed call with argument spans, if present.
  */
 export declare function parseAssetCall(command: string, line?: number): ParsedAssetCall | undefined;
 /** Transport validation mirrors the recursive asset grammar without interpreting string data. */

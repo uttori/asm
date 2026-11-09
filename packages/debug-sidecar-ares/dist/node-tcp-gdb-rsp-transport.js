@@ -25,8 +25,8 @@ export class NodeTcpGdbRspTransport {
     }
     /**
      * Opens a bounded connection to a numeric loopback address.
-     * @param {NodeTcpGdbRspTransportOptions} options Loopback endpoint and deadlines.
-     * @returns {Promise<NodeTcpGdbRspTransport>} Connected transport.
+     * @param options Loopback endpoint and deadlines.
+     * @returns Connected transport.
      */
     static async connect(options) {
         const host = options.host ?? "127.0.0.1";

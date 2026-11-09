@@ -26,13 +26,15 @@ const withEvidencePath = (record, path) => {
     evidencePaths.set(record, path);
     Object.defineProperty(record, "evidencePath", { enumerable: true, get: readEvidencePath });
     // Object.defineProperty installs this exact accessor, but its declaration returns only T.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     return record;
 };
+/** Formats a CPU address as a fixed-width lowercase hex string. */
 const hexAddress = (address) => address.toString(16).padStart(6, "0");
 /** Immutable call stacks are shared by many instructions and heap comparisons. Cache their views. */
 const callContexts = new WeakMap();
 const emptyCallContext = { key: "", sites: [] };
+/** Builds a cached string key and call-site list for a call stack. */
 const describeCallContext = (context) => {
     if (context.length === 0) {
         return emptyCallContext;
@@ -49,9 +51,10 @@ const describeCallContext = (context) => {
     }
     return value;
 };
+/** Returns the cached string identity for a call stack. */
 const contextKey = (context) => describeCallContext(context).key;
 const compactContextKeys = new WeakMap();
-/** Hash the complete, mapping-qualified context once, without changing work-queue priority. */
+/** Hashes the complete mapping-qualified call context for compact node ids. */
 const compactContextKey = (context) => {
     let key = compactContextKeys.get(context);
     if (key === undefined) {
@@ -60,14 +63,15 @@ const compactContextKey = (context) => {
     }
     return key;
 };
+/** Builds the legacy CFG node id from address and full call context. */
 const nodeIdFor = (address, context) => `cfg:${hexAddress(address)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
 /**
  * Semantic priority shared by the work heap and historical deterministic traversal.
  * Do not add insertion order here: the heap supplies it only as a final stability tie-breaker, so
  * addresses, call contexts, entry points, and predecessors retain their documented precedence.
- * @param {WorkItem<State>} left Left queued work item.
- * @param {WorkItem<State>} right Right queued work item.
- * @returns {number} Negative, zero, or positive semantic priority comparison.
+ * @param left Left queued work item.
+ * @param right Right queued work item.
+ * @returns Negative, zero, or positive semantic priority comparison.
  */
 const sortWork = (left, right) => left.address - right.address ||
     contextKey(left.context).localeCompare(contextKey(right.context)) ||
@@ -90,9 +94,11 @@ class StaticWorkQueue {
             this.push(item);
         }
     }
+    /** Number of work items currently queued for exploration. */
     get length() {
         return this.#values.length;
     }
+    /** Highest-priority work item without removing it from the queue. */
     peek() {
         return this.#values[0]?.item;
     }
@@ -100,6 +106,7 @@ class StaticWorkQueue {
     clear() {
         this.#values.length = 0;
     }
+    /** Inserts one work item while preserving deterministic heap ordering. */
     push(item) {
         const queued = { item, sequence: this.#nextSequence++ };
         this.#values.push(queued);
@@ -116,6 +123,7 @@ class StaticWorkQueue {
         }
         this.#values[index] = queued;
     }
+    /** Removes and returns the highest-priority work item. */
     shift() {
         const firstSlot = this.#values.length > 0 ? this.#values[0] : undefined;
         const last = this.#values.pop();
@@ -149,7 +157,9 @@ class StaticWorkQueue {
         return sortWork(left.item, right.item) || left.sequence - right.sequence;
     }
 }
+/** Builds a stable edge id from endpoints, kind, and optional override. */
 const edgeIdFor = (from, kind, toAddress, override) => `edge:${from}:${kind}:${toAddress === undefined ? "unresolved" : hexAddress(toAddress)}${override ? `:${override}` : ""}`;
+/** Maps non-instruction decode outcomes to published conflict categories. */
 const conflictKindFor = (decoded) => {
     if (decoded.kind === "ambiguous") {
         return "state-ambiguity";
@@ -159,6 +169,7 @@ const conflictKindFor = (decoded) => {
     }
     return decoded.reason.includes("map") ? "invalid-mapping" : "decode";
 };
+/** Maps instruction flow kinds to override target kinds for manual resolutions. */
 const overriddenTargetKind = (flow) => {
     if (flow === "call") {
         return "call";
@@ -175,10 +186,10 @@ const overriddenTargetKind = (flow) => {
  * Deterministic conservative worklist traversal. Architecture-specific decoding
  * and state transfer stay behind the adapter boundary. Duplicate target overrides
  * at the same address are rejected. Call context is truncated at `maxCallDepth`.
- * @param {StaticAnalysisAdapter<State>} adapter Architecture-specific decode and abstract-state operations.
- * @param {readonly StaticAnalysisSeed<State>[]} seeds Justified entry points with their initial states and evidence.
- * @param {StaticAnalysisLimits & { readonly targetOverrides?: readonly StaticTargetOverride[] }} [options] Work, context, and target-override configuration.
- * @returns {StaticAnalysisResult<State>} Accepted CFG plus conflicts, unresolved flow, coverage, and completion status.
+ * @param adapter Architecture-specific decode and abstract-state operations.
+ * @param seeds Justified entry points with their initial states and evidence.
+ * @param [options] Work, context, and target-override configuration.
+ * @returns Accepted CFG plus conflicts, unresolved flow, coverage, and completion status.
  */
 export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
     // Successors often consume no new provenance. Share their exact unions instead of retaining
@@ -500,11 +511,13 @@ export const analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
                     },
                 ];
                 if (nextContext.length > maxCallDepth) {
+                    // Keep exploring the callee with bounded history. Older return frames are lost,
+                    // so a drained worklist still reports incomplete caller/return precision.
                     addIncomplete({
                         kind: "call-context-limit",
                         address: instruction.address,
                         limit: maxCallDepth,
-                        message: `Call context at $${hexAddress(instruction.address)} exceeds depth ${maxCallDepth}.`,
+                        message: `Call context at $${hexAddress(instruction.address)} exceeds depth ${maxCallDepth}; exploration continues with older call history discarded.`,
                     });
                     scheduleTarget(target, maxCallDepth === 0 ? [] : nextContext.slice(-maxCallDepth));
                 }

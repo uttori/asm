@@ -7,6 +7,7 @@ export declare class AssetAssemblyService {
     readonly session: Assembler;
     /** A single asset stage may not allocate or emit more than this many bytes. */
     static readonly MAX_STAGE_BYTES: number;
+    /** Paths recorded as binary or resource dependencies during asset conversion. */
     readonly dependencies: Map<string, "binary" | "resource">;
     /** Descriptor of the most recent successful statement, consumed immediately by emission metadata. */
     lastEmission?: Readonly<{
@@ -20,18 +21,21 @@ export declare class AssetAssemblyService {
     constructor(session: Assembler);
     /** Drop all snapshots before the next build; disk changes then become visible. */
     beginBuild(): void;
-    /** Return the exact bytes consumed by this build for dependency fingerprints.
-     * @param {string} path Provider identity.
-     * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
+    /**
+     * Return the exact bytes consumed by this build for dependency fingerprints.
+     * @param path Provider identity.
+     * @returns Owned snapshot copy, when the path was read.
      */
     snapshot(path: string): Uint8Array | undefined;
-    /** Resolve input and declared resource paths for tooling without encoding bytes.
-     * @param {ParsedAssetCall} call Typed source directive.
+    /**
+     * Resolve input and declared resource paths for tooling without encoding bytes.
+     * @param call Typed source directive.
      */
     discoverDependencies(call: ParsedAssetCall): void;
-    /** Convert and select one complete byte stream before touching output state.
-     * @param {ParsedAssetCall} call Typed source directive.
-     * @returns {Uint8Array} Snapshot-owned bytes shared across assembly passes.
+    /**
+     * Convert and select one complete byte stream before touching output state.
+     * @param call Typed source directive.
+     * @returns Snapshot-owned bytes shared across assembly passes.
      */
     materialize(call: ParsedAssetCall): Uint8Array;
 }

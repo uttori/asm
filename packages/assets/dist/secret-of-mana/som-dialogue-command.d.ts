@@ -2,6 +2,7 @@
 export interface SomDialogueCommand {
     /** Distinguishes two-byte name substitutions from equally sized waits. */
     readonly family: "party-name" | "wait" | "text-window";
+    /** Exact native bytes emitted for this token width. */
     readonly bytes: Uint8Array;
 }
 /**
@@ -10,9 +11,10 @@ export interface SomDialogueCommand {
  * not milliseconds. Zero waits for fresh input from the talking actor's controller.
  * Unknown commands and selectors fail rather than becoming literal dialogue glyphs.
  */
-export declare function encodeSomDialogueCommand(token: string): SomDialogueCommand;
+export declare function encodeSomDialogueCommand(text: string): SomDialogueCommand;
 /** One reviewed native instruction/control span inside a raw segment; offsets are bytes. */
 export interface SomDialogueCommandSlot {
+    /** Byte offset within the raw segment's native payload. */
     readonly offset: number;
     /** Original token must compile exactly to the sidecar's native bytes at this offset. */
     readonly token: string;

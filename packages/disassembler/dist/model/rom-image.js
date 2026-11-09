@@ -1,10 +1,15 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
+/**
+ * Hash bytes for ROM identity.
+ * @param bytes Bytes to hash.
+ * @returns Lowercase hex SHA-256 digest.
+ */
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 /**
  * Infers a 0- or 512-byte copier header from file size (`size % 0x8000`).
- * @param {number} fileSize Complete file length in bytes.
- * @returns {CopierHeaderSize} `0` or `512`.
+ * @param fileSize Complete file length in bytes.
+ * @returns `0` or `512`.
  * @throws {Error} When `fileSize` is negative or not 32 KiB aligned with either header size.
  */
 export const detectCopierHeaderSize = (fileSize) => {
@@ -32,8 +37,9 @@ export class RomImage {
     #fileBytes;
     #contentBytes;
     /**
-     * @param {Uint8Array} bytes Complete file bytes. Copied immediately.
-     * @param {RomLoadOptions & { readonly sourcePath?: string }} [options] Header override and optional origin path.
+     * Copy file bytes and split off the copier and container headers.
+     * @param bytes Complete file bytes. Copied immediately.
+     * @param [options] Header override and optional origin path.
      */
     constructor(bytes, options = {}) {
         this.#fileBytes = Uint8Array.from(bytes);
@@ -60,23 +66,24 @@ export class RomImage {
     }
     /**
      * Reads a ROM from disk and records `sourcePath`.
-     * @param {string} file Path to the ROM file.
-     * @param {RomLoadOptions} [options] Optional explicit copier-header size.
-     * @returns {RomImage} Loaded image.
+     * @param file Path to the ROM file.
+     * @param [options] Optional explicit copier-header size.
+     * @returns Loaded image.
      */
     static load(file, options = {}) {
         return new RomImage(fs.readFileSync(file), { ...options, sourcePath: file });
     }
     /**
      * Headerless cartridge length in bytes.
-     * @returns {number} The headerless cartridge length in bytes.
+     * @returns The headerless cartridge length in bytes.
      */
     get length() {
         return this.#contentBytes.length;
     }
     /**
-     * @param {number} offset Headerless file offset.
-     * @returns {number | undefined} Byte value, or `undefined` when out of range.
+     * Read one content byte without throwing on invalid offsets.
+     * @param offset Headerless file offset.
+     * @returns Byte value, or `undefined` when out of range.
      */
     readByte(offset) {
         return Number.isInteger(offset) && offset >= 0 && offset < this.length
@@ -84,9 +91,10 @@ export class RomImage {
             : undefined;
     }
     /**
-     * @param {number} offset Headerless file offset.
-     * @param {number} length Number of bytes to copy.
-     * @returns {Uint8Array | undefined} A copy of the slice, or `undefined` when out of range.
+     * Copy a content range; partial ranges are rejected rather than truncated.
+     * @param offset Headerless file offset.
+     * @param length Number of bytes to copy.
+     * @returns A copy of the slice, or `undefined` when out of range.
      */
     read(offset, length) {
         if (!Number.isInteger(offset) ||
@@ -100,21 +108,21 @@ export class RomImage {
     }
     /**
      * Returns a defensive copy. Callers cannot mutate the loaded image.
-     * @returns {Uint8Array} The headerless ROM content.
+     * @returns The headerless ROM content.
      */
     bytes() {
         return this.#contentBytes.slice();
     }
     /**
      * Returns a defensive copy of the optional 512-byte copier header.
-     * @returns {Uint8Array} The copier header bytes.
+     * @returns The copier header bytes.
      */
     copierHeaderBytes() {
         return this.#fileBytes.slice(0, this.identity.headerSize);
     }
     /**
      * Returns a defensive copy of the complete file, including any copier header.
-     * @returns {Uint8Array} The complete file bytes.
+     * @returns The complete file bytes.
      */
     fileBytes() {
         return this.#fileBytes.slice();

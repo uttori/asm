@@ -15,8 +15,8 @@ export class OverlayFileProvider {
     readFiles = new Set();
     /**
      * Creates an overlay provider.
-     * @param {Map<string, string>} [overlay] Initial overlay contents keyed by absolute path.
-     * @param {AssemblyFileProvider} [base] Backing provider for disk reads.
+     * @param [overlay] Initial overlay contents keyed by absolute path.
+     * @param [base] Backing provider for disk reads.
      */
     constructor(overlay = new Map(), base = new NodeAssemblyFileProvider()) {
         this.overlay = overlay;
@@ -24,9 +24,9 @@ export class OverlayFileProvider {
     }
     /**
      * Resolves a filename to an absolute path, preferring overlay entries.
-     * @param {string} filename The filename or relative path to resolve.
-     * @param {AssemblyFileResolutionOptions} [options] Resolution context (current file, include paths).
-     * @returns {string | undefined} The resolved absolute path, or undefined when not found.
+     * @param filename The filename or relative path to resolve.
+     * @param [options] Resolution context (current file, include paths).
+     * @returns The resolved absolute path, or undefined when not found.
      */
     resolvePath(filename, options = {}) {
         if (!filename) {
@@ -52,8 +52,8 @@ export class OverlayFileProvider {
     }
     /**
      * Returns stat information, treating overlay entries as readable files.
-     * @param {string} filePath The absolute path to stat.
-     * @returns {AssemblyFileStat} The stat result.
+     * @param filePath The absolute path to stat.
+     * @returns The stat result.
      */
     stat(filePath) {
         const entry = this.overlay.get(filePath);
@@ -68,8 +68,8 @@ export class OverlayFileProvider {
     }
     /**
      * Reads a file as bytes, using overlay content when present.
-     * @param {string} filePath The absolute path to read.
-     * @returns {Uint8Array} The file bytes.
+     * @param filePath The absolute path to read.
+     * @returns The file bytes.
      */
     readFile(filePath) {
         this.readFiles.add(filePath);
@@ -81,9 +81,9 @@ export class OverlayFileProvider {
     }
     /**
      * Reads a file as text, using overlay content when present.
-     * @param {string} filePath The absolute path to read.
-     * @param {string} [encoding] The text encoding for disk reads.
-     * @returns {string} The file text.
+     * @param filePath The absolute path to read.
+     * @param [encoding] The text encoding for disk reads.
+     * @returns The file text.
      */
     readTextFile(filePath, encoding = "utf8") {
         this.readFiles.add(filePath);
@@ -96,9 +96,9 @@ export class OverlayFileProvider {
     /**
      * Builds the candidate absolute paths for a relative filename, mirroring the
      * Node provider's resolution order.
-     * @param {string} normalized The unquoted filename.
-     * @param {AssemblyFileResolutionOptions} options Resolution context.
-     * @returns {string[]} The candidate absolute paths to probe in the overlay.
+     * @param normalized The unquoted filename.
+     * @param options Resolution context.
+     * @returns The candidate absolute paths to probe in the overlay.
      */
     candidatePaths(normalized, options) {
         if (path.isAbsolute(normalized)) {

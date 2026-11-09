@@ -5,8 +5,14 @@ import { assertSourcePath, sourceContentHash } from "@uttori/asm-disassembler/so
 import { inspectSnesSource, } from "../source-build.js";
 import { expandedPristineRom, expansionHeaderOffset } from "./expansion.js";
 import { planSnesRelocation, } from "./relocate.js";
+/** Format ROM offsets in relocation error messages. */
 const hex = (value) => `$${value.toString(16).toUpperCase()}`;
-/** Match a unique explicit global source boundary, including a typed table's opening directive. */
+/**
+ * Match a unique explicit global source boundary, including a typed table's opening directive.
+ * @param lines UTF-8 source lines for one file.
+ * @param symbol Global label or table name to locate.
+ * @param table When true, also accept a `dataStructs` opener.
+ */
 function boundary(lines, symbol, table = false) {
     if (!/^[A-Z_a-z][\w.]*$/.test(symbol)) {
         throw new Error(`Unsupported source boundary: ${symbol}`);
@@ -20,7 +26,10 @@ function boundary(lines, symbol, table = false) {
     }
     return matches[0];
 }
-/** Split only UTF-8 source; preserve the original newline convention when producing reviewable edits. */
+/**
+ * Split only UTF-8 source; preserve the original newline convention when producing reviewable edits.
+ * @param bytes Exact on-disk file bytes, including an optional BOM.
+ */
 function sourceLines(bytes) {
     // Preserve a BOM as source content so compare-and-swap hashes still describe the original bytes.
     const text = new TextDecoder("utf8", { fatal: true, ignoreBOM: true }).decode(bytes);

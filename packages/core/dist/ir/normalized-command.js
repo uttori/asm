@@ -9,13 +9,13 @@ const EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
 const EMPTY_TOKEN_SPANS = Object.freeze([]);
 /**
  * Creates immutable provenance metadata for a normalized command.
- * @param {string} raw The original source line.
- * @param {string} normalized The normalized line after pre-dispatch cleanup.
- * @param {string[]} words The tokenized command words.
- * @param {string} file The current source file.
- * @param {number} line The current source line number.
- * @param {boolean} [collectSourceMetadata] Whether to derive precise source spans.
- * @returns {CommandProvenance} The command provenance.
+ * @param raw The original source line.
+ * @param normalized The normalized line after pre-dispatch cleanup.
+ * @param words The tokenized command words.
+ * @param file The current source file.
+ * @param line The current source line number.
+ * @param [collectSourceMetadata] Whether to derive precise source spans.
+ * @returns The command provenance.
  */
 export function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
     if (!collectSourceMetadata) {
@@ -41,13 +41,13 @@ export function createCommandProvenance(raw, normalized, words, file, line, coll
 }
 /**
  * Builds the normalized command node used by the command pipeline.
- * @param {string} raw The original source line.
- * @param {string} normalized The normalized line after pre-dispatch cleanup.
- * @param {string[]} words The tokenized command words.
- * @param {string} file The current source file.
- * @param {number} line The current source line number.
- * @param {boolean} [collectSourceMetadata] Whether to derive precise source spans.
- * @returns {NormalizedCommand} The normalized command node.
+ * @param raw The original source line.
+ * @param normalized The normalized line after pre-dispatch cleanup.
+ * @param words The tokenized command words.
+ * @param file The current source file.
+ * @param line The current source line number.
+ * @param [collectSourceMetadata] Whether to derive precise source spans.
+ * @returns The normalized command node.
  */
 export function createNormalizedCommand(raw, normalized, words, file, line, collectSourceMetadata = true) {
     const command = normalized.trim();
@@ -66,8 +66,8 @@ export function createNormalizedCommand(raw, normalized, words, file, line, coll
 /**
  * Creates an isolated execution copy so runtime preprocessing can mutate command
  * state without changing cached front-end program nodes.
- * @param {NormalizedCommand} command The command to clone.
- * @returns {NormalizedCommand} The detached execution command.
+ * @param command The command to clone.
+ * @returns The detached execution command.
  */
 export function cloneNormalizedCommand(command) {
     incrementInternalCounter("normalizedCommandClones");
@@ -75,10 +75,10 @@ export function cloneNormalizedCommand(command) {
 }
 /**
  * Replaces a command node's tokenized words and derived fields.
- * @param {NormalizedCommand} command The command node to update.
- * @param {string[]} words The updated token list.
- * @param {string} [normalized] Optional normalized command text.
- * @returns {NormalizedCommand} The same command node for chaining.
+ * @param command The command node to update.
+ * @param words The updated token list.
+ * @param [normalized] Optional normalized command text.
+ * @returns The same command node for chaining.
  */
 export function setCommandWords(command, words, normalized) {
     delete command.syntax;
@@ -110,9 +110,9 @@ export function setCommandWords(command, words, normalized) {
 }
 /**
  * Reclassifies a normalized command without changing any other fields.
- * @param {NormalizedCommand} command The command node to update.
- * @param {CommandKind} kind The new command kind.
- * @returns {NormalizedCommand} The same command node for chaining.
+ * @param command The command node to update.
+ * @param kind The new command kind.
+ * @returns The same command node for chaining.
  */
 export function setCommandKind(command, kind) {
     command.kind = kind;
@@ -120,9 +120,9 @@ export function setCommandKind(command, kind) {
 }
 /**
  * Applies lightweight heuristics to classify a normalized command.
- * @param {string} command The normalized command text.
- * @param {string[]} words The tokenized command words.
- * @returns {CommandKind} The inferred command kind.
+ * @param command The normalized command text.
+ * @param words The tokenized command words.
+ * @returns The inferred command kind.
  */
 export function classifyCommand(command, words) {
     const trimmed = command.trim();
@@ -173,8 +173,8 @@ export function classifyCommand(command, words) {
 }
 /**
  * Extracts a label name from a potential label token.
- * @param {string} keyword The candidate label token.
- * @returns {string | undefined} The label name when present.
+ * @param keyword The candidate label token.
+ * @returns The label name when present.
  */
 function deriveLabelName(keyword) {
     if (!keyword) {
@@ -193,8 +193,8 @@ function deriveLabelName(keyword) {
 }
 /**
  * Extracts a static assignment target from a simple `name = value` command.
- * @param {string[]} words The tokenized command words.
- * @returns {string | undefined} The assignment target when present.
+ * @param words The tokenized command words.
+ * @returns The assignment target when present.
  */
 function deriveAssignmentTarget(words) {
     if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
@@ -204,11 +204,11 @@ function deriveAssignmentTarget(words) {
 }
 /**
  * Derives semantic payloads from a normalized command's stable syntax.
- * @param {string} command The normalized command text.
- * @param {string[]} words The tokenized command words.
- * @param {number} [line] Source line for argument spans.
- * @param {string} [raw] Original source line for same-line label offsets.
- * @returns {CommandSemantics} Parsed semantic payloads keyed by construct type.
+ * @param command The normalized command text.
+ * @param words The tokenized command words.
+ * @param [line] Source line for argument spans.
+ * @param [raw] Original source line for same-line label offsets.
+ * @returns Parsed semantic payloads keyed by construct type.
  */
 function deriveCommandSemantics(command, words, line, raw = command) {
     const keyword = (words[0] ?? "").toLowerCase();
@@ -322,8 +322,8 @@ function deriveCommandSemantics(command, words, line, raw = command) {
 }
 /**
  * Extracts an include/incbin path, stripping quotes and an optional `:range` suffix.
- * @param {string} raw The raw filename operand.
- * @returns {string} The path token.
+ * @param raw The raw filename operand.
+ * @returns The path token.
  */
 function extractIncludePath(raw) {
     const trimmed = raw.trim();
@@ -340,8 +340,8 @@ function extractIncludePath(raw) {
 }
 /**
  * Extracts the label split from a command.
- * @param {string} command The command to extract the label split from.
- * @returns {ParsedLabelSplit | undefined} The label split when present.
+ * @param command The command to extract the label split from.
+ * @returns The label split when present.
  */
 function extractLabelSplit(command) {
     const trimmed = command.trim();
@@ -358,8 +358,8 @@ function extractLabelSplit(command) {
 /**
  * Splits comma-separated arguments into an array of strings.
  * Handles quoted strings and nested parentheses.
- * @param {string} input The input string to split.
- * @returns {string[]} An array of split values.
+ * @param input The input string to split.
+ * @returns An array of split values.
  */
 function splitCommaArguments(input) {
     const values = [];

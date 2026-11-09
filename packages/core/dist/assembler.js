@@ -64,9 +64,11 @@ export class Assembler {
     /** A synchronous assignment borrows the existing scope writer while replacing only its numeric binding. */
     moduleAssignmentValue;
     /** Stable symbol-scope identity, independent of include basenames or final placement. */
+    /** Stable module id when section-relative assembly is enabled. */
     get moduleIdentity() {
         return this.moduleAssembly?.id;
     }
+    /** Active section name when writing relocatable module bytes. */
     get moduleSection() {
         return this.moduleAssembly?.position().section;
     }
@@ -78,35 +80,53 @@ export class Assembler {
     currentTargetStartAddress = 0;
     /** The current target base start address. `realstartpos` */
     currentTargetBaseStartAddress = 0;
+    /** Total bytes emitted in the active stage cursor. */
     bytes = 0;
+    /** Saved base addresses for nested `pushbase`/`pullbase` pairs. */
     pushBaseStack = [];
     outputBuffer = new AssemblyOutputBuffer();
     /**
      * Mutable output; large contiguous session-owned images may use typed views. Reacquire a view after
      * growing writes; assigned arrays retain their growth behavior and assigned typed arrays stay fixed.
      */
+    /** Live output buffer view; reacquire after growth when using typed arrays. */
     get outputBytes() {
         return this.outputBuffer.bytes;
     }
+    /** Replaces the entire output buffer backing store. */
     set outputBytes(value) {
         this.outputBuffer.replace(value);
     }
     /** Byte used when expanding a sparse output range. */
     outputFillByte = 0;
+    /** Stack of active `while` and typed `for` loop frames. */
     whileStatus = [];
+    /** Saved namespace prefixes for nested namespace directives. */
     namespaceStack = [];
+    /** Active namespace prefix applied to newly defined symbols. */
     currentNamespace = "";
+    /** Whether dotted namespace segments accumulate on a nesting path. */
     namespaceNestingEnabled = false;
+    /** Path segments accumulated when namespace nesting is enabled. */
     namespaceNestingPath = [];
     // Current macro tracking
+    /** Name of the macro currently being expanded, if any. */
     currentMacroName = "";
+    /** Variadic argument count for the active macro expansion. */
     currentVariadicCount = undefined;
+    /** Captured variadic argument strings for the active macro expansion. */
     currentVariadicArgs = [];
+    /** Macro definitions registered during this session. */
     macros = new Map();
+    /** Shared numeric expression evaluator for directives and operands. */
     mathCore;
+    /** Operand parser and evaluator bound to this session's symbol state. */
     operandResolver;
+    /** Byte-to-source metadata collected when {@link collectSourceMetadata} is enabled. */
     addressToLineMapping = new AddressToLineMapping();
+    /** Path of the source file currently being executed. */
     currentFile = "";
+    /** Zero-based line index within {@link currentFile}. */
     currentLine = 0;
     /** Invocation-local provenance. Buffered nodes snapshot it before this scope ends. */
     currentSourceOrigin;
@@ -114,16 +134,24 @@ export class Assembler {
     traceListener = null;
     /** Active command contexts so nested byte writes inherit the right source line. */
     traceCommandStack = [];
+    /** Textual define bindings established by define directives. */
     defines = new Map();
     /** Bare numeric values exposed only while executing typed `for` loops. */
     activeLoopVariables = new Map();
     // Character mapping support
+    /** Character-to-byte mappings for the active text table. */
     characterMappings = new Map();
+    /** Name of the character table currently selected. */
     currentTable = null;
+    /** Saved character mapping tables for nested table directives. */
     tableStack = [];
+    /** Canonical architecture id selected for encoding. */
     arch = "";
+    /** Saved program counters for nested `pushpc`/`pullpc` pairs. */
     pushpcStack = [];
+    /** Nesting depth counter paired with {@link pushpcStack}. */
     pushpcnum = 0;
+    /** Primary label value table for the active stage. */
     labelTable = new Map();
     /** ca65 `.export` / `.import` names that stay session-global. */
     globalSymbols = new Set();
@@ -131,55 +159,93 @@ export class Assembler {
     forwardLabels = {};
     /** Track multiple `-` labels */
     backwardLabels = {};
+    /** Repeat unit size for pad directives in bytes. */
     padUnit = 1;
+    /** Fill pattern bytes cycled during pad emission. */
     padbyte = [];
+    /** Struct definitions registered during this session. */
     structs = new Map();
+    /** Struct currently being defined, if any. */
     currentStruct = null;
+    /** Saved PCs while defining struct layouts in place. */
     savedPCStack = [];
     /** Initialize fill pattern */
     fillbyte = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    /** Optional base ROM image copied at session construction. */
     baseImage;
     // Add a static property to hold our CRC table.
+    /** Lazily initialized CRC table shared by include fingerprinting. */
     static crcTable = null;
+    /** Metadata for files already included in this session. */
     includedFiles = new Map();
+    /** Stack of include paths for nested include directives. */
     includeStack = [];
+    /** Search paths consulted when resolving include targets. */
     includePaths = ["./"];
+    /** Monotonic id distinguishing anonymous labels across macro expansions. */
     macroLabelInstance = 0; // Tracks the current macro instance
+    /** Whether execution is inside a macro expansion body. */
     inMacroExpansion = false; // Flag to track if we're inside a macro expansion
+    /** Most recently defined parent label for local label resolution. */
     currentParentLabel = ""; // Track the most recent parent label
+    /** Whether {@link currentParentLabel} was declared as global. */
     currentParentIsGlobal = false; // Track if the parent label is global
+    /** Active top-level parent used to resolve single-dot local labels. */
     currentGlobalParentLabel = ""; // Track the active top-level parent for single-dot labels
+    /** Explicit parent links for labels that do not encode ancestry in their names. */
     labelParents = new Map(); // Track explicit label ancestry without relying on underscores
+    /** When true, label reads must resolve to defined values immediately. */
     requireStaticLabelLookup = false;
     /** Session syntax values indexed by opaque builder identities, with source keys owned by the builder. */
     passProgramCache = new Map();
+    /** Directive handlers registered for this session's target and plugins. */
     directiveRegistry;
+    /** Architecture encoder registry bound to the active target. */
     architectureRegistry;
+    /** Frozen plugin environment shared across sessions. */
     environment;
+    /** Resolved target contribution id for this session. */
     targetId;
+    /** Validated target options frozen at construction. */
     targetOptions;
+    /** Active syntax profile controlling label and directive normalization. */
     syntaxProfile;
+    /** Core directive groups exposed to plugins for this session. */
     coreDirectiveGroups;
+    /** Mutable plugin-owned session state store. */
     pluginState;
+    /** Target address-space policy used for writes and label widths. */
     pluginAddressSpace;
+    /** Target output format policy for container sizing and checksum rules. */
     pluginOutputFormat;
     activeLifecycles;
+    /** Facade exposing cursor write helpers to directives. */
     cursorAddress;
+    /** Synchronous file provider used for includes and expression file reads. */
     fileProvider;
     /** Binary/resource dependencies and converted bytes owned by the active build. */
     assetAssembly = new AssetAssemblyService(this);
     /** Tooling-only path discovery avoids conversion on edit bursts. */
+    /** When true, asset includes record edges without converting bytes. */
     deferAssetConversion = false;
     /** Once an active asset is skipped, subsequent layout values cannot validate assertions in this pass. */
     #hasDeferredAssetLayout = false;
+    /** Front-end parser and command factory for this session. */
     frontEndService;
+    /** Incremental program model builder backing editor tooling. */
     programModelBuilder;
+    /** Lowers normalized commands into executable runtime nodes. */
     commandLoweringService;
+    /** Mutable parse state reused across incremental program builds. */
     incrementalProgramParseState;
     services;
+    /** Cached mutable snapshots for each executed assembly stage. */
     stageExecutionStates = new Map();
+    /** Diagnostics accumulated during the current or most recent build. */
     diagnostics = [];
+    /** Symbol definitions recorded for tooling and cross-reference analysis. */
     symbolDefinitions = [];
+    /** Symbol references recorded for tooling and cross-reference analysis. */
     symbolReferences = [];
     /** Deduplication index for {@link symbolDefinitions} — O(1) vs. the former O(n) `.some()` scan. */
     #symbolDefinitionKeys = new Set();
@@ -192,7 +258,9 @@ export class Assembler {
     referenceEpoch = 0;
     /** Deduplication index for {@link includeEdges} — O(1) vs. O(n) `.some()` scan. */
     #includeEdgeKeys = new Set();
+    /** Include graph edges recorded for tooling analysis. */
     includeEdges = [];
+    /** Whether byte-to-source metadata is collected during emission. */
     collectSourceMetadata;
     /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
     followIncludes = true;
@@ -215,40 +283,52 @@ export class Assembler {
             this.#pluginBorrowDepth--;
         }
     }
+    /** Define directive engine for this session. */
     get defineEngine() {
         return this.services.defineEngine;
     }
+    /** Runtime dispatcher for structural directives. */
     get directiveRuntime() {
         return this.services.directiveRuntime;
     }
+    /** Active logical address width in bytes from the target address space. */
     get addressWidth() {
         return this.pluginAddressSpace.addressWidth;
     }
+    /** Architecture ids available on the active target. */
     get availableArchitectures() {
         return new Set(this.environment.getTarget(this.targetId)?.architectures ?? []);
     }
+    /** Human-readable target name for diagnostics. */
     get targetDisplayName() {
         return this.environment.getTarget(this.targetId)?.displayName ?? this.targetId;
     }
+    /** Shared front-end command parsing service. */
     get frontEndCommandService() {
         return this.services.frontEndCommandService;
     }
+    /** Include and incsrc handling service. */
     get includeSource() {
         return this.services.includeSource;
     }
+    /** Macro definition and expansion engine. */
     get macroEngine() {
         return this.services.macroEngine;
     }
+    /** Label and symbol scope service. */
     get symbolScope() {
         return this.services.symbolScope;
     }
+    /** Byte-oriented output writer bound to the session buffer. */
     get outputWriter() {
         return this.services.outputWriter;
     }
+    /** Struct definition and initializer engine. */
     get structEngine() {
         return this.services.structEngine;
     }
     // Core assembler wrapper helpers
+    /** Alias for {@link currentTargetAddress} used by legacy directive helpers. */
     get currentAddress() {
         return this.currentTargetAddress;
     }
@@ -296,7 +376,7 @@ export class Assembler {
     }
     /**
      * Sets write position.
-     * @param {number} address The address.
+     * @param address The address.
      */
     setWritePosition(address) {
         this.currentTargetAddress = address;
@@ -312,7 +392,7 @@ export class Assembler {
     }
     /**
      * Enters struct definition.
-     * @param {number} base The base.
+     * @param base The base.
      */
     enterStructDefinition(base) {
         this.savedPCStack.push(this.currentTargetAddress);
@@ -339,36 +419,41 @@ export class Assembler {
     }
     /**
      * Increments bytes written.
-     * @param {number} num The num.
+     * @param num The num.
      */
     incrementBytesWritten(num) {
         this.bytes += num;
     }
+    /** Whether the active stage sizes instructions without emitting bytes. */
     get mode() {
         return this.getActiveStageCapabilities().instructionMode;
     }
+    /** Whether byte writes are permitted in the active stage. */
     get canEmitBytes() {
         return this.getActiveStageCapabilities().canEmitBytes;
     }
+    /** Whether the active stage may finalize output and enforce completion checks. */
     get canFinalize() {
         return this.getActiveStageCapabilities().canFinalize;
     }
+    /** Whether unresolved labels are errors in the active stage. */
     get enforceResolvedLabels() {
         return this.getActiveStageCapabilities().enforceResolvedLabels;
     }
+    /** Whether the active stage collects definitions without emitting program bytes. */
     get isDefinitionCollectionStage() {
         return this.getActiveStageCapabilities().isDefinitionCollectionStage;
     }
     /**
      * Reports whether structured tracing is active for this assembly session.
-     * @returns {boolean} Whether a trace listener is installed.
+     * @returns Whether a trace listener is installed.
      */
     get isTracing() {
         return this.traceListener !== null;
     }
     /**
      * Traces write.
-     * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
+     * @param event The event.
      */
     traceWrite(event) {
         // Byte writes happen below the command dispatcher, so recover the
@@ -387,7 +472,7 @@ export class Assembler {
     }
     /**
      * Installs or clears the structured trace listener.
-     * @param {AssemblerTraceListener | null} listener The listener to receive trace events.
+     * @param listener The listener to receive trace events.
      */
     setTraceListener(listener) {
         this.traceListener = listener;
@@ -408,8 +493,8 @@ export class Assembler {
     /**
      * Records a directed include-graph edge if it has not already been recorded.
      * Includes execute once per pass, so edges are de-duplicated by file pair.
-     * @param {string} fromFile The file issuing the include directive.
-     * @param {string} toFile The resolved path of the included file.
+     * @param fromFile The file issuing the include directive.
+     * @param toFile The resolved path of the included file.
      */
     recordIncludeEdge(fromFile, toFile) {
         if (!this.collectSourceMetadata) {
@@ -427,18 +512,18 @@ export class Assembler {
     }
     /**
      * Returns the current source location.
-     * @param {SourceSpan} [span] Optional source span override.
-     * @returns {AssemblySourceLocation} The current source location.
+     * @param [span] Optional source span override.
+     * @returns The current source location.
      */
     getCurrentSourceLocation(span) {
         return createAssemblySourceLocation(this.currentFile, this.currentLine, span, this.currentSourceOrigin);
     }
     /**
      * Converts and records an unknown error.
-     * @param {unknown} error The error to normalize.
-     * @param {SourceSpan} [span] Optional source span override.
-     * @param {string} [stage] Optional stage name.
-     * @returns {AssemblyDiagnostic} The recorded diagnostic.
+     * @param error The error to normalize.
+     * @param [span] Optional source span override.
+     * @param [stage] Optional stage name.
+     * @returns The recorded diagnostic.
      */
     reportErrorDiagnostic(error, span, stage) {
         const diagnostic = diagnosticFromError(error, this.getCurrentSourceLocation(span), stage);
@@ -447,14 +532,14 @@ export class Assembler {
     }
     /**
      * Records a symbol definition if it has not already been recorded.
-     * @param {AssemblySymbolKind} kind The symbol kind.
-     * @param {string} name The symbol name.
-     * @param {{ file?: string; line?: number; span?: SourceSpan; value?: number | string; containerName?: string }} [options] Optional symbol metadata.
-     * @param {string} [options.file] Optional source file override.
-     * @param {number} [options.line] Optional source line override.
-     * @param {SourceSpan} [options.span] Optional precise source span.
-     * @param {number | string} [options.value] Optional resolved symbol value.
-     * @param {string} [options.containerName] Optional owning container name.
+     * @param kind The symbol kind.
+     * @param name The symbol name.
+     * @param [options] Optional symbol metadata.
+     * @param [options.file] Optional source file override.
+     * @param [options.line] Optional source line override.
+     * @param [options.span] Optional precise source span.
+     * @param [options.value] Optional resolved symbol value.
+     * @param [options.containerName] Optional owning container name.
      */
     recordSymbolDefinition(kind, name, options = {}) {
         if (!this.collectSourceMetadata) {
@@ -493,13 +578,13 @@ export class Assembler {
     }
     /**
      * Records a symbol reference if it has not already been recorded.
-     * @param {AssemblySymbolReferenceKind} kind The reference kind.
-     * @param {string} name The reference name.
-     * @param {{ file?: string; line?: number; span?: SourceSpan; containerName?: string }} [options] Optional reference metadata.
-     * @param {string} [options.file] Optional source file override.
-     * @param {number} [options.line] Optional source line override.
-     * @param {SourceSpan} [options.span] Optional precise source span.
-     * @param {string} [options.containerName] Optional owning container name.
+     * @param kind The reference kind.
+     * @param name The reference name.
+     * @param [options] Optional reference metadata.
+     * @param [options.file] Optional source file override.
+     * @param [options.line] Optional source line override.
+     * @param [options.span] Optional precise source span.
+     * @param [options.containerName] Optional owning container name.
      */
     recordSymbolReference(kind, name, options = {}) {
         if (!this.collectSourceMetadata) {
@@ -552,8 +637,8 @@ export class Assembler {
     }
     /**
      * Collects expression references.
-     * @param {ExpressionNode | undefined} expression The expression.
-     * @param {SourceSpan} [fallbackSpan] The fallback span.
+     * @param expression The expression.
+     * @param [fallbackSpan] The fallback span.
      */
     collectExpressionReferences(expression, fallbackSpan) {
         if (!expression) {
@@ -594,8 +679,8 @@ export class Assembler {
     /**
      * Records one reference per struct-path segment so `obj.timer` can target
      * the struct root and the field independently.
-     * @param {ReferenceExpressionNode} expression The struct-rooted reference.
-     * @param {SourceSpan} [fallbackSpan] The fallback span.
+     * @param expression The struct-rooted reference.
+     * @param [fallbackSpan] The fallback span.
      */
     collectStructReferenceSegments(expression, fallbackSpan) {
         switch (expression.type) {
@@ -628,8 +713,8 @@ export class Assembler {
      * Strips `[...]` so `obj[19].ext.index` yields `ext` for `index`.
      * Define roots (`!obj_arthur.flags2`) resolve through the define value
      * (`obj_start+obj[0]`) to the actual struct name.
-     * @param {ReferenceExpressionNode} object The object of a member access.
-     * @returns {string | undefined} The container name.
+     * @param object The object of a member access.
+     * @returns The container name.
      */
     structSegmentContainerName(object) {
         switch (object.type) {
@@ -648,9 +733,9 @@ export class Assembler {
     }
     /**
      * Finds a known struct name in a define's expansion, walking nested defines.
-     * @param {string | undefined} name The define name.
-     * @param {Set<string>} [seen] Define names already visited.
-     * @returns {string | undefined} The struct name, if any.
+     * @param name The define name.
+     * @param [seen] Define names already visited.
+     * @returns The struct name, if any.
      */
     structNameFromDefine(name, seen = new Set()) {
         if (!name || seen.has(name)) {
@@ -666,9 +751,9 @@ export class Assembler {
     /**
      * Walks an expression right-to-left looking for a known struct identifier.
      * `obj_start+obj[0]` yields `obj`.
-     * @param {ExpressionNode} node The expression to search.
-     * @param {Set<string>} seen Define names already visited.
-     * @returns {string | undefined} The struct name, if any.
+     * @param node The expression to search.
+     * @param seen Define names already visited.
+     * @returns The struct name, if any.
      */
     structNameFromExpression(node, seen) {
         switch (node.type) {
@@ -704,8 +789,8 @@ export class Assembler {
     /**
      * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
      * segments so each part can be targeted independently.
-     * @param {string} name The identifier text.
-     * @returns {{ name: string; containerName?: string }[] | undefined} Segments, if this is a known sublabel.
+     * @param name The identifier text.
+     * @returns Segments, if this is a known sublabel.
      */
     hierarchicalLabelReferences(name) {
         if (!name.includes("_") || !this.labelTable.has(name)) {
@@ -735,7 +820,7 @@ export class Assembler {
     }
     /**
      * Collects command references.
-     * @param {NormalizedCommand} command The command.
+     * @param command The command.
      */
     collectCommandReferences(command) {
         incrementInternalCounter("referenceCollections");
@@ -849,12 +934,12 @@ export class Assembler {
     }
     /**
      * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
-     * @param {ProgramModel} program The program model to analyze.
-     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-     * @param {boolean} [options.followIncludes] Whether to follow includes.
-     * @param {Array<AssemblyStageName>} [options.stages] Optional stages to run.
-     * @param {boolean} [options.collectSourceMetadata] Whether to collect source metadata.
-     * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
+     * @param program The program model to analyze.
+     * @param [options] Optional analysis options.
+     * @param [options.followIncludes] Whether to follow includes.
+     * @param [options.stages] Optional stages to run.
+     * @param [options.collectSourceMetadata] Whether to collect source metadata.
+     * @returns The accumulated diagnostics and symbols.
      */
     collectProgramAnalysis(program, options = {}) {
         this.clearAnalysisArtifacts();
@@ -887,7 +972,7 @@ export class Assembler {
      * Creates an isolated assembler session suitable for editor-style analysis.
      * This keeps batch assembly state and tooling state from leaking into each
      * other while still sharing the same file provider and directive registry.
-     * @returns {Assembler} A configured analysis session.
+     * @returns A configured analysis session.
      */
     createToolingSession() {
         const session = measureInternalPhase("sessionConstruct", () => new Assembler({
@@ -912,8 +997,8 @@ export class Assembler {
     }
     /**
      * Creates directive handlers bound to a fresh session's family capabilities.
-     * @param {Assembler} session The session that should receive directive calls.
-     * @returns {DirectiveRegistry} A registry bound to the provided session.
+     * @param session The session that should receive directive calls.
+     * @returns A registry bound to the provided session.
      */
     cloneDirectiveRegistryForSession(session) {
         const operandResolver = session.operandResolver;
@@ -1067,6 +1152,10 @@ export class Assembler {
         }
         return registry;
     }
+    /**
+     * Runs tooling analysis on an already-built program in an isolated session.
+     * @param program Parsed program model to analyze.
+     */
     analyzeProgram(program) {
         const session = this.createToolingSession();
         try {
@@ -1078,11 +1167,11 @@ export class Assembler {
     }
     /**
      * Builds and analyzes raw source without throwing on the first error.
-     * @param {string} source The source to analyze.
-     * @param {string} [sourceFile] Optional source file override.
-     * @param {number} [startLine] Optional starting line number.
-     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-     * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
+     * @param source The source to analyze.
+     * @param [sourceFile] Optional source file override.
+     * @param [startLine] Optional starting line number.
+     * @param [options] Optional analysis options.
+     * @returns The analysis result and program model.
      */
     analyzeSource(source, sourceFile = this.currentFile, startLine = 0, options = {}) {
         const session = this.createToolingSession();
@@ -1100,6 +1189,11 @@ export class Assembler {
             session.dispose();
         }
     }
+    /**
+     * Analyzes multiple source documents sequentially in fresh tooling sessions.
+     * @param documents Source buffers with paths and optional start lines.
+     * @param options Analysis options applied to each document.
+     */
     analyzeWorkspace(documents, options = {}) {
         const results = [];
         for (const document of documents) {
@@ -1366,6 +1460,7 @@ export class Assembler {
                     options: this.targetOptions,
                     state: this.pluginState,
                 });
+                // oxlint-disable-next-line typescript/no-unnecessary-condition -- Plugin factories are untrusted runtime code; a missing encoder must fail as a contribution error.
                 if (!typed || typeof typed.estimate !== "function" || typeof typed.encode !== "function") {
                     throw new Error("Typed encoder must provide estimate and encode operations.");
                 }
@@ -1639,6 +1734,11 @@ export class Assembler {
         }
         this.moduleAssembly.recordRange(this.moduleSource(), "reservation", count, start);
     }
+    /**
+     * Aligns the module write cursor within the active section.
+     * @param boundary Byte alignment boundary.
+     * @param fill Fill byte used for padding when emitting.
+     */
     alignModule(boundary, fill = 0) {
         if (!this.moduleAssembly) {
             throw new Error("Module alignment requires section-relative assembly.");
@@ -1665,6 +1765,7 @@ export class Assembler {
             this.outputWriter.writeValue(this.operandResolver.getnum(expression), width, endianness);
         }
     }
+    /** Records one emitted module byte against the current range kind, including asset tails. */
     recordModuleWrite() {
         let kind = this.moduleRangeKind;
         if (this.moduleAssetRemaining > 0) {
@@ -1705,15 +1806,15 @@ export class Assembler {
         }
         this.directiveRegistry.registerImmutableTyped("section", ({ text }) => {
             const entries = parseDataList(text.replace(/^\S+\s*/, ""));
-            const nameNode = entries[0]?.expression;
-            const kindNode = entries[1]?.expression;
+            const nameNode = entries.at(0)?.expression;
+            const kindNode = entries.at(1)?.expression;
             if (entries.length > 3) {
                 throw new Error("SECTION accepts name, kind, and alignment.");
             }
             return {
                 name: sectionName(nameNode),
                 kind: kindNode ? sectionName(kindNode) : "code",
-                alignment: entries[2]?.expression,
+                alignment: entries.at(2)?.expression,
             };
         }, syntaxRecord({
             name: syntaxString,
@@ -1825,6 +1926,11 @@ export class Assembler {
             .filter(({ name }) => paths.has(name))
             .map(({ name, sha256, size, crc }) => ({ path: name, sha256, size, crc32: crc })));
     }
+    /**
+     * Invokes a named hook on every active plugin lifecycle in registration order.
+     * @param hookName Hook label used when wrapping plugin errors.
+     * @param invoke Callback receiving each lifecycle instance.
+     */
     runLifecycleHook(hookName, invoke) {
         for (const { record, instance } of this.activeLifecycles) {
             try {
@@ -1841,6 +1947,12 @@ export class Assembler {
             }
         }
     }
+    /**
+     * Runs plugin `beforeDirective` middleware until one handler consumes the directive.
+     * @param keyword Canonical directive keyword being dispatched.
+     * @param command Normalized command under dispatch.
+     * @param syntax Parsed syntax snapshot when already available.
+     */
     runBeforeDirective(keyword, command, syntax = command.syntax ?? this.directiveRegistry.parseSyntax(command)) {
         for (const { record, instance, directiveKeywords } of this.activeLifecycles) {
             // Irrelevant middleware must not materialize detached source/AST copies. Unfiltered hooks
@@ -1891,10 +2003,10 @@ export class Assembler {
     }
     /**
      * Resolves ambiguous `endif` handling through active dialect lifecycles.
-     * @param {"for" | "while"} [loopType] The innermost loop type.
-     * @param {number} [loopStartLine] The innermost loop start line.
-     * @param {number} [ifStartLine] The innermost conditional start line.
-     * @returns {boolean} Whether `endif` should close the innermost while loop.
+     * @param [loopType] The innermost loop type.
+     * @param [loopStartLine] The innermost loop start line.
+     * @param [ifStartLine] The innermost conditional start line.
+     * @returns Whether `endif` should close the innermost while loop.
      */
     shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine) {
         let result = false;
@@ -1912,6 +2024,11 @@ export class Assembler {
         });
         return result;
     }
+    /**
+     * Selects the session architecture and notifies plugin lifecycles.
+     * @param architecture Architecture id or alias to activate.
+     * @param sourceAlias Original alias text preserved for lifecycle hooks.
+     */
     selectArchitecture(architecture, sourceAlias = architecture) {
         const resolved = this.environment.resolveArchitectureId(this.targetId, architecture);
         if (!resolved) {
@@ -1931,6 +2048,11 @@ export class Assembler {
             sourceAlias,
         }));
     }
+    /**
+     * Validates and notifies plugins before a multi-byte write at a logical address.
+     * @param logicalAddress Target logical address of the write.
+     * @param width Write width in bytes.
+     */
     beforeWrite(logicalAddress, width) {
         this.pluginAddressSpace.validateWrite?.(logicalAddress, width);
         this.runLifecycleHook("beforeWrite", (lifecycle) => lifecycle.beforeWrite?.({
@@ -1942,8 +2064,8 @@ export class Assembler {
     }
     /**
      * Records one emitted byte against the active command source.
-     * @param {number} logicalAddress Logical byte address.
-     * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
+     * @param logicalAddress Logical byte address.
+     * @param outputOffset Physical output offset, or a negative value when unmapped.
      */
     recordSourceWrite(logicalAddress, outputOffset) {
         if (!this.collectSourceMetadata) {
@@ -2036,6 +2158,12 @@ export class Assembler {
             throw new AggregateError(errors, "One or more assembler session resources failed to dispose.");
         }
     }
+    /**
+     * Reads an unsigned little-endian integer from a byte slice.
+     * @param bytes Source buffer.
+     * @param pos Starting byte index.
+     * @param width Width in bytes, at most four.
+     */
     readLittleEndian(bytes, pos, width) {
         if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes.length) {
             return undefined;
@@ -2048,10 +2176,10 @@ export class Assembler {
     }
     /**
      * Check a byte interval after truncating its position and size to integers.
-     * @param {number} sourceLength Available source bytes.
-     * @param {number} position Zero-based byte offset.
-     * @param {number} size Requested byte count, which may be zero.
-     * @returns {number} Numeric 1 or 0 for use by assembly expressions.
+     * @param sourceLength Available source bytes.
+     * @param position Zero-based byte offset.
+     * @param size Requested byte count, which may be zero.
+     * @returns Numeric 1 or 0 for use by assembly expressions.
      */
     canReadByteRange(sourceLength, position, size) {
         const pos = Math.trunc(position);
@@ -2066,12 +2194,12 @@ export class Assembler {
     }
     /**
      * Read an unsigned little-endian value after truncating offset and width.
-     * @param {Uint8Array} source Borrowed input bytes, never modified.
-     * @param {number} position Zero-based byte offset.
-     * @param {number} size Width in bytes, used by the 1–4-byte expression readers.
-     * @param {number | undefined} defaultValue Returned for an out-of-bounds read when supplied.
-     * @param {string} errorMessage Error thrown for an out-of-bounds read without a default.
-     * @returns {number} Unsigned value or the supplied default.
+     * @param source Borrowed input bytes, never modified.
+     * @param position Zero-based byte offset.
+     * @param size Width in bytes, used by the 1–4-byte expression readers.
+     * @param defaultValue Returned for an out-of-bounds read when supplied.
+     * @param errorMessage Error thrown for an out-of-bounds read without a default.
+     * @returns Unsigned value or the supplied default.
      */
     readByteRange(source, position, size, defaultValue, errorMessage) {
         const pos = Math.trunc(position);
@@ -2085,6 +2213,10 @@ export class Assembler {
         }
         return value;
     }
+    /**
+     * Resolves an include or expression path against session search paths.
+     * @param filename Candidate path from source.
+     */
     resolveReadablePath(filename) {
         return this.fileProvider.resolvePath(filename, {
             currentFile: this.currentFile,
@@ -2092,6 +2224,10 @@ export class Assembler {
             macroSourceFile: this.currentMacroSourceFile,
         });
     }
+    /**
+     * Resolves a label identifier for expression evaluation, including loop bindings.
+     * @param identifier Label or symbol text from an expression.
+     */
     resolveExpressionHostLabel(identifier) {
         const trimmed = identifier.trim();
         const loopValue = this.activeLoopVariables.get(trimmed);
@@ -2107,6 +2243,11 @@ export class Assembler {
         }
         return this.symbolScope.getLabelValue(identifier, this.requireStaticLabelLookup);
     }
+    /**
+     * Returns the byte size of a struct or label object referenced in an expression.
+     * @param identifier Object or label name.
+     * @param baseOnly When true, ignore trailing field selectors.
+     */
     getExpressionObjectSize(identifier, baseOnly = false) {
         if (baseOnly && (identifier === "..." || identifier === "…")) {
             if (this.inMacroExpansion && this.currentVariadicCount !== undefined) {
@@ -2116,6 +2257,10 @@ export class Assembler {
         }
         return this.symbolScope.getObjectSize(identifier, baseOnly);
     }
+    /**
+     * Looks up a textual define or active typed `for` loop counter by name.
+     * @param varName Define or loop variable name.
+     */
     lookupDefineValue(varName) {
         const defineValue = this.defines.get(varName);
         if (defineValue !== undefined) {
@@ -2129,16 +2274,28 @@ export class Assembler {
         }
         return undefined;
     }
+    /** Source file path of the macro currently being expanded, when applicable. */
     get currentMacroSourceFile() {
         if (!this.inMacroExpansion || !this.currentMacroName) {
             return undefined;
         }
         return this.macros.get(this.currentMacroName)?.sourceFile;
     }
+    /**
+     * Returns how many bytes can be read from the base or output image at a logical address.
+     * @param position Logical start address.
+     * @param size Requested read width in bytes.
+     */
     canReadBaseImage(position, size) {
         const sourceLength = this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
         return this.canReadByteRange(sourceLength, position, size);
     }
+    /**
+     * Reads an unsigned integer from the base or output image at a logical address.
+     * @param position Logical start address.
+     * @param size Read width in bytes.
+     * @param defaultValue Value returned when the read is out of bounds.
+     */
     readBaseImage(position, size, defaultValue) {
         const pos = Math.trunc(position);
         const pcPos = this.outputWriter.toOutputOffset(pos);
@@ -2152,6 +2309,12 @@ export class Assembler {
         const sourceBytes = Uint8Array.from(source);
         return this.readByteRange(sourceBytes, pcPos, size, defaultValue, `read${Math.trunc(size)} out of bounds at ${pos}`);
     }
+    /**
+     * Returns how many bytes can be read from a resolved expression file path.
+     * @param filename Path token from an expression.
+     * @param position Byte offset within the file.
+     * @param size Requested read width in bytes.
+     */
     canReadExpressionFile(filename, position, size) {
         const resolvedPath = this.resolveReadablePath(filename);
         if (!resolvedPath) {
@@ -2163,6 +2326,13 @@ export class Assembler {
         }
         return this.canReadByteRange(fileSize, position, size);
     }
+    /**
+     * Reads an unsigned integer from a file resolved for expression evaluation.
+     * @param filename Path token from an expression.
+     * @param position Byte offset within the file.
+     * @param size Read width in bytes.
+     * @param defaultValue Value returned when the path or range is invalid.
+     */
     readExpressionFile(filename, position, size, defaultValue) {
         const pos = Math.trunc(position);
         const resolvedPath = this.resolveReadablePath(filename);
@@ -2177,7 +2347,7 @@ export class Assembler {
     }
     /**
      * Installs the active target's expression contributions into this session.
-     * @param {readonly string[]} setIds Resolved expression-set contribution IDs.
+     * @param setIds Resolved expression-set contribution IDs.
      */
     installExpressionFunctions(setIds) {
         for (const setId of setIds) {
@@ -2224,6 +2394,7 @@ export class Assembler {
             }
         }
     }
+    /** Expression evaluation callbacks wired to this session's symbol and output state. */
     expressionHost = {
         resolveReference: (reference) => this.resolveStructuredReference(reference, this.requireStaticLabelLookup),
         bindExpressionTemplate: (template) => this.resolveExpressionNode(template),
@@ -2274,23 +2445,23 @@ export class Assembler {
     };
     /**
      * Advances the logical program counter.
-     * @param {number} num Number of logical address units to advance.
+     * @param num Number of logical address units to advance.
      */
     step(num) {
         this.outputWriter.step(num);
     }
     /**
      * Writes a single architecture byte to output.
-     * @param {number} num Byte value to write.
+     * @param num Byte value to write.
      */
     writeArchitectureByte(num) {
         this.outputWriter.write1(num);
     }
     /**
      * Fills a section of output data with a value.
-     * @param {number} start The starting address.
-     * @param {number} value The value to fill with.
-     * @param {number} length The length of the section to fill.
+     * @param start The starting address.
+     * @param value The value to fill with.
+     * @param length The length of the section to fill.
      */
     fillOutputBytes(start, value, length) {
         this.outputBuffer.fill(start, value, length);
@@ -2303,6 +2474,10 @@ export class Assembler {
         }
         this.outputBuffer.write(offset, value);
     }
+    /**
+     * Builds a throwaway stage snapshot from the live session without caching it.
+     * @param stage Assembly stage whose descriptor seeds the snapshot.
+     */
     createEphemeralStageExecutionState(stage) {
         const descriptor = this.getStageDescriptor(stage);
         return {
@@ -2337,7 +2512,7 @@ export class Assembler {
     }
     /**
      * Synchronizes active stage execution state.
-     * @param {AssemblyStageName} stage The stage.
+     * @param stage The stage.
      */
     syncActiveStageExecutionState(stage) {
         const descriptor = this.getStageDescriptor(stage);
@@ -2348,11 +2523,13 @@ export class Assembler {
         this.activeStageExecutionState.stage = descriptor.stage;
         this.activeStageExecutionState.capabilities = descriptor.capabilities;
     }
+    /** Returns capabilities for the active stage, defaulting to definition collection. */
     getActiveStageCapabilities() {
         this.activeStageExecutionState ??=
             this.createEphemeralStageExecutionState("collectDefinitions");
         return this.activeStageExecutionState.capabilities;
     }
+    /** Assembly stage currently driving execution and tracing. */
     get traceStage() {
         return this.activeStageExecutionState?.stage ?? "collectDefinitions";
     }
@@ -2373,6 +2550,9 @@ export class Assembler {
         this.executeLoweredNode(node);
         return true;
     }
+    /**
+     * Resolves the canonical architecture name and registry definition for {@link arch}.
+     */
     resolveActiveArchitecture() {
         const normalized = this.arch.toLowerCase();
         const canonical = this.architectureRegistry.getCanonicalName(normalized);
@@ -2384,8 +2564,8 @@ export class Assembler {
     }
     /**
      * Resolves target-specific directive prefixes without teaching the registry a dialect.
-     * @param {string} keyword Source directive keyword.
-     * @returns {string} Canonical registry keyword.
+     * @param keyword Source directive keyword.
+     * @returns Canonical registry keyword.
      */
     canonicalizeDirectiveKeyword(keyword) {
         const normalized = keyword.toLowerCase();
@@ -2399,8 +2579,8 @@ export class Assembler {
     }
     /**
      * Returns whether the active syntax profile treats a token as a named label.
-     * @param {string} candidate Candidate token.
-     * @returns {boolean} Whether the token is a named label.
+     * @param candidate Candidate token.
+     * @returns Whether the token is a named label.
      */
     isNamedLabelToken(candidate) {
         if (candidate === ":") {
@@ -2410,36 +2590,36 @@ export class Assembler {
     }
     /**
      * Writes 1, 2, 3, or 4 bytes to output.
-     * @param {number} num - The byte to write.
+     * @param num The byte to write.
      */
     write1(num) {
         this.outputWriter.write1(num);
     }
     /**
      * Writes 2.
-     * @param {number} num The num.
+     * @param num The num.
      */
     write2(num) {
         this.outputWriter.write2(num);
     }
     /**
      * Writes 3.
-     * @param {number} num The num.
+     * @param num The num.
      */
     write3(num) {
         this.outputWriter.write3(num);
     }
     /**
      * Writes 4.
-     * @param {number} num The num.
+     * @param num The num.
      */
     write4(num) {
         this.outputWriter.write4(num);
     }
     /**
      * Reads 1, 2, or 3 bytes from the configured output image.
-     * @param {number} logicalPosition The logical address to read from.
-     * @returns {number} The byte read from the output image.
+     * @param logicalPosition The logical address to read from.
+     * @returns The byte read from the output image.
      */
     read1(logicalPosition) {
         const addr = this.outputWriter.toOutputOffset(logicalPosition);
@@ -2448,6 +2628,10 @@ export class Assembler {
         }
         return this.outputBytes[addr];
     }
+    /**
+     * Reads a little-endian 16-bit value from the output image at a logical address.
+     * @param logicalPosition Logical address to read.
+     */
     read2(logicalPosition) {
         const addr = this.outputWriter.toOutputOffset(logicalPosition);
         if (addr < 0 || addr + 2 > this.outputBytes.length) {
@@ -2455,6 +2639,10 @@ export class Assembler {
         }
         return this.outputBytes[addr] | (this.outputBytes[addr + 1] << 8);
     }
+    /**
+     * Reads a little-endian 24-bit value from the output image at a logical address.
+     * @param logicalPosition Logical address to read.
+     */
     read3(logicalPosition) {
         const addr = this.outputWriter.toOutputOffset(logicalPosition);
         if (addr < 0 || addr + 3 > this.outputBytes.length) {
@@ -2464,13 +2652,20 @@ export class Assembler {
             (this.outputBytes[addr + 1] << 8) |
             (this.outputBytes[addr + 2] << 16));
     }
+    /**
+     * Parses one raw source line into a normalized command via the front-end service.
+     * @param command Raw line text.
+     * @param sourceFile Containing file path.
+     * @param sourceLine Zero-based line index.
+     * @param allowEmpty When true, empty lines produce a command node instead of null.
+     */
     createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
         return this.frontEndService.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty);
     }
     /**
      * Applies a `!name =` assignment without routing it through the incremental if-tree.
-     * @param {string} command The define assignment command.
-     * @returns {boolean} `true` when the define engine handled the command.
+     * @param command The define assignment command.
+     * @returns `true` when the define engine handled the command.
      */
     applyDefineAssignment(command) {
         const commandNode = this.createNormalizedCommandFromRaw(command, this.currentFile, this.currentLine, true);
@@ -2481,8 +2676,8 @@ export class Assembler {
     }
     /**
      * Asar `'X' = $nn` / `"X" = $nn` table entries, including `''' = $2A` for apostrophe.
-     * @param {string} command Raw command text.
-     * @returns {boolean} `true` when the line was a character mapping.
+     * @param command Raw command text.
+     * @returns `true` when the line was a character mapping.
      */
     tryHandleCharacterMapping(command) {
         const parsed = this.createNormalizedCommandFromRaw(command, this.currentFile, this.currentLine, true);
@@ -2523,8 +2718,8 @@ export class Assembler {
     }
     /**
      * Processes a command from an internal re-entrant source.
-     * @param {string} command - The command to process.
-     * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
+     * @param command The command to process.
+     * @param [preprocessed] Whether comments and continuations were already normalized.
      */
     processCommand(command, preprocessed = false, template) {
         this.processSourceFragment(sourceFragment(command, [{ file: this.currentFile, line: this.currentLine, text: command }]), preprocessed, template);
@@ -2696,13 +2891,18 @@ export class Assembler {
             this.addAddressToLine(normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth));
         }
     }
+    /**
+     * Lowers a program once per stage state and caches the result on that state.
+     * @param stageState Stage snapshot owning the lowered program cache.
+     * @param program Parsed program to lower.
+     */
     getOrCreateLoweredProgram(stageState, program) {
         stageState.loweredProgram ??= measureInternalPhase("lowerProgram", () => this.commandLoweringService.lowerProgram(program));
         return stageState.loweredProgram;
     }
     /**
      * Dispatches lowered node.
-     * @param {LoweredCommand} lowered The lowered.
+     * @param lowered The lowered.
      */
     dispatchLoweredNode(lowered) {
         if (lowered.kind === "pluginSyntax") {
@@ -2744,7 +2944,7 @@ export class Assembler {
     /** Classification retains its stage-entry ordering; no prepared values enter the syntax cache. */
     prepareTypedInstruction(node) {
         const definition = this.resolveActiveArchitecture().definition;
-        if (!definition?.encoder.typed?.prepare || !definition.operandGrammar) {
+        if (!definition?.encoder.typed?.prepare) {
             return;
         }
         let operands;
@@ -2980,7 +3180,7 @@ export class Assembler {
      * Parses a function definition of the form:
      *   function name(param1, param2...) = expression
      * Possibly spanning multiple lines joined by backslashes.
-     * @param {string} defLine - The function definition line.
+     * @param defLine The function definition line.
      */
     parseFunctionDefinition(defLine) {
         this.mathCore.parseFunctionDefinition(defLine);
@@ -2991,7 +3191,7 @@ export class Assembler {
     }
     /**
      * Adds a mapping of the current address to the source line number.
-     * @param {number} address The logical address to add to the mapping.
+     * @param address The logical address to add to the mapping.
      */
     addAddressToLine(address) {
         incrementInternalCounter("addressMappings");
@@ -3002,8 +3202,8 @@ export class Assembler {
     }
     /**
      * Evaluates a range expression and returns the result.
-     * @param {string} expr The expression to evaluate.
-     * @returns {number} The result of the expression.
+     * @param expr The expression to evaluate.
+     * @returns The result of the expression.
      */
     evaluateRangeExpression(expr) {
         const resolvedExpr = this.resolveExpressionInput(expr);
@@ -3014,15 +3214,15 @@ export class Assembler {
     }
     /**
      * Replace include search paths before assembly. Retains the array without copying.
-     * @param {string[]} paths Provider-specific search paths. Node resolves relative paths from cwd.
+     * @param paths Provider-specific search paths. Node resolves relative paths from cwd.
      */
     setIncludePaths(paths) {
         this.includePaths = paths;
     }
     /**
      * Evaluates an expression for conditionals (if, while).
-     * @param {string} expression - The expression to evaluate.
-     * @returns {boolean} True if the expression is true, false otherwise.
+     * @param expression The expression to evaluate.
+     * @returns True if the expression is true, false otherwise.
      */
     evaluateExpression(expression) {
         let resolvedExpr;
@@ -3046,8 +3246,8 @@ export class Assembler {
     /**
      * Evaluate an assertion, or defer it when skipped asset bytes make its inputs provisional.
      * Literal arithmetic and expanded numeric defines remain checkable during editor analysis.
-     * @param {string | ExpressionNode} expression Assertion condition.
-     * @returns {boolean | undefined} The condition result, or undefined until a build resolves the layout.
+     * @param expression Assertion condition.
+     * @returns The condition result, or undefined until a build resolves the layout.
      */
     evaluateAssertion(expression) {
         if (this.#hasDeferredAssetLayout) {
@@ -3063,8 +3263,8 @@ export class Assembler {
     }
     /**
      * Parses string input into an expression node and resolves nested references/defines.
-     * @param {string | ExpressionNode} expression The expression source or parsed node.
-     * @returns {ExpressionNode} The resolved expression tree.
+     * @param expression The expression source or parsed node.
+     * @returns The resolved expression tree.
      */
     resolveExpressionInput(expression) {
         const parsed = typeof expression === "string"
@@ -3074,8 +3274,8 @@ export class Assembler {
     }
     /**
      * Recursively resolves define references and nested reference-expression nodes.
-     * @param {ExpressionNode} expression The expression node to resolve.
-     * @returns {ExpressionNode} The resolved expression node.
+     * @param expression The expression node to resolve.
+     * @returns The resolved expression node.
      */
     resolveExpressionNode(expression) {
         if (isReferenceExpressionNode(expression)) {
@@ -3135,8 +3335,8 @@ export class Assembler {
      * Resolves reference-style expressions such as identifiers, define references,
      * member access, and indexed access into either simpler reference nodes or
      * raw/math expressions when defines collapse them further.
-     * @param {ReferenceExpressionNode} expression The reference expression to resolve.
-     * @returns {ExpressionNode} The resolved expression tree.
+     * @param expression The reference expression to resolve.
+     * @returns The resolved expression tree.
      */
     resolveReferenceExpressionNode(expression) {
         switch (expression.type) {
@@ -3181,9 +3381,9 @@ export class Assembler {
     }
     /**
      * Resolves a reference expression all the way to a numeric value.
-     * @param {ReferenceExpressionNode} expression The reference expression to evaluate.
-     * @param {boolean} [requireStatic] Whether labels must be static.
-     * @returns {number} The numeric value of the reference.
+     * @param expression The reference expression to evaluate.
+     * @param [requireStatic] Whether labels must be static.
+     * @returns The numeric value of the reference.
      */
     evaluateReferenceExpressionNode(expression, requireStatic = false) {
         const resolved = this.resolveReferenceLabelValue(expression, requireStatic);
@@ -3195,9 +3395,9 @@ export class Assembler {
     /**
      * Resolves a reference expression to either a numeric value or a normalized
      * label/struct lookup target, depending on how far the expression collapses.
-     * @param {ReferenceExpressionNode} expression The reference expression to resolve.
-     * @param {boolean} [requireStatic] Whether labels must be static.
-     * @returns {number | string} The resolved numeric value.
+     * @param expression The reference expression to resolve.
+     * @param [requireStatic] Whether labels must be static.
+     * @returns The resolved numeric value.
      */
     resolveReferenceLabelValue(expression, requireStatic = false) {
         const resolved = this.resolveReferenceExpressionNode(expression);
@@ -3289,8 +3489,8 @@ export class Assembler {
     }
     /**
      * Resolves standalone relative-label tokens used in define contexts.
-     * @param {string} input The token to resolve.
-     * @returns {string | undefined} The resolved address string, if applicable.
+     * @param input The token to resolve.
+     * @returns The resolved address string, if applicable.
      */
     tryResolveRelativeLabelToken(input) {
         if (input !== "+" && input !== "-" && input !== "?+" && input !== "?-") {
@@ -3319,8 +3519,8 @@ export class Assembler {
     }
     /**
      * Resolves direct `!name` define references that are not assignments.
-     * @param {string} input The token to resolve.
-     * @returns {string | undefined} The resolved define value, if applicable.
+     * @param input The token to resolve.
+     * @returns The resolved define value, if applicable.
      */
     tryResolveDirectDefineReference(input) {
         if (!input.startsWith("!") ||
@@ -3334,8 +3534,8 @@ export class Assembler {
     }
     /**
      * Resolves macro-label references such as `?label` or `#+?label`.
-     * @param {string} input The token to resolve.
-     * @returns {string | undefined} The resolved macro-label value, if applicable.
+     * @param input The token to resolve.
+     * @returns The resolved macro-label value, if applicable.
      */
     tryResolveMacroLabelReference(input) {
         const prefixMatch = input.match(/^(#\?|\?|#\?\.|\?\+|\?-)(.*)/);
@@ -3348,8 +3548,8 @@ export class Assembler {
     /**
      * Resolves bare label-like tokens before the generic character-by-character
      * define scanner runs.
-     * @param {string} input The token to resolve.
-     * @returns {string | undefined} The resolved label value, if applicable.
+     * @param input The token to resolve.
+     * @returns The resolved label value, if applicable.
      */
     tryResolveBareLabelReference(input) {
         if (!isBareLabelReference(input)) {
@@ -3370,8 +3570,8 @@ export class Assembler {
     }
     /**
      * Resolves all define replacements in a given string.
-     * @param {string} input The string to resolve defines in.
-     * @returns {string} The string with defines resolved.
+     * @param input The string to resolve defines in.
+     * @returns The string with defines resolved.
      */
     resolvedefines(input) {
         const relative = this.tryResolveRelativeLabelToken(input);
@@ -3421,7 +3621,7 @@ export class Assembler {
     }
     /**
      * Handles activate stage.
-     * @param {AssemblyStageName} stage The stage.
+     * @param stage The stage.
      */
     activateStage(stage) {
         this.syncActiveStageExecutionState(stage);
@@ -3491,7 +3691,7 @@ export class Assembler {
     }
     /**
      * Sets the current file being processed.
-     * @param {string} filename - The filename to set.
+     * @param filename The filename to set.
      */
     setCurrentFile(filename) {
         this.currentFile = filename;
@@ -3500,11 +3700,15 @@ export class Assembler {
     }
     /**
      * Sets the current line number.
-     * @param {number} line - The line number to set.
+     * @param line The line number to set.
      */
     setCurrentLine(line) {
         this.currentLine = line;
     }
+    /**
+     * Maps a stage name to its execution capabilities without mutating session state.
+     * @param stage Assembly stage identifier.
+     */
     getStageDescriptor(stage) {
         if (stage === "collectDefinitions") {
             return {
@@ -3541,6 +3745,10 @@ export class Assembler {
             },
         };
     }
+    /**
+     * Deep-copies anonymous forward/backward label stacks for stage isolation.
+     * @param source Label stacks keyed by relative depth.
+     */
     cloneRelativeLabels(source) {
         const clone = {};
         for (const [depth, entries] of Object.entries(source)) {
@@ -3548,6 +3756,10 @@ export class Assembler {
         }
         return clone;
     }
+    /**
+     * Builds a fresh stage snapshot seeded from the previous stage when applicable.
+     * @param stage Assembly stage to initialize.
+     */
     createStageExecutionState(stage) {
         const descriptor = this.getStageDescriptor(stage);
         let previousStage;
@@ -3608,7 +3820,7 @@ export class Assembler {
     }
     /**
      * Applies stage execution state.
-     * @param {StageExecutionState} stageState The stage state.
+     * @param stageState The stage state.
      */
     applyStageExecutionState(stageState) {
         this.pluginState.restore(this.pluginState.cloneSnapshot(stageState.pluginState));
@@ -3633,7 +3845,7 @@ export class Assembler {
     }
     /**
      * Captures stage execution state.
-     * @param {StageExecutionState} stageState The stage state.
+     * @param stageState The stage state.
      */
     captureStageExecutionState(stageState) {
         stageState.pluginState = this.pluginState.cloneSnapshot();
@@ -3662,6 +3874,10 @@ export class Assembler {
             macroLabelInstance: this.macroLabelInstance,
         };
     }
+    /**
+     * Returns a cached stage snapshot, creating it on first use.
+     * @param stage Assembly stage key.
+     */
     getOrCreateStageExecutionState(stage) {
         const existing = this.stageExecutionStates.get(stage);
         if (existing) {
@@ -3671,12 +3887,23 @@ export class Assembler {
         this.stageExecutionStates.set(stage, created);
         return created;
     }
+    /**
+     * Parses source into a program model using the session front-end grammar.
+     * @param source Raw assembly source text.
+     * @param sourceFile Path attributed to the buffer.
+     * @param startLine Zero-based line offset for embedded fragments.
+     */
     buildProgramModel(source, sourceFile = this.currentFile, startLine = 0) {
         return withSourceSyntax(() => measureInternalPhase("buildProgramModel", () => {
             const program = this.frontEndService.parseSource(source, sourceFile, startLine);
             return program;
         }));
     }
+    /**
+     * Executes one assembly stage against a parsed program, updating session state in place.
+     * @param stage Stage to run.
+     * @param program Program whose grammar must match the current front-end identity.
+     */
     runStage(stage, program) {
         if (program.grammarIdentity !== undefined &&
             program.grammarIdentity !== this.frontEndService.grammarIdentity) {
@@ -3707,7 +3934,7 @@ export class Assembler {
     /**
      * Run definition collection, layout resolution, and byte emission synchronously in that order.
      * Throws at the first unrecovered failure. Partial state/output is not a successful binary.
-     * @param {ProgramModel} program Parsed source model produced for this target's syntax.
+     * @param program Parsed source model produced for this target's syntax.
      */
     assembleProgram(program) {
         const definitions = this.runStage("collectDefinitions", program);
@@ -3724,10 +3951,10 @@ export class Assembler {
     /**
      * Parse and run all three assembly stages. Includes are read through the configured provider.
      * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
-     * @param {string} source Assembly source text, not a filename.
-     * @param {string} [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
-     * @param {number} [startLine] Zero-based line offset. Defaults to zero.
-     * @returns {ProgramModel} Parsed model used for this build.
+     * @param source Assembly source text, not a filename.
+     * @param [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
+     * @param [startLine] Zero-based line offset. Defaults to zero.
+     * @returns Parsed model used for this build.
      */
     assembleSource(source, sourceFile = this.currentFile, startLine = 0) {
         const program = this.buildProgramModel(source, sourceFile, startLine);
@@ -3739,9 +3966,9 @@ export class Assembler {
     }
     /**
      * Writes a repeated byte into the output buffer.
-     * @param {number} start The starting address of the block to write.
-     * @param {number} value The byte value to write.
-     * @param {number} [length] The length of the block to write.
+     * @param start The starting address of the block to write.
+     * @param value The byte value to write.
+     * @param [length] The length of the block to write.
      */
     writeOutputBytes(start, value, length = 1) {
         if (this.moduleAssembly) {
@@ -3754,8 +3981,8 @@ export class Assembler {
     }
     /**
      * Expands the output buffer and fills it with a specified byte.
-     * @param {number} newSize The new output size.
-     * @param {number} fillByte The byte used for the new range.
+     * @param newSize The new output size.
+     * @param fillByte The byte used for the new range.
      */
     expandOutput(newSize, fillByte) {
         if (this.moduleAssembly) {
@@ -3780,7 +4007,7 @@ export class Assembler {
     }
     /**
      * Materialize the target format's current bytes without assembling or finalizing again.
-     * @returns {Uint8Array} Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
+     * @returns Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
      */
     getBinaryOutput = () => {
         if (this.moduleAssembly) {
@@ -3793,7 +4020,7 @@ export class Assembler {
     };
     /**
      * Lowers completed runtime nodes and executes them through the production executor.
-     * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
+     * @param nodes The runtime nodes to lower and execute.
      */
     lowerAndExecuteRuntimeNodes(nodes) {
         const loweredNodes = nodes.map((node) => this.commandLoweringService.lowerExecutableNode(node));
@@ -3801,6 +4028,10 @@ export class Assembler {
             this.executeWithAnalysisRecovery(node, (current) => this.getLoweredNodeSpan(current), (current) => this.executeLoweredNode(current));
         }
     }
+    /**
+     * Evaluates numeric start and end bounds for a lowered `for` loop header.
+     * @param forBlock Lowered loop node carrying parsed and cached bounds.
+     */
     resolveForLoopBounds(forBlock) {
         const parsedForLoop = forBlock.header?.parsed.forLoop;
         const variable = forBlock.variable ?? parsedForLoop?.variable;
@@ -3817,8 +4048,8 @@ export class Assembler {
     }
     /**
      * Executes for loop iterations.
-     * @param {LoweredLoopNode} forBlock The for block.
-     * @param {() => void} executeBody The execute body.
+     * @param forBlock The for block.
+     * @param executeBody The execute body.
      */
     executeForLoopIterations(forBlock, executeBody) {
         const { variable, start, end } = this.resolveForLoopBounds(forBlock);
@@ -3854,7 +4085,7 @@ export class Assembler {
     }
     /**
      * Executes lowered loop.
-     * @param {LoweredLoopNode} loopBlock The loop block.
+     * @param loopBlock The loop block.
      */
     executeLoweredLoop(loopBlock) {
         if (loopBlock.loopType === "for") {
@@ -3866,17 +4097,17 @@ export class Assembler {
     }
     /**
      * Executes lowered for loop.
-     * @param {LoweredLoopNode} forBlock The for block.
+     * @param forBlock The for block.
      */
     executeLoweredForLoop(forBlock) {
         this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
     }
     /**
      * Executes while loop commands.
-     * @param {LoweredLoopNode} whileBlock The while block.
-     * @param {TCommand[]} commands The commands.
-     * @param {(command: TCommand) => string | null} getDefineTarget The get define target.
-     * @param {(command: TCommand) => void} executeCommand The execute command.
+     * @param whileBlock The while block.
+     * @param commands The commands.
+     * @param getDefineTarget The get define target.
+     * @param executeCommand The execute command.
      */
     executeWhileLoopCommands(whileBlock, commands, getDefineTarget, executeCommand) {
         const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
@@ -3911,7 +4142,7 @@ export class Assembler {
     }
     /**
      * Executes lowered while loop.
-     * @param {LoweredLoopNode} whileBlock The while block.
+     * @param whileBlock The while block.
      */
     executeLoweredWhileLoop(whileBlock) {
         this.executeWhileLoopCommands(whileBlock, whileBlock.commands, (cmd) => cmd.kind === "operation" &&
@@ -3922,20 +4153,21 @@ export class Assembler {
             ? cmd.operation.name
             : null, (cmd) => this.executeLoweredNodeWithRecovery(cmd));
     }
+    /**
+     * Returns the normalized source span for diagnostics on a lowered executable node.
+     * @param node Lowered command or loop header node.
+     */
     getLoweredNodeSpan(node) {
         if ("source" in node) {
             return node.source.normalizedSpan;
         }
-        if (node.kind === "loop" || node.kind === "conditional" || node.kind === "capture") {
-            return node.header?.source.normalizedSpan;
-        }
-        return undefined;
+        return node.header?.source.normalizedSpan;
     }
     /**
      * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
-     * @param {TNode} node The node to execute.
-     * @param {(node: TNode) => SourceSpan | undefined} getSpan Resolves the node span for diagnostics.
-     * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
+     * @param node The node to execute.
+     * @param getSpan Resolves the node span for diagnostics.
+     * @param executeNode Executes the node with its native dispatcher.
      */
     executeWithAnalysisRecovery(node, getSpan, executeNode) {
         if (!this.analysisErrorRecoveryEnabled) {
@@ -3951,7 +4183,7 @@ export class Assembler {
     }
     /**
      * Executes lowered node with recovery.
-     * @param {LoweredExecutableNode} node The node.
+     * @param node The node.
      */
     executeLoweredNodeWithRecovery(node) {
         const command = node.kind === "loop" || node.kind === "conditional" || node.kind === "capture"
@@ -3974,7 +4206,7 @@ export class Assembler {
     }
     /**
      * Executes lowered node.
-     * @param {LoweredExecutableNode} node The node.
+     * @param node The node.
      */
     executeLoweredNode(node) {
         const sourceCommand = node.kind === "loop" || node.kind === "conditional" || node.kind === "capture"
@@ -4143,7 +4375,7 @@ export class Assembler {
             return;
         }
         if (node.kind === "typedInstruction") {
-            if (node.command && this.collectSourceMetadata) {
+            if (this.collectSourceMetadata) {
                 this.collectCommandReferences(node.command);
             }
         }
@@ -4166,7 +4398,7 @@ export class Assembler {
     }
     /**
      * Executes lowered node stream.
-     * @param {LoweredExecutableNode[]} nodes The nodes.
+     * @param nodes The nodes.
      */
     executeLoweredNodeStream(nodes) {
         for (const node of nodes) {
@@ -4186,8 +4418,8 @@ export class Assembler {
     }
     /**
      * Executes conditional branches.
-     * @param {Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[]; }>} branches The branches.
-     * @param {(commands: TCommand[]) => void} executeCommands The execute commands.
+     * @param branches The branches.
+     * @param executeCommands The execute commands.
      */
     executeConditionalBranches(branches, executeCommands) {
         for (const branch of branches) {

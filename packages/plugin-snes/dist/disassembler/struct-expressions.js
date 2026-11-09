@@ -2,9 +2,9 @@ import { parseExpressionNode } from "@uttori/asm-core";
 import { getStructMetadata } from "@uttori/asm-core/frontend";
 /**
  * Reject imprecise intermediates even if later masking would make them fit an operand.
- * @param {number} value Computed intermediate before any truncation.
- * @param {string} expression Parenthesized native source for this subtree.
- * @returns {object} Exact value and source, or throws on lost precision.
+ * @param value Computed intermediate before any truncation.
+ * @param expression Parenthesized native source for this subtree.
+ * @returns Exact value and source, or throws on lost precision.
  */
 const checked = (value, expression) => {
     if (!Number.isSafeInteger(value)) {
@@ -35,8 +35,8 @@ export class SnesStructExpressionResolver {
     }
     /**
      * Check every intermediate value and preserve explicit grouping in the generated assembly.
-     * @param {unknown} input Single-line expression, at most 1,024 characters and 128 AST nodes.
-     * @returns {SnesStructExpression} Native source and exact integer value with referenced owners.
+     * @param input Single-line expression, at most 1,024 characters and 128 AST nodes.
+     * @returns Native source and exact integer value with referenced owners.
      */
     resolve(input) {
         if (typeof input !== "string" ||
@@ -54,8 +54,8 @@ export class SnesStructExpressionResolver {
         let nodes = 0;
         /**
          * Resolve only named layouts/bindings. Inherited and arbitrary symbol paths are outside this map.
-         * @param {ExpressionNode} node Optional record index and field under one declared root.
-         * @returns {object} Address or offset and native reference. Records its binding owner.
+         * @param node Optional record index and field under one declared root.
+         * @returns Address or offset and native reference. Records its binding owner.
          */
         const reference = (node) => {
             let root = node;
@@ -110,8 +110,8 @@ export class SnesStructExpressionResolver {
         };
         /**
          * The AST whitelist excludes macros and host-dependent functions.
-         * @param {ExpressionNode} node Subtree counted against the per-expression complexity limit.
-         * @returns {object} Checked integer value and source preserving operator grouping.
+         * @param node Subtree counted against the per-expression complexity limit.
+         * @returns Checked integer value and source preserving operator grouping.
          */
         const visit = (node) => {
             if (++nodes > 128) {
@@ -266,10 +266,10 @@ export class SnesStructExpressionResolver {
 }
 /**
  * Split a CPU access across fields, opaque gaps and adjacent records of one physical binding.
- * @param {SnesStructBinding} binding Sole owner referenced by the target expression.
- * @param {number} address Resolved CPU start address. Biased index-zero bases are not physical data.
- * @param {number} width CPU access width in bytes (one or two).
- * @returns {readonly SnesStructAccessPart[]} Ordered parts covering every byte exactly once.
+ * @param binding Sole owner referenced by the target expression.
+ * @param address Resolved CPU start address. Biased index-zero bases are not physical data.
+ * @param width CPU access width in bytes (one or two).
+ * @returns Ordered parts covering every byte exactly once.
  */
 export function describeSnesStructAccess(binding, address, width) {
     const { structure } = binding;

@@ -8,8 +8,8 @@ import { createSnesAddressContext } from "./address-identities.js";
 import { identifySnesHardwareRegister } from "./hardware-registers.js";
 /**
  * Extract only state used by the decoder. Aliases, unknowns and emulation widths match analysis.
- * @param {RuntimeInstructionRecord} sample Execution-time instruction and paired registers.
- * @returns {Cpu65816DecodeState} Width and bank state actually consumed by decoding.
+ * @param sample Execution-time instruction and paired registers.
+ * @returns Width and bank state actually consumed by decoding.
  */
 const runtimeDecodeState = (sample) => {
     const value = (key, max) => {
@@ -41,16 +41,20 @@ const runtimeDecodeState = (sample) => {
     };
 };
 // Preserve bank/width conventions shared by the static CFG consumers.
+/**
+ * Serialize a register width or flag for analysis records.
+ * @param entry Captured scalar, boolean, or unknown marker.
+ */
 const known = (entry) => entry === undefined || entry === "unknown"
     ? { kind: "unknown" }
     : { kind: "known", value: Number(entry) };
 /**
  * Decode captured code from any CPU bus location, including WRAM and cartridge RAM.
- * @param {AnalysisProjectShards} shards Captured instructions and evidence.
- * @param {RomImage} rom Verified cartridge image.
- * @param {SnesMapper} mapper Address mapper for checking ROM provenance.
- * @param {Iterable<RuntimeEvidenceRecord>} [runtime] SQL instruction-variant cursor, consumed within its read snapshot.
- * @returns {readonly AnalysisRecord[]} Captured CFG variants and explicit conflicts.
+ * @param shards Captured instructions and evidence.
+ * @param rom Verified cartridge image.
+ * @param mapper Address mapper for checking ROM provenance.
+ * @param [runtime] SQL instruction-variant cursor, consumed within its read snapshot.
+ * @returns Captured CFG variants and explicit conflicts.
  */
 export const analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onProgress) => {
     const evidencePool = new EvidencePool();

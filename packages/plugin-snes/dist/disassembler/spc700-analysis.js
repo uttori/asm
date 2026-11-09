@@ -26,19 +26,37 @@ const EVIDENCE_RANK = {
     runtime: 3,
     manual: 4,
 };
+/**
+ * Test whether an ARAM annotation covers an instruction address.
+ * @param annotation Project interval in the SPC700 address space.
+ * @param address 16-bit ARAM program counter.
+ */
 const intervalContains = (annotation, address) => annotation.addressSpace === SPC700_ARAM_ADDRESS_SPACE &&
     annotation.start <= address &&
     address < annotation.end;
+/**
+ * Extract a direct-page override stored on an annotation payload.
+ * @param annotation Interval carrying optional SPC700 state metadata.
+ */
 const stateOverrideFor = (annotation) => {
     const payload = readAnalysisTargetState(annotation.architecture, annotation.state);
     const directPage = payload?.codec === "snes.spc700" ? payload.state.directPage : undefined;
     return directPage === 0 || directPage === 0x100 ? { directPage } : undefined;
 };
+/**
+ * Read a little-endian 16-bit value from ARAM when both bytes exist.
+ * @param image ARAM view used for vector and indirect resolution.
+ * @param address Low byte address of the word.
+ */
 const readWord = (image, address) => {
     const low = image.readByte(address);
     const high = image.readByte(address + 1);
     return low === undefined || high === undefined ? undefined : low | (high << 8);
 };
+/**
+ * Map decoder reference kinds onto static control-flow edge kinds.
+ * @param kind Operand reference classification from the decoder.
+ */
 const controlTargetKind = (kind) => {
     if (kind === "branch") {
         return "branch";
@@ -48,6 +66,11 @@ const controlTargetKind = (kind) => {
     }
     return "jump";
 };
+/**
+ * Derive static control targets, including TCALL vectors and BRK dispatch.
+ * @param instruction Decoded SPC700 instruction at the current PC.
+ * @param image ARAM image used to resolve indirect vectors.
+ */
 const controlsFor = (instruction, image) => {
     if (instruction.mnemonic === "TCALL") {
         const vector = instruction.references.find((reference) => reference.kind === "pointer")?.address;
@@ -82,7 +105,12 @@ const controlsFor = (instruction, image) => {
         ? { explanation: "The decoded indirect target is not known statically." }
         : {})));
 };
+/** True when the addressing mode may leave the effective address unknown without index state. */
 const isIndexedOrIndirect = (mode) => mode.includes("Indexed") || mode.includes("Indirect");
+/**
+ * Build effective-address records for data and pointer operands.
+ * @param instruction Decoded instruction whose references are summarized.
+ */
 const effectiveAddressesFor = (instruction) => instruction.references
     .filter((reference) => reference.kind === "data" || reference.kind === "pointer")
     .map((reference) => {
@@ -114,7 +142,13 @@ const effectiveAddressesFor = (instruction) => instruction.references
             : "Address resolves within the 16-bit SPC700 memory space.",
     });
 });
+/** Project only known direct-page state onto interval annotations. */
 const annotationState = (state) => state.directPage.kind === "known" ? { directPage: state.directPage.value } : {};
+/**
+ * Convert a static CFG result into publication-ready analysis records.
+ * @param result Completed SPC700 control-flow analysis.
+ * @param runEvidence Evidence id identifying this analysis run.
+ */
 const recordsFor = (result, runEvidence) => [
     ...result.nodes.map((node) => ({
         id: `static:spc700:${node.id}`,
@@ -189,6 +223,11 @@ const recordsFor = (result, runEvidence) => [
         evidence: [runEvidence],
     },
 ];
+/**
+ * Regenerate opcode/operand interval annotations from decoded CFG nodes.
+ * @param result Completed SPC700 control-flow analysis.
+ * @param runEvidence Evidence id identifying this analysis run.
+ */
 const annotationsFor = (result, runEvidence) => {
     const output = new Map();
     const stateByAddress = new Map();
@@ -228,9 +267,9 @@ const annotationsFor = (result, runEvidence) => {
  * Runs conservative SPC700 CFG analysis over one contiguous ARAM image.
  * Entry points are explicit or project-derived. The analyzer does not assume
  * that a standalone payload represents reset-time memory.
- * @param {Spc700AramImage} image Immutable contiguous ARAM bytes and load address.
- * @param {Spc700AnalysisOptions} [options] Project inputs, entry points, overrides, and limits.
- * @returns {Spc700AnalysisResult} Static CFG and project-shaped records.
+ * @param image Immutable contiguous ARAM bytes and load address.
+ * @param [options] Project inputs, entry points, overrides, and limits.
+ * @returns Static CFG and project-shaped records.
  */
 export const analyzeSpc700Aram = (image, options = {}) => {
     const decoder = new Spc700Decoder();

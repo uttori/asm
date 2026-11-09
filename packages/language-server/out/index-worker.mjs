@@ -39847,6 +39847,43 @@ function encodeWorldRow(bytes) {
   return Uint8Array.from(output);
 }
 
+// packages/game-secret-of-mana/src/world-overview.ts
+var WORLD_TILE_SIDE = 512;
+var WORLD_OVERVIEW_SIDE = WORLD_TILE_SIDE / 2;
+var WORLD_OVERVIEW_COLOR_COUNT = 192;
+var PALETTE_COLUMNS = 16;
+function worldOverviewRgba(pixels) {
+  const rgba = new Uint8Array(pixels.length * 4);
+  const toByte = (value) => value << 3 | value >> 2;
+  for (let i = 0; i < pixels.length; i++) {
+    const color = pixels[i];
+    rgba.set(
+      [toByte((color & 7) << 2), toByte((color & 56) >>> 1), toByte((color & 192) >>> 3), 255],
+      i * 4
+    );
+  }
+  return rgba;
+}
+function convertWorldOverviewColors(source) {
+  if (source.mediaType !== "image/png") {
+    throw new Error("Flammie overview colors require a PNG.");
+  }
+  const image = readAssetPng(source.bytes).toRGBA({ copy: false });
+  if (image.width !== PALETTE_COLUMNS || image.height !== WORLD_OVERVIEW_COLOR_COUNT / PALETTE_COLUMNS) {
+    throw new Error("Flammie overview colors require 16 \xD7 12 opaque swatches.");
+  }
+  const colors = new Uint8Array(WORLD_OVERVIEW_COLOR_COUNT);
+  for (let id2 = 0; id2 < colors.length; id2++) {
+    const [r, g, b, a] = image.rgba.subarray(id2 * 4, id2 * 4 + 4);
+    colors[id2] = r >>> 5 | g >>> 5 << 3 | b >>> 6 << 6;
+    const [nativeR, nativeG, nativeB] = worldOverviewRgba(colors.subarray(id2, id2 + 1));
+    if (a !== 255 || r !== nativeR || g !== nativeG || b !== nativeB) {
+      throw new Error(`Flammie overview swatch ${id2} is outside the native direct-color gamut.`);
+    }
+  }
+  return { primaryOutput: "colors", outputs: { colors: { bytes: colors } } };
+}
+
 // packages/game-secret-of-mana/src/assembly.ts
 var registry2 = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
@@ -40074,6 +40111,16 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
         targets: ["snes.sfc"],
         resourcePaths: (options) => typeof options.preview === "string" ? [options.preview] : [],
         convert: convertRoomAsset
+      });
+      context.registerAssetFormat({
+        id: "som.world.overview-colors",
+        version: "1.0.0",
+        targets: ["snes.sfc"],
+        optionSchema: {
+          tiles: { summary: "Extracted indexed 512 \xD7 512 world tile grid for preview." }
+        },
+        resourcePaths: (options) => typeof options.tiles === "string" ? [options.tiles] : [],
+        convert: convertWorldOverviewColors
       });
       context.registerAssetFormat({
         id: "som.palette.bgr555",

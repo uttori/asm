@@ -1,4 +1,5 @@
-/** Bounded read-ahead for sequential ACT2 frame components. Returned copies remain
+/**
+ * Bounded read-ahead for sequential ACT2 frame components. Returned copies remain
  * valid across refills. A small retained prefix cannot pin an entire read window.
  * Live callers create a fresh reader per slice so unconsumed bytes cannot outlive
  * that slice's file snapshot. Only bytes below the supplied watermark are read.
@@ -11,7 +12,8 @@ export class CaptureFrameReader {
     #buffer = Buffer.alloc(0);
     #start = 0;
     #valid = 0;
-    /** Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
+    /**
+     * Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
      * The cap amortizes small metadata reads without loading an entire archive.
      */
     constructor(read, windowBytes = 1048576) {
@@ -21,12 +23,13 @@ export class CaptureFrameReader {
         this.#read = read;
         this.#windowBytes = windowBytes;
     }
-    /** Read one validated component (at most 256 KiB), bounded by a snapshot or
+    /**
+     * Read one validated component (at most 256 KiB), bounded by a snapshot or
      * durable watermark. Short I/O is retried. Premature EOF is always an error.
-     * @param {number} length Component bytes, no larger than the read window.
-     * @param {number} offset Absolute nonnegative file position.
-     * @param {number} limit Exclusive snapshot/durable byte boundary.
-     * @returns {Promise<Buffer>} Owned component bytes, valid across subsequent refills.
+     * @param length Component bytes, no larger than the read window.
+     * @param offset Absolute nonnegative file position.
+     * @param limit Exclusive snapshot/durable byte boundary.
+     * @returns Owned component bytes, valid across subsequent refills.
      */
     async read(length, offset, limit) {
         if (!Number.isSafeInteger(length) ||

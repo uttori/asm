@@ -7,8 +7,8 @@ import { frameAtlasPreservedChunks } from "./som-palette-edit.js";
  * Lay out poses independently of native tile storage. One common cell size keeps origins
  * explicit; the native strip is always the authoritative source, including occluded tiles.
  * This adapter owns SNES tile dimensions; portable rendering knows only pixel rectangles.
- * @param {FrameLayout} layout Current frame atlas sidecar.
- * @returns {FrameLayout} Layout with poses and native strips separated.
+ * @param layout Current frame atlas sidecar.
+ * @returns Layout with poses and native strips separated.
  */
 export function layoutStableFrameAtlas(layout) {
     const next = structuredClone(layout);
@@ -64,10 +64,11 @@ export function layoutStableFrameAtlas(layout) {
     next.tileSources = "native-strip";
     return next;
 }
-/** Render derived poses and independent native strip pixels from previously extracted tiles.
- * @param {ReadonlyMap<string, readonly IndexedPixels[]>} tiles Native tiles keyed by segment.
- * @param {FrameLayout} layout Stable frame atlas sidecar.
- * @returns {IndexedPixels} Composited atlas indexes.
+/**
+ * Render derived poses and independent native strip pixels from previously extracted tiles.
+ * @param tiles Native tiles keyed by segment.
+ * @param layout Stable frame atlas sidecar.
+ * @returns Composited atlas indexes.
  */
 export function renderStableFrameAtlas(tiles, layout) {
     const sources = new Map();
@@ -132,10 +133,10 @@ export function renderStableFrameAtlas(tiles, layout) {
  * Plan body geometry changes as one owned layout/PNG result. Raw native bytes and derived
  * occurrences update together, while native tile bytes must remain exact. No filesystem writes.
  * Frame-record ROM publication still requires a declared include at each record's owned span.
- * @param {SpriteAtlasSource} atlas Current atlas source and layout.
- * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
- * @param {readonly {frame: string | number, block: string, x?: number, y?: number}[]} edits Body coordinate edits.
- * @returns {{layout: FrameLayout, bytes: Uint8Array}} Owned layout and PNG bytes.
+ * @param atlas Current atlas source and layout.
+ * @param catalog Shared palette catalogue.
+ * @param edits Body coordinate edits.
+ * @returns Owned layout and PNG bytes.
  */
 export function planBodyFrameEdits(atlas, catalog, edits) {
     const before = inspectFrameAtlas(atlas.source, atlas.layout, catalog, { whole: true });

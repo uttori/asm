@@ -33,9 +33,13 @@ import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-ser
 import { type SourceSpan } from "./source-location.js";
 import type { SourceOrigin } from "./source-provenance.js";
 import { type SyntaxProfile } from "./syntax-profile.js";
+/** Conditional branch node executed with normalized commands in the runtime buffer. */
 type RuntimeConditionalNode = ConditionalBranchNode;
+/** Executable front-end node stored in pass-local program caches. */
 type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
+/** Whether instruction encoding runs for sizing only or emits bytes. */
 type StageExecutionMode = "layout" | "emit";
+/** Stage-specific limits on emission, finalization, and label enforcement. */
 type StageExecutionCapabilities = {
     instructionMode: StageExecutionMode;
     canEmitBytes: boolean;
@@ -43,6 +47,7 @@ type StageExecutionCapabilities = {
     enforceResolvedLabels: boolean;
     isDefinitionCollectionStage: boolean;
 };
+/** Logical and physical write cursor snapshotted between assembly stages. */
 type StageCursorState = {
     currentTargetAddress: number;
     currentTargetBaseAddress: number;
@@ -50,6 +55,7 @@ type StageCursorState = {
     currentTargetBaseStartAddress: number;
     bytes: number;
 };
+/** Label tables and anonymous label stacks isolated per assembly stage. */
 type StageSymbolState = {
     labelTable: Map<string, LabelEntry>;
     forwardLabels: {
@@ -71,6 +77,7 @@ type StageSymbolState = {
     currentGlobalParentLabel: string;
     labelParents: Map<string, string | null>;
 };
+/** Namespace and macro expansion control snapshotted between assembly stages. */
 type StageControlState = {
     namespaceStack: string[];
     currentNamespace: string;
@@ -79,6 +86,7 @@ type StageControlState = {
     inMacroExpansion: boolean;
     macroLabelInstance: number;
 };
+/** Full mutable snapshot restored when entering or leaving an assembly stage. */
 type StageExecutionState = {
     stage: AssemblyStageName;
     capabilities: StageExecutionCapabilities;
@@ -89,12 +97,14 @@ type StageExecutionState = {
     /** Reclaimable execution cache. Full builds discard completed plans; direct runStage results retain them. */
     loweredProgram: LoweredProgram | null;
 };
+/** Narrow write-position API exposed to directives without the full assembler surface. */
 type CursorAddressFacade = {
     recordCurrentAddress(): void;
     setWritePosition(address: number): void;
     syncWriteStarts(): void;
     incrementBytesWritten(num: number): void;
 };
+/** Active `while` or typed `for` loop frame on the runtime control stack. */
 type WhileTracker = {
     iswhile: boolean;
     startline: number;
@@ -154,7 +164,9 @@ export declare class Assembler {
     /** A synchronous assignment borrows the existing scope writer while replacing only its numeric binding. */
     private moduleAssignmentValue?;
     /** Stable symbol-scope identity, independent of include basenames or final placement. */
+    /** Stable module id when section-relative assembly is enabled. */
     get moduleIdentity(): string | undefined;
+    /** Active section name when writing relocatable module bytes. */
     get moduleSection(): string | undefined;
     /** The current logical target address. */
     currentTargetAddress: number;
@@ -164,30 +176,48 @@ export declare class Assembler {
     currentTargetStartAddress: number;
     /** The current target base start address. `realstartpos` */
     currentTargetBaseStartAddress: number;
+    /** Total bytes emitted in the active stage cursor. */
     bytes: number;
+    /** Saved base addresses for nested `pushbase`/`pullbase` pairs. */
     pushBaseStack: number[];
     private readonly outputBuffer;
     /**
      * Mutable output; large contiguous session-owned images may use typed views. Reacquire a view after
      * growing writes; assigned arrays retain their growth behavior and assigned typed arrays stay fixed.
      */
+    /** Live output buffer view; reacquire after growth when using typed arrays. */
     get outputBytes(): number[] | Uint8Array;
+    /** Replaces the entire output buffer backing store. */
     set outputBytes(value: number[] | Uint8Array);
     /** Byte used when expanding a sparse output range. */
     outputFillByte: number;
+    /** Stack of active `while` and typed `for` loop frames. */
     whileStatus: WhileTracker[];
+    /** Saved namespace prefixes for nested namespace directives. */
     namespaceStack: string[];
+    /** Active namespace prefix applied to newly defined symbols. */
     currentNamespace: string;
+    /** Whether dotted namespace segments accumulate on a nesting path. */
     namespaceNestingEnabled: boolean;
+    /** Path segments accumulated when namespace nesting is enabled. */
     namespaceNestingPath: string[];
+    /** Name of the macro currently being expanded, if any. */
     currentMacroName: string;
+    /** Variadic argument count for the active macro expansion. */
     currentVariadicCount: number | undefined;
+    /** Captured variadic argument strings for the active macro expansion. */
     currentVariadicArgs: string[];
+    /** Macro definitions registered during this session. */
     macros: Map<string, MacroDefinition>;
+    /** Shared numeric expression evaluator for directives and operands. */
     mathCore: MathCore;
+    /** Operand parser and evaluator bound to this session's symbol state. */
     operandResolver: OperandResolver;
+    /** Byte-to-source metadata collected when {@link collectSourceMetadata} is enabled. */
     addressToLineMapping: AddressToLineMapping;
+    /** Path of the source file currently being executed. */
     currentFile: string;
+    /** Zero-based line index within {@link currentFile}. */
     currentLine: number;
     /** Invocation-local provenance. Buffered nodes snapshot it before this scope ends. */
     private currentSourceOrigin?;
@@ -195,15 +225,23 @@ export declare class Assembler {
     private traceListener;
     /** Active command contexts so nested byte writes inherit the right source line. */
     private readonly traceCommandStack;
+    /** Textual define bindings established by define directives. */
     defines: Map<string, string>;
     /** Bare numeric values exposed only while executing typed `for` loops. */
     private readonly activeLoopVariables;
+    /** Character-to-byte mappings for the active text table. */
     characterMappings: Map<string, number>;
+    /** Name of the character table currently selected. */
     currentTable: string | null;
+    /** Saved character mapping tables for nested table directives. */
     tableStack: Map<string, number>[];
+    /** Canonical architecture id selected for encoding. */
     arch: string;
+    /** Saved program counters for nested `pushpc`/`pullpc` pairs. */
     pushpcStack: PushPcStackEntry[];
+    /** Nesting depth counter paired with {@link pushpcStack}. */
     pushpcnum: number;
+    /** Primary label value table for the active stage. */
     labelTable: Map<string, LabelEntry>;
     /** ca65 `.export` / `.import` names that stay session-global. */
     globalSymbols: Set<string>;
@@ -223,59 +261,99 @@ export declare class Assembler {
             unit?: string;
         }[];
     };
+    /** Repeat unit size for pad directives in bytes. */
     padUnit: number;
+    /** Fill pattern bytes cycled during pad emission. */
     padbyte: number[];
+    /** Struct definitions registered during this session. */
     structs: Map<string, StructDefinition>;
+    /** Struct currently being defined, if any. */
     currentStruct: StructDefinition | null;
+    /** Saved PCs while defining struct layouts in place. */
     savedPCStack: number[];
     /** Initialize fill pattern */
     fillbyte: number[];
+    /** Optional base ROM image copied at session construction. */
     baseImage: Uint8Array;
+    /** Lazily initialized CRC table shared by include fingerprinting. */
     static crcTable: number[] | null;
+    /** Metadata for files already included in this session. */
     includedFiles: Map<string, IncludedFileInfo>;
+    /** Stack of include paths for nested include directives. */
     includeStack: string[];
+    /** Search paths consulted when resolving include targets. */
     includePaths: string[];
+    /** Monotonic id distinguishing anonymous labels across macro expansions. */
     macroLabelInstance: number;
+    /** Whether execution is inside a macro expansion body. */
     inMacroExpansion: boolean;
+    /** Most recently defined parent label for local label resolution. */
     currentParentLabel: string;
+    /** Whether {@link currentParentLabel} was declared as global. */
     currentParentIsGlobal: boolean;
+    /** Active top-level parent used to resolve single-dot local labels. */
     currentGlobalParentLabel: string;
+    /** Explicit parent links for labels that do not encode ancestry in their names. */
     labelParents: Map<string, string | null>;
+    /** When true, label reads must resolve to defined values immediately. */
     requireStaticLabelLookup: boolean;
     /** Session syntax values indexed by opaque builder identities, with source keys owned by the builder. */
     readonly passProgramCache: Map<string, RuntimeNode[]>;
+    /** Directive handlers registered for this session's target and plugins. */
     directiveRegistry: DirectiveRegistry;
+    /** Architecture encoder registry bound to the active target. */
     architectureRegistry: ArchitectureRegistry;
+    /** Frozen plugin environment shared across sessions. */
     readonly environment: AssemblerEnvironment;
+    /** Resolved target contribution id for this session. */
     readonly targetId: string;
+    /** Validated target options frozen at construction. */
     readonly targetOptions: Readonly<Record<string, unknown>>;
+    /** Active syntax profile controlling label and directive normalization. */
     readonly syntaxProfile: SyntaxProfile;
+    /** Core directive groups exposed to plugins for this session. */
     readonly coreDirectiveGroups: readonly CoreDirectiveGroup[];
+    /** Mutable plugin-owned session state store. */
     readonly pluginState: PluginSessionStateStore;
+    /** Target address-space policy used for writes and label widths. */
     readonly pluginAddressSpace: PluginTargetAddressSpace;
+    /** Target output format policy for container sizing and checksum rules. */
     readonly pluginOutputFormat: PluginTargetOutputFormat;
     private readonly activeLifecycles;
+    /** Facade exposing cursor write helpers to directives. */
     readonly cursorAddress: CursorAddressFacade;
+    /** Synchronous file provider used for includes and expression file reads. */
     readonly fileProvider: AssemblyFileProvider;
     /** Binary/resource dependencies and converted bytes owned by the active build. */
     readonly assetAssembly: AssetAssemblyService;
     /** Tooling-only path discovery avoids conversion on edit bursts. */
+    /** When true, asset includes record edges without converting bytes. */
     deferAssetConversion: boolean;
+    /** Front-end parser and command factory for this session. */
     readonly frontEndService: AssemblyFrontEndService;
+    /** Incremental program model builder backing editor tooling. */
     readonly programModelBuilder: ProgramModelBuilder;
+    /** Lowers normalized commands into executable runtime nodes. */
     readonly commandLoweringService: CommandLoweringService;
+    /** Mutable parse state reused across incremental program builds. */
     readonly incrementalProgramParseState: IncrementalProgramParseState;
     private readonly services;
+    /** Cached mutable snapshots for each executed assembly stage. */
     readonly stageExecutionStates: Map<AssemblyStageName, StageExecutionState>;
+    /** Diagnostics accumulated during the current or most recent build. */
     readonly diagnostics: AssemblyDiagnostic[];
+    /** Symbol definitions recorded for tooling and cross-reference analysis. */
     readonly symbolDefinitions: AssemblySymbolDefinition[];
+    /** Symbol references recorded for tooling and cross-reference analysis. */
     readonly symbolReferences: AssemblySymbolReference[];
     /** Pure occurrence plans replay against the current scope instead of caching resolved references. */
     private readonly referencePlanner;
     /** Static records need replay only when the same deduplication fields or analysis epoch change. */
     private readonly stableReferences;
     private referenceEpoch;
+    /** Include graph edges recorded for tooling analysis. */
     readonly includeEdges: AssemblyIncludeEdge[];
+    /** Whether byte-to-source metadata is collected during emission. */
     readonly collectSourceMetadata: boolean;
     /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
     followIncludes: boolean;
@@ -284,17 +362,29 @@ export declare class Assembler {
     private sessionDisposed;
     /** Nesting permits target hooks triggered synchronously by another plugin capability. */
     private borrowPluginCapabilities;
+    /** Define directive engine for this session. */
     get defineEngine(): DefineEngine;
+    /** Runtime dispatcher for structural directives. */
     get directiveRuntime(): DirectiveRuntimeService;
+    /** Active logical address width in bytes from the target address space. */
     get addressWidth(): number;
+    /** Architecture ids available on the active target. */
     get availableArchitectures(): ReadonlySet<string>;
+    /** Human-readable target name for diagnostics. */
     get targetDisplayName(): string;
+    /** Shared front-end command parsing service. */
     get frontEndCommandService(): FrontEndCommandService;
+    /** Include and incsrc handling service. */
     get includeSource(): IncludeSourceService;
+    /** Macro definition and expansion engine. */
     get macroEngine(): MacroEngine;
+    /** Label and symbol scope service. */
     get symbolScope(): SymbolScopeService;
+    /** Byte-oriented output writer bound to the session buffer. */
     get outputWriter(): OutputWriterService;
+    /** Struct definition and initializer engine. */
     get structEngine(): StructEngine;
+    /** Alias for {@link currentTargetAddress} used by legacy directive helpers. */
     get currentAddress(): number;
     /**
      * Records current address.
@@ -304,12 +394,12 @@ export declare class Assembler {
     recordBinarySlice(file: string, start: number, end: number, bytes: Uint8Array): void;
     /**
      * Sets write position.
-     * @param {number} address The address.
+     * @param address The address.
      */
     setWritePosition(address: number): void;
     /**
      * Enters struct definition.
-     * @param {number} base The base.
+     * @param base The base.
      */
     enterStructDefinition(base: number): void;
     /**
@@ -322,27 +412,32 @@ export declare class Assembler {
     syncWriteStarts(): void;
     /**
      * Increments bytes written.
-     * @param {number} num The num.
+     * @param num The num.
      */
     incrementBytesWritten(num: number): void;
+    /** Whether the active stage sizes instructions without emitting bytes. */
     get mode(): "layout" | "emit";
+    /** Whether byte writes are permitted in the active stage. */
     get canEmitBytes(): boolean;
+    /** Whether the active stage may finalize output and enforce completion checks. */
     get canFinalize(): boolean;
+    /** Whether unresolved labels are errors in the active stage. */
     get enforceResolvedLabels(): boolean;
+    /** Whether the active stage collects definitions without emitting program bytes. */
     get isDefinitionCollectionStage(): boolean;
     /**
      * Reports whether structured tracing is active for this assembly session.
-     * @returns {boolean} Whether a trace listener is installed.
+     * @returns Whether a trace listener is installed.
      */
     get isTracing(): boolean;
     /**
      * Traces write.
-     * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
+     * @param event The event.
      */
     traceWrite(event: Omit<AssemblerTraceWriteEvent, "type">): void;
     /**
      * Installs or clears the structured trace listener.
-     * @param {AssemblerTraceListener | null} listener The listener to receive trace events.
+     * @param listener The listener to receive trace events.
      */
     setTraceListener(listener: AssemblerTraceListener | null): void;
     /**
@@ -352,34 +447,34 @@ export declare class Assembler {
     /**
      * Records a directed include-graph edge if it has not already been recorded.
      * Includes execute once per pass, so edges are de-duplicated by file pair.
-     * @param {string} fromFile The file issuing the include directive.
-     * @param {string} toFile The resolved path of the included file.
+     * @param fromFile The file issuing the include directive.
+     * @param toFile The resolved path of the included file.
      */
     recordIncludeEdge(fromFile: string, toFile: string): void;
     /**
      * Returns the current source location.
-     * @param {SourceSpan} [span] Optional source span override.
-     * @returns {AssemblySourceLocation} The current source location.
+     * @param [span] Optional source span override.
+     * @returns The current source location.
      */
     getCurrentSourceLocation(span?: SourceSpan): AssemblySourceLocation;
     /**
      * Converts and records an unknown error.
-     * @param {unknown} error The error to normalize.
-     * @param {SourceSpan} [span] Optional source span override.
-     * @param {string} [stage] Optional stage name.
-     * @returns {AssemblyDiagnostic} The recorded diagnostic.
+     * @param error The error to normalize.
+     * @param [span] Optional source span override.
+     * @param [stage] Optional stage name.
+     * @returns The recorded diagnostic.
      */
     reportErrorDiagnostic(error: unknown, span?: SourceSpan, stage?: AssemblyStageName): AssemblyDiagnostic;
     /**
      * Records a symbol definition if it has not already been recorded.
-     * @param {AssemblySymbolKind} kind The symbol kind.
-     * @param {string} name The symbol name.
-     * @param {{ file?: string; line?: number; span?: SourceSpan; value?: number | string; containerName?: string }} [options] Optional symbol metadata.
-     * @param {string} [options.file] Optional source file override.
-     * @param {number} [options.line] Optional source line override.
-     * @param {SourceSpan} [options.span] Optional precise source span.
-     * @param {number | string} [options.value] Optional resolved symbol value.
-     * @param {string} [options.containerName] Optional owning container name.
+     * @param kind The symbol kind.
+     * @param name The symbol name.
+     * @param [options] Optional symbol metadata.
+     * @param [options.file] Optional source file override.
+     * @param [options.line] Optional source line override.
+     * @param [options.span] Optional precise source span.
+     * @param [options.value] Optional resolved symbol value.
+     * @param [options.containerName] Optional owning container name.
      */
     recordSymbolDefinition(kind: AssemblySymbolKind, name: string, options?: {
         file?: string;
@@ -390,13 +485,13 @@ export declare class Assembler {
     }): void;
     /**
      * Records a symbol reference if it has not already been recorded.
-     * @param {AssemblySymbolReferenceKind} kind The reference kind.
-     * @param {string} name The reference name.
-     * @param {{ file?: string; line?: number; span?: SourceSpan; containerName?: string }} [options] Optional reference metadata.
-     * @param {string} [options.file] Optional source file override.
-     * @param {number} [options.line] Optional source line override.
-     * @param {SourceSpan} [options.span] Optional precise source span.
-     * @param {string} [options.containerName] Optional owning container name.
+     * @param kind The reference kind.
+     * @param name The reference name.
+     * @param [options] Optional reference metadata.
+     * @param [options.file] Optional source file override.
+     * @param [options.line] Optional source line override.
+     * @param [options.span] Optional precise source span.
+     * @param [options.containerName] Optional owning container name.
      */
     recordSymbolReference(kind: AssemblySymbolReferenceKind, name: string, options?: {
         file?: string;
@@ -411,15 +506,15 @@ export declare class Assembler {
     private recordStableSymbolReference;
     /**
      * Collects expression references.
-     * @param {ExpressionNode | undefined} expression The expression.
-     * @param {SourceSpan} [fallbackSpan] The fallback span.
+     * @param expression The expression.
+     * @param [fallbackSpan] The fallback span.
      */
     collectExpressionReferences(expression: ExpressionNode | undefined, fallbackSpan?: SourceSpan): void;
     /**
      * Records one reference per struct-path segment so `obj.timer` can target
      * the struct root and the field independently.
-     * @param {ReferenceExpressionNode} expression The struct-rooted reference.
-     * @param {SourceSpan} [fallbackSpan] The fallback span.
+     * @param expression The struct-rooted reference.
+     * @param [fallbackSpan] The fallback span.
      */
     collectStructReferenceSegments(expression: ReferenceExpressionNode, fallbackSpan?: SourceSpan): void;
     /**
@@ -427,74 +522,83 @@ export declare class Assembler {
      * Strips `[...]` so `obj[19].ext.index` yields `ext` for `index`.
      * Define roots (`!obj_arthur.flags2`) resolve through the define value
      * (`obj_start+obj[0]`) to the actual struct name.
-     * @param {ReferenceExpressionNode} object The object of a member access.
-     * @returns {string | undefined} The container name.
+     * @param object The object of a member access.
+     * @returns The container name.
      */
     private structSegmentContainerName;
     /**
      * Finds a known struct name in a define's expansion, walking nested defines.
-     * @param {string | undefined} name The define name.
-     * @param {Set<string>} [seen] Define names already visited.
-     * @returns {string | undefined} The struct name, if any.
+     * @param name The define name.
+     * @param [seen] Define names already visited.
+     * @returns The struct name, if any.
      */
     private structNameFromDefine;
     /**
      * Walks an expression right-to-left looking for a known struct identifier.
      * `obj_start+obj[0]` yields `obj`.
-     * @param {ExpressionNode} node The expression to search.
-     * @param {Set<string>} seen Define names already visited.
-     * @returns {string | undefined} The struct name, if any.
+     * @param node The expression to search.
+     * @param seen Define names already visited.
+     * @returns The struct name, if any.
      */
     private structNameFromExpression;
     /**
      * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
      * segments so each part can be targeted independently.
-     * @param {string} name The identifier text.
-     * @returns {{ name: string; containerName?: string }[] | undefined} Segments, if this is a known sublabel.
+     * @param name The identifier text.
+     * @returns Segments, if this is a known sublabel.
      */
     private hierarchicalLabelReferences;
     /**
      * Collects command references.
-     * @param {NormalizedCommand} command The command.
+     * @param command The command.
      */
     collectCommandReferences(command: NormalizedCommand): void;
     /** Walk portable directive payloads, collecting expression nodes without interpreting enum/path strings. */
     private collectSyntaxReferences;
     /**
      * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
-     * @param {ProgramModel} program The program model to analyze.
-     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-     * @param {boolean} [options.followIncludes] Whether to follow includes.
-     * @param {Array<AssemblyStageName>} [options.stages] Optional stages to run.
-     * @param {boolean} [options.collectSourceMetadata] Whether to collect source metadata.
-     * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
+     * @param program The program model to analyze.
+     * @param [options] Optional analysis options.
+     * @param [options.followIncludes] Whether to follow includes.
+     * @param [options.stages] Optional stages to run.
+     * @param [options.collectSourceMetadata] Whether to collect source metadata.
+     * @returns The accumulated diagnostics and symbols.
      */
     collectProgramAnalysis(program: ProgramModel, options?: ProgramAnalysisOptions): AssemblyAnalysisResult;
     /**
      * Creates an isolated assembler session suitable for editor-style analysis.
      * This keeps batch assembly state and tooling state from leaking into each
      * other while still sharing the same file provider and directive registry.
-     * @returns {Assembler} A configured analysis session.
+     * @returns A configured analysis session.
      */
     createToolingSession(): Assembler;
     /**
      * Creates directive handlers bound to a fresh session's family capabilities.
-     * @param {Assembler} session The session that should receive directive calls.
-     * @returns {DirectiveRegistry} A registry bound to the provided session.
+     * @param session The session that should receive directive calls.
+     * @returns A registry bound to the provided session.
      */
     cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry;
+    /**
+     * Runs tooling analysis on an already-built program in an isolated session.
+     * @param program Parsed program model to analyze.
+     */
     analyzeProgram(program: ProgramModel): AssemblyAnalysisResult;
     /**
      * Builds and analyzes raw source without throwing on the first error.
-     * @param {string} source The source to analyze.
-     * @param {string} [sourceFile] Optional source file override.
-     * @param {number} [startLine] Optional starting line number.
-     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-     * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
+     * @param source The source to analyze.
+     * @param [sourceFile] Optional source file override.
+     * @param [startLine] Optional starting line number.
+     * @param [options] Optional analysis options.
+     * @returns The analysis result and program model.
      */
     analyzeSource(source: string, sourceFile?: string, startLine?: number, options?: ProgramAnalysisOptions): AssemblyAnalysisResult & {
         program: ProgramModel;
     };
+    /**
+     * Analyzes multiple source documents sequentially in fresh tooling sessions.
+     * @param documents Source buffers with paths and optional start lines.
+     * @param options Analysis options applied to each document.
+     */
     analyzeWorkspace(documents: Array<{
         source: string;
         sourceFile: string;
@@ -539,11 +643,17 @@ export declare class Assembler {
     selectModuleSection(options: AssemblySectionOptions): void;
     /** BSS reservations never acquire initialized bytes; initialized sections can request explicit fill. */
     reserveModuleBytes(count: number, fill?: number): void;
+    /**
+     * Aligns the module write cursor within the active section.
+     * @param boundary Byte alignment boundary.
+     * @param fill Fill byte used for padding when emitting.
+     */
     alignModule(boundary: number, fill?: number): void;
     /** Write a typed field through the ordinary byte writer, retaining an independent symbolic record. */
     writeRelocation(expression: LinkExpression, encoding: RelocationEncoding): void;
     /** Numeric scalar directives and struct fields share exactly the encoder relocation contract. */
     writeExpression(expression: ExpressionNode, width: 1 | 2 | 3 | 4, endianness?: "little" | "big"): void;
+    /** Records one emitted module byte against the current range kind, including asset tails. */
     recordModuleWrite(): void;
     /** Addressed record layouts acquire a section base only when they are actually initialized there. */
     recordModuleStructBase(name: string, base: number): void;
@@ -553,7 +663,18 @@ export declare class Assembler {
     private registerAsarModuleLayout;
     /** Returns a detached producer result. No ROM finalizer or linker has run on its section bytes. */
     getAssemblyModule(): AssemblyModule;
+    /**
+     * Invokes a named hook on every active plugin lifecycle in registration order.
+     * @param hookName Hook label used when wrapping plugin errors.
+     * @param invoke Callback receiving each lifecycle instance.
+     */
     runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void;
+    /**
+     * Runs plugin `beforeDirective` middleware until one handler consumes the directive.
+     * @param keyword Canonical directive keyword being dispatched.
+     * @param command Normalized command under dispatch.
+     * @param syntax Parsed syntax snapshot when already available.
+     */
     runBeforeDirective(keyword: string, command: NormalizedCommand, syntax?: import("./ir/source-syntax.ts").DeclarationSyntax | {
         readonly kind: "label";
         readonly statement: import("./ir/statement-node.js").LabelStatement;
@@ -597,18 +718,28 @@ export declare class Assembler {
     }) | undefined): "continue" | "handled";
     /**
      * Resolves ambiguous `endif` handling through active dialect lifecycles.
-     * @param {"for" | "while"} [loopType] The innermost loop type.
-     * @param {number} [loopStartLine] The innermost loop start line.
-     * @param {number} [ifStartLine] The innermost conditional start line.
-     * @returns {boolean} Whether `endif` should close the innermost while loop.
+     * @param [loopType] The innermost loop type.
+     * @param [loopStartLine] The innermost loop start line.
+     * @param [ifStartLine] The innermost conditional start line.
+     * @returns Whether `endif` should close the innermost while loop.
      */
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
+    /**
+     * Selects the session architecture and notifies plugin lifecycles.
+     * @param architecture Architecture id or alias to activate.
+     * @param sourceAlias Original alias text preserved for lifecycle hooks.
+     */
     selectArchitecture(architecture: string, sourceAlias?: string): void;
+    /**
+     * Validates and notifies plugins before a multi-byte write at a logical address.
+     * @param logicalAddress Target logical address of the write.
+     * @param width Write width in bytes.
+     */
     beforeWrite(logicalAddress: number, width: number): void;
     /**
      * Records one emitted byte against the active command source.
-     * @param {number} logicalAddress Logical byte address.
-     * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
+     * @param logicalAddress Logical byte address.
+     * @param outputOffset Physical output offset, or a negative value when unmapped.
      */
     recordSourceWrite(logicalAddress: number, outputOffset: number): void;
     /** Record the actual typed field encoding without splitting or overlapping its row's byte ownership. */
@@ -619,124 +750,197 @@ export declare class Assembler {
      * and file provider remain owned by the host. Do not use this session afterward.
      */
     dispose(): void;
+    /**
+     * Reads an unsigned little-endian integer from a byte slice.
+     * @param bytes Source buffer.
+     * @param pos Starting byte index.
+     * @param width Width in bytes, at most four.
+     */
     readLittleEndian(bytes: Uint8Array, pos: number, width: number): number | undefined;
     /**
      * Check a byte interval after truncating its position and size to integers.
-     * @param {number} sourceLength Available source bytes.
-     * @param {number} position Zero-based byte offset.
-     * @param {number} size Requested byte count, which may be zero.
-     * @returns {number} Numeric 1 or 0 for use by assembly expressions.
+     * @param sourceLength Available source bytes.
+     * @param position Zero-based byte offset.
+     * @param size Requested byte count, which may be zero.
+     * @returns Numeric 1 or 0 for use by assembly expressions.
      */
     canReadByteRange(sourceLength: number, position: number, size: number): number;
     /**
      * Read an unsigned little-endian value after truncating offset and width.
-     * @param {Uint8Array} source Borrowed input bytes, never modified.
-     * @param {number} position Zero-based byte offset.
-     * @param {number} size Width in bytes, used by the 1–4-byte expression readers.
-     * @param {number | undefined} defaultValue Returned for an out-of-bounds read when supplied.
-     * @param {string} errorMessage Error thrown for an out-of-bounds read without a default.
-     * @returns {number} Unsigned value or the supplied default.
+     * @param source Borrowed input bytes, never modified.
+     * @param position Zero-based byte offset.
+     * @param size Width in bytes, used by the 1–4-byte expression readers.
+     * @param defaultValue Returned for an out-of-bounds read when supplied.
+     * @param errorMessage Error thrown for an out-of-bounds read without a default.
+     * @returns Unsigned value or the supplied default.
      */
     readByteRange(source: Uint8Array, position: number, size: number, defaultValue: number | undefined, errorMessage: string): number;
+    /**
+     * Resolves an include or expression path against session search paths.
+     * @param filename Candidate path from source.
+     */
     resolveReadablePath(filename: string): string | undefined;
+    /**
+     * Resolves a label identifier for expression evaluation, including loop bindings.
+     * @param identifier Label or symbol text from an expression.
+     */
     resolveExpressionHostLabel(identifier: string): number | string;
+    /**
+     * Returns the byte size of a struct or label object referenced in an expression.
+     * @param identifier Object or label name.
+     * @param baseOnly When true, ignore trailing field selectors.
+     */
     getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
+    /**
+     * Looks up a textual define or active typed `for` loop counter by name.
+     * @param varName Define or loop variable name.
+     */
     lookupDefineValue(varName: string): string | undefined;
+    /** Source file path of the macro currently being expanded, when applicable. */
     get currentMacroSourceFile(): string | undefined;
+    /**
+     * Returns how many bytes can be read from the base or output image at a logical address.
+     * @param position Logical start address.
+     * @param size Requested read width in bytes.
+     */
     canReadBaseImage(position: number, size: number): number;
+    /**
+     * Reads an unsigned integer from the base or output image at a logical address.
+     * @param position Logical start address.
+     * @param size Read width in bytes.
+     * @param defaultValue Value returned when the read is out of bounds.
+     */
     readBaseImage(position: number, size: number, defaultValue?: number): number;
+    /**
+     * Returns how many bytes can be read from a resolved expression file path.
+     * @param filename Path token from an expression.
+     * @param position Byte offset within the file.
+     * @param size Requested read width in bytes.
+     */
     canReadExpressionFile(filename: string, position: number, size: number): number;
+    /**
+     * Reads an unsigned integer from a file resolved for expression evaluation.
+     * @param filename Path token from an expression.
+     * @param position Byte offset within the file.
+     * @param size Read width in bytes.
+     * @param defaultValue Value returned when the path or range is invalid.
+     */
     readExpressionFile(filename: string, position: number, size: number, defaultValue?: number): number;
     /**
      * Installs the active target's expression contributions into this session.
-     * @param {readonly string[]} setIds Resolved expression-set contribution IDs.
+     * @param setIds Resolved expression-set contribution IDs.
      */
     installExpressionFunctions(setIds: readonly string[]): void;
+    /** Expression evaluation callbacks wired to this session's symbol and output state. */
     readonly expressionHost: ExpressionHost;
     /**
      * Advances the logical program counter.
-     * @param {number} num Number of logical address units to advance.
+     * @param num Number of logical address units to advance.
      */
     step(num: number): void;
     /**
      * Writes a single architecture byte to output.
-     * @param {number} num Byte value to write.
+     * @param num Byte value to write.
      */
     writeArchitectureByte(num: number): void;
     /**
      * Fills a section of output data with a value.
-     * @param {number} start The starting address.
-     * @param {number} value The value to fill with.
-     * @param {number} length The length of the section to fill.
+     * @param start The starting address.
+     * @param value The value to fill with.
+     * @param length The length of the section to fill.
      */
     fillOutputBytes(start: number, value: number, length: number): void;
     /** Store one already-validated emitted byte, preserving sparse gap fill and public fill overrides. */
     writeOutputByte(offset: number, value: number): void;
+    /**
+     * Builds a throwaway stage snapshot from the live session without caching it.
+     * @param stage Assembly stage whose descriptor seeds the snapshot.
+     */
     createEphemeralStageExecutionState(stage: AssemblyStageName): StageExecutionState;
     /**
      * Synchronizes active stage execution state.
-     * @param {AssemblyStageName} stage The stage.
+     * @param stage The stage.
      */
     syncActiveStageExecutionState(stage: AssemblyStageName): void;
+    /** Returns capabilities for the active stage, defaulting to definition collection. */
     getActiveStageCapabilities(): StageExecutionCapabilities;
+    /** Assembly stage currently driving execution and tracing. */
     get traceStage(): AssemblyStageName;
     /** Public word entry; all source forms use the shared parser and typed execution contracts. */
     asblock_pick(words: string[]): boolean;
+    /**
+     * Resolves the canonical architecture name and registry definition for {@link arch}.
+     */
     resolveActiveArchitecture(): {
         name: string;
         definition?: ArchitectureDefinition;
     };
     /**
      * Resolves target-specific directive prefixes without teaching the registry a dialect.
-     * @param {string} keyword Source directive keyword.
-     * @returns {string} Canonical registry keyword.
+     * @param keyword Source directive keyword.
+     * @returns Canonical registry keyword.
      */
     canonicalizeDirectiveKeyword(keyword: string): string;
     /**
      * Returns whether the active syntax profile treats a token as a named label.
-     * @param {string} candidate Candidate token.
-     * @returns {boolean} Whether the token is a named label.
+     * @param candidate Candidate token.
+     * @returns Whether the token is a named label.
      */
     isNamedLabelToken(candidate: string): boolean;
     /**
      * Writes 1, 2, 3, or 4 bytes to output.
-     * @param {number} num - The byte to write.
+     * @param num The byte to write.
      */
     write1(num: number): void;
     /**
      * Writes 2.
-     * @param {number} num The num.
+     * @param num The num.
      */
     write2(num: number): void;
     /**
      * Writes 3.
-     * @param {number} num The num.
+     * @param num The num.
      */
     write3(num: number): void;
     /**
      * Writes 4.
-     * @param {number} num The num.
+     * @param num The num.
      */
     write4(num: number): void;
     /**
      * Reads 1, 2, or 3 bytes from the configured output image.
-     * @param {number} logicalPosition The logical address to read from.
-     * @returns {number} The byte read from the output image.
+     * @param logicalPosition The logical address to read from.
+     * @returns The byte read from the output image.
      */
     read1(logicalPosition: number): number;
+    /**
+     * Reads a little-endian 16-bit value from the output image at a logical address.
+     * @param logicalPosition Logical address to read.
+     */
     read2(logicalPosition: number): number;
+    /**
+     * Reads a little-endian 24-bit value from the output image at a logical address.
+     * @param logicalPosition Logical address to read.
+     */
     read3(logicalPosition: number): number;
+    /**
+     * Parses one raw source line into a normalized command via the front-end service.
+     * @param command Raw line text.
+     * @param sourceFile Containing file path.
+     * @param sourceLine Zero-based line index.
+     * @param allowEmpty When true, empty lines produce a command node instead of null.
+     */
     createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty?: boolean): NormalizedCommand | null;
     /**
      * Applies a `!name =` assignment without routing it through the incremental if-tree.
-     * @param {string} command The define assignment command.
-     * @returns {boolean} `true` when the define engine handled the command.
+     * @param command The define assignment command.
+     * @returns `true` when the define engine handled the command.
      */
     applyDefineAssignment(command: string): boolean;
     /**
      * Asar `'X' = $nn` / `"X" = $nn` table entries, including `''' = $2A` for apostrophe.
-     * @param {string} command Raw command text.
-     * @returns {boolean} `true` when the line was a character mapping.
+     * @param command Raw command text.
+     * @returns `true` when the line was a character mapping.
      */
     tryHandleCharacterMapping(command: string): boolean;
     /** Scope expansion metadata and restore caller positions even when nested expansion fails. */
@@ -745,8 +949,8 @@ export declare class Assembler {
     withIncludeSource(file: string, execute: () => void, fromFile?: string): void;
     /**
      * Processes a command from an internal re-entrant source.
-     * @param {string} command - The command to process.
-     * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
+     * @param command The command to process.
+     * @param [preprocessed] Whether comments and continuations were already normalized.
      */
     processCommand(command: string, preprocessed?: boolean, template?: NormalizedCommand): void;
     /** Physical fragments retained only while the frontend buffers one multiline statement. */
@@ -759,10 +963,15 @@ export declare class Assembler {
     private executeStatement;
     /** Keep nested write attribution and trace event ordering identical for typed and legacy data. */
     private executeAttributedCommand;
+    /**
+     * Lowers a program once per stage state and caches the result on that state.
+     * @param stageState Stage snapshot owning the lowered program cache.
+     * @param program Parsed program to lower.
+     */
     getOrCreateLoweredProgram(stageState: StageExecutionState, program: ProgramModel): LoweredProgram;
     /**
      * Dispatches lowered node.
-     * @param {LoweredCommand} lowered The lowered.
+     * @param lowered The lowered.
      */
     dispatchLoweredNode(lowered: LoweredCommand): void;
     /** Classification retains its stage-entry ordering; no prepared values enter the syntax cache. */
@@ -777,71 +986,71 @@ export declare class Assembler {
      * Parses a function definition of the form:
      *   function name(param1, param2...) = expression
      * Possibly spanning multiple lines joined by backslashes.
-     * @param {string} defLine - The function definition line.
+     * @param defLine The function definition line.
      */
     parseFunctionDefinition(defLine: string): void;
     /**
      * Adds a mapping of the current address to the source line number.
-     * @param {number} address The logical address to add to the mapping.
+     * @param address The logical address to add to the mapping.
      */
     addAddressToLine(address: number): void;
     /**
      * Evaluates a range expression and returns the result.
-     * @param {string} expr The expression to evaluate.
-     * @returns {number} The result of the expression.
+     * @param expr The expression to evaluate.
+     * @returns The result of the expression.
      */
     evaluateRangeExpression(expr: string | ExpressionNode): number;
     /**
      * Replace include search paths before assembly. Retains the array without copying.
-     * @param {string[]} paths Provider-specific search paths. Node resolves relative paths from cwd.
+     * @param paths Provider-specific search paths. Node resolves relative paths from cwd.
      */
     setIncludePaths(paths: string[]): void;
     /**
      * Evaluates an expression for conditionals (if, while).
-     * @param {string} expression - The expression to evaluate.
-     * @returns {boolean} True if the expression is true, false otherwise.
+     * @param expression The expression to evaluate.
+     * @returns True if the expression is true, false otherwise.
      */
     evaluateExpression(expression: string | ExpressionNode): boolean;
     /**
      * Evaluate an assertion, or defer it when skipped asset bytes make its inputs provisional.
      * Literal arithmetic and expanded numeric defines remain checkable during editor analysis.
-     * @param {string | ExpressionNode} expression Assertion condition.
-     * @returns {boolean | undefined} The condition result, or undefined until a build resolves the layout.
+     * @param expression Assertion condition.
+     * @returns The condition result, or undefined until a build resolves the layout.
      */
     evaluateAssertion(expression: string | ExpressionNode): boolean | undefined;
     /**
      * Parses string input into an expression node and resolves nested references/defines.
-     * @param {string | ExpressionNode} expression The expression source or parsed node.
-     * @returns {ExpressionNode} The resolved expression tree.
+     * @param expression The expression source or parsed node.
+     * @returns The resolved expression tree.
      */
     resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode;
     /**
      * Recursively resolves define references and nested reference-expression nodes.
-     * @param {ExpressionNode} expression The expression node to resolve.
-     * @returns {ExpressionNode} The resolved expression node.
+     * @param expression The expression node to resolve.
+     * @returns The resolved expression node.
      */
     resolveExpressionNode(expression: ExpressionNode): ExpressionNode;
     /**
      * Resolves reference-style expressions such as identifiers, define references,
      * member access, and indexed access into either simpler reference nodes or
      * raw/math expressions when defines collapse them further.
-     * @param {ReferenceExpressionNode} expression The reference expression to resolve.
-     * @returns {ExpressionNode} The resolved expression tree.
+     * @param expression The reference expression to resolve.
+     * @returns The resolved expression tree.
      */
     resolveReferenceExpressionNode(expression: ReferenceExpressionNode): ExpressionNode;
     /**
      * Resolves a reference expression all the way to a numeric value.
-     * @param {ReferenceExpressionNode} expression The reference expression to evaluate.
-     * @param {boolean} [requireStatic] Whether labels must be static.
-     * @returns {number} The numeric value of the reference.
+     * @param expression The reference expression to evaluate.
+     * @param [requireStatic] Whether labels must be static.
+     * @returns The numeric value of the reference.
      */
     evaluateReferenceExpressionNode(expression: ReferenceExpressionNode, requireStatic?: boolean): number;
     /**
      * Resolves a reference expression to either a numeric value or a normalized
      * label/struct lookup target, depending on how far the expression collapses.
-     * @param {ReferenceExpressionNode} expression The reference expression to resolve.
-     * @param {boolean} [requireStatic] Whether labels must be static.
-     * @returns {number | string} The resolved numeric value.
+     * @param expression The reference expression to resolve.
+     * @param [requireStatic] Whether labels must be static.
+     * @returns The resolved numeric value.
      */
     resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic?: boolean): number | string;
     /**
@@ -853,40 +1062,40 @@ export declare class Assembler {
     private bindReferenceSuffix;
     /**
      * Resolves standalone relative-label tokens used in define contexts.
-     * @param {string} input The token to resolve.
-     * @returns {string | undefined} The resolved address string, if applicable.
+     * @param input The token to resolve.
+     * @returns The resolved address string, if applicable.
      */
     tryResolveRelativeLabelToken(input: string): string | undefined;
     /**
      * Resolves direct `!name` define references that are not assignments.
-     * @param {string} input The token to resolve.
-     * @returns {string | undefined} The resolved define value, if applicable.
+     * @param input The token to resolve.
+     * @returns The resolved define value, if applicable.
      */
     tryResolveDirectDefineReference(input: string): string | undefined;
     /**
      * Resolves macro-label references such as `?label` or `#+?label`.
-     * @param {string} input The token to resolve.
-     * @returns {string | undefined} The resolved macro-label value, if applicable.
+     * @param input The token to resolve.
+     * @returns The resolved macro-label value, if applicable.
      */
     tryResolveMacroLabelReference(input: string): string | undefined;
     /**
      * Resolves bare label-like tokens before the generic character-by-character
      * define scanner runs.
-     * @param {string} input The token to resolve.
-     * @returns {string | undefined} The resolved label value, if applicable.
+     * @param input The token to resolve.
+     * @returns The resolved label value, if applicable.
      */
     tryResolveBareLabelReference(input: string): string | undefined;
     /**
      * Resolves all define replacements in a given string.
-     * @param {string} input The string to resolve defines in.
-     * @returns {string} The string with defines resolved.
+     * @param input The string to resolve defines in.
+     * @returns The string with defines resolved.
      */
     resolvedefines(input: string): string;
     /** Bind source-valued defines without converting symbol references into numeric source text. */
     resolveDefineFragment(fragment: SourceFragment): SourceFragment;
     /**
      * Handles activate stage.
-     * @param {AssemblyStageName} stage The stage.
+     * @param stage The stage.
      */
     activateStage(stage: AssemblyStageName): void;
     /**
@@ -895,15 +1104,23 @@ export declare class Assembler {
     finishPass(): void;
     /**
      * Sets the current file being processed.
-     * @param {string} filename - The filename to set.
+     * @param filename The filename to set.
      */
     setCurrentFile(filename: string): void;
     /**
      * Sets the current line number.
-     * @param {number} line - The line number to set.
+     * @param line The line number to set.
      */
     setCurrentLine(line: number): void;
+    /**
+     * Maps a stage name to its execution capabilities without mutating session state.
+     * @param stage Assembly stage identifier.
+     */
     getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "capabilities">;
+    /**
+     * Deep-copies anonymous forward/backward label stacks for stage isolation.
+     * @param source Label stacks keyed by relative depth.
+     */
     cloneRelativeLabels(source: {
         [depth: number]: {
             addr: number;
@@ -915,60 +1132,83 @@ export declare class Assembler {
             macroInstance?: number;
         }[];
     };
+    /**
+     * Builds a fresh stage snapshot seeded from the previous stage when applicable.
+     * @param stage Assembly stage to initialize.
+     */
     createStageExecutionState(stage: AssemblyStageName): StageExecutionState;
     /**
      * Applies stage execution state.
-     * @param {StageExecutionState} stageState The stage state.
+     * @param stageState The stage state.
      */
     applyStageExecutionState(stageState: StageExecutionState): void;
     /**
      * Captures stage execution state.
-     * @param {StageExecutionState} stageState The stage state.
+     * @param stageState The stage state.
      */
     captureStageExecutionState(stageState: StageExecutionState): void;
+    /**
+     * Returns a cached stage snapshot, creating it on first use.
+     * @param stage Assembly stage key.
+     */
     getOrCreateStageExecutionState(stage: AssemblyStageName): StageExecutionState;
+    /**
+     * Parses source into a program model using the session front-end grammar.
+     * @param source Raw assembly source text.
+     * @param sourceFile Path attributed to the buffer.
+     * @param startLine Zero-based line offset for embedded fragments.
+     */
     buildProgramModel(source: string, sourceFile?: string, startLine?: number): ProgramModel;
+    /**
+     * Executes one assembly stage against a parsed program, updating session state in place.
+     * @param stage Stage to run.
+     * @param program Program whose grammar must match the current front-end identity.
+     */
     runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState;
     /**
      * Run definition collection, layout resolution, and byte emission synchronously in that order.
      * Throws at the first unrecovered failure. Partial state/output is not a successful binary.
-     * @param {ProgramModel} program Parsed source model produced for this target's syntax.
+     * @param program Parsed source model produced for this target's syntax.
      */
     assembleProgram(program: ProgramModel): void;
     /**
      * Parse and run all three assembly stages. Includes are read through the configured provider.
      * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
-     * @param {string} source Assembly source text, not a filename.
-     * @param {string} [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
-     * @param {number} [startLine] Zero-based line offset. Defaults to zero.
-     * @returns {ProgramModel} Parsed model used for this build.
+     * @param source Assembly source text, not a filename.
+     * @param [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
+     * @param [startLine] Zero-based line offset. Defaults to zero.
+     * @returns Parsed model used for this build.
      */
     assembleSource(source: string, sourceFile?: string, startLine?: number): ProgramModel;
     /**
      * Writes a repeated byte into the output buffer.
-     * @param {number} start The starting address of the block to write.
-     * @param {number} value The byte value to write.
-     * @param {number} [length] The length of the block to write.
+     * @param start The starting address of the block to write.
+     * @param value The byte value to write.
+     * @param [length] The length of the block to write.
      */
     writeOutputBytes(start: number, value: number, length?: number): void;
     /**
      * Expands the output buffer and fills it with a specified byte.
-     * @param {number} newSize The new output size.
-     * @param {number} fillByte The byte used for the new range.
+     * @param newSize The new output size.
+     * @param fillByte The byte used for the new range.
      */
     expandOutput(newSize: number, fillByte: number): void;
     /** Runs the active output-format finalizer. */
     finalizeOutput(): void;
     /**
      * Materialize the target format's current bytes without assembling or finalizing again.
-     * @returns {Uint8Array} Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
+     * @returns Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
      */
     getBinaryOutput: () => Uint8Array;
     /**
      * Lowers completed runtime nodes and executes them through the production executor.
-     * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
+     * @param nodes The runtime nodes to lower and execute.
      */
     lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
+    /**
+     * Evaluates numeric start and end bounds for a lowered `for` loop header.
+     * @param forBlock Lowered loop node carrying parsed and cached bounds.
+     */
     resolveForLoopBounds(forBlock: LoweredLoopNode): {
         variable?: string;
         start?: number;
@@ -976,54 +1216,58 @@ export declare class Assembler {
     };
     /**
      * Executes for loop iterations.
-     * @param {LoweredLoopNode} forBlock The for block.
-     * @param {() => void} executeBody The execute body.
+     * @param forBlock The for block.
+     * @param executeBody The execute body.
      */
     executeForLoopIterations(forBlock: LoweredLoopNode, executeBody: () => void): void;
     /**
      * Executes lowered loop.
-     * @param {LoweredLoopNode} loopBlock The loop block.
+     * @param loopBlock The loop block.
      */
     executeLoweredLoop(loopBlock: LoweredLoopNode): void;
     /**
      * Executes lowered for loop.
-     * @param {LoweredLoopNode} forBlock The for block.
+     * @param forBlock The for block.
      */
     executeLoweredForLoop(forBlock: LoweredLoopNode): void;
     /**
      * Executes while loop commands.
-     * @param {LoweredLoopNode} whileBlock The while block.
-     * @param {TCommand[]} commands The commands.
-     * @param {(command: TCommand) => string | null} getDefineTarget The get define target.
-     * @param {(command: TCommand) => void} executeCommand The execute command.
+     * @param whileBlock The while block.
+     * @param commands The commands.
+     * @param getDefineTarget The get define target.
+     * @param executeCommand The execute command.
      */
     executeWhileLoopCommands<TCommand>(whileBlock: LoweredLoopNode, commands: TCommand[], getDefineTarget: (command: TCommand) => string | null, executeCommand: (command: TCommand) => void): void;
     /**
      * Executes lowered while loop.
-     * @param {LoweredLoopNode} whileBlock The while block.
+     * @param whileBlock The while block.
      */
     executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void;
+    /**
+     * Returns the normalized source span for diagnostics on a lowered executable node.
+     * @param node Lowered command or loop header node.
+     */
     getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined;
     /**
      * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
-     * @param {TNode} node The node to execute.
-     * @param {(node: TNode) => SourceSpan | undefined} getSpan Resolves the node span for diagnostics.
-     * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
+     * @param node The node to execute.
+     * @param getSpan Resolves the node span for diagnostics.
+     * @param executeNode Executes the node with its native dispatcher.
      */
     executeWithAnalysisRecovery<TNode>(node: TNode, getSpan: (node: TNode) => SourceSpan | undefined, executeNode: (node: TNode) => void): void;
     /**
      * Executes lowered node with recovery.
-     * @param {LoweredExecutableNode} node The node.
+     * @param node The node.
      */
     executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void;
     /**
      * Executes lowered node.
-     * @param {LoweredExecutableNode} node The node.
+     * @param node The node.
      */
     executeLoweredNode(node: LoweredExecutableNode): void;
     /**
      * Executes lowered node stream.
-     * @param {LoweredExecutableNode[]} nodes The nodes.
+     * @param nodes The nodes.
      */
     executeLoweredNodeStream(nodes: LoweredExecutableNode[]): void;
     /**
@@ -1034,8 +1278,8 @@ export declare class Assembler {
     flushCompletedIncrementalNodes(): void;
     /**
      * Executes conditional branches.
-     * @param {Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[]; }>} branches The branches.
-     * @param {(commands: TCommand[]) => void} executeCommands The execute commands.
+     * @param branches The branches.
+     * @param executeCommands The execute commands.
      */
     executeConditionalBranches<TCommand>(branches: Array<{
         kind: "if" | "elseif" | "else";

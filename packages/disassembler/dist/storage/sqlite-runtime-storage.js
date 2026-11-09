@@ -46,7 +46,8 @@ export const encodeRuntimeFactPayload = (record, payload) => {
     }
     return encodeSqlitePayload(payload);
 };
-/** Stream negative virtual rowids first, then positive observations, using the observation PK.
+/**
+ * Stream negative virtual rowids first, then positive observations, using the observation PK.
  * Sorting the expanded compatibility view can spill the entire history to temporary disk.
  * LEFT dictionary joins let decoders reject missing entries rather than silently omit records.
  */
@@ -63,7 +64,8 @@ export const RUNTIME_RECORD_STREAM_SQL = [true, false].map((paired) => `
   LEFT JOIN runtime_evidence e ON e.id=o.evidence_id
   ${paired ? "WHERE o.state_prefix_id IS NOT NULL" : ""}
   ORDER BY o.oid ${paired ? "DESC" : "ASC"}`);
-/** Shared facts own coordinates/payload. Observations own source identity and exact counts.
+/**
+ * Shared facts own coordinates/payload. Observations own source identity and exact counts.
  * A trace instruction owns its paired CPU-state observation, exposed with a negative virtual rowid.
  * Identity suffixes are interned globally; paired states share the instruction's suffix by contract.
  * Standalone states and arbitrary text identities remain independent. Packed payloads retain full state.
@@ -147,6 +149,12 @@ CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,arch
  NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,NEW.evidence_id,NEW.payload);
 END;
 `;
+/**
+ * Extract the register state carried by a paired instruction payload.
+ * @param payload Raw SQLite payload column of the instruction fact.
+ * @returns The undecoded `state` field; undefined when the payload has none.
+ * @throws When the payload does not decode to an object.
+ */
 function pairedState(payload) {
     const parsed = parseSqlitePayload(payload);
     if (!isRecord(parsed)) {
@@ -181,9 +189,10 @@ export class SqliteRuntimeWriter {
         this.#findIdentity = db.prepare(`SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?1")}) AND value=?1`);
         this.#insertIdentity = db.prepare("INSERT INTO runtime_identities(value) VALUES(?)");
     }
-    /** Append one validated logical record. Only exact trace pairs share a count/provenance link.
-     * @param {RuntimeEvidenceRecord} record Validated source fact with a stable external ID.
-     * @param {Function} intern Transaction-owned prefix/evidence dictionary allocator.
+    /**
+     * Append one validated logical record. Only exact trace pairs share a count/provenance link.
+     * @param record Validated source fact with a stable external ID.
+     * @param intern Transaction-owned prefix/evidence dictionary allocator.
      */
     insert(record, intern) {
         const identity = sqliteRuntimeIdentity(record.id);

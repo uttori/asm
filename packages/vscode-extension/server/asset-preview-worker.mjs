@@ -35,9 +35,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/ms/index.js
+// ../../node_modules/ms/index.js
 var require_ms = __commonJS({
-  "node_modules/ms/index.js"(exports, module) {
+  "../../node_modules/ms/index.js"(exports, module) {
     var s = 1e3;
     var m = s * 60;
     var h = m * 60;
@@ -151,9 +151,9 @@ var require_ms = __commonJS({
   }
 });
 
-// node_modules/debug/src/common.js
+// ../../node_modules/debug/src/common.js
 var require_common = __commonJS({
-  "node_modules/debug/src/common.js"(exports, module) {
+  "../../node_modules/debug/src/common.js"(exports, module) {
     function setup(env) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -328,9 +328,9 @@ var require_common = __commonJS({
   }
 });
 
-// node_modules/debug/src/browser.js
+// ../../node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "node_modules/debug/src/browser.js"(exports, module) {
+  "../../node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
     exports.load = load;
@@ -498,9 +498,9 @@ var require_browser = __commonJS({
   }
 });
 
-// node_modules/has-flag/index.js
+// ../../node_modules/has-flag/index.js
 var require_has_flag = __commonJS({
-  "node_modules/has-flag/index.js"(exports, module) {
+  "../../node_modules/has-flag/index.js"(exports, module) {
     "use strict";
     module.exports = (flag, argv = process.argv) => {
       const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
@@ -511,9 +511,9 @@ var require_has_flag = __commonJS({
   }
 });
 
-// node_modules/supports-color/index.js
+// ../../node_modules/supports-color/index.js
 var require_supports_color = __commonJS({
-  "node_modules/supports-color/index.js"(exports, module) {
+  "../../node_modules/supports-color/index.js"(exports, module) {
     "use strict";
     var os = __require("os");
     var tty = __require("tty");
@@ -613,9 +613,9 @@ var require_supports_color = __commonJS({
   }
 });
 
-// node_modules/debug/src/node.js
+// ../../node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "node_modules/debug/src/node.js"(exports, module) {
+  "../../node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util = __require("util");
     exports.init = init;
@@ -787,9 +787,9 @@ var require_node = __commonJS({
   }
 });
 
-// node_modules/debug/src/index.js
+// ../../node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "node_modules/debug/src/index.js"(exports, module) {
+  "../../node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -798,10 +798,10 @@ var require_src = __commonJS({
   }
 });
 
-// packages/language-server/src/asset-preview-worker.ts
+// ../language-server/src/asset-preview-worker.ts
 import { parentPort } from "node:worker_threads";
 
-// node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
+// ../../node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
 var Z_BINARY = 0;
 var Z_TEXT = 1;
@@ -4239,7 +4239,7 @@ var Inflate = class {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/data-helpers.js
+// ../../node_modules/@uttori/data-tools/dist/data-helpers.js
 var validateBytes = (uint8, length) => {
   if (uint8.length < length) {
     throw new RangeError(`Insufficient bytes: expected at least ${length}, received ${uint8.length}.`);
@@ -4331,7 +4331,7 @@ var convertFromIeeeExtended = (uint8) => {
   return decodeExtended(sign, exponent, hiMant, loMant);
 };
 
-// node_modules/@uttori/data-tools/dist/underflow-error.js
+// ../../node_modules/@uttori/data-tools/dist/underflow-error.js
 var UnderflowError = class extends Error {
   /**
    * Creates a new UnderflowError.
@@ -4349,7 +4349,7 @@ var UnderflowError = class extends Error {
 };
 var underflow_error_default = UnderflowError;
 
-// node_modules/@uttori/data-tools/dist/data-buffer.js
+// ../../node_modules/@uttori/data-tools/dist/data-buffer.js
 function dataBufferBrand() {
   return /* @__PURE__ */ Symbol.for("uttori.DataBuffer");
 }
@@ -5594,7 +5594,7 @@ var DataBuffer = class _DataBuffer {
 };
 var data_buffer_default = DataBuffer;
 
-// node_modules/@uttori/data-tools/dist/audio/audio-wav.js
+// ../../node_modules/@uttori/data-tools/dist/audio/audio-wav.js
 var _a;
 var debug2 = (..._args) => {
 };
@@ -7564,7 +7564,7 @@ var AudioWAV = class extends data_buffer_default {
 _a = AudioWAV;
 var audio_wav_default = AudioWAV;
 
-// packages/assets/src/validation.ts
+// ../assets/src/validation.ts
 function integer(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -7595,7 +7595,7 @@ function fail(message) {
   throw new Error(message);
 }
 
-// packages/assets/src/snes.ts
+// ../assets/src/snes.ts
 var planeOffset = (depth, plane, row) => {
   if (depth === 3 && plane === 2) {
     return 16 + row;
@@ -7929,7 +7929,7 @@ var snesNativeEncoders = Object.freeze(
   ].toSorted((left, right) => left.id.localeCompare(right.id))
 );
 
-// packages/assets/src/brr-codec.ts
+// ../assets/src/brr-codec.ts
 function decodeNibble(nibble, range, filter, state) {
   let value = range <= 12 ? nibble << range >> 1 : nibble & ~2047;
   const previous = state.previous;
@@ -8037,7 +8037,7 @@ function encodeBrrPcm(samples, loop) {
   return bytes;
 }
 
-// packages/assets/src/audio.ts
+// ../assets/src/audio.ts
 var MAX_WAVE_BYTES = 16 * 1024 * 1024;
 var MAX_SAMPLES = 1024 * 1024;
 var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -8326,7 +8326,7 @@ function withAudioEncoder(native) {
   });
 }
 
-// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 var CRC32_POLYNOMIAL = 3988292384;
 var CRC32C_POLYNOMIAL = 2197175160;
 var reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
@@ -8365,7 +8365,7 @@ var computeBytes = (bytes) => {
   return ~crc >>> 0;
 };
 
-// node_modules/@uttori/data-tools/dist/image/bitmap-text.js
+// ../../node_modules/@uttori/data-tools/dist/image/bitmap-text.js
 function freezeGlyphs() {
   return Object.freeze(Object.fromEntries(Object.entries({
     " ": [0, 0, 0, 0, 0, 0, 0],
@@ -8515,7 +8515,7 @@ function drawBitmapText(surface, text, x, y, color, options) {
   return metrics;
 }
 
-// node_modules/@uttori/data-tools/dist/image/rgba-surface.js
+// ../../node_modules/@uttori/data-tools/dist/image/rgba-surface.js
 var DEFAULT_MAX_PIXELS = 4 * 1024 * 1024;
 function colorRGBA(color) {
   if (!Array.isArray(color) && !(color instanceof Uint8Array) || color.length !== 4) {
@@ -8971,7 +8971,7 @@ var RgbaSurface = class _RgbaSurface {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
 var debug3 = () => {
 };
 if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
@@ -10611,7 +10611,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
-// packages/assets/src/limits.ts
+// ../assets/src/limits.ts
 var ASSET_LIMITS = Object.freeze({
   rasterPixels: 4 * 1024 * 1024,
   interchangeSide: 4096,
@@ -10655,7 +10655,7 @@ function rasterArea(width, height, label = "Raster", side = ASSET_LIMITS.rasterP
 }
 var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
 
-// packages/assets/src/preview.ts
+// ../assets/src/preview.ts
 function rgbaNativePng(rgba, width, height) {
   integer(width, "Image width", 1, ASSET_LIMITS.interchangeSide);
   integer(height, "Image height", 1, ASSET_LIMITS.interchangeSide);
@@ -10715,7 +10715,7 @@ function waveformPreviewPng(samples) {
   return rgbaPreviewPng(rgba, width, height);
 }
 
-// packages/assets/src/png.ts
+// ../assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
   maxInputBytes: ASSET_LIMITS.pngBytes,
   maxPixels: ASSET_LIMITS.rasterPixels,
@@ -10750,7 +10750,7 @@ var pngImporter = Object.freeze({
   }
 });
 
-// packages/assets/src/indexed-edit.ts
+// ../assets/src/indexed-edit.ts
 function validateIndexedPixels(image) {
   const pixels = rasterArea(image.width, image.height, "Indexed");
   if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels) {
@@ -10879,7 +10879,7 @@ function expandIndexedGrid(block) {
   });
 }
 
-// packages/assets/src/indexed-values.ts
+// ../assets/src/indexed-values.ts
 function indexedPalette(value) {
   if (!Array.isArray(value) || value.length < 1 || value.length > 256) {
     throw new Error("Indexed palette requires 1..256 slots.");
@@ -10928,7 +10928,7 @@ function indexedPaletteChanges(before, after, editableSlots) {
   return changes;
 }
 
-// packages/assets/src/png-edit.ts
+// ../assets/src/png-edit.ts
 function rewriteIndexedPng(source, edit) {
   return data_image_png_default.rewriteIndexed(source, edit, {
     ...ASSET_PNG_OPTIONS,
@@ -10947,7 +10947,7 @@ function createIndexedPng(image) {
   });
 }
 
-// packages/assets/src/image-conversion.ts
+// ../assets/src/image-conversion.ts
 var isRecord3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 var isPlanarDepth = (value) => value === 2 || value === 3 || value === 4 || value === 8;
 var isSourceBitDepth = (value) => value === 1 || value === 2 || value === 4 || value === 8;
@@ -11494,7 +11494,7 @@ function withImageEncoders(native) {
   });
 }
 
-// packages/assets/src/secret-of-mana/som-body-frame.ts
+// ../assets/src/secret-of-mana/som-body-frame.ts
 var signed7 = (byte) => (byte & 63) - (byte & 64);
 function decodeBodyFrame(input2) {
   if (!Array.isArray(input2) && !(input2 instanceof Uint8Array) || input2.length < 2 || input2.length > 157 || [...input2].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
@@ -11544,7 +11544,7 @@ function decodeBodyFrame(input2) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-frame-composition.ts
+// ../assets/src/secret-of-mana/som-frame-composition.ts
 function isUnknownArray(value) {
   return Array.isArray(value);
 }
@@ -11707,7 +11707,7 @@ function validateFrameComposition(layout2, frame) {
   return expected;
 }
 
-// packages/assets/src/secret-of-mana/som-sprite-palettes.ts
+// ../assets/src/secret-of-mana/som-sprite-palettes.ts
 function expandChannel(value) {
   return value << 3 | value >>> 2;
 }
@@ -11841,7 +11841,7 @@ function readSpritePaletteCatalog(options, resources) {
   return parseSpritePaletteCatalog(resource.bytes);
 }
 
-// packages/assets/src/secret-of-mana/som-frame-atlas.ts
+// ../assets/src/secret-of-mana/som-frame-atlas.ts
 function rectangle(bounds, width, height, label) {
   if (!Array.isArray(bounds) || bounds.length !== 4 || bounds.some((v) => !Number.isSafeInteger(v)) || bounds[0] < 0 || bounds[1] < 0 || bounds[2] < 1 || bounds[3] < 1 || bounds[0] + bounds[2] > width || bounds[1] + bounds[3] > height) {
     throw new Error(`Invalid ${label} bounds.`);
@@ -12211,7 +12211,7 @@ function readFrameLayout(options, resources) {
   return parsed;
 }
 
-// packages/assets/src/secret-of-mana/som-room-composition.ts
+// ../assets/src/secret-of-mana/som-room-composition.ts
 var LIMITATION = "Background geometry only; omits actors, BG3, camera, mutable clones and color math.";
 function somRoomPaletteColor(word, transparent) {
   integer(word, "Room palette word", 0, 65535);
@@ -12450,7 +12450,7 @@ function renderSomRoomComposition(composition, layer) {
   return { rgba, width: composition.width, height: composition.height };
 }
 
-// packages/assets/src/secret-of-mana/som-room-assets.ts
+// ../assets/src/secret-of-mana/som-room-assets.ts
 function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -12600,7 +12600,7 @@ function renderRoomAsset(room, preview, { layer, story } = {}) {
   };
 }
 
-// packages/assets/src/atlas-interchange.ts
+// ../assets/src/atlas-interchange.ts
 var ATLAS_FILE_LIMIT = ASSET_LIMITS.asepriteBytes;
 function validateAtlasDocument(document2) {
   validateIndexedPixels(document2);
@@ -12674,7 +12674,7 @@ function inspectAtlasChanges(before, after, policy) {
   return { pixels, colors };
 }
 
-// packages/assets/node_modules/pako/dist/pako.mjs
+// ../assets/node_modules/pako/dist/pako.mjs
 var Z_FIXED2 = 4;
 var Z_BINARY2 = 0;
 var Z_TEXT2 = 1;
@@ -15297,7 +15297,7 @@ var Inflate2 = class {
   }
 };
 
-// packages/assets/src/aseprite-binary.ts
+// ../assets/src/aseprite-binary.ts
 var ATLAS_FILE_LIMIT2 = ASSET_LIMITS.asepriteBytes;
 var decoder = new TextDecoder("utf-8", { fatal: true });
 var Cursor = class {
@@ -15437,7 +15437,7 @@ function rasterZlibSync(bytes, expected) {
   return output;
 }
 
-// packages/assets/src/aseprite-document.ts
+// ../assets/src/aseprite-document.ts
 var ID_PREFIX = "uttori-atlas-export:";
 function resolveAsepriteCels(document2) {
   integer(document2.frames.length, "Aseprite frames", 1, ASSET_LIMITS.frames);
@@ -16306,7 +16306,7 @@ function decodeAsepriteDocumentSync(bytes) {
   return step.value;
 }
 
-// packages/assets/src/indexed-ownership.ts
+// ../assets/src/indexed-ownership.ts
 function identity(id2) {
   if (typeof id2 !== "string" || id2.length < 1 || new TextEncoder().encode(id2).length > 1024) {
     throw new Error("Invalid indexed ownership identity.");
@@ -16458,7 +16458,7 @@ function reconcileIndexedViews(snapshot, candidates) {
   });
 }
 
-// packages/assets/src/interchange.ts
+// ../assets/src/interchange.ts
 var VIEW = "uttori-view:";
 var ROLE = "uttori-role:";
 var SET = "uttori-tileset:";
@@ -16705,7 +16705,7 @@ function inspectTilemapInterchange(baseline, after) {
   return { pixels, colors };
 }
 
-// packages/assets/src/source-binding.ts
+// ../assets/src/source-binding.ts
 function sourceResourcePath(value) {
   if (typeof value !== "string" || !value || value.length > 1024 || /[\0:\\]/.test(value) || value.startsWith("/")) {
     throw new Error("Source binding requires a portable relative resource path.");
@@ -16750,7 +16750,7 @@ function bindingResourceKey(binding, resource) {
   return `${binding}#${resource}`;
 }
 
-// packages/assets/src/presentation-layout.ts
+// ../assets/src/presentation-layout.ts
 function planIndexedPresentation(nativeWidth, nativeHeight, tileWidth, tileHeight, views) {
   rasterArea(nativeWidth, nativeHeight, "Native presentation", ASSET_LIMITS.interchangeSide);
   rasterArea(tileWidth, tileHeight, "Inventory tile", ASSET_LIMITS.interchangeSide);
@@ -16787,7 +16787,7 @@ function planIndexedPresentation(nativeWidth, nativeHeight, tileWidth, tileHeigh
   return { width, height, columns, rows: rows2, capacity, pages };
 }
 
-// packages/assets/src/raster-interchange.ts
+// ../assets/src/raster-interchange.ts
 function rasterInterchangeDocument(atlas) {
   validateAtlasDocument(atlas);
   return {
@@ -16854,7 +16854,7 @@ function rasterInterchangeAtlas(document2) {
   return result;
 }
 
-// packages/assets/src/source-codecs.ts
+// ../assets/src/source-codecs.ts
 var AssetSourceCodecRegistry = class {
   #codecs = /* @__PURE__ */ new Map();
   #revision = 0;
@@ -16975,7 +16975,7 @@ var asepriteRasterImporter = {
   }
 };
 
-// packages/assets/src/registry.ts
+// ../assets/src/registry.ts
 var AssetRegistry = class {
   #importers = /* @__PURE__ */ new Map();
   #encoders = /* @__PURE__ */ new Map();
@@ -17064,7 +17064,7 @@ function convertAsset(registry4, request) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-boss-graphics.ts
+// ../assets/src/secret-of-mana/som-boss-graphics.ts
 function expandBossGraphics(source, size) {
   validateSize(source, size);
   return expandBossMask(source, Math.ceil(size / 8) * 8);
@@ -17132,7 +17132,7 @@ function encodeBossMask(data) {
   return encoded;
 }
 
-// packages/assets/src/secret-of-mana/som-lz.ts
+// ../assets/src/secret-of-mana/som-lz.ts
 var LZ_HEADER_BYTES = 4;
 var LZ_COPY_FLAG = 128;
 var LZ_TOKEN_PAYLOAD_MASK = LZ_COPY_FLAG - 1;
@@ -17312,7 +17312,7 @@ function encodeMode(source, mode, unusedHeaderByte) {
   return Uint8Array.from(output);
 }
 
-// packages/assets/src/secret-of-mana/som-boss-image.ts
+// ../assets/src/secret-of-mana/som-boss-image.ts
 var registry = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry.registerEncoder(encoder);
@@ -17430,7 +17430,7 @@ function convertBossImage(source, options, resources = {}, normalized) {
   return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
 }
 
-// packages/assets/src/secret-of-mana/som-palette-edit.ts
+// ../assets/src/secret-of-mana/som-palette-edit.ts
 function nativeBytes(atlas, source, catalog, segment) {
   const options = atlas.nativeOptions?.[segment];
   if (!options) {
@@ -17514,7 +17514,7 @@ function planSpritePaletteWords(catalog, edits) {
   return { catalog: next, palettes: [...changed] };
 }
 
-// packages/assets/src/secret-of-mana/som-frame-edit.ts
+// ../assets/src/secret-of-mana/som-frame-edit.ts
 function renderStableFrameAtlas(tiles, layout2) {
   const sources = /* @__PURE__ */ new Map();
   const placements = [];
@@ -17576,7 +17576,7 @@ function renderStableFrameAtlas(tiles, layout2) {
   });
 }
 
-// packages/assets/src/secret-of-mana/som-atlas-interchange.ts
+// ../assets/src/secret-of-mana/som-atlas-interchange.ts
 function ownerId(segment, tile) {
   return JSON.stringify([segment, tile]);
 }
@@ -17677,7 +17677,7 @@ function planSomAtlasImport(atlas, catalog, changes) {
   return { png, layout: layout2, catalog: palettePlan.catalog, palettes: palettePlan.palettes, palette };
 }
 
-// packages/assets/src/tilemap-presentation.ts
+// ../assets/src/tilemap-presentation.ts
 function tilemapPresentationCel(layer, x, y, columns, rows2, cells) {
   return {
     kind: "tilemap",
@@ -17773,7 +17773,7 @@ function createTilemapInventory(ownership, nativeWidth, nativeHeight, name) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-sprite-interchange.ts
+// ../assets/src/secret-of-mana/som-sprite-interchange.ts
 var X = 2147483648;
 var Y = 1073741824;
 function createSomSpriteInterchange(atlas, catalog, exportId, runs = []) {
@@ -17995,7 +17995,7 @@ function createSomSpriteInterchange(atlas, catalog, exportId, runs = []) {
   return { baseline, paletteSlots, displayOrigin };
 }
 
-// packages/assets/src/secret-of-mana/som-source.ts
+// ../assets/src/secret-of-mana/som-source.ts
 function isSourceNames(value) {
   return Array.isArray(value) && value.every((name) => typeof name === "string" && !!name);
 }
@@ -18269,7 +18269,7 @@ function normalizeSomSource(source, options, resources, catalog, codecs = indexe
   };
 }
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -18302,7 +18302,7 @@ function sourceLineStarts(text) {
   return starts;
 }
 
-// packages/core/src/ir/expression-parse-state.ts
+// ../core/src/ir/expression-parse-state.ts
 var rawOutcomes = /* @__PURE__ */ new WeakMap();
 function setRawExpressionOutcome(node, outcome2) {
   rawOutcomes.set(node, outcome2);
@@ -18311,7 +18311,7 @@ function expressionOutcomeKey(outcome2) {
   return outcome2.kind === "native" ? "native" : `${outcome2.kind}:${outcome2.reason}`;
 }
 
-// packages/core/src/internal-instrumentation.ts
+// ../core/src/internal-instrumentation.ts
 var activeInstrumentation;
 function recordExpressionParse(site, outcome2) {
   if (syntaxOwner === "execution") {
@@ -18345,12 +18345,12 @@ function recordExecutionParser(kind) {
   }
 }
 
-// packages/core/src/ir/source-fragment.ts
+// ../core/src/ir/source-fragment.ts
 function sourceFragment(text, origins = []) {
   return { segments: [{ text, origins }] };
 }
 
-// packages/core/src/ir/define-template.ts
+// ../core/src/ir/define-template.ts
 function parseDefineTemplate(text, escapes = "basic") {
   const parse2 = (start, end) => {
     const parts2 = [];
@@ -18408,7 +18408,7 @@ function parseDefineTemplate(text, escapes = "basic") {
   return { text, parts: parse2(0, text.length) };
 }
 
-// packages/core/src/ir/expression-call-contracts.ts
+// ../core/src/ir/expression-call-contracts.ts
 var firstSourceArgument = /* @__PURE__ */ new Set([
   "countof",
   "bytesof",
@@ -18428,7 +18428,7 @@ function isSourceTextArgument(name, index) {
   return index === 0 && (firstSourceArgument.has(name) || /^(?:canreadfile|readfile)\d?$/.test(name));
 }
 
-// packages/core/src/ir/expression-operators.ts
+// ../core/src/ir/expression-operators.ts
 var binaryPrecedence = {
   "||": 0,
   "&&": 1,
@@ -18452,7 +18452,7 @@ var binaryPrecedence = {
   "**": 6
 };
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 function attachRootSpan(node, text, source) {
   node.span ??= source ? createTextSpan(
     source.text,
@@ -19285,7 +19285,7 @@ function isBinaryOperator(value) {
   return value in binaryPrecedence;
 }
 
-// packages/core/src/ir/directive-arguments.ts
+// ../core/src/ir/directive-arguments.ts
 function parseDirectiveExpression(text, numeric = true, source) {
   recordExecutionParser("directive");
   if (/![\w{]/.test(text)) {
@@ -19308,7 +19308,7 @@ function dataResolutionExpression(text, node) {
   return node;
 }
 
-// packages/core/src/ir/source-syntax.ts
+// ../core/src/ir/source-syntax.ts
 function copySyntaxValue(value) {
   return copySyntaxTree(value, false);
 }
@@ -19387,7 +19387,7 @@ function copySyntaxTree(value, immutable) {
   return copy(value, 0);
 }
 
-// packages/core/src/ir/syntax-codec.ts
+// ../core/src/ir/syntax-codec.ts
 var syntaxString = (value) => typeof value === "string";
 var syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
 var syntaxBoolean = (value) => typeof value === "boolean";
@@ -19539,7 +19539,7 @@ function syntaxCodec(version, parse2, guard) {
   };
 }
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE = Object.freeze({
   id: "asar",
   preserveLeadingWhitespace: false,
@@ -19571,7 +19571,7 @@ var CA65_SYNTAX_PROFILE = Object.freeze({
   fileLocalSymbols: true
 });
 
-// packages/core/src/services/command-text-service.ts
+// ../core/src/services/command-text-service.ts
 var splitRespectingFunctions = (input2) => {
   const result = [];
   let current = "";
@@ -19607,7 +19607,7 @@ var splitRespectingFunctions = (input2) => {
   return result;
 };
 
-// packages/core/src/ir/data-node.ts
+// ../core/src/ir/data-node.ts
 function parseDataOperand(text) {
   let value = text.trim();
   const quote = value[0];
@@ -19629,7 +19629,7 @@ function parseDataList(text) {
   return splitRespectingFunctions(text).map(parseDataOperand);
 }
 
-// packages/core/src/ir/link-expression.ts
+// ../core/src/ir/link-expression.ts
 function linkInteger(value) {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`Link expression requires a safe integer: ${value}`);
@@ -19827,7 +19827,7 @@ function compileLinkExpression(expression, context, depth = 0) {
   }
 }
 
-// packages/core/src/ir/parsed-operand.ts
+// ../core/src/ir/parsed-operand.ts
 function parseInstructionOperands(mnemonic, text, grammar2) {
   const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
   let width;
@@ -20074,13 +20074,13 @@ function parseOperand(text, start, grammar2) {
   };
 }
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 2;
 function definePlugin(plugin2) {
   return plugin2;
 }
 
-// packages/core/src/services/source-link-recipe.ts
+// ../core/src/services/source-link-recipe.ts
 function addressedSourceLinkRecipe(options) {
   const regions = [];
   const placements = [];
@@ -20148,7 +20148,7 @@ function addressedSourceLinkRecipe(options) {
   };
 }
 
-// packages/core/src/ir/relocatable-instruction.ts
+// ../core/src/ir/relocatable-instruction.ts
 var RelocatableInstruction = class {
   constructor(frame, context) {
     this.frame = frame;
@@ -20203,7 +20203,7 @@ var RelocatableInstruction = class {
   }
 };
 
-// packages/core/src/linker/types.ts
+// ../core/src/linker/types.ts
 var LinkError = class extends Error {
   /**
    * Captures a link failure with optional source anchoring and partial placement state.
@@ -20226,7 +20226,7 @@ var LinkError = class extends Error {
   name = "LinkError";
 };
 
-// packages/assets/src/secret-of-mana/som-boss-background.ts
+// ../assets/src/secret-of-mana/som-boss-background.ts
 function integer3(value, minimum, maximum) {
   if (!Number.isInteger(value) || value < minimum || value > maximum) {
     throw new Error(`Boss background value must be ${minimum}..${maximum}.`);
@@ -20264,7 +20264,7 @@ function encodeBossTilemap(data, tag = 1) {
   return result;
 }
 
-// packages/assets/src/secret-of-mana/som-dialogue-command.ts
+// ../assets/src/secret-of-mana/som-dialogue-command.ts
 function encodeSomDialogueCommand(text) {
   const names = ["${boy}", "${girl}", "${sprite}"];
   const index = names.indexOf(text);
@@ -20294,7 +20294,7 @@ function encodeSomDialogueCommand(text) {
   throw new Error(`Unsupported dialogue command token ${text}.`);
 }
 
-// packages/assets/src/secret-of-mana/som-dialogue.ts
+// ../assets/src/secret-of-mana/som-dialogue.ts
 var SOM_DIALOGUE_PAIR_COUNT = 61;
 var MAX_GLYPHS = 4096;
 var punctuation = /* @__PURE__ */ new Map([
@@ -20733,7 +20733,7 @@ function convertSomDialogueScript(source, options, resources) {
   return { primaryOutput: "script", outputs: { script: output } };
 }
 
-// packages/assets/src/secret-of-mana/som-world-rle.ts
+// ../assets/src/secret-of-mana/som-world-rle.ts
 function decodeWorldRow(bytes, size = 512) {
   if (!Number.isSafeInteger(size) || size < 1 || size > 65536) {
     throw new Error("World row size must be 1..65536 tiles.");
@@ -20784,7 +20784,7 @@ function encodeWorldRow(bytes) {
   return Uint8Array.from(output);
 }
 
-// packages/game-secret-of-mana/src/world-overview.ts
+// ../game-secret-of-mana/src/world-overview.ts
 var WORLD_TILE_SIDE = 512;
 var WORLD_OVERVIEW_SIDE = WORLD_TILE_SIDE / 2;
 var WORLD_OVERVIEW_COLOR_COUNT = 192;
@@ -20862,7 +20862,7 @@ function readWorldOverviewTileIds(source) {
   return image.indexes;
 }
 
-// packages/game-secret-of-mana/src/assembly.ts
+// ../game-secret-of-mana/src/assembly.ts
 var registry2 = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry2.registerEncoder(encoder);
@@ -21289,7 +21289,7 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
 }
 var assembly_default = createSomAssetPlugin();
 
-// packages/game-secret-of-mana/src/preview.ts
+// ../game-secret-of-mana/src/preview.ts
 function convertSomFramePreview(input2) {
   let layout2 = readFrameLayout(input2.options, input2.resources);
   let catalog = readSpritePaletteCatalog(input2.options, input2.resources);
@@ -21501,7 +21501,7 @@ var somPreviewAdapters = Object.freeze([
   { formats: ["som.sprite.frames", "som.boss.graphics"], convert: convertSomFramePreview }
 ]);
 
-// packages/assets/src/data.ts
+// ../assets/src/data.ts
 var rawImporter = Object.freeze({
   id: "uttori.import.raw",
   version: "1.0.0",
@@ -21545,7 +21545,7 @@ var jsonImporter = Object.freeze({
   }
 });
 
-// packages/plugin-65xx/src/ca65-profile.ts
+// ../plugin-65xx/src/ca65-profile.ts
 var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
 function isSessionStateKey(value) {
   return value.id.length > 0;
@@ -21737,7 +21737,7 @@ var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
   macroParameterPrefix: "\\"
 });
 
-// packages/plugin-65xx/src/instructions/schema.ts
+// ../plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
   if (expression.allOf?.some((feature) => !features.has(feature))) {
     return false;
@@ -21849,7 +21849,7 @@ function getOperandFields(codec) {
   return [];
 }
 
-// packages/plugin-65xx/src/instructions/variant-tables.generated.ts
+// ../plugin-65xx/src/instructions/variant-tables.generated.ts
 var ca65EaTable = [
   [
     0,
@@ -23408,7 +23408,7 @@ var ca65VariantTables = {
   ]
 };
 
-// packages/plugin-65xx/src/instructions/variants.ts
+// ../plugin-65xx/src/instructions/variants.ts
 var commonModes = {
   0: { mode: "implied" },
   1: { mode: "accumulator" },
@@ -23704,7 +23704,7 @@ var variantFormsByCpuId = Object.freeze({
   [mitsubishiM740Cpu.id]: mitsubishiM740Forms
 });
 
-// packages/plugin-65xx/src/instructions/opcodes.ts
+// ../plugin-65xx/src/instructions/opcodes.ts
 var rows = [
   "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
   "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
@@ -24033,7 +24033,7 @@ function getCpuAssemblyForms(cpu) {
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 
-// packages/plugin-65xx/src/decoder.ts
+// ../plugin-65xx/src/decoder.ts
 var hex = (value, width = 2) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var sizeOf = (form) => form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
 function cpu6502Specifications(cpu) {
@@ -24175,7 +24175,7 @@ var Cpu6502Decoder = class {
   }
 };
 
-// packages/plugin-65xx/src/session-state.ts
+// ../plugin-65xx/src/session-state.ts
 var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
 function isSessionStateKey2(value) {
   return value.id.length > 0;
@@ -24206,7 +24206,7 @@ function resetNes65xxStageState(state) {
   state.segmentRunStart = 0;
 }
 
-// packages/plugin-65xx/src/directives/ca65.ts
+// ../plugin-65xx/src/directives/ca65.ts
 function parameterList(words) {
   const joined = words.slice(1).join(" ");
   const parts2 = [];
@@ -24364,7 +24364,7 @@ function handlePopseg(state) {
   state.currentFlatSegment = segment;
 }
 
-// packages/plugin-65xx/src/linker-config.ts
+// ../plugin-65xx/src/linker-config.ts
 function ld65LinkRecipe(config, target = "65xx.nes") {
   const symbols = [];
   for (const segment of config.segments.values()) {
@@ -24619,7 +24619,7 @@ function parseYesNo(raw) {
   return void 0;
 }
 
-// packages/plugin-65xx/src/target/nes.ts
+// ../plugin-65xx/src/target/nes.ts
 var NES_65XX_TARGET_ID = "65xx.nes";
 var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
@@ -24799,7 +24799,7 @@ function normalizeHeader(configured, imageSize) {
   return header;
 }
 
-// packages/plugin-65xx/src/directives/ca65-syntax.ts
+// ../plugin-65xx/src/directives/ca65-syntax.ts
 var operation = (name) => syntaxLiteral(name);
 var schema = syntaxUnion(
   syntaxRecord({ operation: operation("segment"), name: syntaxString }),
@@ -25120,7 +25120,7 @@ function ca65DirectiveSyntax(id2) {
   };
 }
 
-// packages/plugin-65xx/src/instructions/catalog.ts
+// ../plugin-65xx/src/instructions/catalog.ts
 var syntax = {
   implied: "",
   accumulator: "A",
@@ -25204,7 +25204,7 @@ function buildInstructionCatalog(forms) {
   }));
 }
 
-// packages/plugin-65xx/src/nes/assets.ts
+// ../plugin-65xx/src/nes/assets.ts
 var NES_CHR_CODEC = "nes.chr.2bpp";
 var NES_TEXT_CODEC = "nes.text.tiles";
 function encodeNesChrPng(bytes) {
@@ -25295,7 +25295,7 @@ var nesAssetFormats = [
   }
 ];
 
-// packages/plugin-65xx/src/operands/syntax.ts
+// ../plugin-65xx/src/operands/syntax.ts
 var grammar = {
   registers: ["a", "q"],
   indexRegisters: ["x", "y", "z", "s"],
@@ -25503,7 +25503,7 @@ function has65xxPolicy(syntax2) {
   return "policy65xx" in syntax2 && typeof syntax2.policy65xx === "object" && syntax2.policy65xx !== null && "kind" in syntax2.policy65xx && syntax2.policy65xx.kind === "65xx-v1";
 }
 
-// packages/plugin-65xx/src/target/link-target.ts
+// ../plugin-65xx/src/target/link-target.ts
 function createNesSourceLinkRecipe(context, sections) {
   if (context.options.sourceStyle !== "asar") {
     throw new Error("The NES Asar adapter requires sourceStyle: asar in target configuration.");
@@ -25552,7 +25552,7 @@ function createNesLinkTarget() {
   };
 }
 
-// packages/plugin-65xx/src/operands/resolution.ts
+// ../plugin-65xx/src/operands/resolution.ts
 function valueWidth(value) {
   if (!Number.isFinite(value)) {
     return 4;
@@ -25749,7 +25749,7 @@ function selectedScalar(syntax2) {
   return selected ?? syntax2.policy65xx.whole.scalar;
 }
 
-// packages/plugin-65xx/src/typed-architecture.ts
+// ../plugin-65xx/src/typed-architecture.ts
 var directToAbsolute = {
   zeroPage: "absolute",
   zeroPageIndexedX: "absoluteIndexedX",
@@ -26295,7 +26295,7 @@ var TypedArch65xx = class {
   }
 };
 
-// packages/plugin-65xx/src/index.ts
+// ../plugin-65xx/src/index.ts
 var RAW_65XX_TARGET_ID = "65xx.raw";
 var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
@@ -26705,7 +26705,7 @@ var plugin = definePlugin({
   activate: register65xxContributions
 });
 
-// packages/language-server/src/asset-preview-conversion.ts
+// ../language-server/src/asset-preview-conversion.ts
 var registry3 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(asepriteRasterImporter).registerImporter(waveImporter);
 for (const encoder of [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder]) {
   registry3.registerEncoder(encoder);
@@ -26823,10 +26823,10 @@ function convertNesChrPreview(input2) {
   };
 }
 
-// packages/language-server/src/asset-preview-host.ts
+// ../language-server/src/asset-preview-host.ts
 var convertAssetPreview2 = (input2) => convertAssetPreview(input2, somPreviewAdapters);
 
-// packages/language-server/src/asset-preview-worker.ts
+// ../language-server/src/asset-preview-worker.ts
 if (!parentPort) {
   throw new Error("Asset preview worker requires a parent port.");
 }

@@ -5,46 +5,52 @@ export declare const SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
 export declare const SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR: AddressSpaceDescriptor;
 /** Identity between a 16-bit SPC700 address and its offset in an analysis image. */
 export interface Spc700AramAddressIdentity {
+    /** Always the SPC700 ARAM address space. */
     readonly addressSpace: typeof SPC700_ARAM_ADDRESS_SPACE;
+    /** 16-bit ARAM address. */
     readonly address: number;
+    /** Zero-based offset in the backing image. */
     readonly imageOffset: number;
 }
 /** Immutable contiguous ARAM image used by standalone SPC700 analysis. */
 export declare class Spc700AramImage {
     #private;
+    /** First 16-bit ARAM address represented by the image. */
     readonly loadAddress: number;
+    /** Lowercase hex SHA-256 of the image bytes, fixed at construction. */
     readonly contentSha256: string;
     /**
-     * @param {ArrayLike<number>} bytes Contiguous bytes copied into the image.
-     * @param {number} [loadAddress] First 16-bit ARAM address represented by `bytes`.
+     * Copies the bytes and validates that they fit contiguously below `$10000`.
+     * @param bytes Contiguous bytes copied into the image.
+     * @param [loadAddress] First 16-bit ARAM address represented by `bytes`.
      */
     constructor(bytes: ArrayLike<number>, loadAddress?: number);
     /**
      * Number of represented ARAM bytes.
-     * @returns {number} Backing-image length.
+     * @returns Backing-image length.
      */
     get length(): number;
     /**
      * Returns a defensive copy of the represented bytes.
-     * @returns {Uint8Array} Copied image bytes.
+     * @returns Copied image bytes.
      */
     bytes(): Uint8Array;
     /**
      * Reads one byte by 16-bit ARAM address.
-     * @param {number} address SPC700 memory address.
-     * @returns {number | undefined} Byte value, or `undefined` outside the image.
+     * @param address SPC700 memory address.
+     * @returns Byte value, or `undefined` outside the image.
      */
     readByte(address: number): number | undefined;
     /**
      * Maps a represented ARAM address to its backing-image offset.
-     * @param {number} address SPC700 memory address.
-     * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
+     * @param address SPC700 memory address.
+     * @returns Address identity when represented.
      */
     identifyAddress(address: number): Spc700AramAddressIdentity | undefined;
     /**
      * Maps a backing-image offset to its 16-bit ARAM address.
-     * @param {number} imageOffset Offset in the contiguous backing image.
-     * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
+     * @param imageOffset Offset in the contiguous backing image.
+     * @returns Address identity when represented.
      */
     identifyOffset(imageOffset: number): Spc700AramAddressIdentity | undefined;
 }

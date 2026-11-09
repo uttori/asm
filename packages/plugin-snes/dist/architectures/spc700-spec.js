@@ -1,3 +1,10 @@
+/**
+ * Builds a fixed-size SPC700 mode definition.
+ * @param id Stable addressing mode id.
+ * @param syntax Operand placeholder spelling.
+ * @param size Encoded instruction size in bytes.
+ * @returns Mode definition consumed by the opcode matrix.
+ */
 const mode = (id, syntax, size) => ({
     id,
     syntax,
@@ -80,14 +87,15 @@ export const spc700Modes = Object.freeze({
     dpxY: mode("directIndexedXRegisterY", "dp+X,Y", 2),
     absY: mode("absoluteRegisterY", "addr,Y", 3),
 });
+/**
+ * Narrows a string to a known SPC700 mode table key.
+ * @param value Candidate mode key from an opcode row cell.
+ * @returns True when `value` names a mode in spc700Modes.
+ */
 function isSpc700ModeKey(value) {
     return Object.hasOwn(spc700Modes, value);
 }
-/*
- * Independently transcribed from Nintendo's SNES Development Manual, Book I,
- * Appendix C. The GPL Framework disassembler is an optional oracle only and
- * is not a source for this table or its implementation.
- */
+/** Opcode matrix rows transcribed from the SPC700 appendix table. */
 const opcodeRows = [
     "NOP:imp TCALL:tc SET0:dpBit BBS0:dpBitRel OR:aDp OR:aAbs OR:aIndX OR:aDpxi OR:aImm OR:dpDp OR1:cBit ASL:dp ASL:abs PUSH:regP TSET:absA BRK:imp",
     "BPL:rel TCALL:tc CLR0:dpBit BBC0:dpBitRel OR:aDpx OR:aAbx OR:aAby OR:aDpiy OR:dpImm OR:xy DECW:dpWord ASL:dpx ASL:regA DEC:regX CMP:xAbs JMP:jmpAbx",
@@ -179,6 +187,12 @@ export const spc700ConditionalBranches = new Set([
     "CBNE",
     "DBNZ",
 ]);
+/**
+ * Derives control-flow metadata from mnemonic and addressing mode ids.
+ * @param mnemonic Uppercased instruction mnemonic.
+ * @param addressingMode Stable mode id from the opcode matrix.
+ * @returns Flow descriptor for decode and analysis consumers.
+ */
 const flowFor = (mnemonic, addressingMode) => {
     if (spc700ConditionalBranches.has(mnemonic) ||
         mnemonic.startsWith("BBS") ||
@@ -261,7 +275,7 @@ export const spc700Specifications = Object.freeze(entries.map((entry, opcode) =>
 }));
 /**
  * Generates editor hover/completion data from the decoder's opcode authority.
- * @returns {InstructionDescriptor[]} Alphabetized SPC700 instruction descriptors.
+ * @returns Alphabetized SPC700 instruction descriptors.
  */
 export function buildSpc700Catalog() {
     const grouped = new Map();

@@ -4,6 +4,7 @@ import { Cpu6502Decoder } from "../decoder.js";
 import { ricoh2a03Cpu } from "../instructions/opcodes.js";
 import { initialNesMapperState, nesExecutionContext, nesPrgOffset, validateNesMapper, writeNesMapper, } from "./mapper.js";
 import { matchesNesResearch, nesResearchState } from "./research.js";
+/** Empty NES analysis seed: unknown mapper, no banks, no PPU clock. */
 export const initialNesAnalysisState = () => ({
     mapper: initialNesMapperState(),
     a: null,

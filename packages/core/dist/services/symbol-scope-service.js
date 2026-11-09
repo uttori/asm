@@ -1,6 +1,8 @@
+/** Returns the forward or backward anonymous label bucket for a depth, if present. */
 function relativeLabelBucket(table, depth) {
     return Object.hasOwn(table, depth) ? table[depth] : undefined;
 }
+/** Resolves, qualifies, and stores labels across namespaces, macros, and file-local rules. */
 export class SymbolScopeService {
     host;
     bindingObserver;
@@ -35,7 +37,7 @@ export class SymbolScopeService {
     }
     /**
      * Returns the current ca65-style object file name (last `.asm` on the include stack).
-     * @returns {string} The object-file basename, or empty when unknown.
+     * @returns The object-file basename, or empty when unknown.
      */
     objectFileKey() {
         const chain = [...this.host.includeStack, this.host.currentFile];
@@ -50,8 +52,8 @@ export class SymbolScopeService {
     /**
      * Qualifies a symbol for the active syntax profile's file-local rule.
      * Exported/imported names and cheap/sublabels stay unqualified.
-     * @param {string} name The source symbol name.
-     * @returns {string} The storage key.
+     * @param name The source symbol name.
+     * @returns The storage key.
      */
     qualifySymbolName(name) {
         if (!this.host.syntaxProfile.fileLocalSymbols) {
@@ -68,9 +70,9 @@ export class SymbolScopeService {
     }
     /**
      * Adds a namespace inside a file-local qualifier (`unit::Namespace_Label`).
-     * @param {string} namespacePrefix The flattened namespace prefix.
-     * @param {string} label The already-qualified or plain label.
-     * @returns {string} The namespace-qualified storage key.
+     * @param namespacePrefix The flattened namespace prefix.
+     * @param label The already-qualified or plain label.
+     * @returns The namespace-qualified storage key.
      */
     qualifyNamespaceAlias(namespacePrefix, label) {
         if (this.host.syntaxProfile.fileLocalSymbols) {
@@ -83,8 +85,8 @@ export class SymbolScopeService {
     }
     /**
      * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
-     * @param {string} name The label token, without a trailing colon.
-     * @returns {string} The rewritten name.
+     * @param name The label token, without a trailing colon.
+     * @returns The rewritten name.
      */
     toCheapDotLabel(name) {
         const prefix = this.host.syntaxProfile.cheapLocalPrefix;
@@ -93,6 +95,7 @@ export class SymbolScopeService {
         }
         return name;
     }
+    /** Walks underscore segments to find the nearest hierarchy-modifying ancestor label. */
     findNearestHierarchyAncestor(label) {
         for (let i = label.length - 1; i >= 0; i--) {
             if (label[i] !== "_") {
@@ -109,6 +112,7 @@ export class SymbolScopeService {
         }
         return null;
     }
+    /** Builds outer-to-inner label ancestry, stopping at the active global root when applicable. */
     getHierarchyChain(label) {
         const rootLabel = this.host.currentGlobalParentLabel;
         const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
@@ -131,6 +135,7 @@ export class SymbolScopeService {
         }
         return chain;
     }
+    /** Lists every strict underscore prefix of a label from longest to shortest. */
     getAncestorPrefixes(label) {
         const prefixes = [];
         for (let i = label.length - 1; i >= 0; i--) {
@@ -144,6 +149,7 @@ export class SymbolScopeService {
         }
         return prefixes;
     }
+    /** Resolves the parent label for cheap-local references given leading dot count. */
     getScopedParentLabel(dotCount) {
         const current = this.host.currentParentLabel;
         if (dotCount === 1) {
@@ -168,8 +174,8 @@ export class SymbolScopeService {
     }
     /**
      * Checks if a label is in scope.
-     * @param {string} identifier The label to check.
-     * @returns {boolean} `true` if the label is in scope, `false` otherwise.
+     * @param identifier The label to check.
+     * @returns `true` if the label is in scope, `false` otherwise.
      */
     hasLabelInScope(identifier) {
         const qualified = this.qualifySymbolName(identifier);
@@ -181,8 +187,8 @@ export class SymbolScopeService {
     }
     /**
      * Handles a relative label.
-     * @param {string} label The label to handle.
-     * @returns {number} The address of the label.
+     * @param label The label to handle.
+     * @returns The address of the label.
      */
     handleRelativeLabel(label) {
         const isPositive = label.includes("+");
@@ -254,7 +260,7 @@ export class SymbolScopeService {
     /**
      * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
      * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
-     * @returns {number} The address of the unnamed label.
+     * @returns The address of the unnamed label.
      */
     handleUnnamedLabel() {
         const targetAddress = this.host.currentTargetAddress;
@@ -286,9 +292,9 @@ export class SymbolScopeService {
     }
     /**
      * Resolves a ca65 unnamed-label reference (`:+`, `:++`, `:-`, `:--`).
-     * @param {string} label The reference token.
-     * @param {number} [currentAddressOverride] PC to search from.
-     * @returns {number} The target address.
+     * @param label The reference token.
+     * @param [currentAddressOverride] PC to search from.
+     * @returns The target address.
      */
     findUnnamedLabel(label, currentAddressOverride) {
         const parsed = parseUnnamedLabelReference(label);
@@ -366,9 +372,9 @@ export class SymbolScopeService {
     }
     /**
      * Finds the next label.
-     * @param {string} label The label to find.
-     * @param {number} currentAddressOverride The current address to override.
-     * @returns {number} The address of the next label.
+     * @param label The label to find.
+     * @param currentAddressOverride The current address to override.
+     * @returns The address of the next label.
      */
     findNextLabel(label, currentAddressOverride) {
         const isPositive = label.includes("+");
@@ -405,9 +411,9 @@ export class SymbolScopeService {
     }
     /**
      * Finds the previous label.
-     * @param {string} label The label to find.
-     * @param {number} currentAddressOverride The current address to override.
-     * @returns {number} The address of the previous label.
+     * @param label The label to find.
+     * @param currentAddressOverride The current address to override.
+     * @returns The address of the previous label.
      */
     findPreviousLabel(label, currentAddressOverride) {
         const isPositive = label.includes("+");
@@ -441,12 +447,12 @@ export class SymbolScopeService {
     }
     /**
      * Sets a label.
-     * @param {string} label The label to set.
-     * @param {number} value The value of the label.
-     * @param {boolean} isStatic Whether the label is static.
-     * @param {boolean} isMacroLabel Whether the label is a macro label.
-     * @param {boolean} isGlobal Whether the label is global.
-     * @param {boolean} modifiesHierarchy Whether the label modifies the hierarchy.
+     * @param label The label to set.
+     * @param value The value of the label.
+     * @param isStatic Whether the label is static.
+     * @param isMacroLabel Whether the label is a macro label.
+     * @param isGlobal Whether the label is global.
+     * @param modifiesHierarchy Whether the label modifies the hierarchy.
      */
     setLabel(label, value, isStatic = false, isMacroLabel = false, isGlobal = false, modifiesHierarchy = true) {
         let fullLabel = label;
@@ -600,8 +606,8 @@ export class SymbolScopeService {
     }
     /**
      * Resolves a struct member.
-     * @param {string} compoundId The compound ID of the struct member.
-     * @returns {number} The address of the struct member.
+     * @param compoundId The compound ID of the struct member.
+     * @returns The address of the struct member.
      */
     resolveStructMember(compoundId) {
         const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
@@ -656,9 +662,9 @@ export class SymbolScopeService {
     }
     /**
      * Gets the value of a label.
-     * @param {string} label The label to get the value of.
-     * @param {boolean} requireStatic Whether the label must be static.
-     * @returns {number} The value of the label.
+     * @param label The label to get the value of.
+     * @param requireStatic Whether the label must be static.
+     * @returns The value of the label.
      */
     getLabelValue(label, requireStatic) {
         const value = this.tryGetLabelValue(label, requireStatic);
@@ -672,9 +678,9 @@ export class SymbolScopeService {
     }
     /**
      * Tries to get a scoped label value without allocating an Error for a miss.
-     * @param {string} label The label to get the value of.
-     * @param {boolean} requireStatic Whether the label must be static.
-     * @returns {number | undefined} The value, or undefined when not found.
+     * @param label The label to get the value of.
+     * @param requireStatic Whether the label must be static.
+     * @returns The value, or undefined when not found.
      */
     tryGetLabelValue(label, requireStatic) {
         if (parseUnnamedLabelReference(label)) {
@@ -820,9 +826,9 @@ export class SymbolScopeService {
     }
     /**
      * Gets the value of a label directly.
-     * @param {string} label The label to get the value of.
-     * @param {boolean} requireStatic Whether the label must be static.
-     * @returns {number} The value of the label.
+     * @param label The label to get the value of.
+     * @param requireStatic Whether the label must be static.
+     * @returns The value of the label.
      */
     getLabelValueDirect(label, requireStatic) {
         const value = this.tryGetLabelValueDirect(label, requireStatic);
@@ -836,9 +842,9 @@ export class SymbolScopeService {
     }
     /**
      * Tries a direct label lookup without allocating an Error for ordinary misses.
-     * @param {string} label The label to get the value of.
-     * @param {boolean} requireStatic Whether the label must be static.
-     * @returns {number | undefined} The value, or undefined when not found.
+     * @param label The label to get the value of.
+     * @param requireStatic Whether the label must be static.
+     * @returns The value, or undefined when not found.
      */
     tryGetLabelValueDirect(label, requireStatic) {
         if (label.includes("_") && !label.includes(":")) {
@@ -874,9 +880,9 @@ export class SymbolScopeService {
     }
     /**
      * Gets the size of a struct or extension.
-     * @param {string} identifier The identifier of the struct or extension.
-     * @param {boolean} [baseOnly] If true, returns only the base size without extensions.
-     * @returns {number} The size of the struct or extension.
+     * @param identifier The identifier of the struct or extension.
+     * @param [baseOnly] If true, returns only the base size without extensions.
+     * @returns The size of the struct or extension.
      * @throws {Error} If the struct or extension doesn't exist.
      */
     getObjectSize(identifier, baseOnly = false) {
@@ -922,9 +928,9 @@ export class SymbolScopeService {
     /**
      * Returns the outline container for a stored label name.
      * Sublabels nest under their parent. Namespaced labels nest under the namespace.
-     * @param {string} fullLabel The stored label name.
-     * @param {boolean} isGlobal Whether the label is global.
-     * @returns {string | undefined} The container name, if any.
+     * @param fullLabel The stored label name.
+     * @param isGlobal Whether the label is global.
+     * @returns The container name, if any.
      */
     symbolContainerName(fullLabel, isGlobal) {
         const parent = this.host.labelParents.get(fullLabel);
@@ -940,7 +946,7 @@ export class SymbolScopeService {
     }
     /**
      * Handles a label definition.
-     * @param {string} labelName The name of the label.
+     * @param labelName The name of the label.
      */
     handleLabelDefinition(labelName) {
         labelName = this.toCheapDotLabel(labelName);
@@ -1027,8 +1033,8 @@ export class SymbolScopeService {
 }
 /**
  * Returns the last path segment of a source file.
- * @param {string} file The file path.
- * @returns {string} The basename.
+ * @param file The file path.
+ * @returns The basename.
  */
 function fileBasename(file) {
     const normalized = file.replaceAll("\\", "/");
@@ -1037,8 +1043,8 @@ function fileBasename(file) {
 }
 /**
  * Parses a ca65 unnamed-label reference (`:+`, `:++`, `:-`).
- * @param {string} token The operand token.
- * @returns {{ direction: 1 | -1; count: number } | undefined} The skip count, or undefined.
+ * @param token The operand token.
+ * @returns The skip count, or undefined.
  */
 export function parseUnnamedLabelReference(token) {
     const match = token.trim().match(/^:(\++|-+)$/);

@@ -3,12 +3,19 @@ import { linkConstant, linkInteger } from "../ir/link-expression.js";
 export class ModuleAssembly {
     id;
     defaultAddressSpace;
+    /** Mutable section byte cursors keyed by section name. */
     sections = new Map();
+    /** Module symbol table including imports, exports, and locals. */
     symbols = new Map();
+    /** Pending relocation sites recorded during emission. */
     fixups = [];
+    /** Source ranges mapped to section offsets for debug metadata. */
     ranges = [];
+    /** Typed field metadata attached to emitted data. */
     fields = [];
+    /** Asset emission records linked to module output. */
     assets = [];
+    /** Instruction metadata captured for link-time validation. */
     instructions = [];
     definitions = new Map();
     exports = new Set();
@@ -90,6 +97,7 @@ export class ModuleAssembly {
     position(offset = this.previewOffset ?? this.current.cursor) {
         return { section: this.sectionName, offset };
     }
+    /** Kind of the currently selected section. */
     get sectionKind() {
         return this.current.kind;
     }
@@ -107,6 +115,7 @@ export class ModuleAssembly {
         this.sections.set(this.sectionName, { ...this.current, alignment: combined });
         return (alignment - (this.current.cursor % alignment)) % alignment;
     }
+    /** Builds a link expression pointing at the current module section offset. */
     location(offset = this.position().offset) {
         return { kind: "section", module: this.id, ...this.position(offset) };
     }
@@ -172,6 +181,7 @@ export class ModuleAssembly {
             source,
         });
     }
+    /** True when the symbol received a definition during the active stage. */
     isDefinedThisStage(name) {
         return this.definitions.has(name);
     }
@@ -357,8 +367,7 @@ export class ModuleAssembly {
             instructions: this.instructions,
             sections: [...this.sections.values()]
                 .filter((section) => section.size || section.name !== ".text")
-                .map(({ cursor: _cursor, bytes, ...section }) => ({
-                ...section,
+                .map(({ cursor: _cursor, bytes, ...section }) => Object.assign(section, {
                 bytes: section.kind === "bss"
                     ? new Uint8Array()
                     : Uint8Array.from({ length: section.size }, (_, index) => bytes[index] ?? 0),

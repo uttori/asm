@@ -26,6 +26,7 @@ export declare class SqliteRuntimeTraceBatch implements RuntimeTracePublicationS
     constructor(db: DatabaseSync, source: string | undefined, intern: (table: string, value: string) => number);
     /** Accept only the importer's adjacent code/state pairs; validate equality before sharing storage. */
     add(record: RuntimeEvidenceRecord): boolean;
+    /** Flush pending rows and drop the staging table; throws if a paired state is still missing or the transaction ended. */
     finish(): void;
 }
 //# sourceMappingURL=sqlite-runtime-batch.d.ts.map

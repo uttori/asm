@@ -4,7 +4,7 @@
   "source": "packages/vscode-extension/src/assets/png-worker.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/png-worker.cjs.licenses.txt",
-  "sha256": "b4e54b3b575868a2be3020541d0dcb017841bd207f1cc41a8e168dd2cb38e571",
+  "sha256": "112ec9e6f7c777472553c3729c66e9aabc3f9d133b4ca24c3ba04b811e1a3354",
   "noticesSha256": "7b8f30493d45e9bb5f5d79f49dbb463feb84785a0d6a1187045a44f821f7ee54",
   "inputs": [
     {
@@ -41,7 +41,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "3357428093100ad6e3aff2fcf0bb8f676b43c875679a6c80895d80cefb584bfa"
     },
     {
       "file": "packages/assets/src/image-conversion.ts",

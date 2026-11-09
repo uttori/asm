@@ -43,11 +43,11 @@ export function nesPrgOffset(rom, address, state) {
         bank = count - 1;
     }
     else if (window === 1) {
-        bank = state.banks[7];
+        bank = state.banks.at(7);
     }
     else if (state.prgMode !== null) {
         const fixed = (window === 2 && state.prgMode === 0) || (window === 0 && state.prgMode === 1);
-        bank = fixed ? count - 2 : state.banks[6];
+        bank = fixed ? count - 2 : state.banks.at(6);
     }
     if (bank === null || bank === undefined) {
         return undefined;

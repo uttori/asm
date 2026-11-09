@@ -13,32 +13,60 @@ import { parseSpritePaletteCatalog, spritePaletteBytes, } from "@uttori/asm-asse
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { assertSourcePath, } from "@uttori/asm-disassembler/source-project";
 import { convertBossImage } from "./assembly.js";
+/** Accepts a plain object; arrays and null are rejected. */
 function isObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
 }
+/**
+ * Require a plain object declaration.
+ * @param value Untrusted declaration value.
+ * @returns The value as a record.
+ */
 function object(value) {
     if (!isObject(value)) {
         throw new Error("Invalid SoM interchange declaration.");
     }
     return value;
 }
+/**
+ * Require a nonempty identity string of at most 1024 UTF-16 units.
+ * @param value Untrusted identity value.
+ * @returns The validated string.
+ */
 function text(value) {
     if (typeof value !== "string" || !value.length || value.length > 1024) {
         throw new Error("Invalid SoM interchange identity.");
     }
     return value;
 }
+/**
+ * Require a portable project-relative source path.
+ * @param value Untrusted path value.
+ * @returns The validated path.
+ */
 function name(value) {
     const result = text(value);
     assertSourcePath(result);
     return result;
 }
+/**
+ * Serialize as two-space-indented JSON with a trailing newline, matching source formatting.
+ * @param value JSON-compatible value.
+ * @returns UTF-8 bytes.
+ */
 function json(value) {
     return new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
 }
+/** Byte-exact equality of two buffers. */
 function equal(a, b) {
     return Buffer.from(a).equals(b);
 }
+/**
+ * Convert an absolute build path into a validated project-relative path with forward slashes.
+ * @param context Adapter context supplying the build root.
+ * @param absolute Absolute path inside the build root.
+ * @returns The portable relative path.
+ */
 function relative(context, absolute) {
     const result = path.relative(context.build.root, absolute).split(path.sep).join("/");
     assertSourcePath(result);
@@ -70,6 +98,12 @@ function graphics(context, selection) {
     }
     return result;
 }
+/**
+ * Read every declared conversion resource of an emission from current source.
+ * @param context Adapter context used to read source files.
+ * @param emission Emission whose conversion resources are read.
+ * @returns Inputs keyed by declared resource name; JSON media type is inferred from a .json suffix.
+ */
 function resourceInputs(context, emission) {
     const inputs = {};
     for (const [declared, absolute] of Object.entries(emission.conversion?.resources ?? {})) {
@@ -145,6 +179,13 @@ function assertEffect(context, owner, before) {
         throw new Error(`Native include does not uniquely own emitted span ${offset}..${offset + owner.size}.`);
     }
 }
+/**
+ * Decode the complete consumer closure and prove the selected atlas's emissions own exactly its declared segments
+ * and re-encode to the current output.
+ * @param context Adapter context for the current build.
+ * @param selection Validated sprite selection.
+ * @returns The selected and all decoded atlases, the catalogue, the selected emissions, and sorted source dependencies.
+ */
 function inspect(context, selection) {
     const emitted = graphics(context, selection), catalog = parseSpritePaletteCatalog(context.read(selection.catalog));
     const all = selection.atlases.map((user) => atlas(context, user, catalog, user.id === selection.atlasId

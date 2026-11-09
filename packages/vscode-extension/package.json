@@ -26,7 +26,7 @@
     "url": "https://github.com/uttori/asm.git",
     "directory": "packages/vscode-extension"
   },
-  "publisher": "matthewcallis",
+  "publisher": "uttori",
   "main": "out/extension.js",
   "scripts": {
     "build": "node esbuild.mjs",
@@ -615,7 +615,11 @@
           ".inc"
         ],
         "firstLine": "(?i)^\\s*(lorom|hirom|exlorom|exhirom|sa1rom|sfxrom|norom|fullsa1rom)\\b",
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./media/uttori-asm-file-light.svg",
+          "dark": "./media/uttori-asm-file-dark.svg"
+        }
       },
       {
         "id": "uttori-65xx",
@@ -623,7 +627,11 @@
           "Uttori 65xx",
           "65xx Assembly"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./media/uttori-asm-file-light.svg",
+          "dark": "./media/uttori-asm-file-dark.svg"
+        }
       }
     ],
     "breakpoints": [
@@ -1207,9 +1215,10 @@
   "activationEvents": [
     "onDebugResolve:uttori-asm"
   ],
+  "icon": "media/uttori-asm.png",
   "engines": {
     "node": ">=26",
-    "vscode": "^1.140.0"
+    "vscode": "^1.145.0"
   },
   "capabilities": {
     "untrustedWorkspaces": {

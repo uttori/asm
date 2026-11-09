@@ -14,7 +14,8 @@ import type { SqliteTraceStage } from "./sqlite-trace-stage.js";
 export declare const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 /** Physical SQLite layout version, independent of semantic manifest schema and edit revisions. */
 export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 4;
-/** Lookup parameters are the external prefix and binary/text suffix. Resolve both dictionaries
+/**
+ * Lookup parameters are the external prefix and binary/text suffix. Resolve both dictionaries
  * before probing observations: filtering the logical view by external ID otherwise scans every
  * observation in that capture, making a growing import quadratic. Full suffix equality protects
  * against truncated hash-key collisions. Signed rowids retain paired-state and deletion semantics.
@@ -22,9 +23,9 @@ export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 export declare const RUNTIME_RECORD_LOOKUP_SQL: string;
 /**
  * Resolves the sqlite file for a project pointer.
- * @param {string} directory Project root containing analysis.json.
- * @param {Pick<AnalysisProjectManifest, "db">} manifest Validated pointer.
- * @returns {string} Joined sqlite path. Relative directories remain relative to process cwd.
+ * @param directory Project root containing analysis.json.
+ * @param manifest Validated pointer.
+ * @returns Joined sqlite path. Relative directories remain relative to process cwd.
  */
 export declare const analysisProjectSqlitePath: (directory: string, manifest: Pick<AnalysisProjectManifest, "db">) => string;
 /**
@@ -42,8 +43,8 @@ export declare class SqliteAnalysisStore {
      * Opens or creates a project database.
      * Opening validates physical format, not every semantic record, and may create SQLite journal files.
      * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
-     * @param {string} file SQLite path. Parent directory must already exist.
-     * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
+     * @param file SQLite path. Parent directory must already exist.
+     * @param [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
      */
     constructor(file: string, createSchema?: boolean);
     /**
@@ -57,24 +58,25 @@ export declare class SqliteAnalysisStore {
      * Throwing rolls back records and manifest changes. Promise/thenable results are rejected. Perform
      * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
      * the manifest themselves when changing semantic records. Prefer the commitAnalysisProject APIs.
-     * @param {Function} action Synchronous work. Cursors must be consumed before returning.
-     * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
-     * @returns {T} Callback result after a successful commit.
+     * @param action Synchronous work. Cursors must be consumed before returning.
+     * @param [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
+     * @returns Callback result after a successful commit.
      */
     transaction<T>(action: () => T, write?: boolean): T;
     /**
      * Index trace chunks in temporary or privately staged disk counters. This transaction never
      * reads or writes the destination project, allowing other writers during asynchronous parsing.
-     * @param {Function} action Async parser using only the supplied counter index.
-     * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-     * @param {SqliteTraceStage} stage Optional private counters retained across publication failures.
-     * @returns {Promise} Parser result after counters commit. Staged counters survive connection close.
+     * @param action Async parser using only the supplied counter index.
+     * @param metrics Optional caller-owned diagnostic counters.
+     * @param stage Optional private counters retained across publication failures.
+     * @returns Parser result after counters commit. Staged counters survive connection close.
      */
     indexTrace<T>(action: (index: RuntimeTraceFactIndex) => Promise<T>, metrics?: TraceIndexMetrics, stage?: SqliteTraceStage): Promise<T>;
-    /** Apply a selected metadata edit by stable ID. Omitted records are never deleted.
+    /**
+     * Apply a selected metadata edit by stable ID. Omitted records are never deleted.
      * Validation and optimistic revision checks belong to the publication API.
-     * @param {AnalysisProjectShards} before Original selected view.
-     * @param {AnalysisProjectShards} after Edited selected view.
+     * @param before Original selected view.
+     * @param after Edited selected view.
      */
     patchMetadata(before: AnalysisProjectShards, after: AnalysisProjectShards): void;
     /**
@@ -106,22 +108,23 @@ export declare class SqliteAnalysisStore {
      * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
      * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
      * Semantic validation belongs to the project publication API. This method must run in its transaction.
-     * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
+     * @param shards Validated replacements for explicitly named tables.
      */
     replaceTables(shards: Partial<AnalysisProjectShards>): void;
     /**
      * Insert a content-addressed runtime fact once. An ID collision with different content is an
      * error, never a silent no-op. Count values are already aggregated within the source capture.
-     * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
-     * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
+     * @param record Fully aggregated fact with a source-derived stable ID.
+     * @returns True when inserted. Identical facts return false and conflicting facts throw.
      */
     insertRuntime(record: RuntimeEvidenceRecord): boolean;
-    /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
+    /**
+     * Prepare a unique-record batch in one source namespace, inside the publication transaction.
      * New namespaces need no per-record existence query. SQL uniqueness still rejects repeated IDs.
      * Existing/partially pruned sources use full idempotency and collision checks for every record.
      * The callback must not escape its transaction. Any insertion error must abort the whole batch.
-     * @param {string} prefix Exact ID prefix including its final colon.
-     * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
+     * @param prefix Exact ID prefix including its final colon.
+     * @returns Transaction-scoped inserter for validated records with unique suffixes.
      */
     runtimeBatchInserter(prefix: string): (record: RuntimeEvidenceRecord) => boolean;
     /**
@@ -135,40 +138,40 @@ export declare class SqliteAnalysisStore {
     validateRuntimeEvidence(): void;
     /**
      * Store manifest and counter in the same transaction as the changed records.
-     * @param {object} manifest Semantic project identity for this publication.
-     * @returns {AnalysisProjectManifest} Manifest containing the incremented counter.
+     * @param manifest Semantic project identity for this publication.
+     * @returns Manifest containing the incremented counter.
      */
     publishManifest(manifest: Omit<AnalysisProjectManifest, "shards">): AnalysisProjectManifest;
     /**
      * Current publication counter, or zero before initial publication. It is not a schema version.
      * Read it with related records inside transaction to retain one consistent snapshot.
-     * @returns {number} Stored revision.
+     * @returns Stored revision.
      */
     revision(): number;
     /**
      * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
      * Use a transaction when combining it with other reads. This does not validate the entire project.
-     * @returns {AnalysisProjectManifest} Pointer manifest.
+     * @returns Pointer manifest.
      */
     manifest(): AnalysisProjectManifest;
     /**
      * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
-     * @param {Array} kinds Runtime discriminators to include. Empty selects nothing.
-     * @returns {IterableIterator} Cursor consumed within the owning read transaction.
+     * @param kinds Runtime discriminators to include. Empty selects nothing.
+     * @returns Cursor consumed within the owning read transaction.
      * @yields {RuntimeEvidenceRecord} One matching decoded fact.
      */
     runtimeRecordsByKinds(kinds: readonly RuntimeEvidenceRecord["kind"][]): IterableIterator<RuntimeEvidenceRecord>;
     /**
      * Stream runtime facts without retaining the complete table. Consume before the owning transaction
      * returns or the connection closes. An escaped iterator does not preserve its original snapshot.
-     * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
+     * @returns One reconstructed runtime row at a time.
      * @yields {RuntimeEvidenceRecord} One runtime fact.
      */
     runtimeRecords(): IterableIterator<RuntimeEvidenceRecord>;
     /**
      * Read one metadata table directly. Sources must not load unrelated CFG or runtime tables.
-     * @param {string} kind Metadata table name from the semantic collection contract.
-     * @returns {Array} Decoded metadata in deterministic display order.
+     * @param kind Metadata table name from the semantic collection contract.
+     * @returns Decoded metadata in deterministic display order.
      */
     loadTable(kind: "labels"): AnalysisProjectShards["labels"];
     loadTable(kind: "comments"): AnalysisProjectShards["comments"];
@@ -182,14 +185,16 @@ export declare class SqliteAnalysisStore {
         records: readonly AnalysisProjectShards[Kind][number][];
         next?: string;
     };
-    /** Validate a query view against this read snapshot, including every included provenance reference.
-     * @param {AnalysisProjectShards} shards Selected records, with unused collections empty.
+    /**
+     * Validate a query view against this read snapshot, including every included provenance reference.
+     * @param shards Selected records, with unused collections empty.
      */
     validateView(shards: AnalysisProjectShards): void;
-    /** Merge an already-parsed offline batch by stable IDs without loading saved runtime history.
+    /**
+     * Merge an already-parsed offline batch by stable IDs without loading saved runtime history.
      * The caller owns revision checking and publication in the surrounding writer transaction.
-     * @param {RuntimeEvidenceBatch} batch Imported facts and metadata.
-     * @returns {object} Whether anything changed and per-collection additions/updates.
+     * @param batch Imported facts and metadata.
+     * @returns Whether anything changed and per-collection additions/updates.
      */
     mergeEvidenceBatch(batch: RuntimeEvidenceBatch): {
         changed: boolean;
@@ -205,35 +210,40 @@ export declare class SqliteAnalysisStore {
         };
         updated: Readonly<Record<keyof AnalysisProjectShards, number>>;
     };
-    /** Produce an explicit complete evidence report one qualified PC at a time.
+    /**
+     * Produce an explicit complete evidence report one qualified PC at a time.
      * Only report output accumulates. Unused instruction/memory histories and CFG contexts are never loaded.
-     * @returns {object} Runtime record count, conflicts, and metadata explanations.
+     * @returns Runtime record count, conflicts, and metadata explanations.
      */
     inspectEvidence(): {
         runtimeRecords: number;
         conflicts: RuntimeEvidenceConflict[];
         explanations: readonly import("../runtime/runtime-evidence.js").RuntimeEvidenceExplanation[];
     };
-    /** Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
-     * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
-     * @returns {AnalysisProjectShards} Bounded choice view and complete small provenance catalog.
+    /**
+     * Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
+     * @param [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
+     * @returns Bounded choice view and complete small provenance catalog.
      */
     evidenceChoices(selected?: Partial<Record<ShardKind, readonly string[]>>): AnalysisProjectShards;
-    /** Find candidate evidence IDs still owned by retained runtime observations.
+    /**
+     * Find candidate evidence IDs still owned by retained runtime observations.
      * Reads the small provenance dictionary and physical observation rows without decoding histories.
      * Caller holds the same read snapshot as the metadata being used for a replacement publication.
-     * @param {readonly string[]} ids Evidence candidates; empty input performs no query.
-     * @returns {string[]} Referenced candidate IDs in stable order, bounded by the input size.
+     * @param ids Evidence candidates; empty input performs no query.
+     * @returns Referenced candidate IDs in stable order, bounded by the input size.
      */
     runtimeEvidenceReferences(ids: readonly string[]): string[];
-    /** Explain one record with an exact reference count and a bounded reverse-reference preview.
-     * @param {ShardKind} kind Selected collection.
-     * @param {string} id Stable semantic record ID.
-     * @returns {ProjectEvidenceExplanation} Full direct provenance/conflicts, at most 200 reverse links.
+    /**
+     * Explain one record with an exact reference count and a bounded reverse-reference preview.
+     * @param kind Selected collection.
+     * @param id Stable semantic record ID.
+     * @returns Full direct provenance/conflicts, at most 200 reverse links.
      */
     explainEvidence(kind: ShardKind, id: string): ProjectEvidenceExplanation;
-    /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
-     * @returns {object} Functions, calls, unresolved sites, and ownership.
+    /**
+     * Persisted call graph plus current labels, without retaining CFG contexts between requests.
+     * @returns Functions, calls, unresolved sites, and ownership.
      */
     callGraph(): {
         calls: readonly import("../index.ts").AnalysisCallGraphEdge[];
@@ -247,49 +257,54 @@ export declare class SqliteAnalysisStore {
             }[];
         })[];
     };
-    /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
+    /**
+     * Cache a compact target-specific result. Callers declare every persisted input it consumes.
      * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
      * Concurrent input changes discard cache publication. Results still belong to one read snapshot.
-     * @param {string} key Internal stable query name.
-     * @param {string} signature Layout/configuration fingerprint.
-     * @param {readonly ShardKind[]} dependencies Source collections.
-     * @param {Function} compute Synchronous reader. Must not open another transaction.
-     * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
-     * @returns {T} Current projected value.
+     * @param key Internal stable query name.
+     * @param signature Layout/configuration fingerprint.
+     * @param dependencies Source collections.
+     * @param compute Synchronous reader. Must not open another transaction.
+     * @param [publish] Optional short SQL publication for derived rows built in temporary tables.
+     * @returns Current projected value.
      */
     cachedProjection<T>(key: string, signature: string, dependencies: readonly ShardKind[], compute: () => T & (T extends PromiseLike<unknown> ? never : unknown), publish?: () => void, restore?: (value: unknown) => T): T;
-    /** Select a bounded CFG navigation window through its address index.
-     * @param {string} space Exact logical address space.
-     * @param {number} address Selected PC.
-     * @param {readonly string[]} architectures Optional specification prefixes.
-     * @returns {AnalysisRecord[]} Four preceding and 28 following variants, in address order.
+    /**
+     * Select a bounded CFG navigation window through its address index.
+     * @param space Exact logical address space.
+     * @param address Selected PC.
+     * @param architectures Optional specification prefixes.
+     * @returns Four preceding and 28 following variants, in address order.
      */
     navigationNodes(space: string, address: number, architectures: readonly string[]): AnalysisRecord[];
-    /** Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
-     * @returns {Array} Half-open ROM-content intervals.
+    /**
+     * Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
+     * @returns Half-open ROM-content intervals.
      */
     codeRanges(): {
         start: number;
         end: number;
     }[];
-    /** Select processor MMIO observations before decoding payloads.
-     * @param {string} architecture Exact runtime architecture.
-     * @param {string} space Instruction and accessed logical space.
-     * @param {readonly number[]} addresses Exact hardware addresses, including target-approved mirrors.
-     * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations. Counts/provenance stay exact.
+    /**
+     * Select processor MMIO observations before decoding payloads.
+     * @param architecture Exact runtime architecture.
+     * @param space Instruction and accessed logical space.
+     * @param addresses Exact hardware addresses, including target-approved mirrors.
+     * @returns SQL-grouped observations. Counts/provenance stay exact.
      * @yields {RuntimeEvidenceRecord} One role-relevant access variant.
      */
     runtimeMemoryAtAddresses(architecture: string, space: string, addresses: readonly number[]): IterableIterator<RuntimeEvidenceRecord>;
-    /** Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
+    /**
+     * Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
      * The signature includes the ordered state fields and architecture. Aliases remain distinct so
      * the target decoder retains its original precedence and validation rules.
-     * @param {string} architecture Exact instruction architecture.
-     * @param {string} space Exact instruction address space.
-     * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
-     * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
-     * @param {Function} [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
-     * @param {Function} [onReadProgress] Representatives staged in storage order; throwing aborts the cursor.
-     * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
+     * @param architecture Exact instruction architecture.
+     * @param space Exact instruction address space.
+     * @param stateFields Only fields the target decoder consumes, including aliases.
+     * @param masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+     * @param [onProgress] Cumulative and total observations when rebuilding; throwing aborts the build.
+     * @param [onReadProgress] Representatives staged in storage order; throwing aborts the cursor.
+     * @returns SQL cursor over compact variants with exact per-evidence counts.
      * Preparation precedes the consuming read transaction. Standalone iteration owns a snapshot;
      * close a partially consumed cursor to release it.
      */
@@ -297,50 +312,55 @@ export declare class SqliteAnalysisStore {
         readonly max: number;
         readonly mask: number;
     }>>, onProgress?: (observations: number, totalObservations: number) => void, onReadProgress?: (representatives: number) => void): IterableIterator<RuntimeEvidenceRecord>;
-    /** Exact execution seed totals grouped by PC, without decoding execution payloads.
+    /**
+     * Exact execution seed totals grouped by PC, without decoding execution payloads.
      * Stream per-provenance SQL totals into one seed per PC; capture attribution remains in runtime
      * storage. Static seed selection needs their union, not millions of duplicate PC records.
-     * @param {string} architecture Target processor.
-     * @param {string} space Logical CPU address space.
-     * @returns {RuntimeEvidenceRecord[]} Execution facts reduced to the fields used for seed selection.
+     * @param architecture Target processor.
+     * @param space Logical CPU address space.
+     * @returns Execution facts reduced to the fields used for seed selection.
      */
     runtimeExecutionSeeds(architecture: string, space: string): RuntimeEvidenceRecord[];
     /** Build additive query indexes once, then refresh only rows invalidated by project writes. */
     prepareAnnotationQueries(): void;
     /** Prepare direct source attribution indexes without decoding runtime payloads. */
     prepareSourceQueries(): void;
-    /** Validated source identities from small catalog tables in the caller's read snapshot.
-     * @returns {object} Manifest and sources ordered by their most recent successful import.
+    /**
+     * Validated source identities from small catalog tables in the caller's read snapshot.
+     * @returns Manifest and sources ordered by their most recent successful import.
      */
     sourceCatalog(): {
         manifest: AnalysisProjectManifest;
         sources: readonly import("../analysis/analysis-sources.js").AnalysisEvidenceSource[];
     };
-    /** Exact SQL counts for a catalog source. No baseline or inferred static execution.
-     * @param {string} sourceId Catalog source ID.
-     * @returns {object} Manifest and source counts.
+    /**
+     * Exact SQL counts for a catalog source. No baseline or inferred static execution.
+     * @param sourceId Catalog source ID.
+     * @returns Manifest and source counts.
      */
     sourceSummary(sourceId: string): {
         manifest: AnalysisProjectManifest;
         summary: import("../analysis/analysis-sources.js").AnalysisSourceSummary;
     };
-    /** At most 200 SQL-selected contribution rows, decoded within the caller's read transaction.
-     * @param {string} sourceId Catalog source ID.
-     * @param {AnalysisSourceGroup} group Contribution category.
-     * @param {number} offset Nonnegative page offset.
-     * @returns {Array} Bounded source records.
+    /**
+     * At most 200 SQL-selected contribution rows, decoded within the caller's read transaction.
+     * @param sourceId Catalog source ID.
+     * @param group Contribution category.
+     * @param offset Nonnegative page offset.
+     * @returns Bounded source records.
      */
     sourcePage(sourceId: string, group: AnalysisSourceGroup, offset?: number): import("../analysis/analysis-sources.js").AnalysisSourceEntry[];
     /**
      * Read names, comments and provenance for editing without materializing instruction variants.
-     * @returns {object} Validated editing metadata from the caller's read transaction.
+     * @returns Validated editing metadata from the caller's read transaction.
      */
     annotationEditView(): {
         manifest: AnalysisProjectManifest;
         shards: AnalysisProjectShards;
     };
-    /** Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
-     * @returns {object} Validated manifest, metadata, and an empty runtime collection.
+    /**
+     * Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
+     * @returns Validated manifest, metadata, and an empty runtime collection.
      */
     sourceExportView(): {
         manifest: AnalysisProjectManifest;
@@ -361,56 +381,56 @@ export declare class SqliteAnalysisStore {
     /**
      * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
      * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
-     * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
+     * @returns All variants at each explicit output offset.
      * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
      */
     instructionExportGroups(): IterableIterator<readonly InstructionExportRecord[]>;
     /**
      * Read and validate only the requested instruction metadata and bounded runtime details.
-     * @param {readonly AnnotationQueryRange[]} ranges Exact visible source/debugger coordinates.
-     * @returns {SqliteAnnotationView} Small view. Consume inside the caller's read transaction.
+     * @param ranges Exact visible source/debugger coordinates.
+     * @returns Small view. Consume inside the caller's read transaction.
      */
     instructionAnnotationView(ranges: readonly AnnotationQueryRange[]): SqliteAnnotationView;
     /**
      * Exact viewport counts without materializing the detailed instruction projection.
-     * @param {readonly AnnotationQueryRange[]} ranges Current mapped coordinates, validated by the query.
-     * @returns {readonly InstructionExecutionSummaryRow[]} Bounded locations with exact execution totals.
+     * @param ranges Current mapped coordinates, validated by the query.
+     * @returns Bounded locations with exact execution totals.
      */
     instructionExecutionSummary(ranges: readonly AnnotationQueryRange[]): readonly InstructionExecutionSummaryRow[];
     /**
      * Read selected metadata kinds through the address index instead of loading the complete CFG.
-     * @param {readonly AnalysisRecord["kind"][]} kinds Analysis discriminators to include.
-     * @returns {AnalysisRecord[]} Matching rows in stable ID order.
+     * @param kinds Analysis discriminators to include.
+     * @returns Matching rows in stable ID order.
      */
     analysisByKinds(kinds: readonly AnalysisRecord["kind"][]): AnalysisRecord[];
     /**
      * Resolve an edit boundary to representative CFG nodes, one per qualified location.
      * Call after preparing query indexes and consume inside a read transaction.
-     * @param {string} addressSpace Exact debug-map/native address space.
-     * @param {number} address Instruction start in that space.
-     * @param {number} [outputOffset] Optional explicit file offset, never an inferred mapper alias.
-     * @returns {AnalysisProjectShards["analysis"]} Location representatives. State variants need not be loaded to edit a comment.
+     * @param addressSpace Exact debug-map/native address space.
+     * @param address Instruction start in that space.
+     * @param [outputOffset] Optional explicit file offset, never an inferred mapper alias.
+     * @returns Location representatives. State variants need not be loaded to edit a comment.
      */
     annotationNodesAt(addressSpace: string, address: number, outputOffset?: number): AnalysisProjectShards["analysis"];
     /**
      * Materialize complete record arrays without semantic validation. Run inside a read transaction.
-     * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
-     * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
+     * @param [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
+     * @returns Decoded record arrays owned by the caller.
      */
     loadShards(runtime?: boolean): AnalysisProjectShards;
     /**
      * Table counts for reports.
-     * @returns {Readonly<Record<string, number>>} Row counts.
+     * @returns Row counts.
      */
     counts(): Readonly<Record<string, number>>;
     /**
      * Count analysis kinds without inflating or parsing their compressed payloads.
-     * @returns {Readonly<Record<string, number>>} Counts by analysis record discriminator.
+     * @returns Counts by analysis record discriminator.
      */
     analysisCounts(): Readonly<Record<string, number>>;
     /**
      * Summarize per-PC execution facts using stored columns, without reading register history.
-     * @returns {object} Fact count and total observed executions in the owning transaction.
+     * @returns Fact count and total observed executions in the owning transaction.
      */
     runtimeExecutionCounts(): {
         records: number;
@@ -419,7 +439,7 @@ export declare class SqliteAnalysisStore {
     /**
      * Atomically refresh the watcher hint after commit. SQLite is authoritative: a failed hint write
      * is reported as a warning, never as a failed import that could cause an unsafe retry.
-     * @param {string} directory Project root for the watcher hint.
+     * @param directory Project root for the watcher hint.
      */
     writePointer(directory: string): void;
     /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
@@ -431,38 +451,45 @@ export declare class SqliteAnalysisStore {
      * retain their exact payloads. Refresh the portable capture catalog and compact() afterward.
      */
     retainSnesAnalysisEvidence(onProgress?: (message: string) => void): void;
-    /** Current persisted policy. Defaults do not write or change the semantic revision.
-     * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
+    /**
+     * Current persisted policy. Defaults do not write or change the semantic revision.
+     * @returns Validated defaults and persisted overrides.
      */
     storagePolicy(): AnalysisStoragePolicy;
-    /** Update only explicit policy fields in the caller's writer transaction.
-     * @param {Partial<AnalysisStoragePolicy>} patch Explicit limits, in bytes/days/counts.
-     * @returns {AnalysisStoragePolicy} Complete policy saved without changing the edit revision.
+    /**
+     * Update only explicit policy fields in the caller's writer transaction.
+     * @param patch Explicit limits, in bytes/days/counts.
+     * @returns Complete policy saved without changing the edit revision.
      */
     setStoragePolicy(patch: Partial<AnalysisStoragePolicy>): AnalysisStoragePolicy;
-    /** Storage accounting avoids decoding runtime or analysis payloads.
-     * @returns {object} Physical allocation and logical retention counts.
+    /**
+     * Storage accounting avoids decoding runtime or analysis payloads.
+     * @returns Physical allocation and logical retention counts.
      */
     storageSnapshot(): import("./sqlite-storage-policy.js").AnalysisStorageSnapshot;
-    /** Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
-     * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
+    /**
+     * Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
+     * @returns Allocated cache bytes, excluding permanent editor/export indexes.
      */
     storageCacheBytes(): number;
-    /** Durable receipt lookup survives source-file removal and cache eviction.
-     * @param {string} sha256 Canonical capture identity.
-     * @returns {object | undefined} Retained import identity and counts.
+    /**
+     * Durable receipt lookup survives source-file removal and cache eviction.
+     * @param sha256 Canonical capture identity.
+     * @returns Retained import identity and counts.
      */
     captureReceipt(sha256: string): Record<string, import("node:sqlite").SQLOutputValue> | undefined;
     /** Bounded physical-code joins; graphics never imply that a CPU instruction executed. */
     graphicsEvidence(query: GraphicsEvidenceQuery): readonly import("./sqlite-graphics-query.js").GraphicsEvidenceRow[];
     /** Small durable import receipts in import order. */
     captureCatalog(): Record<string, import("node:sqlite").SQLOutputValue>[];
-    /** Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
-     * @param {ImportReport} report Successfully validated native trace import.
+    /**
+     * Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
+     * @param report Successfully validated native trace import.
      */
     recordCaptureReceipt(report: ImportReport): void;
-    /** Drop disposable projections after publication, then recycle WAL without waiting on active readers.
-     * @returns {object} Cache eviction totals and whether readers delayed WAL truncation.
+    /**
+     * Drop disposable projections after publication, then recycle WAL without waiting on active readers.
+     * @returns Cache eviction totals and whether readers delayed WAL truncation.
      */
     maintainStorage(): {
         evicted: readonly string[];

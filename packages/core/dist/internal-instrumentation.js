@@ -1,5 +1,6 @@
 import { expressionOutcomeKey, } from "./ir/expression-parse-state.js";
 let activeInstrumentation;
+/** Updates peak memory fields from the current process memory usage. */
 function sampleMemory(metrics) {
     const memory = process.memoryUsage();
     metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
@@ -8,8 +9,8 @@ function sampleMemory(metrics) {
 /**
  * Runs synchronous work with opt-in, run-scoped internal instrumentation.
  * This module is intentionally not exported from the package entry point.
- * @param {() => T} callback The instrumented work.
- * @returns {{ value: T; metrics: InternalInstrumentationSnapshot }} The callback result and metrics.
+ * @param callback The instrumented work.
+ * @returns The callback result and metrics.
  */
 export function runWithInternalInstrumentation(callback) {
     if (activeInstrumentation) {
@@ -78,8 +79,8 @@ export function runWithInternalInstrumentation(callback) {
 }
 /**
  * Increments an internal counter when instrumentation is active.
- * @param {CounterName} name The counter to increment.
- * @param {number} [amount] The increment amount.
+ * @param name The counter to increment.
+ * @param [amount] The increment amount.
  */
 export function incrementInternalCounter(name, amount = 1) {
     const metrics = activeInstrumentation;
@@ -89,15 +90,15 @@ export function incrementInternalCounter(name, amount = 1) {
 }
 /**
  * Reports whether run-scoped internal instrumentation is active.
- * @returns {boolean} Whether instrumentation is collecting metrics.
+ * @returns Whether instrumentation is collecting metrics.
  */
 export function isInternalInstrumentationActive() {
     return activeInstrumentation !== undefined;
 }
 /**
  * Records the largest observed value for an internal counter.
- * @param {CounterName} name The counter to update.
- * @param {number} value The candidate peak value.
+ * @param name The counter to update.
+ * @param value The candidate peak value.
  */
 export function recordInternalCounterPeak(name, value) {
     const metrics = activeInstrumentation;
@@ -107,9 +108,9 @@ export function recordInternalCounterPeak(name, value) {
 }
 /**
  * Measures a synchronous wall-clock phase when instrumentation is active.
- * @param {string} name The stable phase name.
- * @param {() => T} callback The phase work.
- * @returns {T} The callback result.
+ * @param name The stable phase name.
+ * @param callback The phase work.
+ * @returns The callback result.
  */
 export function measureInternalPhase(name, callback) {
     const metrics = activeInstrumentation;

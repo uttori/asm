@@ -2,7 +2,9 @@ import { AddressToLineMapping, type Assembler, type AssemblyLinkRecipe, type Ass
 import { type LinkResult } from "@uttori/asm-core/linker";
 /** One generated source unit with independently replaceable placement; ordinary absolute builds omit this contract. */
 export interface SourceLinkBuild {
+    /** Single generated module identity and adapter selection from the portable manifest. */
     readonly module: AssemblyModuleOptions;
+    /** Placement recipe validated before linking against the reviewed source graph. */
     readonly recipe: AssemblyLinkRecipe;
     /** Snapshot these host inputs alongside assembly/includes so watch and debugger freshness cover layout edits. */
     readonly dependencies?: readonly {

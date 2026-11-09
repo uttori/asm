@@ -4,7 +4,9 @@ import { type SpritePaletteCatalog } from "./som-sprite-palettes.js";
 import type { SpriteAtlasSource } from "./som-types.js";
 /** Display slots bind to catalogue words by identity; colors and file tile numbers never establish ownership. */
 export interface SomInterchangePaletteSlot {
+    /** Catalogue palette id bound to this display slot. */
     readonly palette: string;
+    /** Word index within the catalogue palette record. */
     readonly index: number;
 }
 /**

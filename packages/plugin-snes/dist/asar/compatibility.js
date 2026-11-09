@@ -24,7 +24,7 @@ export const ASAR_COMPAT_NO_OP_DIRECTIVES = [
 ];
 /**
  * Rejects mapper changes while assembling an SPC block.
- * @param {boolean} inSpcblock Whether an SPC block is active.
+ * @param inSpcblock Whether an SPC block is active.
  */
 export const assertMapperAvailable = (inSpcblock) => {
     if (inSpcblock) {
@@ -33,8 +33,8 @@ export const assertMapperAvailable = (inSpcblock) => {
 };
 /**
  * Applies mapper selection and its associated checksum policy.
- * @param {MapperCompatibilityState} state Mutable mapper state.
- * @param {string} mapper Canonical mapper name.
+ * @param state Mutable mapper state.
+ * @param mapper Canonical mapper name.
  */
 export const applyMapperSelection = (state, mapper) => {
     state.mapper = mapper;
@@ -44,15 +44,15 @@ export const applyMapperSelection = (state, mapper) => {
 };
 /**
  * Reports whether the selected mapper can allocate ROM freespace.
- * @param {string} mapper Canonical mapper name.
- * @returns {boolean} True when freespace allocation is supported.
+ * @param mapper Canonical mapper name.
+ * @returns True when freespace allocation is supported.
  */
 export const isFreespaceAvailable = (mapper) => mapper !== "norom";
 /**
  * Encodes the LMS/SMS operand byte for Super FX auto-MOVE short addressing.
- * @param {number} addrVal RAM byte address, already known to be even and `< $200`.
- * @param {SuperFxMoveShortAddressMode} [mode] Encoding policy. Defaults to hardware.
- * @returns {number} The byte stored after `A0+Rn`.
+ * @param addrVal RAM byte address, already known to be even and `< $200`.
+ * @param [mode] Encoding policy. Defaults to hardware.
+ * @returns The byte stored after `A0+Rn`.
  */
 export const encodeSuperFxMoveShortAddress = (addrVal, mode = "hardware") => {
     if (mode === "asar") {
@@ -62,8 +62,8 @@ export const encodeSuperFxMoveShortAddress = (addrVal, mode = "hardware") => {
 };
 /**
  * Resolves the SNES header offset used by the compatibility checksum writer.
- * @param {string} mapper Canonical mapper name.
- * @returns {number} ROM offset of the header.
+ * @param mapper Canonical mapper name.
+ * @returns ROM offset of the header.
  */
 export const getChecksumHeaderOffset = (mapper) => {
     if (mapper === "lorom" || mapper === "sa1rom" || mapper === "bigsa1rom") {
@@ -76,9 +76,9 @@ export const getChecksumHeaderOffset = (mapper) => {
  * are a straight sum. Otherwise Asar mirrors the trailing non-power-of-two
  * tail enough times to fill to the next power of two - SNES cart checksum
  * when the ROM is 2.5/3/4.5 MiB, etc.
- * @param {number[] | Uint8Array} romdata ROM bytes.
- * @param {ChecksumMode} mode Checksum compatibility mode.
- * @returns {number} 16-bit checksum.
+ * @param romdata ROM bytes.
+ * @param mode Checksum compatibility mode.
+ * @returns 16-bit checksum.
  */
 export const calculateHeaderChecksum = (romdata, mode) => {
     const romLength = romdata.length;
@@ -110,36 +110,36 @@ export const calculateHeaderChecksum = (romdata, mode) => {
 };
 /**
  * In inline SPC compatibility mode, `org` is treated as a `spcblock` entry.
- * @param {boolean} spcInlineCompatMode Whether the SPC inline compatibility mode is enabled.
- * @returns {boolean} True if the `org` directive should be redirected to the `spcblock` directive.
+ * @param spcInlineCompatMode Whether the SPC inline compatibility mode is enabled.
+ * @returns True if the `org` directive should be redirected to the `spcblock` directive.
  */
 export const shouldRedirectOrgToSpcblock = (spcInlineCompatMode) => spcInlineCompatMode;
 /**
  * Reports whether an architecture spelling enables inline SPC compatibility.
- * @param {string} architecture Requested architecture spelling.
- * @returns {boolean} True for the ASAR inline-SPC alias.
+ * @param architecture Requested architecture spelling.
+ * @returns True for the ASAR inline-SPC alias.
  */
 export const shouldEnableSpcInlineCompat = (architecture) => architecture === "spc700-inline";
 /**
  * Asar `arch spc700-raw` assembles a standalone SPC payload with 1:1 file addressing.
  * Without this, `org $000000` stays on lorom/hirom and writes land in unmapped space.
- * @param {string} architecture Requested architecture spelling.
- * @returns {boolean} True for the raw SPC output alias.
+ * @param architecture Requested architecture spelling.
+ * @returns True for the raw SPC output alias.
  */
 export const shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
 /**
  * Reports whether pass finalization should close an implicit SPC block.
- * @param {boolean} spcInlineCompatMode Whether inline SPC compatibility is enabled.
- * @param {boolean} inSpcblock Whether an SPC block is active.
- * @returns {boolean} True when an implicit block must be closed.
+ * @param spcInlineCompatMode Whether inline SPC compatibility is enabled.
+ * @param inSpcblock Whether an SPC block is active.
+ * @returns True when an implicit block must be closed.
  */
 export const shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
 /**
  * ASAR quirk: `endif` may close an innermost `while` instead of an `if` chain.
- * @param {string} currentLoopType The type of the current loop.
- * @param {number} currentLoopStartLine The start line of the current loop.
- * @param {number} currentIfStartLine The start line of the current if.
- * @returns {boolean} True if the `endif` directive should close the innermost `while` block.
+ * @param currentLoopType The type of the current loop.
+ * @param currentLoopStartLine The start line of the current loop.
+ * @param currentIfStartLine The start line of the current if.
+ * @returns True if the `endif` directive should close the innermost `while` block.
  */
 export const shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" &&
     (currentIfStartLine === undefined || (currentLoopStartLine ?? -1) >= currentIfStartLine);

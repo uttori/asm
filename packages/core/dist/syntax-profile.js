@@ -1,3 +1,4 @@
+/** Default Asar-compatible statement splitting and directive prefix rules. */
 export const ASAR_SYNTAX_PROFILE = Object.freeze({
     id: "asar",
     preserveLeadingWhitespace: false,
@@ -8,6 +9,7 @@ export const ASAR_SYNTAX_PROFILE = Object.freeze({
     cheapLocalPrefix: "",
     fileLocalSymbols: false,
 });
+/** Native Uttori syntax preserving leading whitespace and unsplit statements. */
 export const NATIVE_SYNTAX_PROFILE = Object.freeze({
     id: "native",
     preserveLeadingWhitespace: true,
@@ -18,6 +20,7 @@ export const NATIVE_SYNTAX_PROFILE = Object.freeze({
     cheapLocalPrefix: "",
     fileLocalSymbols: false,
 });
+/** ca65-style cheap locals, dotted directives, and file-local symbol qualification. */
 export const CA65_SYNTAX_PROFILE = Object.freeze({
     id: "ca65",
     preserveLeadingWhitespace: true,

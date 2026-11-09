@@ -4,9 +4,13 @@ import { type SourceGenerationFile } from "@uttori/asm-disassembler/source-proje
 import type { NesCartridge } from "./cartridge.js";
 /** One physical output segment, independent of the runtime mapper selection. */
 export interface NesSourceSegment {
+    /** Exported segment name as it appears in generated source. */
     readonly name: string;
+    /** Byte offset within the parent container. */
     readonly offset: number;
+    /** Span length in bytes. */
     readonly size: number;
+    /** Load address of the exported segment. */
     readonly origin: number;
 }
 /** Stable 8 KiB PRG/CHR ownership with separate trainer/trailer segments. Offsets include the iNES header. */

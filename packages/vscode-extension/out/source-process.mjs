@@ -41,13 +41,13 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 function isDataBuffer(data) {
   return typeof data === "object" && data !== null && Symbol.for(DATA_BUFFER_BRAND2) in data;
 }
 var DATA_BUFFER_BRAND2, CRC32_POLYNOMIAL, CRC32C_POLYNOMIAL, reflectedTable, sliceTable, CRC32_TABLE, CRC32C_TABLE, crc32Slices, crc32cSlices, i0, i1, i2, i3, i4, i5, i6, i7, c0, c1, c2, c3, c4, c5, c6, c7, textEncoder, hashBytes, computeBytes, isoChecksum, compute, crc32cBytes;
 var init_data_hash_crc32 = __esm({
-  "node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
+  "../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
     DATA_BUFFER_BRAND2 = "uttori.DataBuffer";
     CRC32_POLYNOMIAL = 3988292384;
     CRC32C_POLYNOMIAL = 2197175160;
@@ -136,9 +136,9 @@ var init_data_hash_crc32 = __esm({
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports, module) {
+  "../../node_modules/semver/internal/constants.js"(exports, module) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -196,9 +196,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports, module) {
+  "../../node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
     var debug4 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -206,9 +206,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports, module) {
+  "../../node_modules/semver/internal/re.js"(exports, module) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -294,9 +294,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports, module) {
+  "../../node_modules/semver/internal/parse-options.js"(exports, module) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -313,9 +313,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports, module) {
+  "../../node_modules/semver/internal/identifiers.js"(exports, module) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -338,9 +338,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports, module) {
+  "../../node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
     var debug4 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -630,9 +630,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports, module) {
+  "../../node_modules/semver/functions/parse.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse2 = (version, options, throwErrors = false) => {
@@ -652,9 +652,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// ../../node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports, module) {
+  "../../node_modules/semver/functions/valid.js"(exports, module) {
     "use strict";
     var parse2 = require_parse();
     var valid = (version, options) => {
@@ -665,9 +665,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/clean.js
+// ../../node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "node_modules/semver/functions/clean.js"(exports, module) {
+  "../../node_modules/semver/functions/clean.js"(exports, module) {
     "use strict";
     var parse2 = require_parse();
     var clean = (version, options) => {
@@ -678,9 +678,9 @@ var require_clean = __commonJS({
   }
 });
 
-// node_modules/semver/functions/inc.js
+// ../../node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "node_modules/semver/functions/inc.js"(exports, module) {
+  "../../node_modules/semver/functions/inc.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier3, identifierBase) => {
@@ -702,9 +702,9 @@ var require_inc = __commonJS({
   }
 });
 
-// node_modules/semver/functions/diff.js
+// ../../node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "node_modules/semver/functions/diff.js"(exports, module) {
+  "../../node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse2 = require_parse();
     var diff = (version1, version2) => {
@@ -746,9 +746,9 @@ var require_diff = __commonJS({
   }
 });
 
-// node_modules/semver/functions/major.js
+// ../../node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "node_modules/semver/functions/major.js"(exports, module) {
+  "../../node_modules/semver/functions/major.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -756,9 +756,9 @@ var require_major = __commonJS({
   }
 });
 
-// node_modules/semver/functions/minor.js
+// ../../node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "node_modules/semver/functions/minor.js"(exports, module) {
+  "../../node_modules/semver/functions/minor.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -766,9 +766,9 @@ var require_minor = __commonJS({
   }
 });
 
-// node_modules/semver/functions/patch.js
+// ../../node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "node_modules/semver/functions/patch.js"(exports, module) {
+  "../../node_modules/semver/functions/patch.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -776,9 +776,9 @@ var require_patch = __commonJS({
   }
 });
 
-// node_modules/semver/functions/prerelease.js
+// ../../node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "node_modules/semver/functions/prerelease.js"(exports, module) {
+  "../../node_modules/semver/functions/prerelease.js"(exports, module) {
     "use strict";
     var parse2 = require_parse();
     var prerelease = (version, options) => {
@@ -789,9 +789,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports, module) {
+  "../../node_modules/semver/functions/compare.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -799,9 +799,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// ../../node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports, module) {
+  "../../node_modules/semver/functions/rcompare.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -809,9 +809,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-loose.js
+// ../../node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "node_modules/semver/functions/compare-loose.js"(exports, module) {
+  "../../node_modules/semver/functions/compare-loose.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -819,9 +819,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-build.js
+// ../../node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "node_modules/semver/functions/compare-build.js"(exports, module) {
+  "../../node_modules/semver/functions/compare-build.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -833,9 +833,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// node_modules/semver/functions/sort.js
+// ../../node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "node_modules/semver/functions/sort.js"(exports, module) {
+  "../../node_modules/semver/functions/sort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list2, loose) => list2.sort((a, b) => compareBuild(a, b, loose));
@@ -843,9 +843,9 @@ var require_sort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rsort.js
+// ../../node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "node_modules/semver/functions/rsort.js"(exports, module) {
+  "../../node_modules/semver/functions/rsort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list2, loose) => list2.sort((a, b) => compareBuild(b, a, loose));
@@ -853,9 +853,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports, module) {
+  "../../node_modules/semver/functions/gt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -863,9 +863,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports, module) {
+  "../../node_modules/semver/functions/lt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -873,9 +873,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports, module) {
+  "../../node_modules/semver/functions/eq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -883,9 +883,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports, module) {
+  "../../node_modules/semver/functions/neq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -893,9 +893,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports, module) {
+  "../../node_modules/semver/functions/gte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -903,9 +903,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports, module) {
+  "../../node_modules/semver/functions/lte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -913,9 +913,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports, module) {
+  "../../node_modules/semver/functions/cmp.js"(exports, module) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -963,9 +963,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/functions/coerce.js
+// ../../node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/semver/functions/coerce.js"(exports, module) {
+  "../../node_modules/semver/functions/coerce.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse2 = require_parse();
@@ -1009,9 +1009,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// node_modules/semver/functions/truncate.js
+// ../../node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "node_modules/semver/functions/truncate.js"(exports, module) {
+  "../../node_modules/semver/functions/truncate.js"(exports, module) {
     "use strict";
     var parse2 = require_parse();
     var constants2 = require_constants();
@@ -1050,9 +1050,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports, module) {
+  "../../node_modules/semver/internal/lrucache.js"(exports, module) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -1088,9 +1088,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/internal/trim-comparator-whitespace.js
+// ../../node_modules/semver/internal/trim-comparator-whitespace.js
 var require_trim_comparator_whitespace = __commonJS({
-  "node_modules/semver/internal/trim-comparator-whitespace.js"(exports, module) {
+  "../../node_modules/semver/internal/trim-comparator-whitespace.js"(exports, module) {
     "use strict";
     var {
       MAX_LENGTH,
@@ -1279,9 +1279,9 @@ var require_trim_comparator_whitespace = __commonJS({
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports, module) {
+  "../../node_modules/semver/classes/range.js"(exports, module) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -1664,9 +1664,9 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports, module) {
+  "../../node_modules/semver/classes/comparator.js"(exports, module) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -1777,9 +1777,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports, module) {
+  "../../node_modules/semver/functions/satisfies.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range2, options) => {
@@ -1794,9 +1794,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// ../../node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
+  "../../node_modules/semver/ranges/to-comparators.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var toComparators = (range2, options) => new Range(range2, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -1804,9 +1804,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// ../../node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+  "../../node_modules/semver/ranges/max-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1833,9 +1833,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// ../../node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+  "../../node_modules/semver/ranges/min-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1862,9 +1862,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-version.js
+// ../../node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "node_modules/semver/ranges/min-version.js"(exports, module) {
+  "../../node_modules/semver/ranges/min-version.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1921,9 +1921,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/valid.js
+// ../../node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "node_modules/semver/ranges/valid.js"(exports, module) {
+  "../../node_modules/semver/ranges/valid.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var validRange = (range2, options) => {
@@ -1937,9 +1937,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/outside.js
+// ../../node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "node_modules/semver/ranges/outside.js"(exports, module) {
+  "../../node_modules/semver/ranges/outside.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -2006,9 +2006,9 @@ var require_outside = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/gtr.js
+// ../../node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "node_modules/semver/ranges/gtr.js"(exports, module) {
+  "../../node_modules/semver/ranges/gtr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range2, options) => outside(version, range2, ">", options);
@@ -2016,9 +2016,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/ltr.js
+// ../../node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "node_modules/semver/ranges/ltr.js"(exports, module) {
+  "../../node_modules/semver/ranges/ltr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range2, options) => outside(version, range2, "<", options);
@@ -2026,9 +2026,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/intersects.js
+// ../../node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "node_modules/semver/ranges/intersects.js"(exports, module) {
+  "../../node_modules/semver/ranges/intersects.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -2040,9 +2040,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/simplify.js
+// ../../node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "node_modules/semver/ranges/simplify.js"(exports, module) {
+  "../../node_modules/semver/ranges/simplify.js"(exports, module) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -2090,9 +2090,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/subset.js
+// ../../node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "node_modules/semver/ranges/subset.js"(exports, module) {
+  "../../node_modules/semver/ranges/subset.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -2252,9 +2252,9 @@ var require_subset = __commonJS({
   }
 });
 
-// node_modules/semver/index.js
+// ../../node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "node_modules/semver/index.js"(exports, module) {
+  "../../node_modules/semver/index.js"(exports, module) {
     "use strict";
     var internalRe = require_re();
     var constants2 = require_constants();
@@ -2349,7 +2349,7 @@ var require_semver2 = __commonJS({
   }
 });
 
-// packages/capture/src/capture-compression.ts
+// ../capture/src/capture-compression.ts
 import { constants, zstdCompressSync, zstdDecompressSync } from "node:zlib";
 function validateFrame(frame, decodedBytes) {
   if (frame.length < 6 || frame.readUInt32LE(0) !== 4247762216) {
@@ -2453,26 +2453,26 @@ function compressCaptureChunk(bytes3) {
 }
 var chunkBytes;
 var init_capture_compression = __esm({
-  "packages/capture/src/capture-compression.ts"() {
+  "../capture/src/capture-compression.ts"() {
     "use strict";
     init_data_hash_crc32();
     chunkBytes = 262144;
   }
 });
 
-// packages/capture/src/capture-nes-mapper.ts
+// ../capture/src/capture-nes-mapper.ts
 function validateNesMapper(mapper) {
   if (mapper.length !== 18 || ![0, 4].includes(mapper[0]) || mapper[1] !== 0 || mapper[2] > 7 || mapper[3] > 1 || mapper[4] > 1 || mapper[13] > 1 || mapper[14] > 1 || mapper[15] > 1 || mapper[17] > 1) {
     throw new Error("Invalid NES mapper dictionary.");
   }
 }
 var init_capture_nes_mapper = __esm({
-  "packages/capture/src/capture-nes-mapper.ts"() {
+  "../capture/src/capture-nes-mapper.ts"() {
     "use strict";
   }
 });
 
-// packages/capture/src/capture-nes-timeline.ts
+// ../capture/src/capture-nes-timeline.ts
 function irq(r, at) {
   if (r[at + 2] > 1 || r[at + 3] > 1 || r[at + 4] > 1 || r[at + 5] > 6 || r[at + 6] > 7 || r[at + 7] > 1) {
     throw new Error("Invalid NES mapper IRQ state.");
@@ -2522,13 +2522,13 @@ function decodeNesTimeline(r) {
   };
 }
 var init_capture_nes_timeline = __esm({
-  "packages/capture/src/capture-nes-timeline.ts"() {
+  "../capture/src/capture-nes-timeline.ts"() {
     "use strict";
     init_capture_nes_mapper();
   }
 });
 
-// packages/capture/src/capture-nes-ppu.ts
+// ../capture/src/capture-nes-ppu.ts
 function decodeNesPPUState(bytes3, offset) {
   const state = {
     v: bytes3.readUInt16LE(offset),
@@ -2630,7 +2630,7 @@ function decodeNesBusRecords(b, first, count2) {
 }
 var physical;
 var init_capture_nes_ppu = __esm({
-  "packages/capture/src/capture-nes-ppu.ts"() {
+  "../capture/src/capture-nes-ppu.ts"() {
     "use strict";
     init_capture_nes_mapper();
     init_capture_nes_timeline();
@@ -2638,7 +2638,7 @@ var init_capture_nes_ppu = __esm({
   }
 });
 
-// packages/capture/src/target-payload.ts
+// ../capture/src/target-payload.ts
 function readCaptureTargetPayload(codec, version, state) {
   if (version !== 1 || codec !== "snes.65816" && codec !== "nes.2a03") {
     throw new Error("Unsupported capture target codec/version.");
@@ -2681,7 +2681,7 @@ function isNesState(state) {
 }
 var snesLimits, nesLimits;
 var init_target_payload = __esm({
-  "packages/capture/src/target-payload.ts"() {
+  "../capture/src/target-payload.ts"() {
     "use strict";
     snesLimits = {
       a: 65535,
@@ -2724,7 +2724,7 @@ var init_target_payload = __esm({
   }
 });
 
-// packages/capture/src/capture-v2.ts
+// ../capture/src/capture-v2.ts
 function isFieldRecord(value) {
   return typeof value === "object" && value !== null;
 }
@@ -3042,7 +3042,7 @@ function decodeCaptureChunk(bytes3, session, scope = "snes.65816.instructions") 
 }
 var maxU64, captureScope, captureU64, captureSession, bounded, validateCaptureCapabilities, validateCapturePosition, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
 var init_capture_v2 = __esm({
-  "packages/capture/src/capture-v2.ts"() {
+  "../capture/src/capture-v2.ts"() {
     "use strict";
     init_data_hash_crc32();
     init_capture_compression();
@@ -3283,10 +3283,10 @@ var init_capture_v2 = __esm({
   }
 });
 
-// packages/capture/src/capture-file-reader.ts
+// ../capture/src/capture-file-reader.ts
 var CaptureFrameReader;
 var init_capture_file_reader = __esm({
-  "packages/capture/src/capture-file-reader.ts"() {
+  "../capture/src/capture-file-reader.ts"() {
     "use strict";
     CaptureFrameReader = class {
       #read;
@@ -3348,7 +3348,7 @@ var init_capture_file_reader = __esm({
   }
 });
 
-// packages/capture/src/capture-file.ts
+// ../capture/src/capture-file.ts
 import { open, lstat } from "node:fs/promises";
 import { setImmediate as yieldToMessages } from "node:timers/promises";
 function validateCaptureMetadata(m) {
@@ -3383,7 +3383,7 @@ function assertCaptureFileHeader(value) {
 }
 var isRecord31, consumerRejected, CaptureTruncationError, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition;
 var init_capture_file = __esm({
-  "packages/capture/src/capture-file.ts"() {
+  "../capture/src/capture-file.ts"() {
     "use strict";
     init_capture_file_reader();
     init_capture_v2();
@@ -3886,14 +3886,14 @@ var init_capture_file = __esm({
   }
 });
 
-// packages/capture/src/capture-context.ts
+// ../capture/src/capture-context.ts
 import { createHash as createHash17 } from "node:crypto";
 import { createReadStream as createReadStream2 } from "node:fs";
 import { lstat as lstat2, readFile } from "node:fs/promises";
 import path30 from "node:path";
 var isRecord32, digestFile, verifyCaptureContext;
 var init_capture_context = __esm({
-  "packages/capture/src/capture-context.ts"() {
+  "../capture/src/capture-context.ts"() {
     "use strict";
     isRecord32 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     digestFile = async (file, signal) => {
@@ -3965,7 +3965,7 @@ var init_capture_context = __esm({
   }
 });
 
-// packages/capture/src/index.ts
+// ../capture/src/index.ts
 var src_exports = {};
 __export(src_exports, {
   CaptureFrameReader: () => CaptureFrameReader,
@@ -3995,7 +3995,7 @@ __export(src_exports, {
   verifyCaptureContext: () => verifyCaptureContext
 });
 var init_src = __esm({
-  "packages/capture/src/index.ts"() {
+  "../capture/src/index.ts"() {
     "use strict";
     init_capture_v2();
     init_capture_compression();
@@ -4009,7 +4009,7 @@ var init_src = __esm({
   }
 });
 
-// packages/assets/src/validation.ts
+// ../assets/src/validation.ts
 function integer(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -4040,7 +4040,7 @@ function fail(message) {
   throw new Error(message);
 }
 
-// packages/assets/src/registry.ts
+// ../assets/src/registry.ts
 var AssetRegistry = class {
   #importers = /* @__PURE__ */ new Map();
   #encoders = /* @__PURE__ */ new Map();
@@ -4129,7 +4129,7 @@ function convertAsset(registry5, request) {
   };
 }
 
-// node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
+// ../../node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
 var Z_BINARY = 0;
 var Z_TEXT = 1;
@@ -7567,7 +7567,7 @@ var Inflate = class {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/data-helpers.js
+// ../../node_modules/@uttori/data-tools/dist/data-helpers.js
 var validateBytes = (uint8, length) => {
   if (uint8.length < length) {
     throw new RangeError(`Insufficient bytes: expected at least ${length}, received ${uint8.length}.`);
@@ -7659,7 +7659,7 @@ var convertFromIeeeExtended = (uint8) => {
   return decodeExtended(sign, exponent, hiMant, loMant);
 };
 
-// node_modules/@uttori/data-tools/dist/underflow-error.js
+// ../../node_modules/@uttori/data-tools/dist/underflow-error.js
 var UnderflowError = class extends Error {
   /**
    * Creates a new UnderflowError.
@@ -7677,7 +7677,7 @@ var UnderflowError = class extends Error {
 };
 var underflow_error_default = UnderflowError;
 
-// node_modules/@uttori/data-tools/dist/data-buffer.js
+// ../../node_modules/@uttori/data-tools/dist/data-buffer.js
 function dataBufferBrand() {
   return /* @__PURE__ */ Symbol.for("uttori.DataBuffer");
 }
@@ -8922,7 +8922,7 @@ var DataBuffer = class _DataBuffer {
 };
 var data_buffer_default = DataBuffer;
 
-// node_modules/@uttori/data-tools/dist/audio/audio-wav.js
+// ../../node_modules/@uttori/data-tools/dist/audio/audio-wav.js
 var _a;
 var debug2 = (..._args) => {
 };
@@ -10892,7 +10892,7 @@ var AudioWAV = class extends data_buffer_default {
 _a = AudioWAV;
 var audio_wav_default = AudioWAV;
 
-// packages/assets/src/snes.ts
+// ../assets/src/snes.ts
 var planeOffset = (depth, plane, row) => {
   if (depth === 3 && plane === 2) {
     return 16 + row;
@@ -11226,7 +11226,7 @@ var snesNativeEncoders = Object.freeze(
   ].toSorted((left, right) => left.id.localeCompare(right.id))
 );
 
-// packages/assets/src/brr-codec.ts
+// ../assets/src/brr-codec.ts
 function decodeNibble(nibble2, range2, filter, state) {
   let value = range2 <= 12 ? nibble2 << range2 >> 1 : nibble2 & ~2047;
   const previous = state.previous;
@@ -11334,7 +11334,7 @@ function encodeBrrPcm(samples, loop) {
   return bytes3;
 }
 
-// packages/assets/src/audio.ts
+// ../assets/src/audio.ts
 var MAX_WAVE_BYTES = 16 * 1024 * 1024;
 var MAX_SAMPLES = 1024 * 1024;
 var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -11623,10 +11623,10 @@ function withAudioEncoder(native) {
   });
 }
 
-// node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
 init_data_hash_crc32();
 
-// node_modules/@uttori/data-tools/dist/image/bitmap-text.js
+// ../../node_modules/@uttori/data-tools/dist/image/bitmap-text.js
 function freezeGlyphs() {
   return Object.freeze(Object.fromEntries(Object.entries({
     " ": [0, 0, 0, 0, 0, 0, 0],
@@ -11776,7 +11776,7 @@ function drawBitmapText(surface, text4, x, y, color, options) {
   return metrics;
 }
 
-// node_modules/@uttori/data-tools/dist/image/rgba-surface.js
+// ../../node_modules/@uttori/data-tools/dist/image/rgba-surface.js
 var DEFAULT_MAX_PIXELS = 4 * 1024 * 1024;
 function colorRGBA(color) {
   if (!Array.isArray(color) && !(color instanceof Uint8Array) || color.length !== 4) {
@@ -12232,7 +12232,7 @@ var RgbaSurface = class _RgbaSurface {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
 var debug3 = () => {
 };
 if (typeof process !== "undefined" && false) {
@@ -13872,7 +13872,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
-// packages/assets/src/limits.ts
+// ../assets/src/limits.ts
 var ASSET_LIMITS = Object.freeze({
   rasterPixels: 4 * 1024 * 1024,
   interchangeSide: 4096,
@@ -13916,7 +13916,7 @@ function rasterArea(width, height, label = "Raster", side = ASSET_LIMITS.rasterP
 }
 var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
 
-// packages/assets/src/png.ts
+// ../assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
   maxInputBytes: ASSET_LIMITS.pngBytes,
   maxPixels: ASSET_LIMITS.rasterPixels,
@@ -13951,10 +13951,10 @@ var pngImporter = Object.freeze({
   }
 });
 
-// packages/assets/src/png-edit.ts
+// ../assets/src/png-edit.ts
 init_data_hash_crc32();
 
-// packages/assets/src/indexed-edit.ts
+// ../assets/src/indexed-edit.ts
 function validateIndexedPixels(image) {
   const pixels2 = rasterArea(image.width, image.height, "Indexed");
   if (!(image.indexes instanceof Uint8Array) || image.indexes.length !== pixels2) {
@@ -14083,7 +14083,7 @@ function expandIndexedGrid(block) {
   });
 }
 
-// packages/assets/src/indexed-values.ts
+// ../assets/src/indexed-values.ts
 function indexedPalette(value) {
   if (!Array.isArray(value) || value.length < 1 || value.length > 256) {
     throw new Error("Indexed palette requires 1..256 slots.");
@@ -14132,7 +14132,7 @@ function indexedPaletteChanges(before, after, editableSlots) {
   return changes;
 }
 
-// packages/assets/src/png-edit.ts
+// ../assets/src/png-edit.ts
 function pngChunk(type, data) {
   const result = new Uint8Array(data.length + 12);
   const view = new DataView(result.buffer);
@@ -14194,7 +14194,7 @@ function extendIndexedPngPalette(source2, colors, preserveChunks = []) {
   return output;
 }
 
-// packages/assets/src/image-conversion.ts
+// ../assets/src/image-conversion.ts
 var isRecord3 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 var isPlanarDepth = (value) => value === 2 || value === 3 || value === 4 || value === 8;
 var isSourceBitDepth = (value) => value === 1 || value === 2 || value === 4 || value === 8;
@@ -14741,7 +14741,7 @@ function withImageEncoders(native) {
   });
 }
 
-// packages/assets/src/secret-of-mana/som-boss-graphics.ts
+// ../assets/src/secret-of-mana/som-boss-graphics.ts
 function expandBossGraphics(source2, size) {
   validateSize(source2, size);
   return expandBossMask(source2, Math.ceil(size / 8) * 8);
@@ -14809,7 +14809,7 @@ function encodeBossMask(data) {
   return encoded;
 }
 
-// packages/assets/src/secret-of-mana/som-body-frame.ts
+// ../assets/src/secret-of-mana/som-body-frame.ts
 var signed7 = (byte) => (byte & 63) - (byte & 64);
 function decodeBodyFrame(input2) {
   if (!Array.isArray(input2) && !(input2 instanceof Uint8Array) || input2.length < 2 || input2.length > 157 || [...input2].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
@@ -14859,7 +14859,7 @@ function decodeBodyFrame(input2) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-frame-composition.ts
+// ../assets/src/secret-of-mana/som-frame-composition.ts
 function isUnknownArray(value) {
   return Array.isArray(value);
 }
@@ -15022,7 +15022,7 @@ function validateFrameComposition(layout2, frame) {
   return expected;
 }
 
-// packages/assets/src/secret-of-mana/som-sprite-palettes.ts
+// ../assets/src/secret-of-mana/som-sprite-palettes.ts
 function expandChannel(value) {
   return value << 3 | value >>> 2;
 }
@@ -15118,7 +15118,7 @@ function readSpritePaletteCatalog(options, resources2) {
   return parseSpritePaletteCatalog(resource.bytes);
 }
 
-// packages/assets/src/secret-of-mana/som-frame-atlas.ts
+// ../assets/src/secret-of-mana/som-frame-atlas.ts
 function rectangle(bounds, width, height, label) {
   if (!Array.isArray(bounds) || bounds.length !== 4 || bounds.some((v) => !Number.isSafeInteger(v)) || bounds[0] < 0 || bounds[1] < 0 || bounds[2] < 1 || bounds[3] < 1 || bounds[0] + bounds[2] > width || bounds[1] + bounds[3] > height) {
     throw new Error(`Invalid ${label} bounds.`);
@@ -15488,7 +15488,7 @@ function readFrameLayout(options, resources2) {
   return parsed;
 }
 
-// packages/assets/src/secret-of-mana/som-lz.ts
+// ../assets/src/secret-of-mana/som-lz.ts
 var LZ_HEADER_BYTES = 4;
 var LZ_COPY_FLAG = 128;
 var LZ_TOKEN_PAYLOAD_MASK = LZ_COPY_FLAG - 1;
@@ -15668,7 +15668,7 @@ function encodeMode(source2, mode3, unusedHeaderByte) {
   return Uint8Array.from(output);
 }
 
-// packages/assets/src/secret-of-mana/som-boss-image.ts
+// ../assets/src/secret-of-mana/som-boss-image.ts
 var registry = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry.registerEncoder(encoder);
@@ -15804,7 +15804,7 @@ function readBossNativeReference(source2, options, resources2) {
   return bytes3?.slice();
 }
 
-// packages/core/src/address-width.ts
+// ../core/src/address-width.ts
 function maximumAddressForWidth(addressWidth) {
   if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
     throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
@@ -15819,7 +15819,7 @@ function normalizeAddressForWidth(address3, addressWidth) {
   return (address3 % modulus + modulus) % modulus;
 }
 
-// packages/core/src/crc32.ts
+// ../core/src/crc32.ts
 init_data_hash_crc32();
 var CRC32 = class _CRC32 {
   /**
@@ -15844,7 +15844,7 @@ var CRC32 = class _CRC32 {
   }
 };
 
-// packages/core/src/addressToLine.ts
+// ../core/src/addressToLine.ts
 var sourceIdentity = (filename, supplied) => {
   try {
     const fs48 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
@@ -15989,7 +15989,7 @@ var AddressToLineMapping = class {
   }
 };
 
-// packages/core/src/architecture-registry.ts
+// ../core/src/architecture-registry.ts
 var ArchitectureRegistry = class {
   /** Definitions keyed by lowercase canonical name. */
   definitions = /* @__PURE__ */ new Map();
@@ -16039,7 +16039,7 @@ var ArchitectureRegistry = class {
   }
 };
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -16113,7 +16113,7 @@ function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
   };
 }
 
-// packages/core/src/diagnostics.ts
+// ../core/src/diagnostics.ts
 var AssemblyError = class extends Error {
   /** Stable diagnostic code mirrored in AssemblyDiagnostic records. */
   code;
@@ -16197,7 +16197,7 @@ function diagnosticFromError(error, fallbackLocation, stage) {
   };
 }
 
-// packages/core/src/directive-groups.ts
+// ../core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS = Object.freeze([
   "data",
   "memory",
@@ -16211,7 +16211,7 @@ var CORE_DIRECTIVE_GROUPS = Object.freeze([
   "diagnostic"
 ]);
 
-// packages/core/src/ir/expression-parse-state.ts
+// ../core/src/ir/expression-parse-state.ts
 var rawOutcomes = /* @__PURE__ */ new WeakMap();
 function setRawExpressionOutcome(node, outcome2) {
   rawOutcomes.set(node, outcome2);
@@ -16226,7 +16226,7 @@ function expressionOutcomeKey(outcome2) {
   return outcome2.kind === "native" ? "native" : `${outcome2.kind}:${outcome2.reason}`;
 }
 
-// packages/core/src/internal-instrumentation.ts
+// ../core/src/internal-instrumentation.ts
 var activeInstrumentation;
 function sampleMemory(metrics) {
   const memory = process.memoryUsage();
@@ -16367,7 +16367,7 @@ function withAstQualification(run) {
   return withAstMigrationGuard(AST_COMPLETION_FORBIDDEN, run);
 }
 
-// packages/core/src/ir/source-fragment.ts
+// ../core/src/ir/source-fragment.ts
 function sourceFragment(text4, origins = []) {
   return { segments: [{ text: text4, origins }] };
 }
@@ -16435,7 +16435,7 @@ function bindSourceFragment(fragment, replacements2) {
   return { segments };
 }
 
-// packages/core/src/ir/define-template.ts
+// ../core/src/ir/define-template.ts
 function parseDefineTemplate(text4, escapes = "basic") {
   const parse2 = (start, end) => {
     const parts2 = [];
@@ -16505,7 +16505,7 @@ function bindDefineTemplate(template, fragment, resolve, errorMessage = "Error: 
   );
 }
 
-// packages/core/src/ir/expression-call-contracts.ts
+// ../core/src/ir/expression-call-contracts.ts
 var firstSourceArgument = /* @__PURE__ */ new Set([
   "countof",
   "bytesof",
@@ -16525,7 +16525,7 @@ function isSourceTextArgument(name4, index) {
   return index === 0 && (firstSourceArgument.has(name4) || /^(?:canreadfile|readfile)\d?$/.test(name4));
 }
 
-// packages/core/src/ir/expression-operators.ts
+// ../core/src/ir/expression-operators.ts
 var binaryPrecedence = {
   "||": 0,
   "&&": 1,
@@ -16549,7 +16549,7 @@ var binaryPrecedence = {
   "**": 6
 };
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 function attachRootSpan(node, text4, source2) {
   node.span ??= source2 ? createTextSpan(
     source2.text,
@@ -17510,7 +17510,7 @@ function isBinaryOperator(value) {
   return value in binaryPrecedence;
 }
 
-// packages/core/src/ir/directive-arguments.ts
+// ../core/src/ir/directive-arguments.ts
 function parseDirectiveExpression(text4, numeric = true, source2) {
   recordExecutionParser("directive");
   if (/![\w{]/.test(text4)) {
@@ -17533,7 +17533,7 @@ function dataResolutionExpression(text4, node) {
   return node;
 }
 
-// packages/core/src/ir/source-syntax.ts
+// ../core/src/ir/source-syntax.ts
 function copySyntaxValue(value) {
   return copySyntaxTree(value, false);
 }
@@ -17623,7 +17623,7 @@ function copySyntaxTree(value, immutable) {
   return copy(value, 0);
 }
 
-// packages/core/src/ir/syntax-codec.ts
+// ../core/src/ir/syntax-codec.ts
 var syntaxString = (value) => typeof value === "string";
 var syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
 var syntaxBoolean = (value) => typeof value === "boolean";
@@ -17790,7 +17790,7 @@ function immutableSyntaxCodec(version, parse2, guard) {
   };
 }
 
-// packages/core/src/ir/asset-call.ts
+// ../core/src/ir/asset-call.ts
 function parseAssetCall(command, line) {
   const leading = command.length - command.trimStart().length;
   const trimmed = command.slice(leading);
@@ -18032,7 +18032,7 @@ function assetValueGuard(value) {
   }
 }
 
-// packages/core/src/ir/macro-arguments.ts
+// ../core/src/ir/macro-arguments.ts
 function parseMacroArguments(text4) {
   const args = [];
   let value = "";
@@ -18076,7 +18076,7 @@ function parseMacroArguments(text4) {
   return args;
 }
 
-// packages/core/src/ir/command-operation.ts
+// ../core/src/ir/command-operation.ts
 function parseCommandOperation(text4, raw = text4) {
   const command = text4.trim();
   try {
@@ -18167,7 +18167,7 @@ function parseCommandOperation(text4, raw = text4) {
   }
 }
 
-// packages/core/src/services/struct-initializer.ts
+// ../core/src/services/struct-initializer.ts
 function splitInitializerList(text4) {
   const entries3 = [];
   const stack = [];
@@ -18305,7 +18305,7 @@ function isOpenStructInitializer(text4) {
   return depth > 0;
 }
 
-// packages/core/src/ir/function-template.ts
+// ../core/src/ir/function-template.ts
 var generatedSyntax = /* @__PURE__ */ new WeakMap();
 function parameterSites(text4, name4) {
   const sites = [];
@@ -18457,7 +18457,7 @@ function bindFunctionTemplate(template, values) {
   return syntax2;
 }
 
-// packages/core/src/ir/declaration-node.ts
+// ../core/src/ir/declaration-node.ts
 var expression = (text4) => parseDirectiveExpression(text4);
 function parseDeclarationNode(text4, words) {
   try {
@@ -18649,7 +18649,7 @@ var structDeclarationGuard = syntaxUnion(
   syntaxRecord({ kind: syntaxLiteral("endDataStructs"), argumentCount: syntaxNumber })
 );
 
-// packages/core/src/ir/normalized-command.ts
+// ../core/src/ir/normalized-command.ts
 var EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
 var EMPTY_TOKEN_SPANS = Object.freeze([]);
 function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
@@ -18960,7 +18960,7 @@ function splitCommaArguments(input2) {
   return values;
 }
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE = Object.freeze({
   id: "asar",
   preserveLeadingWhitespace: false,
@@ -18992,7 +18992,7 @@ var CA65_SYNTAX_PROFILE = Object.freeze({
   fileLocalSymbols: true
 });
 
-// packages/core/src/services/command-text-service.ts
+// ../core/src/services/command-text-service.ts
 var isEscapedAt = (text4, index) => {
   let slashes = 0;
   for (let at = index - 1; at >= 0 && text4[at] === "\\"; at--) {
@@ -19395,7 +19395,7 @@ function isBareLabelReference(input2) {
   return index === input2.length;
 }
 
-// packages/core/src/ir/data-node.ts
+// ../core/src/ir/data-node.ts
 function parseDataOperand(text4) {
   let value = text4.trim();
   const quote = value[0];
@@ -19439,7 +19439,7 @@ function bindDataOperand(operand, bind) {
   throw new Error("Recursive define in data operand.");
 }
 
-// packages/core/src/ir/expression-occurrence.ts
+// ../core/src/ir/expression-occurrence.ts
 function compactExpressionSpans(node, relocate) {
   if (node.span) {
     const span = relocate?.(node.span) ?? node.span;
@@ -19532,7 +19532,7 @@ function locateContinuedExpression(text4, physical2, start) {
   return positions;
 }
 
-// packages/core/src/ir/statement-node.ts
+// ../core/src/ir/statement-node.ts
 function* literalDataOperands(data) {
   if (data.length % 6 !== 0) {
     throw new Error("Invalid literal data syntax.");
@@ -19693,7 +19693,7 @@ function sliceTrailingCommand(command, count2) {
   return trailing;
 }
 
-// packages/core/src/directives/data.ts
+// ../core/src/directives/data.ts
 var nativeDataHandlers = /* @__PURE__ */ new WeakSet();
 function isCoreDataDirective(registry5, keyword) {
   const handler = registry5.lookup(keyword);
@@ -19734,7 +19734,7 @@ var registerDataDirectives = (registry5, context) => {
   }
 };
 
-// packages/core/src/plugin/syntax-snapshot.ts
+// ../core/src/plugin/syntax-snapshot.ts
 function clonePluginSyntax(value) {
   if (Array.isArray(value)) {
     const copy = new Array(value.length);
@@ -19765,7 +19765,7 @@ function clonePluginSyntax(value) {
   return value;
 }
 
-// packages/core/src/directives/fill-pad.ts
+// ../core/src/directives/fill-pad.ts
 var FILL_PATTERN_SIZE = 12;
 var PATTERN_WIDTH = {
   fillbyte: 1,
@@ -19875,7 +19875,7 @@ var executePad = (context, { address: address3 }) => {
   }
 };
 
-// packages/core/src/directives/flow-control.ts
+// ../core/src/directives/flow-control.ts
 var registerFlowControlDirectives = (registry5, context) => {
   registry5.registerImmutableTyped(
     ["+", "-"],
@@ -19897,7 +19897,7 @@ var registerFlowControlDirectives = (registry5, context) => {
   );
 };
 
-// packages/core/src/directives/include-source.ts
+// ../core/src/directives/include-source.ts
 var IDENTITY_INCLUDE_DEFINES = {
   resolveDefinesInStringLiteral: (content) => content,
   resolveRegularDefines: (content) => content
@@ -20177,7 +20177,7 @@ var registerIncludeSourceDirectives = (registry5, context) => {
   );
 };
 
-// packages/core/src/directives/layout.ts
+// ../core/src/directives/layout.ts
 var handlePushBase = ({ session }) => {
   session.pushBaseStack.push(session.currentTargetAddress);
 };
@@ -20299,7 +20299,7 @@ var parseArchitectureName = (words) => {
   return { name: words[1].toLowerCase() };
 };
 
-// packages/core/src/directives/misc.ts
+// ../core/src/directives/misc.ts
 var handlePullTable = ({ session }) => {
   if (session.tableStack.length === 0) {
     throw new Error("pulltable without pushtable");
@@ -20499,7 +20499,7 @@ var parseTable = ({ text: text4 }) => {
   return { filename, rtl };
 };
 
-// packages/core/src/directives/namespace.ts
+// ../core/src/directives/namespace.ts
 var handlePushNamespace = ({ session }) => {
   session.namespaceStack.push(session.currentNamespace);
   if (session.namespaceNestingEnabled) {
@@ -20606,7 +20606,7 @@ var executeNamespace = (context, node) => {
   }
 };
 
-// packages/core/src/directives/struct-binary.ts
+// ../core/src/directives/struct-binary.ts
 var registerStructBinaryDirectives = (registry5, { session }) => {
   registry5.registerImmutableTyped(
     ["struct", "endstruct", "datastruct", "datastructs", "enddatastructs"],
@@ -20640,7 +20640,7 @@ var registerStructBinaryDirectives = (registry5, { session }) => {
   );
 };
 
-// packages/core/src/directives/registry.ts
+// ../core/src/directives/registry.ts
 var packIdentity = (value) => `${value.length.toString(36)}:${value}`;
 var DirectiveRegistry = class {
   constructor(directivePrefixes = []) {
@@ -20870,7 +20870,7 @@ var createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, 
   return registry5;
 };
 
-// packages/core/src/file-provider.ts
+// ../core/src/file-provider.ts
 var nodePath = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:path");
 var nodeFs = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
 var virtualPath = {
@@ -21051,7 +21051,7 @@ function stripWrappingQuotes(filename) {
   return filename;
 }
 
-// packages/core/src/ir/link-expression.ts
+// ../core/src/ir/link-expression.ts
 function linkInteger(value) {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`Link expression requires a safe integer: ${value}`);
@@ -21255,7 +21255,7 @@ function requireLinkConstant(expression2, purpose) {
   return expression2.value;
 }
 
-// packages/core/src/ir/parsed-operand.ts
+// ../core/src/ir/parsed-operand.ts
 function parseInstructionOperands(mnemonic, text4, grammar2) {
   const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
   let width;
@@ -21536,7 +21536,7 @@ function bindInstructionOperands(syntax2, bind, parse2) {
   throw new OperandTemplateBindingError("depth", "Operand template expansion exceeds 128 phases.");
 }
 
-// packages/core/src/ir/reference-path.ts
+// ../core/src/ir/reference-path.ts
 function referencePath(node) {
   const segments = [];
   let current = node;
@@ -21554,7 +21554,7 @@ function referencePath(node) {
   return { root: current.name, segments: segments.toReversed() };
 }
 
-// packages/core/src/ir/instruction-references.ts
+// ../core/src/ir/instruction-references.ts
 function instructionReferenceExpressions(syntax2, command) {
   if (syntax2.operands.length === 0) {
     return [];
@@ -21606,7 +21606,7 @@ function instructionReferenceExpressions(syntax2, command) {
   return result;
 }
 
-// packages/core/src/ir/reference-plan.ts
+// ../core/src/ir/reference-plan.ts
 var EMPTY_REFERENCES = Object.freeze([]);
 function hasReferences(node) {
   switch (node.type) {
@@ -21726,7 +21726,7 @@ var ReferencePlanner = class {
   }
 };
 
-// packages/core/src/ir/resolved-instruction.ts
+// ../core/src/ir/resolved-instruction.ts
 var InstructionResolutionFrame = class {
   constructor(instruction, context, preparation) {
     this.instruction = instruction;
@@ -21913,7 +21913,7 @@ var InstructionResolutionFrame = class {
   }
 };
 
-// packages/core/src/mathcore.ts
+// ../core/src/mathcore.ts
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
@@ -22788,7 +22788,7 @@ var MathCore = class {
   }
 };
 
-// packages/core/src/operand-resolver.ts
+// ../core/src/operand-resolver.ts
 var OperandResolver = class {
   constructor(deps) {
     this.deps = deps;
@@ -22856,13 +22856,13 @@ var OperandResolver = class {
   }
 };
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 2;
 function definePlugin(plugin3) {
   return plugin3;
 }
 
-// packages/core/src/plugin/diagnostics.ts
+// ../core/src/plugin/diagnostics.ts
 var PluginError = class extends Error {
   /** Stable failure category for programmatic handling. */
   code;
@@ -22888,7 +22888,7 @@ var PluginError = class extends Error {
   }
 };
 
-// packages/core/src/lsp/directive-catalog.ts
+// ../core/src/lsp/directive-catalog.ts
 var descriptor = (keyword, summary, syntax2, group, operands) => ({
   keyword,
   summary,
@@ -23065,7 +23065,7 @@ var directiveCatalogMap = new Map(
   directiveCatalog.map((entry) => [entry.keyword.toLowerCase(), entry])
 );
 
-// packages/core/src/plugin/environment.ts
+// ../core/src/plugin/environment.ts
 var canonical = (value) => value.toLowerCase();
 var toMap = (records) => new Map(records.map((record7) => [canonical(record7.contributionId), record7]));
 var targetInvalid = (target, message) => {
@@ -23573,7 +23573,7 @@ var AssemblerEnvironment = class {
   }
 };
 
-// packages/core/src/plugin/manager.ts
+// ../core/src/plugin/manager.ts
 var import_semver = __toESM(require_semver2(), 1);
 var noopLogger = {
   debug: () => void 0,
@@ -24248,7 +24248,7 @@ var PluginManager = class {
   }
 };
 
-// packages/core/src/plugin/session-state.ts
+// ../core/src/plugin/session-state.ts
 var PluginSessionStateStore = class {
   #contributions;
   #values;
@@ -24383,7 +24383,7 @@ var PluginSessionStateStore = class {
   }
 };
 
-// packages/core/src/services/asar-module-layout.ts
+// ../core/src/services/asar-module-layout.ts
 var AsarModuleLayout = class {
   constructor(module, addressSpace) {
     this.module = module;
@@ -24526,7 +24526,7 @@ var AsarModuleLayout = class {
   }
 };
 
-// packages/core/src/ir/macro-template.ts
+// ../core/src/ir/macro-template.ts
 var patterns = {
   defineName: /!<(\w+)>/g,
   deprecated: /<!(\w+)>/g,
@@ -24654,7 +24654,7 @@ function bindMacroFragment(template, fragment, kind, resolve) {
   );
 }
 
-// packages/core/src/services/occurrence-syntax-cache.ts
+// ../core/src/services/occurrence-syntax-cache.ts
 var OccurrenceSyntaxCache = class {
   atoms = /* @__PURE__ */ new Map();
   scopes = /* @__PURE__ */ new Map();
@@ -24691,7 +24691,7 @@ var OccurrenceSyntaxCache = class {
   }
 };
 
-// packages/core/src/services/program-model-builder.ts
+// ../core/src/services/program-model-builder.ts
 function stackTop(stack) {
   const topIndex = stack.length - 1;
   return topIndex >= 0 ? stack[topIndex] : void 0;
@@ -25088,7 +25088,7 @@ var ProgramModelBuilder = class {
   }
 };
 
-// packages/core/src/services/assembly-front-end-service.ts
+// ../core/src/services/assembly-front-end-service.ts
 var AssemblyFrontEndService = class {
   constructor(host) {
     this.host = host;
@@ -25361,7 +25361,7 @@ var AssemblyFrontEndService = class {
   }
 };
 
-// packages/core/src/services/assembly-output-buffer.ts
+// ../core/src/services/assembly-output-buffer.ts
 var DENSE_THRESHOLD = 64 * 1024;
 var AssemblyOutputBuffer = class {
   value = [];
@@ -25479,7 +25479,7 @@ var AssemblyOutputBuffer = class {
   }
 };
 
-// packages/core/src/services/asset-resource-snapshot.ts
+// ../core/src/services/asset-resource-snapshot.ts
 function assetSourceMediaType(path66, format) {
   const representation = format?.sourceRepresentations?.find(
     (item) => item.extensions.some((extension2) => path66.toLowerCase().endsWith(extension2))
@@ -25582,7 +25582,7 @@ function resolveAssetResourceSnapshot(format, source2, options, host) {
   throw new Error(`Asset format '${format.id}' exceeds the resource discovery depth limit.`);
 }
 
-// packages/core/src/services/asset-assembly-service.ts
+// ../core/src/services/asset-assembly-service.ts
 function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -26101,7 +26101,7 @@ var AssetAssemblyService = class _AssetAssemblyService {
   }
 };
 
-// packages/core/src/services/command-lowering-service.ts
+// ../core/src/services/command-lowering-service.ts
 var CommandLoweringService = class {
   /** Assembler callbacks for directive lookup, keyword canonicalization and architecture selection. */
   host;
@@ -26359,7 +26359,7 @@ function assertConditionalNode(node) {
   }
 }
 
-// packages/core/src/services/define-engine.ts
+// ../core/src/services/define-engine.ts
 var DefineEngine = class {
   constructor(host) {
     this.host = host;
@@ -26667,7 +26667,7 @@ var DefineEngine = class {
   }
 };
 
-// packages/core/src/services/directive-runtime-service.ts
+// ../core/src/services/directive-runtime-service.ts
 var DirectiveRuntimeService = class {
   constructor(host) {
     this.host = host;
@@ -26919,7 +26919,7 @@ var DirectiveRuntimeService = class {
   }
 };
 
-// packages/core/src/services/front-end-command-service.ts
+// ../core/src/services/front-end-command-service.ts
 var FrontEndCommandService = class {
   constructor(host) {
     this.host = host;
@@ -26990,7 +26990,7 @@ var FrontEndCommandService = class {
   }
 };
 
-// packages/core/src/services/include-source-service.ts
+// ../core/src/services/include-source-service.ts
 var IncludeSourceService = class {
   constructor(host) {
     this.host = host;
@@ -27197,7 +27197,7 @@ function stringifyCaught(value) {
   return JSON.stringify(value);
 }
 
-// packages/core/src/services/macro-engine.ts
+// ../core/src/services/macro-engine.ts
 function occurrence(source2) {
   return { file: source2.file, line: source2.line, span: source2.span, text: source2.raw };
 }
@@ -27767,7 +27767,7 @@ var MacroEngine = class {
   }
 };
 
-// packages/core/src/services/module-assembly.ts
+// ../core/src/services/module-assembly.ts
 var ModuleAssembly = class {
   constructor(id2, defaultAddressSpace) {
     this.id = id2;
@@ -28123,7 +28123,7 @@ var ModuleAssembly = class {
   }
 };
 
-// packages/core/src/services/module-file-provider.ts
+// ../core/src/services/module-file-provider.ts
 var ModuleFileProvider = class {
   constructor(provider) {
     this.provider = provider;
@@ -28178,7 +28178,7 @@ var ModuleFileProvider = class {
   }
 };
 
-// packages/core/src/services/output-writer-service.ts
+// ../core/src/services/output-writer-service.ts
 var OutputWriterService = class {
   constructor(host) {
     this.host = host;
@@ -28397,7 +28397,7 @@ var OutputWriterService = class {
   }
 };
 
-// packages/core/src/services/plugin-session-capabilities.ts
+// ../core/src/services/plugin-session-capabilities.ts
 function createPluginSessionCapabilities(session, assertBorrowed) {
   const moduleCapabilities = Object.freeze({
     apiVersion: 1,
@@ -28641,7 +28641,7 @@ function createPluginSessionCapabilities(session, assertBorrowed) {
   });
 }
 
-// packages/core/src/services/data-struct-engine.ts
+// ../core/src/services/data-struct-engine.ts
 var DataStructEngine = class {
   constructor(host, structs) {
     this.host = host;
@@ -28884,7 +28884,7 @@ var DataStructEngine = class {
   }
 };
 
-// packages/core/src/services/struct-engine.ts
+// ../core/src/services/struct-engine.ts
 var StructEngine = class {
   constructor(host) {
     this.host = host;
@@ -29272,7 +29272,7 @@ var StructEngine = class {
   }
 };
 
-// packages/core/src/services/struct-metadata.ts
+// ../core/src/services/struct-metadata.ts
 function getStructMetadata(definition, property) {
   const count2 = definition.indexRange?.count ?? 1;
   const bytes3 = definition.size * count2;
@@ -29291,7 +29291,7 @@ function getStructMetadata(definition, property) {
   }
 }
 
-// packages/core/src/services/symbol-scope-service.ts
+// ../core/src/services/symbol-scope-service.ts
 function relativeLabelBucket(table, depth) {
   return Object.hasOwn(table, depth) ? table[depth] : void 0;
 }
@@ -30291,7 +30291,7 @@ function parseUnnamedLabelReference(token) {
   };
 }
 
-// packages/core/src/assembler.ts
+// ../core/src/assembler.ts
 var TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
 var Assembler = class _Assembler {
   /** Section-relative output owner, absent for ordinary absolute assembly. */
@@ -34839,7 +34839,7 @@ function sectionName(node) {
   throw new Error("Section name and kind must be literal names.");
 }
 
-// packages/core/src/services/source-link-recipe.ts
+// ../core/src/services/source-link-recipe.ts
 function addressedSourceLinkRecipe(options) {
   const regions = [];
   const placements = [];
@@ -34907,7 +34907,7 @@ function addressedSourceLinkRecipe(options) {
   };
 }
 
-// packages/core/src/ir/relocatable-instruction.ts
+// ../core/src/ir/relocatable-instruction.ts
 var RelocatableInstruction = class {
   constructor(frame, context) {
     this.frame = frame;
@@ -34962,7 +34962,7 @@ var RelocatableInstruction = class {
   }
 };
 
-// packages/core/src/decoder-types.ts
+// ../core/src/decoder-types.ts
 var Uint8ArrayDecoderSource = class {
   #bytes;
   /**
@@ -35008,11 +35008,11 @@ var Uint8ArrayDecoderSource = class {
   }
 };
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 import { createHash } from "node:crypto";
 import path2 from "node:path";
 
-// packages/core/src/canonical-json.ts
+// ../core/src/canonical-json.ts
 var compareKeys = (a, b) => a.localeCompare(b);
 var isRecord7 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var canonicalValue = (value) => {
@@ -35058,7 +35058,7 @@ var canonicalEquals = (left, right) => left === right || canonicalJsonCompact(le
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
 var DEBUG_MAP_SCHEMA_VERSION = 1;
 var sha256 = (value) => createHash("sha256").update(value).digest("hex");
@@ -35145,7 +35145,7 @@ var validateDebugMap = (map, output) => {
   return issues;
 };
 
-// packages/core/src/typed-encoder-entry.ts
+// ../core/src/typed-encoder-entry.ts
 function runTypedEncoderEntry(context, encoder, instruction, emit) {
   const stage = context.branches.enforceResolvedLabels() ? "emitProgram" : "resolveLayout";
   const evaluation = {
@@ -35187,7 +35187,7 @@ function runTypedEncoderEntry(context, encoder, instruction, emit) {
   }
 }
 
-// packages/core/src/linker/types.ts
+// ../core/src/linker/types.ts
 var LinkError = class extends Error {
   /**
    * Captures a link failure with optional source anchoring and partial placement state.
@@ -35210,7 +35210,7 @@ var LinkError = class extends Error {
   name = "LinkError";
 };
 
-// packages/assets/src/secret-of-mana/som-boss-background.ts
+// ../assets/src/secret-of-mana/som-boss-background.ts
 function integer2(value, minimum, maximum) {
   if (!Number.isInteger(value) || value < minimum || value > maximum) {
     throw new Error(`Boss background value must be ${minimum}..${maximum}.`);
@@ -35248,7 +35248,7 @@ function encodeBossTilemap(data, tag = 1) {
   return result;
 }
 
-// packages/assets/src/secret-of-mana/som-dialogue-command.ts
+// ../assets/src/secret-of-mana/som-dialogue-command.ts
 function encodeSomDialogueCommand(text4) {
   const names = ["${boy}", "${girl}", "${sprite}"];
   const index = names.indexOf(text4);
@@ -35278,7 +35278,7 @@ function encodeSomDialogueCommand(text4) {
   throw new Error(`Unsupported dialogue command token ${text4}.`);
 }
 
-// packages/assets/src/secret-of-mana/som-dialogue.ts
+// ../assets/src/secret-of-mana/som-dialogue.ts
 var SOM_DIALOGUE_PAIR_COUNT = 61;
 var MAX_GLYPHS = 4096;
 var punctuation = /* @__PURE__ */ new Map([
@@ -35717,7 +35717,7 @@ function convertSomDialogueScript(source2, options, resources2) {
   return { primaryOutput: "script", outputs: { script: output } };
 }
 
-// packages/assets/src/secret-of-mana/som-room-composition.ts
+// ../assets/src/secret-of-mana/som-room-composition.ts
 var LIMITATION = "Background geometry only; omits actors, BG3, camera, mutable clones and color math.";
 function somRoomPaletteColor(word2, transparent) {
   integer(word2, "Room palette word", 0, 65535);
@@ -35905,7 +35905,7 @@ function composeSomRoom(room, preview, story) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-room-assets.ts
+// ../assets/src/secret-of-mana/som-room-assets.ts
 function isRecord9(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -36043,7 +36043,7 @@ function convertRoomAsset(source2, options) {
   return { primaryOutput: selected, outputs };
 }
 
-// packages/assets/src/atlas-interchange.ts
+// ../assets/src/atlas-interchange.ts
 var ATLAS_FILE_LIMIT = ASSET_LIMITS.asepriteBytes;
 function validateAtlasDocument(document) {
   validateIndexedPixels(document);
@@ -36117,7 +36117,7 @@ function inspectAtlasChanges(before, after, policy) {
   return { pixels: pixels2, colors };
 }
 
-// packages/assets/node_modules/pako/dist/pako.mjs
+// ../assets/node_modules/pako/dist/pako.mjs
 var Z_FIXED2 = 4;
 var Z_BINARY2 = 0;
 var Z_TEXT2 = 1;
@@ -38740,7 +38740,7 @@ var Inflate2 = class {
   }
 };
 
-// packages/assets/src/aseprite-binary.ts
+// ../assets/src/aseprite-binary.ts
 var ATLAS_FILE_LIMIT2 = ASSET_LIMITS.asepriteBytes;
 var decoder = new TextDecoder("utf-8", { fatal: true });
 var Cursor = class {
@@ -38923,7 +38923,7 @@ function rasterZlibSync(bytes3, expected) {
   return output;
 }
 
-// packages/assets/src/aseprite-document.ts
+// ../assets/src/aseprite-document.ts
 var ID_PREFIX = "uttori-atlas-export:";
 function resolveAsepriteCels(document) {
   integer(document.frames.length, "Aseprite frames", 1, ASSET_LIMITS.frames);
@@ -39800,7 +39800,7 @@ async function decodeAsepriteDocument(bytes3, signal) {
   return step.value;
 }
 
-// packages/assets/src/indexed-ownership.ts
+// ../assets/src/indexed-ownership.ts
 var isObject = (input2) => !!input2 && typeof input2 === "object" && !Array.isArray(input2);
 var object = (input2) => {
   if (!isObject(input2)) {
@@ -40016,7 +40016,7 @@ function reconcileIndexedViews(snapshot, candidates) {
   });
 }
 
-// packages/assets/src/interchange.ts
+// ../assets/src/interchange.ts
 var VIEW = "uttori-view:";
 var ROLE = "uttori-role:";
 var SET = "uttori-tileset:";
@@ -40274,7 +40274,7 @@ function inspectTilemapInterchange(baseline, after) {
   return { pixels: pixels2, colors };
 }
 
-// packages/assets/src/source-binding.ts
+// ../assets/src/source-binding.ts
 function sourceResourcePath(value) {
   if (typeof value !== "string" || !value || value.length > 1024 || /[\0:\\]/.test(value) || value.startsWith("/")) {
     throw new Error("Source binding requires a portable relative resource path.");
@@ -40319,7 +40319,7 @@ function bindingResourceKey(binding, resource) {
   return `${binding}#${resource}`;
 }
 
-// packages/assets/src/presentation-layout.ts
+// ../assets/src/presentation-layout.ts
 function planIndexedPresentation(nativeWidth, nativeHeight, tileWidth, tileHeight, views) {
   rasterArea(nativeWidth, nativeHeight, "Native presentation", ASSET_LIMITS.interchangeSide);
   rasterArea(tileWidth, tileHeight, "Inventory tile", ASSET_LIMITS.interchangeSide);
@@ -40356,7 +40356,7 @@ function planIndexedPresentation(nativeWidth, nativeHeight, tileWidth, tileHeigh
   return { width, height, columns: columns2, rows: rows2, capacity: capacity2, pages };
 }
 
-// packages/assets/src/raster-interchange.ts
+// ../assets/src/raster-interchange.ts
 function rasterInterchangeDocument(atlas2) {
   validateAtlasDocument(atlas2);
   return {
@@ -40519,7 +40519,7 @@ function inspectRasterInterchange(baseline, document) {
   return { pixels: pixels2, colors };
 }
 
-// packages/assets/src/source-codecs.ts
+// ../assets/src/source-codecs.ts
 var AssetSourceCodecRegistry = class {
   #codecs = /* @__PURE__ */ new Map();
   #revision = 0;
@@ -40640,7 +40640,7 @@ var asepriteRasterImporter = {
   }
 };
 
-// packages/assets/src/secret-of-mana/som-palette-edit.ts
+// ../assets/src/secret-of-mana/som-palette-edit.ts
 function useKey(palette, atlas2, role, segments) {
   return JSON.stringify([palette, atlas2, role, [...segments].toSorted()]);
 }
@@ -40807,7 +40807,7 @@ function planSpritePaletteWords(catalog, edits) {
   return { catalog: next, palettes: [...changed] };
 }
 
-// packages/assets/src/secret-of-mana/som-frame-edit.ts
+// ../assets/src/secret-of-mana/som-frame-edit.ts
 function renderStableFrameAtlas(tiles, layout2) {
   const sources = /* @__PURE__ */ new Map();
   const placements = [];
@@ -40869,7 +40869,7 @@ function renderStableFrameAtlas(tiles, layout2) {
   });
 }
 
-// packages/assets/src/secret-of-mana/som-atlas-interchange.ts
+// ../assets/src/secret-of-mana/som-atlas-interchange.ts
 function ownerId(segment, tile) {
   return JSON.stringify([segment, tile]);
 }
@@ -40970,7 +40970,7 @@ function planSomAtlasImport(atlas2, catalog, changes) {
   return { png, layout: layout2, catalog: palettePlan.catalog, palettes: palettePlan.palettes, palette };
 }
 
-// packages/assets/src/tilemap-presentation.ts
+// ../assets/src/tilemap-presentation.ts
 function tilemapPresentationCel(layer, x, y, columns2, rows2, cells) {
   return {
     kind: "tilemap",
@@ -41066,7 +41066,7 @@ function createTilemapInventory(ownership, nativeWidth, nativeHeight, name4) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-sprite-interchange.ts
+// ../assets/src/secret-of-mana/som-sprite-interchange.ts
 var X = 2147483648;
 var Y = 1073741824;
 function createSomSpriteInterchange(atlas2, catalog, exportId, runs = []) {
@@ -41288,7 +41288,7 @@ function createSomSpriteInterchange(atlas2, catalog, exportId, runs = []) {
   return { baseline, paletteSlots, displayOrigin };
 }
 
-// packages/assets/src/secret-of-mana/som-source.ts
+// ../assets/src/secret-of-mana/som-source.ts
 function isSourceNames(value) {
   return Array.isArray(value) && value.every((name4) => typeof name4 === "string" && !!name4);
 }
@@ -41562,7 +41562,7 @@ function normalizeSomSource(source2, options, resources2, catalog, codecs = inde
   };
 }
 
-// packages/assets/src/secret-of-mana/som-world-rle.ts
+// ../assets/src/secret-of-mana/som-world-rle.ts
 function decodeWorldRow(bytes3, size = 512) {
   if (!Number.isSafeInteger(size) || size < 1 || size > 65536) {
     throw new Error("World row size must be 1..65536 tiles.");
@@ -41613,7 +41613,7 @@ function encodeWorldRow(bytes3) {
   return Uint8Array.from(output);
 }
 
-// packages/game-secret-of-mana/src/world-overview.ts
+// ../game-secret-of-mana/src/world-overview.ts
 var WORLD_TILE_SIDE = 512;
 var WORLD_OVERVIEW_SIDE = WORLD_TILE_SIDE / 2;
 var WORLD_OVERVIEW_COLOR_COUNT = 192;
@@ -41650,7 +41650,7 @@ function convertWorldOverviewColors(source2) {
   return { primaryOutput: "colors", outputs: { colors: { bytes: colors } } };
 }
 
-// packages/game-secret-of-mana/src/assembly.ts
+// ../game-secret-of-mana/src/assembly.ts
 var registry2 = new AssetRegistry().registerImporter(pngImporter);
 for (const encoder of withImageEncoders(snesNativeEncoders)) {
   registry2.registerEncoder(encoder);
@@ -42077,17 +42077,17 @@ function createSomAssetPlugin(sourceCodecs = indexedSourceCodecs()) {
 }
 var assembly_default = createSomAssetPlugin();
 
-// packages/workflows/src/asset-interchange/record-store.ts
+// ../workflows/src/asset-interchange/record-store.ts
 import { createHash as createHash10, randomUUID as randomUUID8 } from "node:crypto";
 import fs20 from "node:fs";
 import path25 from "node:path";
 
-// packages/disassembler/src/source-project/git.ts
+// ../disassembler/src/source-project/git.ts
 import { spawn } from "node:child_process";
 import fs3 from "node:fs";
 import path6 from "node:path";
 
-// packages/disassembler/src/internal/durable-files.ts
+// ../disassembler/src/internal/durable-files.ts
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -42193,12 +42193,12 @@ function acquireFileLease(file) {
   };
 }
 
-// packages/disassembler/src/source-project/file-transaction.ts
+// ../disassembler/src/source-project/file-transaction.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
 import fs2 from "node:fs";
 import path5 from "node:path";
 
-// packages/disassembler/src/internal/source-inputs.ts
+// ../disassembler/src/internal/source-inputs.ts
 import { createHash as createHash2 } from "node:crypto";
 import path4 from "node:path";
 var sourceContentHash = (value) => createHash2("sha256").update(value).digest("hex");
@@ -42208,7 +42208,7 @@ function assertSourcePath(relative5) {
   }
 }
 
-// packages/disassembler/src/source-project/file-transaction.ts
+// ../disassembler/src/source-project/file-transaction.ts
 function stateHash(bytes3) {
   return bytes3 === null ? null : sourceContentHash(bytes3);
 }
@@ -42484,7 +42484,7 @@ function recoverSourceFileTransaction(repository, direction, options = {}) {
   }
 }
 
-// packages/disassembler/src/source-project/git.ts
+// ../disassembler/src/source-project/git.ts
 function acquireSourceOperationLease(repository) {
   return acquireFileLease(path6.join(repository.stateDirectory, "operation.lock"));
 }
@@ -42623,7 +42623,7 @@ function assertSourceObjectId(value) {
   }
 }
 
-// packages/disassembler/src/source-project/blobs.ts
+// ../disassembler/src/source-project/blobs.ts
 async function readSourceBlobs(repository, objects, signal) {
   const unique2 = [...new Set(objects)];
   const sizes = /* @__PURE__ */ new Map();
@@ -42688,11 +42688,11 @@ async function readSourceBlobs(repository, objects, signal) {
   return result;
 }
 
-// packages/disassembler/src/source-project/generation.ts
+// ../disassembler/src/source-project/generation.ts
 import fs6 from "node:fs";
 import path9 from "node:path";
 
-// packages/disassembler/src/source-project/pins.ts
+// ../disassembler/src/source-project/pins.ts
 import { createHash as createHash3 } from "node:crypto";
 import fs4 from "node:fs";
 import path7 from "node:path";
@@ -42781,7 +42781,7 @@ async function pruneSourcePins(repository) {
   }
 }
 
-// packages/disassembler/src/source-project/scratch.ts
+// ../disassembler/src/source-project/scratch.ts
 import { randomUUID as randomUUID3 } from "node:crypto";
 import fs5 from "node:fs";
 import path8 from "node:path";
@@ -42890,7 +42890,7 @@ function createSourceScratch(repository, purpose) {
   }
 }
 
-// packages/disassembler/src/source-project/generation.ts
+// ../disassembler/src/source-project/generation.ts
 var SOURCE_GENERATION_FILE = ".uttori/generation.json";
 function isGenerationFileMode(value) {
   return value === "100644" || value === "100755";
@@ -43147,7 +43147,7 @@ async function acceptedSourceGeneration(repository, sourceCommit) {
   );
 }
 
-// packages/disassembler/src/source-project/input-snapshot.ts
+// ../disassembler/src/source-project/input-snapshot.ts
 var SOURCE_INPUT_SNAPSHOT_FILE = ".uttori/generation-snapshot.json";
 var MAX_INPUT_BYTES = 40 * 1024 * 1024;
 function createSourceInputSnapshot(files) {
@@ -43181,12 +43181,12 @@ function createSourceInputSnapshot(files) {
   };
 }
 
-// packages/disassembler/src/source-project/merge.ts
+// ../disassembler/src/source-project/merge.ts
 import { randomUUID as randomUUID4 } from "node:crypto";
 import fs8 from "node:fs";
 import path11 from "node:path";
 
-// packages/disassembler/src/source-project/errors.ts
+// ../disassembler/src/source-project/errors.ts
 var SourceOperationError = class extends Error {
   constructor(code, message, options) {
     super(message, options);
@@ -43196,7 +43196,7 @@ var SourceOperationError = class extends Error {
   code;
 };
 
-// packages/disassembler/src/source-project/snapshot-index.ts
+// ../disassembler/src/source-project/snapshot-index.ts
 import { createHash as createHash4 } from "node:crypto";
 import fs7 from "node:fs";
 import path10 from "node:path";
@@ -43361,7 +43361,7 @@ var SourceSnapshotIndex = class {
   }
 };
 
-// packages/disassembler/src/source-project/merge.ts
+// ../disassembler/src/source-project/merge.ts
 var journalFile2 = (repository) => path11.join(repository.stateDirectory, "merge.json");
 async function prepareSourceGeneration(repository, render, signal) {
   signal?.throwIfAborted();
@@ -43781,20 +43781,20 @@ async function abortSourceGeneration(repository) {
   }
 }
 
-// packages/disassembler/src/source-project/project.ts
+// ../disassembler/src/source-project/project.ts
 import fs14 from "node:fs";
 import path16 from "node:path";
 
-// packages/disassembler/src/project/project-store.ts
+// ../disassembler/src/project/project-store.ts
 import * as fs13 from "node:fs";
 import path15 from "node:path";
 
-// packages/disassembler/src/model/project-types.ts
+// ../disassembler/src/model/project-types.ts
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// packages/disassembler/src/internal/record-id-set.ts
+// ../disassembler/src/internal/record-id-set.ts
 import fs9 from "node:fs";
 import os2 from "node:os";
 import path12 from "node:path";
@@ -43857,7 +43857,7 @@ var RecordIdSet = class {
   }
 };
 
-// packages/disassembler/src/model/analysis-ownership.ts
+// ../disassembler/src/model/analysis-ownership.ts
 function withCompactAnalysisOwnership(records, entries3) {
   const outgoing = /* @__PURE__ */ new Map();
   const nodes = /* @__PURE__ */ new Set();
@@ -43962,7 +43962,7 @@ function validateAnalysisOwnership(records, scope = "complete") {
   }
 }
 
-// packages/disassembler/src/model/research-mapping.ts
+// ../disassembler/src/model/research-mapping.ts
 function isRecord14(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -44007,7 +44007,7 @@ function matchesResearchMapping(mapping, location2, delta = 0) {
   );
 }
 
-// packages/disassembler/src/model/runtime-ppu-effect.ts
+// ../disassembler/src/model/runtime-ppu-effect.ts
 function isEffectRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -44085,7 +44085,7 @@ var normalizeRuntimePPUEffect = (effect, access) => {
   };
 };
 
-// packages/disassembler/src/model/runtime-bus-types.ts
+// ../disassembler/src/model/runtime-bus-types.ts
 function isInteger2(value) {
   return typeof value === "number" && Number.isInteger(value);
 }
@@ -44130,7 +44130,7 @@ var validateRuntimeBusFact = (fact) => {
   return void 0;
 };
 
-// packages/disassembler/src/model/runtime-graphics-fact.ts
+// ../disassembler/src/model/runtime-graphics-fact.ts
 var record = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var unsigned = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
 var name = (value) => typeof value === "string" && /^[A-Za-z][\w.-]{0,63}$/.test(value);
@@ -44156,7 +44156,7 @@ function isRuntimeGraphicsFact(value) {
   );
 }
 
-// packages/disassembler/src/model/trace-detail.ts
+// ../disassembler/src/model/trace-detail.ts
 function isRecord15(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -44263,7 +44263,7 @@ var validateRuntimeInstructionDetails = (value, count2) => {
   });
 };
 
-// packages/disassembler/src/model/project-validation.ts
+// ../disassembler/src/model/project-validation.ts
 function isObject2(value) {
   return typeof value === "object" && value !== null;
 }
@@ -44743,7 +44743,7 @@ var validateLoadedShards = (shards, project, analysisScope = "complete") => {
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// packages/disassembler/src/model/record-shape.ts
+// ../disassembler/src/model/record-shape.ts
 function isRecord16(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -45004,11 +45004,11 @@ function requireMetadataRecord(kind, value) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/storage/sqlite-payload.ts
 import { TextDecoder as TextDecoder2, types } from "node:util";
 import { deflateSync, inflateSync } from "node:zlib";
 
-// packages/disassembler/src/storage/sqlite-runtime-payload.ts
+// ../disassembler/src/storage/sqlite-runtime-payload.ts
 import { crc32 as crc323 } from "node:zlib";
 var MAGIC = Buffer.from([85, 65, 82, 1]);
 var FIELDS = [
@@ -45115,7 +45115,7 @@ var decodePackedRuntimePayload = (bytes3) => {
   return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
 };
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/storage/sqlite-payload.ts
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
 var HEADER = Buffer.from([85, 65, 80, 1]);
 var HEADER_BYTES2 = 8;
@@ -45206,7 +45206,7 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// packages/disassembler/src/storage/sqlite-records.ts
+// ../disassembler/src/storage/sqlite-records.ts
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) {
     return -1;
@@ -45715,13 +45715,13 @@ var analysisAddress = (record7) => {
   return { addressSpace: null, address: null };
 };
 
-// packages/disassembler/src/storage/sqlite-store.ts
+// ../disassembler/src/storage/sqlite-store.ts
 import { createHash as createHash6, randomUUID as randomUUID6 } from "node:crypto";
 import fs12 from "node:fs";
 import path14 from "node:path";
 import { DatabaseSync as DatabaseSync2 } from "node:sqlite";
 
-// packages/disassembler/src/analysis/analysis-sources.ts
+// ../disassembler/src/analysis/analysis-sources.ts
 var sorted = (values) => [...new Set(values)].toSorted();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
@@ -45782,7 +45782,7 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
-// packages/disassembler/src/analysis/project-evidence.ts
+// ../disassembler/src/analysis/project-evidence.ts
 var evidenceReferences = (shards, evidenceId) => [
   ...shards.analysis.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `analysis:${record7.id}`),
   ...shards.annotations.filter((record7) => record7.evidence.includes(evidenceId)).map((record7) => `annotations:${record7.id}`),
@@ -45819,7 +45819,7 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   return { shard, record: record7, evidence, referencedBy, conflicts };
 };
 
-// packages/disassembler/src/internal/trace-cache.ts
+// ../disassembler/src/internal/trace-cache.ts
 var TraceCache = class {
   #entries = /* @__PURE__ */ new Map();
   /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
@@ -45892,7 +45892,7 @@ var TraceCache = class {
   }
 };
 
-// packages/disassembler/src/model/evidence-pool.ts
+// ../disassembler/src/model/evidence-pool.ts
 var EvidencePool = class {
   #strings = /* @__PURE__ */ new Map();
   #lists = /* @__PURE__ */ new Map();
@@ -45928,11 +45928,11 @@ var EvidencePool = class {
   }
 };
 
-// packages/disassembler/src/research-inputs/inputs.ts
+// ../disassembler/src/research-inputs/inputs.ts
 import fs10 from "node:fs";
 import path13 from "node:path";
 
-// packages/disassembler/src/model/project-labels.ts
+// ../disassembler/src/model/project-labels.ts
 var validateSourceLabelName = (name4) => {
   if (typeof name4 !== "string" || name4.length > 256 || !/^[A-Z_a-z]\w*$/.test(name4)) {
     throw new Error(
@@ -45967,7 +45967,7 @@ var projectSourceLabelNames = (labels, reserved = []) => {
   return names;
 };
 
-// packages/disassembler/src/model/target-state.ts
+// ../disassembler/src/model/target-state.ts
 function record2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -46010,7 +46010,7 @@ function readAnalysisTargetState(architecture, value) {
   throw new Error(`Invalid state fields for architecture '${architecture}'.`);
 }
 
-// packages/disassembler/src/model/metadata-validation.ts
+// ../disassembler/src/model/metadata-validation.ts
 function isRecord17(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -46153,7 +46153,7 @@ var validateEditableMetadataRecord = (shard, record7) => {
   }
 };
 
-// packages/disassembler/src/research-inputs/inputs.ts
+// ../disassembler/src/research-inputs/inputs.ts
 var isArray2 = (value) => Array.isArray(value);
 function isRecord18(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -46408,7 +46408,7 @@ function readResearchInputs(root, roots, identity3, overlays = /* @__PURE__ */ n
   return { ...selected, files, decisions, hash: hash3 };
 }
 
-// packages/disassembler/src/runtime/runtime-analysis-profile.ts
+// ../disassembler/src/runtime/runtime-analysis-profile.ts
 var SNES_ANALYSIS_TRACE_PROFILE = "65816-analysis-v3";
 var SNES_ANALYSIS_STATE_FIELDS = ["p", "P", "e", "E", "db", "DB", "d", "D"];
 var SNES_ANALYSIS_STATE_MASKS = {
@@ -46431,7 +46431,7 @@ function snesAnalysisTraceState(state) {
   return result;
 }
 
-// packages/disassembler/src/runtime/runtime-evidence.ts
+// ../disassembler/src/runtime/runtime-evidence.ts
 var emptyCounts = () => ({
   analysis: 0,
   annotations: 0,
@@ -46687,7 +46687,7 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// packages/disassembler/src/storage/sqlite-annotation-query.ts
+// ../disassembler/src/storage/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 function isPartialInstruction(value) {
   if (!isRecord16(value)) {
@@ -47144,7 +47144,7 @@ var readInstructionExecutionSummary = (database, manifest, ranges) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-graph-query.ts
+// ../disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
   const record7 = requireAnalysisRecord(parseSqlitePayload(value));
   if (record7.kind !== "cfg-node") {
@@ -47380,7 +47380,7 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// packages/disassembler/src/storage/sqlite-graphics-query.ts
+// ../disassembler/src/storage/sqlite-graphics-query.ts
 function queryGraphicsEvidence(db, query) {
   const limit = query.limit ?? 500;
   if (!Number.isInteger(limit) || limit < 1 || limit > 2e3 || [query.pc, query.physicalOffset].some(
@@ -47445,7 +47445,7 @@ function queryGraphicsEvidence(db, query) {
   return result;
 }
 
-// packages/disassembler/src/storage/sqlite-query-cache.ts
+// ../disassembler/src/storage/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 var installQueryCache = (db, key3, dependencies) => {
   if (!/^[\d_a-z]+$/.test(key3)) {
@@ -47496,7 +47496,7 @@ var writeQueryCache = (db, key3, signature, value) => {
   );
 };
 
-// packages/disassembler/src/storage/sqlite-research-inputs.ts
+// ../disassembler/src/storage/sqlite-research-inputs.ts
 var SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   collection TEXT NOT NULL, id TEXT NOT NULL, baseline BLOB, projected BLOB,
   PRIMARY KEY(collection,id)
@@ -47614,7 +47614,7 @@ function projectResearchInputs(database, snapshot, insert) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-runtime-facts.ts
+// ../disassembler/src/storage/sqlite-runtime-facts.ts
 var RUNTIME_DESCRIPTOR_COLUMNS = [
   "kind",
   "architecture",
@@ -47703,10 +47703,10 @@ WHEN EXISTS(SELECT 1 FROM runtime_identities
 BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
 `;
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
 import { createHash as createHash5 } from "node:crypto";
 
-// packages/disassembler/src/storage/sqlite-runtime-history.ts
+// ../disassembler/src/storage/sqlite-runtime-history.ts
 import { TextDecoder as TextDecoder3, types as types2 } from "node:util";
 import { crc32 as crc324, deflateSync as deflateSync2, inflateSync as inflateSync2 } from "node:zlib";
 function historyPayload(value) {
@@ -47889,7 +47889,7 @@ var collectRuntimeHistory = (db) => {
       SELECT 1 FROM runtime_fact_rows f WHERE f.descriptor_id=runtime_descriptors.did);`);
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
 var runtimeFactFingerprint = (record7, columns2) => createHash5("sha256").update(
   JSON.stringify(
     {
@@ -48128,7 +48128,7 @@ var SqliteRuntimeWriter = class {
   }
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-batch.ts
+// ../disassembler/src/storage/sqlite-runtime-batch.ts
 var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL = `
   INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready)
     SELECT f.fid,b.prefix_id,i.iid,b.evidence_id,b.count,b.state_prefix_id,b.query_ready
@@ -48282,7 +48282,7 @@ var SqliteRuntimeTraceBatch = class {
   }
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-summary.ts
+// ../disassembler/src/storage/sqlite-runtime-summary.ts
 import { randomUUID as randomUUID5 } from "node:crypto";
 var KEY = "instruction_variants";
 var BUILD = "instruction_variants_build";
@@ -48544,7 +48544,7 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields2, 
   })();
 };
 
-// packages/disassembler/src/storage/sqlite-source-export.ts
+// ../disassembler/src/storage/sqlite-source-export.ts
 function isUnknownArray6(value) {
   return Array.isArray(value);
 }
@@ -48638,7 +48638,7 @@ function* sourceExportCacheRecords(database) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-source-query.ts
+// ../disassembler/src/storage/sqlite-source-query.ts
 function isRecord20(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -48815,7 +48815,7 @@ var readSourcePage = (db, source2, group, offset = 0) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-storage-policy.ts
+// ../disassembler/src/storage/sqlite-storage-policy.ts
 import fs11 from "node:fs";
 function errorCode2(error) {
   if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
@@ -49001,7 +49001,7 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// packages/disassembler/src/storage/sqlite-store.ts
+// ../disassembler/src/storage/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 var ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 var SCHEMA2 = `
@@ -51146,7 +51146,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
 };
 
-// packages/disassembler/src/project/project-store.ts
+// ../disassembler/src/project/project-store.ts
 function isUntrustedManifest(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -51244,7 +51244,7 @@ var validateAnalysisProject = (directory, rom) => {
   return project;
 };
 
-// packages/disassembler/src/source-project/project.ts
+// ../disassembler/src/source-project/project.ts
 function isUnknownArray7(value) {
   return Array.isArray(value);
 }
@@ -51350,7 +51350,7 @@ function synchronizeSourceResearch(project) {
   }
 }
 
-// packages/disassembler/src/source-project/captures.ts
+// ../disassembler/src/source-project/captures.ts
 import { createHash as createHash7 } from "node:crypto";
 import fs15 from "node:fs";
 import path17 from "node:path";
@@ -51593,7 +51593,7 @@ async function fingerprintSourceCapture(file, signal, maxBytes = DEFAULT_SOURCE_
   };
 }
 
-// packages/disassembler/src/source-project/code-preservation.ts
+// ../disassembler/src/source-project/code-preservation.ts
 var union = (ranges) => {
   const merged = [];
   for (const range2 of ranges.toSorted((left, right) => left.start - right.start)) {
@@ -51638,7 +51638,7 @@ var lostCodeRanges = (previous, next) => {
   return lost;
 };
 
-// packages/disassembler/src/source-project/raw-consumption.ts
+// ../disassembler/src/source-project/raw-consumption.ts
 import path18 from "node:path";
 function checkRawBlockConsumption(mapping, blocks) {
   const consumed = /* @__PURE__ */ new Map();
@@ -51683,11 +51683,11 @@ function checkRawBlockConsumption(mapping, blocks) {
   return issues;
 }
 
-// packages/disassembler/src/source-project/build-publication.ts
+// ../disassembler/src/source-project/build-publication.ts
 import fs17 from "node:fs";
 import path20 from "node:path";
 
-// packages/disassembler/src/source-project/build-cache.ts
+// ../disassembler/src/source-project/build-cache.ts
 import fs16 from "node:fs";
 import path19 from "node:path";
 function isRecord23(value) {
@@ -51797,7 +51797,7 @@ function pruneSourceBuilds(directory, current, fileName) {
   return warnings;
 }
 
-// packages/disassembler/src/source-project/build-publication.ts
+// ../disassembler/src/source-project/build-publication.ts
 function publishSourceBuild(options) {
   options.signal?.throwIfAborted();
   const { directory, receipt, output, debugMap } = options;
@@ -51856,15 +51856,15 @@ function publishSourceBuild(options) {
   }
 }
 
-// packages/disassembler/src/source-project/link-build.ts
+// ../disassembler/src/source-project/link-build.ts
 import { randomUUID as randomUUID7 } from "node:crypto";
 import fs18 from "node:fs";
 import path21 from "node:path";
 
-// packages/core/src/linker/envelope.ts
+// ../core/src/linker/envelope.ts
 import { createHash as createHash9, timingSafeEqual } from "node:crypto";
 
-// packages/core/src/linker/value.ts
+// ../core/src/linker/value.ts
 import { createHash as createHash8 } from "node:crypto";
 function stableJson(value) {
   return JSON.stringify(portableValue(value));
@@ -51976,7 +51976,7 @@ function integer4(value, purpose, minimum = 0, maximum = Number.MAX_SAFE_INTEGER
   return value;
 }
 
-// packages/core/src/linker/envelope.ts
+// ../core/src/linker/envelope.ts
 var HEADER_SIZE = 52;
 var MAX_METADATA = 16 * 1024 * 1024;
 var MAX_ARTIFACT_BYTES = 256 * 1024 * 1024;
@@ -52027,7 +52027,7 @@ function digest(bytes3) {
   return createHash9("sha256").update(bytes3.subarray(0, 20)).update(bytes3.subarray(HEADER_SIZE)).digest();
 }
 
-// packages/core/src/linker/validation.ts
+// ../core/src/linker/validation.ts
 var binaryOperators2 = /* @__PURE__ */ new Set([
   "+",
   "-",
@@ -52311,7 +52311,7 @@ function assertAssemblyModule(input2) {
   }
 }
 
-// packages/core/src/linker/object.ts
+// ../core/src/linker/object.ts
 var MAGIC3 = "UASMOBJ\0";
 function encodeObject(module) {
   assertAssemblyModule(module);
@@ -52352,7 +52352,7 @@ function decodeObject(bytes3) {
   return module;
 }
 
-// packages/core/src/linker/library.ts
+// ../core/src/linker/library.ts
 var MAGIC4 = "UASMLIB\0";
 function encodeLibrary(inputs) {
   const names = /* @__PURE__ */ new Set();
@@ -52432,7 +52432,7 @@ function indexOf(members) {
   return [...index].toSorted(([a], [b]) => a < b ? -1 : Number(a > b));
 }
 
-// packages/core/src/linker/layout.ts
+// ../core/src/linker/layout.ts
 function aligned(value, alignment) {
   return integer4(Math.ceil(value / alignment) * alignment, "Aligned address");
 }
@@ -52622,7 +52622,7 @@ function fit(state, section, placement, alignment, fail2) {
   return start;
 }
 
-// packages/core/src/linker/recipe.ts
+// ../core/src/linker/recipe.ts
 function assertLinkRecipe(input2) {
   const recipe = record3(input2, "Link recipe");
   textValue(recipe.target, "Link target");
@@ -52705,7 +52705,7 @@ function assertLinkRecipe(input2) {
   }
 }
 
-// packages/core/src/linker/symbols.ts
+// ../core/src/linker/symbols.ts
 var allocationKey = (module, section) => JSON.stringify([module, section]);
 var LinkSymbols = class {
   constructor(modules, recipe, allocations) {
@@ -52935,7 +52935,7 @@ var LinkSymbols = class {
   }
 };
 
-// packages/core/src/linker/relocations.ts
+// ../core/src/linker/relocations.ts
 function applyRelocations(output, modules, recipe, symbols) {
   for (const module of modules) {
     for (const instruction of module.instructions) {
@@ -53125,7 +53125,7 @@ function explicitlyNarrowed(expression2, width) {
   return false;
 }
 
-// packages/core/src/linker/driver.ts
+// ../core/src/linker/driver.ts
 var LINKER_VERSION = "1";
 function linkObjects(options) {
   options.signal?.throwIfAborted();
@@ -53441,7 +53441,7 @@ function expressionDisplay(expression2) {
   }
 }
 
-// packages/disassembler/src/source-project/link-build.ts
+// ../disassembler/src/source-project/link-build.ts
 function publishLinkedBuild(result, directory, outputName = "program.rom", signal, recipe) {
   signal?.throwIfAborted();
   if (!/^[\w.-]+$/.test(outputName) || outputName === "." || outputName === ".." || outputName === "build.json") {
@@ -53516,7 +53516,7 @@ function publishLinkedBuild(result, directory, outputName = "program.rom", signa
   }
 }
 
-// packages/disassembler/src/source-project/source-link.ts
+// ../disassembler/src/source-project/source-link.ts
 import path22 from "node:path";
 var isRecord25 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 function readSourceLinkBuild(configuration, configFile, entrySource, read) {
@@ -53705,7 +53705,7 @@ function sourceMappingFromLink(result, root, outputBias = 0) {
   return mapping;
 }
 
-// packages/disassembler/src/source-project/build-coverage.ts
+// ../disassembler/src/source-project/build-coverage.ts
 import path23 from "node:path";
 function sourceBuildCoverage(mapping, root, raw) {
   if (!Number.isSafeInteger(raw.blockSize) || raw.blockSize < 1 || raw.blockSize > 65536) {
@@ -53751,7 +53751,7 @@ function sourceBuildCoverage(mapping, root, raw) {
   };
 }
 
-// packages/workflows/src/asset-interchange/paths.ts
+// ../workflows/src/asset-interchange/paths.ts
 import fs19 from "node:fs";
 import path24 from "node:path";
 function assetPath(file) {
@@ -53766,7 +53766,7 @@ function assetPath(file) {
   return absolute;
 }
 
-// packages/workflows/src/asset-interchange/record-store.ts
+// ../workflows/src/asset-interchange/record-store.ts
 function assetHash(bytes3) {
   return createHash10("sha256").update(bytes3).digest("hex");
 }
@@ -54195,13 +54195,13 @@ var AssetRecordStore = class {
   }
 };
 
-// packages/workflows/src/asset-interchange/service.ts
+// ../workflows/src/asset-interchange/service.ts
 import { randomUUID as randomUUID12 } from "node:crypto";
 import fs42 from "node:fs";
 import path55 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
-// packages/assets/src/aseprite.ts
+// ../assets/src/aseprite.ts
 var ID_PREFIX2 = "uttori-atlas-export:";
 function encodeAsepriteAtlas(document) {
   validateAtlasDocument(document);
@@ -54296,7 +54296,7 @@ var asepriteAtlasCodec = Object.freeze({
   decode: decodeAsepriteAtlas
 });
 
-// packages/plugin-loader-node/src/configuration.ts
+// ../plugin-loader-node/src/configuration.ts
 import { existsSync, promises as fs21 } from "node:fs";
 import path26 from "node:path";
 var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
@@ -54430,7 +54430,7 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
   throw configurationError(`Unable to read project configuration '${candidates[0]}'.`, lastError);
 };
 
-// packages/plugin-loader-node/src/loader.ts
+// ../plugin-loader-node/src/loader.ts
 import { realpath } from "node:fs/promises";
 import { createRequire, registerHooks } from "node:module";
 import path27 from "node:path";
@@ -54824,7 +54824,7 @@ var loadProjectEnvironment = async (options) => {
   });
 };
 
-// packages/plugin-loader-node/src/toolchain.ts
+// ../plugin-loader-node/src/toolchain.ts
 import { createHash as createHash11 } from "node:crypto";
 import fs22 from "node:fs";
 import { createRequire as createRequire2 } from "node:module";
@@ -54960,7 +54960,7 @@ function fingerprintNodeToolchain(moduleFiles, bundles = []) {
   return { ...identity3, sha256: hash(canonicalJson(identity3)) };
 }
 
-// packages/workflows/src/source-requests.ts
+// ../workflows/src/source-requests.ts
 var fields = {
   init: ["rom", "dizRawFile", "mapper"],
   status: ["candidate"],
@@ -55101,7 +55101,7 @@ function readSourceOperation(value) {
   return value;
 }
 
-// packages/disassembler/src/model/rom-image.ts
+// ../disassembler/src/model/rom-image.ts
 import { createHash as createHash12 } from "node:crypto";
 import * as fs23 from "node:fs";
 var sha2562 = (bytes3) => createHash12("sha256").update(bytes3).digest("hex");
@@ -55213,7 +55213,7 @@ var RomImage = class _RomImage {
   }
 };
 
-// packages/disassembler/src/analysis/static-analysis.ts
+// ../disassembler/src/analysis/static-analysis.ts
 import { createHash as createHash13 } from "node:crypto";
 var DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS = 1e6;
 var DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH = 16;
@@ -55770,10 +55770,10 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
   return result;
 };
 
-// packages/disassembler/src/runtime/runtime-trace.ts
+// ../disassembler/src/runtime/runtime-trace.ts
 import { createHash as createHash14 } from "node:crypto";
 
-// packages/disassembler/src/runtime/trace-chunk-formatter.ts
+// ../disassembler/src/runtime/trace-chunk-formatter.ts
 var TraceChunkFormatter = class {
   /** Repeated instruction snapshots reuse their indented text; large arbitrary JSON bypasses it. */
   #details = new TraceCache();
@@ -55823,7 +55823,7 @@ ${entries3.join(",\n")}
   }
 };
 
-// packages/disassembler/src/runtime/runtime-trace.ts
+// ../disassembler/src/runtime/runtime-trace.ts
 var RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
 var RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
 var DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8e6;
@@ -56297,15 +56297,15 @@ var createRuntimeInstructionTraceImporter = (value, context, storage) => {
   return { push: push2, checkpoint, finish: finish2 };
 };
 
-// packages/disassembler/src/runtime/runtime-trace-file.ts
+// ../disassembler/src/runtime/runtime-trace-file.ts
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { StringDecoder } from "node:string_decoder";
 
-// packages/disassembler/src/internal/capture-limits.ts
+// ../disassembler/src/internal/capture-limits.ts
 var DEFAULT_RUNTIME_TRACE_MAX_BYTES = 32 * 1024 ** 3;
 
-// packages/disassembler/src/runtime/runtime-trace-file.ts
+// ../disassembler/src/runtime/runtime-trace-file.ts
 var MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
 async function* traceEntries(file, options) {
   const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
@@ -56550,10 +56550,10 @@ var createRuntimeTraceFileSource = async (file, options = {}) => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-bus-trace.ts
+// ../disassembler/src/runtime/runtime-bus-trace.ts
 import { createHash as createHash15 } from "node:crypto";
 
-// packages/disassembler/src/runtime/runtime-graphics.ts
+// ../disassembler/src/runtime/runtime-graphics.ts
 var mapVram = (address3, mapping) => {
   if (mapping === 0) {
     return address3;
@@ -56780,7 +56780,7 @@ var createRuntimeGraphicsAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-ppu.ts
+// ../disassembler/src/runtime/runtime-ppu.ts
 var createRuntimePPUAccumulator = () => {
   let portWrites = 0, written = 0, blocked = 0, latched = 0, byteWrites = 0, renderingRestricted = 0;
   const writes = [];
@@ -56834,7 +56834,7 @@ var createRuntimePPUAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-transfer.ts
+// ../disassembler/src/runtime/runtime-transfer.ts
 function isRecord30(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -57038,7 +57038,7 @@ var createRuntimeTransferAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime/runtime-bus-trace.ts
+// ../disassembler/src/runtime/runtime-bus-trace.ts
 function isRowRecord4(value) {
   return !Array.isArray(value);
 }
@@ -57454,7 +57454,7 @@ ${JSON.stringify(meta)}
   return { push: push2, finish: finish2 };
 };
 
-// packages/disassembler/src/project/project-transaction.ts
+// ../disassembler/src/project/project-transaction.ts
 import { createHash as createHash16 } from "node:crypto";
 import * as fs24 from "node:fs";
 import path29 from "node:path";
@@ -57535,7 +57535,7 @@ var commitAnalysisProjectViewUpdate = (directory, snapshot, updates) => {
 };
 var publishAnalysisProject = (directory, project, expected) => publish2(directory, project, expected);
 
-// packages/disassembler/src/project/read-session.ts
+// ../disassembler/src/project/read-session.ts
 function withAnalysisReadSession(directory, action) {
   const store = openAnalysisProjectStore(directory);
   let active = true;
@@ -57585,14 +57585,14 @@ function withAnalysisReadSession(directory, action) {
   }
 }
 
-// packages/disassembler/src/project/runtime-trace-project.ts
+// ../disassembler/src/project/runtime-trace-project.ts
 import { createHash as createHash18 } from "node:crypto";
 import path33 from "node:path";
 
-// packages/disassembler/src/runtime/capture-instruction-source.ts
+// ../disassembler/src/runtime/capture-instruction-source.ts
 import { open as open2, lstat as lstat4 } from "node:fs/promises";
 
-// packages/disassembler/src/runtime/capture-companion.ts
+// ../disassembler/src/runtime/capture-companion.ts
 init_src();
 import { lstat as lstat3, readFile as readFile2 } from "node:fs/promises";
 import path31 from "node:path";
@@ -57642,7 +57642,7 @@ async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
   }
 }
 
-// packages/disassembler/src/runtime/capture-instruction-source.ts
+// ../disassembler/src/runtime/capture-instruction-source.ts
 var createRuntimeCaptureSource = async (file, options = {}) => {
   options.signal?.throwIfAborted();
   const handle = await open2(file, "r");
@@ -57737,7 +57737,7 @@ var createRuntimeCaptureSource = async (file, options = {}) => {
   };
 };
 
-// packages/disassembler/src/storage/sqlite-trace-stage.ts
+// ../disassembler/src/storage/sqlite-trace-stage.ts
 import fs25 from "node:fs";
 import path32 from "node:path";
 import { DatabaseSync as DatabaseSync3 } from "node:sqlite";
@@ -57816,7 +57816,7 @@ var SqliteTraceStage = class {
   }
 };
 
-// packages/disassembler/src/project/runtime-trace-project.ts
+// ../disassembler/src/project/runtime-trace-project.ts
 async function importRuntimeTraceSourceIntoProject(source2, directory, context, options = {}) {
   options.signal?.throwIfAborted();
   const store = openAnalysisProjectStore(directory);
@@ -58043,7 +58043,7 @@ async function importRuntimeTraceSourceIntoProject(source2, directory, context, 
   }
 }
 
-// packages/disassembler/src/project/runtime-bus-project.ts
+// ../disassembler/src/project/runtime-bus-project.ts
 import fs26 from "node:fs";
 var captureFileIdentity = (file) => {
   const stat2 = fs26.statSync(file, { bigint: true });
@@ -58200,7 +58200,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source2, directory, context,
   }
 };
 
-// packages/disassembler/src/project/capture-notes.ts
+// ../disassembler/src/project/capture-notes.ts
 import fs27 from "node:fs";
 import path34 from "node:path";
 function notesPath(directory, sha2564) {
@@ -58283,13 +58283,13 @@ function completeCaptureImportNotes(directory, pending, status, addedCode) {
   }
 }
 
-// packages/disassembler/src/source/source-export.ts
+// ../disassembler/src/source/source-export.ts
 import { createHash as createHash19 } from "node:crypto";
 var SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
 var SOURCE_EXPORT_SCHEMA_VERSION = 1;
 var sourceExportSha256 = (value) => createHash19("sha256").update(value).digest("hex");
 
-// packages/disassembler/src/research-inputs/symbols.ts
+// ../disassembler/src/research-inputs/symbols.ts
 var isArray3 = (value) => Array.isArray(value);
 function isProjectLabel2(value) {
   return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
@@ -58371,7 +58371,7 @@ function changeResearchSymbol(snapshot, id2, change) {
   return { path: file.path, expectedSha256: file.sha256, document, symbol };
 }
 
-// packages/disassembler/src/research-inputs/analysis.ts
+// ../disassembler/src/research-inputs/analysis.ts
 function validateLocations(record7, spaces) {
   const space = spaces.find((item) => item.id === record7.addressSpace);
   if (!space || !Number.isInteger(space.addressBits) || space.addressBits < 1 || space.addressBits > 53) {
@@ -58489,7 +58489,7 @@ function changeResearchAnalysis(snapshot, change, spaces) {
   };
 }
 
-// packages/disassembler/src/internal/interval-index.ts
+// ../disassembler/src/internal/interval-index.ts
 var HalfOpenIntervalIndex = class {
   #entries;
   #prefixMaximumEnd;
@@ -58560,7 +58560,7 @@ var HalfOpenIntervalIndex = class {
   }
 };
 
-// packages/disassembler/src/runtime/capture-bus-source.ts
+// ../disassembler/src/runtime/capture-bus-source.ts
 var createRuntimeBusCaptureSource = async (file, options = {}) => {
   const { readCaptureFileHeader: readCaptureFileHeader2, recoverCaptureFile: recoverCaptureFile2 } = await Promise.resolve().then(() => (init_src(), src_exports));
   const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
@@ -58601,7 +58601,7 @@ var createRuntimeBusCaptureSource = async (file, options = {}) => {
   };
 };
 
-// packages/disassembler/src/runtime/capture-source.ts
+// ../disassembler/src/runtime/capture-source.ts
 import { open as open3 } from "node:fs/promises";
 async function openRuntimeCaptureSource(file, options = {}) {
   options.signal?.throwIfAborted();
@@ -58629,7 +58629,7 @@ async function openRuntimeCaptureSource(file, options = {}) {
   return { kind: "instructions", source: await createRuntimeCaptureSource(file, options) };
 }
 
-// packages/plugin-65xx/src/instructions/schema.ts
+// ../plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression2, features) {
   if (expression2.allOf?.some((feature) => !features.has(feature))) {
     return false;
@@ -58741,7 +58741,7 @@ function getOperandFields(codec) {
   return [];
 }
 
-// packages/plugin-65xx/src/instructions/variant-tables.generated.ts
+// ../plugin-65xx/src/instructions/variant-tables.generated.ts
 var ca65EaTable = [
   [
     0,
@@ -60300,7 +60300,7 @@ var ca65VariantTables = {
   ]
 };
 
-// packages/plugin-65xx/src/instructions/variants.ts
+// ../plugin-65xx/src/instructions/variants.ts
 var commonModes = {
   0: { mode: "implied" },
   1: { mode: "accumulator" },
@@ -60596,7 +60596,7 @@ var variantFormsByCpuId = Object.freeze({
   [mitsubishiM740Cpu.id]: mitsubishiM740Forms
 });
 
-// packages/plugin-65xx/src/instructions/opcodes.ts
+// ../plugin-65xx/src/instructions/opcodes.ts
 var rows = [
   "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
   "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
@@ -60931,7 +60931,7 @@ function getCpuAssemblyForms(cpu) {
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 
-// packages/plugin-65xx/src/decoder.ts
+// ../plugin-65xx/src/decoder.ts
 var hex3 = (value, width = 2) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var sizeOf = (form) => form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
 function cpu6502Specifications(cpu) {
@@ -61161,7 +61161,7 @@ function formatCpu6502Instruction(instruction, addressExpression) {
   return `${form.mnemonic}${suffix}${text4 ? ` ${text4}` : ""}`;
 }
 
-// packages/plugin-65xx/src/nes/mapper.ts
+// ../plugin-65xx/src/nes/mapper.ts
 function initialNesMapperState() {
   return {
     select: 0,
@@ -61251,7 +61251,7 @@ function nesExecutionContext(state) {
   return `${state.prgMode ?? "?"}:${state.banks[6] ?? "?"}:${state.banks[7] ?? "?"}`;
 }
 
-// packages/plugin-65xx/src/nes/research.ts
+// ../plugin-65xx/src/nes/research.ts
 function nesResearchState(mapper) {
   const { banks, ...registers } = mapper;
   return { ...registers, ...Object.fromEntries(banks.map((value, index) => [`r${index}`, value])) };
@@ -61424,7 +61424,7 @@ function nesStoredMapper(state) {
   return nesResearchMapper({ state: fields2 });
 }
 
-// packages/plugin-65xx/src/nes/analysis.ts
+// ../plugin-65xx/src/nes/analysis.ts
 var initialNesAnalysisState = () => ({
   mapper: initialNesMapperState(),
   a: null,
@@ -61691,10 +61691,10 @@ function analyzeNes(rom, options = {}) {
   return analyzeStaticControlFlow(adapter, seeds, options);
 }
 
-// packages/plugin-65xx/src/nes/project.ts
+// ../plugin-65xx/src/nes/project.ts
 import fs28 from "node:fs";
 
-// packages/plugin-65xx/src/nes/cartridge.ts
+// ../plugin-65xx/src/nes/cartridge.ts
 var NesCartridge = class {
   #bytes;
   /** iNES mapper number derived from the header. */
@@ -61780,7 +61780,7 @@ var NesCartridge = class {
   }
 };
 
-// packages/plugin-65xx/src/nes/project.ts
+// ../plugin-65xx/src/nes/project.ts
 function loadNesRom(file) {
   const bytes3 = fs28.readFileSync(file);
   const cartridge = new NesCartridge(bytes3);
@@ -62105,7 +62105,7 @@ function analyzeNesProject(options) {
   };
 }
 
-// packages/plugin-65xx/src/nes/assets.ts
+// ../plugin-65xx/src/nes/assets.ts
 var NES_CHR_CODEC = "nes.chr.2bpp";
 var NES_TEXT_CODEC = "nes.text.tiles";
 var indexPalette = [
@@ -62233,7 +62233,7 @@ var nesAssetFormats = [
   }
 ];
 
-// packages/plugin-65xx/src/nes/hardware.ts
+// ../plugin-65xx/src/nes/hardware.ts
 var NES_HARDWARE_SYMBOLS = [
   {
     name: "PPUCTRL",
@@ -62392,7 +62392,7 @@ ${entry.name} = $${entry.address.toString(16).toUpperCase().padStart(4, "0")}`
   ).join("\n\n") + "\n";
 }
 
-// packages/plugin-65xx/src/nes/source-data.ts
+// ../plugin-65xx/src/nes/source-data.ts
 function nesSourceDataRanges(rom, annotations) {
   const ranges = [];
   for (const annotation of annotations) {
@@ -62429,7 +62429,7 @@ function nesSourceDefinition(name4, address3, description) {
   return [...lines.map((line) => `; ${line}`), `${name4} = ${nesSourceHex(address3)}`, ""];
 }
 
-// packages/plugin-65xx/src/nes/source-index.ts
+// ../plugin-65xx/src/nes/source-index.ts
 function append2(index, key3, value) {
   const entries3 = index.get(key3);
   if (entries3) {
@@ -62501,7 +62501,7 @@ function nesInstructionIntervals(nodes) {
   );
 }
 
-// packages/plugin-65xx/src/nes/source-export.ts
+// ../plugin-65xx/src/nes/source-export.ts
 function nesSourceSegments(rom, _nodes = []) {
   const segments = [];
   if (rom.trainer.size) {
@@ -62902,7 +62902,7 @@ ${layout2}
   return { files, segments, codeBytes, ranges };
 }
 
-// packages/plugin-65xx/src/nes/source-build.ts
+// ../plugin-65xx/src/nes/source-build.ts
 import path35 from "node:path";
 function inspectNesSource(options) {
   options.signal?.throwIfAborted();
@@ -63049,7 +63049,7 @@ function buildNesSource(options) {
   });
 }
 
-// packages/plugin-65xx/src/nes/source-generation.ts
+// ../plugin-65xx/src/nes/source-generation.ts
 import fs29 from "node:fs";
 import path36 from "node:path";
 function nesGenerationOptionsHash(options) {
@@ -63316,7 +63316,7 @@ async function prepareNesGeneration(options) {
   }
 }
 
-// packages/plugin-65xx/src/nes/ppu.ts
+// ../plugin-65xx/src/nes/ppu.ts
 init_src();
 import { createHash as createHash20 } from "node:crypto";
 import { createReadStream as createReadStream3 } from "node:fs";
@@ -63428,12 +63428,12 @@ async function summarizeNesPPUCapture(file, options) {
   };
 }
 
-// packages/plugin-65xx/src/nes/ppu-project.ts
+// ../plugin-65xx/src/nes/ppu-project.ts
 init_src();
 import { open as open4, mkdir, writeFile, readFile as readFile3, mkdtemp, link, rm } from "node:fs/promises";
 import path38 from "node:path";
 
-// packages/plugin-65xx/src/nes/ppu-evidence.ts
+// ../plugin-65xx/src/nes/ppu-evidence.ts
 import path37 from "node:path";
 function createNesGraphicsProjection() {
   const facts = /* @__PURE__ */ new Map();
@@ -63565,7 +63565,7 @@ function publishNesGraphicsEvidence(options) {
   }
 }
 
-// packages/plugin-65xx/src/nes/ppu-project.ts
+// ../plugin-65xx/src/nes/ppu-project.ts
 async function importNesPPUCapture(options) {
   const handle = await open4(options.file, "r");
   const magic = Buffer.alloc(4);
@@ -63628,7 +63628,7 @@ async function importNesPPUCapture(options) {
   };
 }
 
-// packages/plugin-65xx/src/nes/source-initialize.ts
+// ../plugin-65xx/src/nes/source-initialize.ts
 import { randomUUID as randomUUID9 } from "node:crypto";
 import fs30 from "node:fs";
 import path39 from "node:path";
@@ -63916,7 +63916,7 @@ Prepare and preview regeneration while editing. Commit a checkpoint before apply
   }
 }
 
-// packages/plugin-65xx/src/nes/source-target.ts
+// ../plugin-65xx/src/nes/source-target.ts
 import fs31 from "node:fs";
 import path40 from "node:path";
 function assertSourceLayout(value, romSha256) {
@@ -64141,7 +64141,7 @@ var nesSourceTarget = {
   companionArchive: "graphics.act2"
 };
 
-// packages/plugin-snes/src/architectures/65816-spec.ts
+// ../plugin-snes/src/architectures/65816-spec.ts
 var mode = (id2, syntax2, minimumSize, maximumSize = minimumSize, widthFlag) => ({
   id: id2,
   syntax: syntax2,
@@ -64446,7 +64446,7 @@ function buildCpu65816Catalog() {
   );
 }
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
+// ../plugin-snes/src/architectures/65816-decoder.ts
 var flagValue = (value) => {
   if (value === true || value === 1) {
     return 1;
@@ -64841,7 +64841,7 @@ function formatCpu65816Instruction(instruction) {
   return text4 ? `${instruction.mnemonic} ${text4}` : instruction.mnemonic;
 }
 
-// packages/plugin-snes/src/target/address-space.ts
+// ../plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace = {
   name: "snes-rom",
   addressWidth: 24,
@@ -65023,7 +65023,7 @@ var snesRomAddressSpace = {
   }
 };
 
-// packages/plugin-snes/src/disassembler/65816-state.ts
+// ../plugin-snes/src/disassembler/65816-state.ts
 var unknown = () => ({ kind: "unknown" });
 var known = (value) => ({ kind: "known", value });
 var joinValue = (left, right) => {
@@ -65298,7 +65298,7 @@ var transferCpu65816State = (instruction, input2) => {
 };
 var cpu65816StateKey = (state) => JSON.stringify(state);
 
-// packages/plugin-snes/src/disassembler/address-identities.ts
+// ../plugin-snes/src/disassembler/address-identities.ts
 var SNES_FILE_ADDRESS_SPACE = "rom.file";
 var SNES_CPU_ADDRESS_SPACE = "snes.cpu";
 var SNES_WRAM_ADDRESS_SPACE = "snes.wram";
@@ -65363,7 +65363,7 @@ var identifySnesCpuAddress = (address3, context, romSize) => {
   };
 };
 
-// packages/plugin-snes/src/disassembler/analysis-record-values.ts
+// ../plugin-snes/src/disassembler/analysis-record-values.ts
 function isOwnKey(value, key3) {
   return Object.hasOwn(value, key3);
 }
@@ -65444,7 +65444,7 @@ function incompleteReasonRecords(reasons) {
   return reasons.map(incompleteReasonRecord);
 }
 
-// packages/plugin-snes/src/disassembler/hardware-registers.ts
+// ../plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS = [
   {
     symbol: "INIDISP",
@@ -65919,7 +65919,7 @@ var renderSnesHardwareDefines = () => {
 `;
 };
 
-// packages/plugin-snes/src/disassembler/rom-header.ts
+// ../plugin-snes/src/disassembler/rom-header.ts
 var SNES_MAPPERS = [
   "lorom",
   "hirom",
@@ -66318,7 +66318,7 @@ var detectSnesRom = (rom, options = {}) => {
   };
 };
 
-// packages/plugin-snes/src/disassembler/65816-analysis.ts
+// ../plugin-snes/src/disassembler/65816-analysis.ts
 var DATA_CLASSIFICATIONS = /* @__PURE__ */ new Set([
   "data8",
   "data16",
@@ -66901,7 +66901,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
   };
 };
 
-// packages/plugin-snes/src/disassembler/dizraw-import.ts
+// ../plugin-snes/src/disassembler/dizraw-import.ts
 import { createHash as createHash21 } from "node:crypto";
 var SUBSTITUTIONS = [
   ["0001E", "ZQ"],
@@ -67309,11 +67309,11 @@ var importDizRaw = (xml, options = {}) => {
   };
 };
 
-// packages/plugin-snes/src/disassembler/source-export.ts
+// ../plugin-snes/src/disassembler/source-export.ts
 import * as fs34 from "node:fs";
 import path43 from "node:path";
 
-// packages/plugin-snes/src/disassembler/asset-requirements.ts
+// ../plugin-snes/src/disassembler/asset-requirements.ts
 function parseSnesAssetRequirements(value) {
   if (value === void 0) {
     return [];
@@ -67386,7 +67386,7 @@ function verifySnesAssetRequirements(requirements, entries3, catalog) {
   }
 }
 
-// packages/plugin-snes/src/disassembler/ram-map.ts
+// ../plugin-snes/src/disassembler/ram-map.ts
 import * as fs32 from "node:fs";
 import path41 from "node:path";
 var SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
@@ -67732,7 +67732,7 @@ var renderSnesRamMapSchema = () => canonicalJson({
   }
 });
 
-// packages/plugin-snes/src/disassembler/source-layout.ts
+// ../plugin-snes/src/disassembler/source-layout.ts
 var formatStructDeclaration = (prefix, fields2, width) => {
   const indent = prefix.match(/^\s*/)?.[0] ?? "";
   const fieldIndent = `${indent}  `;
@@ -67844,7 +67844,7 @@ var wrapAssemblyComments = (source2, width) => mapAssemblyCommentProse(source2, 
   return wrapped;
 });
 
-// packages/plugin-snes/src/disassembler/struct-expressions.ts
+// ../plugin-snes/src/disassembler/struct-expressions.ts
 var checked = (value, expression2) => {
   if (!Number.isSafeInteger(value)) {
     throw new Error("Struct expression must evaluate to exact safe integers.");
@@ -68130,7 +68130,7 @@ function describeSnesStructAccess(binding, address3, width) {
   return parts2;
 }
 
-// packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
+// ../plugin-snes/src/disassembler/struct-instruction-uses.ts
 var isRecord39 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var record6 = (value) => {
   if (!isRecord39(value)) {
@@ -68369,7 +68369,7 @@ var renderSnesStructUseComments = (use) => {
   return comment2 ? [comment2] : [];
 };
 
-// packages/plugin-snes/src/disassembler/struct-map.ts
+// ../plugin-snes/src/disassembler/struct-map.ts
 import * as fs33 from "node:fs";
 import path42 from "node:path";
 var SNES_STRUCT_MAP_SOURCE = "struct-map.json";
@@ -68764,7 +68764,7 @@ var renderSnesStructData = (field, start, bytes3) => {
   ];
 };
 
-// packages/plugin-snes/src/disassembler/typed-data.ts
+// ../plugin-snes/src/disassembler/typed-data.ts
 var WIDTHS = {
   data8: 1,
   data16: 2,
@@ -68843,7 +68843,7 @@ function renderSnesTypedData(bytes3, start, declaration) {
   return lines;
 }
 
-// packages/plugin-snes/src/disassembler/source-export.ts
+// ../plugin-snes/src/disassembler/source-export.ts
 function isSourceFlowMode(value) {
   return value === "absolute" || value === "absoluteLong" || value === "relative" || value === "relativeLong";
 }
@@ -70434,10 +70434,10 @@ var exportSnes65816Source = (project, rom, directory, options) => emitSnes65816S
   planSnes65816Source(project, rom, directory, options)
 );
 
-// packages/plugin-snes/src/disassembler/source-build.ts
+// ../plugin-snes/src/disassembler/source-build.ts
 import path44 from "node:path";
 
-// packages/plugin-snes/src/disassembler/rom-layout/relocate.ts
+// ../plugin-snes/src/disassembler/rom-layout/relocate.ts
 var RELOCATION_ENCODINGS = [
   "long24",
   "bank16",
@@ -70728,7 +70728,7 @@ function planSnesRelocation(options) {
   return { object: object7, destination, encodedLength: options.encodedLength, repairs };
 }
 
-// packages/plugin-snes/src/disassembler/rom-layout/check.ts
+// ../plugin-snes/src/disassembler/rom-layout/check.ts
 function checkSnesPlacements(output, symbols, contract2) {
   const diagnostics = [];
   try {
@@ -70908,7 +70908,7 @@ function checkSnesSourceLayout(options) {
   return diagnostics;
 }
 
-// packages/plugin-snes/src/disassembler/rom-layout/code-flow.ts
+// ../plugin-snes/src/disassembler/rom-layout/code-flow.ts
 var sameState = (a, b) => a.e === b.e && a.m === b.m && a.x === b.x;
 function knownState(state) {
   return !!state && [state.e, state.m, state.x].every((flag) => typeof flag === "boolean") && !(state.e && (!state.m || !state.x));
@@ -71138,7 +71138,7 @@ function checkSnesCodeFlow(output, mapping, contract2, declared = []) {
   return { diagnostics, states };
 }
 
-// packages/plugin-snes/src/disassembler/rom-layout/expansion.ts
+// ../plugin-snes/src/disassembler/rom-layout/expansion.ts
 var expansionHeaderOffset = (policy) => policy.mapper === "lorom" ? 32704 : 65472;
 var powerOfTwo = (value) => Number.isSafeInteger(value) && value > 0 && Number.isInteger(Math.log2(value));
 function assertSnesRomExpansion(original, size, policy) {
@@ -71213,7 +71213,7 @@ function checkSnesRomExpansion(output, original, size, policy, objects = []) {
   return diagnostics;
 }
 
-// packages/plugin-snes/src/disassembler/source-build.ts
+// ../plugin-snes/src/disassembler/source-build.ts
 function inspectSnesSourceModule(options) {
   options.signal?.throwIfAborted();
   const root = path44.resolve(options.root);
@@ -71503,7 +71503,7 @@ function buildSnesSource(options) {
   });
 }
 
-// packages/plugin-snes/src/disassembler/source-generation.ts
+// ../plugin-snes/src/disassembler/source-generation.ts
 import fs35 from "node:fs";
 import path45 from "node:path";
 function snesGenerationOptionsHash(options) {
@@ -71803,7 +71803,7 @@ async function prepareSnesGeneration(options) {
   }
 }
 
-// packages/plugin-snes/src/disassembler/rom-layout/source-relocation.ts
+// ../plugin-snes/src/disassembler/rom-layout/source-relocation.ts
 import fs36 from "node:fs";
 import path46 from "node:path";
 var hex11 = (value) => `$${value.toString(16).toUpperCase()}`;
@@ -72238,7 +72238,7 @@ function prepareSnesSourceRelocation(options) {
   };
 }
 
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+// ../plugin-snes/src/disassembler/spc700-address-space.ts
 var SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
 var SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
   id: SPC700_ARAM_ADDRESS_SPACE,
@@ -72247,7 +72247,7 @@ var SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
   kind: "memory"
 });
 
-// packages/plugin-snes/src/architectures/spc700-spec.ts
+// ../plugin-snes/src/architectures/spc700-spec.ts
 var mode2 = (id2, syntax2, size) => ({
   id: id2,
   syntax: syntax2,
@@ -72523,7 +72523,7 @@ function buildSpc700Catalog() {
   );
 }
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
+// ../plugin-snes/src/architectures/spc700-decoder.ts
 var readLittleEndian2 = (bytes3, offset, width) => {
   let value = 0;
   for (let index = 0; index < width; index++) {
@@ -72802,7 +72802,7 @@ var Spc700Decoder = class {
   }
 };
 
-// packages/plugin-snes/src/architectures/superfx-spec.ts
+// ../plugin-snes/src/architectures/superfx-spec.ts
 function isSuperFxAltState(value) {
   return value === 0 || value === 1 || value === 2 || value === 3;
 }
@@ -73385,7 +73385,7 @@ function buildSuperFxCatalog() {
   );
 }
 
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
+// ../plugin-snes/src/architectures/superfx-decoder.ts
 var word = (bytes3, offset) => (bytes3[offset] ?? 0) | (bytes3[offset + 1] ?? 0) << 8;
 var register3 = (value) => ({ kind: "register", register: `R${value}` });
 var immediate2 = (value, width, signed2 = false) => ({
@@ -73686,11 +73686,11 @@ var SuperFxDecoder = class {
   }
 };
 
-// packages/plugin-snes/src/disassembler/project-initializer.ts
+// ../plugin-snes/src/disassembler/project-initializer.ts
 import * as fs37 from "node:fs";
 import path47 from "node:path";
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
+// ../plugin-snes/src/disassembler/runtime-code.ts
 import { createHash as createHash22 } from "node:crypto";
 var runtimeDecodeState = (sample) => {
   const value = (key3, max) => {
@@ -73952,7 +73952,7 @@ var analyzeSnesRuntimeCode = (shards, rom, mapper, runtime = shards.runtime, onP
   return records.toSorted((a, b) => a.id.localeCompare(b.id));
 };
 
-// packages/plugin-snes/src/disassembler/superfx-address-space.ts
+// ../plugin-snes/src/disassembler/superfx-address-space.ts
 var SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
 var SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
   id: SUPERFX_ROM_ADDRESS_SPACE,
@@ -73961,7 +73961,7 @@ var SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
   kind: "memory"
 });
 
-// packages/plugin-snes/src/disassembler/project-initializer.ts
+// ../plugin-snes/src/disassembler/project-initializer.ts
 var TARGET_ID = "snes.sfc";
 var ARCHITECTURE_ID = "snes.65816";
 var count = (value) => value.toLocaleString("en-US");
@@ -74505,7 +74505,7 @@ var analyzeSnesProject = (options) => {
   };
 };
 
-// packages/plugin-snes/src/disassembler/rom-layout/source-expansion.ts
+// ../plugin-snes/src/disassembler/rom-layout/source-expansion.ts
 import path48 from "node:path";
 var hex12 = (value) => `$${value.toString(16).toUpperCase()}`;
 function prepareSnesSourceExpansion(options) {
@@ -74628,7 +74628,7 @@ function prepareSnesSourceExpansion(options) {
   return { size, expansion, freeSpace, edits, outputSha256: sourceContentHash(final.output) };
 }
 
-// packages/plugin-snes/src/disassembler/source-initialize.ts
+// ../plugin-snes/src/disassembler/source-initialize.ts
 import { randomUUID as randomUUID10 } from "node:crypto";
 import fs38 from "node:fs";
 import path49 from "node:path";
@@ -74971,11 +74971,11 @@ function checkedMapper(value) {
   return mapper;
 }
 
-// packages/plugin-snes/src/disassembler/source-target.ts
+// ../plugin-snes/src/disassembler/source-target.ts
 import fs39 from "node:fs";
 import path50 from "node:path";
 
-// packages/plugin-snes/src/asar/compatibility.ts
+// ../plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "fastrom",
   "dpbase",
@@ -75048,12 +75048,12 @@ var shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
 var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
 var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
 
-// packages/plugin-snes/src/tooling/instruction-catalog.ts
+// ../plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog = buildCpu65816Catalog();
 var spc700Catalog = buildSpc700Catalog();
 var superFxCatalog = buildSuperFxCatalog();
 
-// packages/plugin-snes/src/architectures/operand-plans.ts
+// ../plugin-snes/src/architectures/operand-plans.ts
 function operandParts2(text4) {
   const result = [];
   let depth = 0;
@@ -75224,7 +75224,7 @@ function freeze(value) {
   }
 }
 
-// packages/plugin-snes/src/architectures/65816-syntax.ts
+// ../plugin-snes/src/architectures/65816-syntax.ts
 function parse65816Operands(mnemonic, text4) {
   const grammar2 = {
     registers: ["a", "x", "y", "s"],
@@ -75299,7 +75299,7 @@ function hasPolicy(value) {
   return "cpu65816" in value && typeof value.cpu65816 === "object" && value.cpu65816 !== null && "kind" in value.cpu65816 && value.cpu65816.kind === "cpu65816-v2";
 }
 
-// packages/plugin-snes/src/architectures/operand-values.ts
+// ../plugin-snes/src/architectures/operand-values.ts
 function valueWidth(value) {
   if (!Number.isFinite(value)) {
     return 4;
@@ -75419,7 +75419,7 @@ function preparedParts(frame) {
   return state.parts;
 }
 
-// packages/plugin-snes/src/architectures/65816-resolution.ts
+// ../plugin-snes/src/architectures/65816-resolution.ts
 function classify65816(syntax2, frame) {
   const p = syntax2.cpu65816, expanded = expandOperandPlan(p.whole, frame);
   let length = expanded.length;
@@ -75568,7 +75568,7 @@ function prepared65816(frame, scalar3) {
   };
 }
 
-// packages/plugin-snes/src/architectures/typed-65816.ts
+// ../plugin-snes/src/architectures/typed-65816.ts
 var encodings = /* @__PURE__ */ new Map();
 for (const spec of cpu65816Specifications) {
   const modes = encodings.get(spec.mnemonic) ?? /* @__PURE__ */ new Map();
@@ -76367,7 +76367,7 @@ function decimalHexPrefix(value) {
   return count2 ? result : NaN;
 }
 
-// packages/plugin-snes/src/architectures/65816.ts
+// ../plugin-snes/src/architectures/65816.ts
 var Arch65816 = class {
   constructor(context, optimizeDirectPage = () => false) {
     this.context = context;
@@ -76457,7 +76457,7 @@ var Arch65816 = class {
   }
 };
 
-// packages/plugin-snes/src/services/spc-runtime.ts
+// ../plugin-snes/src/services/spc-runtime.ts
 function parseSpcBlock(words) {
   if (words.length < 2) {
     throw new Error("spcblock requires at least a destination address.");
@@ -76598,7 +76598,7 @@ var SnesSpcRuntimeService = class {
   }
 };
 
-// packages/plugin-snes/src/directives/cpu-name.ts
+// ../plugin-snes/src/directives/cpu-name.ts
 function resolveSnesCpuName(name4) {
   switch (name4.toLowerCase()) {
     case "65816":
@@ -76614,7 +76614,7 @@ function resolveSnesCpuName(name4) {
   }
 }
 
-// packages/plugin-snes/src/directives/syntax-parser.ts
+// ../plugin-snes/src/directives/syntax-parser.ts
 var op = (name4) => syntaxLiteral(name4);
 var snesDirectiveSchema = syntaxUnion(
   syntaxRecord({
@@ -76759,7 +76759,7 @@ function parseSnesDirective(id2, { words }) {
   }
 }
 
-// packages/plugin-snes/src/directives/ca65-compat.ts
+// ../plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -76782,7 +76782,7 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 
-// packages/plugin-snes/src/session-state.ts
+// ../plugin-snes/src/session-state.ts
 var SNES_SESSION_STATE_ID = "snes.session-state";
 function isSessionStateKey(value) {
   return value.id.length > 0;
@@ -76804,10 +76804,10 @@ function cloneSnesSessionState(value) {
   };
 }
 
-// packages/plugin-snes/src/directives/spc.ts
+// ../plugin-snes/src/directives/spc.ts
 var createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
 
-// packages/plugin-snes/src/target/link-target.ts
+// ../plugin-snes/src/target/link-target.ts
 function createSnesSourceLinkRecipe(context, sections) {
   const state = context.state.get(snesSessionStateKey);
   const mapping = { mapper: state.mapper, sa1banks: state.sa1Banks };
@@ -76927,7 +76927,7 @@ function createSnesLinkTarget() {
   };
 }
 
-// packages/plugin-snes/src/disassembler/source-target.ts
+// ../plugin-snes/src/disassembler/source-target.ts
 function assertSourceLayout2(value, romSha256) {
   if (typeof value !== "object" || value === null || !("format" in value) || value.format !== "uttori-snes-layout" || !("version" in value) || value.version !== 1 || !("romSha256" in value) || value.romSha256 !== romSha256 || !("size" in value) || typeof value.size !== "number" || !Number.isSafeInteger(value.size) || value.size <= 0 || !("states" in value) || !isUnknownArray10(value.states) || !("extents" in value) || !isUnknownArray10(value.extents)) {
     throw new Error("Invalid SNES source layout contract.");
@@ -77245,16 +77245,16 @@ var snesSourceTarget = {
   relocate: relocateSnesProject
 };
 
-// packages/workflows/src/source-builtins.ts
+// ../workflows/src/source-builtins.ts
 var builtinSourceTargets = [
   snesSourceTarget,
   nesSourceTarget
 ];
 
-// packages/workflows/src/source-host.ts
+// ../workflows/src/source-host.ts
 import path51 from "node:path";
 
-// packages/plugin-65xx/src/ca65-profile.ts
+// ../plugin-65xx/src/ca65-profile.ts
 var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
 function isSessionStateKey2(value) {
   return value.id.length > 0;
@@ -77446,7 +77446,7 @@ var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
   macroParameterPrefix: "\\"
 });
 
-// packages/plugin-65xx/src/session-state.ts
+// ../plugin-65xx/src/session-state.ts
 var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
 function isSessionStateKey3(value) {
   return value.id.length > 0;
@@ -77477,7 +77477,7 @@ function resetNes65xxStageState(state) {
   state.segmentRunStart = 0;
 }
 
-// packages/plugin-65xx/src/directives/ca65.ts
+// ../plugin-65xx/src/directives/ca65.ts
 function parameterList(words) {
   const joined = words.slice(1).join(" ");
   const parts2 = [];
@@ -77635,7 +77635,7 @@ function handlePopseg(state) {
   state.currentFlatSegment = segment;
 }
 
-// packages/plugin-65xx/src/linker-config.ts
+// ../plugin-65xx/src/linker-config.ts
 function ld65LinkRecipe(config, target = "65xx.nes") {
   const symbols = [];
   for (const segment of config.segments.values()) {
@@ -77890,7 +77890,7 @@ function parseYesNo(raw) {
   return void 0;
 }
 
-// packages/plugin-65xx/src/target/nes.ts
+// ../plugin-65xx/src/target/nes.ts
 var NES_65XX_TARGET_ID = "65xx.nes";
 var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
@@ -78070,7 +78070,7 @@ function normalizeHeader(configured, imageSize) {
   return header;
 }
 
-// packages/plugin-65xx/src/directives/ca65-syntax.ts
+// ../plugin-65xx/src/directives/ca65-syntax.ts
 var operation = (name4) => syntaxLiteral(name4);
 var schema = syntaxUnion(
   syntaxRecord({ operation: operation("segment"), name: syntaxString }),
@@ -78391,7 +78391,7 @@ function ca65DirectiveSyntax(id2) {
   };
 }
 
-// packages/plugin-65xx/src/instructions/catalog.ts
+// ../plugin-65xx/src/instructions/catalog.ts
 var syntax = {
   implied: "",
   accumulator: "A",
@@ -78475,7 +78475,7 @@ function buildInstructionCatalog(forms) {
   }));
 }
 
-// packages/plugin-65xx/src/operands/syntax.ts
+// ../plugin-65xx/src/operands/syntax.ts
 var grammar = {
   registers: ["a", "q"],
   indexRegisters: ["x", "y", "z", "s"],
@@ -78683,7 +78683,7 @@ function has65xxPolicy(syntax2) {
   return "policy65xx" in syntax2 && typeof syntax2.policy65xx === "object" && syntax2.policy65xx !== null && "kind" in syntax2.policy65xx && syntax2.policy65xx.kind === "65xx-v1";
 }
 
-// packages/plugin-65xx/src/target/link-target.ts
+// ../plugin-65xx/src/target/link-target.ts
 function createNesSourceLinkRecipe(context, sections) {
   if (context.options.sourceStyle !== "asar") {
     throw new Error("The NES Asar adapter requires sourceStyle: asar in target configuration.");
@@ -78732,7 +78732,7 @@ function createNesLinkTarget() {
   };
 }
 
-// packages/plugin-65xx/src/operands/resolution.ts
+// ../plugin-65xx/src/operands/resolution.ts
 function valueWidth2(value) {
   if (!Number.isFinite(value)) {
     return 4;
@@ -78929,7 +78929,7 @@ function selectedScalar(syntax2) {
   return selected ?? syntax2.policy65xx.whole.scalar;
 }
 
-// packages/plugin-65xx/src/typed-architecture.ts
+// ../plugin-65xx/src/typed-architecture.ts
 var directToAbsolute = {
   zeroPage: "absolute",
   zeroPageIndexedX: "absoluteIndexedX",
@@ -79475,7 +79475,7 @@ var TypedArch65xx = class {
   }
 };
 
-// packages/plugin-65xx/src/index.ts
+// ../plugin-65xx/src/index.ts
 var RAW_65XX_TARGET_ID = "65xx.raw";
 var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
@@ -79886,7 +79886,7 @@ var plugin = definePlugin({
 });
 var src_default = plugin;
 
-// packages/plugin-snes/src/architectures/spc700-syntax.ts
+// ../plugin-snes/src/architectures/spc700-syntax.ts
 function parseSpcOperands(mnemonic, text4) {
   const grammar2 = {
     registers: ["a", "x", "y", "ya", "sp", "p", "psw", "c"],
@@ -79976,7 +79976,7 @@ function hasPolicy2(value) {
   return "spc700" in value && typeof value.spc700 === "object" && value.spc700 !== null && "kind" in value.spc700 && value.spc700.kind === "spc700-v2";
 }
 
-// packages/plugin-snes/src/architectures/superfx-syntax.ts
+// ../plugin-snes/src/architectures/superfx-syntax.ts
 function register4(text4) {
   const match = /^r(\d{1,2})$/i.exec(text4);
   if (!match) {
@@ -80031,7 +80031,7 @@ function hasPolicy3(value) {
   return "superfx" in value && typeof value.superfx === "object" && value.superfx !== null && "kind" in value.superfx && value.superfx.kind === "superfx-v2";
 }
 
-// packages/plugin-snes/src/architectures/typed-spc700.ts
+// ../plugin-snes/src/architectures/typed-spc700.ts
 var moduleRegister = (name4) => name4 === "psw" ? "p" : name4;
 var encodings2 = /* @__PURE__ */ new Map();
 for (const spec of spc700Specifications) {
@@ -80805,7 +80805,7 @@ function moduleOperandsMatch(expected, actual) {
   return true;
 }
 
-// packages/plugin-snes/src/architectures/superfx-encodings.ts
+// ../plugin-snes/src/architectures/superfx-encodings.ts
 var hasOwn = (obj, key3) => Object.hasOwn(obj, key3);
 var ALT1 = 61;
 var ALT2 = 62;
@@ -80898,7 +80898,7 @@ var INDIRECT_OPS = {
   LDB: { prefix: ALT1, base: 64, min: 0, max: 11 }
 };
 
-// packages/plugin-snes/src/architectures/typed-superfx.ts
+// ../plugin-snes/src/architectures/typed-superfx.ts
 var shortRam = (value) => (value & 1) === 0 && value < 512;
 var signedByte2 = (value) => (value & 65535) < 128 || (value & 65535) >= 65408;
 var TypedSuperFx = class {
@@ -81290,7 +81290,7 @@ var TypedSuperFx = class {
   }
 };
 
-// packages/assets/src/data.ts
+// ../assets/src/data.ts
 var rawImporter = Object.freeze({
   id: "uttori.import.raw",
   version: "1.0.0",
@@ -81334,7 +81334,7 @@ var jsonImporter = Object.freeze({
   }
 });
 
-// packages/plugin-snes/src/assets/assembly-formats.ts
+// ../plugin-snes/src/assets/assembly-formats.ts
 var registry4 = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(asepriteRasterImporter).registerImporter(waveImporter);
 var encoders = [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder];
 for (const encoder of encoders) {
@@ -81396,7 +81396,7 @@ var snesAssetFormats = encoders.map((encoder) => ({
   }
 }));
 
-// packages/plugin-snes/src/directives/layout.ts
+// ../plugin-snes/src/directives/layout.ts
 var MAPPER_KEYWORDS = [
   "lorom",
   "hirom",
@@ -81481,7 +81481,7 @@ function applyCheckPayload(state, payload) {
   }
 }
 
-// packages/plugin-snes/src/directives/freespace.ts
+// ../plugin-snes/src/directives/freespace.ts
 function allocateFreespace(session, state, keyword) {
   if (state.inSpcBlock) {
     throw new Error(`${keyword} is unavailable inside spcblock.`);
@@ -81529,7 +81529,7 @@ function emitProtectionRecord(session, labels) {
   }
 }
 
-// packages/plugin-snes/src/directives/syntax.ts
+// ../plugin-snes/src/directives/syntax.ts
 function execute2(node, { session, state }) {
   const active = state.get(snesSessionStateKey);
   switch (node.operation) {
@@ -81583,7 +81583,7 @@ function snesDirectiveSyntax(id2) {
   };
 }
 
-// packages/plugin-snes/src/tooling/directive-catalog.ts
+// ../plugin-snes/src/tooling/directive-catalog.ts
 var op2 = (keyword, summary, syntax2, operands) => ({
   keyword,
   summary,
@@ -82202,7 +82202,7 @@ var directiveByKeyword = new Map(
   directiveCatalog2.map((descriptor3) => [descriptor3.keyword.toLowerCase(), descriptor3])
 );
 
-// packages/plugin-snes/src/assembler.ts
+// ../plugin-snes/src/assembler.ts
 var SNES_TARGET_ID = "snes.sfc";
 var toolingFor = (keywords) => {
   const wanted = new Set(keywords);
@@ -82596,7 +82596,7 @@ var plugin2 = definePlugin({
 });
 var assembler_default = plugin2;
 
-// packages/workflows/src/source-host.ts
+// ../workflows/src/source-host.ts
 function createSourceWorkflowHost(plugins = [], targets) {
   const bundledPlugins = new Map([
     ["@uttori/asm-plugin-snes", assembler_default],
@@ -82617,12 +82617,12 @@ function sourceToolchain(plugins) {
   return fingerprintNodeToolchain([import.meta.url, ...plugins]);
 }
 
-// packages/workflows/src/source.ts
+// ../workflows/src/source.ts
 import { randomUUID as randomUUID11 } from "node:crypto";
 import fs41 from "node:fs";
 import path54 from "node:path";
 
-// packages/workflows/src/source-capture-imports.ts
+// ../workflows/src/source-capture-imports.ts
 import path52 from "node:path";
 function summarize(capture, result) {
   if (typeof result !== "object" || result === null || !("sourceSha256" in result) || typeof result.sourceSha256 !== "string" || !("changed" in result) || typeof result.changed !== "boolean" || !("added" in result) || typeof result.added !== "object" || result.added === null || !("runtime" in result.added) || typeof result.added.runtime !== "number" || !("evidence" in result.added) || typeof result.added.evidence !== "number" || !("warnings" in result) || !Array.isArray(result.warnings) || result.warnings.some((warning) => typeof warning !== "string")) {
@@ -82675,7 +82675,7 @@ async function importSourceCaptures(captures, run, options = {}) {
   return { imports };
 }
 
-// packages/workflows/src/source-progress.ts
+// ../workflows/src/source-progress.ts
 function createSourceMergeProgress(report2, now = () => performance.now()) {
   let started2;
   let lastReported;
@@ -82702,7 +82702,7 @@ function createSourceMergeProgress(report2, now = () => performance.now()) {
   };
 }
 
-// packages/workflows/src/source-research.ts
+// ../workflows/src/source-research.ts
 import fs40 from "node:fs";
 import path53 from "node:path";
 function isRecord45(value) {
@@ -82859,7 +82859,7 @@ function prepareSourceResearch(project, request = {}, buffers = []) {
   };
 }
 
-// packages/workflows/src/source.ts
+// ../workflows/src/source.ts
 function readJson3(file) {
   if (fs41.statSync(file).size > 8 * 1024 * 1024) {
     throw new Error(`Project contract is too large: ${file}`);
@@ -83570,7 +83570,7 @@ async function executeSourceOperation(operation2, host = defaultSourceHost) {
   });
 }
 
-// packages/workflows/src/asset-interchange/public-records.ts
+// ../workflows/src/asset-interchange/public-records.ts
 function isObject3(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -83691,7 +83691,7 @@ function immutableReview(value) {
   });
 }
 
-// packages/workflows/src/asset-interchange/service.ts
+// ../workflows/src/asset-interchange/service.ts
 var asepriteStructureCodec = Object.freeze({
   id: "aseprite.indexed-structure",
   version: 2,
@@ -84286,10 +84286,10 @@ var AssetInterchangeService = class {
   }
 };
 
-// packages/workflows/src/asset-interchange/operations.ts
+// ../workflows/src/asset-interchange/operations.ts
 import path57 from "node:path";
 
-// packages/workflows/src/asset-interchange/maintenance.ts
+// ../workflows/src/asset-interchange/maintenance.ts
 import path56 from "node:path";
 function retirementIds(value, read) {
   if (!Array.isArray(value) || value.length > 65536) {
@@ -84421,7 +84421,7 @@ async function recoverAssetInterchange(directory, direction, host = {}, signal) 
   return result;
 }
 
-// packages/assets/src/atlas-png.ts
+// ../assets/src/atlas-png.ts
 function indexedPngAtlasCodec(transparentIndex) {
   return {
     id: "indexed-png",
@@ -84444,7 +84444,7 @@ function indexedPngAtlasCodec(transparentIndex) {
   };
 }
 
-// packages/workflows/src/asset-interchange/raster-codecs.ts
+// ../workflows/src/asset-interchange/raster-codecs.ts
 var capabilities2 = Object.freeze({
   pixelEdits: true,
   paletteEdits: true,
@@ -84495,7 +84495,7 @@ var indexedPngStructureCodec = Object.freeze({
   }
 });
 
-// packages/workflows/src/asset-interchange/operation-records.ts
+// ../workflows/src/asset-interchange/operation-records.ts
 function readAssetOperation(value) {
   const input2 = object3(value), directory = text2(input2.directory);
   let drafts;
@@ -84559,7 +84559,7 @@ function readAssetOperation(value) {
   throw new Error("Unsupported asset operation.");
 }
 
-// packages/workflows/src/asset-interchange/operations.ts
+// ../workflows/src/asset-interchange/operations.ts
 function registerAssetAdapter(adapter) {
   return {
     id: adapter.id,
@@ -84651,7 +84651,7 @@ async function executeAssetFileOperation(operation2, options = {}) {
   );
 }
 
-// packages/game-secret-of-mana/src/source-host.ts
+// ../game-secret-of-mana/src/source-host.ts
 var somSourceHost = createSourceWorkflowHost([
   ["@uttori/asm-game-secret-of-mana", assembly_default]
 ]);
@@ -84661,15 +84661,15 @@ var somAssetSourceHost = {
   inspect: (directory, overlays, signal) => inspectSourceProject(directory, overlays, signal, somSourceHost)
 };
 
-// packages/workflows/src/asset-source/operations.ts
+// ../workflows/src/asset-source/operations.ts
 import fs45 from "node:fs";
 import path61 from "node:path";
 
-// packages/workflows/src/asset-source-conversion.ts
+// ../workflows/src/asset-source-conversion.ts
 import fs44 from "node:fs";
 import path59 from "node:path";
 
-// packages/workflows/src/asset-source-edits.ts
+// ../workflows/src/asset-source-edits.ts
 function maskComments(text4) {
   let quote = "", comment2 = false, result = "";
   for (let index = 0; index < text4.length; index++) {
@@ -84760,7 +84760,7 @@ function editAssetCall(text4, location2, options) {
   return text4;
 }
 
-// packages/workflows/src/asset-source-inventory.ts
+// ../workflows/src/asset-source-inventory.ts
 import fs43 from "node:fs";
 import path58 from "node:path";
 function assetSourceAssemblyInventory(root) {
@@ -84794,7 +84794,7 @@ function assetSourceAssemblyInventory(root) {
   return files.toSorted();
 }
 
-// packages/workflows/src/asset-source-conversion.ts
+// ../workflows/src/asset-source-conversion.ts
 function assertBuild(build) {
   if (build.diagnostics.length) {
     throw new Error(build.diagnostics.map((item) => item.message).join("\n"));
@@ -85030,7 +85030,7 @@ var AssetSourceConversionService = class {
   }
 };
 
-// packages/workflows/src/asset-source/raster-adapter.ts
+// ../workflows/src/asset-source/raster-adapter.ts
 import path60 from "node:path";
 var rasterSourceConversionAdapter = {
   id: "indexed.raster",
@@ -85068,7 +85068,7 @@ var rasterSourceConversionAdapter = {
   }
 };
 
-// packages/workflows/src/asset-source/operations.ts
+// ../workflows/src/asset-source/operations.ts
 function createAssetSourceConversionService(host = savedAssetSourceHost, adapters = []) {
   return new AssetSourceConversionService([...adapters, rasterSourceConversionAdapter], host);
 }
@@ -85274,12 +85274,12 @@ async function executeAssetSourceOperation(value, options = {}) {
   };
 }
 
-// packages/game-secret-of-mana/src/room-adapter.ts
+// ../game-secret-of-mana/src/room-adapter.ts
 import { createHash as createHash23 } from "node:crypto";
 import path62 from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
-// packages/assets/src/secret-of-mana/som-room-interchange.ts
+// ../assets/src/secret-of-mana/som-room-interchange.ts
 function createSomRoomInterchange(composition, inventory2, physical2, editablePaletteSlots, exportId) {
   rasterArea(
     composition.width,
@@ -85438,7 +85438,7 @@ function createSomRoomInterchange(composition, inventory2, physical2, editablePa
   return baseline;
 }
 
-// packages/assets/src/secret-of-mana/som-map-piece.ts
+// ../assets/src/secret-of-mana/som-map-piece.ts
 import assert from "node:assert/strict";
 function decodeMapPiece(bytes3, { history, origin = 0 } = {}) {
   assert(bytes3.length >= 3, "Missing map header/data.");
@@ -85617,7 +85617,7 @@ function decodeMapStream(bytes3, width, height, motifs, memory, origin) {
   return result;
 }
 
-// packages/assets/src/secret-of-mana/som-room-native.ts
+// ../assets/src/secret-of-mana/som-room-native.ts
 function decodeSomRoomMetatiles(bytes3) {
   if (!bytes3.length || bytes3.length > 3840) {
     throw new Error("Invalid metatile stream extent.");
@@ -85851,7 +85851,7 @@ function loadSomRoomNative(room, reader) {
   };
 }
 
-// packages/game-secret-of-mana/src/room-adapter.ts
+// ../game-secret-of-mana/src/room-adapter.ts
 function isObject4(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -86285,7 +86285,7 @@ var somRoomSourceAdapter = {
   }
 };
 
-// packages/game-secret-of-mana/src/source-adapter.ts
+// ../game-secret-of-mana/src/source-adapter.ts
 import { randomUUID as randomUUID13 } from "node:crypto";
 import fs46 from "node:fs";
 import path63 from "node:path";
@@ -86531,13 +86531,13 @@ var somSourceConversionAdapter = {
   }
 };
 
-// packages/game-secret-of-mana/src/sprite-adapter.ts
+// ../game-secret-of-mana/src/sprite-adapter.ts
 import { createHash as createHash24 } from "node:crypto";
 import path64 from "node:path";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 import { gunzipSync } from "node:zlib";
 
-// packages/assets/src/animation-evidence.ts
+// ../assets/src/animation-evidence.ts
 function milliseconds(ticks2, rate) {
   return (ticks2 * rate.denominator * 1000n + rate.numerator / 2n) / rate.numerator;
 }
@@ -86592,7 +86592,7 @@ function quantizeAnimationEvidence(sequences) {
   return result;
 }
 
-// packages/assets/src/secret-of-mana/som-observation-evidence.ts
+// ../assets/src/secret-of-mana/som-observation-evidence.ts
 function isObject5(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -86786,7 +86786,7 @@ function resolveSomObservationEvidence(proofValue, declaration, poses) {
   return { sequences, gaps };
 }
 
-// packages/game-secret-of-mana/src/sprite-adapter.ts
+// ../game-secret-of-mana/src/sprite-adapter.ts
 function isObject6(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -87168,7 +87168,7 @@ var somSpriteSourceAdapter = {
   }
 };
 
-// packages/game-secret-of-mana/src/workflows.ts
+// ../game-secret-of-mana/src/workflows.ts
 var somAssetAdapters = Object.freeze([
   registerAssetAdapter(somSpriteSourceAdapter),
   registerAssetAdapter(somRoomSourceAdapter)
@@ -87187,13 +87187,13 @@ var executeAssetSourceOperation2 = (value, options = {}) => executeAssetSourceOp
   adapters: [...somSourceAdapters, ...options.adapters ?? []]
 });
 
-// packages/workflows/src/build.ts
+// ../workflows/src/build.ts
 import { randomUUID as randomUUID14 } from "node:crypto";
 import fs47 from "node:fs";
 import path65 from "node:path";
 import { crc32 as crc325 } from "node:zlib";
 
-// packages/plugin-loader-node/src/build-configuration.ts
+// ../plugin-loader-node/src/build-configuration.ts
 function isModuleRecipeSelection(value) {
   return isRecord49(value) && value.from === "modules" && isText2(value.target) && Object.keys(value).every((key3) => key3 === "from" || key3 === "target");
 }
@@ -87270,7 +87270,7 @@ function readAssemblyBuildManifest(value) {
   return structuredClone(value);
 }
 
-// packages/workflows/src/build-contracts.ts
+// ../workflows/src/build-contracts.ts
 var isRecord50 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var isText3 = (value) => typeof value === "string" && value.trim().length > 0 && !value.includes("\0");
 var isHash = (value) => typeof value === "string" && /^[\da-f]{64}$/.test(value);
@@ -87318,7 +87318,7 @@ function readAssemblyBuildOperation(value) {
   return structuredClone(value);
 }
 
-// packages/workflows/src/source-recipes.ts
+// ../workflows/src/source-recipes.ts
 function mergeModuleRecipes(recipes) {
   const first = recipes.at(0);
   if (!first) {
@@ -87397,7 +87397,7 @@ function mergeModuleRecipes(recipes) {
   };
 }
 
-// packages/workflows/src/build.ts
+// ../workflows/src/build.ts
 function createAssemblyBuildHost(plugins = []) {
   const bundledPlugins = new Map([
     ["@uttori/asm-plugin-snes", assembler_default],
@@ -87694,7 +87694,7 @@ function isRecord51(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// packages/vscode-extension/src/source/process.ts
+// src/source/process.ts
 var cancellation = new AbortController();
 var assemblyHost = createAssemblyBuildHost([["@uttori/asm-game-secret-of-mana", assembly_default]]);
 var started = false;

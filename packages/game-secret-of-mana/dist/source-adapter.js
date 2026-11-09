@@ -12,12 +12,15 @@ import { assetSourceMediaType } from "@uttori/asm-core";
 import { assertSourcePath } from "@uttori/asm-disassembler/source-project";
 import { editAssetCall, locateAssetCall } from "@uttori/asm-workflows/asset-source-edits";
 import { readBossNativeReference } from "./assembly.js";
+/** Encode a JSON record as UTF-8 bytes with a trailing newline. */
 const json = (value) => new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
+/** Path of `to` relative to the directory containing `from`, always using `/`. */
 const relative = (from, to) => path.relative(path.dirname(from), to).split(path.sep).join("/");
 /** JSON declarations and include options are untrusted until their structural fields are checked. */
 function isRecord(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
 }
+/** True when the value is an array whose elements still need their own checks. */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }

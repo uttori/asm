@@ -4,13 +4,18 @@ import { ANALYSIS_PROJECT_MANIFEST, } from "../model/project-types.js";
 import { validateAnalysisProjectManifest, validateLoadedShards, createRuntimeRecordValidator, } from "../model/project-validation.js";
 import { compareRuntimeRecordIds } from "../storage/sqlite-records.js";
 import { SqliteAnalysisStore, analysisProjectSqlitePath } from "../storage/sqlite-store.js";
+/**
+ * Narrow parsed JSON to an object whose fields are still unvalidated.
+ * @param value Parsed manifest candidate.
+ * @returns Whether value is a non-null, non-array object.
+ */
 function isUntrustedManifest(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 /**
  * Validate the current semantic schema and SQLite pointer, returning the same object without copying.
- * @param {unknown} input Parsed watcher or database manifest.
- * @returns {AnalysisProjectManifest} Validated current manifest. Obsolete containers throw.
+ * @param input Parsed watcher or database manifest.
+ * @returns Validated current manifest. Obsolete containers throw.
  */
 export const parseAnalysisProjectManifest = (input) => {
     if (!isUntrustedManifest(input)) {
@@ -30,8 +35,8 @@ export const parseAnalysisProjectManifest = (input) => {
  * Open an existing database without initializing storage. A missing watcher pointer is recovered
  * from its validated SQLite manifest; malformed or unreadable pointers still fail explicitly.
  * Opening checks the physical format, not every record. Snapshot loaders validate records.
- * @param {string} directory Project root containing analysis.sqlite and an optional watcher pointer.
- * @returns {SqliteAnalysisStore} Owned connection. Close exactly once in a finally block.
+ * @param directory Project root containing analysis.sqlite and an optional watcher pointer.
+ * @returns Owned connection. Close exactly once in a finally block.
  */
 export const openAnalysisProjectStore = (directory) => {
     let pointer;
@@ -61,10 +66,10 @@ export const openAnalysisProjectStore = (directory) => {
 /**
  * Load one SQLite read snapshot. Ordinary views skip runtime entirely. Explicit reducers stream
  * and validate each stored fact without a duplicate-ID scratch index or intermediate row array.
- * @param {string} directory Existing project root.
- * @param {boolean} runtime Whether to retain complete runtime history.
- * @param {Function} [createProjection] Optional reducer created inside the read transaction.
- * @returns {LoadedAnalysisProject} Records and manifest from the same database revision.
+ * @param directory Existing project root.
+ * @param runtime Whether to retain complete runtime history.
+ * @param [createProjection] Optional reducer created inside the read transaction.
+ * @returns Records and manifest from the same database revision.
  */
 const loadProject = (directory, runtime, createProjection) => {
     const store = openAnalysisProjectStore(directory);
@@ -111,15 +116,15 @@ const loadProject = (directory, runtime, createProjection) => {
 /**
  * Load and validate the complete project, including all runtime facts.
  * Closes its connection before returning. Editing the result alone changes nothing on disk.
- * @param {string} directory Existing project root.
- * @returns {LoadedAnalysisProject} Complete validated project. Large runtime histories are materialized.
+ * @param directory Existing project root.
+ * @returns Complete validated project. Large runtime histories are materialized.
  */
 export const loadAnalysisProject = (directory) => loadProject(directory, true);
 /**
  * Load metadata only, or stream runtime through an explicit reducer in the same read snapshot.
- * @param {string} directory Existing project root.
- * @param {Function} [createProjection] Reducer for a validated runtime stream. Omitted to skip runtime.
- * @returns {LoadedAnalysisProjectView} Metadata and optional projection from one revision.
+ * @param directory Existing project root.
+ * @param [createProjection] Reducer for a validated runtime stream. Omitted to skip runtime.
+ * @returns Metadata and optional projection from one revision.
  */
 export const loadAnalysisProjectView = (directory, createProjection) => {
     const { manifest, shards } = loadProject(directory, false, createProjection);
@@ -128,9 +133,8 @@ export const loadAnalysisProjectView = (directory, createProjection) => {
 /**
  * Throw if the ROM's full-file hash, headerless-content hash, or copier-header size differs.
  * Does not open the manifest's source path or alter the supplied ROM.
- * @param {AnalysisProjectManifest} manifest Project manifest.
- * @param {RomImage} rom ROM that should be used with this project.
- * @returns {void}
+ * @param manifest Project manifest.
+ * @param rom ROM that should be used with this project.
  */
 export const validateProjectRom = (manifest, rom) => {
     if (manifest.rom.sha256 !== rom.identity.sha256 ||
@@ -143,9 +147,9 @@ export const validateProjectRom = (manifest, rom) => {
 };
 /**
  * Loads and validates a project, optionally checking ROM identity in one step.
- * @param {string} directory Project directory containing `analysis.json`.
- * @param {RomImage} [rom] When provided, must match `manifest.rom`.
- * @returns {LoadedAnalysisProject} Validated project.
+ * @param directory Project directory containing `analysis.json`.
+ * @param [rom] When provided, must match `manifest.rom`.
+ * @returns Validated project.
  */
 export const validateAnalysisProject = (directory, rom) => {
     const project = loadAnalysisProject(directory);

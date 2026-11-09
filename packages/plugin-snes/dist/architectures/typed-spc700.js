@@ -10,6 +10,7 @@ for (const spec of spc700Specifications) {
     forms.set(spec.mode, spec.opcode[0]);
     encodings.set(spec.mnemonic, forms);
 }
+/** True when `value` appears as a whitespace-separated token in `list`. */
 const families = (value, list) => list.split(" ").includes(value);
 /** Pattern syntax comes from the same opcode matrix as the decoder, with a concrete bit placeholder. */
 const modulePatterns = spc700Specifications.map((specification) => ({
@@ -18,7 +19,9 @@ const modulePatterns = spc700Specifications.map((specification) => ({
 }));
 /** All SPC forms execute structural operands; opcode writes retain each family's established ordering. */
 export class TypedSpc700 {
+    /** Relocatable object emission covers the full opcode matrix. */
     supportsRelocatable = true;
+    /** Operand binding failures surface at the final read, not during width collection. */
     deferOperandBindingErrors = true;
     /** Preserve per-slot observations before the whole-fragment width probe. */
     prepare(frame) {
@@ -32,9 +35,20 @@ export class TypedSpc700 {
         expandOperandPlan(syntax.whole, frame);
         chooseOperandPreparation(frame, "spc700-preparation", parts);
     }
+    /**
+     * Returns the byte size chosen for the current instruction form.
+     * @param frame Active resolution frame for the occurrence.
+     * @returns Encoded instruction length in bytes.
+     */
     estimate(frame) {
         return this.run(frame);
     }
+    /**
+     * Emits opcode bytes when `context` is supplied; otherwise sizes only.
+     * @param frame Active resolution frame for the occurrence.
+     * @param context Emission sink and diagnostics for the emit pass.
+     * @returns True when a recognized form produced bytes.
+     */
     encode(frame, context) {
         return this.run(frame, context) > 0;
     }
@@ -97,7 +111,7 @@ export class TypedSpc700 {
                 width: hex && digits <= 2 ? 1 : 2,
             };
         });
-        const a = parts[0], b = parts[1], n = parts.length;
+        const a = parts.at(0), b = parts.at(1), n = parts.length;
         const write = (value, width = 1) => {
             if (width === 2) {
                 context?.emission.write2(value);
@@ -110,7 +124,9 @@ export class TypedSpc700 {
             frame.choose(mode, size);
             return size;
         };
-        const code = (mode) => encodings.get(op)?.get(spc700Modes[mode]?.id ?? mode);
+        const code = (mode) => encodings
+            .get(op)
+            ?.get(spc700Modes[mode]?.id ?? mode);
         const output = (mode, values = []) => {
             const byte = code(mode);
             if (byte === undefined) {
@@ -286,7 +302,7 @@ export class TypedSpc700 {
                 return choose("alu", b?.mode === "indexedY" ? 3 : 1 + (b?.hex ? b.width : lexicalWidth(b)));
             }
         }
-        if (n === 1) {
+        if (n === 1 && a) {
             if (code("rel") !== undefined) {
                 write(code("rel"));
                 const target = branchTarget(a, frame.currentAddress() + 1);
@@ -347,7 +363,7 @@ export class TypedSpc700 {
                 return output("regYA");
             }
         }
-        if (n === 2) {
+        if (n === 2 && a && b) {
             if (syntax.bitFamily === "BBS" || syntax.bitFamily === "BBC") {
                 const bit = a.part.bit ?? syntax.bit;
                 if (bit === undefined) {
@@ -647,7 +663,7 @@ export class TypedSpc700 {
                 }
             }
         }
-        if (emit && syntax.bitFamily === "MOV" && n === 2) {
+        if (emit && syntax.bitFamily === "MOV" && n === 2 && a) {
             if (frame.bindingFailure?.reason === "other") {
                 throw new Error(frame.bindingFailure.message);
             } // The fallback reads the combined bit operand. Only its diagnostic spelling reflects expansion.
@@ -757,7 +773,8 @@ export class TypedSpc700 {
         };
         const pattern = candidates
             .filter((candidate) => widthScore(candidate) >= 0)
-            .toSorted((a, b) => widthScore(b) - widthScore(a))[0];
+            .toSorted((a, b) => widthScore(b) - widthScore(a))
+            .at(0);
         if (!pattern) {
             throw frame.error(`${op} has no matching relocatable SPC700 operand form.`);
         }

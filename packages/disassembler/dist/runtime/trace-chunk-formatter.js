@@ -1,5 +1,6 @@
 import { TraceCache } from "../internal/trace-cache.js";
-/** Historical canonical trace text at its four-space envelope indentation. Input must already
+/**
+ * Historical canonical trace text at its four-space envelope indentation. Input must already
  * belong to createRuntimeTraceChunkValidator: every nested object's keys are canonical and no
  * producer-owned values may change during formatting. No fields or observations are omitted.
  */

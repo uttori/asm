@@ -2,20 +2,29 @@ import type { KnownAnimationSequence } from "../animation-evidence.js";
 import type { FrameRecord } from "./som-types.js";
 /** Source-owned selection of known capture intervals; hashes identify evidence, never native pixel ownership. */
 export interface SomObservationDeclaration {
+    /** Observation sidecar discriminator. */
     readonly format: "som.sprite.observations";
+    /** Sidecar schema revision. */
     readonly version: 1;
+    /** Stable observation bundle identity. */
     readonly id: string;
+    /** SHA-256 of the ROM bytes referenced by the capture. */
     readonly romSha256: string;
+    /** SHA-256 of the proof bundle supporting the intervals. */
     readonly proofSha256: string;
+    /** Capture locator or label for the observation session. */
     readonly capture: string;
+    /** Presentation pivot in pixels for quantized animation runs. */
     readonly pivot: {
         readonly x: number;
         readonly y: number;
     };
+    /** Palette bank snapshots referenced while observing. */
     readonly paletteBanks: readonly {
         readonly bank: number;
         readonly bytes: string;
     }[];
+    /** Known pose intervals selected from the capture clock. */
     readonly ranges: readonly {
         readonly id: string;
         readonly start: bigint;

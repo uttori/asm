@@ -27,8 +27,8 @@ const registers = [
 const byAddress = new Map(registers.map((register) => [register.address, register]));
 /**
  * Identifies volatile SPC700 I/O mapped at `$00F0`–`$00FF`.
- * @param {number} address SPC700 memory address.
- * @returns {Spc700HardwareRegister | undefined} Register metadata when matched.
+ * @param address SPC700 memory address.
+ * @returns Register metadata when matched.
  */
 export const identifySpc700HardwareRegister = (address) => byAddress.get(address);
 //# sourceMappingURL=spc700-hardware-registers.js.map

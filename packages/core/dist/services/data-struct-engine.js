@@ -13,12 +13,15 @@ export class DataStructEngine {
         this.host = host;
         this.structs = structs;
     }
+    /** True while a dataStructs table block is open. */
     get inTable() {
         return this.table !== undefined;
     }
+    /** Clears table sequencing state without validating row counts. */
     reset() {
         this.table = undefined;
     }
+    /** Ensures no dataStructs table remains open at session end. */
     finish() {
         if (this.table) {
             throw new Error(`Missing endDataStructs for '${this.table.name}'.`);
@@ -39,6 +42,7 @@ export class DataStructEngine {
             fields: node.fields,
         };
     }
+    /** Parses and opens a dataStructs table from directive words. */
     begin(words) {
         this.executeBegin(checkedDeclaration(parseDeclarationNode(words.join(" "), words)));
     }
@@ -52,6 +56,7 @@ export class DataStructEngine {
         }
         this.table = { name: node.name, rows: 0 };
     }
+    /** Closes the active table using the parsed end directive argument count. */
     end(words) {
         this.executeEnd(words.length - 1);
     }
@@ -70,8 +75,8 @@ export class DataStructEngine {
     }
     /**
      * Resolve an addressed record, keeping the established Asar index/stride rules.
-     * @param {RecordReference} reference Previously declared name with an unevaluated logical index.
-     * @returns {{ definition: StructDefinition; index: number }} Layout and checked index.
+     * @param reference Previously declared name with an unevaluated logical index.
+     * @returns Layout and checked index.
      */
     resolveRecord(reference) {
         const definition = this.host.structs.get(reference.name);
@@ -120,6 +125,7 @@ export class DataStructEngine {
         }
         return fields;
     }
+    /** Emits one indexed struct row from parsed declaration words. */
     emit(words) {
         const node = checkedDeclaration(parseDeclarationNode(words.join(" "), words));
         if (node?.kind !== "dataStruct") {

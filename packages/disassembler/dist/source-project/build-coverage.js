@@ -1,5 +1,6 @@
 import path from "node:path";
 import { sourceContentHash } from "../internal/source-inputs.js";
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }

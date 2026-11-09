@@ -7,6 +7,7 @@ import { deriveTokenSpans } from "../source-location.js";
  * by later layout and emission stages.
  */
 export class CommandLoweringService {
+    /** Assembler callbacks for directive lookup, keyword canonicalization and architecture selection. */
     host;
     /** Command snapshots are immutable; weak ownership releases included/reparsed programs. */
     statements = new WeakMap();
@@ -135,8 +136,8 @@ export class CommandLoweringService {
     }
     /**
      * Lowers a normalized command into the execution-layer representation.
-     * @param {NormalizedCommand} command The normalized command node.
-     * @returns {LoweredCommand} The lowered execution work unit.
+     * @param command The normalized command node.
+     * @returns The lowered execution work unit.
      */
     lowerCommand(command) {
         const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
@@ -174,8 +175,8 @@ export class CommandLoweringService {
      * Commands retain their immutable front-end snapshots. Legacy preprocessing
      * creates its mutable execution copy at dispatch time, avoiding a redundant
      * clone for every stage-owned lowered node.
-     * @param {ExecutableNode} node The node to lower.
-     * @returns {LoweredExecutableNode} The lowered node.
+     * @param node The node to lower.
+     * @returns The lowered node.
      */
     lowerExecutableNode(node, scope) {
         incrementInternalCounter("runtimeNodesLowered");
@@ -266,8 +267,8 @@ export class CommandLoweringService {
     }
     /**
      * Lowers a full program model into a stage-owned execution program.
-     * @param {ProgramModel} program The program to lower.
-     * @returns {LoweredProgram} The lowered program.
+     * @param program The program to lower.
+     * @returns The lowered program.
      */
     lowerProgram(program) {
         incrementInternalCounter("loweredProgramBuilds");
@@ -278,6 +279,11 @@ export class CommandLoweringService {
         };
     }
 }
+/**
+ * Narrows a non-loop control node to an `if` chain.
+ * @param node Loop or conditional node.
+ * @throws {Error} If the node type is not `if`.
+ */
 function assertConditionalNode(node) {
     if (node.type !== "if") {
         throw new Error(`Unknown executable node type: ${node.type}`);

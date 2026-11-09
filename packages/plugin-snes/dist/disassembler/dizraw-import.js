@@ -30,6 +30,7 @@ const CLASSIFICATIONS = {
     T: "text",
 };
 const ARCHITECTURES = ["snes.65816", "snes.spc700", "snes.superfx"];
+/** Decode XML character and numeric entities in DizRaw attribute values. */
 const xmlDecode = (value) => value.replace(/&(?:#(x[\da-f]+|\d+)|amp|lt|gt|quot|apos);/gi, (entity, numeric) => {
     if (numeric) {
         const radix = numeric[0].toLowerCase() === "x" ? 16 : 10;
@@ -37,6 +38,7 @@ const xmlDecode = (value) => value.replace(/&(?:#(x[\da-f]+|\d+)|amp|lt|gt|quot|
     }
     return ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&apos;": "'" }[entity.toLowerCase()] ?? entity);
 });
+/** Parse `name="value"` pairs from one XML opening tag fragment. */
 const attributes = (source) => Object.fromEntries([...source.matchAll(/([\w:-]+)="([^"]*)"/g)].map((match) => [match[1], xmlDecode(match[2])]));
 const ELEMENT_PATTERNS = {
     Data: /<Data\b([^>]*)>([\S\s]*?)<\/Data>/,
@@ -45,10 +47,16 @@ const ELEMENT_PATTERNS = {
     Comments: /<Comments\b([^>]*)>([\S\s]*?)<\/Comments>/,
     Regions: /<Regions\b([^>]*)>([\S\s]*?)<\/Regions>/,
 };
+/**
+ * Extract the opening attributes and inner body of one DizRaw XML section.
+ * @param xml Full document text being scanned.
+ * @param name Section tag to locate.
+ */
 const element = (xml, name) => {
     const match = ELEMENT_PATTERNS[name].exec(xml);
     return match ? { opening: match[1], body: match[2] } : undefined;
 };
+/** Decode one `.dizraw` metadata flag character into its 6-bit wire value. */
 const fake64 = (character) => {
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     if (character === "0") {
@@ -63,6 +71,7 @@ const fake64 = (character) => {
     }
     return index << 2;
 };
+/** Decode one RomBytes metadata line into classification, CPU state and flow points. */
 const decodeMetadata = (line) => {
     const padded = line.padEnd(9, "0").slice(0, 9);
     const classification = CLASSIFICATIONS[padded[0]];
@@ -99,6 +108,7 @@ const decodeMetadata = (line) => {
         points,
     };
 };
+/** Compare coalesced metadata rows for identical classification and CPU state. */
 const sameMetadata = (left, right) => left.classification === right.classification &&
     left.architecture === right.architecture &&
     left.m === right.m &&
@@ -106,6 +116,11 @@ const sameMetadata = (left, right) => left.classification === right.classificati
     left.dataBank === right.dataBank &&
     left.directPage === right.directPage &&
     left.points.join(",") === right.points.join(",");
+/**
+ * Expand compressed RomBytes text into one metadata line per ROM byte.
+ * @param body Inner XML body of the RomBytes section.
+ * @param maximumBytes Safety cap on expanded row count.
+ */
 const decodeRomByteLines = (body, maximumBytes) => {
     const normalized = xmlDecode(body).replaceAll("\r", "").trim();
     const [header, ...encodedLines] = normalized.split("\n");
@@ -156,6 +171,11 @@ const decodeRomByteLines = (body, maximumBytes) => {
     }
     return decoded;
 };
+/**
+ * Coalesce contiguous metadata rows into import interval annotations.
+ * @param lines Expanded per-byte metadata lines aligned with ROM offsets.
+ * @param evidenceId Import evidence id attached to every interval.
+ */
 const metadataIntervals = (lines, evidenceId) => {
     if (lines.length === 0) {
         return [];
@@ -211,9 +231,9 @@ const DIZ_SPEEDS = {
  * Compressed `.diz` is rejected. Mapper, speed, labels, comments, regions,
  * per-byte classification, architecture, M/X, DBR, direct page, and in/out/end/read
  * points are imported. UI settings and context-mapping aliases are reported as loss.
- * @param {string} xml Uncompressed `.dizraw` XML document.
- * @param {DizRawImportOptions} [options] Source name, ROM-size check, and expansion cap.
- * @returns {DizRawImportResult} Mapping, shards, loss report, and metadata row count.
+ * @param xml Uncompressed `.dizraw` XML document.
+ * @param [options] Source name, ROM-size check, and expansion cap.
+ * @returns Mapping, shards, loss report, and metadata row count.
  */
 export const importDizRaw = (xml, options = {}) => {
     if (!xml.trimStart().startsWith("<?xml") &&

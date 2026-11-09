@@ -33,6 +33,7 @@ export function createSourceInputSnapshot(files) {
         })),
     };
 }
+/** Narrow parsed snapshot JSON to a plain object record. */
 function isSnapshotRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }

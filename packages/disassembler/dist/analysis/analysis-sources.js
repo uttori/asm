@@ -1,11 +1,13 @@
+/** Dedupe and lexicographically sort string identities for stable catalog output. */
 const sorted = (values) => [...new Set(values)].toSorted();
+/** Build a deterministic grouping key from catalog identity parts. */
 const key = (...values) => JSON.stringify(values);
 /**
  * Join sources by immutable artifact identity, never by a display filename or import order.
  * Legacy imports can also link evidence through an exact report ID or full content hash.
- * @param {Pick<AnalysisProjectShards, "imports" | "evidence">} shards Source metadata.
- * @param {ReadonlyMap<string, number>} [importTimes] Durable capture receipt times by content hash.
- * @returns {readonly AnalysisEvidenceSource[]} Newest imports first. Undated sources and ties use name/identity order.
+ * @param shards Source metadata.
+ * @param [importTimes] Durable capture receipt times by content hash.
+ * @returns Newest imports first. Undated sources and ties use name/identity order.
  */
 export const buildAnalysisSourceCatalog = (shards, importTimes = new Map()) => {
     const sources = new Map();

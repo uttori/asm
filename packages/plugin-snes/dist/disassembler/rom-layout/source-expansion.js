@@ -2,6 +2,7 @@ import path from "node:path";
 import { assertSourcePath, sourceContentHash } from "@uttori/asm-disassembler/source-project";
 import { inspectSnesSource } from "../source-build.js";
 import { assertSnesRomExpansion, expansionHeaderOffset, } from "./expansion.js";
+/** Format offsets in expansion diagnostics. */
 const hex = (value) => `$${value.toString(16).toUpperCase()}`;
 /**
  * Add reviewed storage as ordinary assembly and update an explicit one-byte size header.

@@ -24,18 +24,18 @@ export function parseAssemblyBuildArguments(argv, directory) {
     const positionals = [];
     const flags = new Map();
     for (let index = 0; index < tokens.length; index++) {
-        const token = tokens[index];
-        if (token === "--") {
+        const argument = tokens[index];
+        if (argument === "--") {
             positionals.push(...tokens.slice(index + 1));
             break;
         }
-        if (!token.startsWith("--")) {
-            positionals.push(token);
+        if (!argument.startsWith("--")) {
+            positionals.push(argument);
             continue;
         }
-        const equals = token.indexOf("=");
-        const flag = equals < 0 ? token : token.slice(0, equals);
-        const value = equals < 0 ? tokens[++index] : token.slice(equals + 1);
+        const equals = argument.indexOf("=");
+        const flag = equals < 0 ? argument : argument.slice(0, equals);
+        const value = equals < 0 ? tokens[++index] : argument.slice(equals + 1);
         if (action !== "assemble-object" ||
             !["--module", "--config", "--source-adapter"].includes(flag) ||
             !value ||

@@ -1311,7 +1311,7 @@ var DebugSidecarMessageParser = class {
   #lastSequence = 0;
   /**
    * Creates one directional stream parser.
-   * @param {DebugSidecarProtocolLimits} limits Framing and request limits.
+   * @param limits Framing and request limits.
    */
   constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
     validateLimits(limits);
@@ -1319,8 +1319,8 @@ var DebugSidecarMessageParser = class {
   }
   /**
    * Adds a transport chunk and returns every complete validated message in order.
-   * @param {Uint8Array} chunk Next stdio or socket bytes.
-   * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
+   * @param chunk Next stdio or socket bytes.
+   * @returns Complete messages decoded from the stream.
    */
   push(chunk) {
     if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
@@ -1365,24 +1365,29 @@ var DebugSidecarMessageQueue = class {
   #bytes = 0;
   /**
    * Creates a bounded outgoing queue.
-   * @param {DebugSidecarProtocolLimits} limits Framing and queue limits.
+   * @param limits Framing and queue limits.
    */
   constructor(limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
     validateLimits(limits);
     this.#limits = limits;
   }
-  /** @returns {number} Number of queued protocol messages. */
+  /**
+   * Number of queued protocol messages.
+   * @returns Count of frames waiting for transport write.
+   */
   get length() {
     return this.#frames.length;
   }
-  /** @returns {number} Encoded bytes currently retained for transport backpressure. */
+  /**
+   * Encoded bytes currently retained for transport backpressure.
+   * @returns Sum of queued frame lengths.
+   */
   get bytes() {
     return this.#bytes;
   }
   /**
    * Encodes and appends one message, failing the connection when bounds would be exceeded.
-   * @param {DebugSidecarMessage} message Next ordered message.
-   * @returns {void}
+   * @param message Next ordered message.
    */
   enqueue(message) {
     const frame = encodeDebugSidecarMessage(message, this.#limits);
@@ -1394,7 +1399,7 @@ var DebugSidecarMessageQueue = class {
   }
   /**
    * Removes the oldest encoded frame.
-   * @returns {Uint8Array | undefined} Oldest frame or undefined when empty.
+   * @returns Oldest frame or undefined when empty.
    */
   dequeue() {
     const frame = this.#frames.shift();
@@ -1484,7 +1489,7 @@ var DebugSidecarServer = class {
   #closed = false;
   /**
    * Creates a server around an emulator-neutral backend implementation.
-   * @param {DebugSidecarServerOptions} options Identity, backend, transport, and safety bounds.
+   * @param options Identity, backend, transport, and safety bounds.
    */
   constructor(options) {
     if (typeof options.backend !== "string" || options.backend.length === 0) {
@@ -1501,14 +1506,17 @@ var DebugSidecarServer = class {
     this.#outgoing = new DebugSidecarMessageQueue(limits);
     this.#eventSubscription = this.#implementation.onEvent((event) => this.#backendEvent(event));
   }
-  /** @returns {boolean} Whether the server has permanently closed. */
+  /**
+   * Whether the server has permanently closed.
+   * @returns True after shutdown or terminal protocol failure.
+   */
   get closed() {
     return this.#closed;
   }
   /**
    * Accepts the next transport chunk. Calls are serialized even when the stream producer overlaps them.
-   * @param {Uint8Array} data Framed protocol bytes from the client.
-   * @returns {Promise<void>} Completion after every request in this chunk has been dispatched.
+   * @param data Framed protocol bytes from the client.
+   * @returns Completion after every request in this chunk has been dispatched.
    */
   receive(data) {
     if (this.#closed) {
@@ -1523,8 +1531,8 @@ var DebugSidecarServer = class {
   }
   /**
    * Flushes queued output and closes the server transport exactly once.
-   * @param {Error} error Optional terminal protocol or transport failure.
-   * @returns {Promise<void>} Completion of transport cleanup.
+   * @param error Optional terminal protocol or transport failure.
+   * @returns Completion of transport cleanup.
    */
   async close(error) {
     if (this.#closed) {
@@ -1853,7 +1861,10 @@ var GdbRspClient = class {
   #started = false;
   #closed = false;
   #closeError;
-  /** @param {GdbRspClientOptions} options Transport and protocol safety bounds. */
+  /**
+   * Validates bounds and subscribes to the transport. No bytes are sent until `start`.
+   * @param options Transport and protocol safety bounds.
+   */
   constructor(options) {
     this.#transport = options.transport;
     this.#requestTimeoutMs = options.requestTimeoutMs ?? 3e3;
@@ -1876,11 +1887,14 @@ var GdbRspClient = class {
       (error) => this.#fail(error ?? new Error("RSP transport closed."), false)
     );
   }
-  /** @returns {boolean} Whether the client has permanently closed. */
+  /** Whether the client has permanently closed after a local close, transport loss, or protocol failure. */
   get closed() {
     return this.#closed;
   }
-  /** @returns {Promise<void>} Completion after writing the required initial acknowledgement byte. */
+  /**
+   * Sends the initial `+` acknowledgement. Must be called exactly once before any request.
+   * @returns Completion after writing the required initial acknowledgement byte.
+   */
   async start() {
     if (this.#closed) {
       throw new Error("RSP client is closed.");
@@ -1893,8 +1907,8 @@ var GdbRspClient = class {
   }
   /**
    * Subscribes to asynchronous stop packets.
-   * @param {(event: GdbRspStop) => void} listener Stop-event consumer.
-   * @returns {DebugSubscription} Disposable subscription.
+   * @param listener Stop-event consumer.
+   * @returns Disposable subscription.
    */
   onStop(listener) {
     this.#stopListeners.add(listener);
@@ -1902,8 +1916,8 @@ var GdbRspClient = class {
   }
   /**
    * Subscribes to terminal RSP transport or protocol failure.
-   * @param {(error: Error) => void} listener Close-error consumer.
-   * @returns {DebugSubscription} Disposable subscription.
+   * @param listener Close-error consumer.
+   * @returns Disposable subscription.
    */
   onClose(listener) {
     if (this.#closeError) {
@@ -1915,29 +1929,38 @@ var GdbRspClient = class {
   }
   /**
    * Sends one packet and waits for its non-stop response.
-   * @param {string} command RSP command payload.
-   * @returns {Promise<string>} Response payload.
+   * @param command RSP command payload.
+   * @returns Response payload.
    */
   request(command) {
     return this.#request(command, false);
   }
   /**
    * Sends a handshake packet such as `?` whose response is itself a stop packet.
-   * @param {string} command RSP command payload.
-   * @returns {Promise<string>} Stop response payload.
+   * @param command RSP command payload.
+   * @returns Stop response payload.
    */
   requestStop(command) {
     return this.#request(command, true);
   }
-  /** @returns {Promise<void>} Completion after writing continue. */
+  /**
+   * Sends `c`. The eventual stop arrives through `onStop`, not as a response.
+   * @returns Completion after writing continue.
+   */
   continue() {
     return this.#sendExecutionCommand("c");
   }
-  /** @returns {Promise<void>} Completion after writing one-instruction step. */
+  /**
+   * Sends `s`. The resulting stop arrives through `onStop`, not as a response.
+   * @returns Completion after writing one-instruction step.
+   */
   step() {
     return this.#sendExecutionCommand("s");
   }
-  /** @returns {Promise<void>} Completion after writing the out-of-band interrupt byte. */
+  /**
+   * Sends raw `0x03` to halt a running target. Rejected while a request is pending.
+   * @returns Completion after writing the out-of-band interrupt byte.
+   */
   interrupt() {
     this.#assertReady();
     if (this.#pending) {
@@ -1945,7 +1968,10 @@ var GdbRspClient = class {
     }
     return this.#write(Uint8Array.of(3));
   }
-  /** @returns {Promise<void>} Completion after closing the transport. */
+  /**
+   * Closes the transport and rejects any in-flight request.
+   * @returns Completion after closing the transport.
+   */
   async close() {
     if (this.#closed) {
       return;
@@ -2044,9 +2070,10 @@ var GdbRspClient = class {
       this.#fail(asError2(error));
     }
   }
-  /** Append one owned transport fragment without repeatedly copying its accumulated prefix.
-   * @param {Uint8Array} data Incoming bytes. The transport may reuse them after this call returns.
-   * @returns {void} Grows/compacts only when tail capacity is exhausted. Exceeding the bound throws.
+  /**
+   * Append one owned transport fragment without repeatedly copying its accumulated prefix.
+   * @param data Incoming bytes. The transport may reuse them after this call returns.
+   * @returns Grows/compacts only when tail capacity is exhausted. Exceeding the bound throws.
    */
   #append(data) {
     const used = this.#end - this.#start;
@@ -2161,8 +2188,8 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
   /**
    * Opens a bounded connection to a numeric loopback address.
-   * @param {NodeTcpGdbRspTransportOptions} options Loopback endpoint and deadlines.
-   * @returns {Promise<NodeTcpGdbRspTransport>} Connected transport.
+   * @param options Loopback endpoint and deadlines.
+   * @returns Connected transport.
    */
   static async connect(options) {
     const host = options.host ?? "127.0.0.1";
@@ -2316,6 +2343,10 @@ var NodeAresProcessHandle = class {
   #child;
   #exit;
   #exited = false;
+  /**
+   * Spawns the child immediately without a shell.
+   * @param options Command, arguments, environment, and output sink.
+   */
   constructor(options) {
     let spawnError;
     this.#child = spawn(options.command, [...options.args], {
@@ -2337,15 +2368,25 @@ var NodeAresProcessHandle = class {
       });
     });
   }
+  /** OS process id, or undefined when spawning failed. */
   get pid() {
     return this.#child.pid;
   }
+  /** True after the child's `close` event. */
   get exited() {
     return this.#exited;
   }
+  /**
+   * Waits for the child's `close` event.
+   * @returns Exit status, including any earlier spawn error.
+   */
   waitForExit() {
     return this.#exit;
   }
+  /**
+   * Signals the child unless it has already closed.
+   * @param signal Graceful `SIGTERM` or forced `SIGKILL`.
+   */
   kill(signal) {
     if (!this.#exited) {
       this.#child.kill(signal);
@@ -2524,7 +2565,10 @@ var AresProcessHost = class {
   #port;
   #output = Buffer.alloc(0);
   #lifecycleTail = Promise.resolve();
-  /** @param {AresProcessHostOptions} options Paths, manifest, bounds, and platform runtime. */
+  /**
+   * Validates paths, manifest, and bounds without launching or hashing anything.
+   * @param options Paths, manifest, bounds, and platform runtime.
+   */
   constructor(options) {
     this.#executable = checkedAbsolutePath(options.executable, "Ares executable");
     this.#rom = checkedAbsolutePath(options.rom, "Ares ROM");
@@ -2563,22 +2607,31 @@ var AresProcessHost = class {
       }
     }
   }
-  /** @returns {AresRuntimeManifest} Normalized immutable launch identity. */
+  /**
+   * Manifest parsed at construction.
+   * @returns Normalized immutable launch identity.
+   */
   get manifest() {
     return this.#manifest;
   }
-  /** @returns {number | undefined} PID of the current emulator process. */
+  /**
+   * Process id of the owned emulator.
+   * @returns PID of the current emulator process, or undefined when none is running.
+   */
   get pid() {
     return this.#process?.pid;
   }
-  /** @returns {string} Bounded tail of emulator stdout and stderr, never protocol stdout. */
+  /**
+   * Stream-tagged output captured since the latest launch, truncated to `maxOutputBytes`.
+   * @returns Bounded tail of emulator stdout and stderr, never protocol stdout.
+   */
   get output() {
     return this.#output.toString("utf8");
   }
   /**
    * Starts a fresh verified emulator for reset connects or reconnects to the preserved process.
-   * @param {DebugBackendConnectOptions} options Backend reset policy.
-   * @returns {Promise<GdbRspClient>} Connected, not-yet-started private RSP client.
+   * @param options Backend reset policy.
+   * @returns Connected, not-yet-started private RSP client.
    */
   createClient(options) {
     return this.#serializeLifecycle(async () => {
@@ -2600,7 +2653,10 @@ var AresProcessHost = class {
       }
     });
   }
-  /** @returns {Promise<void>} Bounded graceful/forced cleanup of the owned emulator process. */
+  /**
+   * Sends SIGTERM, then SIGKILL after `shutdownTimeoutMs`. Serialized with `createClient`.
+   * @returns Bounded graceful/forced cleanup of the owned emulator process.
+   */
   terminate() {
     return this.#serializeLifecycle(() => this.#terminateCurrent());
   }
@@ -3538,7 +3594,13 @@ var ExpressionParser = class {
   }
   tokens;
   sourceText;
+  /** Position of the next unconsumed token. */
   index = 0;
+  /**
+   * Parses a binary expression whose operators bind at least as tightly as `minPrecedence`.
+   * @param minPrecedence Lowest operator precedence this call may consume.
+   * @returns The parsed expression.
+   */
   parseExpression(minPrecedence = 0) {
     let left = this.parsePrefix();
     while (true) {
@@ -3569,9 +3631,11 @@ var ExpressionParser = class {
     }
     return left;
   }
+  /** Reports whether every token has been consumed. */
   isAtEnd() {
     return this.index >= this.tokens.length;
   }
+  /** Parses right-nested prefix operators followed by a primary with postfix accessors. */
   parsePrefix() {
     const token = this.peek();
     if (!token) {
@@ -3587,6 +3651,7 @@ var ExpressionParser = class {
     }
     return this.parsePostfix(this.parsePrimary());
   }
+  /** Parses one operand: dotted local name, literal, string, define reference, identifier or parenthesized group. */
   parsePrimary() {
     if (this.peek()?.type === "dot") {
       const firstSpan = this.peek()?.span;
@@ -3677,6 +3742,7 @@ var ExpressionParser = class {
       { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` }
     );
   }
+  /** Applies call, member and index postfixes; calls require identifiers and accessors require references. */
   parsePostfix(expression) {
     let current = expression;
     while (true) {
@@ -3726,6 +3792,7 @@ var ExpressionParser = class {
       return current;
     }
   }
+  /** Parses comma-separated arguments after `(` through the closing `)`. */
   parseCallArguments() {
     const args = [];
     if (this.match({ type: "rparen" })) {
@@ -3739,7 +3806,7 @@ var ExpressionParser = class {
   }
   /**
    * Expects a value.
-   * @param {Token["type"]} type The type.
+   * @param type The type.
    */
   expect(type) {
     const token = this.consume();
@@ -3752,6 +3819,7 @@ var ExpressionParser = class {
       );
     }
   }
+  /** Consumes the next token only when its type matches, reporting whether it did. */
   match(expected) {
     const token = this.peek();
     if (token && token.type === expected.type) {
@@ -3760,11 +3828,13 @@ var ExpressionParser = class {
     }
     return false;
   }
+  /** Returns the next token and advances; undefined past the end. */
   consume() {
     const token = this.tokens[this.index];
     this.index++;
     return token;
   }
+  /** Returns the next token without advancing; undefined past the end. */
   peek() {
     return this.tokens[this.index];
   }
@@ -4352,7 +4422,7 @@ function parseInstructionOperands(mnemonic, text, grammar2) {
     const parts2 = operandParts(text, ",");
     for (let index = 0; index < parts2.length; index++) {
       let part = parts2[index];
-      const next = parts2[index + 1];
+      const next = parts2.at(index + 1);
       if (grammar2.commaIndex && next && grammar2.indexRegisters.includes(next.text.toLowerCase())) {
         part = { text: text.slice(part.start, next.end), start: part.start, end: next.end };
         index++;
@@ -4694,20 +4764,24 @@ var RelocatableInstruction = class {
 // packages/core/src/decoder-types.ts
 var Uint8ArrayDecoderSource = class {
   #bytes;
+  /**
+   * Copies the provided bytes into private storage.
+   * @param bytes Source bytes; values are wrapped modulo 256 by `Uint8Array.from`.
+   */
   constructor(bytes) {
     this.#bytes = Uint8Array.from(bytes);
   }
   /**
    * The length of the byte source.
-   * @returns {number} The length of the byte source.
+   * @returns The length of the byte source.
    */
   get length() {
     return this.#bytes.length;
   }
   /**
    * Reads a byte from the byte source.
-   * @param {number} offset The offset to read from.
-   * @returns {number | undefined} The byte at the offset, or undefined if the offset is out of bounds.
+   * @param offset The offset to read from.
+   * @returns The byte at the offset, or undefined if the offset is out of bounds.
    */
   readByte(offset) {
     if (!Number.isInteger(offset) || offset < 0 || offset >= this.#bytes.length) {
@@ -4717,9 +4791,9 @@ var Uint8ArrayDecoderSource = class {
   }
   /**
    * Reads bytes from the byte source.
-   * @param {number} offset The offset to read from.
-   * @param {number} length The length to read.
-   * @returns {Uint8Array | undefined} The bytes at the offset and length, or undefined if the offset or length is out of bounds.
+   * @param offset The offset to read from.
+   * @param length The length to read.
+   * @returns The bytes at the offset and length, or undefined if the offset or length is out of bounds.
    */
   readBytes(offset, length) {
     if (!Number.isInteger(offset) || !Number.isInteger(length) || offset < 0 || length < 0) {
@@ -4735,6 +4809,13 @@ var Uint8ArrayDecoderSource = class {
 
 // packages/core/src/linker/types.ts
 var LinkError = class extends Error {
+  /**
+   * Captures a link failure with optional source anchoring and partial placement state.
+   * @param code Stable machine-readable failure code.
+   * @param message Human-readable explanation prefixed with source location when present.
+   * @param source Optional source occurrence tied to the failure.
+   * @param allocations Partial allocations computed before the failure.
+   */
   constructor(code, message, source, allocations = []) {
     const location = source ? `${source.file}:${source.line}: ` : "";
     super(`${location}${message}`);
@@ -4745,6 +4826,7 @@ var LinkError = class extends Error {
   code;
   source;
   allocations;
+  /** Stable error name for instanceof checks across bundle boundaries. */
   name = "LinkError";
 };
 
@@ -7267,6 +7349,11 @@ var Cpu6502Decoder = class {
   }
   cpu;
   #forms;
+  /**
+   * Decodes one instruction at `context.offset`.
+   * @param context Byte source, offset, and 16-bit logical PC.
+   * @returns Decoded instruction, or an error for an invalid PC, missing/truncated bytes, or an opcode absent from this CPU's table.
+   */
   decode(context) {
     const { source, offset, logicalAddress } = context;
     if (!Number.isInteger(logicalAddress) || logicalAddress < 0 || logicalAddress > 65535) {
@@ -7307,7 +7394,7 @@ var Cpu6502Decoder = class {
         message: "Truncated 6502 instruction."
       };
     }
-    let value = bytes[1] ?? 0;
+    let value = bytes.at(1) ?? 0;
     if (size === 3) {
       value |= bytes[2] << 8;
     }
@@ -7383,7 +7470,7 @@ function formatCpu6502Instruction(instruction, addressExpression) {
   if (!form.canonical) {
     return `.byte ${[...instruction.bytes].map((byte) => hex(byte)).join(", ")} ; ${form.mnemonic}`;
   }
-  const operand = instruction.operands[0];
+  const operand = instruction.operands.at(0);
   const value = operand?.value ?? 0;
   let text = "";
   let suffix = "";
@@ -7703,20 +7790,20 @@ function ld65LinkRecipe(config, target = "65xx.nes") {
   }
   return {
     target,
-    regions: [...config.memories.values()].map((region) => ({
-      name: region.name,
-      start: region.start,
-      size: region.size,
-      ...region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
-      ...region.fill ? { fillByte: region.fillval } : {},
-      addressSpace: "65xx.ines-address-space"
-    })),
-    placements: [...config.segments.values()].map((segment) => ({
-      section: segment.name,
-      load: segment.load,
-      run: segment.run,
-      ...segment.start !== void 0 ? { start: segment.start } : {}
-    })),
+    regions: [...config.memories.values()].map(
+      (region) => Object.assign(
+        { name: region.name, start: region.start, size: region.size },
+        region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {},
+        region.fill ? { fillByte: region.fillval } : {},
+        { addressSpace: "65xx.ines-address-space" }
+      )
+    ),
+    placements: [...config.segments.values()].map(
+      (segment) => Object.assign(
+        { section: segment.name, load: segment.load, run: segment.run },
+        segment.start !== void 0 ? { start: segment.start } : {}
+      )
+    ),
     // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
     symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()]
   };
@@ -16224,10 +16311,15 @@ var TypedArch65xx = class {
     }
   }
   cpu;
+  /** 65xx encodings can be emitted into relocatable objects. */
   supportsRelocatable = true;
+  /** Unbound operand templates stay errors at encode time, not parse time. */
   deferOperandBindingErrors = true;
+  /** Assembly forms enabled for this CPU's feature set. */
   forms;
+  /** Editor/LSP instruction catalog derived from `forms`. */
   catalog;
+  /** Lookup of enabled forms grouped by canonical mnemonic. */
   formsByMnemonic = /* @__PURE__ */ new Map();
   /** Failed binding retains parsed punctuation so addressing errors keep precedence over value reads. */
   syntax(frame) {
@@ -16271,6 +16363,7 @@ var TypedArch65xx = class {
     }
     return prepare65xx(this.syntax(frame), frame);
   }
+  /** Return encoded size for the resolved operand frame without emitting bytes. */
   estimate(frame) {
     const state = this.classification(frame);
     const form = this.resolveForm(frame, this.syntax(frame), state);
@@ -17049,13 +17142,16 @@ function register65xxContributions(context) {
           },
           // The flat NES lifecycle fills the complete cartridge with the target byte, including MEMORY gaps.
           // Keep its established output here; ld65LinkRecipe remains available for explicit per-region policies.
-          ...recipe.regions.map((region) => ({
-            ...region,
-            ...region.outputOffset !== void 0 ? {
-              outputOffset: region.outputOffset + nes.header.length,
-              fillByte: nes.fillByte
-            } : {}
-          }))
+          ...recipe.regions.map(
+            (region) => Object.assign(
+              {},
+              region,
+              region.outputOffset !== void 0 ? {
+                outputOffset: region.outputOffset + nes.header.length,
+                fillByte: nes.fillByte
+              } : {}
+            )
+          )
         ]
       };
     }
@@ -17593,8 +17689,8 @@ var buildInstruction = (specification, bytes, context, state) => {
 var Cpu65816Decoder = class {
   /**
    * Decodes a 65816 instruction.
-   * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
-   * @returns {ArchitectureDecodeResult} The decode result.
+   * @param context The decode context.
+   * @returns The decode result.
    */
   decode(context) {
     const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
@@ -18059,6 +18155,7 @@ var safeHexInteger = (value, context) => {
   return parsed;
 };
 var AresRspDebugBackend = class {
+  /** Fixed ares RSP backend protocol revision. */
   protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
   #nes = false;
   #richTrace = false;
@@ -18070,6 +18167,7 @@ var AresRspDebugBackend = class {
   #busCaptureSupported = false;
   #contextBoundaryHeld = false;
   #contextReplayPending = false;
+  /** Negotiated capabilities including NES mode and rich-trace overrides. */
   get capabilities() {
     if (this.#nes) {
       return ARES_NES_CAPABILITIES;
@@ -18121,7 +18219,10 @@ var AresRspDebugBackend = class {
   #instructionBoundaryStop = false;
   #nextBreakpointId = 1;
   #trace;
-  /** @param {AresRspBackendOptions} options RSP client/process lifecycle hooks. */
+  /**
+   * Wires RSP client creation and optional process termination hooks.
+   * @param options RSP client and process lifecycle hooks.
+   */
   constructor(options) {
     this.#nativeFileIdentity = options.nativeFileIdentity;
     this.#nesPrgFileOffset = options.nesPrgFileOffset ?? 16;
@@ -18783,6 +18884,7 @@ var AresRspDebugBackend = class {
     }
     return position;
   }
+  /** @inheritdoc */
   async startTrace(options) {
     if (options.architecture !== ARES_65816_ARCHITECTURE || options.addressSpace !== ARES_65816_ADDRESS_SPACE) {
       throw new Error(

@@ -7,8 +7,11 @@ import { removeInlineComment } from "./command-text-service.js";
 function occurrence(source) {
     return { file: source.file, line: source.line, span: source.span, text: source.raw };
 }
+/** Expands macro invocations and tracks nested macro control flow. */
 export class MacroEngine {
+    /** Hosting assembler state mutated during macro capture and expansion. */
     host;
+    /** Stack of active if/while/for frames during expansion. */
     macroExpansionControlStack = [];
     /** Weak ownership releases definitions when an assembly snapshot is discarded. */
     templates = new WeakMap();
@@ -17,22 +20,22 @@ export class MacroEngine {
     }
     /**
      * Checks whether the current macro expansion line is in an active branch.
-     * @returns {boolean} `true` when the current expansion path is active.
+     * @returns `true` when the current expansion path is active.
      */
     isMacroExpansionActive() {
         return this.macroExpansionControlStack.every((entry) => entry.active);
     }
     /**
      * Checks whether the current macro expansion line is inside a deferred loop body.
-     * @returns {boolean} `true` when loop-body commands should defer placeholder resolution.
+     * @returns `true` when loop-body commands should defer placeholder resolution.
      */
     isMacroExpansionLoopActive() {
         return this.macroExpansionControlStack.some((entry) => entry.active && (entry.type === "for" || entry.type === "while"));
     }
     /**
      * Evaluates a macro control-flow condition using the assembler expression engine.
-     * @param {string} expression The expression text to evaluate.
-     * @returns {boolean} The boolean result.
+     * @param expression The expression text to evaluate.
+     * @returns The boolean result.
      */
     evaluateMacroControlExpression(expression) {
         const trimmed = removeInlineComment(expression).trim();
@@ -43,7 +46,7 @@ export class MacroEngine {
     }
     /**
      * Updates macro expansion control state after dispatching a control-flow line.
-     * @param {string} line The fully expanded line text.
+     * @param line The fully expanded line text.
      */
     updateMacroExpansionControlState(line) {
         const trimmed = removeInlineComment(line).trim();
@@ -154,7 +157,7 @@ export class MacroEngine {
     }
     /**
      * Calls a macro.
-     * @param {string} invocation The invocation to call.
+     * @param invocation The invocation to call.
      */
     callMacro(invocation, source) {
         const operation = parseCommandOperation(invocation.startsWith("%") ? invocation : `%${invocation}`);
@@ -309,11 +312,11 @@ export class MacroEngine {
     }
     /**
      * Expands a macro line.
-     * @param {string} line The line to expand.
-     * @param {Map<string, string>} fixedArgs The fixed arguments.
-     * @param {string[]} variadicArgs The variadic arguments.
-     * @param {number} variadicCount The variadic count.
-     * @returns {string} The expanded line.
+     * @param line The line to expand.
+     * @param fixedArgs The fixed arguments.
+     * @param variadicArgs The variadic arguments.
+     * @param variadicCount The variadic count.
+     * @returns The expanded line.
      */
     expandMacroLine(line, fixedArgs, variadicArgs, variadicCount, template) {
         return fragmentText(this.expandMacroFragment(sourceFragment(line), fixedArgs, variadicArgs, variadicCount, template));
@@ -470,13 +473,15 @@ export class MacroEngine {
         fragment = bindMacroFragment(undefined, fragment, "count", () => sourceFragment(String(args.length)));
         return bindMacroFragment(undefined, fragment, "variadic", (part) => {
             const binding = this.resolveVariadicBinding(part.payload, args);
-            const argument = argumentsOrigin.filter((origin) => origin.parameter === undefined)[binding.index];
+            const argument = argumentsOrigin
+                .filter((origin) => origin.parameter === undefined)
+                .at(binding.index);
             return sourceFragment(binding.value, argument ? [argument.location] : []);
         });
     }
     /**
      * Processes a macro line.
-     * @param {string} line The line to process.
+     * @param line The line to process.
      */
     processMacroLine(line, template) {
         this.processMacroFragment(sourceFragment(line, template ? [occurrence(template.source)] : []), template);

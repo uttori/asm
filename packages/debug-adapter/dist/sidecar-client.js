@@ -1,4 +1,5 @@
 import { DEFAULT_DEBUG_SIDECAR_LIMITS, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DebugSidecarMessageParser, assertDebugSidecarSessionToken, encodeDebugSidecarMessage, } from "./sidecar-protocol.js";
+/** Normalizes unknown failures into Error instances. */
 const asError = (error) => error instanceof Error ? error : new Error(String(error));
 /** Ordered request/response client shared by native emulator sidecar implementations. */
 export class DebugSidecarClient {
@@ -19,7 +20,7 @@ export class DebugSidecarClient {
     #writeTail = Promise.resolve();
     /**
      * Starts listening to one already-created transport.
-     * @param {DebugSidecarClientOptions} options Authenticated transport and safety bounds.
+     * @param options Authenticated transport and safety bounds.
      */
     constructor(options) {
         assertDebugSidecarSessionToken(options.session);
@@ -34,14 +35,17 @@ export class DebugSidecarClient {
         this.#dataSubscription = this.#transport.onData((data) => this.#receive(data));
         this.#closeSubscription = this.#transport.onClose((error) => this.#fail(error ?? new Error("Sidecar transport closed.")));
     }
-    /** @returns {boolean} Whether the transport can still accept requests. */
+    /**
+     * Whether the transport can still accept requests.
+     * @returns True after terminal failure or explicit close.
+     */
     get closed() {
         return this.#closed;
     }
     /**
      * Subscribes to validated, session-matched events.
-     * @param {(event: DebugSidecarEvent) => void} listener Event consumer.
-     * @returns {DebugSubscription} Disposable subscription.
+     * @param listener Event consumer.
+     * @returns Disposable subscription.
      */
     onEvent(listener) {
         this.#eventListeners.add(listener);
@@ -49,8 +53,8 @@ export class DebugSidecarClient {
     }
     /**
      * Subscribes to terminal client failure, including native process crashes and protocol errors.
-     * @param {(error: Error) => void} listener Failure consumer.
-     * @returns {DebugSubscription} Disposable subscription.
+     * @param listener Failure consumer.
+     * @returns Disposable subscription.
      */
     onClose(listener) {
         if (this.#closeError) {
@@ -64,9 +68,9 @@ export class DebugSidecarClient {
      * Sends one bounded command and resolves its paired response. A command error rejects only this
      * request. Timeout, malformed input, or transport failure closes the connection and rejects all
      * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
-     * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
-     * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
-     * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
+     * @param command Neutral sidecar command.
+     * @param arguments_ Validated command arguments.
+     * @returns Untrusted command result for the typed backend adapter to validate.
      */
     request(command, arguments_ = {}) {
         if (this.#closed) {
@@ -120,7 +124,7 @@ export class DebugSidecarClient {
     }
     /**
      * Closes the connection and rejects unresolved requests.
-     * @returns {Promise<void>} Completion of the transport close.
+     * @returns Completion of the transport close.
      */
     async close() {
         if (this.#closed) {

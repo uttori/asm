@@ -1,9 +1,12 @@
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Accept finite integers for register and counter fields. */
 function isInteger(value) {
     return typeof value === "number" && Number.isInteger(value);
 }
+/** Read one bounded register field from a transfer configuration object. */
 const readRegister = (configuration, field, maximum, message) => {
     const count = configuration[field];
     if (!(isInteger(count) && count >= 0 && count <= maximum)) {
@@ -11,9 +14,10 @@ const readRegister = (configuration, field, maximum, message) => {
     }
     return count;
 };
-/** Normalize boundary fields for deterministic hashing. Common event ordering is validated by the importer.
- * @param {unknown} marker Untrusted marker from a transport-neutral source.
- * @returns {RuntimeTransferBoundary} Canonical marker. Inconsistent counts/configuration throw.
+/**
+ * Normalize boundary fields for deterministic hashing. Common event ordering is validated by the importer.
+ * @param marker Untrusted marker from a transport-neutral source.
+ * @returns Canonical marker. Inconsistent counts/configuration throw.
  */
 export const validateRuntimeTransferBoundary = (marker) => {
     if (!isRecord(marker) || !isRecord(marker.configuration)) {
@@ -89,16 +93,18 @@ export const validateRuntimeTransferBoundary = (marker) => {
         configuration: { dmap, bbad, a1t, a1b, das, dasb, a2a, ntlr, flags },
     };
 };
-/** Correlate explicit boundaries with payload accesses using at most sixteen open windows.
- * @returns {object} Streaming accumulator. Finish preserves partial windows at capture edges.
+/**
+ * Correlate explicit boundaries with payload accesses using at most sixteen open windows.
+ * @returns Streaming accumulator. Finish preserves partial windows at capture edges.
  */
 export const createRuntimeTransferAccumulator = () => {
     const open = new Map();
     const activity = new Map();
     const windows = [];
     let omittedWindows = 0;
-    /** Retain all aggregate counts while bounding the report's example list.
-     * @param {RuntimeTransferWindow} window Closed or explicitly partial observed window.
+    /**
+     * Retain all aggregate counts while bounding the report's example list.
+     * @param window Closed or explicitly partial observed window.
      */
     const retain = (window) => {
         const key = `${window.actor}:${window.channel}`;
@@ -142,8 +148,9 @@ export const createRuntimeTransferAccumulator = () => {
         }
     };
     return {
-        /** Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
-         * @param {RuntimeBusAccess | RuntimeTransferBoundary} event Already validated ordered event.
+        /**
+         * Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
+         * @param event Already validated ordered event.
          */
         push: (event) => {
             if (event.actor === "cpu") {
@@ -215,8 +222,9 @@ export const createRuntimeTransferAccumulator = () => {
             retain({ ...current, end: event, status });
             open.delete(key);
         },
-        /** Close remaining windows without claiming completion or an attempted slot count.
-         * @returns {RuntimeTransferSummary} Bounded report with exact lifetime window counts.
+        /**
+         * Close remaining windows without claiming completion or an attempted slot count.
+         * @returns Bounded report with exact lifetime window counts.
          */
         finish: () => {
             for (const current of open.values()) {

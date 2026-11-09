@@ -1,10 +1,16 @@
 /** Structured plugin/configuration failure. Cleanup of multiple resources may instead throw AggregateError. */
 export class PluginError extends Error {
+    /** Stable failure category for programmatic handling. */
     code;
+    /** Manifest ID of the plugin responsible, when known. */
     pluginId;
+    /** Module specifier or URL the plugin was loaded from, when known. */
     pluginModule;
+    /** Contribution ID involved in the failure, when known. */
     contributionId;
+    /** Target ID involved in the failure, when known. */
     targetId;
+    /** Original thrown value, also passed to the native Error cause. */
     cause;
     constructor(message, context) {
         super(message, { cause: context.cause });

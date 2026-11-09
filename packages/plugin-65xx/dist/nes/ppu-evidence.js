@@ -2,7 +2,8 @@ import path from "node:path";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { openAnalysisProjectStore, } from "@uttori/asm-disassembler";
 import { sourceContentHash } from "@uttori/asm-disassembler/source-project";
-/** Aggregate verified PPU port accesses without timing/register snapshots multiplying every fact.
+/**
+ * Aggregate verified PPU port accesses without timing/register snapshots multiplying every fact.
  * Full ordered events, including fetch/A12/IRQ timelines, remain in the hashed ACT2 archive.
  */
 export function createNesGraphicsProjection() {
@@ -39,8 +40,7 @@ export function createNesGraphicsProjection() {
         },
         finish(sha256) {
             const evidence = [`runtime:graphics:${sha256}`];
-            return [...facts].map(([key, entry]) => ({
-                ...entry.fact,
+            return [...facts].map(([key, entry]) => Object.assign({}, entry.fact, {
                 count: entry.count,
                 kind: "runtime-graphics-access",
                 architecture: "65xx.2a03",

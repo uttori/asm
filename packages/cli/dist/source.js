@@ -3,15 +3,18 @@ import path from "node:path";
 import { executeSourceOperation } from "@uttori/asm-game-secret-of-mana/source-host";
 import { SNES_MAPPERS } from "@uttori/asm-plugin-snes/disassembler";
 import { readSourceOperation } from "@uttori/asm-workflows/source";
+/** Read a project contract JSON file, rejecting payloads larger than 8 MiB. */
 function readJson(file) {
     if (fs.statSync(file).size > 8 * 1024 * 1024) {
         throw new Error(`Project contract is too large: ${file}`);
     }
     return JSON.parse(fs.readFileSync(file, "utf8"));
 }
+/** True for a plain object that can hold JSON object fields. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** True when the token is one of the SNES mapper identifiers the source workflow accepts. */
 function isSnesMapper(value) {
     return SNES_MAPPERS.some((mapper) => mapper === value);
 }
@@ -32,9 +35,11 @@ const DIRECT_SOURCE_ACTIONS = [
     "expand",
     "import",
 ];
+/** True when the token is a zero-operand source action. */
 function isDirectSourceAction(value) {
     return DIRECT_SOURCE_ACTIONS.some((action) => action === value);
 }
+/** Parse an optional `--mapper` token, or return undefined when the flag is omitted. */
 function requestedMapper(value) {
     if (value === undefined) {
         return undefined;
@@ -44,6 +49,7 @@ function requestedMapper(value) {
     }
     return value;
 }
+/** Load a research analysis change from JSON, rejecting unknown collections or kinds. */
 function readAnalysisChange(file) {
     const value = readJson(file);
     if (!isResearchAnalysisChange(value)) {
@@ -51,6 +57,7 @@ function readAnalysisChange(file) {
     }
     return value;
 }
+/** True when the payload is a put/remove of annotations or analysis with the required identity fields. */
 function isResearchAnalysisChange(value) {
     if (!isRecord(value) || typeof value.expectedDocumentSha256 !== "string") {
         return false;
@@ -69,6 +76,7 @@ function isResearchAnalysisChange(value) {
         isRecord(value.value) &&
         typeof value.value.id === "string");
 }
+/** Usage text for `uttori-asm source`, covering Git source, research, graphics and capture import. */
 export const sourceUsage = `uttori-asm source <status|prepare|build|index|analyze|catalog|finish|abort|clean> <project>
 uttori-asm source init <new-folder> <original-rom> [--mapper <mapper>] [--dizraw <research.dizraw>]
 uttori-asm source prepare <project> --linked

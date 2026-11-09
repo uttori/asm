@@ -1,16 +1,17 @@
 /**
  * Compare keys preserving the existing locale-based ordering.
  * JSON.stringify still emits canonical integer keys in numeric order.
- * @param {string} a First key.
- * @param {string} b Second key.
- * @returns {number} Comparison result.
+ * @param a First key.
+ * @param b Second key.
+ * @returns Comparison result.
  */
 const compareKeys = (a, b) => a.localeCompare(b);
+/** Narrows plain objects while excluding arrays and null. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /**
  * Sort keys and omit undefined fields recursively for bounded JSON identities and payloads.
- * @param {unknown} value Bounded JSON-compatible value. Arrays retain their input order.
- * @returns {unknown} Canonical objects with undefined fields omitted.
+ * @param value Bounded JSON-compatible value. Arrays retain their input order.
+ * @returns Canonical objects with undefined fields omitted.
  */
 export const canonicalValue = (value) => {
     if (typeof value !== "object" || value === null) {
@@ -54,6 +55,7 @@ export const canonicalValue = (value) => {
     }
     return result;
 };
+/** Shared JSON.stringify entry point so compact and pretty paths stay aligned. */
 function stringifyCanonical(value) {
     return JSON.stringify(value);
 }
@@ -61,16 +63,16 @@ function stringifyCanonical(value) {
  * Compact canonical JSON for in-memory equality.
  * Same key order, undefined omission, and escaping as {@link canonicalJson}, without
  * indentation or a trailing newline.
- * @param {unknown} value Bounded identity, record, or configuration value.
- * @returns {string} Compact canonical text. Top-level undefined, functions, and symbols become empty.
+ * @param value Bounded identity, record, or configuration value.
+ * @returns Compact canonical text. Top-level undefined, functions, and symbols become empty.
  */
 export const canonicalJsonCompact = (value) => stringifyCanonical(canonicalValue(value)) ?? "";
 /**
  * True when both values have the same canonical JSON identity.
  * Identical references match without serialization.
- * @param {unknown} left First bounded value.
- * @param {unknown} right Second bounded value.
- * @returns {boolean} Canonical equality.
+ * @param left First bounded value.
+ * @param right Second bounded value.
+ * @returns Canonical equality.
  */
 export const canonicalEquals = (left, right) => left === right || canonicalJsonCompact(left) === canonicalJsonCompact(right);
 /**
@@ -78,8 +80,8 @@ export const canonicalEquals = (left, right) => left === right || canonicalJsonC
  * Debug-map fingerprints, analysis manifests, runtime-fact payloads, trace content
  * hashes, and review files are defined as this text. Changing the layout changes
  * those durable identities. In-memory equality should use {@link canonicalEquals}.
- * @param {unknown} value Bounded identity, record, or configuration value.
- * @returns {string} Canonical text used for durable hashes and review output.
+ * @param value Bounded identity, record, or configuration value.
+ * @returns Canonical text used for durable hashes and review output.
  */
 export const canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), undefined, 2)}\n`;
 //# sourceMappingURL=canonical-json.js.map

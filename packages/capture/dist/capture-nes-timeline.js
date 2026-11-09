@@ -1,4 +1,5 @@
 import { validateNesMapper } from "./capture-nes-mapper.js";
+/** Decode eight packed MMC3 IRQ bytes at `at`, rejecting out-of-range flags. */
 function irq(r, at) {
     if (r[at + 2] > 1 ||
         r[at + 3] > 1 ||

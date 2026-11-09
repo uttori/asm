@@ -1,10 +1,11 @@
 /** Keep cache names in a separate index: WITHOUT ROWID mixes large JSON payloads into key pages. */
 const QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
-/** Install dependency-specific invalidation. Cached projections survive unrelated publications.
+/**
+ * Install dependency-specific invalidation. Cached projections survive unrelated publications.
  * The caller owns the writer transaction. Trigger names and tables come only from internal constants.
- * @param {DatabaseSync} db Open project database.
- * @param {string} key Internal projection identifier (letters/digits/underscores).
- * @param {readonly ShardKind[]} dependencies Collections consumed by the projection.
+ * @param db Open project database.
+ * @param key Internal projection identifier (letters/digits/underscores).
+ * @param dependencies Collections consumed by the projection.
  */
 export const installQueryCache = (db, key, dependencies) => {
     if (!/^[\d_a-z]+$/.test(key)) {
@@ -39,11 +40,12 @@ export const installQueryCache = (db, key, dependencies) => {
         }
     }
 };
-/** Read a dependency-validated projection. Configuration and layout belong in its signature.
- * @param {DatabaseSync} db Open project database.
- * @param {string} key Internal projection identifier.
- * @param {string} signature Configuration/layout fingerprint.
- * @returns {T | undefined} Cached value, or undefined when its inputs changed.
+/**
+ * Read a dependency-validated projection. Configuration and layout belong in its signature.
+ * @param db Open project database.
+ * @param key Internal projection identifier.
+ * @param signature Configuration/layout fingerprint.
+ * @returns Cached value, or undefined when its inputs changed.
  */
 export const readQueryCache = (db, key, signature) => {
     if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
@@ -58,11 +60,12 @@ export const readQueryCache = (db, key, signature) => {
     const parsed = JSON.parse(String(row.payload));
     return parsed;
 };
-/** Publish a complete projection atomically with the read snapshot used to compute it.
- * @param {DatabaseSync} db Connection in the owning write transaction.
- * @param {string} key Internal projection identifier.
- * @param {string} signature Configuration/layout fingerprint.
- * @param {unknown} value JSON-serializable compact result.
+/**
+ * Publish a complete projection atomically with the read snapshot used to compute it.
+ * @param db Connection in the owning write transaction.
+ * @param key Internal projection identifier.
+ * @param signature Configuration/layout fingerprint.
+ * @param value JSON-serializable compact result.
  */
 export const writeQueryCache = (db, key, signature, value) => {
     db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(key, signature, JSON.stringify(value));

@@ -6,9 +6,10 @@ export declare function isCoreDataDirective(registry: Pick<DirectiveRegistry, "l
 export declare function inheritCoreDataHandler(original: NonNullable<ReturnType<DirectiveRegistry["lookup"]>>, wrapped: NonNullable<ReturnType<DirectiveRegistry["lookup"]>>): void;
 /**
  * Routes byte/word/long data directives through the runtime data handler.
- * @param {DataDirectiveContext} ctx The ROM-capable directive context.
- * @param {string[]} words The directive words.
+ * @param ctx The ROM-capable directive context.
+ * @param words The directive words.
  */
 export declare const handleDataDirective: ({ runtime }: DataDirectiveContext, words: readonly string[]) => void;
+/** Registers numeric and character data directives that delegate to the data runtime. */
 export declare const registerDataDirectives: (registry: DirectiveRegistry, context: DataDirectiveContext) => void;
 //# sourceMappingURL=data.d.ts.map

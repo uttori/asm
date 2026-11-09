@@ -5,8 +5,11 @@ import type { SpriteAtlasSource } from "./som-types.js";
 export declare function createSomSpriteEditorBundle(atlas: SpriteAtlasSource, catalog: SpritePaletteCatalog, session: string): SpriteEditorBundle;
 /** One whole fixed record; the host turns only changed coordinate scalars into source edits. */
 export interface SomBodySourceChange {
+    /** CPU address of the fixed-length body record. */
     readonly address: number;
+    /** Native bytes before applying editor deltas. */
     readonly before: Uint8Array;
+    /** Native bytes after applying editor deltas. */
     readonly after: Uint8Array;
 }
 /** Combine all deltas against current native pixels before rendering new derived views. No filesystem access. */

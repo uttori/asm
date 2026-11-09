@@ -1,21 +1,51 @@
 import { canonicalValue } from "@uttori/asm-core/canonical-json";
+/**
+ * Accept only non-null, non-array objects.
+ * @param value Candidate value.
+ * @returns Whether value is a plain record.
+ */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/**
+ * Narrow to a readonly array of unvalidated elements without widening to Array<any>.
+ * @param value Candidate value.
+ * @returns Whether value is an array.
+ */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
+/**
+ * Accept any integral number, including unsafe magnitudes.
+ * @param value Candidate value.
+ * @returns Whether value is an integer.
+ */
 function isInteger(value) {
     return typeof value === "number" && Number.isInteger(value);
 }
+/**
+ * Accept integers exactly representable as doubles.
+ * @param value Candidate value.
+ * @returns Whether value is a safe integer.
+ */
 function isSafeInteger(value) {
     return typeof value === "number" && Number.isSafeInteger(value);
 }
+/**
+ * Accept register values: strings, booleans and finite numbers.
+ * @param value Candidate value.
+ * @returns Whether value is a runtime state value.
+ */
 function isStateValue(value) {
     return (typeof value === "string" ||
         typeof value === "boolean" ||
         (typeof value === "number" && Number.isFinite(value)));
 }
+/**
+ * Validate one bus operation, including actor/channel consistency for DMA and HDMA.
+ * @param entry Untrusted access record.
+ * @returns Whether entry is a valid memory access.
+ */
 function isMemoryAccess(entry) {
     if (!isRecord(entry)) {
         return false;
@@ -42,9 +72,9 @@ function isMemoryAccess(entry) {
 }
 /**
  * Validate execution details for persistence.
- * @param {unknown} value Untrusted detail array.
- * @param {number} count Expected instruction count.
- * @returns {readonly RuntimeInstructionDetail[]} Owned details with recursively canonical key order.
+ * @param value Untrusted detail array.
+ * @param count Expected instruction count.
+ * @returns Owned details with recursively canonical key order.
  */
 export const validateRuntimeInstructionDetails = (value, count) => {
     if (!isUnknownArray(value) || value.length !== count) {

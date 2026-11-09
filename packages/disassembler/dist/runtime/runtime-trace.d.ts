@@ -9,6 +9,7 @@ export declare const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION: 1;
 export interface RuntimeInstructionTraceChunk {
     /** Nonnegative producer sequence of the first address, including positions lost before delivery. */
     readonly sequenceStart: number;
+    /** Program counter addresses delivered in this chunk, in observation order. */
     readonly addresses: readonly number[];
     /** Optional execution-time detail. Legacy PC-only chunks remain valid. */
     readonly details?: readonly RuntimeInstructionDetail[];
@@ -16,6 +17,7 @@ export interface RuntimeInstructionTraceChunk {
     readonly unattributedMemoryAccesses?: number;
     /** Cumulative producer loss, not the loss in this chunk. Counts must never decrease. */
     readonly droppedEvents: number;
+    /** False when the producer closed the stream before the chunk ended. */
     readonly active: boolean;
 }
 /**
@@ -23,23 +25,33 @@ export interface RuntimeInstructionTraceChunk {
  * Chunks preserve observed order and producer loss. Project facts are aggregated during import.
  */
 export interface RuntimeInstructionTraceArtifact {
+    /** On-disk trace artifact discriminator. */
     readonly format: typeof RUNTIME_INSTRUCTION_TRACE_FORMAT;
+    /** Schema version readers accept for instruction traces. */
     readonly schemaVersion: typeof RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION;
+    /** Instruction architecture recorded in the trace envelope. */
     readonly architecture: string;
+    /** Named address space for every PC in the trace. */
     readonly addressSpace: string;
+    /** Headerless ROM content hash binding the trace to one cartridge image. */
     readonly romContentSha256: string;
     /** Complete cartridge identity, including iNES mapper/header bytes. */
     readonly romFileSha256?: string;
+    /** Recorder identity recorded in the trace envelope. */
     readonly producer: {
+        /** Recorder or emulator id that emitted the trace. */
         readonly id: string;
+        /** Producer revision string recorded with the trace. */
         readonly revision: string;
     };
+    /** Ordered instruction chunks preserving producer loss and sequencing. */
     readonly chunks: readonly RuntimeInstructionTraceChunk[];
 }
 /** Project identity and user-visible source name required for an explicit trace import. */
 export interface RuntimeInstructionTraceImportContext {
     /** Lowercase SHA-256 of headerless ROM content. A mismatch rejects the import. */
     readonly projectRomContentSha256: string;
+    /** User-visible source name stored on the import report. */
     readonly sourceName: string;
     /** Full retains supplied registers. Analysis retains SNES decoder state and all memory facts. Defaults to full. */
     readonly indexMode?: string;
@@ -57,11 +69,15 @@ export type RuntimeTraceIndexMode = "full" | "analysis";
 export declare const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 8000000;
 /** Native evidence plus deterministic diagnostics produced without mutating a project. */
 export interface RuntimeInstructionTraceImportResult {
+    /** Shard batch ready to merge into the analysis project. */
     readonly batch: RuntimeEvidenceBatch;
+    /** Import report describing the validated trace artifact. */
     readonly report: ImportReport;
     /** Canonical identity of all validated input, including every supplied register. */
     readonly sourceSha256: string;
+    /** Count of instruction events observed across the validated stream. */
     readonly observedEvents: number;
+    /** Cumulative producer loss reported by the trace envelope. */
     readonly droppedEvents: number;
 }
 /** Identity shared by all chunks of one trace. */
@@ -72,7 +88,9 @@ export type RuntimeInstructionTraceMetadata = Omit<RuntimeInstructionTraceArtifa
  * provisional until read() resolves. Consumers validate chunk contents and must not retain them.
  */
 export interface RuntimeTraceSource {
+    /** Validated trace envelope identity shared by every chunk. */
     readonly metadata: RuntimeInstructionTraceMetadata;
+    /** Stream chunks to the importer after validating envelope integrity. */
     readonly read: (accept: (chunk: unknown) => void) => Promise<void>;
     /** Recheck external companions when a content-matched, previously validated index replaces read(). */
     readonly verifyRetained?: () => Promise<void>;
@@ -85,27 +103,27 @@ export interface RuntimeTraceSource {
 }
 /**
  * Validate the small trace envelope independently of its event stream.
- * @param {unknown} value Untrusted metadata.
- * @returns {RuntimeInstructionTraceMetadata} Normalized identity.
+ * @param value Untrusted metadata.
+ * @returns Normalized identity.
  */
 export declare const validateRuntimeInstructionTraceMetadata: (value: unknown) => RuntimeInstructionTraceMetadata;
 /**
  * Create validation state spanning chunk boundaries without retaining earlier events.
- * @returns {(value: unknown) => RuntimeInstructionTraceChunk} Next-chunk validator.
+ * @returns Next-chunk validator.
  */
 export declare const createRuntimeTraceChunkValidator: () => ((value: unknown) => RuntimeInstructionTraceChunk);
 /**
  * Validates untrusted trace data without importing project facts.
- * @param {unknown} value Untrusted trace.
- * @returns {RuntimeInstructionTraceArtifact} Normalized trace.
+ * @param value Untrusted trace.
+ * @returns Normalized trace.
  */
 export declare const validateRuntimeInstructionTrace: (value: unknown) => RuntimeInstructionTraceArtifact;
 /**
  * Converts one explicitly supplied native trace artifact into merge-ready runtime evidence.
  * This function is pure: callers must separately invoke `mergeRuntimeEvidence` and persist the project.
- * @param {RuntimeInstructionTraceArtifact} value Untrusted native trace artifact.
- * @param {RuntimeInstructionTraceImportContext} context Selected project and source identity.
- * @returns {RuntimeInstructionTraceImportResult} Deterministic batch and loss diagnostics.
+ * @param value Untrusted native trace artifact.
+ * @param context Selected project and source identity.
+ * @returns Deterministic batch and loss diagnostics.
  */
 export declare const importRuntimeInstructionTrace: (value: unknown, context: RuntimeInstructionTraceImportContext) => RuntimeInstructionTraceImportResult;
 /** One distinct indexed fact. Byte/state pairs expand into two persisted records at finalization. */
@@ -139,6 +157,7 @@ export interface RuntimeTraceFactIndex {
 }
 /** Optional external storage and record sink. Sink output is provisional until finish returns. */
 export interface RuntimeTraceImporterStorage {
+    /** Caller-owned fact index receiving distinct trace observations. */
     readonly index: RuntimeTraceFactIndex;
     /** Complete parser summary paired atomically with this index; never resume a partial parse. */
     readonly checkpoint?: RuntimeTraceCheckpoint;
@@ -155,10 +174,10 @@ export interface RuntimeTraceImporterStorage {
 /**
  * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
  * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
- * @param {string} mode Full snapshots or compact analysis state.
- * @param {number} requested Explicit caller budget, if any.
- * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
- * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
+ * @param mode Full snapshots or compact analysis state.
+ * @param requested Explicit caller budget, if any.
+ * @param storage Optional counter storage and final record sink.
+ * @returns Positive safe integer limit, or throws for an invalid or unsafe memory budget.
  */
 export declare const runtimeTraceIndexRecordLimit: (mode: string, requested: number | undefined, storage?: RuntimeTraceImporterStorage) => number;
 /** Incremental aggregation. Any failed push permanently invalidates the pending import. */
@@ -172,26 +191,37 @@ export interface RuntimeInstructionTraceImporter {
 }
 /** Small sealed parser state. The owning cache binds it to archive, ROM, importer and index identities. */
 export interface RuntimeTraceCheckpoint {
+    /** Canonical hash over validated input accepted into the checkpoint. */
     readonly sourceSha256: string;
+    /** Execution runtime records emitted before sealing the checkpoint. */
     readonly executionRecords: number;
+    /** Memory runtime records emitted before sealing the checkpoint. */
     readonly memoryRecords: number;
+    /** Distinct indexed facts retained in the importer index. */
     readonly indexRecords: number;
+    /** Instruction events observed before sealing the checkpoint. */
     readonly observedEvents: number;
+    /** Producer loss accumulated before sealing the checkpoint. */
     readonly droppedEvents: number;
+    /** True when the validated stream ended at a terminal producer boundary. */
     readonly complete: boolean;
+    /** Bus operations outside captured CPU instructions accumulated so far. */
     readonly unattributed: number;
+    /** Instruction events carrying execution-time detail fields. */
     readonly detailedEvents: number;
+    /** Memory facts dropped by indexing policy before sealing. */
     readonly memoryLoss: number;
+    /** Optional partial-stream recovery bounds when importing a checkpointed prefix. */
     readonly recovery?: RuntimeTraceSource["recovery"];
 }
 /**
  * Aggregate a trace one validated chunk at a time, preserving canonical import identities.
  * The default memory index grows with distinct facts. Callers can supply a disk index and sink.
  * Paired code/state facts share one accumulator until finalization. Record budgets do not bound bytes.
- * @param {RuntimeInstructionTraceMetadata} value Trace identity.
- * @param {RuntimeInstructionTraceImportContext} context Destination identity.
- * @param {RuntimeTraceImporterStorage} [storage] Caller-owned counter index and optional bounded record sink.
- * @returns {RuntimeInstructionTraceImporter} Incremental importer. Finish only after the file validates.
+ * @param value Trace identity.
+ * @param context Destination identity.
+ * @param [storage] Caller-owned counter index and optional bounded record sink.
+ * @returns Incremental importer. Finish only after the file validates.
  */
 export declare const createRuntimeInstructionTraceImporter: (value: RuntimeInstructionTraceMetadata, context: RuntimeInstructionTraceImportContext, storage?: RuntimeTraceImporterStorage) => RuntimeInstructionTraceImporter;
 //# sourceMappingURL=runtime-trace.d.ts.map

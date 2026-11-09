@@ -1,4 +1,5 @@
-/** Host-independent ceilings. Smaller host budgets may restrict these; files cannot enlarge them.
+/**
+ * Host-independent ceilings. Smaller host budgets may restrict these; files cannot enlarge them.
  * Pixel area, decoded bytes, rendering work and metadata counts have different units.
  */
 export declare const ASSET_LIMITS: Readonly<{

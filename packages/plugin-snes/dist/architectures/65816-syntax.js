@@ -8,8 +8,9 @@ export function parse65816Operands(mnemonic, text) {
         commaIndex: true,
     };
     const common = parseInstructionOperands(mnemonic, text, grammar);
-    const structural = common.operands[0]?.kind === "template" ? common.operands[0].structure : common;
-    const whole = expansionPlan(text, 0), shape = structural.operands[0];
+    const first = common.operands.at(0);
+    const structural = first?.kind === "template" ? first.structure : common;
+    const whole = expansionPlan(text, 0), shape = structural.operands.at(0);
     let scalar = whole.scalar;
     if (shape?.kind === "immediate") {
         scalar = shape.value;

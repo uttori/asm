@@ -2,8 +2,26 @@ import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import { formatSpc700Instruction, Spc700Decoder } from "../architectures/spc700-decoder.js";
 import { formatSuperFxInstruction, SuperFxDecoder } from "../architectures/superfx-decoder.js";
 import { initialSuperFxState, superFxDecodeState, transferSuperFxState } from "./superfx-state.js";
+/**
+ * Formats an unsigned value as uppercase `$` hex.
+ * @param value Unsigned value.
+ * @param width Minimum digit count, zero-padded.
+ * @returns Assembler hex literal.
+ */
 const hex = (value, width) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+/**
+ * Emits raw bytes as one `db` directive.
+ * @param bytes Bytes to emit.
+ * @returns Comma-separated byte directive.
+ */
 const dataLine = (bytes) => `db ${[...bytes].map((value) => hex(value, 2)).join(",")}`;
+/**
+ * Linearly decodes SPC700 bytes with direct page zero, emitting a one-byte `db` for every
+ * undecodable position so the output always reassembles to the same bytes.
+ * @param bytes Payload bytes.
+ * @param loadAddress ARAM address of the first byte; wrapped to 16 bits per instruction.
+ * @returns Source lines in byte order.
+ */
 const spc700Lines = (bytes, loadAddress) => {
     const decoder = new Spc700Decoder();
     const source = new Uint8ArrayDecoderSource(bytes);
@@ -28,8 +46,8 @@ const spc700Lines = (bytes, loadAddress) => {
 };
 /**
  * Renders a standalone ARAM image as byte-exact native SPC700 source.
- * @param {Spc700AramImage} image ARAM bytes and load address.
- * @returns {string} Native source that recreates the payload.
+ * @param image ARAM bytes and load address.
+ * @returns Native source that recreates the payload.
  */
 export const renderSpc700AramSource = (image) => [
     "; Generated standalone SPC700 payload.",
@@ -41,9 +59,9 @@ export const renderSpc700AramSource = (image) => [
 ].join("\n");
 /**
  * Renders an explicitly parsed NSPC stream as byte-exact native embedded-block source.
- * @param {RomImage} rom Source ROM containing the payload bytes.
- * @param {Spc700UploadStream} stream Validated upload-stream structure.
- * @returns {string} Native source that recreates the stream.
+ * @param rom Source ROM containing the payload bytes.
+ * @param stream Validated upload-stream structure.
+ * @returns Native source that recreates the stream.
  */
 export const renderSpc700UploadSource = (rom, stream) => {
     const lines = ["; Generated Nintendo-style SPC700 upload stream.", "lorom", "org $008000"];
@@ -71,8 +89,8 @@ export const renderSpc700UploadSource = (rom, stream) => {
 };
 /**
  * Renders a contiguous GSU program image as byte-exact native SuperFX source.
- * @param {SuperFxRomImage} image GSU bytes and logical load address.
- * @returns {string} Native source that recreates the program image.
+ * @param image GSU bytes and logical load address.
+ * @returns Native source that recreates the program image.
  */
 export const renderSuperFxRomSource = (image) => {
     const bytes = image.bytes();

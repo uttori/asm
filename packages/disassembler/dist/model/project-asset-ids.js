@@ -13,8 +13,8 @@ const legacyNativeIds = new Map([
 /**
  * Resolve a known v1 SNES declaration for analysis display without editing its stored provenance.
  * A different codec version or an unknown ID may have different byte semantics and stays unresolved.
- * @param {ProjectAssetCodecAnnotation} declaration Persisted project record.
- * @returns {string | undefined} Equivalent native format ID when semantics are known.
+ * @param declaration Persisted project record.
+ * @returns Equivalent native format ID when semantics are known.
  */
 export function resolveProjectNativeAssetId(declaration) {
     if (declaration.codecVersion !== "1.0.0") {

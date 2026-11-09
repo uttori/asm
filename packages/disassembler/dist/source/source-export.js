@@ -5,15 +5,15 @@ export const SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
 export const SOURCE_EXPORT_SCHEMA_VERSION = 1;
 /**
  * SHA-256 of UTF-8 text or raw bytes, hex-encoded.
- * @param {string | Uint8Array} value Content to hash.
- * @returns {string} 64-character lowercase hex digest.
+ * @param value Content to hash.
+ * @returns 64-character lowercase hex digest.
  */
 export const sourceExportSha256 = (value) => createHash("sha256").update(value).digest("hex");
 /**
  * Compares two images without throwing. Used for round-trip rebuild reports.
- * @param {Uint8Array} expected Source ROM content (or other oracle).
- * @param {Uint8Array} actual Rebuilt bytes.
- * @returns {ByteComparison} Equality, hashes, and first mismatch index.
+ * @param expected Source ROM content (or other oracle).
+ * @param actual Rebuilt bytes.
+ * @returns Equality, hashes, and first mismatch index.
  */
 export const compareByteImages = (expected, actual) => {
     const common = Math.min(expected.length, actual.length);

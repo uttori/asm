@@ -10,12 +10,27 @@ import { assertSourcePath, sourceRepository } from "./git.js";
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
+/**
+ * Narrow untrusted project JSON to a plain object.
+ * @param value Parsed JSON value.
+ * @returns True for non-null, non-array objects.
+ */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/**
+ * Narrow a limit value to a safe integer; sign is checked by the caller.
+ * @param value Untrusted limit value.
+ * @returns True for a number that is a safe integer.
+ */
 function isSafeInteger(value) {
     return typeof value === "number" && Number.isSafeInteger(value);
 }
+/**
+ * Validate configuration identity, portable paths and work limits.
+ * @param value Parsed `.uttori/project.json`.
+ * @throws Error when any field is missing, malformed or outside its allowed range.
+ */
 function assertSourceProjectConfiguration(value) {
     if (!isRecord(value)) {
         throw new Error("Invalid Git source project configuration.");
@@ -88,6 +103,11 @@ export async function openSourceProject(directory) {
 export function sourceProjectLocalInputs(project) {
     return readSourceProjectLocalInputs(project.repository.root);
 }
+/**
+ * Validate local bindings before resolving their paths.
+ * @param value Parsed `.uttori-local/project.json`.
+ * @throws Error asking the user to configure the ROM and evidence paths when invalid.
+ */
 function assertSourceProjectLocalInputs(value) {
     if (!isRecord(value) ||
         value.format !== "uttori-source-local" ||

@@ -2,8 +2,8 @@ import { sourceSpanToRange, } from "../source-location.js";
 /**
  * Returns the source range for a located artifact, deriving it from the span
  * when an explicit range is not present.
- * @param {LocatableLocation} location The artifact location.
- * @returns {SourceRange | undefined} The resolved range, or undefined when no geometry exists.
+ * @param location The artifact location.
+ * @returns The resolved range, or undefined when no geometry exists.
  */
 export function locationRange(location) {
     if (location.range) {
@@ -16,9 +16,9 @@ export function locationRange(location) {
 }
 /**
  * Tests whether a position falls within a range (end-exclusive on the column).
- * @param {SourcePosition} position The zero-based position to test.
- * @param {SourceRange} range The range to test against.
- * @returns {boolean} True when the position is inside the range.
+ * @param position The zero-based position to test.
+ * @param range The range to test against.
+ * @returns True when the position is inside the range.
  */
 export function positionInRange(position, range) {
     if (position.line < range.start.line || position.line > range.end.line) {
@@ -35,18 +35,18 @@ export function positionInRange(position, range) {
 /**
  * Finds the symbol reference whose range contains the given position. When
  * multiple match, the narrowest range wins so token-level spans beat line spans.
- * @param {AssemblySymbolReference[]} references The references to search.
- * @param {SourcePosition} position The position to resolve.
- * @returns {AssemblySymbolReference | undefined} The matching reference, if any.
+ * @param references The references to search.
+ * @param position The position to resolve.
+ * @returns The matching reference, if any.
  */
 export function referenceAt(references, position) {
     return narrowestMatch(references, position);
 }
 /**
  * Finds the symbol definition whose range contains the given position.
- * @param {AssemblySymbolDefinition[]} symbols The symbols to search.
- * @param {SourcePosition} position The position to resolve.
- * @returns {AssemblySymbolDefinition | undefined} The matching symbol, if any.
+ * @param symbols The symbols to search.
+ * @param position The position to resolve.
+ * @returns The matching symbol, if any.
  */
 export function symbolAt(symbols, position) {
     return narrowestMatch(symbols, position);
@@ -54,9 +54,9 @@ export function symbolAt(symbols, position) {
 /**
  * Resolves the definitions a reference points at, matching by name and a
  * compatible kind, falling back to a name-only match when no kind matches.
- * @param {AssemblySymbolReference} reference The reference to resolve.
- * @param {AssemblySymbolDefinition[]} allSymbols Every known symbol definition.
- * @returns {AssemblySymbolDefinition[]} The candidate definitions.
+ * @param reference The reference to resolve.
+ * @param allSymbols Every known symbol definition.
+ * @returns The candidate definitions.
  */
 export function resolveDefinition(reference, allSymbols) {
     const byName = allSymbols.filter((symbol) => symbol.name === reference.name);
@@ -76,10 +76,10 @@ export function resolveDefinition(reference, allSymbols) {
 /**
  * Finds every reference that targets a given symbol name, optionally scoped to
  * a container.
- * @param {string} name The symbol name.
- * @param {AssemblySymbolReference[]} allReferences Every known reference.
- * @param {string} [containerName] Optional container scope.
- * @returns {AssemblySymbolReference[]} The matching references.
+ * @param name The symbol name.
+ * @param allReferences Every known reference.
+ * @param [containerName] Optional container scope.
+ * @returns The matching references.
  */
 export function findReferences(name, allReferences, containerName) {
     return allReferences.filter((reference) => reference.name === name &&
@@ -87,9 +87,9 @@ export function findReferences(name, allReferences, containerName) {
 }
 /**
  * Determines whether a reference kind can resolve to a symbol kind.
- * @param {AssemblySymbolReferenceKind} referenceKind The reference kind.
- * @param {AssemblySymbolKind} symbolKind The symbol kind.
- * @returns {boolean} True when the reference can point at the symbol.
+ * @param referenceKind The reference kind.
+ * @param symbolKind The symbol kind.
+ * @returns True when the reference can point at the symbol.
  */
 function kindMatches(referenceKind, symbolKind) {
     switch (referenceKind) {
@@ -112,9 +112,9 @@ function kindMatches(referenceKind, symbolKind) {
 /**
  * Returns the artifact with the narrowest containing range at a position.
  * @template T
- * @param {T[]} located The located artifacts to search.
- * @param {SourcePosition} position The position to resolve.
- * @returns {T | undefined} The narrowest matching artifact, if any.
+ * @param located The located artifacts to search.
+ * @param position The position to resolve.
+ * @returns The narrowest matching artifact, if any.
  */
 function narrowestMatch(located, position) {
     let best;
@@ -134,8 +134,8 @@ function narrowestMatch(located, position) {
 }
 /**
  * Computes a comparable width for a range so narrower matches can be preferred.
- * @param {SourceRange} range The range to measure.
- * @returns {number} A width metric (lines weighted heavily over columns).
+ * @param range The range to measure.
+ * @returns A width metric (lines weighted heavily over columns).
  */
 function rangeWidth(range) {
     const lineSpan = range.end.line - range.start.line;

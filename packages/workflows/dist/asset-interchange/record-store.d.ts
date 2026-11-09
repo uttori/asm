@@ -5,8 +5,11 @@ export declare function assetHash(bytes: string | Uint8Array): string;
 export declare function readAssetStagingId(value: unknown): string;
 /** Exact sorted regular-file inventory; the hash pins names, byte sizes and content hashes for retirement. */
 export interface AssetStagingInventory {
+    /** Staging inventory identity used to retire leftover directories. */
     readonly id: string;
+    /** SHA-256 of the interchange document or review payload. */
     readonly hash: string;
+    /** Per-file before/after digests recorded with the review. */
     readonly files: readonly {
         readonly name: string;
         /** File length in bytes, including partially written durable-replacement temporaries. */

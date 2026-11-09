@@ -49,10 +49,10 @@ export interface Snes65816AnalysisResult extends StaticAnalysisResult<Cpu65816Ab
  * Seeds from RESET/interrupt vectors, labels, `points: ["in"]` annotations,
  * configured entry points, and target sets. Data-classified intervals block
  * decode. Hardware I/O is never treated as ROM.
- * @param {RomImage} rom Immutable ROM content and identity.
- * @param {SnesMapper} mapper Explicitly detected or user-selected SNES mapper.
- * @param {Snes65816AnalysisOptions} [options] Project annotations, seeds, overrides, and deterministic limits.
- * @returns {Snes65816AnalysisResult} Static CFG, abstract states, project records, annotations, and evidence.
+ * @param rom Immutable ROM content and identity.
+ * @param mapper Explicitly detected or user-selected SNES mapper.
+ * @param [options] Project annotations, seeds, overrides, and deterministic limits.
+ * @returns Static CFG, abstract states, project records, annotations, and evidence.
  */
 export declare const analyzeSnes65816: (rom: RomImage, mapper: SnesMapper, options?: Snes65816AnalysisOptions) => Snes65816AnalysisResult;
 //# sourceMappingURL=65816-analysis.d.ts.map

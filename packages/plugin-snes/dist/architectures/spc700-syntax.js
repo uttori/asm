@@ -10,9 +10,11 @@ export function parseSpcOperands(mnemonic, text) {
         bitSelectors: true,
     };
     const common = parseInstructionOperands(mnemonic, text, grammar);
-    const structural = common.operands[0]?.kind === "template" ? common.operands[0].structure : common;
-    const parts = operandParts(text).map((part, i) => {
-        const shape = structural.operands[i];
+    const first = common.operands.at(0);
+    const structural = first?.kind === "template" ? first.structure : common;
+    const parts = [];
+    for (const [i, part] of operandParts(text).entries()) {
+        const shape = structural.operands.at(i);
         let body = part.text, scalar = operandScalarSyntax(body, part.start);
         if (shape?.kind === "immediate") {
             scalar = shape.value;
@@ -33,7 +35,7 @@ export function parseSpcOperands(mnemonic, text) {
         const bitHex = /^\$([\da-f]+)$/i.exec(bitBody);
         const hex = /^\$([\da-f]+)$/i.exec(display);
         const reg = /^(a|x|y|ya|sp|p|psw|c)$/i.exec(part.text);
-        return {
+        parts.push({
             ...(shape ? { shape } : {}),
             scalar,
             wholeScalar: part.text.startsWith("!$")
@@ -61,11 +63,13 @@ export function parseSpcOperands(mnemonic, text) {
             ...(dotted ? { bit: Number(dotted[2]) } : {}),
             invert,
             ...(bitHex ? { bitValue: Number.parseInt(bitHex[1], 16) } : {}),
-        };
-    });
+        });
+    }
     const op = mnemonic.toUpperCase(), dot = op.indexOf(".");
     const name = dot < 0 ? op : op.slice(0, dot);
-    const width = dot < 0 ? undefined : { B: 1, W: 2, L: 3, D: 4 }[op[dot + 1]];
+    const width = dot < 0
+        ? undefined
+        : { B: 1, W: 2, L: 3, D: 4 }[op[dot + 1]];
     const numbered = /^(OR|AND|EOR|MOV|NOT)([0-7])$/.exec(name), branch = /^(BBS|BBC|SET|CLR)([0-7])?$/.exec(name);
     const bitFamily = numbered?.[1] ?? branch?.[1], bitText = numbered?.[2] ?? branch?.[2];
     return {

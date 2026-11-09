@@ -3,15 +3,31 @@ import { type PluginSessionCapabilities } from "@uttori/asm-core/plugin";
 import type { SnesSessionState } from "../session-state.js";
 /** Prepared operands preserve validation timing relative to block-state checks and header writes. */
 export type SpcBlockSyntax = {
+    /** Parsed 16-bit SPC load address expression. */
     destination: ExpressionNode;
+    /** Original destination token text for diagnostics. */
     destinationText: string;
+    /** Non-NSPC mode or arity error deferred until after destination binding. */
     modeError?: string;
 };
+/** Parsed `endspcblock` trailer and validation errors. */
 export type EndSpcBlockSyntax = {
+    /** Optional execute address expression for the NSPC trailer word pair. */
     execute?: ExpressionNode;
+    /** Line format error detected during tokenization. */
     error?: string;
 };
+/**
+ * Tokenizes an `spcblock` directive line into a validated syntax payload.
+ * @param words Tokenized directive words beginning with `spcblock`.
+ * @returns Parsed block open payload.
+ */
 export declare function parseSpcBlock(words: readonly string[]): SpcBlockSyntax;
+/**
+ * Tokenizes an `endspcblock` directive line into trailer operands or errors.
+ * @param words Tokenized directive words beginning with `endspcblock`.
+ * @returns Parsed block close payload.
+ */
 export declare function parseEndSpcBlock(words: readonly string[]): EndSpcBlockSyntax;
 /**
  * Session-bound runtime for SPC block directives and stage cleanup.
@@ -38,7 +54,7 @@ export declare class SnesSpcRuntimeService {
      *
      * `custom` with a macro name is recognized as Asar syntax but not implemented.
      *
-     * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
+     * @param words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
      */
     handleSpcblock(words: readonly string[]): void;
     /** Bind destination before reporting mode errors, then commit the NSPC header and switch CPU. */
@@ -53,7 +69,7 @@ export declare class SnesSpcRuntimeService {
      *
      * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.
      *
-     * @param {readonly string[]} words Tokenized line.
+     * @param words Tokenized line.
      */
     handleEndSpcblock(words: readonly string[]): void;
     /** Size patching precedes trailer validation; an execute expression runs after its zero word. */

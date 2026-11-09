@@ -52,20 +52,8 @@ export function ld65LinkRecipe(config, target = "65xx.nes") {
     }
     return {
         target,
-        regions: [...config.memories.values()].map((region) => ({
-            name: region.name,
-            start: region.start,
-            size: region.size,
-            ...(region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {}),
-            ...(region.fill ? { fillByte: region.fillval } : {}),
-            addressSpace: "65xx.ines-address-space",
-        })),
-        placements: [...config.segments.values()].map((segment) => ({
-            section: segment.name,
-            load: segment.load,
-            run: segment.run,
-            ...(segment.start !== undefined ? { start: segment.start } : {}),
-        })),
+        regions: [...config.memories.values()].map((region) => Object.assign({ name: region.name, start: region.start, size: region.size }, region.fileOffset >= 0 ? { outputOffset: region.fileOffset } : {}, region.fill ? { fillByte: region.fillval } : {}, { addressSpace: "65xx.ines-address-space" })),
+        placements: [...config.segments.values()].map((segment) => Object.assign({ section: segment.name, load: segment.load, run: segment.run }, segment.start !== undefined ? { start: segment.start } : {})),
         // Explicit SYMBOLS declarations override generated defaults, matching the flat target's ordering.
         symbols: [...new Map(symbols.map((symbol) => [symbol.name, symbol])).values()],
     };
@@ -79,15 +67,15 @@ SEGMENTS {
 `;
 /**
  * Returns the built-in 32 KiB `$8000` layout used when a target omits `linkerConfig`.
- * @returns {string} A minimal ld65 config.
+ * @returns A minimal ld65 config.
  */
 export function defaultLd65ConfigText() {
     return DEFAULT_LINKER_CONFIG;
 }
 /**
  * Parses an ld65 config string into memories, segments, and exported symbols.
- * @param {string} source Linker configuration text.
- * @returns {Ld65Config} The parsed layout.
+ * @param source Linker configuration text.
+ * @returns The parsed layout.
  */
 export function parseLd65Config(source) {
     // Replace block comments with whitespace so adjacent tokens stay separate.
@@ -157,8 +145,8 @@ export function parseLd65Config(source) {
 }
 /**
  * Linker-defined names produced by `define = yes` plus the SYMBOLS block.
- * @param {Ld65Config} config Parsed linker configuration.
- * @returns {string[]} Symbol names that must stay session-global.
+ * @param config Parsed linker configuration.
+ * @returns Symbol names that must stay session-global.
  */
 export function linkerDefinedSymbolNames(config) {
     const names = [];
@@ -180,9 +168,9 @@ const LD65_BLOCK_BODY = {
 };
 /**
  * Reads semicolon-terminated statements inside a named MEMORY/SEGMENTS/SYMBOLS block.
- * @param {string} source Config text.
- * @param {"MEMORY" | "SEGMENTS" | "SYMBOLS"} block MEMORY, SEGMENTS, or SYMBOLS.
- * @returns {string[]} Statement bodies, without the trailing semicolon.
+ * @param source Config text.
+ * @param block MEMORY, SEGMENTS, or SYMBOLS.
+ * @returns Statement bodies, without the trailing semicolon.
  */
 function readBlockStatements(source, block) {
     const match = source.match(LD65_BLOCK_BODY[block]);
@@ -196,8 +184,8 @@ function readBlockStatements(source, block) {
 }
 /**
  * Parses `NAME: key = value, key = value`.
- * @param {string} statement One semicolon-terminated statement.
- * @returns {NamedStatement} Name plus attribute map.
+ * @param statement One semicolon-terminated statement.
+ * @returns Name plus attribute map.
  */
 function parseNamedStatement(statement) {
     const colon = statement.indexOf(":");
@@ -219,8 +207,8 @@ function parseNamedStatement(statement) {
 }
 /**
  * Splits on commas that are not inside quotes.
- * @param {string} input Attribute list.
- * @returns {string[]} Attribute assignments.
+ * @param input Attribute list.
+ * @returns Attribute assignments.
  */
 function splitTopLevelCommas(input) {
     const parts = [];
@@ -257,8 +245,8 @@ function splitTopLevelCommas(input) {
 }
 /**
  * Parses `$hex` or decimal tokens. Returns undefined when missing.
- * @param {string | undefined} token Raw attribute value.
- * @returns {number | undefined} The numeric value.
+ * @param token Raw attribute value.
+ * @returns The numeric value.
  */
 function parseNumberToken(token) {
     if (token === undefined || token === "") {
@@ -275,10 +263,10 @@ function parseNumberToken(token) {
 }
 /**
  * Requires a numeric attribute.
- * @param {Partial<Record<string, string>>} attrs Attribute map.
- * @param {string} key Attribute name.
- * @param {string} owner Statement name for errors.
- * @returns {number} The parsed number.
+ * @param attrs Attribute map.
+ * @param key Attribute name.
+ * @param owner Statement name for errors.
+ * @returns The parsed number.
  */
 function requireNumber(attrs, key, owner) {
     const value = parseNumberToken(attrs[key]);
@@ -289,8 +277,8 @@ function requireNumber(attrs, key, owner) {
 }
 /**
  * Parses ld65 yes/no flags.
- * @param {string | undefined} raw Raw token.
- * @returns {boolean | undefined} Parsed flag.
+ * @param raw Raw token.
+ * @returns Parsed flag.
  */
 function parseYesNo(raw) {
     if (raw === undefined) {

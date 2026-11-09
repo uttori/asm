@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 // oxlint-disable-next-line security/detect-unsafe-regex -- Every repetition has a fixed small bound.
 const uuidPattern = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/;
-/** Keep ownership until every payload is gone, so interruption never strands unidentifiable data.
+/**
+ * Keep ownership until every payload is gone, so interruption never strands unidentifiable data.
  * The caller holds both the maintenance lease and this directory's active lease.
  */
 function removeScratch(directory, lease) {

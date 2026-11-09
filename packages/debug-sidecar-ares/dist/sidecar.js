@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { DEBUG_SIDECAR_SESSION_ENV, DebugSidecarServer, assertDebugSidecarSessionToken } from "@uttori/asm-debug-adapter";
+import { DEBUG_SIDECAR_SESSION_ENV, DebugSidecarServer, assertDebugSidecarSessionToken, } from "@uttori/asm-debug-adapter";
 import { AresProcessHost, parseAresRuntimeManifest } from "./ares-process-host.js";
 import { ARES_RSP_BACKEND_ID, AresRspDebugBackend } from "./ares-rsp-backend.js";
 const usage = `Usage: uttori-asm-debug-sidecar-ares [options]
@@ -30,8 +30,8 @@ const optionNames = new Set([
 ]);
 /**
  * Strict shell-independent parser for the production sidecar executable.
- * @param {readonly string[]} arguments_ Sidecar command-line arguments.
- * @returns {AresSidecarArguments} Validated and path-resolved launch inputs.
+ * @param arguments_ Sidecar command-line arguments.
+ * @returns Validated and path-resolved launch inputs.
  */
 export const parseAresSidecarArguments = (arguments_) => {
     const values = new Map();
@@ -82,6 +82,7 @@ export const parseAresSidecarArguments = (arguments_) => {
         fastBoot,
     };
 };
+/** Resolves when a writable stream accepts one chunk without error. */
 const write = (stream, data) => new Promise((resolve, reject) => {
     stream.write(data, (error) => {
         if (error) {
@@ -94,9 +95,9 @@ const write = (stream, data) => new Promise((resolve, reject) => {
 });
 /**
  * Runs one authenticated stdio sidecar until shutdown, EOF, signal, or protocol failure.
- * @param {readonly string[]} arguments_ Sidecar command-line arguments.
- * @param {NodeJS.ProcessEnv} environment Environment containing the one-session token.
- * @returns {Promise<void>} Completion once stdio handlers and backend ownership are installed.
+ * @param arguments_ Sidecar command-line arguments.
+ * @param environment Environment containing the one-session token.
+ * @returns Completion once stdio handlers and backend ownership are installed.
  */
 export const runAresSidecar = async (arguments_, environment = process.env) => {
     const options = parseAresSidecarArguments(arguments_);

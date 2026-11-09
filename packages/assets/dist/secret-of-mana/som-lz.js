@@ -22,10 +22,10 @@ export const DISTANCE_MASKS = [0x1f, 0x0f, 0x07, 0x03, 0x01, 0x00];
  * Header: mode byte 0..5, one unused byte, big-endian uint16 output size.
  * Returns the exact encoded extent, excluding the game's speculative next-token read at completion.
  * Throws on truncated input, references before output, or runs exceeding the declared size.
- * @param {Uint8Array} source Encoded boot or graphics stream.
- * @param {number} [offset] Index of the four-byte header.
- * @param {number} [maxOutputBytes] Maximum accepted decoded size.
- * @returns {{data: Uint8Array, mode: number, unusedHeaderByte: number, compressedBytes: number, end: number, literalRuns: number, copyRuns: number}} Decoded bytes and the consumed encoded extent.
+ * @param source Encoded boot or graphics stream.
+ * @param [offset] Index of the four-byte header.
+ * @param [maxOutputBytes] Maximum accepted decoded size.
+ * @returns Decoded bytes and the consumed encoded extent.
  */
 export function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTPUT_BYTES) {
     assert(source instanceof Uint8Array, "Expected byte input.");
@@ -77,8 +77,9 @@ export function decompressSomLz(source, offset = 0, maxOutputBytes = LZ_MAX_OUTP
         copyRuns,
     };
 }
-/** Reject non-objects before reading `mode` or `unusedHeaderByte`.
- * @param {unknown} options Caller-supplied encoder options.
+/**
+ * Reject non-objects before reading `mode` or `unusedHeaderByte`.
+ * @param options Caller-supplied encoder options.
  */
 function assertLzOptions(options) {
     assert(options && typeof options === "object" && !Array.isArray(options), "Invalid LZ options.");
@@ -89,9 +90,9 @@ function assertLzOptions(options) {
  * nearer distances on equal cost; `auto` chooses the shortest stream, then lowest mode.
  * The unused header byte is explicit because original ROM headers may differ.
  * This does not preserve an original stream's token choices.
- * @param {Uint8Array} source Plain bytes to encode.
- * @param {unknown} [options] `mode` and `unusedHeaderByte`.
- * @returns {Uint8Array} Shortest accepted stream for the selected mode.
+ * @param source Plain bytes to encode.
+ * @param [options] `mode` and `unusedHeaderByte`.
+ * @returns Shortest accepted stream for the selected mode.
  */
 export function compressSomLz(source, options = {}) {
     assert(source instanceof Uint8Array, "Expected byte input.");
@@ -123,11 +124,12 @@ export function compressSomLz(source, options = {}) {
     assert(best, "LZ encoder produced no candidate.");
     return best;
 }
-/** Index previous triples, then choose the cheapest token sequence for this mode.
- * @param {Uint8Array} source Plain bytes to encode.
- * @param {number} mode Distance-mask index.
- * @param {number} unusedHeaderByte Reserved header byte copied into the stream.
- * @returns {Uint8Array} Encoded stream for this mode.
+/**
+ * Index previous triples, then choose the cheapest token sequence for this mode.
+ * @param source Plain bytes to encode.
+ * @param mode Distance-mask index.
+ * @param unusedHeaderByte Reserved header byte copied into the stream.
+ * @returns Encoded stream for this mode.
  */
 function encodeMode(source, mode, unusedHeaderByte) {
     const mask = DISTANCE_MASKS[mode];

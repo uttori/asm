@@ -1,7 +1,10 @@
 /** Exact package contents consumed by a trusted Node host, independent of installation directories. */
 export interface ToolchainFingerprint {
+    /** Hex SHA-256 of the canonical JSON of node and packages. */
     readonly sha256: string;
+    /** Node runtime version string, such as v24.0.0. */
     readonly node: string;
+    /** Packages and bundles in byte order of name, version and content hash. */
     readonly packages: readonly {
         readonly name: string;
         readonly version: string;

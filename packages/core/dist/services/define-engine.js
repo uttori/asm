@@ -2,6 +2,7 @@ import { parseCommandOperation } from "../ir/command-operation.js";
 import { parseDefineTemplate, bindDefineTemplate, } from "../ir/define-template.js";
 import { setCommandKind } from "../ir/normalized-command.js";
 import { sourceFragment, fragmentText, sliceSourceFragment, bindSourceFragment, } from "../ir/source-fragment.js";
+/** Parses, caches, and expands define templates during assembly. */
 export class DefineEngine {
     host;
     /** Value identity remains in defines; metadata is refreshed when a declaration executes. */
@@ -52,14 +53,15 @@ export class DefineEngine {
     constructor(host) {
         this.host = host;
     }
+    /** True when a define value contains only literal numbers and math operators. */
     isPureMathExpression(value) {
         // oxlint-disable-next-line security/detect-unsafe-regex -- Anchors bound the complete token grammar.
         return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|-]|\s)+$/.test(value);
     }
     /**
      * Handles a define command.
-     * @param {NormalizedCommand} commandNode The command node to handle.
-     * @returns {boolean} `true` if the command was handled, `false` otherwise.
+     * @param commandNode The command node to handle.
+     * @returns `true` if the command was handled, `false` otherwise.
      */
     handleCommand(commandNode) {
         const operation = commandNode.parsed.operation;
@@ -79,7 +81,7 @@ export class DefineEngine {
     }
     /**
      * Handles a define command.
-     * @param {string} command The command to handle.
+     * @param command The command to handle.
      * @example
      * !identifier = value // Basic assignment
      * !identifier += value // Append to existing value
@@ -131,8 +133,8 @@ export class DefineEngine {
     }
     /**
      * Resolves nested defines in a string.
-     * @param {string} content The content to process.
-     * @returns {string} The processed content with nested defines resolved.
+     * @param content The content to process.
+     * @returns The processed content with nested defines resolved.
      */
     processNestedDefines(content) {
         if (!content.includes("!")) {
@@ -151,8 +153,8 @@ export class DefineEngine {
     }
     /**
      * Resolves one level of defines in a string.
-     * @param {string} content The content to process.
-     * @returns {string} The processed content with one level of defines resolved.
+     * @param content The content to process.
+     * @returns The processed content with one level of defines resolved.
      */
     resolveOneLevelOfDefines(content) {
         const template = this.template(content, "none");
@@ -179,8 +181,8 @@ export class DefineEngine {
     }
     /**
      * Resolves regular defines in a string.
-     * @param {string} content The content to process.
-     * @returns {string} The processed content with regular defines resolved.
+     * @param content The content to process.
+     * @returns The processed content with regular defines resolved.
      */
     resolveRegularDefines(content) {
         return fragmentText(this.resolveRegularFragment(sourceFragment(content)));
@@ -203,8 +205,8 @@ export class DefineEngine {
     }
     /**
      * Resolves defines in a string literal.
-     * @param {string} content The content to process.
-     * @returns {string} The processed content with defines in string literal resolved.
+     * @param content The content to process.
+     * @returns The processed content with defines in string literal resolved.
      */
     resolveDefinesInStringLiteral(content) {
         const template = this.template(content, "string");
@@ -223,8 +225,8 @@ export class DefineEngine {
     }
     /**
      * Processes a value with braced defines.
-     * @param {string} value The value to process.
-     * @returns {string} The processed value with braced defines resolved.
+     * @param value The value to process.
+     * @returns The processed value with braced defines resolved.
      */
     processValueWithBracedDefines(value) {
         const template = this.template(value, "none");
@@ -236,9 +238,9 @@ export class DefineEngine {
     }
     /**
      * Applies a define operation.
-     * @param {string} identifier The identifier to apply the operation to.
-     * @param {string} operator The operator to apply.
-     * @param {string} initialValue The initial value to apply the operation to.
+     * @param identifier The identifier to apply the operation to.
+     * @param operator The operator to apply.
+     * @param initialValue The initial value to apply the operation to.
      */
     applyDefineOperation(identifier, operator, initialValue, source) {
         let value = initialValue;
@@ -310,7 +312,7 @@ export class DefineEngine {
     }
     /**
      * Applies an `undef` operation.
-     * @param {string} command The normalized undef command.
+     * @param command The normalized undef command.
      */
     applyUndefOperation(command) {
         this.handleDefineCommand(command);

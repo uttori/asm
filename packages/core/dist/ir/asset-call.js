@@ -1,10 +1,11 @@
 import { createSourceSpan } from "../source-location.js";
 import { parseDirectiveExpression } from "./directive-arguments.js";
 import { syntaxExpression, syntaxSpan, syntaxObject } from "./syntax-codec.js";
-/** Parse only the `includeAsset(...)` form; leave all other commands alone.
- * @param {string} command Normalized source command.
- * @param {number} [line] Zero-based source line for argument spans.
- * @returns {ParsedAssetCall | undefined} Typed call with argument spans, if present.
+/**
+ * Parse only the `includeAsset(...)` form; leave all other commands alone.
+ * @param command Normalized source command.
+ * @param [line] Zero-based source line for argument spans.
+ * @returns Typed call with argument spans, if present.
  */
 export function parseAssetCall(command, line) {
     const leading = command.length - command.trimStart().length;
@@ -233,12 +234,14 @@ export const assetCallGuard = (value) => {
         assetEntriesGuard(call.options) &&
         syntaxSpan(call.span));
 };
+/** Accepts a plain non-array object whose every value is a valid asset value node. */
 function assetEntriesGuard(value) {
     return (!!value &&
         typeof value === "object" &&
         !Array.isArray(value) &&
         Object.values(value).every(assetValueGuard));
 }
+/** Recursively validates one asset value node, including its span and kind-specific payload. */
 function assetValueGuard(value) {
     if (!syntaxObject(value)) {
         return false;

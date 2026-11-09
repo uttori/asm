@@ -1,3 +1,4 @@
+/** Builds one catalog entry with optional nested operand descriptors. */
 const descriptor = (keyword, summary, syntax, group, operands) => ({
     keyword,
     summary,
@@ -135,6 +136,7 @@ export const directiveCatalog = [
 ];
 /** Pre-built keyword → descriptor index for O(1) lookup (keys are already lowercase). */
 const directiveCatalogMap = new Map(directiveCatalog.map((entry) => [entry.keyword.toLowerCase(), entry]));
+/** Looks up built-in directive documentation, stripping a leading `@` prefix. */
 export function findDirective(keyword) {
     const normalized = keyword.toLowerCase().replace(/^@/, "");
     return directiveCatalogMap.get(normalized);

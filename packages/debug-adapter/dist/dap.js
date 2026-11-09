@@ -2,7 +2,9 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import path from "node:path";
 import { debugMapRangesForAddress, debugMapRangesForSource, validateDebugMap, } from "@uttori/asm-core/debug-map";
 import { evaluateDebugExpression, formatDebugExpressionValue } from "./debug-expression.js";
+/** Coerces unknown JSON numbers to safe integers with a fallback. */
 const numeric = (value, fallback = 0) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
+/** Narrows unknown JSON to plain objects. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /** Reject framed JSON that is not a DAP request before the session dispatcher sees it. */
 const dapRequest = (value) => {
@@ -21,6 +23,7 @@ const dapRequest = (value) => {
     }
     return { ...request, arguments: value.arguments };
 };
+/** Filters JSON arrays down to object entries. */
 const records = (value) => Array.isArray(value)
     ? value.filter((entry) => entry !== null && typeof entry === "object")
     : [];
@@ -33,18 +36,19 @@ const VIRTUAL_DISASSEMBLY_HEADER = [
 ];
 /**
  * Formats a qualified address for DAP memory/instruction references.
- * @param {DebugAddress} address Qualified logical address.
- * @returns {string} Stable transport string.
+ * @param address Qualified logical address.
+ * @returns Stable transport string.
  */
 export const formatDebugAddress = (address) => `${address.architecture}|${address.addressSpace}|0x${address.address.toString(16)}${address.outputOffset === undefined ? "" : `|0x${address.outputOffset.toString(16)}`}`;
-/**
- * Parses an address produced by `formatDebugAddress`.
- * @param {string} reference Qualified address string.
- * @returns {DebugAddress | undefined} Parsed address, or undefined for malformed input.
- */
+/** Reads one string slot from a split reference without throwing. */
 function indexedString(values, index) {
     return index >= 0 && index < values.length ? values[index] : undefined;
 }
+/**
+ * Parses an address produced by formatDebugAddress.
+ * @param reference Qualified address string.
+ * @returns Parsed address, or undefined for malformed input.
+ */
 export const parseDebugAddress = (reference) => {
     const parts = reference.split("|");
     const architecture = indexedString(parts, 0);
@@ -70,6 +74,7 @@ export const parseDebugAddress = (reference) => {
         ...(outputOffset === undefined ? {} : { outputOffset }),
     };
 };
+/** Maps backend lifecycle events into DAP event bodies. */
 const backendEvent = (event) => {
     switch (event.type) {
         case "stopped":
@@ -101,17 +106,19 @@ const backendEvent = (event) => {
     }
     throw new Error("Unsupported backend event.");
 };
+/** Serializes a backend breakpoint for DAP clients. */
 const dapBreakpoint = (breakpoint) => ({
     id: breakpoint.id,
     verified: breakpoint.verified,
     instructionReference: formatDebugAddress(breakpoint.address),
     ...(breakpoint.message ? { message: breakpoint.message } : {}),
 });
+/** Formats instruction bytes as contiguous lowercase hex pairs. */
 const bytesText = (instruction) => instruction.bytes.map((value) => value.toString(16).padStart(2, "0")).join(" ");
 /**
  * Physical-map metadata must not create duplicate execute breakpoints at one bus address.
- * @param {DebugAddress} address Qualified bus address, with optional source metadata.
- * @returns {string} Native breakpoint identity without the physical output offset.
+ * @param address Qualified bus address, with optional source metadata.
+ * @returns Native breakpoint identity without the physical output offset.
  */
 const breakpointKey = ({ architecture, addressSpace, address }) => formatDebugAddress({ architecture, addressSpace, address });
 /**
@@ -120,6 +127,7 @@ const breakpointKey = ({ architecture, addressSpace, address }) => formatDebugAd
  * `setBreakpoints` request indefinitely.
  */
 const BREAKPOINT_UPDATE_STOP_TIMEOUT_MS = 5_000;
+/** Parses a register hex value into a safe integer when possible. */
 const registerNumber = (register) => {
     if (!register) {
         return undefined;
@@ -128,6 +136,7 @@ const registerNumber = (register) => {
     const value = Number.parseInt(normalized, 16);
     return Number.isSafeInteger(value) ? value : undefined;
 };
+/** Maps architecture identifiers to short UI processor labels. */
 const processorLabel = (architecture) => {
     if (architecture === "snes.65816") {
         return "65816";
@@ -193,7 +202,7 @@ export class DebugAdapterSession {
     #executionUpdateQueue = Promise.resolve();
     /**
      * Creates a DAP session around one backend.
-     * @param {DebugAdapterSessionOptions} options Backend, map, and host callbacks.
+     * @param options Backend, map, and host callbacks.
      */
     constructor(options) {
         this.#backend = options.backend;
@@ -217,8 +226,8 @@ export class DebugAdapterSession {
     }
     /**
      * Handles one request and returns all deterministically ordered response/events.
-     * @param {DapRequest} request Incoming request.
-     * @returns {Promise<readonly DapProtocolMessage[]>} Response followed by queued events.
+     * @param request Incoming request.
+     * @returns Response followed by queued events.
      */
     async dispatch(request) {
         const pending = [];
@@ -285,7 +294,7 @@ export class DebugAdapterSession {
      * VS Code sends its initial breakpoints between `initialized` and
      * `configurationDone`. Connecting first leaves the emulator stopped and able to
      * accept those breakpoint-table writes before execution begins.
-     * @returns {Promise<void>} Resolves after the client finishes breakpoint configuration.
+     * @returns Resolves after the client finishes breakpoint configuration.
      */
     async #configure() {
         if (!this.#configurationHandshake) {
@@ -787,8 +796,8 @@ export class DebugAdapterSession {
     /**
      * Replaces the breakpoint set for one source and reports the executable line chosen
      * for each request. Directive/comment lines move forward to the next mapped instruction.
-     * @param {Record<string, unknown>} args DAP `setBreakpoints` arguments.
-     * @returns {Promise<Record<string, unknown>>} Verified or rejected breakpoint results.
+     * @param args DAP `setBreakpoints` arguments.
+     * @returns Verified or rejected breakpoint results.
      */
     async #setSourceBreakpoints(args) {
         if (!this.#map) {
@@ -843,8 +852,8 @@ export class DebugAdapterSession {
     /**
      * Returns only mapped, backend-supported lines so the IDE can render valid gutter
      * locations before the user creates a breakpoint.
-     * @param {Record<string, unknown>} args DAP source range to query.
-     * @returns {Record<string, unknown>} Executable source locations in the requested range.
+     * @param args DAP source range to query.
+     * @returns Executable source locations in the requested range.
      */
     #breakpointLocations(args) {
         if (!this.#map) {
@@ -907,9 +916,9 @@ export class DebugAdapterSession {
      * Live emulators require a stopped CPU for this mutation, so a running session is
      * paused briefly. A failed replacement restores the confirmed table before resuming.
      * Failed recovery leaves a visible stop and blocks execution until a successful edit.
-     * @param {Map<string, DebugAddress[]>} sources Proposed per-source requests.
-     * @param {Map<string, DebugAddress>} instructions Proposed instruction requests.
-     * @returns {Promise<Map<string, DebugBreakpoint>>} Applied breakpoints keyed by address.
+     * @param sources Proposed per-source requests.
+     * @param instructions Proposed instruction requests.
+     * @returns Applied breakpoints keyed by address.
      */
     async #applyBreakpoints(sources, instructions) {
         const source = [...sources.values()].flat();
@@ -984,8 +993,8 @@ export class DebugAdapterSession {
     }
     /**
      * Finds ranges for either a portable map path or its absolute workspace spelling.
-     * @param {string} sourcePath Source path supplied by the DAP client.
-     * @returns {readonly DebugMapRange[]} All mapped ranges belonging to the source.
+     * @param sourcePath Source path supplied by the DAP client.
+     * @returns All mapped ranges belonging to the source.
      */
     #sourceRanges(sourcePath) {
         if (!this.#map) {
@@ -999,9 +1008,9 @@ export class DebugAdapterSession {
     }
     /**
      * Resolves an exact line first, then the nearest later executable line in the same source.
-     * @param {string} sourcePath Source path supplied by the DAP client.
-     * @param {number} requestedLine One-based requested source line.
-     * @returns {DebugMapRange | undefined} Executable range chosen for the breakpoint.
+     * @param sourcePath Source path supplied by the DAP client.
+     * @param requestedLine One-based requested source line.
+     * @returns Executable range chosen for the breakpoint.
      */
     #sourceBreakpointRange(sourcePath, requestedLine) {
         return (debugMapRangesForSource(this.#map, sourcePath, requestedLine).find((range) => this.#supportsBreakpoint(this.#addressForRange(range))) ??
@@ -1012,8 +1021,8 @@ export class DebugAdapterSession {
     /**
      * Serializes execution and whole-table writes without blocking backend events.
      * Otherwise a user Continue could resume the CPU during a maintenance table write.
-     * @param {() => Promise<T>} update Deferred execution or breakpoint mutation.
-     * @returns {Promise<T>} Result after earlier mutations settle.
+     * @param update Deferred execution or breakpoint mutation.
+     * @returns Result after earlier mutations settle.
      */
     #queueExecutionUpdate(update) {
         const result = this.#executionUpdateQueue.then(() => {
@@ -1043,8 +1052,8 @@ export class DebugAdapterSession {
     /**
      * Records execution intent before the backend can resolve ahead of its continued
      * event. A newer stop/termination owns the state even if the operation later rejects.
-     * @param {() => Promise<void>} resume Backend Continue or supported step operation.
-     * @returns {Promise<void>} Resolves on backend acceptance, not on event delivery.
+     * @param resume Backend Continue or supported step operation.
+     * @returns Resolves on backend acceptance, not on event delivery.
      */
     async #resumeExecution(resume) {
         this.#assertExecutionActive();
@@ -1070,9 +1079,8 @@ export class DebugAdapterSession {
      * The returned `resume` flag is false when a real breakpoint/exception wins the race
      * with our pause request. In that case the real stop remains visible and must not be
      * undone by an automatic continue.
-     * @param {readonly DebugAddress[]} addresses Breakpoints about to replace the table.
-     * @returns {Promise<{ readonly threadId: number; readonly resume: boolean; readonly revision: number } | undefined>}
-     * Maintenance state, or undefined when the emulator was not running.
+     * @param addresses Breakpoints about to replace the table.
+     * @returns Maintenance state, or undefined when the emulator was not running.
      */
     async #pauseForBreakpointUpdate(addresses) {
         if (this.#executionState !== "running") {
@@ -1119,8 +1127,8 @@ export class DebugAdapterSession {
     }
     /**
      * Resumes after a confirmed maintenance pause and marks its continued event as internal.
-     * @param {number} threadId Processor thread paused for the table replacement.
-     * @returns {Promise<void>} Resolves when the backend accepts the continue request.
+     * @param threadId Processor thread paused for the table replacement.
+     * @returns Resolves when the backend accepts the continue request.
      */
     async #resumeAfterBreakpointUpdate(threadId) {
         this.#maintenanceResumeThreadId = threadId;
@@ -1136,8 +1144,7 @@ export class DebugAdapterSession {
     }
     /**
      * Rejects an in-flight breakpoint update when the debug session ends underneath it.
-     * @param {Error} error Termination error reported to the waiting DAP request.
-     * @returns {void}
+     * @param error Termination error reported to the waiting DAP request.
      */
     #cancelMaintenancePause(error) {
         const maintenance = this.#maintenancePause;
@@ -1270,8 +1277,8 @@ export class DebugAdapterSession {
 }
 /**
  * Encodes one DAP message with a UTF-8 byte-counted Content-Length header.
- * @param {DapRequest | DapProtocolMessage} message Protocol message.
- * @returns {Uint8Array} Framed transport bytes.
+ * @param message Protocol message.
+ * @returns Framed transport bytes.
  */
 export const encodeDapMessage = (message) => {
     const body = Buffer.from(JSON.stringify(message), "utf8");
@@ -1282,8 +1289,8 @@ export class DapMessageParser {
     #buffer = Buffer.alloc(0);
     /**
      * Adds a transport chunk and returns every complete request.
-     * @param {Uint8Array} chunk Transport bytes.
-     * @returns {readonly DapRequest[]} Complete parsed requests.
+     * @param chunk Transport bytes.
+     * @returns Complete parsed requests.
      */
     push(chunk) {
         this.#buffer = Buffer.concat([this.#buffer, chunk]);

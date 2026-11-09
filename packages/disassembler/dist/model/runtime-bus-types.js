@@ -1,13 +1,19 @@
 import { normalizeRuntimePPUEffect } from "./runtime-ppu-effect.js";
+/**
+ * Accept any integral number.
+ * @param value Candidate value.
+ * @returns Whether value is an integer.
+ */
 function isInteger(value) {
     return typeof value === "number" && Number.isInteger(value);
 }
-/** Validate semantic facts independently of their transport or storage representation.
+/**
+ * Validate semantic facts independently of their transport or storage representation.
  * Return the normalization result so importers need not normalize twice. This
  * still checks untrusted PPU fields. The bus importer uses the returned canonical
  * effect for fact identity, keeping transport-only raster fields on the raw event.
- * @param {RuntimeBusFact} fact Byte-access coordinates and attribution.
- * @returns {RuntimePPUEffect | undefined} Canonical PPU effect when present, for reuse by the importer.
+ * @param fact Byte-access coordinates and attribution.
+ * @returns Canonical PPU effect when present, for reuse by the importer.
  * Throws on inconsistent actor, channel, phase, effect or out-of-range values. Never mutates the input.
  */
 export const validateRuntimeBusFact = (fact) => {

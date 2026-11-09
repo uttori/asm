@@ -1,6 +1,7 @@
 import { ASSET_LIMITS } from "./limits.js";
 import { integer } from "./validation.js";
 /** Round cumulative boundaries, rather than individual holds, so fractional frame times cannot drift. */
+/** Convert rational-clock ticks to rounded milliseconds without per-hold drift. */
 function milliseconds(ticks, rate) {
     return (ticks * rate.denominator * 1000n + rate.numerator / 2n) / rate.numerator;
 }

@@ -4,9 +4,11 @@ import { integer, textValue } from "./value.js";
 function aligned(value, alignment) {
     return integer(Math.ceil(value / alignment) * alignment, "Aligned address");
 }
+/** Greatest common divisor for combining section alignment requirements. */
 function gcd(a, b) {
     return b === 0 ? a : gcd(b, a % b);
 }
+/** Least common multiple of alignments with overflow-checked integer math. */
 function combine(a, b) {
     return integer((a / gcd(a, b)) * b, "Combined alignment", 1, 0x1000000);
 }

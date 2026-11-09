@@ -73,7 +73,11 @@ export function checkSnesPlacements(output, symbols, contract) {
     }
     return diagnostics;
 }
-/** Attribute a diagnostic to the exact emission, including repeated macro/loop instances. */
+/**
+ * Attribute a diagnostic to the exact emission, including repeated macro/loop instances.
+ * @param mapping Build debug map listing files and lines.
+ * @param entry Instruction or range entry carrying file and line indices.
+ */
 function location(mapping, entry) {
     return { file: mapping.fileList[entry.fileIdx]?.name, line: entry.line };
 }

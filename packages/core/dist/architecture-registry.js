@@ -1,10 +1,13 @@
+/** Case-insensitive registry of architecture definitions and their aliases. */
 export class ArchitectureRegistry {
+    /** Definitions keyed by lowercase canonical name. */
     definitions = new Map();
+    /** Lowercase alias or canonical name to canonical name; every canonical name maps to itself. */
     aliases = new Map();
     /**
      * Registers the value.
-     * @param {ArchitectureDefinition} definition The definition.
-     * @param {string[]} [aliases] The aliases.
+     * @param definition The definition.
+     * @param [aliases] The aliases.
      */
     register(definition, aliases = []) {
         const canonical = definition.name.toLowerCase();
@@ -14,9 +17,19 @@ export class ArchitectureRegistry {
             this.aliases.set(alias.toLowerCase(), canonical);
         }
     }
+    /**
+     * Resolves an architecture name or alias, ignoring case.
+     * @param name Architecture name or alias.
+     * @returns The lowercase canonical name, or undefined when unregistered.
+     */
     getCanonicalName(name) {
         return this.aliases.get(name.toLowerCase());
     }
+    /**
+     * Looks up a definition by name or alias, ignoring case.
+     * @param name Architecture name or alias.
+     * @returns The registered definition, or undefined when unregistered.
+     */
     getDefinition(name) {
         const canonical = this.getCanonicalName(name);
         if (!canonical) {
@@ -26,8 +39,8 @@ export class ArchitectureRegistry {
     }
     /**
      * Returns editor metadata from the same registered encoder used for builds.
-     * @param {string} name Architecture name or alias.
-     * @returns {InstructionDescriptor[]} Registered instruction descriptors.
+     * @param name Architecture name or alias.
+     * @returns Registered instruction descriptors.
      */
     getInstructionCatalog(name) {
         const definition = this.getDefinition(name);

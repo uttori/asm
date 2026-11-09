@@ -13,12 +13,27 @@ export { rasterSourceConversionAdapter };
 export function createAssetSourceConversionService(host = savedAssetSourceHost, adapters = []) {
     return new AssetSourceConversionService([...adapters, rasterSourceConversionAdapter], host);
 }
+/**
+ * Narrow untrusted IPC JSON to a plain object.
+ * @param value Decoded request fragment.
+ * @returns Whether keyed fields can be read.
+ */
 function isRecord(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
 }
+/**
+ * Accept only JSON arrays at the IPC boundary.
+ * @param value Decoded request fragment.
+ * @returns Whether the value is an array.
+ */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
+/**
+ * Validate one asset draft descriptor from an IPC payload.
+ * @param value Draft candidate from the request.
+ * @returns Whether the draft satisfies the interchange contract.
+ */
 function isDraft(value) {
     return (isRecord(value) &&
         typeof value.path === "string" &&

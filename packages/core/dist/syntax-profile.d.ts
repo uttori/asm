@@ -1,8 +1,13 @@
+/** Source coordinates passed to dialect rewrite hooks before tokenization. */
 export interface SyntaxRewriteContext {
+    /** Absolute or virtual path of the file being rewritten. */
     readonly sourceFile: string;
+    /** Zero-based line number where the command originated. */
     readonly sourceLine: number;
 }
+/** Target dialect options controlling tokenization, labels, and optional rewrites. */
 export interface SyntaxProfile {
+    /** Stable profile name referenced by targets and cache keys. */
     readonly id: string;
     /** Bump when a rewrite hook changes grammar; functions themselves never enter cache identities. */
     readonly grammarVersion?: string;
@@ -33,7 +38,10 @@ export interface SyntaxProfile {
     /** Optional parameter marker used while expanding macro bodies (ca65 uses `\\`). */
     readonly macroParameterPrefix?: string;
 }
+/** Default Asar-compatible statement splitting and directive prefix rules. */
 export declare const ASAR_SYNTAX_PROFILE: SyntaxProfile;
+/** Native Uttori syntax preserving leading whitespace and unsplit statements. */
 export declare const NATIVE_SYNTAX_PROFILE: SyntaxProfile;
+/** ca65-style cheap locals, dotted directives, and file-local symbol qualification. */
 export declare const CA65_SYNTAX_PROFILE: SyntaxProfile;
 //# sourceMappingURL=syntax-profile.d.ts.map

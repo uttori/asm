@@ -42,9 +42,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/vscode-languageclient/lib/common/utils/is.js
+// ../../node_modules/vscode-languageclient/lib/common/utils/is.js
 var require_is = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/utils/is.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/utils/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean2;
@@ -98,9 +98,9 @@ var require_is = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js
 var require_is2 = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean2;
@@ -134,9 +134,9 @@ var require_is2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js
 var require_messages = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messages.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -519,9 +519,9 @@ var require_messages = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js
 var require_linkedMap = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LRUCache = exports2.LinkedMap = exports2.Touch = void 0;
@@ -903,9 +903,9 @@ var require_linkedMap = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js
 var require_disposable = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Disposable = void 0;
@@ -921,9 +921,9 @@ var require_disposable = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js
 var require_ral = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/ral.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var _ral;
@@ -946,9 +946,9 @@ var require_ral = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js
 var require_events = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/events.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -1083,9 +1083,9 @@ var require_events = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js
 var require_cancellation = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1212,9 +1212,9 @@ var require_cancellation = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
 var require_sharedArrayCancellation = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SharedArrayReceiverStrategy = exports2.SharedArraySenderStrategy = void 0;
@@ -1291,9 +1291,9 @@ var require_sharedArrayCancellation = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js
 var require_semaphore = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -1365,9 +1365,9 @@ var require_semaphore = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js
 var require_messageReader = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1607,9 +1607,9 @@ ${JSON.stringify(Object.fromEntries(headers))}`));
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js
 var require_messageWriter = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1765,9 +1765,9 @@ var require_messageWriter = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
 var require_messageBuffer = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.AbstractMessageBuffer = void 0;
@@ -1916,9 +1916,9 @@ ${header}`);
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js
 var require_connection = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/connection.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -3083,9 +3083,9 @@ ${JSON.stringify(message, null, 4)}`);
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js
 var require_api = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/common/api.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -3297,9 +3297,9 @@ var require_api = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js
 var require_main = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js"(exports2, module2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-types/lib/umd/main.js"(exports2, module2) {
     (function(factory) {
       if (typeof module2 === "object" && typeof module2.exports === "object") {
         var v = factory(require, exports2);
@@ -4922,9 +4922,9 @@ var require_main = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js
 var require_messages2 = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CM = exports2.ProtocolNotificationType = exports2.ProtocolNotificationType0 = exports2.ProtocolRequestType = exports2.ProtocolRequestType0 = exports2.RegistrationType = exports2.MessageDirection = void 0;
@@ -5005,9 +5005,9 @@ var require_messages2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
 var require_is3 = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean2;
@@ -5049,9 +5049,9 @@ var require_is3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
 var require_protocol_implementation = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ImplementationRequest = void 0;
@@ -5066,9 +5066,9 @@ var require_protocol_implementation = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
 var require_protocol_typeDefinition = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeDefinitionRequest = void 0;
@@ -5083,9 +5083,9 @@ var require_protocol_typeDefinition = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
 var require_protocol_workspaceFolder = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DidChangeWorkspaceFoldersNotification = exports2.WorkspaceFoldersRequest = void 0;
@@ -5107,9 +5107,9 @@ var require_protocol_workspaceFolder = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
 var require_protocol_configuration = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ConfigurationRequest = void 0;
@@ -5124,9 +5124,9 @@ var require_protocol_configuration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
 var require_protocol_colorProvider = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ColorPresentationRequest = exports2.DocumentColorRequest = void 0;
@@ -5148,9 +5148,9 @@ var require_protocol_colorProvider = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
 var require_protocol_foldingRange = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FoldingRangeRefreshRequest = exports2.FoldingRangeRequest = void 0;
@@ -5172,9 +5172,9 @@ var require_protocol_foldingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
 var require_protocol_declaration = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DeclarationRequest = void 0;
@@ -5189,9 +5189,9 @@ var require_protocol_declaration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
 var require_protocol_selectionRange = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SelectionRangeRequest = void 0;
@@ -5206,9 +5206,9 @@ var require_protocol_selectionRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
 var require_protocol_progress = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WorkDoneProgressCancelNotification = exports2.WorkDoneProgressCreateRequest = exports2.WorkDoneProgress = void 0;
@@ -5238,9 +5238,9 @@ var require_protocol_progress = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
 var require_protocol_callHierarchy = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CallHierarchyOutgoingCallsRequest = exports2.CallHierarchyIncomingCallsRequest = exports2.CallHierarchyPrepareRequest = void 0;
@@ -5269,9 +5269,9 @@ var require_protocol_callHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
 var require_protocol_semanticTokens = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SemanticTokensRefreshRequest = exports2.SemanticTokensRangeRequest = exports2.SemanticTokensDeltaRequest = exports2.SemanticTokensRequest = exports2.SemanticTokensRegistrationType = exports2.TokenFormat = void 0;
@@ -5319,9 +5319,9 @@ var require_protocol_semanticTokens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
 var require_protocol_showDocument = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ShowDocumentRequest = void 0;
@@ -5336,9 +5336,9 @@ var require_protocol_showDocument = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
 var require_protocol_linkedEditingRange = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LinkedEditingRangeRequest = void 0;
@@ -5353,9 +5353,9 @@ var require_protocol_linkedEditingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
 var require_protocol_fileOperations = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WillDeleteFilesRequest = exports2.DidDeleteFilesNotification = exports2.DidRenameFilesNotification = exports2.WillRenameFilesRequest = exports2.DidCreateFilesNotification = exports2.WillCreateFilesRequest = exports2.FileOperationPatternKind = void 0;
@@ -5410,9 +5410,9 @@ var require_protocol_fileOperations = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
 var require_protocol_moniker = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.MonikerRequest = exports2.MonikerKind = exports2.UniquenessLevel = void 0;
@@ -5441,9 +5441,9 @@ var require_protocol_moniker = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
 var require_protocol_typeHierarchy = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeHierarchySubtypesRequest = exports2.TypeHierarchySupertypesRequest = exports2.TypeHierarchyPrepareRequest = void 0;
@@ -5470,9 +5470,9 @@ var require_protocol_typeHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
 var require_protocol_inlineValue = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineValueRefreshRequest = exports2.InlineValueRequest = void 0;
@@ -5494,9 +5494,9 @@ var require_protocol_inlineValue = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
 var require_protocol_inlayHint = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlayHintRefreshRequest = exports2.InlayHintResolveRequest = exports2.InlayHintRequest = void 0;
@@ -5525,9 +5525,9 @@ var require_protocol_inlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
 var require_protocol_diagnostic = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5610,9 +5610,9 @@ var require_protocol_diagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
 var require_protocol_notebook = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5836,9 +5836,9 @@ var require_protocol_notebook = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
 var require_protocol_inlineCompletion = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineCompletionRequest = void 0;
@@ -5853,9 +5853,9 @@ var require_protocol_inlineCompletion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
 var require_protocol_textDocumentContent = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TextDocumentContentRefreshRequest = exports2.TextDocumentContentRequest = void 0;
@@ -5876,9 +5876,9 @@ var require_protocol_textDocumentContent = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js
 var require_protocol = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6604,9 +6604,9 @@ var require_protocol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js
 var require_connection2 = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.createProtocolConnection = createProtocolConnection;
@@ -6620,9 +6620,9 @@ var require_connection2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js
 var require_api2 = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6662,9 +6662,9 @@ var require_api2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/utils/async.js
+// ../../node_modules/vscode-languageclient/lib/common/utils/async.js
 var require_async = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/utils/async.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/utils/async.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Semaphore = exports2.Delayer = void 0;
@@ -6950,9 +6950,9 @@ var require_async = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js
 var require_protocolCompletionItem = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7008,9 +7008,9 @@ var require_protocolCompletionItem = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolCodeLens.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolCodeLens.js
 var require_protocolCodeLens = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolCodeLens.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolCodeLens.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7061,9 +7061,9 @@ var require_protocolCodeLens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js
 var require_protocolDocumentLink = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7114,9 +7114,9 @@ var require_protocolDocumentLink = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolCodeAction.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolCodeAction.js
 var require_protocolCodeAction = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolCodeAction.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolCodeAction.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7168,9 +7168,9 @@ var require_protocolCodeAction = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js
 var require_protocolDiagnostic = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7234,9 +7234,9 @@ var require_protocolDiagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js
 var require_protocolCallHierarchyItem = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7290,9 +7290,9 @@ var require_protocolCallHierarchyItem = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js
 var require_protocolTypeHierarchyItem = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7346,9 +7346,9 @@ var require_protocolTypeHierarchyItem = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js
 var require_protocolWorkspaceSymbol = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7405,9 +7405,9 @@ var require_protocolWorkspaceSymbol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolInlayHint.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolInlayHint.js
 var require_protocolInlayHint = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolInlayHint.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolInlayHint.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7458,9 +7458,9 @@ var require_protocolInlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/codeConverter.js
+// ../../node_modules/vscode-languageclient/lib/common/codeConverter.js
 var require_codeConverter = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/codeConverter.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/codeConverter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8386,9 +8386,9 @@ var require_codeConverter = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolConverter.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolConverter.js
 var require_protocolConverter = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolConverter.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolConverter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -9563,9 +9563,9 @@ ${JSON.stringify(change, void 0, 4)}`);
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/progressPart.js
+// ../../node_modules/vscode-languageclient/lib/common/progressPart.js
 var require_progressPart = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/progressPart.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/progressPart.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -9706,9 +9706,9 @@ var require_progressPart = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/features.js
+// ../../node_modules/vscode-languageclient/lib/common/features.js
 var require_features = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/features.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/features.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -10059,9 +10059,9 @@ var require_features = __commonJS({
   }
 });
 
-// node_modules/balanced-match/dist/commonjs/index.js
+// ../../node_modules/balanced-match/dist/commonjs/index.js
 var require_commonjs = __commonJS({
-  "node_modules/balanced-match/dist/commonjs/index.js"(exports2) {
+  "../../node_modules/balanced-match/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.range = exports2.balanced = void 0;
@@ -10121,9 +10121,9 @@ var require_commonjs = __commonJS({
   }
 });
 
-// node_modules/brace-expansion/dist/commonjs/index.js
+// ../../node_modules/brace-expansion/dist/commonjs/index.js
 var require_commonjs2 = __commonJS({
-  "node_modules/brace-expansion/dist/commonjs/index.js"(exports2) {
+  "../../node_modules/brace-expansion/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.EXPANSION_MAX_LENGTH = exports2.EXPANSION_MAX = void 0;
@@ -10343,9 +10343,9 @@ var require_commonjs2 = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/assert-valid-pattern.js
+// ../../node_modules/minimatch/dist/commonjs/assert-valid-pattern.js
 var require_assert_valid_pattern = __commonJS({
-  "node_modules/minimatch/dist/commonjs/assert-valid-pattern.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/assert-valid-pattern.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.assertValidPattern = void 0;
@@ -10362,9 +10362,9 @@ var require_assert_valid_pattern = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/brace-expressions.js
+// ../../node_modules/minimatch/dist/commonjs/brace-expressions.js
 var require_brace_expressions = __commonJS({
-  "node_modules/minimatch/dist/commonjs/brace-expressions.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/brace-expressions.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.parseClass = void 0;
@@ -10479,9 +10479,9 @@ var require_brace_expressions = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/unescape.js
+// ../../node_modules/minimatch/dist/commonjs/unescape.js
 var require_unescape = __commonJS({
-  "node_modules/minimatch/dist/commonjs/unescape.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/unescape.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.unescape = void 0;
@@ -10495,9 +10495,9 @@ var require_unescape = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/ast.js
+// ../../node_modules/minimatch/dist/commonjs/ast.js
 var require_ast = __commonJS({
-  "node_modules/minimatch/dist/commonjs/ast.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/ast.js"(exports2) {
     "use strict";
     var _a;
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -11149,9 +11149,9 @@ var require_ast = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/escape.js
+// ../../node_modules/minimatch/dist/commonjs/escape.js
 var require_escape = __commonJS({
-  "node_modules/minimatch/dist/commonjs/escape.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/escape.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.escape = void 0;
@@ -11165,9 +11165,9 @@ var require_escape = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/index.js
+// ../../node_modules/minimatch/dist/commonjs/index.js
 var require_commonjs3 = __commonJS({
-  "node_modules/minimatch/dist/commonjs/index.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.unescape = exports2.escape = exports2.AST = exports2.Minimatch = exports2.match = exports2.makeRe = exports2.braceExpand = exports2.defaults = exports2.filter = exports2.GLOBSTAR = exports2.sep = exports2.minimatch = void 0;
@@ -12005,9 +12005,9 @@ var require_commonjs3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/utils/globPattern.js
+// ../../node_modules/vscode-languageclient/lib/common/utils/globPattern.js
 var require_globPattern = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/utils/globPattern.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/utils/globPattern.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12071,9 +12071,9 @@ var require_globPattern = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/diagnostic.js
+// ../../node_modules/vscode-languageclient/lib/common/diagnostic.js
 var require_diagnostic = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/diagnostic.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/diagnostic.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DiagnosticFeature = exports2.DiagnosticPullMode = exports2.vsdiag = void 0;
@@ -12911,9 +12911,9 @@ var require_diagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/notebook.js
+// ../../node_modules/vscode-languageclient/lib/common/notebook.js
 var require_notebook = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/notebook.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/notebook.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -13893,9 +13893,9 @@ var require_notebook = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/configuration.js
+// ../../node_modules/vscode-languageclient/lib/common/configuration.js
 var require_configuration = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/configuration.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/configuration.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -14131,9 +14131,9 @@ var require_configuration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-textdocument/lib/umd/main.js
+// ../../node_modules/vscode-languageserver-textdocument/lib/umd/main.js
 var require_main2 = __commonJS({
-  "node_modules/vscode-languageserver-textdocument/lib/umd/main.js"(exports2, module2) {
+  "../../node_modules/vscode-languageserver-textdocument/lib/umd/main.js"(exports2, module2) {
     var __spreadArray = exports2 && exports2.__spreadArray || function(to, from, pack) {
       if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -14436,9 +14436,9 @@ var require_main2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/textSynchronization.js
+// ../../node_modules/vscode-languageclient/lib/common/textSynchronization.js
 var require_textSynchronization = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/textSynchronization.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/textSynchronization.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DidSaveTextDocumentFeature = exports2.WillSaveWaitUntilFeature = exports2.WillSaveFeature = exports2.DidChangeTextDocumentFeature = exports2.DidCloseTextDocumentFeature = exports2.DidOpenTextDocumentFeature = void 0;
@@ -15069,9 +15069,9 @@ var require_textSynchronization = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/completion.js
+// ../../node_modules/vscode-languageclient/lib/common/completion.js
 var require_completion = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/completion.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/completion.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CompletionItemFeature = void 0;
@@ -15196,9 +15196,9 @@ var require_completion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/hover.js
+// ../../node_modules/vscode-languageclient/lib/common/hover.js
 var require_hover = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/hover.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/hover.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.HoverFeature = void 0;
@@ -15253,9 +15253,9 @@ var require_hover = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/definition.js
+// ../../node_modules/vscode-languageclient/lib/common/definition.js
 var require_definition = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/definition.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/definition.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DefinitionFeature = void 0;
@@ -15307,9 +15307,9 @@ var require_definition = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/signatureHelp.js
+// ../../node_modules/vscode-languageclient/lib/common/signatureHelp.js
 var require_signatureHelp = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/signatureHelp.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/signatureHelp.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SignatureHelpFeature = void 0;
@@ -15377,9 +15377,9 @@ var require_signatureHelp = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/documentHighlight.js
+// ../../node_modules/vscode-languageclient/lib/common/documentHighlight.js
 var require_documentHighlight = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/documentHighlight.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/documentHighlight.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentHighlightFeature = void 0;
@@ -15426,9 +15426,9 @@ var require_documentHighlight = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/documentSymbol.js
+// ../../node_modules/vscode-languageclient/lib/common/documentSymbol.js
 var require_documentSymbol = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/documentSymbol.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/documentSymbol.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentSymbolFeature = exports2.SupportedSymbolTags = exports2.SupportedSymbolKinds = void 0;
@@ -15526,9 +15526,9 @@ var require_documentSymbol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/workspaceSymbol.js
+// ../../node_modules/vscode-languageclient/lib/common/workspaceSymbol.js
 var require_workspaceSymbol = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/workspaceSymbol.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/workspaceSymbol.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WorkspaceSymbolFeature = void 0;
@@ -15600,9 +15600,9 @@ var require_workspaceSymbol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/reference.js
+// ../../node_modules/vscode-languageclient/lib/common/reference.js
 var require_reference = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/reference.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/reference.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ReferencesFeature = void 0;
@@ -15652,9 +15652,9 @@ var require_reference = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/typeDefinition.js
+// ../../node_modules/vscode-languageclient/lib/common/typeDefinition.js
 var require_typeDefinition = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/typeDefinition.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/typeDefinition.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeDefinitionFeature = void 0;
@@ -15707,9 +15707,9 @@ var require_typeDefinition = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/implementation.js
+// ../../node_modules/vscode-languageclient/lib/common/implementation.js
 var require_implementation = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/implementation.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/implementation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ImplementationFeature = void 0;
@@ -15761,9 +15761,9 @@ var require_implementation = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/colorProvider.js
+// ../../node_modules/vscode-languageclient/lib/common/colorProvider.js
 var require_colorProvider = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/colorProvider.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/colorProvider.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ColorProviderFeature = void 0;
@@ -15833,9 +15833,9 @@ var require_colorProvider = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/codeAction.js
+// ../../node_modules/vscode-languageclient/lib/common/codeAction.js
 var require_codeAction = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/codeAction.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/codeAction.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CodeActionFeature = void 0;
@@ -15939,9 +15939,9 @@ var require_codeAction = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/codeLens.js
+// ../../node_modules/vscode-languageclient/lib/common/codeLens.js
 var require_codeLens = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/codeLens.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/codeLens.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CodeLensFeature = void 0;
@@ -16014,9 +16014,9 @@ var require_codeLens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/formatting.js
+// ../../node_modules/vscode-languageclient/lib/common/formatting.js
 var require_formatting = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/formatting.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/formatting.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentOnTypeFormattingFeature = exports2.DocumentRangeFormattingFeature = exports2.DocumentFormattingFeature = void 0;
@@ -16189,9 +16189,9 @@ var require_formatting = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/rename.js
+// ../../node_modules/vscode-languageclient/lib/common/rename.js
 var require_rename = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/rename.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/rename.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16337,9 +16337,9 @@ var require_rename = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/documentLink.js
+// ../../node_modules/vscode-languageclient/lib/common/documentLink.js
 var require_documentLink = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/documentLink.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/documentLink.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DocumentLinkFeature = void 0;
@@ -16403,9 +16403,9 @@ var require_documentLink = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/executeCommand.js
+// ../../node_modules/vscode-languageclient/lib/common/executeCommand.js
 var require_executeCommand = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/executeCommand.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/executeCommand.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ExecuteCommandFeature = void 0;
@@ -16477,9 +16477,9 @@ var require_executeCommand = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/foldingRange.js
+// ../../node_modules/vscode-languageclient/lib/common/foldingRange.js
 var require_foldingRange = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/foldingRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/foldingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FoldingRangeFeature = void 0;
@@ -16542,9 +16542,9 @@ var require_foldingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/declaration.js
+// ../../node_modules/vscode-languageclient/lib/common/declaration.js
 var require_declaration = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/declaration.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/declaration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DeclarationFeature = void 0;
@@ -16596,9 +16596,9 @@ var require_declaration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/selectionRange.js
+// ../../node_modules/vscode-languageclient/lib/common/selectionRange.js
 var require_selectionRange = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/selectionRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/selectionRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SelectionRangeFeature = void 0;
@@ -16653,9 +16653,9 @@ var require_selectionRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/callHierarchy.js
+// ../../node_modules/vscode-languageclient/lib/common/callHierarchy.js
 var require_callHierarchy = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/callHierarchy.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/callHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CallHierarchyFeature = void 0;
@@ -16748,9 +16748,9 @@ var require_callHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/semanticTokens.js
+// ../../node_modules/vscode-languageclient/lib/common/semanticTokens.js
 var require_semanticTokens = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/semanticTokens.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/semanticTokens.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16954,9 +16954,9 @@ var require_semanticTokens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/linkedEditingRange.js
+// ../../node_modules/vscode-languageclient/lib/common/linkedEditingRange.js
 var require_linkedEditingRange = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/linkedEditingRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/linkedEditingRange.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17044,9 +17044,9 @@ var require_linkedEditingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/typeHierarchy.js
+// ../../node_modules/vscode-languageclient/lib/common/typeHierarchy.js
 var require_typeHierarchy = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/typeHierarchy.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/typeHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeHierarchyFeature = void 0;
@@ -17138,9 +17138,9 @@ var require_typeHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/inlineValue.js
+// ../../node_modules/vscode-languageclient/lib/common/inlineValue.js
 var require_inlineValue = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/inlineValue.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/inlineValue.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineValueFeature = void 0;
@@ -17203,9 +17203,9 @@ var require_inlineValue = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/inlayHint.js
+// ../../node_modules/vscode-languageclient/lib/common/inlayHint.js
 var require_inlayHint = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/inlayHint.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/inlayHint.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlayHintsFeature = void 0;
@@ -17289,9 +17289,9 @@ var require_inlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/workspaceFolder.js
+// ../../node_modules/vscode-languageclient/lib/common/workspaceFolder.js
 var require_workspaceFolder = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/workspaceFolder.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/workspaceFolder.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WorkspaceFoldersFeature = void 0;
@@ -17433,9 +17433,9 @@ var require_workspaceFolder = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/fileOperations.js
+// ../../node_modules/vscode-languageclient/lib/common/fileOperations.js
 var require_fileOperations = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/fileOperations.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/fileOperations.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17780,9 +17780,9 @@ var require_fileOperations = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/inlineCompletion.js
+// ../../node_modules/vscode-languageclient/lib/common/inlineCompletion.js
 var require_inlineCompletion = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/inlineCompletion.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/inlineCompletion.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineCompletionItemFeature = void 0;
@@ -17833,9 +17833,9 @@ var require_inlineCompletion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/textDocumentContent.js
+// ../../node_modules/vscode-languageclient/lib/common/textDocumentContent.js
 var require_textDocumentContent = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/textDocumentContent.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/textDocumentContent.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17978,9 +17978,9 @@ var require_textDocumentContent = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js
+// ../../node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js
 var require_fileSystemWatcher = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FileSystemWatcherFeature = void 0;
@@ -18081,9 +18081,9 @@ var require_fileSystemWatcher = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/progress.js
+// ../../node_modules/vscode-languageclient/lib/common/progress.js
 var require_progress = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/progress.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/progress.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ProgressFeature = void 0;
@@ -18129,9 +18129,9 @@ var require_progress = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/client.js
+// ../../node_modules/vscode-languageclient/lib/common/client.js
 var require_client = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/client.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/client.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19926,9 +19926,9 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
   }
 });
 
-// node_modules/vscode-languageclient/lib/node/processes.js
+// ../../node_modules/vscode-languageclient/lib/node/processes.js
 var require_processes = __commonJS({
-  "node_modules/vscode-languageclient/lib/node/processes.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/node/processes.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20019,9 +20019,9 @@ terminateTree "${pid}"
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js
 var require_ril = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/ril.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var util_1 = require("util");
@@ -20181,9 +20181,9 @@ var require_ril = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js
 var require_main3 = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20489,9 +20489,9 @@ var require_main3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js
+// ../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js
 var require_main4 = __commonJS({
-  "node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
+  "../../node_modules/vscode-languageclient/node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20520,9 +20520,9 @@ var require_main4 = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports2, module2) {
+  "../../node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
     var debug7 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -20530,9 +20530,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports2, module2) {
+  "../../node_modules/semver/internal/constants.js"(exports2, module2) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -20590,9 +20590,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports2, module2) {
+  "../../node_modules/semver/internal/re.js"(exports2, module2) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -20678,9 +20678,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports2, module2) {
+  "../../node_modules/semver/internal/parse-options.js"(exports2, module2) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -20697,9 +20697,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports2, module2) {
+  "../../node_modules/semver/internal/identifiers.js"(exports2, module2) {
     "use strict";
     var numeric2 = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -20722,9 +20722,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports2, module2) {
+  "../../node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
     var debug7 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -21014,9 +21014,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports2, module2) {
+  "../../node_modules/semver/functions/parse.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse4 = (version, options, throwErrors = false) => {
@@ -21036,9 +21036,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports2, module2) {
+  "../../node_modules/semver/internal/lrucache.js"(exports2, module2) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -21074,9 +21074,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -21084,9 +21084,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports2, module2) {
+  "../../node_modules/semver/functions/eq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -21094,9 +21094,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports2, module2) {
+  "../../node_modules/semver/functions/neq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -21104,9 +21104,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports2, module2) {
+  "../../node_modules/semver/functions/gt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -21114,9 +21114,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports2, module2) {
+  "../../node_modules/semver/functions/gte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -21124,9 +21124,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports2, module2) {
+  "../../node_modules/semver/functions/lt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -21134,9 +21134,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports2, module2) {
+  "../../node_modules/semver/functions/lte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -21144,9 +21144,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports2, module2) {
+  "../../node_modules/semver/functions/cmp.js"(exports2, module2) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -21194,9 +21194,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports2, module2) {
+  "../../node_modules/semver/classes/comparator.js"(exports2, module2) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -21307,9 +21307,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// node_modules/semver/internal/trim-comparator-whitespace.js
+// ../../node_modules/semver/internal/trim-comparator-whitespace.js
 var require_trim_comparator_whitespace = __commonJS({
-  "node_modules/semver/internal/trim-comparator-whitespace.js"(exports2, module2) {
+  "../../node_modules/semver/internal/trim-comparator-whitespace.js"(exports2, module2) {
     "use strict";
     var {
       MAX_LENGTH,
@@ -21498,9 +21498,9 @@ var require_trim_comparator_whitespace = __commonJS({
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports2, module2) {
+  "../../node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range10 = class _Range {
@@ -21883,9 +21883,9 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports2, module2) {
+  "../../node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
     var Range10 = require_range();
     var satisfies = (version, range, options) => {
@@ -21900,9 +21900,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/api.js
+// ../../node_modules/vscode-languageclient/lib/common/api.js
 var require_api3 = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/api.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/api.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -21935,9 +21935,9 @@ var require_api3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/node/main.js
+// ../../node_modules/vscode-languageclient/lib/node/main.js
 var require_main5 = __commonJS({
-  "node_modules/vscode-languageclient/lib/node/main.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -22542,13 +22542,13 @@ var require_main5 = __commonJS({
   }
 });
 
-// packages/core/src/canonical-json.ts
+// ../core/src/canonical-json.ts
 function stringifyCanonical(value) {
   return JSON.stringify(value);
 }
 var compareKeys, isRecord, canonicalValue, canonicalJsonCompact, canonicalEquals, canonicalJson;
 var init_canonical_json = __esm({
-  "packages/core/src/canonical-json.ts"() {
+  "../core/src/canonical-json.ts"() {
     "use strict";
     compareKeys = (a, b) => a.localeCompare(b);
     isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -22594,10 +22594,10 @@ var init_canonical_json = __esm({
   }
 });
 
-// packages/disassembler/src/model/project-types.ts
+// ../disassembler/src/model/project-types.ts
 var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
 var init_project_types = __esm({
-  "packages/disassembler/src/model/project-types.ts"() {
+  "../disassembler/src/model/project-types.ts"() {
     "use strict";
     ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
     ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
@@ -22605,7 +22605,7 @@ var init_project_types = __esm({
   }
 });
 
-// packages/disassembler/src/model/project-asset-ids.ts
+// ../disassembler/src/model/project-asset-ids.ts
 function resolveProjectNativeAssetId(declaration) {
   if (declaration.codecVersion !== "1.0.0") {
     return void 0;
@@ -22614,7 +22614,7 @@ function resolveProjectNativeAssetId(declaration) {
 }
 var legacyNativeIds;
 var init_project_asset_ids = __esm({
-  "packages/disassembler/src/model/project-asset-ids.ts"() {
+  "../disassembler/src/model/project-asset-ids.ts"() {
     "use strict";
     legacyNativeIds = /* @__PURE__ */ new Map([
       ["snes.asset.tile.2bpp", "snes.tile.2bpp"],
@@ -22630,10 +22630,10 @@ var init_project_asset_ids = __esm({
   }
 });
 
-// packages/disassembler/src/model/evidence-pool.ts
+// ../disassembler/src/model/evidence-pool.ts
 var EvidencePool;
 var init_evidence_pool = __esm({
-  "packages/disassembler/src/model/evidence-pool.ts"() {
+  "../disassembler/src/model/evidence-pool.ts"() {
     "use strict";
     EvidencePool = class {
       #strings = /* @__PURE__ */ new Map();
@@ -22672,7 +22672,7 @@ var init_evidence_pool = __esm({
   }
 });
 
-// packages/disassembler/src/model/analysis-ownership.ts
+// ../disassembler/src/model/analysis-ownership.ts
 function withCompactAnalysisOwnership(records3, entries) {
   const outgoing = /* @__PURE__ */ new Map();
   const nodes = /* @__PURE__ */ new Set();
@@ -22777,15 +22777,15 @@ function validateAnalysisOwnership(records3, scope = "complete") {
   }
 }
 var init_analysis_ownership = __esm({
-  "packages/disassembler/src/model/analysis-ownership.ts"() {
+  "../disassembler/src/model/analysis-ownership.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/model/project-labels.ts
+// ../disassembler/src/model/project-labels.ts
 var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
 var init_project_labels = __esm({
-  "packages/disassembler/src/model/project-labels.ts"() {
+  "../disassembler/src/model/project-labels.ts"() {
     "use strict";
     validateSourceLabelName = (name2) => {
       if (typeof name2 !== "string" || name2.length > 256 || !/^[A-Z_a-z]\w*$/.test(name2)) {
@@ -22823,10 +22823,10 @@ var init_project_labels = __esm({
   }
 });
 
-// packages/disassembler/src/model/rom-image.ts
+// ../disassembler/src/model/rom-image.ts
 var import_node_crypto4, fs3, sha2562, detectCopierHeaderSize, RomImage;
 var init_rom_image = __esm({
-  "packages/disassembler/src/model/rom-image.ts"() {
+  "../disassembler/src/model/rom-image.ts"() {
     "use strict";
     import_node_crypto4 = require("node:crypto");
     fs3 = __toESM(require("node:fs"), 1);
@@ -22941,7 +22941,7 @@ var init_rom_image = __esm({
   }
 });
 
-// packages/disassembler/src/model/trace-detail.ts
+// ../disassembler/src/model/trace-detail.ts
 function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -22972,7 +22972,7 @@ function isMemoryAccess(entry) {
 }
 var validateRuntimeInstructionDetails;
 var init_trace_detail = __esm({
-  "packages/disassembler/src/model/trace-detail.ts"() {
+  "../disassembler/src/model/trace-detail.ts"() {
     "use strict";
     init_canonical_json();
     validateRuntimeInstructionDetails = (value, count3) => {
@@ -23055,7 +23055,7 @@ var init_trace_detail = __esm({
   }
 });
 
-// packages/disassembler/src/model/runtime-ppu-effect.ts
+// ../disassembler/src/model/runtime-ppu-effect.ts
 function isEffectRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -23067,7 +23067,7 @@ function isInteger2(value) {
 }
 var normalizeRuntimePPUEffect;
 var init_runtime_ppu_effect = __esm({
-  "packages/disassembler/src/model/runtime-ppu-effect.ts"() {
+  "../disassembler/src/model/runtime-ppu-effect.ts"() {
     "use strict";
     normalizeRuntimePPUEffect = (effect, access) => {
       const accessAddress = access.address;
@@ -23139,13 +23139,13 @@ var init_runtime_ppu_effect = __esm({
   }
 });
 
-// packages/disassembler/src/model/runtime-bus-types.ts
+// ../disassembler/src/model/runtime-bus-types.ts
 function isInteger3(value) {
   return typeof value === "number" && Number.isInteger(value);
 }
 var validateRuntimeBusFact;
 var init_runtime_bus_types = __esm({
-  "packages/disassembler/src/model/runtime-bus-types.ts"() {
+  "../disassembler/src/model/runtime-bus-types.ts"() {
     "use strict";
     init_runtime_ppu_effect();
     validateRuntimeBusFact = (fact) => {
@@ -23191,10 +23191,10 @@ var init_runtime_bus_types = __esm({
   }
 });
 
-// packages/disassembler/src/analysis/analysis-sources.ts
+// ../disassembler/src/analysis/analysis-sources.ts
 var sorted, key, buildAnalysisSourceCatalog;
 var init_analysis_sources = __esm({
-  "packages/disassembler/src/analysis/analysis-sources.ts"() {
+  "../disassembler/src/analysis/analysis-sources.ts"() {
     "use strict";
     sorted = (values) => [...new Set(values)].toSorted();
     key = (...values) => JSON.stringify(values);
@@ -23258,10 +23258,10 @@ var init_analysis_sources = __esm({
   }
 });
 
-// packages/disassembler/src/analysis/instruction-annotations.ts
+// ../disassembler/src/analysis/instruction-annotations.ts
 var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, lowerBound, buildInstructionAnalysisAnnotations;
 var init_instruction_annotations = __esm({
-  "packages/disassembler/src/analysis/instruction-annotations.ts"() {
+  "../disassembler/src/analysis/instruction-annotations.ts"() {
     "use strict";
     init_canonical_json();
     sortedStrings = (values) => values ? [...new Set(values)].toSorted((left, right) => left.localeCompare(right)) : [];
@@ -23650,7 +23650,7 @@ var init_instruction_annotations = __esm({
   }
 });
 
-// packages/disassembler/src/model/research-mapping.ts
+// ../disassembler/src/model/research-mapping.ts
 function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -23695,18 +23695,18 @@ function matchesResearchMapping(mapping, location, delta = 0) {
   );
 }
 var init_research_mapping = __esm({
-  "packages/disassembler/src/model/research-mapping.ts"() {
+  "../disassembler/src/model/research-mapping.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/analysis/static-analysis.ts
+// ../disassembler/src/analysis/static-analysis.ts
 function readEvidencePath() {
   return materializeEvidencePath(evidencePaths.get(this));
 }
 var import_node_crypto5, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, materializeEvidencePath, evidencePaths, withEvidencePath, hexAddress, callContexts, emptyCallContext, describeCallContext, contextKey, compactContextKeys, compactContextKey, nodeIdFor, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
 var init_static_analysis = __esm({
-  "packages/disassembler/src/analysis/static-analysis.ts"() {
+  "../disassembler/src/analysis/static-analysis.ts"() {
     "use strict";
     import_node_crypto5 = require("node:crypto");
     init_canonical_json();
@@ -24266,10 +24266,10 @@ var init_static_analysis = __esm({
   }
 });
 
-// packages/disassembler/src/analysis/project-evidence.ts
+// ../disassembler/src/analysis/project-evidence.ts
 var evidenceReferences, sortedUnique2, explainProjectEvidence;
 var init_project_evidence = __esm({
-  "packages/disassembler/src/analysis/project-evidence.ts"() {
+  "../disassembler/src/analysis/project-evidence.ts"() {
     "use strict";
     evidenceReferences = (shards, evidenceId) => [
       ...shards.analysis.filter((record8) => record8.evidence.includes(evidenceId)).map((record8) => `analysis:${record8.id}`),
@@ -24309,10 +24309,10 @@ var init_project_evidence = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/runtime-evidence.ts
+// ../disassembler/src/runtime/runtime-evidence.ts
 var emptyCounts, sortedUnique3, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
 var init_runtime_evidence = __esm({
-  "packages/disassembler/src/runtime/runtime-evidence.ts"() {
+  "../disassembler/src/runtime/runtime-evidence.ts"() {
     "use strict";
     init_canonical_json();
     emptyCounts = () => ({
@@ -24572,10 +24572,10 @@ var init_runtime_evidence = __esm({
   }
 });
 
-// packages/disassembler/src/internal/trace-cache.ts
+// ../disassembler/src/internal/trace-cache.ts
 var TraceCache;
 var init_trace_cache = __esm({
-  "packages/disassembler/src/internal/trace-cache.ts"() {
+  "../disassembler/src/internal/trace-cache.ts"() {
     "use strict";
     TraceCache = class {
       #entries = /* @__PURE__ */ new Map();
@@ -24651,7 +24651,7 @@ var init_trace_cache = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/runtime-analysis-profile.ts
+// ../disassembler/src/runtime/runtime-analysis-profile.ts
 function snesAnalysisTraceState(state) {
   const result = {};
   for (const field of SNES_ANALYSIS_STATE_FIELDS) {
@@ -24669,7 +24669,7 @@ function snesAnalysisTraceState(state) {
 }
 var SNES_ANALYSIS_TRACE_PROFILE, SNES_ANALYSIS_STATE_FIELDS, SNES_ANALYSIS_STATE_MASKS;
 var init_runtime_analysis_profile = __esm({
-  "packages/disassembler/src/runtime/runtime-analysis-profile.ts"() {
+  "../disassembler/src/runtime/runtime-analysis-profile.ts"() {
     "use strict";
     SNES_ANALYSIS_TRACE_PROFILE = "65816-analysis-v3";
     SNES_ANALYSIS_STATE_FIELDS = ["p", "P", "e", "E", "db", "DB", "d", "D"];
@@ -24680,10 +24680,10 @@ var init_runtime_analysis_profile = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/trace-chunk-formatter.ts
+// ../disassembler/src/runtime/trace-chunk-formatter.ts
 var TraceChunkFormatter;
 var init_trace_chunk_formatter = __esm({
-  "packages/disassembler/src/runtime/trace-chunk-formatter.ts"() {
+  "../disassembler/src/runtime/trace-chunk-formatter.ts"() {
     "use strict";
     init_trace_cache();
     TraceChunkFormatter = class {
@@ -24737,13 +24737,13 @@ ${entries.join(",\n")}
   }
 });
 
-// packages/disassembler/src/runtime/runtime-trace.ts
+// ../disassembler/src/runtime/runtime-trace.ts
 function isRowRecord(value) {
   return !Array.isArray(value);
 }
 var import_node_crypto6, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, record, string, integer, sha2563, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
-  "packages/disassembler/src/runtime/runtime-trace.ts"() {
+  "../disassembler/src/runtime/runtime-trace.ts"() {
     "use strict";
     import_node_crypto6 = require("node:crypto");
     init_canonical_json();
@@ -25245,16 +25245,16 @@ var init_runtime_trace = __esm({
   }
 });
 
-// packages/disassembler/src/internal/capture-limits.ts
+// ../disassembler/src/internal/capture-limits.ts
 var DEFAULT_RUNTIME_TRACE_MAX_BYTES;
 var init_capture_limits = __esm({
-  "packages/disassembler/src/internal/capture-limits.ts"() {
+  "../disassembler/src/internal/capture-limits.ts"() {
     "use strict";
     DEFAULT_RUNTIME_TRACE_MAX_BYTES = 32 * 1024 ** 3;
   }
 });
 
-// packages/disassembler/src/runtime/runtime-trace-file.ts
+// ../disassembler/src/runtime/runtime-trace-file.ts
 async function* traceEntries(file, options) {
   const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
@@ -25470,7 +25470,7 @@ async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
 }
 var import_node_fs, import_promises3, import_node_string_decoder, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
 var init_runtime_trace_file = __esm({
-  "packages/disassembler/src/runtime/runtime-trace-file.ts"() {
+  "../disassembler/src/runtime/runtime-trace-file.ts"() {
     "use strict";
     import_node_fs = require("node:fs");
     import_promises3 = require("node:fs/promises");
@@ -25524,10 +25524,10 @@ var init_runtime_trace_file = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/runtime-graphics.ts
+// ../disassembler/src/runtime/runtime-graphics.ts
 var mapVram, createRuntimeGraphicsAccumulator;
 var init_runtime_graphics = __esm({
-  "packages/disassembler/src/runtime/runtime-graphics.ts"() {
+  "../disassembler/src/runtime/runtime-graphics.ts"() {
     "use strict";
     mapVram = (address3, mapping) => {
       if (mapping === 0) {
@@ -25757,10 +25757,10 @@ var init_runtime_graphics = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/runtime-ppu.ts
+// ../disassembler/src/runtime/runtime-ppu.ts
 var createRuntimePPUAccumulator;
 var init_runtime_ppu = __esm({
-  "packages/disassembler/src/runtime/runtime-ppu.ts"() {
+  "../disassembler/src/runtime/runtime-ppu.ts"() {
     "use strict";
     init_runtime_ppu_effect();
     createRuntimePPUAccumulator = () => {
@@ -25818,7 +25818,7 @@ var init_runtime_ppu = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/runtime-transfer.ts
+// ../disassembler/src/runtime/runtime-transfer.ts
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -25827,7 +25827,7 @@ function isInteger4(value) {
 }
 var readRegister, validateRuntimeTransferBoundary, createRuntimeTransferAccumulator;
 var init_runtime_transfer = __esm({
-  "packages/disassembler/src/runtime/runtime-transfer.ts"() {
+  "../disassembler/src/runtime/runtime-transfer.ts"() {
     "use strict";
     readRegister = (configuration, field, maximum, message) => {
       const count3 = configuration[field];
@@ -26028,7 +26028,7 @@ var init_runtime_transfer = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/runtime-bus-trace.ts
+// ../disassembler/src/runtime/runtime-bus-trace.ts
 function isRowRecord2(value) {
   return !Array.isArray(value);
 }
@@ -26052,7 +26052,7 @@ function isBusTraceEvent(value) {
 }
 var import_node_crypto7, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
 var init_runtime_bus_trace = __esm({
-  "packages/disassembler/src/runtime/runtime-bus-trace.ts"() {
+  "../disassembler/src/runtime/runtime-bus-trace.ts"() {
     "use strict";
     import_node_crypto7 = require("node:crypto");
     init_trace_cache();
@@ -26456,10 +26456,10 @@ ${JSON.stringify(meta)}
   }
 });
 
-// packages/disassembler/src/internal/record-id-set.ts
+// ../disassembler/src/internal/record-id-set.ts
 var import_node_fs2, import_node_os, import_node_path4, import_node_sqlite, RecordIdSet;
 var init_record_id_set = __esm({
-  "packages/disassembler/src/internal/record-id-set.ts"() {
+  "../disassembler/src/internal/record-id-set.ts"() {
     "use strict";
     import_node_fs2 = __toESM(require("node:fs"), 1);
     import_node_os = __toESM(require("node:os"), 1);
@@ -26525,7 +26525,7 @@ var init_record_id_set = __esm({
   }
 });
 
-// packages/disassembler/src/model/runtime-graphics-fact.ts
+// ../disassembler/src/model/runtime-graphics-fact.ts
 function isRuntimeGraphicsFact(value) {
   if (!record2(value) || !name(value.addressSpace) || !unsigned2(value.address) || !unsigned2(value.pc) || !name(value.actor) || value.context !== "instruction" && value.context !== "interrupt" && value.context !== "unattributed" || value.direction !== "read" && value.direction !== "write" || !unsigned2(value.value) || value.value > 255) {
     return false;
@@ -26549,7 +26549,7 @@ function isRuntimeGraphicsFact(value) {
 }
 var record2, unsigned2, name;
 var init_runtime_graphics_fact = __esm({
-  "packages/disassembler/src/model/runtime-graphics-fact.ts"() {
+  "../disassembler/src/model/runtime-graphics-fact.ts"() {
     "use strict";
     record2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     unsigned2 = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
@@ -26557,7 +26557,7 @@ var init_runtime_graphics_fact = __esm({
   }
 });
 
-// packages/disassembler/src/model/project-validation.ts
+// ../disassembler/src/model/project-validation.ts
 function isObject(value) {
   return typeof value === "object" && value !== null;
 }
@@ -26620,7 +26620,7 @@ function validateAnalysisProjectManifest(manifest) {
 }
 var FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isAlphaNumeric, isStableId, visitJson, assertCodecReference, createRuntimeRecordValidator, validateRuntimeRecords, outsideSpace, validateLoadedShards;
 var init_project_validation = __esm({
-  "packages/disassembler/src/model/project-validation.ts"() {
+  "../disassembler/src/model/project-validation.ts"() {
     "use strict";
     init_record_id_set();
     init_analysis_ownership();
@@ -27050,7 +27050,7 @@ var init_project_validation = __esm({
   }
 });
 
-// packages/disassembler/src/model/record-shape.ts
+// ../disassembler/src/model/record-shape.ts
 function isRecord9(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -27294,7 +27294,7 @@ function requireMetadataRecord(kind, value) {
 }
 var CLASSIFICATIONS;
 var init_record_shape = __esm({
-  "packages/disassembler/src/model/record-shape.ts"() {
+  "../disassembler/src/model/record-shape.ts"() {
     "use strict";
     init_research_mapping();
     CLASSIFICATIONS = [
@@ -27318,10 +27318,10 @@ var init_record_shape = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-runtime-payload.ts
+// ../disassembler/src/storage/sqlite-runtime-payload.ts
 var import_node_zlib, MAGIC, FIELDS, FIELD_NAMES, HEADER_BYTES, CHECKSUM_BYTES, encodePackedRuntimePayload, isPackedRuntimePayload, decodePackedRuntimePayload;
 var init_sqlite_runtime_payload = __esm({
-  "packages/disassembler/src/storage/sqlite-runtime-payload.ts"() {
+  "../disassembler/src/storage/sqlite-runtime-payload.ts"() {
     "use strict";
     import_node_zlib = require("node:zlib");
     MAGIC = Buffer.from([85, 65, 82, 1]);
@@ -27431,10 +27431,10 @@ var init_sqlite_runtime_payload = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/storage/sqlite-payload.ts
 var import_node_util, import_node_zlib2, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES2, utf8, encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
 var init_sqlite_payload = __esm({
-  "packages/disassembler/src/storage/sqlite-payload.ts"() {
+  "../disassembler/src/storage/sqlite-payload.ts"() {
     "use strict";
     import_node_util = require("node:util");
     import_node_zlib2 = require("node:zlib");
@@ -27531,7 +27531,7 @@ var init_sqlite_payload = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-records.ts
+// ../disassembler/src/storage/sqlite-records.ts
 function isRowRecord4(value) {
   return !Array.isArray(value);
 }
@@ -27701,7 +27701,7 @@ function isBusPpu(value) {
 }
 var compareRuntimeRecordIds, runtimeColumns, runtimeInstructionFields, runtimeFromRow, analysisAddress;
 var init_sqlite_records = __esm({
-  "packages/disassembler/src/storage/sqlite-records.ts"() {
+  "../disassembler/src/storage/sqlite-records.ts"() {
     "use strict";
     init_canonical_json();
     init_record_shape();
@@ -28050,7 +28050,7 @@ var init_sqlite_records = __esm({
   }
 });
 
-// packages/disassembler/src/internal/durable-files.ts
+// ../disassembler/src/internal/durable-files.ts
 function errorCode(error) {
   if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
     return error.code;
@@ -28153,7 +28153,7 @@ function acquireFileLease(file) {
 }
 var import_node_crypto8, import_node_fs3, import_node_os2, import_node_path5;
 var init_durable_files = __esm({
-  "packages/disassembler/src/internal/durable-files.ts"() {
+  "../disassembler/src/internal/durable-files.ts"() {
     "use strict";
     import_node_crypto8 = require("node:crypto");
     import_node_fs3 = __toESM(require("node:fs"), 1);
@@ -28162,7 +28162,7 @@ var init_durable_files = __esm({
   }
 });
 
-// packages/disassembler/src/internal/source-inputs.ts
+// ../disassembler/src/internal/source-inputs.ts
 function assertSourcePath(relative4) {
   if (!relative4 || relative4.includes("\0") || relative4.includes("\\") || import_node_path6.default.isAbsolute(relative4) || /^[A-Za-z]:/.test(relative4) || relative4.split("/").some((part) => !part || part === "." || part === ".." || part.toLowerCase() === ".git")) {
     throw new Error(`Invalid source project path: ${relative4}`);
@@ -28170,7 +28170,7 @@ function assertSourcePath(relative4) {
 }
 var import_node_crypto9, import_node_path6, sourceContentHash;
 var init_source_inputs = __esm({
-  "packages/disassembler/src/internal/source-inputs.ts"() {
+  "../disassembler/src/internal/source-inputs.ts"() {
     "use strict";
     import_node_crypto9 = require("node:crypto");
     import_node_path6 = __toESM(require("node:path"), 1);
@@ -28178,7 +28178,7 @@ var init_source_inputs = __esm({
   }
 });
 
-// packages/disassembler/src/model/target-state.ts
+// ../disassembler/src/model/target-state.ts
 function record3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -28221,12 +28221,12 @@ function readAnalysisTargetState(architecture, value) {
   throw new Error(`Invalid state fields for architecture '${architecture}'.`);
 }
 var init_target_state = __esm({
-  "packages/disassembler/src/model/target-state.ts"() {
+  "../disassembler/src/model/target-state.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/model/metadata-validation.ts
+// ../disassembler/src/model/metadata-validation.ts
 function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -28261,7 +28261,7 @@ function stateEntries(state) {
 }
 var CLASSIFICATIONS2, validateEditableMetadataRecord;
 var init_metadata_validation = __esm({
-  "packages/disassembler/src/model/metadata-validation.ts"() {
+  "../disassembler/src/model/metadata-validation.ts"() {
     "use strict";
     init_project_labels();
     init_research_mapping();
@@ -28378,7 +28378,7 @@ var init_metadata_validation = __esm({
   }
 });
 
-// packages/disassembler/src/research-inputs/inputs.ts
+// ../disassembler/src/research-inputs/inputs.ts
 function isRecord12(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -28637,7 +28637,7 @@ function writeResearchDocument(root, relative4, document, expectedSha256) {
 }
 var import_node_fs4, import_node_path7, isArray, RESEARCH_COLLECTIONS, RESEARCH_INPUT_LIMIT_NAMES, compareDecisions;
 var init_inputs = __esm({
-  "packages/disassembler/src/research-inputs/inputs.ts"() {
+  "../disassembler/src/research-inputs/inputs.ts"() {
     "use strict";
     import_node_fs4 = __toESM(require("node:fs"), 1);
     import_node_path7 = __toESM(require("node:path"), 1);
@@ -28665,7 +28665,7 @@ var init_inputs = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-annotation-query.ts
+// ../disassembler/src/storage/sqlite-annotation-query.ts
 function isPartialInstruction(value) {
   if (!isRecord9(value)) {
     return false;
@@ -28701,7 +28701,7 @@ function requirePartialInstruction(value) {
 }
 var QUERY_LAYOUT, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView, validateAnnotationRanges, readInstructionExecutionSummary;
 var init_sqlite_annotation_query = __esm({
-  "packages/disassembler/src/storage/sqlite-annotation-query.ts"() {
+  "../disassembler/src/storage/sqlite-annotation-query.ts"() {
     "use strict";
     init_record_shape();
     init_sqlite_payload();
@@ -29131,7 +29131,7 @@ var init_sqlite_annotation_query = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-graph-query.ts
+// ../disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
   const record8 = requireAnalysisRecord(parseSqlitePayload(value));
   if (record8.kind !== "cfg-node") {
@@ -29188,7 +29188,7 @@ function requireCallKind(value) {
 }
 var unique, numbers, append, prepareGraph, publishGraph;
 var init_sqlite_graph_query = __esm({
-  "packages/disassembler/src/storage/sqlite-graph-query.ts"() {
+  "../disassembler/src/storage/sqlite-graph-query.ts"() {
     "use strict";
     init_record_shape();
     init_sqlite_payload();
@@ -29375,7 +29375,7 @@ var init_sqlite_graph_query = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-graphics-query.ts
+// ../disassembler/src/storage/sqlite-graphics-query.ts
 function queryGraphicsEvidence(db, query) {
   const limit = query.limit ?? 500;
   if (!Number.isInteger(limit) || limit < 1 || limit > 2e3 || [query.pc, query.physicalOffset].some(
@@ -29440,16 +29440,16 @@ function queryGraphicsEvidence(db, query) {
   return result;
 }
 var init_sqlite_graphics_query = __esm({
-  "packages/disassembler/src/storage/sqlite-graphics-query.ts"() {
+  "../disassembler/src/storage/sqlite-graphics-query.ts"() {
     "use strict";
     init_sqlite_records();
   }
 });
 
-// packages/disassembler/src/storage/sqlite-query-cache.ts
+// ../disassembler/src/storage/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA, installQueryCache, readQueryCache, writeQueryCache;
 var init_sqlite_query_cache = __esm({
-  "packages/disassembler/src/storage/sqlite-query-cache.ts"() {
+  "../disassembler/src/storage/sqlite-query-cache.ts"() {
     "use strict";
     QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
     installQueryCache = (db, key3, dependencies) => {
@@ -29503,7 +29503,7 @@ var init_sqlite_query_cache = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-research-inputs.ts
+// ../disassembler/src/storage/sqlite-research-inputs.ts
 function isRecord13(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -29611,7 +29611,7 @@ function projectResearchInputs(database, snapshot, insert) {
 }
 var SCHEMA, collectionName, recordValue;
 var init_sqlite_research_inputs = __esm({
-  "packages/disassembler/src/storage/sqlite-research-inputs.ts"() {
+  "../disassembler/src/storage/sqlite-research-inputs.ts"() {
     "use strict";
     init_canonical_json();
     init_sqlite_payload();
@@ -29629,10 +29629,10 @@ var init_sqlite_research_inputs = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-runtime-facts.ts
+// ../disassembler/src/storage/sqlite-runtime-facts.ts
 var RUNTIME_DESCRIPTOR_COLUMNS, runtimeIdentityKey, columns, inserted, key2, descriptorInsert, descriptorId, RUNTIME_FACT_SCHEMA, RUNTIME_IDENTITY_SCHEMA;
 var init_sqlite_runtime_facts = __esm({
-  "packages/disassembler/src/storage/sqlite-runtime-facts.ts"() {
+  "../disassembler/src/storage/sqlite-runtime-facts.ts"() {
     "use strict";
     RUNTIME_DESCRIPTOR_COLUMNS = [
       "kind",
@@ -29724,7 +29724,7 @@ BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
   }
 });
 
-// packages/disassembler/src/storage/sqlite-runtime-history.ts
+// ../disassembler/src/storage/sqlite-runtime-history.ts
 function historyPayload(value) {
   if (value === null || typeof value === "string" || import_node_util2.types.isUint8Array(value)) {
     return value;
@@ -29733,7 +29733,7 @@ function historyPayload(value) {
 }
 var import_node_util2, import_node_zlib3, MAGIC2, MAX_ROWS, MAX_BYTES, TARGET_BYTES, CACHE_BYTES, utf82, RUNTIME_HISTORY_SCHEMA, encodeRuntimeHistory, decodeHistoryBlock, historyValue, registerRuntimeHistory, packRuntimeHistory, collectRuntimeHistory;
 var init_sqlite_runtime_history = __esm({
-  "packages/disassembler/src/storage/sqlite-runtime-history.ts"() {
+  "../disassembler/src/storage/sqlite-runtime-history.ts"() {
     "use strict";
     import_node_util2 = require("node:util");
     import_node_zlib3 = require("node:zlib");
@@ -29913,7 +29913,7 @@ END;`;
   }
 });
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
 function pairedState(payload) {
   const parsed = parseSqlitePayload(payload);
   if (!isRecord9(parsed)) {
@@ -29923,7 +29923,7 @@ function pairedState(payload) {
 }
 var import_node_crypto10, runtimeFactFingerprint, encodeRuntimeFactPayload, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
-  "packages/disassembler/src/storage/sqlite-runtime-storage.ts"() {
+  "../disassembler/src/storage/sqlite-runtime-storage.ts"() {
     "use strict";
     import_node_crypto10 = require("node:crypto");
     init_canonical_json();
@@ -30166,7 +30166,7 @@ END;
   }
 });
 
-// packages/disassembler/src/storage/sqlite-runtime-batch.ts
+// ../disassembler/src/storage/sqlite-runtime-batch.ts
 function assertTraceRecordNamespace(record8, sourceSha256) {
   const root = `runtime:instruction-trace:${sourceSha256}:`;
   let prefix = root;
@@ -30191,7 +30191,7 @@ function assertTraceRecordNamespace(record8, sourceSha256) {
 }
 var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL, SqliteRuntimeTraceBatch;
 var init_sqlite_runtime_batch = __esm({
-  "packages/disassembler/src/storage/sqlite-runtime-batch.ts"() {
+  "../disassembler/src/storage/sqlite-runtime-batch.ts"() {
     "use strict";
     init_canonical_json();
     init_sqlite_payload();
@@ -30331,13 +30331,13 @@ var init_sqlite_runtime_batch = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-runtime-summary.ts
+// ../disassembler/src/storage/sqlite-runtime-summary.ts
 function isByteList(value) {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
 var import_node_crypto11, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, ORDERED_STAGED_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
 var init_sqlite_runtime_summary = __esm({
-  "packages/disassembler/src/storage/sqlite-runtime-summary.ts"() {
+  "../disassembler/src/storage/sqlite-runtime-summary.ts"() {
     "use strict";
     import_node_crypto11 = require("node:crypto");
     init_record_shape();
@@ -30604,7 +30604,7 @@ var init_sqlite_runtime_summary = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-source-export.ts
+// ../disassembler/src/storage/sqlite-source-export.ts
 function isUnknownArray3(value) {
   return Array.isArray(value);
 }
@@ -30698,7 +30698,7 @@ function* sourceExportCacheRecords(database) {
 }
 var SOURCE_EXPORT_CACHE;
 var init_sqlite_source_export = __esm({
-  "packages/disassembler/src/storage/sqlite-source-export.ts"() {
+  "../disassembler/src/storage/sqlite-source-export.ts"() {
     "use strict";
     init_record_shape();
     init_sqlite_payload();
@@ -30707,7 +30707,7 @@ var init_sqlite_source_export = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-source-query.ts
+// ../disassembler/src/storage/sqlite-source-query.ts
 function isRecord14(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -30736,7 +30736,7 @@ function optionalNumber(record8, key3) {
 }
 var collections, sourceEvidence, sourceRuntime, sourceObservations, instructionKinds, observationLocations, hex2, sourceQueriesReady, prepareSourceQueries, readSourceSummary, readSourcePage;
 var init_sqlite_source_query = __esm({
-  "packages/disassembler/src/storage/sqlite-source-query.ts"() {
+  "../disassembler/src/storage/sqlite-source-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -30892,7 +30892,7 @@ var init_sqlite_source_query = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-storage-policy.ts
+// ../disassembler/src/storage/sqlite-storage-policy.ts
 function errorCode2(error) {
   if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
     return error.code;
@@ -30907,7 +30907,7 @@ function isPolicyRecord(value) {
 }
 var import_node_fs5, DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, CACHES, RETIRED_CACHES, retireStorageCaches, cacheTableBytes, optionalCacheBytes, maintainStorageCaches;
 var init_sqlite_storage_policy = __esm({
-  "packages/disassembler/src/storage/sqlite-storage-policy.ts"() {
+  "../disassembler/src/storage/sqlite-storage-policy.ts"() {
     "use strict";
     import_node_fs5 = __toESM(require("node:fs"), 1);
     DEFAULT_ANALYSIS_STORAGE_POLICY = {
@@ -31084,7 +31084,7 @@ var init_sqlite_storage_policy = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-store.ts
+// ../disassembler/src/storage/sqlite-store.ts
 function isByteList2(value) {
   return Array.isArray(value) && value.every(isFiniteNumber);
 }
@@ -31150,7 +31150,7 @@ function isIndexedExportInstruction(value, spaces, knownEvidence) {
 }
 var import_node_crypto12, import_node_fs6, import_node_path8, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA2, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
-  "packages/disassembler/src/storage/sqlite-store.ts"() {
+  "../disassembler/src/storage/sqlite-store.ts"() {
     "use strict";
     import_node_crypto12 = require("node:crypto");
     import_node_fs6 = __toESM(require("node:fs"), 1);
@@ -33265,13 +33265,13 @@ PRAGMA user_version=4;
   }
 });
 
-// packages/disassembler/src/project/project-store.ts
+// ../disassembler/src/project/project-store.ts
 function isUntrustedManifest(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 var fs9, import_node_path9, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, validateProjectRom, validateAnalysisProject;
 var init_project_store = __esm({
-  "packages/disassembler/src/project/project-store.ts"() {
+  "../disassembler/src/project/project-store.ts"() {
     "use strict";
     fs9 = __toESM(require("node:fs"), 1);
     import_node_path9 = __toESM(require("node:path"), 1);
@@ -33375,10 +33375,10 @@ var init_project_store = __esm({
   }
 });
 
-// packages/disassembler/src/project/project-transaction.ts
+// ../disassembler/src/project/project-transaction.ts
 var import_node_crypto13, fs10, import_node_path10, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
-  "packages/disassembler/src/project/project-transaction.ts"() {
+  "../disassembler/src/project/project-transaction.ts"() {
     "use strict";
     import_node_crypto13 = require("node:crypto");
     fs10 = __toESM(require("node:fs"), 1);
@@ -33493,7 +33493,7 @@ var init_project_transaction = __esm({
   }
 });
 
-// packages/disassembler/src/project/read-session.ts
+// ../disassembler/src/project/read-session.ts
 function withAnalysisReadSession(directory, action) {
   const store = openAnalysisProjectStore(directory);
   let active = true;
@@ -33543,17 +33543,17 @@ function withAnalysisReadSession(directory, action) {
   }
 }
 var init_read_session = __esm({
-  "packages/disassembler/src/project/read-session.ts"() {
+  "../disassembler/src/project/read-session.ts"() {
     "use strict";
     init_project_store();
     init_project_transaction();
   }
 });
 
-// node_modules/@uttori/data-tools/dist/data-hash-crc32.js
+// ../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js
 var CRC32_POLYNOMIAL, CRC32C_POLYNOMIAL, reflectedTable, sliceTable, CRC32_TABLE, CRC32C_TABLE, crc32Slices, crc32cSlices, i0, i1, i2, i3, i4, i5, i6, i7, c0, c1, c2, c3, c4, c5, c6, c7, computeBytes, crc32cBytes;
 var init_data_hash_crc32 = __esm({
-  "node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
+  "../../node_modules/@uttori/data-tools/dist/data-hash-crc32.js"() {
     CRC32_POLYNOMIAL = 3988292384;
     CRC32C_POLYNOMIAL = 2197175160;
     reflectedTable = (polynomial) => Array.from({ length: 256 }, (_, index) => {
@@ -33613,7 +33613,7 @@ var init_data_hash_crc32 = __esm({
   }
 });
 
-// packages/capture/src/capture-compression.ts
+// ../capture/src/capture-compression.ts
 function validateFrame(frame, decodedBytes) {
   if (frame.length < 6 || frame.readUInt32LE(0) !== 4247762216) {
     throw new Error("Invalid capture Zstandard frame.");
@@ -33716,7 +33716,7 @@ function compressCaptureChunk(bytes) {
 }
 var import_node_zlib4, chunkBytes;
 var init_capture_compression = __esm({
-  "packages/capture/src/capture-compression.ts"() {
+  "../capture/src/capture-compression.ts"() {
     "use strict";
     import_node_zlib4 = require("node:zlib");
     init_data_hash_crc32();
@@ -33724,19 +33724,19 @@ var init_capture_compression = __esm({
   }
 });
 
-// packages/capture/src/capture-nes-mapper.ts
+// ../capture/src/capture-nes-mapper.ts
 function validateNesMapper(mapper) {
   if (mapper.length !== 18 || ![0, 4].includes(mapper[0]) || mapper[1] !== 0 || mapper[2] > 7 || mapper[3] > 1 || mapper[4] > 1 || mapper[13] > 1 || mapper[14] > 1 || mapper[15] > 1 || mapper[17] > 1) {
     throw new Error("Invalid NES mapper dictionary.");
   }
 }
 var init_capture_nes_mapper = __esm({
-  "packages/capture/src/capture-nes-mapper.ts"() {
+  "../capture/src/capture-nes-mapper.ts"() {
     "use strict";
   }
 });
 
-// packages/capture/src/capture-nes-timeline.ts
+// ../capture/src/capture-nes-timeline.ts
 function irq(r, at) {
   if (r[at + 2] > 1 || r[at + 3] > 1 || r[at + 4] > 1 || r[at + 5] > 6 || r[at + 6] > 7 || r[at + 7] > 1) {
     throw new Error("Invalid NES mapper IRQ state.");
@@ -33786,13 +33786,13 @@ function decodeNesTimeline(r) {
   };
 }
 var init_capture_nes_timeline = __esm({
-  "packages/capture/src/capture-nes-timeline.ts"() {
+  "../capture/src/capture-nes-timeline.ts"() {
     "use strict";
     init_capture_nes_mapper();
   }
 });
 
-// packages/capture/src/capture-nes-ppu.ts
+// ../capture/src/capture-nes-ppu.ts
 function decodeNesPPUState(bytes, offset) {
   const state = {
     v: bytes.readUInt16LE(offset),
@@ -33894,7 +33894,7 @@ function decodeNesBusRecords(b, first, count3) {
 }
 var physical;
 var init_capture_nes_ppu = __esm({
-  "packages/capture/src/capture-nes-ppu.ts"() {
+  "../capture/src/capture-nes-ppu.ts"() {
     "use strict";
     init_capture_nes_mapper();
     init_capture_nes_timeline();
@@ -33902,7 +33902,7 @@ var init_capture_nes_ppu = __esm({
   }
 });
 
-// packages/capture/src/target-payload.ts
+// ../capture/src/target-payload.ts
 function readCaptureTargetPayload(codec, version, state) {
   if (version !== 1 || codec !== "snes.65816" && codec !== "nes.2a03") {
     throw new Error("Unsupported capture target codec/version.");
@@ -33945,7 +33945,7 @@ function isNesState(state) {
 }
 var snesLimits, nesLimits;
 var init_target_payload = __esm({
-  "packages/capture/src/target-payload.ts"() {
+  "../capture/src/target-payload.ts"() {
     "use strict";
     snesLimits = {
       a: 65535,
@@ -33988,7 +33988,7 @@ var init_target_payload = __esm({
   }
 });
 
-// packages/capture/src/capture-v2.ts
+// ../capture/src/capture-v2.ts
 function isFieldRecord(value) {
   return typeof value === "object" && value !== null;
 }
@@ -34306,7 +34306,7 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
 }
 var maxU64, captureScope, captureU64, captureSession, bounded, validateCaptureCapabilities, validateCapturePosition, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
 var init_capture_v2 = __esm({
-  "packages/capture/src/capture-v2.ts"() {
+  "../capture/src/capture-v2.ts"() {
     "use strict";
     init_data_hash_crc32();
     init_capture_compression();
@@ -34547,10 +34547,10 @@ var init_capture_v2 = __esm({
   }
 });
 
-// packages/capture/src/capture-file-reader.ts
+// ../capture/src/capture-file-reader.ts
 var CaptureFrameReader;
 var init_capture_file_reader = __esm({
-  "packages/capture/src/capture-file-reader.ts"() {
+  "../capture/src/capture-file-reader.ts"() {
     "use strict";
     CaptureFrameReader = class {
       #read;
@@ -34612,7 +34612,7 @@ var init_capture_file_reader = __esm({
   }
 });
 
-// packages/capture/src/capture-file.ts
+// ../capture/src/capture-file.ts
 function validateCaptureMetadata(m) {
   if (!isRecord15(m)) {
     throw new Error("Capture requires a supported CPU scope and exact ROM/producer identity.");
@@ -34645,7 +34645,7 @@ function assertCaptureFileHeader(value) {
 }
 var import_promises4, import_promises5, isRecord15, consumerRejected, CaptureTruncationError, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition;
 var init_capture_file = __esm({
-  "packages/capture/src/capture-file.ts"() {
+  "../capture/src/capture-file.ts"() {
     "use strict";
     import_promises4 = require("node:fs/promises");
     import_promises5 = require("node:timers/promises");
@@ -35150,10 +35150,10 @@ var init_capture_file = __esm({
   }
 });
 
-// packages/capture/src/capture-context.ts
+// ../capture/src/capture-context.ts
 var import_node_crypto14, import_node_fs7, import_promises6, import_node_path11, isRecord16, digestFile, verifyCaptureContext;
 var init_capture_context = __esm({
-  "packages/capture/src/capture-context.ts"() {
+  "../capture/src/capture-context.ts"() {
     "use strict";
     import_node_crypto14 = require("node:crypto");
     import_node_fs7 = require("node:fs");
@@ -35229,7 +35229,7 @@ var init_capture_context = __esm({
   }
 });
 
-// packages/capture/src/index.ts
+// ../capture/src/index.ts
 var src_exports = {};
 __export(src_exports, {
   CaptureFrameReader: () => CaptureFrameReader,
@@ -35259,7 +35259,7 @@ __export(src_exports, {
   verifyCaptureContext: () => verifyCaptureContext
 });
 var init_src = __esm({
-  "packages/capture/src/index.ts"() {
+  "../capture/src/index.ts"() {
     "use strict";
     init_capture_v2();
     init_capture_compression();
@@ -35273,7 +35273,7 @@ var init_src = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/capture-companion.ts
+// ../disassembler/src/runtime/capture-companion.ts
 function isRecord17(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -35321,7 +35321,7 @@ async function verifyRuntimeCaptureCompanion(file, recovery, signal) {
 }
 var import_promises7, import_node_path12;
 var init_capture_companion = __esm({
-  "packages/disassembler/src/runtime/capture-companion.ts"() {
+  "../disassembler/src/runtime/capture-companion.ts"() {
     "use strict";
     import_promises7 = require("node:fs/promises");
     import_node_path12 = __toESM(require("node:path"), 1);
@@ -35330,10 +35330,10 @@ var init_capture_companion = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/capture-instruction-source.ts
+// ../disassembler/src/runtime/capture-instruction-source.ts
 var import_promises8, createRuntimeCaptureSource;
 var init_capture_instruction_source = __esm({
-  "packages/disassembler/src/runtime/capture-instruction-source.ts"() {
+  "../disassembler/src/runtime/capture-instruction-source.ts"() {
     "use strict";
     import_promises8 = require("node:fs/promises");
     init_canonical_json();
@@ -35436,7 +35436,7 @@ var init_capture_instruction_source = __esm({
   }
 });
 
-// packages/disassembler/src/storage/sqlite-trace-stage.ts
+// ../disassembler/src/storage/sqlite-trace-stage.ts
 function checkpointCount(value, key3) {
   const count3 = Reflect.get(value, key3);
   if (typeof count3 !== "number" || !Number.isSafeInteger(count3) || count3 < 0) {
@@ -35466,7 +35466,7 @@ function readCheckpoint(value) {
 }
 var import_node_fs8, import_node_path13, import_node_sqlite3, SqliteTraceStage;
 var init_sqlite_trace_stage = __esm({
-  "packages/disassembler/src/storage/sqlite-trace-stage.ts"() {
+  "../disassembler/src/storage/sqlite-trace-stage.ts"() {
     "use strict";
     import_node_fs8 = __toESM(require("node:fs"), 1);
     import_node_path13 = __toESM(require("node:path"), 1);
@@ -35522,7 +35522,7 @@ var init_sqlite_trace_stage = __esm({
   }
 });
 
-// packages/disassembler/src/project/runtime-trace-project.ts
+// ../disassembler/src/project/runtime-trace-project.ts
 async function importRuntimeTraceSourceIntoProject(source, directory, context, options = {}) {
   options.signal?.throwIfAborted();
   const store = openAnalysisProjectStore(directory);
@@ -35750,7 +35750,7 @@ async function importRuntimeTraceSourceIntoProject(source, directory, context, o
 }
 var import_node_crypto15, import_node_path14, importRuntimeTraceIntoProject, commitRuntimeEvidenceBatch;
 var init_runtime_trace_project = __esm({
-  "packages/disassembler/src/project/runtime-trace-project.ts"() {
+  "../disassembler/src/project/runtime-trace-project.ts"() {
     "use strict";
     import_node_crypto15 = require("node:crypto");
     import_node_path14 = __toESM(require("node:path"), 1);
@@ -35788,10 +35788,10 @@ var init_runtime_trace_project = __esm({
   }
 });
 
-// packages/disassembler/src/project/runtime-bus-project.ts
+// ../disassembler/src/project/runtime-bus-project.ts
 var import_node_fs9, captureFileIdentity, importRuntimeBusTraceSourceIntoProject;
 var init_runtime_bus_project = __esm({
-  "packages/disassembler/src/project/runtime-bus-project.ts"() {
+  "../disassembler/src/project/runtime-bus-project.ts"() {
     "use strict";
     import_node_fs9 = __toESM(require("node:fs"), 1);
     init_project_validation();
@@ -35956,7 +35956,7 @@ var init_runtime_bus_project = __esm({
   }
 });
 
-// packages/disassembler/src/project/capture-notes.ts
+// ../disassembler/src/project/capture-notes.ts
 function notesPath(directory, sha2564) {
   if (!/^[\da-f]{64}$/.test(sha2564)) {
     throw new Error("Invalid capture notes identity.");
@@ -36038,7 +36038,7 @@ function completeCaptureImportNotes(directory, pending, status, addedCode) {
 }
 var import_node_fs10, import_node_path15;
 var init_capture_notes = __esm({
-  "packages/disassembler/src/project/capture-notes.ts"() {
+  "../disassembler/src/project/capture-notes.ts"() {
     "use strict";
     import_node_fs10 = __toESM(require("node:fs"), 1);
     import_node_path15 = __toESM(require("node:path"), 1);
@@ -36047,10 +36047,10 @@ var init_capture_notes = __esm({
   }
 });
 
-// packages/disassembler/src/source/source-export.ts
+// ../disassembler/src/source/source-export.ts
 var import_node_crypto16, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, sourceExportSha256, compareByteImages;
 var init_source_export = __esm({
-  "packages/disassembler/src/source/source-export.ts"() {
+  "../disassembler/src/source/source-export.ts"() {
     "use strict";
     import_node_crypto16 = require("node:crypto");
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
@@ -36080,7 +36080,7 @@ var init_source_export = __esm({
   }
 });
 
-// packages/disassembler/src/research-inputs/symbols.ts
+// ../disassembler/src/research-inputs/symbols.ts
 function isProjectLabel2(value) {
   return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
 }
@@ -36247,7 +36247,7 @@ function renameResearchSymbol(snapshot, identity2, newName, newDocumentPath, res
 }
 var isArray2;
 var init_symbols = __esm({
-  "packages/disassembler/src/research-inputs/symbols.ts"() {
+  "../disassembler/src/research-inputs/symbols.ts"() {
     "use strict";
     init_canonical_json();
     init_source_inputs();
@@ -36257,7 +36257,7 @@ var init_symbols = __esm({
   }
 });
 
-// packages/disassembler/src/research-inputs/analysis.ts
+// ../disassembler/src/research-inputs/analysis.ts
 function validateLocations(record8, spaces) {
   const space = spaces.find((item) => item.id === record8.addressSpace);
   if (!space || !Number.isInteger(space.addressBits) || space.addressBits < 1 || space.addressBits > 53) {
@@ -36375,17 +36375,17 @@ function changeResearchAnalysis(snapshot, change, spaces) {
   };
 }
 var init_analysis = __esm({
-  "packages/disassembler/src/research-inputs/analysis.ts"() {
+  "../disassembler/src/research-inputs/analysis.ts"() {
     "use strict";
     init_source_inputs();
     init_inputs();
   }
 });
 
-// packages/disassembler/src/internal/interval-index.ts
+// ../disassembler/src/internal/interval-index.ts
 var HalfOpenIntervalIndex;
 var init_interval_index = __esm({
-  "packages/disassembler/src/internal/interval-index.ts"() {
+  "../disassembler/src/internal/interval-index.ts"() {
     "use strict";
     HalfOpenIntervalIndex = class {
       #entries;
@@ -36459,10 +36459,10 @@ var init_interval_index = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/capture-bus-source.ts
+// ../disassembler/src/runtime/capture-bus-source.ts
 var createRuntimeBusCaptureSource;
 var init_capture_bus_source = __esm({
-  "packages/disassembler/src/runtime/capture-bus-source.ts"() {
+  "../disassembler/src/runtime/capture-bus-source.ts"() {
     "use strict";
     init_canonical_json();
     init_capture_companion();
@@ -36510,7 +36510,7 @@ var init_capture_bus_source = __esm({
   }
 });
 
-// packages/disassembler/src/runtime/capture-source.ts
+// ../disassembler/src/runtime/capture-source.ts
 async function openRuntimeCaptureSource(file, options = {}) {
   options.signal?.throwIfAborted();
   const handle = await (0, import_promises9.open)(file, "r");
@@ -36538,7 +36538,7 @@ async function openRuntimeCaptureSource(file, options = {}) {
 }
 var import_promises9;
 var init_capture_source = __esm({
-  "packages/disassembler/src/runtime/capture-source.ts"() {
+  "../disassembler/src/runtime/capture-source.ts"() {
     "use strict";
     import_promises9 = require("node:fs/promises");
     init_capture_bus_source();
@@ -36546,7 +36546,7 @@ var init_capture_source = __esm({
   }
 });
 
-// packages/disassembler/src/index.ts
+// ../disassembler/src/index.ts
 var src_exports2 = {};
 __export(src_exports2, {
   ANALYSIS_PROJECT_FORMAT: () => ANALYSIS_PROJECT_FORMAT,
@@ -36645,7 +36645,7 @@ __export(src_exports2, {
   writeResearchDocument: () => writeResearchDocument
 });
 var init_src2 = __esm({
-  "packages/disassembler/src/index.ts"() {
+  "../disassembler/src/index.ts"() {
     "use strict";
     init_project_types();
     init_project_asset_ids();
@@ -36686,7 +36686,7 @@ var init_src2 = __esm({
   }
 });
 
-// packages/vscode-extension/src/extension.ts
+// src/extension.ts
 var extension_exports = {};
 __export(extension_exports, {
   activate: () => activate,
@@ -36697,11 +36697,11 @@ var path51 = __toESM(require("node:path"), 1);
 var import_vscode32 = require("vscode");
 var import_node = __toESM(require_main5(), 1);
 
-// packages/vscode-extension/src/analysis/annotation-controller.ts
+// src/analysis/annotation-controller.ts
 var path22 = __toESM(require("node:path"), 1);
 var import_vscode3 = require("vscode");
 
-// packages/vscode-extension/src/editor-info/format.ts
+// src/editor-info/format.ts
 init_canonical_json();
 var INFORMATION_FIELDS = {
   output_offsets: "File and logical addresses",
@@ -37059,7 +37059,7 @@ var renderInformationSection = (info, section) => {
   return lines.join("\n");
 };
 
-// packages/vscode-extension/src/editor-info/configuration.ts
+// src/editor-info/configuration.ts
 var INFORMATION_PRESETS = {
   compact: {
     parts: ["${output_offsets}", "exec ${execution_counts}"],
@@ -37162,12 +37162,12 @@ var readEditorInformationConfiguration = (configuration) => {
   };
 };
 
-// packages/vscode-extension/src/editor-info/provider.ts
+// src/editor-info/provider.ts
 var import_node_crypto2 = require("node:crypto");
 var import_promises = require("node:fs/promises");
 var path2 = __toESM(require("node:path"), 1);
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var import_node_crypto = require("node:crypto");
 var import_node_path = __toESM(require("node:path"), 1);
 init_canonical_json();
@@ -37216,7 +37216,7 @@ var debugMapRangesForSource = (map, sourcePath, line, architecture) => {
   );
 };
 
-// packages/vscode-extension/src/editor-info/provider.ts
+// src/editor-info/provider.ts
 function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -37722,7 +37722,7 @@ var EditorInformationProvider = class {
   }
 };
 
-// packages/vscode-extension/src/editor-info/layout.ts
+// src/editor-info/layout.ts
 var informationSourceColumns = (text2, tabSize) => {
   const width = Number.isSafeInteger(tabSize) && tabSize > 0 ? tabSize : 4;
   let columns2 = 0;
@@ -37733,11 +37733,11 @@ var informationSourceColumns = (text2, tabSize) => {
 };
 var informationOverlayGap = (source, tabSize, column = 80) => Math.max(3, column - informationSourceColumns(source, tabSize));
 
-// packages/vscode-extension/src/editor-info/worker-client.ts
+// src/editor-info/worker-client.ts
 var import_node_path2 = __toESM(require("node:path"), 1);
 var import_node_worker_threads = require("node:worker_threads");
 
-// packages/vscode-extension/src/workers/lifecycle.ts
+// src/workers/lifecycle.ts
 var WorkerRequestSlots = class {
   constructor(limit) {
     this.limit = limit;
@@ -37797,7 +37797,7 @@ function workerTimeout(value, fallback) {
   return timeout;
 }
 
-// packages/vscode-extension/src/editor-info/worker-client.ts
+// src/editor-info/worker-client.ts
 function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -38017,13 +38017,13 @@ var EditorInformationWorker = class {
   }
 };
 
-// packages/vscode-extension/src/analysis/debug-maps.ts
+// src/analysis/debug-maps.ts
 var import_node_crypto3 = require("node:crypto");
 var fs2 = __toESM(require("node:fs"), 1);
 var path5 = __toESM(require("node:path"), 1);
 var import_vscode = require("vscode");
 
-// packages/vscode-extension/src/source/project-path.ts
+// src/source/project-path.ts
 var import_promises2 = __toESM(require("node:fs/promises"), 1);
 var import_node_path3 = __toESM(require("node:path"), 1);
 async function findSourceRoot(directory) {
@@ -38047,7 +38047,7 @@ async function findSourceRoot(directory) {
   }
 }
 
-// packages/vscode-extension/src/analysis/debug-maps.ts
+// src/analysis/debug-maps.ts
 var DEBUG_MAP_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
 var sortedUnique = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
 function isRecord5(value) {
@@ -38190,11 +38190,11 @@ var analysisDebugMapRanges = (map, location) => {
   return [...unique2.values()].filter((range) => hints.size === 0 || hints.has(range.architecture));
 };
 
-// packages/vscode-extension/src/analysis/project-discovery.ts
+// src/analysis/project-discovery.ts
 var path20 = __toESM(require("node:path"), 1);
 init_src2();
 
-// packages/disassembler/src/source-project/git.ts
+// ../disassembler/src/source-project/git.ts
 var import_node_child_process = require("node:child_process");
 var import_node_path16 = __toESM(require("node:path"), 1);
 init_source_inputs();
@@ -38303,7 +38303,7 @@ function assertSourceObjectId(value) {
   }
 }
 
-// packages/disassembler/src/source-project/blobs.ts
+// ../disassembler/src/source-project/blobs.ts
 async function readSourceBlobs(repository, objects, signal) {
   const unique2 = [...new Set(objects)];
   const sizes = /* @__PURE__ */ new Map();
@@ -38368,10 +38368,10 @@ async function readSourceBlobs(repository, objects, signal) {
   return result;
 }
 
-// packages/disassembler/src/source-project/generation.ts
+// ../disassembler/src/source-project/generation.ts
 init_source_inputs();
 
-// packages/disassembler/src/source-project/project.ts
+// ../disassembler/src/source-project/project.ts
 var import_node_fs11 = __toESM(require("node:fs"), 1);
 var import_node_path17 = __toESM(require("node:path"), 1);
 init_inputs();
@@ -38444,7 +38444,7 @@ function readSourceProjectLocalInputs(root) {
   };
 }
 
-// packages/core/src/linker/value.ts
+// ../core/src/linker/value.ts
 var import_node_crypto17 = require("node:crypto");
 function artifactHash(value) {
   return (0, import_node_crypto17.createHash)("sha256").update(value).digest("hex");
@@ -38477,7 +38477,7 @@ function integer2(value, purpose, minimum = 0, maximum = Number.MAX_SAFE_INTEGER
   return value;
 }
 
-// packages/core/src/linker/validation.ts
+// ../core/src/linker/validation.ts
 var binaryOperators = /* @__PURE__ */ new Set([
   "+",
   "-",
@@ -38539,7 +38539,7 @@ function assertLinkExpression(value, depth = 0, budget = { nodes: 0 }) {
   }
 }
 
-// packages/core/src/linker/types.ts
+// ../core/src/linker/types.ts
 var LinkError = class extends Error {
   /**
    * Captures a link failure with optional source anchoring and partial placement state.
@@ -38562,7 +38562,7 @@ var LinkError = class extends Error {
   name = "LinkError";
 };
 
-// packages/core/src/linker/recipe.ts
+// ../core/src/linker/recipe.ts
 function assertLinkRecipe(input) {
   const recipe = record4(input, "Link recipe");
   textValue(recipe.target, "Link target");
@@ -38645,7 +38645,7 @@ function assertLinkRecipe(input) {
   }
 }
 
-// packages/core/src/ir/link-expression.ts
+// ../core/src/ir/link-expression.ts
 function linkInteger(value) {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`Link expression requires a safe integer: ${value}`);
@@ -38843,7 +38843,7 @@ function compileLinkExpression(expression, context, depth = 0) {
   }
 }
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -38876,7 +38876,7 @@ function sourceLineStarts(text2) {
   return starts;
 }
 
-// packages/core/src/ir/expression-parse-state.ts
+// ../core/src/ir/expression-parse-state.ts
 var rawOutcomes = /* @__PURE__ */ new WeakMap();
 function setRawExpressionOutcome(node, outcome2) {
   rawOutcomes.set(node, outcome2);
@@ -38885,7 +38885,7 @@ function expressionOutcomeKey(outcome2) {
   return outcome2.kind === "native" ? "native" : `${outcome2.kind}:${outcome2.reason}`;
 }
 
-// packages/core/src/internal-instrumentation.ts
+// ../core/src/internal-instrumentation.ts
 var activeInstrumentation;
 function recordExpressionParse(site, outcome2) {
   if (syntaxOwner === "execution") {
@@ -38919,12 +38919,12 @@ function recordExecutionParser(kind) {
   }
 }
 
-// packages/core/src/ir/source-fragment.ts
+// ../core/src/ir/source-fragment.ts
 function sourceFragment(text2, origins = []) {
   return { segments: [{ text: text2, origins }] };
 }
 
-// packages/core/src/ir/define-template.ts
+// ../core/src/ir/define-template.ts
 function parseDefineTemplate(text2, escapes = "basic") {
   const parse4 = (start, end) => {
     const parts2 = [];
@@ -38982,7 +38982,7 @@ function parseDefineTemplate(text2, escapes = "basic") {
   return { text: text2, parts: parse4(0, text2.length) };
 }
 
-// packages/core/src/ir/expression-call-contracts.ts
+// ../core/src/ir/expression-call-contracts.ts
 var firstSourceArgument = /* @__PURE__ */ new Set([
   "countof",
   "bytesof",
@@ -39002,7 +39002,7 @@ function isSourceTextArgument(name2, index) {
   return index === 0 && (firstSourceArgument.has(name2) || /^(?:canreadfile|readfile)\d?$/.test(name2));
 }
 
-// packages/core/src/ir/expression-operators.ts
+// ../core/src/ir/expression-operators.ts
 var binaryPrecedence = {
   "||": 0,
   "&&": 1,
@@ -39026,7 +39026,7 @@ var binaryPrecedence = {
   "**": 6
 };
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 function attachRootSpan(node, text2, source) {
   node.span ??= source ? createTextSpan(
     source.text,
@@ -39859,7 +39859,7 @@ function isBinaryOperator(value) {
   return value in binaryPrecedence;
 }
 
-// packages/core/src/ir/directive-arguments.ts
+// ../core/src/ir/directive-arguments.ts
 function parseDirectiveExpression(text2, numeric2 = true, source) {
   recordExecutionParser("directive");
   if (/![\w{]/.test(text2)) {
@@ -39882,7 +39882,7 @@ function dataResolutionExpression(text2, node) {
   return node;
 }
 
-// packages/core/src/ir/source-syntax.ts
+// ../core/src/ir/source-syntax.ts
 function copySyntaxValue(value) {
   return copySyntaxTree(value, false);
 }
@@ -39961,7 +39961,7 @@ function copySyntaxTree(value, immutable) {
   return copy(value, 0);
 }
 
-// packages/core/src/ir/syntax-codec.ts
+// ../core/src/ir/syntax-codec.ts
 var syntaxString = (value) => typeof value === "string";
 var syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
 var syntaxBoolean = (value) => typeof value === "boolean";
@@ -40113,7 +40113,7 @@ function syntaxCodec(version, parse4, guard) {
   };
 }
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE = Object.freeze({
   id: "asar",
   preserveLeadingWhitespace: false,
@@ -40145,7 +40145,7 @@ var CA65_SYNTAX_PROFILE = Object.freeze({
   fileLocalSymbols: true
 });
 
-// packages/core/src/services/command-text-service.ts
+// ../core/src/services/command-text-service.ts
 var splitRespectingFunctions = (input) => {
   const result = [];
   let current = "";
@@ -40181,7 +40181,7 @@ var splitRespectingFunctions = (input) => {
   return result;
 };
 
-// packages/core/src/ir/data-node.ts
+// ../core/src/ir/data-node.ts
 function parseDataOperand(text2) {
   let value = text2.trim();
   const quote = value[0];
@@ -40203,7 +40203,7 @@ function parseDataList(text2) {
   return splitRespectingFunctions(text2).map(parseDataOperand);
 }
 
-// packages/core/src/ir/parsed-operand.ts
+// ../core/src/ir/parsed-operand.ts
 function parseInstructionOperands(mnemonic, text2, grammar2) {
   const suffix = /\.([blw])$/i.exec(mnemonic)?.[1]?.toLowerCase();
   let width;
@@ -40450,13 +40450,13 @@ function parseOperand(text2, start, grammar2) {
   };
 }
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 2;
 function definePlugin(plugin2) {
   return plugin2;
 }
 
-// packages/core/src/plugin/diagnostics.ts
+// ../core/src/plugin/diagnostics.ts
 var PluginError = class extends Error {
   /** Stable failure category for programmatic handling. */
   code;
@@ -40482,7 +40482,7 @@ var PluginError = class extends Error {
   }
 };
 
-// packages/core/src/services/source-link-recipe.ts
+// ../core/src/services/source-link-recipe.ts
 function addressedSourceLinkRecipe(options) {
   const regions = [];
   const placements = [];
@@ -40550,7 +40550,7 @@ function addressedSourceLinkRecipe(options) {
   };
 }
 
-// packages/core/src/ir/relocatable-instruction.ts
+// ../core/src/ir/relocatable-instruction.ts
 var RelocatableInstruction = class {
   constructor(frame, context) {
     this.frame = frame;
@@ -40605,7 +40605,7 @@ var RelocatableInstruction = class {
   }
 };
 
-// packages/disassembler/src/source-project/build-coverage.ts
+// ../disassembler/src/source-project/build-coverage.ts
 function isRecord21(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -40619,7 +40619,7 @@ function isSourceBuildCoverage(value) {
   ) && Number(record8.remainingBytes) + Number(record8.convertedBytes) === record8.totalBytes;
 }
 
-// packages/vscode-extension/src/analysis/project-discovery.ts
+// src/analysis/project-discovery.ts
 var import_vscode2 = require("vscode");
 var ANALYSIS_PROJECT_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
 var selectedSourceRoot;
@@ -40663,7 +40663,7 @@ var findAnalysisProjectDirectories = async () => {
   ].toSorted();
 };
 
-// packages/vscode-extension/src/analysis/worker-client.ts
+// src/analysis/worker-client.ts
 var import_node_child_process2 = require("node:child_process");
 var path21 = __toESM(require("node:path"), 1);
 var AnalysisRequestCancelled = class extends Error {
@@ -40918,7 +40918,7 @@ var analysisWorker = () => {
   return client;
 };
 
-// packages/vscode-extension/src/analysis/annotation-controller.ts
+// src/analysis/annotation-controller.ts
 function isInformationPreset(value) {
   return value === "compact" || value === "authoring" || value === "disassembly";
 }
@@ -41397,15 +41397,15 @@ ${content.slice(start, start + 120).join("\n")}`
   }
 };
 
-// packages/vscode-extension/src/analysis/coverage-tree.ts
+// src/analysis/coverage-tree.ts
 var path25 = __toESM(require("node:path"), 1);
 var import_vscode4 = require("vscode");
 
-// packages/vscode-extension/src/analysis/build-coverage.ts
+// src/analysis/build-coverage.ts
 var import_promises11 = __toESM(require("node:fs/promises"), 1);
 var import_node_path19 = __toESM(require("node:path"), 1);
 
-// packages/vscode-extension/src/source/build-inputs.ts
+// src/source/build-inputs.ts
 var import_promises10 = __toESM(require("node:fs/promises"), 1);
 var import_node_path18 = __toESM(require("node:path"), 1);
 async function captureBuildControls(root) {
@@ -41448,7 +41448,7 @@ async function changedBuildInputs(root, inputs) {
   return [...new Set(changed2)].toSorted();
 }
 
-// packages/vscode-extension/src/analysis/build-coverage.ts
+// src/analysis/build-coverage.ts
 function isRecord23(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -41529,7 +41529,7 @@ async function checkBuildCoverageFreshness(root, summary) {
   }
 }
 
-// packages/vscode-extension/src/analysis/coverage-tree.ts
+// src/analysis/coverage-tree.ts
 var formatBytes = (bytes) => `${bytes.toLocaleString("en-US")} byte${bytes === 1 ? "" : "s"}`;
 var percentage = (bytes, total) => total === 0 ? "0.00%" : `${(bytes / total * 100).toFixed(2)}%`;
 var leaf = (id, label, description, icon) => ({
@@ -41733,7 +41733,7 @@ ${String(error)}`;
   }
 };
 
-// packages/vscode-extension/src/analysis/evidence-inspector.ts
+// src/analysis/evidence-inspector.ts
 var path26 = __toESM(require("node:path"), 1);
 init_canonical_json();
 var import_vscode5 = require("vscode");
@@ -41873,7 +41873,7 @@ var AnalysisEvidenceInspector = class {
   }
 };
 
-// packages/vscode-extension/src/analysis/navigation-target.ts
+// src/analysis/navigation-target.ts
 var isStringArray3 = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
 var isAnalysisNavigationTarget = (value) => {
   if (!value || typeof value !== "object") {
@@ -41890,13 +41890,13 @@ var parseAnalysisNavigationTarget = (value) => {
   return isAnalysisNavigationTarget(candidate) ? candidate : void 0;
 };
 
-// packages/vscode-extension/src/analysis/navigation.ts
+// src/analysis/navigation.ts
 var path29 = __toESM(require("node:path"), 1);
 
-// packages/debug-adapter/src/contracts.ts
+// ../debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
 
-// packages/debug-adapter/src/debug-expression.ts
+// ../debug-adapter/src/debug-expression.ts
 var MAX_EXPRESSION_CHARACTERS = 256;
 var MAX_EXPRESSION_DEPTH = 32;
 var MAX_SHIFT = 255n;
@@ -42194,7 +42194,7 @@ var DebugExpressionParser = class {
 var evaluateDebugExpression = (expression, registers) => new DebugExpressionParser(tokenize(expression.trim()), registers).parse();
 var formatDebugExpressionValue = (value) => value < 0n ? `-0x${(-value).toString(16)}` : `0x${value.toString(16)}`;
 
-// packages/debug-adapter/src/dap.ts
+// ../debug-adapter/src/dap.ts
 var import_node_async_hooks = require("node:async_hooks");
 var import_node_path20 = __toESM(require("node:path"), 1);
 init_src();
@@ -43404,7 +43404,7 @@ var DebugAdapterSession = class {
   }
 };
 
-// packages/debug-adapter/src/mock-script.ts
+// ../debug-adapter/src/mock-script.ts
 var addressFor = (range) => ({
   architecture: range.architecture,
   addressSpace: range.addressSpace,
@@ -43482,10 +43482,10 @@ var createDebugMapReplayScript = (map, output) => {
   return { snapshots };
 };
 
-// packages/debug-adapter/src/node-stdio-transport.ts
+// ../debug-adapter/src/node-stdio-transport.ts
 var import_node_child_process3 = require("node:child_process");
 
-// packages/debug-adapter/src/sidecar-protocol.ts
+// ../debug-adapter/src/sidecar-protocol.ts
 var import_node_crypto18 = require("node:crypto");
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
@@ -43700,7 +43700,7 @@ var DebugSidecarMessageParser = class {
   }
 };
 
-// packages/debug-adapter/src/node-stdio-transport.ts
+// ../debug-adapter/src/node-stdio-transport.ts
 var DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
 var positiveInteger2 = (value, name2) => {
   if (!Number.isSafeInteger(value) || value <= 0) {
@@ -43883,7 +43883,7 @@ var NodeStdioSidecarTransport = class {
   }
 };
 
-// packages/debug-adapter/src/trace-buffer.ts
+// ../debug-adapter/src/trace-buffer.ts
 var positiveInteger3 = (value, context) => {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new Error(`${context} must be a positive safe integer.`);
@@ -43994,7 +43994,7 @@ var DebugTraceBuffer = class {
   }
 };
 
-// packages/debug-adapter/src/replay-backend.ts
+// ../debug-adapter/src/replay-backend.ts
 var REPLAY_TRACE_BUFFER_EVENTS = 65536;
 var REPLAY_TRACE_BATCH_EVENTS = 4096;
 var REPLAY_STEP_KINDS = ["instruction", "over", "in", "out"];
@@ -44393,7 +44393,7 @@ var ReplayDebugBackend = class {
   }
 };
 
-// packages/debug-adapter/src/trace-detail-validation.ts
+// ../debug-adapter/src/trace-detail-validation.ts
 function isUnknownArray5(value) {
   return Array.isArray(value);
 }
@@ -44462,7 +44462,7 @@ function validateDebugTraceDetails(value, count3) {
   return value;
 }
 
-// packages/debug-adapter/src/sidecar-backend.ts
+// ../debug-adapter/src/sidecar-backend.ts
 init_src();
 var isStopReason = (value) => value === "entry" || value === "pause" || value === "step" || value === "breakpoint" || value === "exception";
 var stepKindNames = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
@@ -45115,7 +45115,7 @@ var SidecarDebugBackend = class {
   }
 };
 
-// packages/debug-adapter/src/sidecar-client.ts
+// ../debug-adapter/src/sidecar-client.ts
 var asError = (error) => error instanceof Error ? error : new Error(String(error));
 var DebugSidecarClient = class {
   #transport;
@@ -45310,11 +45310,11 @@ var DebugSidecarClient = class {
   }
 };
 
-// packages/debug-adapter/src/capture-file.ts
+// ../debug-adapter/src/capture-file.ts
 var import_promises13 = require("node:fs/promises");
 init_src();
 
-// packages/debug-adapter/src/capture-context.ts
+// ../debug-adapter/src/capture-context.ts
 var import_node_crypto19 = require("node:crypto");
 var import_node_fs12 = require("node:fs");
 var import_promises12 = require("node:fs/promises");
@@ -45535,7 +45535,7 @@ var CaptureContextRecorder = class {
   }
 };
 
-// packages/debug-adapter/src/capture-file.ts
+// ../debug-adapter/src/capture-file.ts
 var pause = () => new Promise((resolve9) => setTimeout(resolve9, 10));
 function captureOutputFormat(value) {
   const format2 = value ?? "json";
@@ -46042,7 +46042,7 @@ var NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
   }
 };
 
-// packages/vscode-extension/src/analysis/navigation.ts
+// src/analysis/navigation.ts
 var import_vscode6 = require("vscode");
 function isRecord30(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -46235,7 +46235,7 @@ var navigateToAnalysisLocation = async (target) => {
   }
 };
 
-// packages/vscode-extension/src/analysis/sources-tree.ts
+// src/analysis/sources-tree.ts
 var path30 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode7 = require("vscode");
@@ -46511,7 +46511,7 @@ ${String(error)}`
   }
 };
 
-// packages/vscode-extension/src/asset-preview-controller.ts
+// src/asset-preview-controller.ts
 var import_vscode8 = require("vscode");
 function escapeHtml(value) {
   return value.replace(/["&'<>]/g, (character) => {
@@ -46743,7 +46743,7 @@ var AssetPreviewController = class {
   }
 };
 
-// packages/vscode-extension/src/assets/binary-drafts.ts
+// src/assets/binary-drafts.ts
 var import_vscode9 = require("vscode");
 var BinaryDrafts = class {
   /** Open binary drafts tracked for unsaved-state queries. */
@@ -46762,10 +46762,10 @@ var BinaryDrafts = class {
   }
 };
 
-// packages/vscode-extension/src/assets/palette-editor.ts
+// src/assets/palette-editor.ts
 var import_vscode11 = require("vscode");
 
-// packages/vscode-extension/src/webview-template.ts
+// src/webview-template.ts
 var import_node_crypto20 = require("node:crypto");
 var import_node_fs13 = require("node:fs");
 var import_vscode10 = require("vscode");
@@ -46796,7 +46796,7 @@ var renderWebviewTemplate = (webview, extensionUri, name2) => {
   });
 };
 
-// packages/assets/src/secret-of-mana/som-sprite-palettes.ts
+// ../assets/src/secret-of-mana/som-sprite-palettes.ts
 function isSpritePaletteCatalog(value) {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -46833,7 +46833,7 @@ function spritePaletteBytes(catalog, id, { wordOffset = 0, wordCount } = {}) {
   return bytes;
 }
 
-// node_modules/jsonc-parser/lib/esm/impl/scanner.js
+// ../../node_modules/jsonc-parser/lib/esm/impl/scanner.js
 function createScanner(text2, ignoreTrivia = false) {
   const len = text2.length;
   let pos = 0, value = "", tokenOffset = 0, token = 16, lineNumber = 0, lineStartOffset = 0, tokenLineStartOffset = 0, prevTokenLineStartOffset = 0, scanError = 0;
@@ -47254,7 +47254,7 @@ var CharacterCodes;
   CharacterCodes2[CharacterCodes2["tab"] = 9] = "tab";
 })(CharacterCodes || (CharacterCodes = {}));
 
-// node_modules/jsonc-parser/lib/esm/impl/string-intern.js
+// ../../node_modules/jsonc-parser/lib/esm/impl/string-intern.js
 var cachedSpaces = new Array(20).fill(0).map((_, index) => {
   return " ".repeat(index);
 });
@@ -47284,7 +47284,7 @@ var cachedBreakLinesWithSpaces = {
   }
 };
 
-// node_modules/jsonc-parser/lib/esm/impl/parser.js
+// ../../node_modules/jsonc-parser/lib/esm/impl/parser.js
 var ParseOptions;
 (function(ParseOptions2) {
   ParseOptions2.DEFAULT = {
@@ -47706,7 +47706,7 @@ function getNodeType(value) {
   }
 }
 
-// node_modules/jsonc-parser/lib/esm/main.js
+// ../../node_modules/jsonc-parser/lib/esm/main.js
 var ScanError;
 (function(ScanError2) {
   ScanError2[ScanError2["None"] = 0] = "None";
@@ -47759,7 +47759,7 @@ var ParseErrorCode;
   ParseErrorCode2[ParseErrorCode2["InvalidCharacter"] = 16] = "InvalidCharacter";
 })(ParseErrorCode || (ParseErrorCode = {}));
 
-// packages/vscode-extension/src/assets/palette-model.ts
+// src/assets/palette-model.ts
 function isSpritePaletteCatalog2(value) {
   return typeof value === "object" && value !== null && "version" in value && value.version === 1 && "palettes" in value && typeof value.palettes === "object" && value.palettes !== null && !Array.isArray(value.palettes);
 }
@@ -47829,7 +47829,7 @@ function paletteWordEdit(text2, id, index, word) {
   return { offset: node.offset, length: node.length, text: JSON.stringify(word.toUpperCase()) };
 }
 
-// packages/vscode-extension/src/assets/palette-editor.ts
+// src/assets/palette-editor.ts
 function isRecord33(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -47911,7 +47911,7 @@ function registerPaletteEditor(context) {
   );
 }
 
-// packages/assets/src/validation.ts
+// ../assets/src/validation.ts
 function integer4(value, label, minimum, maximum) {
   if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
@@ -47919,7 +47919,7 @@ function integer4(value, label, minimum, maximum) {
   return value;
 }
 
-// packages/assets/src/limits.ts
+// ../assets/src/limits.ts
 var ASSET_LIMITS = Object.freeze({
   rasterPixels: 4 * 1024 * 1024,
   interchangeSide: 4096,
@@ -47943,10 +47943,10 @@ var ASSET_LIMITS = Object.freeze({
 });
 var PNG_EDITOR_BACKUP_BYTES = Math.ceil((ASSET_LIMITS.pngBytes + 2 * ASSET_LIMITS.rasterPixels) / 3) * 4 + 1024 * 1024;
 
-// packages/vscode-extension/src/assets/png-editor.ts
+// src/assets/png-editor.ts
 var import_vscode13 = require("vscode");
 
-// packages/vscode-extension/src/assets/png-codec.ts
+// src/assets/png-codec.ts
 var import_node_worker_threads2 = require("node:worker_threads");
 var PngCodec = class {
   constructor(workerFile) {
@@ -48002,17 +48002,17 @@ var PngCodec = class {
   }
 };
 
-// packages/vscode-extension/src/assets/png-document.ts
+// src/assets/png-document.ts
 var import_node_crypto22 = require("node:crypto");
 var import_promises15 = __toESM(require("node:fs/promises"), 1);
 var import_node_path22 = __toESM(require("node:path"), 1);
 var import_vscode12 = require("vscode");
 
-// packages/vscode-extension/src/assets/png-guidance.ts
+// src/assets/png-guidance.ts
 var import_node_crypto21 = require("node:crypto");
 var import_promises14 = __toESM(require("node:fs/promises"), 1);
 
-// node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
+// ../../node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
 var Z_FIXED = 4;
 var Z_BINARY = 0;
 var Z_TEXT = 1;
@@ -51450,7 +51450,7 @@ var Inflate = class {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/data-helpers.js
+// ../../node_modules/@uttori/data-tools/dist/data-helpers.js
 var validateBytes = (uint8, length) => {
   if (uint8.length < length) {
     throw new RangeError(`Insufficient bytes: expected at least ${length}, received ${uint8.length}.`);
@@ -51542,7 +51542,7 @@ var convertFromIeeeExtended = (uint8) => {
   return decodeExtended(sign, exponent, hiMant, loMant);
 };
 
-// node_modules/@uttori/data-tools/dist/underflow-error.js
+// ../../node_modules/@uttori/data-tools/dist/underflow-error.js
 var UnderflowError = class extends Error {
   /**
    * Creates a new UnderflowError.
@@ -51560,7 +51560,7 @@ var UnderflowError = class extends Error {
 };
 var underflow_error_default = UnderflowError;
 
-// node_modules/@uttori/data-tools/dist/data-buffer.js
+// ../../node_modules/@uttori/data-tools/dist/data-buffer.js
 function dataBufferBrand() {
   return /* @__PURE__ */ Symbol.for("uttori.DataBuffer");
 }
@@ -52805,10 +52805,10 @@ var DataBuffer = class _DataBuffer {
 };
 var data_buffer_default = DataBuffer;
 
-// node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
 init_data_hash_crc32();
 
-// node_modules/@uttori/data-tools/dist/image/bitmap-text.js
+// ../../node_modules/@uttori/data-tools/dist/image/bitmap-text.js
 function freezeGlyphs() {
   return Object.freeze(Object.fromEntries(Object.entries({
     " ": [0, 0, 0, 0, 0, 0, 0],
@@ -52958,7 +52958,7 @@ function drawBitmapText(surface, text2, x, y, color, options) {
   return metrics;
 }
 
-// node_modules/@uttori/data-tools/dist/image/rgba-surface.js
+// ../../node_modules/@uttori/data-tools/dist/image/rgba-surface.js
 var DEFAULT_MAX_PIXELS = 4 * 1024 * 1024;
 function colorRGBA(color) {
   if (!Array.isArray(color) && !(color instanceof Uint8Array) || color.length !== 4) {
@@ -53414,7 +53414,7 @@ var RgbaSurface = class _RgbaSurface {
   }
 };
 
-// node_modules/@uttori/data-tools/dist/image/data-image-png.js
+// ../../node_modules/@uttori/data-tools/dist/image/data-image-png.js
 var debug4 = () => {
 };
 if (typeof process !== "undefined" && false) {
@@ -55054,7 +55054,7 @@ var ImagePNG = class _ImagePNG extends data_buffer_default {
 };
 var data_image_png_default = ImagePNG;
 
-// packages/assets/src/png.ts
+// ../assets/src/png.ts
 var ASSET_PNG_OPTIONS = Object.freeze({
   maxInputBytes: ASSET_LIMITS.pngBytes,
   maxPixels: ASSET_LIMITS.rasterPixels,
@@ -55089,7 +55089,7 @@ var pngImporter = Object.freeze({
   }
 });
 
-// packages/assets/src/indexed-edit.ts
+// ../assets/src/indexed-edit.ts
 function validateOrientation(value) {
   for (const flag of [value.flipX, value.flipY]) {
     if (flag !== void 0 && typeof flag !== "boolean") {
@@ -55122,7 +55122,7 @@ function expandIndexedGrid(block) {
   });
 }
 
-// packages/assets/src/secret-of-mana/som-body-frame.ts
+// ../assets/src/secret-of-mana/som-body-frame.ts
 var signed7 = (byte2) => (byte2 & 63) - (byte2 & 64);
 function decodeBodyFrame(input) {
   if (!Array.isArray(input) && !(input instanceof Uint8Array) || input.length < 2 || input.length > 157 || [...input].some((v) => !Number.isInteger(v) || v < 0 || v > 255)) {
@@ -55172,7 +55172,7 @@ function decodeBodyFrame(input) {
   };
 }
 
-// packages/assets/src/secret-of-mana/som-frame-composition.ts
+// ../assets/src/secret-of-mana/som-frame-composition.ts
 function isUnknownArray6(value) {
   return Array.isArray(value);
 }
@@ -55335,7 +55335,7 @@ function validateFrameComposition(layout2, frame) {
   return expected;
 }
 
-// packages/assets/src/secret-of-mana/som-frame-atlas.ts
+// ../assets/src/secret-of-mana/som-frame-atlas.ts
 function rectangle(bounds, width, height, label) {
   if (!Array.isArray(bounds) || bounds.length !== 4 || bounds.some((v) => !Number.isSafeInteger(v)) || bounds[0] < 0 || bounds[1] < 0 || bounds[2] < 1 || bounds[3] < 1 || bounds[0] + bounds[2] > width || bounds[1] + bounds[3] > height) {
     throw new Error(`Invalid ${label} bounds.`);
@@ -55507,7 +55507,7 @@ function validateFrameLayout(layout2, { segmentName, whole = false } = {}) {
   return layout2;
 }
 
-// packages/vscode-extension/src/assets/png-guidance.ts
+// src/assets/png-guidance.ts
 var hash2 = (bytes) => (0, import_node_crypto21.createHash)("sha256").update(bytes).digest("hex");
 function errorCode3(error) {
   return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : void 0;
@@ -55594,7 +55594,7 @@ async function assertPngGuidanceCurrent(guidance) {
   }
 }
 
-// packages/vscode-extension/src/assets/png-document.ts
+// src/assets/png-document.ts
 var hash3 = (bytes) => (0, import_node_crypto22.createHash)("sha256").update(bytes).digest("hex");
 function isRecord34(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -55931,7 +55931,7 @@ var PngDocument = class _PngDocument {
   }
 };
 
-// packages/vscode-extension/src/assets/png-editor.ts
+// src/assets/png-editor.ts
 function isRecord35(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -56087,13 +56087,13 @@ function registerPngEditor(context, drafts) {
   );
 }
 
-// packages/vscode-extension/src/debug/session.ts
+// src/debug/session.ts
 var import_node_crypto25 = require("node:crypto");
 var fs20 = __toESM(require("node:fs"), 1);
 var path37 = __toESM(require("node:path"), 1);
 init_src();
 
-// packages/debug-sidecar-ares/src/profile.ts
+// ../debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
 var ARES_65816_ADDRESS_SPACE = "snes.cpu";
@@ -56217,14 +56217,14 @@ var ARES_NES_CAPABILITIES = Object.freeze({
   ]
 });
 
-// packages/debug-sidecar-ares/src/ares-process-host.ts
+// ../debug-sidecar-ares/src/ares-process-host.ts
 var import_node_child_process4 = require("node:child_process");
 var import_node_crypto23 = require("node:crypto");
 var import_node_fs14 = require("node:fs");
 var import_node_net2 = __toESM(require("node:net"), 1);
 var import_node_path23 = __toESM(require("node:path"), 1);
 
-// packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
+// ../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 var import_node_net = __toESM(require("node:net"), 1);
 var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   #socket;
@@ -56364,7 +56364,7 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
 };
 
-// packages/debug-sidecar-ares/src/ares-process-host.ts
+// ../debug-sidecar-ares/src/ares-process-host.ts
 var ARES_RUNTIME_MANIFEST_VERSION = 1;
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
 var revisionPattern = /^[\dA-Fa-f]{40}$/;
@@ -56593,11 +56593,11 @@ var parseAresRuntimeManifest = (value) => {
   });
 };
 
-// packages/vscode-extension/src/debug/session.ts
+// src/debug/session.ts
 init_src2();
 var import_vscode17 = require("vscode");
 
-// packages/vscode-extension/src/runtime/binding.ts
+// src/runtime/binding.ts
 var path33 = __toESM(require("node:path"), 1);
 function isRecord37(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -56643,7 +56643,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
   return bindings.size === 1 ? [...bindings.values()][0] : void 0;
 };
 
-// packages/vscode-extension/src/runtime/capture-state.ts
+// src/runtime/capture-state.ts
 var import_vscode14 = require("vscode");
 var phase = "idle";
 var changed = new import_vscode14.EventEmitter();
@@ -56656,7 +56656,7 @@ function setRuntimeCapturePhase(next) {
   }
 }
 
-// packages/vscode-extension/src/runtime/live-bus-analysis.ts
+// src/runtime/live-bus-analysis.ts
 var import_node_child_process5 = require("node:child_process");
 var LiveBusAnalysis = class {
   /** Resolves only after guarded project publication. Rejection leaves the recording available. */
@@ -56767,7 +56767,7 @@ var LiveBusAnalysis = class {
   }
 };
 
-// packages/vscode-extension/src/runtime/trace-lease.ts
+// src/runtime/trace-lease.ts
 var owner;
 var acquireTraceLease = () => {
   if (owner) {
@@ -56784,7 +56784,7 @@ var acquireTraceLease = () => {
   };
 };
 
-// packages/vscode-extension/src/runtime/trace-recorder.ts
+// src/runtime/trace-recorder.ts
 var import_promises16 = require("node:fs/promises");
 var resolveEditorTraceDetail = (requested, instructionDetails) => {
   if (requested === "full" && !instructionDetails) {
@@ -56981,7 +56981,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
   }
 };
 
-// packages/vscode-extension/src/source/evidence-selection.ts
+// src/source/evidence-selection.ts
 var import_node_path24 = __toESM(require("node:path"), 1);
 var import_vscode15 = require("vscode");
 function isRecord38(value) {
@@ -57013,7 +57013,7 @@ async function chooseLiveBusProject(romContentSha256) {
   return (await import_vscode15.window.showQuickPick(choices, { title: "Choose the matching evidence project" }))?.directory;
 }
 
-// packages/vscode-extension/src/debug/analysis-annotations.ts
+// src/debug/analysis-annotations.ts
 var locationKey2 = (addressSpace, address3) => `${addressSpace}:${address3}`;
 function isRecord39(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -57123,12 +57123,12 @@ var createDebugInstructionAnnotation = async (map) => {
   };
 };
 
-// packages/vscode-extension/src/debug/nes-ppu.ts
+// src/debug/nes-ppu.ts
 var import_node_crypto24 = require("node:crypto");
 var import_promises17 = require("node:fs/promises");
 var import_node_path25 = __toESM(require("node:path"), 1);
 
-// packages/plugin-65xx/src/instructions/schema.ts
+// ../plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
   if (expression.allOf?.some((feature) => !features.has(feature))) {
     return false;
@@ -57240,7 +57240,7 @@ function getOperandFields(codec) {
   return [];
 }
 
-// packages/plugin-65xx/src/instructions/variant-tables.generated.ts
+// ../plugin-65xx/src/instructions/variant-tables.generated.ts
 var ca65EaTable = [
   [
     0,
@@ -58799,7 +58799,7 @@ var ca65VariantTables = {
   ]
 };
 
-// packages/plugin-65xx/src/instructions/variants.ts
+// ../plugin-65xx/src/instructions/variants.ts
 var commonModes = {
   0: { mode: "implied" },
   1: { mode: "accumulator" },
@@ -59095,7 +59095,7 @@ var variantFormsByCpuId = Object.freeze({
   [mitsubishiM740Cpu.id]: mitsubishiM740Forms
 });
 
-// packages/plugin-65xx/src/instructions/opcodes.ts
+// ../plugin-65xx/src/instructions/opcodes.ts
 var rows = [
   "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
   "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
@@ -59424,7 +59424,7 @@ function getCpuAssemblyForms(cpu) {
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 
-// packages/plugin-65xx/src/decoder.ts
+// ../plugin-65xx/src/decoder.ts
 var hex3 = (value, width = 2) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var sizeOf = (form) => form.encoding.length + form.operands.reduce((sum, field) => sum + field.width, 0);
 function cpu6502Specifications(cpu) {
@@ -59566,7 +59566,7 @@ var Cpu6502Decoder = class {
   }
 };
 
-// packages/plugin-65xx/src/nes/cartridge.ts
+// ../plugin-65xx/src/nes/cartridge.ts
 var NesCartridge = class {
   #bytes;
   /** iNES mapper number derived from the header. */
@@ -59652,7 +59652,7 @@ var NesCartridge = class {
   }
 };
 
-// packages/plugin-65xx/src/nes/assets.ts
+// ../plugin-65xx/src/nes/assets.ts
 var NES_CHR_CODEC = "nes.chr.2bpp";
 var NES_TEXT_CODEC = "nes.text.tiles";
 function encodeNesChrPng(bytes) {
@@ -59743,7 +59743,7 @@ var nesAssetFormats = [
   }
 ];
 
-// packages/plugin-65xx/src/nes/ppu.ts
+// ../plugin-65xx/src/nes/ppu.ts
 init_src();
 var NES_PPU_SNAPSHOT_BYTES = 13056;
 function decodeNesPPUSnapshot(bytes) {
@@ -59872,7 +59872,7 @@ function nesPPUHtml(snapshot, identity2 = {}) {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>NES PPU evidence</title><style>body{font:16px system-ui;background:#10141d;color:#eef2fa;margin:32px}canvas{image-rendering:pixelated;max-width:100%;border:1px solid #526079}section{margin:24px 0}pre{white-space:pre-wrap;font:13px monospace}h1{font-size:28px}</style><main><h1>NES PPU evidence</h1><p>Halted storage view. Pattern tables, four nametables and OAM tiles use the captured mapper and palette. These panels do not reproduce mid-frame scrolling, sprite evaluation or the final composited screen.</p><section><h2>Mapped pattern tables</h2><canvas role="img" aria-label="Captured mapped pattern tables; numeric palette and mapping data follows under Coordinates and provenance" id="patterns" width="256" height="128" style="width:768px"></canvas></section><section><h2>Nametables</h2><canvas role="img" aria-label="Captured four nametables; numeric palette and mapping data follows under Coordinates and provenance" id="nametables" width="512" height="480" style="width:768px"></canvas></section><section><h2>OAM tiles (64 sprites)</h2><canvas role="img" aria-label="Captured 64 OAM sprites; numeric OAM and palette data follows under Coordinates and provenance" id="sprites" width="128" height="128" style="width:512px"></canvas></section><h2>Coordinates and provenance</h2><pre id="details"></pre></main><script>const data=${data};for(const [key,encoded] of Object.entries(data.views)){const c=document.getElementById(key),ctx=c.getContext('2d'),pixels=atob(encoded),out=ctx.createImageData(c.width,c.height);for(let i=0;i<pixels.length;i++){const code=pixels.charCodeAt(i);out.data.set(data.colors.slice(code*3,code*3+3),i*4);out.data[i*4+3]=255}ctx.putImageData(out,0,0)}const {views,colors,...details}=data;document.getElementById('details').textContent=JSON.stringify(details,null,2);</script></html>`;
 }
 
-// packages/vscode-extension/src/debug/nes-ppu.ts
+// src/debug/nes-ppu.ts
 var import_vscode16 = require("vscode");
 async function saveNesPPUSnapshot(session, metadata, root) {
   if (metadata.architecture !== "65xx.2a03" || !metadata.romFileSha256) {
@@ -59927,10 +59927,10 @@ async function saveNesPPUSnapshot(session, metadata, root) {
   };
 }
 
-// packages/vscode-extension/src/debug/rom-addresses.ts
+// src/debug/rom-addresses.ts
 init_src2();
 
-// packages/plugin-65xx/src/ca65-profile.ts
+// ../plugin-65xx/src/ca65-profile.ts
 var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
 function isSessionStateKey(value) {
   return value.id.length > 0;
@@ -60122,7 +60122,7 @@ var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
   macroParameterPrefix: "\\"
 });
 
-// packages/plugin-65xx/src/session-state.ts
+// ../plugin-65xx/src/session-state.ts
 var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
 function isSessionStateKey2(value) {
   return value.id.length > 0;
@@ -60153,7 +60153,7 @@ function resetNes65xxStageState(state) {
   state.segmentRunStart = 0;
 }
 
-// packages/plugin-65xx/src/directives/ca65.ts
+// ../plugin-65xx/src/directives/ca65.ts
 function parameterList(words) {
   const joined = words.slice(1).join(" ");
   const parts2 = [];
@@ -60311,7 +60311,7 @@ function handlePopseg(state) {
   state.currentFlatSegment = segment;
 }
 
-// packages/plugin-65xx/src/linker-config.ts
+// ../plugin-65xx/src/linker-config.ts
 function ld65LinkRecipe(config, target = "65xx.nes") {
   const symbols = [];
   for (const segment of config.segments.values()) {
@@ -60566,7 +60566,7 @@ function parseYesNo(raw) {
   return void 0;
 }
 
-// packages/plugin-65xx/src/target/nes.ts
+// ../plugin-65xx/src/target/nes.ts
 var NES_65XX_TARGET_ID = "65xx.nes";
 var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
@@ -60746,7 +60746,7 @@ function normalizeHeader(configured, imageSize) {
   return header;
 }
 
-// packages/plugin-65xx/src/directives/ca65-syntax.ts
+// ../plugin-65xx/src/directives/ca65-syntax.ts
 var operation = (name2) => syntaxLiteral(name2);
 var schema = syntaxUnion(
   syntaxRecord({ operation: operation("segment"), name: syntaxString }),
@@ -61067,7 +61067,7 @@ function ca65DirectiveSyntax(id) {
   };
 }
 
-// packages/plugin-65xx/src/instructions/catalog.ts
+// ../plugin-65xx/src/instructions/catalog.ts
 var syntax = {
   implied: "",
   accumulator: "A",
@@ -61151,7 +61151,7 @@ function buildInstructionCatalog(forms) {
   }));
 }
 
-// packages/plugin-65xx/src/operands/syntax.ts
+// ../plugin-65xx/src/operands/syntax.ts
 var grammar = {
   registers: ["a", "q"],
   indexRegisters: ["x", "y", "z", "s"],
@@ -61359,7 +61359,7 @@ function has65xxPolicy(syntax2) {
   return "policy65xx" in syntax2 && typeof syntax2.policy65xx === "object" && syntax2.policy65xx !== null && "kind" in syntax2.policy65xx && syntax2.policy65xx.kind === "65xx-v1";
 }
 
-// packages/plugin-65xx/src/target/link-target.ts
+// ../plugin-65xx/src/target/link-target.ts
 function createNesSourceLinkRecipe(context, sections) {
   if (context.options.sourceStyle !== "asar") {
     throw new Error("The NES Asar adapter requires sourceStyle: asar in target configuration.");
@@ -61408,7 +61408,7 @@ function createNesLinkTarget() {
   };
 }
 
-// packages/plugin-65xx/src/operands/resolution.ts
+// ../plugin-65xx/src/operands/resolution.ts
 function valueWidth(value) {
   if (!Number.isFinite(value)) {
     return 4;
@@ -61605,7 +61605,7 @@ function selectedScalar(syntax2) {
   return selected ?? syntax2.policy65xx.whole.scalar;
 }
 
-// packages/plugin-65xx/src/typed-architecture.ts
+// ../plugin-65xx/src/typed-architecture.ts
 var directToAbsolute = {
   zeroPage: "absolute",
   zeroPageIndexedX: "absoluteIndexedX",
@@ -62151,7 +62151,7 @@ var TypedArch65xx = class {
   }
 };
 
-// packages/plugin-65xx/src/index.ts
+// ../plugin-65xx/src/index.ts
 var RAW_65XX_TARGET_ID = "65xx.raw";
 var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
@@ -62561,7 +62561,7 @@ var plugin = definePlugin({
   activate: register65xxContributions
 });
 
-// packages/plugin-snes/src/target/address-space.ts
+// ../plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace = {
   name: "snes-rom",
   addressWidth: 24,
@@ -62743,7 +62743,7 @@ var snesRomAddressSpace = {
   }
 };
 
-// packages/plugin-snes/src/disassembler/address-identities.ts
+// ../plugin-snes/src/disassembler/address-identities.ts
 var SNES_FILE_ADDRESS_SPACE = "rom.file";
 var SNES_CPU_ADDRESS_SPACE = "snes.cpu";
 var SNES_WRAM_ADDRESS_SPACE = "snes.wram";
@@ -62808,7 +62808,7 @@ var identifySnesCpuAddress = (address3, context, romSize) => {
   };
 };
 
-// packages/plugin-snes/src/disassembler/rom-header.ts
+// ../plugin-snes/src/disassembler/rom-header.ts
 var SNES_MAPPERS = [
   "lorom",
   "hirom",
@@ -63207,7 +63207,7 @@ var detectSnesRom = (rom, options = {}) => {
   };
 };
 
-// packages/vscode-extension/src/debug/rom-addresses.ts
+// src/debug/rom-addresses.ts
 var createSnesDebugAddressResolvers = (map, output) => {
   if (map.target === "65xx.nes") {
     const cartridge = new NesCartridge(output);
@@ -63277,7 +63277,7 @@ var createSnesDebugAddressResolvers = (map, output) => {
   };
 };
 
-// packages/vscode-extension/src/debug/source-root.ts
+// src/debug/source-root.ts
 var import_node_fs15 = __toESM(require("node:fs"), 1);
 var import_node_path26 = __toESM(require("node:path"), 1);
 var sourceMatches = (root, source) => {
@@ -63326,7 +63326,7 @@ var resolveDebugSourceRoot = (options) => {
   return bestRoot;
 };
 
-// packages/vscode-extension/src/debug/session.ts
+// src/debug/session.ts
 var UTTORI_ASM_DEBUG_TYPE = "uttori-asm";
 var UTTORI_TRACE_START_COMMAND = "asm.trace.start";
 var UTTORI_TRACE_STOP_COMMAND = "asm.trace.stop";
@@ -64269,10 +64269,10 @@ var registerDebugging = (extensionRoot) => {
   ];
 };
 
-// packages/vscode-extension/src/linked-build.ts
+// src/linked-build.ts
 var import_node_path29 = __toESM(require("node:path"), 1);
 
-// packages/plugin-loader-node/src/configuration.ts
+// ../plugin-loader-node/src/configuration.ts
 var import_node_fs16 = require("node:fs");
 var import_node_path27 = __toESM(require("node:path"), 1);
 var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
@@ -64373,7 +64373,7 @@ var discoverProjectConfigurationPath = (cwd, configuredPath) => {
   return (0, import_node_fs16.existsSync)(candidate) ? candidate : void 0;
 };
 
-// packages/workflows/src/build-contracts.ts
+// ../workflows/src/build-contracts.ts
 function assertBuildResult(value) {
   if (!isRecord43(value) || !isText(value.outputFile)) {
     throw new Error("Invalid assembly build receipt.");
@@ -64403,7 +64403,7 @@ var isRecord43 = (value) => typeof value === "object" && value !== null && !Arra
 var isText = (value) => typeof value === "string" && value.trim().length > 0 && !value.includes("\0");
 var isHash = (value) => typeof value === "string" && /^[\da-f]{64}$/.test(value);
 
-// packages/workflows/src/build-selection.ts
+// ../workflows/src/build-selection.ts
 var import_node_fs17 = __toESM(require("node:fs"), 1);
 var import_node_path28 = __toESM(require("node:path"), 1);
 async function resolveAssemblyBuildSelection(directory, configFile, override) {
@@ -64430,10 +64430,10 @@ async function resolveAssemblyBuildSelection(directory, configFile, override) {
   };
 }
 
-// packages/vscode-extension/src/linked-build.ts
+// src/linked-build.ts
 var import_vscode18 = require("vscode");
 
-// packages/vscode-extension/src/source/process-client.ts
+// src/source/process-client.ts
 var import_node_child_process6 = require("node:child_process");
 var SourceProcessClient = class {
   constructor(file, log = () => {
@@ -64696,7 +64696,7 @@ ${stderr}` : ""}`
   }
 };
 
-// packages/vscode-extension/src/linked-build.ts
+// src/linked-build.ts
 var LinkedBuildController = class {
   constructor(context, output, binaryDrafts) {
     this.output = output;
@@ -64966,10 +64966,10 @@ var LinkedBuildController = class {
   }
 };
 
-// packages/vscode-extension/src/project/outline-tree.ts
+// src/project/outline-tree.ts
 var import_vscode19 = require("vscode");
 
-// packages/vscode-extension/node_modules/vscode-languageserver-types/lib/esm/main.js
+// node_modules/vscode-languageserver-types/lib/esm/main.js
 var DocumentUri;
 (function(DocumentUri2) {
   function is(value) {
@@ -66260,7 +66260,7 @@ var Is;
   Is2.typedArray = typedArray;
 })(Is || (Is = {}));
 
-// packages/vscode-extension/src/project/outline-tree.ts
+// src/project/outline-tree.ts
 var ProjectOutlineProvider = class {
   constructor(getClient) {
     this.getClient = getClient;
@@ -66410,11 +66410,11 @@ function iconForSymbolKind(kind) {
   }
 }
 
-// packages/vscode-extension/src/project/panel.ts
+// src/project/panel.ts
 var path41 = __toESM(require("node:path"), 1);
 var import_vscode20 = require("vscode");
 
-// packages/vscode-extension/src/source/workflow.ts
+// src/source/workflow.ts
 function shouldClearSourceCandidate(status) {
   if (!["idle", "verified", "checkpoint"].includes(status.phase)) {
     return false;
@@ -66618,7 +66618,7 @@ function sourceWorkflow(state) {
   return steps;
 }
 
-// packages/vscode-extension/src/project/home-model.ts
+// src/project/home-model.ts
 var STEPPER = [
   { id: "analyze", label: "Analyze", kinds: ["needs-catalog", "needs-analysis"] },
   { id: "prepare", label: "Prepare", kinds: ["needs-prepare"] },
@@ -66854,7 +66854,7 @@ function buildHomeSnapshot(input) {
   return snapshot;
 }
 
-// packages/vscode-extension/src/project/panel.ts
+// src/project/panel.ts
 function fallbackProjectStatus() {
   const config = import_vscode20.workspace.getConfiguration("asm");
   return {
@@ -67339,21 +67339,21 @@ function asString(value) {
   return typeof value === "string" ? value : "";
 }
 
-// packages/vscode-extension/src/source/controller.ts
+// src/source/controller.ts
 var import_promises21 = __toESM(require("node:fs/promises"), 1);
 var import_node_path38 = __toESM(require("node:path"), 1);
 var import_vscode31 = require("vscode");
 
-// packages/vscode-extension/src/source/analysis-editor.ts
+// src/source/analysis-editor.ts
 var import_node_path31 = __toESM(require("node:path"), 1);
 init_src2();
 var import_vscode22 = require("vscode");
 
-// packages/vscode-extension/src/source/research-editor.ts
+// src/source/research-editor.ts
 var import_node_path30 = __toESM(require("node:path"), 1);
 var import_vscode21 = require("vscode");
 
-// packages/vscode-extension/src/source/result-readers.ts
+// src/source/result-readers.ts
 function record6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -67477,7 +67477,7 @@ function readConversionPlan(value) {
   return value;
 }
 
-// packages/vscode-extension/src/source/research-editor.ts
+// src/source/research-editor.ts
 async function editSourceResearch(worker, context, request) {
   if (!import_vscode21.workspace.isTrusted) {
     throw new Error("Research edits require a trusted workspace.");
@@ -67648,7 +67648,7 @@ async function editSourceResearch(worker, context, request) {
   return result;
 }
 
-// packages/vscode-extension/src/source/analysis-editor.ts
+// src/source/analysis-editor.ts
 function parseResearchAddress(text2) {
   const value = text2.trim();
   if (!/^(?:\$[\da-f]+|0x[\da-f]+|\d+)$/i.test(value)) {
@@ -68058,11 +68058,11 @@ async function editAnalysisResearch(worker, context, change, hint) {
   return editSourceResearch(worker, context, { kind: "analysis", change });
 }
 
-// packages/vscode-extension/src/source/asset-coordinator.ts
+// src/source/asset-coordinator.ts
 var import_promises19 = __toESM(require("node:fs/promises"), 1);
 var import_node_path35 = __toESM(require("node:path"), 1);
 
-// packages/workflows/src/asset-interchange/public-records.ts
+// ../workflows/src/asset-interchange/public-records.ts
 function isObject2(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -68145,7 +68145,7 @@ function immutableReview(value) {
   });
 }
 
-// packages/workflows/src/asset-interchange/operation-records.ts
+// ../workflows/src/asset-interchange/operation-records.ts
 function readAssetOperation(value) {
   const input = object(value), directory = text(input.directory);
   let drafts;
@@ -68209,10 +68209,10 @@ function readAssetOperation(value) {
   throw new Error("Unsupported asset operation.");
 }
 
-// packages/vscode-extension/src/source/asset-coordinator.ts
+// src/source/asset-coordinator.ts
 var import_vscode25 = require("vscode");
 
-// packages/workflows/src/asset-interchange/paths.ts
+// ../workflows/src/asset-interchange/paths.ts
 var import_node_fs18 = __toESM(require("node:fs"), 1);
 var import_node_path32 = __toESM(require("node:path"), 1);
 function assetPath(file) {
@@ -68227,7 +68227,7 @@ function assetPath(file) {
   return absolute;
 }
 
-// packages/vscode-extension/src/source/asset-drafts.ts
+// src/source/asset-drafts.ts
 function assertAssetEditorVersions(before, current, relevant) {
   const paths = new Set(relevant.map(assetPath)), originals = new Map(before.map((entry) => [assetPath(entry.path), entry]));
   for (const entry of current) {
@@ -68244,11 +68244,11 @@ function assertAssetEditorVersions(before, current, relevant) {
   }
 }
 
-// packages/vscode-extension/src/source/conversion-editor.ts
+// src/source/conversion-editor.ts
 var import_promises18 = __toESM(require("node:fs/promises"), 1);
 var import_node_path34 = __toESM(require("node:path"), 1);
 
-// packages/workflows/src/asset-source-inventory.ts
+// ../workflows/src/asset-source-inventory.ts
 var import_node_fs19 = __toESM(require("node:fs"), 1);
 var import_node_path33 = __toESM(require("node:path"), 1);
 function assetSourceAssemblyInventory(root) {
@@ -68282,7 +68282,7 @@ function assetSourceAssemblyInventory(root) {
   return files.toSorted();
 }
 
-// packages/vscode-extension/src/source/conversion-editor.ts
+// src/source/conversion-editor.ts
 var import_vscode23 = require("vscode");
 async function applyAssetSourceEdit(root, plan2, validateEditors) {
   const paths = [
@@ -68347,7 +68347,7 @@ async function applyAssetSourceEdit(root, plan2, validateEditors) {
   }
 }
 
-// packages/vscode-extension/src/source/ui-contracts.ts
+// src/source/ui-contracts.ts
 var import_vscode24 = require("vscode");
 function isRecord44(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -68397,7 +68397,7 @@ var SourceRow = class extends import_vscode24.TreeItem {
 };
 var chooseAssetFile = async (title, extensions) => (await import_vscode24.window.showOpenDialog({ title, canSelectMany: false, filters: { Files: extensions } }))?.[0]?.fsPath;
 
-// packages/vscode-extension/src/source/asset-coordinator.ts
+// src/source/asset-coordinator.ts
 var SourceAssetCoordinator = class {
   constructor(session, host) {
     this.session = session;
@@ -68912,11 +68912,11 @@ var SourceAssetCoordinator = class {
   }
 };
 
-// packages/vscode-extension/src/source/build-coordinator.ts
+// src/source/build-coordinator.ts
 var import_promises20 = __toESM(require("node:fs/promises"), 1);
 var import_node_path36 = __toESM(require("node:path"), 1);
 
-// packages/workflows/src/source-requests.ts
+// ../workflows/src/source-requests.ts
 var fields = {
   init: ["rom", "dizRawFile", "mapper"],
   status: ["candidate"],
@@ -69057,10 +69057,10 @@ function readSourceOperation(value) {
   return value;
 }
 
-// packages/vscode-extension/src/source/build-coordinator.ts
+// src/source/build-coordinator.ts
 var import_vscode27 = require("vscode");
 
-// packages/vscode-extension/src/source/analysis-summary.ts
+// src/source/analysis-summary.ts
 function record7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -69137,7 +69137,7 @@ function summarizeSourceAnalysis(value) {
   return { message, warning, details };
 }
 
-// packages/vscode-extension/src/source/capture-coordinator.ts
+// src/source/capture-coordinator.ts
 var import_vscode26 = require("vscode");
 var SourceCaptureCoordinator = class {
   constructor(session) {
@@ -69179,7 +69179,7 @@ var SourceCaptureCoordinator = class {
   }
 };
 
-// packages/vscode-extension/src/source/generation-review.ts
+// src/source/generation-review.ts
 async function readSourceGenerationReview(root, candidate, preview) {
   const previewed = preview?.candidate === candidate;
   let before;
@@ -69238,7 +69238,7 @@ async function readGenerationDiffStats(root, before, after) {
   return stats;
 }
 
-// packages/vscode-extension/src/source/build-coordinator.ts
+// src/source/build-coordinator.ts
 var SourceBuildCoordinator = class {
   constructor(session, host) {
     this.session = session;
@@ -69707,7 +69707,7 @@ var SourceBuildCoordinator = class {
   }
 };
 
-// packages/vscode-extension/src/source/code-actions.ts
+// src/source/code-actions.ts
 var import_node_path37 = __toESM(require("node:path"), 1);
 var import_vscode28 = require("vscode");
 function registerSourceCodeActions(context) {
@@ -69769,7 +69769,7 @@ function registerSourceCodeActions(context) {
   );
 }
 
-// packages/vscode-extension/src/source/git-watch.ts
+// src/source/git-watch.ts
 function isGitCacheNoise(relative4) {
   if (relative4 === ".git") {
     return true;
@@ -69787,10 +69787,10 @@ function isGitIndexEcho(relative4) {
   return name2 === "index" || name2 === "index.lock" || name2 === "index.backup";
 }
 
-// packages/vscode-extension/src/source/session.ts
+// src/source/session.ts
 var import_vscode30 = require("vscode");
 
-// packages/vscode-extension/src/source/git-files.ts
+// src/source/git-files.ts
 var import_vscode29 = require("vscode");
 var SourceGitFiles = class {
   /** Internal emitter backing onDidChangeFile notifications. */
@@ -69859,7 +69859,7 @@ var SourceGitFiles = class {
   }
 };
 
-// packages/vscode-extension/src/source/session.ts
+// src/source/session.ts
 var SourceProjectSession = class {
   /** Source tree refresh signal; `undefined` refreshes the whole tree and also reschedules asset-menu probes. */
   changed = new import_vscode30.EventEmitter();
@@ -69923,7 +69923,7 @@ var SourceProjectSession = class {
   assetReview;
 };
 
-// packages/vscode-extension/src/source/controller.ts
+// src/source/controller.ts
 var SourceController = class {
   constructor(context, output, binaryDrafts = new BinaryDrafts()) {
     this.context = context;
@@ -70904,7 +70904,7 @@ var SourceController = class {
   }
 };
 
-// packages/vscode-extension/src/extension.ts
+// src/extension.ts
 function isRecord46(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

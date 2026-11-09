@@ -1,8 +1,9 @@
 import { integer, unitCount } from "./validation.js";
-/** Decode fixed-width integers, retaining the width and signedness selected by the caller.
- * @param {Uint8Array} bytes Borrowed packed integer bytes.
- * @param {ScalarArrayOptions} options Width, endian order and signedness.
- * @returns {number[]} Decoded integers in input order.
+/**
+ * Decode fixed-width integers, retaining the width and signedness selected by the caller.
+ * @param bytes Borrowed packed integer bytes.
+ * @param options Width, endian order and signedness.
+ * @returns Decoded integers in input order.
  */
 export function decodeScalarArray(bytes, options) {
     const count = unitCount(bytes, options.width, "Scalar array");
@@ -16,10 +17,11 @@ export function decodeScalarArray(bytes, options) {
         return options.signed && unsigned >= sign ? unsigned - sign * 2 : unsigned;
     });
 }
-/** Encode fresh integer arrays, rejecting overflow instead of truncating high bits.
- * @param {number[]} values Integer values to pack.
- * @param {ScalarArrayOptions} options Width, endian order and signedness.
- * @returns {Uint8Array} Owned packed bytes.
+/**
+ * Encode fresh integer arrays, rejecting overflow instead of truncating high bits.
+ * @param values Integer values to pack.
+ * @param options Width, endian order and signedness.
+ * @returns Owned packed bytes.
  */
 export function encodeScalarArray(values, options) {
     const bits = options.width * 8;

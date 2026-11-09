@@ -3,12 +3,15 @@ import path from "node:path";
 import { changeResearchSymbol, changeResearchAnalysis, withAnalysisReadSession, readResearchInputs, } from "@uttori/asm-disassembler";
 import { sourceProjectLocalInputs, sourceContentHash, } from "@uttori/asm-disassembler/source-project";
 import { loadNesRom, nesResearchInputs } from "@uttori/asm-plugin-65xx/disassembler";
+/** True for a plain object that can hold JSON object fields. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** True when every element is a string. */
 function isStringArray(value) {
     return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
+/** True when the payload is a project label with identity, address, and evidence. */
 function isProjectLabel(value) {
     if (!isRecord(value) ||
         typeof value.id !== "string" ||
@@ -23,6 +26,7 @@ function isProjectLabel(value) {
         (value.suppressed === undefined || typeof value.suppressed === "boolean") &&
         (value.analysisEntryPoint === undefined || typeof value.analysisEntryPoint === "boolean"));
 }
+/** True when the payload is a put/remove analysis or annotation record. */
 function isResearchAnalysisRecord(value) {
     if (!isRecord(value) ||
         typeof value.id !== "string" ||

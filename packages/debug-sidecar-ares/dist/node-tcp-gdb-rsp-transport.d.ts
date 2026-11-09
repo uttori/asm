@@ -4,8 +4,11 @@ import type { GdbRspTransport } from "./gdb-rsp-client.js";
 export interface NodeTcpGdbRspTransportOptions {
     /** Connected only for numeric loopback; any other host is rejected. */
     readonly host?: string;
+    /** Loopback TCP port owned by the sidecar GDB stub. */
     readonly port: number;
+    /** Positive milliseconds to wait for the initial TCP connect. */
     readonly connectTimeoutMs?: number;
+    /** Positive milliseconds to wait for graceful socket shutdown. */
     readonly shutdownTimeoutMs?: number;
 }
 /** Node TCP transport restricted to the sidecar-owned loopback GDB endpoint. */
@@ -14,8 +17,8 @@ export declare class NodeTcpGdbRspTransport implements GdbRspTransport {
     private constructor();
     /**
      * Opens a bounded connection to a numeric loopback address.
-     * @param {NodeTcpGdbRspTransportOptions} options Loopback endpoint and deadlines.
-     * @returns {Promise<NodeTcpGdbRspTransport>} Connected transport.
+     * @param options Loopback endpoint and deadlines.
+     * @returns Connected transport.
      */
     static connect(options: NodeTcpGdbRspTransportOptions): Promise<NodeTcpGdbRspTransport>;
     /** @inheritdoc */

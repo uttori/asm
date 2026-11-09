@@ -5,9 +5,11 @@ import { convertRoomAsset, parseRoomAsset, parseRoomPreview, renderRoomAsset, } 
 import { effectiveSomSourcePalette, normalizeSomSource, } from "@uttori/asm-assets/secret-of-mana/som-source";
 import { parseSpritePaletteCatalog, readSpritePaletteCatalog, spritePaletteBytes, spritePalettePreview, } from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
 import { convertBossImage, convertBrrWave, sliceBrrSegment } from "./assembly.js";
-/** Preview the authored frame arrangement while validating the same source tiles as assembly.
- * @param {AssetPreviewInput} input Resolved source and sidecars from the editor.
- * @returns {AssetPreviewResult} Display PNG and the validated native byte count.
+import { composeWorldOverview, convertWorldOverviewColors, readWorldOverviewTileIds, WORLD_OVERVIEW_SIDE, worldOverviewRgba, } from "./world-overview.js";
+/**
+ * Preview the authored frame arrangement while validating the same source tiles as assembly.
+ * @param input Resolved source and sidecars from the editor.
+ * @returns Display PNG and the validated native byte count.
  */
 function convertSomFramePreview(input) {
     let layout = readFrameLayout(input.options, input.resources);
@@ -89,9 +91,10 @@ function convertSomFramePreview(input) {
         composedPngBase64: Buffer.from(source.bytes).toString("base64"),
     };
 }
-/** Preview one shared ROM palette with native 8×8 swatches and its exact encoded size.
- * @param {AssetPreviewInput} input Catalogue source and selected address.
- * @returns {AssetPreviewResult} BGR555 metadata and a magnifiable swatch PNG.
+/**
+ * Preview one shared ROM palette with native 8×8 swatches and its exact encoded size.
+ * @param input Catalogue source and selected address.
+ * @returns BGR555 metadata and a magnifiable swatch PNG.
  */
 function convertSomPalettePreview(input) {
     const id = input.options.palette;
@@ -124,8 +127,8 @@ function convertSomPalettePreview(input) {
 }
 /**
  * Render current room placements after checking every encoded section.
- * @param {AssetPreviewInput} input Editable room JSON, selected section and captured preview-resource dependency.
- * @returns {AssetPreviewResult} Native-scale image preview with the selected section's encoded byte count.
+ * @param input Editable room JSON, selected section and captured preview-resource dependency.
+ * @returns Native-scale image preview with the selected section's encoded byte count.
  */
 function convertSomRoomPreview(input) {
     const converted = convertRoomAsset(input.source, input.options);
@@ -169,8 +172,8 @@ function convertSomRoomPreview(input) {
 /**
  * Preview the playable source and verified native BRR stream used by the SoM plugin.
  * Segment playback uses the complete stream because a bank split can cut through a BRR block.
- * @param {AssetPreviewInput} input Authored WAVE and literal segment options, when present.
- * @returns {AssetPreviewResult} Full-stream audio with the selected ROM byte count.
+ * @param input Authored WAVE and literal segment options, when present.
+ * @returns Full-stream audio with the selected ROM byte count.
  */
 function convertSomBrrPreview(input) {
     if (input.output !== undefined && input.output !== "brr") {
@@ -200,9 +203,35 @@ function convertSomBrrPreview(input) {
         decodedWavBase64: Buffer.from(writePcmWave(decoded, sourceAudio.sampleRate)).toString("base64"),
     };
 }
+/** Render current swatch colors against the same extracted tile IDs used by the game. */
+function convertWorldOverviewPreview(input) {
+    const { primaryOutput, outputs } = convertWorldOverviewColors(input.source);
+    if (input.output !== undefined && input.output !== primaryOutput) {
+        throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
+    }
+    const tilesPath = input.options.tiles;
+    if (typeof tilesPath !== "string" || !Object.hasOwn(input.resources, tilesPath)) {
+        throw new Error("Flammie overview preview requires the extracted world tile grid.");
+    }
+    const colors = outputs.colors.bytes;
+    const tiles = readWorldOverviewTileIds(input.resources[tilesPath]);
+    const rgba = worldOverviewRgba(composeWorldOverview(tiles, colors));
+    const size = WORLD_OVERVIEW_SIDE;
+    return {
+        kind: "image",
+        sourceBytes: input.source.bytes.length,
+        encodedBytes: colors.length,
+        format: input.format,
+        output: primaryOutput,
+        metadata: { width: size, height: size, name: "Flammie world overview" },
+        thumbnailPngBase64: Buffer.from(rgbaPreviewPng(rgba, size, size, 192)).toString("base64"),
+        composedPngBase64: Buffer.from(rgbaNativePng(rgba, size, size)).toString("base64"),
+    };
+}
 /** Game previews validate through the same portable codecs as assembly without publishing files. */
 export const somPreviewAdapters = Object.freeze([
     { formats: ["som.room"], convert: convertSomRoomPreview },
+    { formats: ["som.world.overview-colors"], convert: convertWorldOverviewPreview },
     { formats: ["som.brr.pcm", "som.brr.segment"], convert: convertSomBrrPreview },
     { formats: ["som.palette.bgr555"], convert: convertSomPalettePreview },
     { formats: ["som.sprite.frames", "som.boss.graphics"], convert: convertSomFramePreview },

@@ -9,30 +9,42 @@ export const SNES_STRUCT_DEFINES_SOURCE = "structs.asm";
 const widths = { db: 1, dw: 2, dl: 3, dd: 4 };
 /**
  * Infer scalar widths for 1–4-byte fields and byte arrays for larger fields without an explicit type.
- * @param {SnesStructField} field Validated field or synthesized opaque gap.
- * @returns {string} Native scalar/array declaration.
+ * @param field Validated field or synthesized opaque gap.
+ * @returns Native scalar/array declaration.
  */
 const fieldType = (field) => field.type ?? (["", "db", "dw", "dl", "dd"][field.size] || `db[${field.size}]`);
+/** Format ROM offsets in struct-map validation errors. */
 const hex = (value) => `$${value.toString(16).toUpperCase()}`;
+/** Collapse whitespace in user-authored struct-map text fields. */
 const comment = (value) => value.replaceAll(/\s+/g, " ").trim();
 /**
  * Accepts a JSON object. Arrays and null are not struct-map records.
- * @param {unknown} value Candidate record.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Candidate record.
+ * @returns True when `value` is a non-array object.
  */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /**
  * Accepts an array of strings.
- * @param {unknown} value Candidate notes array.
- * @returns {boolean} True when every element is a string.
+ * @param value Candidate notes array.
+ * @returns True when every element is a string.
  */
 const isStringList = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
+/**
+ * Require a plain object when parsing struct-map JSON entries.
+ * @param value Raw JSON fragment.
+ */
 const object = (value) => {
     if (!isRecord(value)) {
         throw new Error("Struct-map records must be objects.");
     }
     return value;
 };
+/**
+ * Parse a safe integer within bounds for struct-map metadata.
+ * @param value Raw numeric field.
+ * @param minimum Smallest accepted value.
+ * @param maximum Largest accepted value.
+ */
 const integer = (value, minimum = 0, maximum = 0xffffff) => {
     if (typeof value !== "number" ||
         !Number.isSafeInteger(value) ||
@@ -42,12 +54,20 @@ const integer = (value, minimum = 0, maximum = 0xffffff) => {
     }
     return value;
 };
+/**
+ * Validate a non-reserved struct-map identifier string.
+ * @param value Candidate name from JSON.
+ */
 const identifier = (value) => {
     if (typeof value !== "string" || !/^[A-Z_a-z]\w*$/.test(value) || /^__gap_|^snes_/i.test(value)) {
         throw new Error(`Invalid or reserved struct-map identifier '${String(value)}'.`);
     }
     return value;
 };
+/**
+ * Normalize optional note arrays to trimmed non-empty lines.
+ * @param value Raw notes field from JSON.
+ */
 const notes = (value) => {
     if (value === undefined) {
         return [];
@@ -60,10 +80,10 @@ const notes = (value) => {
 /**
  * Normalize optional ROM entry names/descriptions without interpreting them as assembly.
  * Keys are canonical decimal logical indexes, so one-based bindings cannot silently shift names.
- * @param {unknown} value Untrusted JSON object mapping logical indexes to comment text.
- * @param {number} firstIndex Lowest allowed logical index, from the validated binding.
- * @param {number} count Number of physical records owned by that binding.
- * @returns {Readonly<Record<number, string>>} Non-empty, single-line comments for valid indexes.
+ * @param value Untrusted JSON object mapping logical indexes to comment text.
+ * @param firstIndex Lowest allowed logical index, from the validated binding.
+ * @param count Number of physical records owned by that binding.
+ * @returns Non-empty, single-line comments for valid indexes.
  */
 const entryComments = (value, firstIndex, count) => {
     const result = {};
@@ -85,8 +105,8 @@ const entryComments = (value, firstIndex, count) => {
 /**
  * Validate layouts and non-overlapping bindings before any generated files are changed.
  * Extra source/provenance properties are retained in the input file, not interpreted as code.
- * @param {unknown} value Parsed JSON metadata.
- * @returns {Omit<LoadedSnesStructMap, "sourceBytes">} Normalized layouts and bindings.
+ * @param value Parsed JSON metadata.
+ * @returns Normalized layouts and bindings.
  */
 export const validateSnesStructMap = (value) => {
     const file = object(value);
@@ -242,8 +262,8 @@ export const validateSnesStructMap = (value) => {
 };
 /**
  * Load optional layout metadata. Existing projects without a struct map export as before.
- * @param {string} directory Source-export root.
- * @returns {LoadedSnesStructMap | undefined} Validated metadata when present.
+ * @param directory Source-export root.
+ * @returns Validated metadata when present.
  */
 export const loadSnesStructMap = (directory) => {
     const filename = path.join(directory, SNES_STRUCT_MAP_SOURCE);
@@ -260,6 +280,10 @@ export const loadSnesStructMap = (directory) => {
         throw new Error(`Invalid SNES struct map ${filename}: ${detail} Correct this input before regenerating.`, { cause: error });
     }
 };
+/**
+ * Synthesize opaque gap fields so every byte in the layout stride is accounted for.
+ * @param structure Validated layout whose declared fields may leave holes.
+ */
 const completeFields = (structure) => {
     const fields = [];
     let offset = 0;
@@ -283,8 +307,8 @@ const completeFields = (structure) => {
 };
 /**
  * Render both reusable offsets and addressed native structs from the same field definitions.
- * @param {LoadedSnesStructMap} map Validated layouts and bindings.
- * @returns {string} Native assembler source. Structs reserve offsets without emitting bytes.
+ * @param map Validated layouts and bindings.
+ * @returns Native assembler source. Structs reserve offsets without emitting bytes.
  */
 export const renderSnesStructDefines = (map) => {
     const lines = [
@@ -319,10 +343,10 @@ export const renderSnesStructDefines = (map) => {
 };
 /**
  * Render a physical record's field using the binding's logical index.
- * @param {SnesStructBinding} binding Validated owner, including its count and index origin.
- * @param {number} index Zero-based physical record offset within the binding.
- * @param {SnesStructField} field Named field within the record layout.
- * @returns {string} Native field reference; only a scalar at logical index zero omits brackets.
+ * @param binding Validated owner, including its count and index origin.
+ * @param index Zero-based physical record offset within the binding.
+ * @param field Named field within the record layout.
+ * @returns Native field reference; only a scalar at logical index zero omits brackets.
  */
 const fieldExpression = (binding, index, field) => {
     const logicalIndex = index + binding.firstIndex;
@@ -332,9 +356,9 @@ const fieldExpression = (binding, index, field) => {
 };
 /**
  * Index known data bytes by canonical CPU address, leaving unknown gaps unnamed.
- * @param {LoadedSnesStructMap | undefined} map Optional validated metadata.
- * @param {boolean} [indexed] Also name biased array bases used with a runtime CPU index.
- * @returns {ReadonlyMap<number, string>} Native field expressions, including interior-byte offsets.
+ * @param map Optional validated metadata.
+ * @param [indexed] Also name biased array bases used with a runtime CPU index.
+ * @returns Native field expressions, including interior-byte offsets.
  */
 export const indexSnesStructFields = (map, indexed = false) => {
     const result = new Map();
@@ -367,10 +391,10 @@ export const indexSnesStructFields = (map, indexed = false) => {
 };
 /**
  * Validate CPU/file continuity and expand ROM arrays into physical fields for source emission.
- * @param {LoadedSnesStructMap | undefined} map Optional validated metadata.
- * @param {number} romSize Headerless ROM size.
- * @param {(offset: number) => number} cpuAddress Mapper conversion for a file offset.
- * @returns {readonly SnesStructRomField[]} Physical field ranges, sorted by ROM offset.
+ * @param map Optional validated metadata.
+ * @param romSize Headerless ROM size.
+ * @param cpuAddress Mapper conversion for a file offset.
+ * @returns Physical field ranges, sorted by ROM offset.
  */
 export const planSnesStructRomFields = (map, romSize, cpuAddress) => {
     const fields = [];
@@ -411,9 +435,9 @@ export const planSnesStructRomFields = (map, romSize, cpuAddress) => {
 /**
  * Encode every named field (including opaque gaps) from immutable ROM bytes. Field descriptions
  * stay on the authoritative declarations in structs.asm so every data row does not repeat them.
- * @param {SnesStructRomRecord} record Complete, mapped record ownership.
- * @param {Uint8Array} bytes Exactly the original record bytes.
- * @returns {readonly {assignment: string}[]} Named initializer assignments, including opaque gaps.
+ * @param record Complete, mapped record ownership.
+ * @param bytes Exactly the original record bytes.
+ * @returns Named initializer assignments, including opaque gaps.
  */
 export const renderSnesStructInitializerFields = (record, bytes) => {
     if (bytes.length !== record.end - record.start) {
@@ -440,9 +464,9 @@ export const renderSnesStructInitializerFields = (record, bytes) => {
 };
 /**
  * Render one complete record as a compact native initializer without field documentation.
- * @param {SnesStructRomRecord} record Complete mapped record ownership.
- * @param {Uint8Array} bytes Exact record bytes from the ROM.
- * @returns {string} Single-line brace initializer for callers that manage source layout.
+ * @param record Complete mapped record ownership.
+ * @param bytes Exact record bytes from the ROM.
+ * @returns Single-line brace initializer for callers that manage source layout.
  */
 export const renderSnesStructInitializer = (record, bytes) => `{ ${renderSnesStructInitializerFields(record, bytes)
     .map((field) => field.assignment)
@@ -450,10 +474,10 @@ export const renderSnesStructInitializer = (record, bytes) => `{ ${renderSnesStr
 /**
  * Emit a complete field or a metadata-split fragment without changing any original byte.
  * The assertion makes the binding's actual placement part of the assembler build contract.
- * @param {SnesStructRomField} field Physical field and its native address expression.
- * @param {number} start Fragment file offset.
- * @param {Uint8Array} bytes Exact fragment bytes from the ROM.
- * @returns {readonly string[]} Address assertion plus native data directive.
+ * @param field Physical field and its native address expression.
+ * @param start Fragment file offset.
+ * @param bytes Exact fragment bytes from the ROM.
+ * @returns Address assertion plus native data directive.
  */
 export const renderSnesStructData = (field, start, bytes) => {
     const offset = start - field.start;

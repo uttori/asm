@@ -10,9 +10,16 @@ export const SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
 });
 /** Immutable contiguous program image used by SuperFX decoding and analysis. */
 export class SuperFxRomImage {
+    /** First 24-bit GSU address represented by the image. */
     loadAddress;
+    /** Lowercase hex SHA-256 of the image bytes, fixed at construction. */
     contentSha256;
     #bytes;
+    /**
+     * Copies the bytes and validates that they fit contiguously below `$1000000`.
+     * @param bytes Contiguous bytes copied into the image.
+     * @param [loadAddress] First 24-bit GSU address represented by `bytes`.
+     */
     constructor(bytes, loadAddress = 0) {
         if (!Number.isInteger(loadAddress) || loadAddress < 0 || loadAddress > 0xffffff) {
             throw new Error("SuperFX loadAddress must be a 24-bit unsigned integer.");
@@ -24,16 +31,34 @@ export class SuperFxRomImage {
         this.loadAddress = loadAddress;
         this.contentSha256 = createHash("sha256").update(this.#bytes).digest("hex");
     }
+    /**
+     * Number of represented GSU bytes.
+     * @returns Backing-image length.
+     */
     get length() {
         return this.#bytes.length;
     }
+    /**
+     * Returns a defensive copy of the represented bytes.
+     * @returns Copied image bytes.
+     */
     bytes() {
         return this.#bytes.slice();
     }
+    /**
+     * Reads one byte by 24-bit GSU address.
+     * @param address GSU memory address.
+     * @returns Byte value, or `undefined` outside the image.
+     */
     readByte(address) {
         const identity = this.identifyAddress(address);
         return identity ? this.#bytes[identity.imageOffset] : undefined;
     }
+    /**
+     * Maps a represented GSU address to its backing-image offset.
+     * @param address GSU memory address.
+     * @returns Address identity when represented.
+     */
     identifyAddress(address) {
         if (!Number.isInteger(address) || address < this.loadAddress || address > 0xffffff) {
             return undefined;
@@ -44,6 +69,11 @@ export class SuperFxRomImage {
         }
         return { addressSpace: SUPERFX_ROM_ADDRESS_SPACE, address, imageOffset };
     }
+    /**
+     * Maps a backing-image offset to its 24-bit GSU address.
+     * @param imageOffset Offset in the contiguous backing image.
+     * @returns Address identity when represented.
+     */
     identifyOffset(imageOffset) {
         if (!Number.isInteger(imageOffset) || imageOffset < 0 || imageOffset >= this.length) {
             return undefined;

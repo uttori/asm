@@ -1,15 +1,22 @@
 import type { ArchitectureInstructionSpecification, InstructionDescriptor, InstructionFlow, InstructionStateEffect } from "@uttori/asm-core";
 /** One fixed-width SPC700 addressing form. */
 export interface Spc700ModeDefinition {
+    /** Stable mode id referenced by opcode rows and encoders. */
     readonly id: string;
+    /** Canonical operand placeholder spelling for tooling and decode. */
     readonly syntax: string;
+    /** Fixed encoded instruction size for this mode in bytes. */
     readonly size: 1 | 2 | 3;
 }
 /** Declarative specification for one of the SPC700's 256 opcode bytes. */
 export interface Spc700InstructionSpecification extends ArchitectureInstructionSpecification {
+    /** Primary opcode byte indexing the 256-entry matrix. */
     readonly opcode: readonly [number];
+    /** Canonical operand placeholder spelling shown in disassembly tooling. */
     readonly syntax: string;
+    /** Control-flow kind used by analysis and the linear decoder. */
     readonly flow: InstructionFlow;
+    /** PSW or register effects attributed to this instruction form. */
     readonly effects: readonly InstructionStateEffect[];
 }
 /**
@@ -95,7 +102,7 @@ export declare const spc700ConditionalBranches: ReadonlySet<string>;
 export declare const spc700Specifications: readonly Spc700InstructionSpecification[];
 /**
  * Generates editor hover/completion data from the decoder's opcode authority.
- * @returns {InstructionDescriptor[]} Alphabetized SPC700 instruction descriptors.
+ * @returns Alphabetized SPC700 instruction descriptors.
  */
 export declare function buildSpc700Catalog(): InstructionDescriptor[];
 //# sourceMappingURL=spc700-spec.d.ts.map

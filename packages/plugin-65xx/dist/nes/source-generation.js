@@ -20,24 +20,24 @@ export function nesGenerationOptionsHash(options) {
 }
 /**
  * Accepts a JSON object. Arrays and null are not coverage contracts.
- * @param {unknown} value Parsed JSON.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Parsed JSON.
+ * @returns True when `value` is a non-array object.
  */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 /**
  * Accepts one half-open ROM interval from a coverage contract.
- * @param {unknown} value Candidate range.
- * @returns {boolean} True when start and end are numbers.
+ * @param value Candidate range.
+ * @returns True when start and end are numbers.
  */
 function isCodeRange(value) {
     return isRecord(value) && typeof value.start === "number" && typeof value.end === "number";
 }
 /**
  * Accepts the accepted generation's code coverage contract.
- * @param {unknown} value Parsed `source-code.json`.
- * @returns {boolean} True for format `uttori-source-code` version 1 with numeric ranges.
+ * @param value Parsed `source-code.json`.
+ * @returns True for format `uttori-source-code` version 1 with numeric ranges.
  */
 function isSourceCodeContract(value) {
     return (isRecord(value) &&

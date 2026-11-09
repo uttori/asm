@@ -172,12 +172,14 @@ export const nmos6502xForms = Object.freeze([
     ...nmos6502DecodeTable.filter((form) => form.canonical),
     ...brkSignatureForms,
 ]);
+/** Documented NMOS 6502 (`65xx.6502`); unofficial opcodes are neither assembled nor decoded. */
 export const nmos6502Cpu = Object.freeze({
     id: "65xx.6502",
     displayName: "NMOS 6502",
     aliases: ["6502", "6510", "8502", "6507"],
     features: new Set(["nmos"]),
 });
+/** NMOS 6502 with stable and unstable unofficial opcodes assemblable (`65xx.6502x`). */
 export const nmos6502xCpu = Object.freeze({
     id: "65xx.6502x",
     displayName: "NMOS 6502 with undocumented opcodes",
@@ -191,14 +193,19 @@ export const ricoh2a03Cpu = Object.freeze({
     aliases: ["2a03", "2a07"],
     features: new Set(["nmos", "undocumented"]),
 });
+/**
+ * Looks up assemblable forms for a ca65-derived variant CPU.
+ * @param cpuId Architecture id.
+ * @returns Variant forms, or undefined for NMOS/Ricoh CPUs and unknown ids.
+ */
 function cpuVariantForms(cpuId) {
     return Object.hasOwn(variantFormsByCpuId, cpuId) ? variantFormsByCpuId[cpuId] : undefined;
 }
 /**
  * Looks up the NMOS decode-table form for a byte.
  *
- * @param {number} opcode Opcode 0–255.
- * @returns {InstructionForm} The form at that slot (always defined, unofficial included).
+ * @param opcode Opcode 0–255.
+ * @returns The form at that slot (always defined, unofficial included).
  */
 export function getOpcodeForm(opcode) {
     if (!Number.isInteger(opcode) || opcode < 0 || opcode > 0xff) {
@@ -209,8 +216,8 @@ export function getOpcodeForm(opcode) {
 /**
  * Full decode table for a CPU: CMOS variants use generated tables.
  * NMOS uses {@link nmos6502DecodeTable} filtered by features.
- * @param {CpuDefinition} cpu The CPU definition.
- * @returns {readonly InstructionForm[]} The decode table.
+ * @param cpu The CPU definition.
+ * @returns The decode table.
  */
 export function getCpuDecodeTable(cpu) {
     const variantForms = cpuVariantForms(cpu.id);
@@ -222,8 +229,8 @@ export function getCpuDecodeTable(cpu) {
 /**
  * Forms the assembler will encode (canonical only). Decode tables keep
  * duplicate unofficial encodings. Assembly does not.
- * @param {CpuDefinition} cpu The CPU definition.
- * @returns {readonly InstructionForm[]} The assembly forms.
+ * @param cpu The CPU definition.
+ * @returns The assembly forms.
  */
 export function getCpuAssemblyForms(cpu) {
     const variantForms = cpuVariantForms(cpu.id);

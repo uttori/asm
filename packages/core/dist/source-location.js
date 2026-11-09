@@ -1,9 +1,9 @@
 /**
  * Creates a source span.
- * @param {number} start The inclusive starting offset.
- * @param {number} end The exclusive ending offset.
- * @param {number} [line] Optional 0-based line number.
- * @returns {SourceSpan} The source span.
+ * @param start The inclusive starting offset.
+ * @param end The exclusive ending offset.
+ * @param [line] Optional 0-based line number.
+ * @returns The source span.
  */
 export function createSourceSpan(start, end, line) {
     return {
@@ -17,9 +17,9 @@ export function createSourceSpan(start, end, line) {
 }
 /**
  * Returns a span covering an entire single-line string.
- * @param {string} text The source text.
- * @param {number} [line] Optional 0-based line number.
- * @returns {SourceSpan} The full-line span.
+ * @param text The source text.
+ * @param [line] Optional 0-based line number.
+ * @returns The full-line span.
  */
 export function createLineSpan(text, line) {
     return createSourceSpan(0, text.length, line);
@@ -50,10 +50,10 @@ export function sourceLineStarts(text) {
 }
 /**
  * Shifts a span by a column offset.
- * @param {SourceSpan} span The span to shift.
- * @param {number} offset The offset delta.
- * @param {number} [line] Optional line override.
- * @returns {SourceSpan} The shifted span.
+ * @param span The span to shift.
+ * @param offset The offset delta.
+ * @param [line] Optional line override.
+ * @returns The shifted span.
  */
 export function shiftSourceSpan(span, offset, line = span.line) {
     return {
@@ -66,10 +66,10 @@ export function shiftSourceSpan(span, offset, line = span.line) {
 }
 /**
  * Derives token spans by scanning a normalized line from left to right.
- * @param {string} text The source text to scan.
- * @param {string[]} tokens The already-tokenized command words.
- * @param {number} [line] Optional 0-based line number.
- * @returns {SourceSpan[]} The token spans in token order.
+ * @param text The source text to scan.
+ * @param tokens The already-tokenized command words.
+ * @param [line] Optional 0-based line number.
+ * @returns The token spans in token order.
  */
 export function deriveTokenSpans(text, tokens, line) {
     if (tokens.length === 0) {
@@ -97,9 +97,9 @@ export function deriveTokenSpans(text, tokens, line) {
 /**
  * Converts a span into an explicit line/character range for editor tooling.
  * The current assembler spans are line-local and use zero-based columns.
- * @param {SourceSpan} span The span to convert.
- * @param {number} [fallbackLine] Optional line when the span omits one.
- * @returns {SourceRange} The normalized source range.
+ * @param span The span to convert.
+ * @param [fallbackLine] Optional line when the span omits one.
+ * @returns The normalized source range.
  */
 export function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
     const line = span.line ?? fallbackLine;

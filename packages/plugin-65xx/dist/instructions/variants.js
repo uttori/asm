@@ -46,9 +46,9 @@ const featureByTable = {
  * Opcode for one (row, mode) cell: `base | eaTable[mode]`, then 4510/45GS02
  * remaps. Put4510 swaps several 65CE02 opcodes onto the 4510 encoding.
  * Put45GS02_Q rewrites INC/DEC accumulator to $1A/$3A under the Q prefix.
- * @param {Ca65InstructionRow} row The ca65 instruction row.
- * @param {number} modeIndex The mode index.
- * @returns {number} The opcode.
+ * @param row The ca65 instruction row.
+ * @param modeIndex The mode index.
+ * @returns The opcode.
  */
 function opcodeFor(row, modeIndex) {
     if (row[4] === "PutJSR_m740") {
@@ -103,10 +103,10 @@ function opcodeFor(row, modeIndex) {
 /**
  * Resolves a ca65 mode bit. Mode 10 is the CMOS vs CE02 fork:
  * 65SC02/65C02/W65C02 → `(zp)`. 65CE02/4510/45GS02 → `(zp),z`.
- * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
- * @param {Ca65InstructionRow} row The ca65 instruction row.
- * @param {number} modeIndex The mode index.
- * @returns {ModeDefinition | undefined} The mode definition.
+ * @param table The ca65 variant table.
+ * @param row The ca65 instruction row.
+ * @param modeIndex The mode index.
+ * @returns The mode definition.
  */
 function modeFor(table, row, modeIndex) {
     if (row[4] === "PutBlockTransfer" && modeIndex === 25) {
@@ -150,11 +150,11 @@ function modeFor(table, row, modeIndex) {
 /**
  * Builds one {@link InstructionForm}. 45GS02 Q ops prefix `42 42`. `[zp],z`
  * (modes 12 and 30) also needs a leading `EA` NOP prefix.
- * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
- * @param {Ca65InstructionRow} row The ca65 instruction row.
- * @param {number} modeIndex The mode index.
- * @param {ModeDefinition} modeDefinition The mode definition.
- * @returns {InstructionForm} The instruction form.
+ * @param table The ca65 variant table.
+ * @param row The ca65 instruction row.
+ * @param modeIndex The mode index.
+ * @param modeDefinition The mode definition.
+ * @returns The instruction form.
  */
 function createForm(table, row, modeIndex, modeDefinition) {
     let opcode = opcodeFor(row, modeIndex);
@@ -203,8 +203,8 @@ function createForm(table, row, modeIndex, modeDefinition) {
  * Expands one ca65 instruction table into frozen forms.
  * `PutBitBranch` is BBR/BBS (rel base = 3). `PutPCRel8` / `PutPCRel4510`
  * skip the bit mask and use relative / relative16 directly.
- * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
- * @returns {readonly InstructionForm[]} The decode table.
+ * @param table The ca65 variant table.
+ * @returns The decode table.
  */
 function decodeTable(table) {
     const forms = [];
@@ -257,69 +257,88 @@ function decodeTable(table) {
     }
     return Object.freeze(forms);
 }
+/** Canonical assemblable forms for the C64DTV 6502. */
 export const mos6502DtvForms = decodeTable("6502DTV");
+/** Canonical assemblable forms for the 65SC02. */
 export const cmos65sc02Forms = decodeTable("65SC02");
+/** Canonical assemblable forms for the Rockwell 65C02. */
 export const cmos65c02Forms = decodeTable("65C02");
+/** Canonical assemblable forms for the WDC W65C02. */
 export const wdc65c02Forms = decodeTable("W65C02");
+/** Canonical assemblable forms for the CSG 65CE02. */
 export const csg65ce02Forms = decodeTable("65CE02");
+/** Canonical assemblable forms for the Commodore 4510. */
 export const commodore4510Forms = decodeTable("4510");
+/** Canonical assemblable forms for the MEGA65 45GS02, including prefixed encodings. */
 export const mega65Gs02Forms = decodeTable("45GS02");
+/** Canonical assemblable forms for the Hudson HuC6280. */
 export const hudsonHuC6280Forms = decodeTable("HuC6280");
+/** Canonical assemblable forms for the Mitsubishi M740. */
 export const mitsubishiM740Forms = decodeTable("M740");
+/** C64DTV 6502: NMOS encodings with unofficial opcodes and DTV extensions. */
 export const mos6502DtvCpu = Object.freeze({
     id: "65xx.6502dtv",
     displayName: "C64DTV 6502",
     aliases: ["6502dtv", "dtv"],
     features: new Set(["nmos", "undocumented", "dtv"]),
 });
+/** 65SC02: CMOS base set without Rockwell bit instructions. */
 export const cmos65sc02Cpu = Object.freeze({
     id: "65xx.65sc02",
     displayName: "65SC02",
     aliases: ["65sc02"],
     features: new Set(["cmos"]),
 });
+/** Rockwell 65C02 with bit manipulation and bit-branch instructions. */
 export const cmos65c02Cpu = Object.freeze({
     id: "65xx.65c02",
     displayName: "65C02 with Rockwell extensions",
     aliases: ["65c02"],
     features: new Set(["cmos", "rockwell"]),
 });
+/** WDC W65C02: Rockwell set plus `WAI` and `STP`. */
 export const wdc65c02Cpu = Object.freeze({
     id: "65xx.w65c02",
     displayName: "WDC W65C02",
     aliases: ["w65c02"],
     features: new Set(["cmos", "rockwell", "wdc"]),
 });
+/** CSG 65CE02: Rockwell set plus Z register, base page, and 16-bit branches. */
 export const csg65ce02Cpu = Object.freeze({
     id: "65xx.65ce02",
     displayName: "CSG 65CE02",
     aliases: ["65ce02"],
     features: new Set(["cmos", "rockwell", "ce02"]),
 });
+/** Commodore 4510: 65CE02 set plus `MAP`/`EOM`. */
 export const commodore4510Cpu = Object.freeze({
     id: "65xx.4510",
     displayName: "Commodore 4510",
     aliases: ["4510"],
     features: new Set(["cmos", "rockwell", "ce02", "4510"]),
 });
+/** MEGA65 45GS02: 4510 set plus 32-bit quad and flat-memory prefixed forms. */
 export const mega65Gs02Cpu = Object.freeze({
     id: "65xx.45gs02",
     displayName: "MEGA65 45GS02",
     aliases: ["45gs02"],
     features: new Set(["cmos", "rockwell", "ce02", "4510", "45gs02"]),
 });
+/** Hudson HuC6280: Rockwell set plus PC Engine block transfer and MPR instructions. */
 export const hudsonHuC6280Cpu = Object.freeze({
     id: "65xx.huc6280",
     displayName: "Hudson HuC6280",
     aliases: ["huc6280", "6280"],
     features: new Set(["cmos", "rockwell", "huc6280"]),
 });
+/** Mitsubishi M740: independent CMOS-derived set with special-page and bit instructions. */
 export const mitsubishiM740Cpu = Object.freeze({
     id: "65xx.m740",
     displayName: "Mitsubishi M740",
     aliases: ["m740", "740"],
     features: new Set(["m740"]),
 });
+/** Every ca65-derived variant CPU, in table order. */
 export const variantCpus = Object.freeze([
     mos6502DtvCpu,
     cmos65sc02Cpu,
@@ -331,6 +350,7 @@ export const variantCpus = Object.freeze([
     hudsonHuC6280Cpu,
     mitsubishiM740Cpu,
 ]);
+/** Canonical assemblable forms keyed by variant architecture id. */
 export const variantFormsByCpuId = Object.freeze({
     [mos6502DtvCpu.id]: mos6502DtvForms,
     [cmos65sc02Cpu.id]: cmos65sc02Forms,

@@ -3,20 +3,30 @@ import type { ImportReport } from "../model/project-types.js";
 export interface CaptureAddedCode {
     /** Inclusive start and exclusive end in ROM-content bytes, excluding any copier header. */
     readonly start: number;
+    /** Exclusive end in ROM-content bytes, greater than start. */
     readonly end: number;
+    /** CPU address space of the interval's first byte. */
     readonly addressSpace: string;
+    /** CPU address of start within addressSpace. */
     readonly address: number;
+    /** Analysis record IDs that decoded this interval. */
     readonly recordIds: readonly string[];
 }
 /** Local generated report. Absence means a legacy import; pending reports await a successful analysis. */
 export interface CaptureImportNotes {
+    /** Report format marker. */
     readonly format: "uttori-capture-notes";
+    /** Report schema version. */
     readonly version: 1;
+    /** SHA-256 of the capture archive; also the report filename. */
     readonly sourceSha256: string;
+    /** Capture basename only; directories are stripped to keep private paths out of reports. */
     readonly sourceName: string;
     /** First successful import time in Unix milliseconds; reimports retain it. */
     readonly importedAt: number;
+    /** Human-readable import counts, warnings and unsupported-field losses. */
     readonly notes: readonly string[];
+    /** Result of the first analysis after import; undefined while the report is pending. */
     readonly analysis?: {
         readonly status: "complete" | "incomplete";
         /** All captures awaiting this pass; new code cannot be attributed to one capture in isolation. */

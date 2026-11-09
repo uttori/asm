@@ -10,9 +10,19 @@ function notesPath(directory, sha256) {
     }
     return path.join(directory, "capture-notes", `${sha256}.json`);
 }
+/**
+ * Accept only non-null, non-array objects.
+ * @param value Candidate value.
+ * @returns Whether value is a plain record.
+ */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/**
+ * Accept arrays whose every element is a string.
+ * @param value Candidate value.
+ * @returns Whether value is a string array.
+ */
 function isStrings(value) {
     return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }

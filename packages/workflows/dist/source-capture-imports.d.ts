@@ -2,16 +2,21 @@
 export interface SourceCaptureImportSummary {
     /** Historical absolute input path; callers must not rely on its existence after successful import. */
     readonly capture: string;
+    /** SHA-256 of the capture archive that produced this import. */
     readonly sourceSha256: string;
+    /** True when the import wrote new runtime or evidence records. */
     readonly changed: boolean;
+    /** Counts of runtime and evidence records inserted by the import. */
     readonly added: {
         readonly runtime: number;
         readonly evidence: number;
     };
+    /** Non-fatal import notes retained for the review UI. */
     readonly warnings: readonly string[];
 }
 /** A completed queue. Each file commits independently, so an interrupted queue can be retried. */
 export interface SourceCaptureImportBatchResult {
+    /** Per-archive summaries included in the batch result. */
     readonly imports: readonly SourceCaptureImportSummary[];
 }
 /**

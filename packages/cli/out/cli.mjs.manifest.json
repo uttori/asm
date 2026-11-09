@@ -261,7 +261,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "d12cf70986ddc12dfb591ccc159ce5bddd82dade499d065290e6bbae92718c25"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",

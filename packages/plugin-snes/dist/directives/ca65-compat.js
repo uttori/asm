@@ -26,8 +26,8 @@ import { parseSnesDirective } from "./syntax-parser.js";
 /**
  * Returns the active `Arch65816` encoder, or `undefined` if the current
  * architecture is not the 65816 (e.g. SPC700 or Super FX are active).
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @returns {Arch65816 | undefined} The encoder, if present.
+ * @param session The host assembler session.
+ * @returns The encoder, if present.
  */
 export function getActiveArch65816(session) {
     const { definition } = session.resolveActiveArchitecture();
@@ -45,8 +45,7 @@ export function getActiveArch65816(session) {
 /**
  * Sets the assembler's accumulator width hint to 8-bit.
  * Equivalent to ca65's `.A8` directive.
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @returns {void}
+ * @param session The host assembler session.
  */
 export function handleA8(session) {
     getActiveArch65816(session)?.setAccumulatorWidth(false);
@@ -54,17 +53,15 @@ export function handleA8(session) {
 /**
  * Sets the assembler's accumulator width hint to 16-bit.
  * Equivalent to ca65's `.A16` directive.
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @returns {void}
+ * @param session The host assembler session.
  */
 export function handleA16(session) {
     getActiveArch65816(session)?.setAccumulatorWidth(true);
 }
 /**
  * Handles the `.accu 8|16` directive (ca65 alias for `.a8` / `.a16`).
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session The host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleAccu(session, words) {
     const node = parseSnesDirective("snes.directive.ca65.accu", { words });
@@ -79,8 +76,7 @@ export function handleAccu(session, words) {
 /**
  * Sets the assembler's index register width hint to 8-bit.
  * Equivalent to ca65's `.I8` directive.
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @returns {void}
+ * @param session The host assembler session.
  */
 export function handleI8(session) {
     getActiveArch65816(session)?.setIndexWidth(false);
@@ -88,17 +84,15 @@ export function handleI8(session) {
 /**
  * Sets the assembler's index register width hint to 16-bit.
  * Equivalent to ca65's `.I16` directive.
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @returns {void}
+ * @param session The host assembler session.
  */
 export function handleI16(session) {
     getActiveArch65816(session)?.setIndexWidth(true);
 }
 /**
  * Handles the `.index 8|16` directive (ca65 alias for `.i8` / `.i16`).
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session The host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleIndex(session, words) {
     const node = parseSnesDirective("snes.directive.ca65.index", { words });
@@ -115,9 +109,8 @@ export function handleIndex(session, words) {
  * Without an argument or with `on`, enables automatic M/X tracking via
  * `SEP`/`REP` (the assembler default).  With `off`, disables auto-tracking so
  * only explicit `.a8`/`.a16`/`.i8`/`.i16` directives change the width hints.
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session The host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleSmart(session, words) {
     const node = parseSnesDirective("snes.directive.ca65.smart", { words });
@@ -136,9 +129,8 @@ export { resolveSnesCpuName } from "./cpu-name.js";
  * Throws for names that are not available on the SNES target. For names that
  * are unrecognised SNES CPUs but are valid 65xx names the caller should
  * propagate an "unknown architecture" diagnostic rather than silently no-op.
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param session The host assembler session.
+ * @param words Tokenized line, keyword first.
  */
 export function handleSetcpu(session, words) {
     const node = parseSnesDirective("snes.directive.ca65.setcpu", { words });
@@ -151,9 +143,8 @@ export function handleSetcpu(session, words) {
  * Handles the `.pushcpu` directive.
  * Saves the current architecture id onto `SnesSessionState.cpuStack` so it
  * can be restored by `.popcpu`.
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @param {SnesSessionState} state Mutable SNES session state.
- * @returns {void}
+ * @param session The host assembler session.
+ * @param state Mutable SNES session state.
  */
 export function handlePushcpu(session, state) {
     const { name } = session.resolveActiveArchitecture();
@@ -162,9 +153,8 @@ export function handlePushcpu(session, state) {
 /**
  * Handles the `.popcpu` directive.
  * Restores the architecture saved by the most recent `.pushcpu`.
- * @param {PluginSessionCapabilities} session The host assembler session.
- * @param {SnesSessionState} state Mutable SNES session state.
- * @returns {void}
+ * @param session The host assembler session.
+ * @param state Mutable SNES session state.
  */
 export function handlePopcpu(session, state) {
     if (state.cpuStack.length === 0) {

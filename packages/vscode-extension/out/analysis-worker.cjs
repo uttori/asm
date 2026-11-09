@@ -27,7 +27,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// packages/vscode-extension/src/analysis/worker.ts
+// src/analysis/worker.ts
 var worker_exports = {};
 __export(worker_exports, {
   runAnalysisWorkerRequest: () => runAnalysisWorkerRequest
@@ -37,12 +37,12 @@ var fs9 = __toESM(require("node:fs"), 1);
 var path9 = __toESM(require("node:path"), 1);
 var import_node_worker_threads = require("node:worker_threads");
 
-// packages/disassembler/src/model/project-types.ts
+// ../disassembler/src/model/project-types.ts
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// packages/disassembler/src/model/evidence-pool.ts
+// ../disassembler/src/model/evidence-pool.ts
 var EvidencePool = class {
   #strings = /* @__PURE__ */ new Map();
   #lists = /* @__PURE__ */ new Map();
@@ -78,7 +78,7 @@ var EvidencePool = class {
   }
 };
 
-// packages/disassembler/src/model/analysis-ownership.ts
+// ../disassembler/src/model/analysis-ownership.ts
 function validateAnalysisOwnership(records, scope = "complete") {
   if (!records.some(
     (record3) => record3.kind === "cfg-node" && (record3.functionEntry !== void 0 || record3.evidencePredecessor !== void 0)
@@ -132,7 +132,7 @@ function validateAnalysisOwnership(records, scope = "complete") {
   }
 }
 
-// packages/disassembler/src/model/project-labels.ts
+// ../disassembler/src/model/project-labels.ts
 var validateSourceLabelName = (name2) => {
   if (typeof name2 !== "string" || name2.length > 256 || !/^[A-Z_a-z]\w*$/.test(name2)) {
     throw new Error(
@@ -141,7 +141,7 @@ var validateSourceLabelName = (name2) => {
   }
 };
 
-// packages/core/src/canonical-json.ts
+// ../core/src/canonical-json.ts
 var compareKeys = (a, b) => a.localeCompare(b);
 var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var canonicalValue = (value) => {
@@ -187,7 +187,7 @@ var canonicalEquals = (left, right) => left === right || canonicalJsonCompact(le
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
-// packages/disassembler/src/model/trace-detail.ts
+// ../disassembler/src/model/trace-detail.ts
 function isRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -294,7 +294,7 @@ var validateRuntimeInstructionDetails = (value, count) => {
   });
 };
 
-// packages/disassembler/src/model/runtime-ppu-effect.ts
+// ../disassembler/src/model/runtime-ppu-effect.ts
 function isEffectRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -372,7 +372,7 @@ var normalizeRuntimePPUEffect = (effect, access) => {
   };
 };
 
-// packages/disassembler/src/model/runtime-bus-types.ts
+// ../disassembler/src/model/runtime-bus-types.ts
 function isInteger3(value) {
   return typeof value === "number" && Number.isInteger(value);
 }
@@ -417,7 +417,7 @@ var validateRuntimeBusFact = (fact) => {
   return void 0;
 };
 
-// packages/disassembler/src/analysis/analysis-sources.ts
+// ../disassembler/src/analysis/analysis-sources.ts
 var sorted = (values) => [...new Set(values)].toSorted();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
@@ -478,7 +478,7 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
-// packages/disassembler/src/analysis/instruction-annotations.ts
+// ../disassembler/src/analysis/instruction-annotations.ts
 var sortedStrings = (values) => values ? [...new Set(values)].toSorted((left, right) => left.localeCompare(right)) : [];
 var sortedNumbers = (values) => values ? [...new Set(values)].toSorted((left, right) => left - right) : [];
 var valueKey = (value, present) => present ? canonicalJsonCompact(value) : "<absent>";
@@ -863,7 +863,7 @@ var buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => sha
   };
 };
 
-// packages/disassembler/src/model/research-mapping.ts
+// ../disassembler/src/model/research-mapping.ts
 function isRecord3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -897,7 +897,7 @@ function isResearchMapping(value) {
   return record3.fileOffset !== void 0 || fields > 0;
 }
 
-// packages/disassembler/src/analysis/project-evidence.ts
+// ../disassembler/src/analysis/project-evidence.ts
 var evidenceReferences = (shards, evidenceId) => [
   ...shards.analysis.filter((record3) => record3.evidence.includes(evidenceId)).map((record3) => `analysis:${record3.id}`),
   ...shards.annotations.filter((record3) => record3.evidence.includes(evidenceId)).map((record3) => `annotations:${record3.id}`),
@@ -934,7 +934,7 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   return { shard, record: record3, evidence, referencedBy, conflicts };
 };
 
-// packages/disassembler/src/runtime/runtime-evidence.ts
+// ../disassembler/src/runtime/runtime-evidence.ts
 var emptyCounts = () => ({
   analysis: 0,
   annotations: 0,
@@ -1190,7 +1190,7 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// packages/disassembler/src/internal/trace-cache.ts
+// ../disassembler/src/internal/trace-cache.ts
 var TraceCache = class {
   #entries = /* @__PURE__ */ new Map();
   /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
@@ -1263,7 +1263,7 @@ var TraceCache = class {
   }
 };
 
-// packages/disassembler/src/runtime/runtime-analysis-profile.ts
+// ../disassembler/src/runtime/runtime-analysis-profile.ts
 var SNES_ANALYSIS_TRACE_PROFILE = "65816-analysis-v3";
 var SNES_ANALYSIS_STATE_FIELDS = ["p", "P", "e", "E", "db", "DB", "d", "D"];
 var SNES_ANALYSIS_STATE_MASKS = {
@@ -1286,11 +1286,11 @@ function snesAnalysisTraceState(state) {
   return result;
 }
 
-// packages/disassembler/src/project/project-store.ts
+// ../disassembler/src/project/project-store.ts
 var fs5 = __toESM(require("node:fs"), 1);
 var import_node_path5 = __toESM(require("node:path"), 1);
 
-// packages/disassembler/src/internal/record-id-set.ts
+// ../disassembler/src/internal/record-id-set.ts
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_os = __toESM(require("node:os"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
@@ -1353,7 +1353,7 @@ var RecordIdSet = class {
   }
 };
 
-// packages/disassembler/src/model/runtime-graphics-fact.ts
+// ../disassembler/src/model/runtime-graphics-fact.ts
 var record = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var unsigned = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
 var name = (value) => typeof value === "string" && /^[A-Za-z][\w.-]{0,63}$/.test(value);
@@ -1379,7 +1379,7 @@ function isRuntimeGraphicsFact(value) {
   );
 }
 
-// packages/disassembler/src/model/project-validation.ts
+// ../disassembler/src/model/project-validation.ts
 function isObject(value) {
   return typeof value === "object" && value !== null;
 }
@@ -1859,7 +1859,7 @@ var validateLoadedShards = (shards, project, analysisScope = "complete") => {
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// packages/disassembler/src/model/record-shape.ts
+// ../disassembler/src/model/record-shape.ts
 function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -2120,11 +2120,11 @@ function requireMetadataRecord(kind, value) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/storage/sqlite-payload.ts
 var import_node_util = require("node:util");
 var import_node_zlib2 = require("node:zlib");
 
-// packages/disassembler/src/storage/sqlite-runtime-payload.ts
+// ../disassembler/src/storage/sqlite-runtime-payload.ts
 var import_node_zlib = require("node:zlib");
 var MAGIC = Buffer.from([85, 65, 82, 1]);
 var FIELDS = [
@@ -2231,7 +2231,7 @@ var decodePackedRuntimePayload = (bytes) => {
   return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
 };
 
-// packages/disassembler/src/storage/sqlite-payload.ts
+// ../disassembler/src/storage/sqlite-payload.ts
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
 var HEADER = Buffer.from([85, 65, 80, 1]);
 var HEADER_BYTES2 = 8;
@@ -2322,7 +2322,7 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// packages/disassembler/src/storage/sqlite-records.ts
+// ../disassembler/src/storage/sqlite-records.ts
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) {
     return -1;
@@ -2831,17 +2831,17 @@ var analysisAddress = (record3) => {
   return { addressSpace: null, address: null };
 };
 
-// packages/disassembler/src/storage/sqlite-store.ts
+// ../disassembler/src/storage/sqlite-store.ts
 var import_node_crypto4 = require("node:crypto");
 var import_node_fs4 = __toESM(require("node:fs"), 1);
 var import_node_path4 = __toESM(require("node:path"), 1);
 var import_node_sqlite2 = require("node:sqlite");
 
-// packages/disassembler/src/research-inputs/inputs.ts
+// ../disassembler/src/research-inputs/inputs.ts
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 var import_node_path3 = __toESM(require("node:path"), 1);
 
-// packages/disassembler/src/internal/source-inputs.ts
+// ../disassembler/src/internal/source-inputs.ts
 var import_node_crypto = require("node:crypto");
 var import_node_path2 = __toESM(require("node:path"), 1);
 var sourceContentHash = (value) => (0, import_node_crypto.createHash)("sha256").update(value).digest("hex");
@@ -2851,7 +2851,7 @@ function assertSourcePath(relative) {
   }
 }
 
-// packages/disassembler/src/model/target-state.ts
+// ../disassembler/src/model/target-state.ts
 function record2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -2894,7 +2894,7 @@ function readAnalysisTargetState(architecture, value) {
   throw new Error(`Invalid state fields for architecture '${architecture}'.`);
 }
 
-// packages/disassembler/src/model/metadata-validation.ts
+// ../disassembler/src/model/metadata-validation.ts
 function isRecord5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -3037,7 +3037,7 @@ var validateEditableMetadataRecord = (shard, record3) => {
   }
 };
 
-// packages/disassembler/src/research-inputs/inputs.ts
+// ../disassembler/src/research-inputs/inputs.ts
 var isArray = (value) => Array.isArray(value);
 function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -3292,7 +3292,7 @@ function readResearchInputs(root, roots, identity, overlays = /* @__PURE__ */ ne
   return { ...selected, files, decisions, hash };
 }
 
-// packages/disassembler/src/storage/sqlite-annotation-query.ts
+// ../disassembler/src/storage/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 function isPartialInstruction(value) {
   if (!isRecord4(value)) {
@@ -3749,7 +3749,7 @@ var readInstructionExecutionSummary = (database2, manifest, ranges) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-graph-query.ts
+// ../disassembler/src/storage/sqlite-graph-query.ts
 function requireNode(value) {
   const record3 = requireAnalysisRecord(parseSqlitePayload(value));
   if (record3.kind !== "cfg-node") {
@@ -3985,7 +3985,7 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// packages/disassembler/src/storage/sqlite-graphics-query.ts
+// ../disassembler/src/storage/sqlite-graphics-query.ts
 function queryGraphicsEvidence(db, query) {
   const limit = query.limit ?? 500;
   if (!Number.isInteger(limit) || limit < 1 || limit > 2e3 || [query.pc, query.physicalOffset].some(
@@ -4050,7 +4050,7 @@ function queryGraphicsEvidence(db, query) {
   return result;
 }
 
-// packages/disassembler/src/storage/sqlite-query-cache.ts
+// ../disassembler/src/storage/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 var installQueryCache = (db, key3, dependencies) => {
   if (!/^[\d_a-z]+$/.test(key3)) {
@@ -4101,7 +4101,7 @@ var writeQueryCache = (db, key3, signature, value) => {
   );
 };
 
-// packages/disassembler/src/storage/sqlite-research-inputs.ts
+// ../disassembler/src/storage/sqlite-research-inputs.ts
 var SCHEMA = `CREATE TABLE IF NOT EXISTS research_projection (
   collection TEXT NOT NULL, id TEXT NOT NULL, baseline BLOB, projected BLOB,
   PRIMARY KEY(collection,id)
@@ -4219,7 +4219,7 @@ function projectResearchInputs(database2, snapshot, insert) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-runtime-facts.ts
+// ../disassembler/src/storage/sqlite-runtime-facts.ts
 var RUNTIME_DESCRIPTOR_COLUMNS = [
   "kind",
   "architecture",
@@ -4308,10 +4308,10 @@ WHEN EXISTS(SELECT 1 FROM runtime_identities
 BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
 `;
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
 var import_node_crypto2 = require("node:crypto");
 
-// packages/disassembler/src/storage/sqlite-runtime-history.ts
+// ../disassembler/src/storage/sqlite-runtime-history.ts
 var import_node_util2 = require("node:util");
 var import_node_zlib3 = require("node:zlib");
 function historyPayload(value) {
@@ -4494,7 +4494,7 @@ var collectRuntimeHistory = (db) => {
       SELECT 1 FROM runtime_fact_rows f WHERE f.descriptor_id=runtime_descriptors.did);`);
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-storage.ts
+// ../disassembler/src/storage/sqlite-runtime-storage.ts
 var runtimeFactFingerprint = (record3, columns2) => (0, import_node_crypto2.createHash)("sha256").update(
   JSON.stringify(
     {
@@ -4733,7 +4733,7 @@ var SqliteRuntimeWriter = class {
   }
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-batch.ts
+// ../disassembler/src/storage/sqlite-runtime-batch.ts
 var RUNTIME_TRACE_BATCH_OBSERVATIONS_SQL = `
   INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready)
     SELECT f.fid,b.prefix_id,i.iid,b.evidence_id,b.count,b.state_prefix_id,b.query_ready
@@ -4887,7 +4887,7 @@ var SqliteRuntimeTraceBatch = class {
   }
 };
 
-// packages/disassembler/src/storage/sqlite-runtime-summary.ts
+// ../disassembler/src/storage/sqlite-runtime-summary.ts
 var import_node_crypto3 = require("node:crypto");
 var KEY = "instruction_variants";
 var BUILD = "instruction_variants_build";
@@ -5149,7 +5149,7 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
   })();
 };
 
-// packages/disassembler/src/storage/sqlite-source-export.ts
+// ../disassembler/src/storage/sqlite-source-export.ts
 function isUnknownArray3(value) {
   return Array.isArray(value);
 }
@@ -5243,7 +5243,7 @@ function* sourceExportCacheRecords(database2) {
   }
 }
 
-// packages/disassembler/src/storage/sqlite-source-query.ts
+// ../disassembler/src/storage/sqlite-source-query.ts
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -5420,7 +5420,7 @@ var readSourcePage = (db, source, group, offset = 0) => {
   });
 };
 
-// packages/disassembler/src/storage/sqlite-storage-policy.ts
+// ../disassembler/src/storage/sqlite-storage-policy.ts
 var import_node_fs3 = __toESM(require("node:fs"), 1);
 function errorCode(error) {
   if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
@@ -5606,7 +5606,7 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// packages/disassembler/src/storage/sqlite-store.ts
+// ../disassembler/src/storage/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 var ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 var SCHEMA2 = `
@@ -7751,7 +7751,7 @@ var SqliteAnalysisStore = class _SqliteAnalysisStore {
   }
 };
 
-// packages/disassembler/src/project/project-store.ts
+// ../disassembler/src/project/project-store.ts
 function isUntrustedManifest(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -7793,7 +7793,7 @@ var openAnalysisProjectStore = (directory) => {
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
-// packages/disassembler/src/project/capture-notes.ts
+// ../disassembler/src/project/capture-notes.ts
 var import_node_fs5 = __toESM(require("node:fs"), 1);
 var import_node_path6 = __toESM(require("node:path"), 1);
 function notesPath(directory, sha256) {
@@ -7834,7 +7834,7 @@ function readCaptureImportNotes(directory, sha256) {
   return notes;
 }
 
-// packages/vscode-extension/src/editor-info/format.ts
+// src/editor-info/format.ts
 var informationHex = (value, digits = 4) => {
   const sign = value < 0 ? "-" : "";
   return `${sign}$${Math.abs(value).toString(16).toUpperCase().padStart(digits, "0")}`;
@@ -7929,7 +7929,7 @@ var formatInstructionAnnotationSummary = (annotation, maximumLength = 220) => {
   return joinInformation(parts, " \xB7 ", Math.max(24, maximumLength));
 };
 
-// packages/vscode-extension/src/analysis/annotation-index.ts
+// src/analysis/annotation-index.ts
 var append2 = (map, key3, value) => {
   const entries = map.get(key3);
   if (entries) {
@@ -8002,7 +8002,7 @@ var instructionAnnotationsForDebugRange = (index, range) => {
   );
 };
 
-// packages/vscode-extension/src/analysis/navigation-data.ts
+// src/analysis/navigation-data.ts
 var projectAnalysisNavigation = (project, target, executionCounts) => {
   if (project.manifest.target !== target.target || project.manifest.rom.contentSha256 !== target.romContentSha256 || project.manifest.rom.contentSize !== target.romContentSize) {
     throw new Error("Navigation target no longer matches the current native analysis project.");
@@ -8097,11 +8097,11 @@ var projectAnalysisNavigation = (project, target, executionCounts) => {
   };
 };
 
-// packages/vscode-extension/src/analysis/research-context.ts
+// src/analysis/research-context.ts
 var import_node_fs7 = __toESM(require("node:fs"), 1);
 var import_node_path8 = __toESM(require("node:path"), 1);
 
-// packages/disassembler/src/source-project/project.ts
+// ../disassembler/src/source-project/project.ts
 var import_node_fs6 = __toESM(require("node:fs"), 1);
 var import_node_path7 = __toESM(require("node:path"), 1);
 function isUnknownArray4(value) {
@@ -8173,7 +8173,7 @@ function readSourceProjectLocalInputs(root) {
   };
 }
 
-// packages/vscode-extension/src/analysis/research-context.ts
+// src/analysis/research-context.ts
 function readConfiguration(file) {
   if (import_node_fs7.default.statSync(file).size > 1024 * 1024) {
     throw new Error(`Source project configuration exceeds 1 MiB: ${file}`);
@@ -8220,7 +8220,7 @@ function analysisResearchContext(directory, preferredRoot) {
   }
 }
 
-// packages/vscode-extension/src/analysis/sources-data.ts
+// src/analysis/sources-data.ts
 var readAnalysisSourceCatalog = (directory) => {
   const store = openAnalysisProjectStore(directory);
   try {
@@ -8230,7 +8230,7 @@ var readAnalysisSourceCatalog = (directory) => {
   }
 };
 
-// packages/vscode-extension/src/analysis/worker.ts
+// src/analysis/worker.ts
 function isRecord12(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

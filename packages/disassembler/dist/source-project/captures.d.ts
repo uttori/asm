@@ -1,27 +1,39 @@
 import type { ImportReport } from "../model/project-types.js";
 /** Historical input identity. Its filename and hashes do not imply the archive is still available. */
 export interface SourceCaptureArchive {
+    /** Portable archive basename; a discovery hint only, not part of the binding identity. */
     readonly name: string;
+    /** Lowercase SHA-256 of the archive bytes. */
     readonly sha256: string;
+    /** Archive length in bytes; always positive. */
     readonly bytes: number;
     /** Hash of the verified manifest, which binds every companion artifact by its own content hash. */
     readonly companionSha256?: string;
 }
 /** Canonical importer identity survives archive re-encoding and differs from the archive byte hash. */
 export interface SourceCaptureIdentity {
+    /** Canonical importer source hash; unique within a catalog. */
     readonly sha256: string;
+    /** Portable basename of the imported source; absolute report paths are reduced to it. */
     readonly sourceName: string;
+    /** Retention/index profile used for the import, such as `full` or `65816-analysis-v3`. */
     readonly profile: string;
+    /** Graphics, bus or execution events observed by the importer, in that precedence. */
     readonly observedEvents: number;
+    /** Events the producer reported dropped for instruction addresses. */
     readonly droppedEvents: number;
     /** Verified input fingerprints only. Imported evidence must remain available independently of these files. */
     readonly archives: readonly SourceCaptureArchive[];
 }
 /** Git-tracked import provenance contains identities only, never capture contents or required host paths. */
 export interface SourceCaptureCatalog {
+    /** Catalog format discriminator. */
     readonly format: "uttori-capture-catalog";
+    /** Catalog schema version. */
     readonly version: 1;
+    /** Original ROM identity; a catalog for another ROM is rejected. */
     readonly romSha256: string;
+    /** Capture identities sorted by `sha256`; at most 10,000 entries. */
     readonly captures: readonly SourceCaptureIdentity[];
 }
 /** Validate before trusting a catalog from a branch, clone or external private-input bundle. */

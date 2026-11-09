@@ -8,13 +8,18 @@ import type { ReferenceResolution } from "./reference-path.js";
 import { type SyntaxValue } from "./source-syntax.js";
 /** Target-selected instruction syntax. Original spelling belongs to its source occurrence, not decisions. */
 export type ParsedInstruction = {
+    /** Normalized mnemonic selecting the encoder entry point. */
     readonly mnemonic: string;
+    /** Parsed operand list bound to the mnemonic's grammar. */
     readonly operands: ParsedInstructionOperands;
 };
+/** Stage in encoder lowering when an operand numeric read occurs. */
 export type OperandEvaluationPoint = "classification" | "sizing" | "beforeOpcode" | "afterOpcode" | "operand";
 /** Binding failures are stage-local diagnostics, never cached syntax or executable source. */
 export type OperandBindingFailure = {
+    /** Category explaining why symbolic binding could not complete. */
     readonly reason: "unbound" | "recursive" | "depth" | "other";
+    /** Human-readable detail suitable for deferred encoder diagnostics. */
     readonly message: string;
 };
 /** Narrow capabilities deliberately omit all string evaluation, expansion and operand classifiers. */
@@ -27,24 +32,36 @@ export interface TypedOperandEvaluationContext {
     withSourcePreview?<T>(operation: (advance: (bytes: number) => void) => T): T;
     /** Present only during section-relative assembly; never substitutes numeric placeholder addresses. */
     compileLink?(expression: ExpressionNode): LinkExpression;
+    /** Return the current section-relative cursor when object production is active. */
     sectionPosition?(): SectionPosition;
+    /** Deferred fragment binding failure surfaced at numeric read time when encoders opt in. */
     readonly bindingFailure?: OperandBindingFailure;
+    /** Evaluate a typed expression to a numeric value at the current cursor. */
     evaluate(expression: ExpressionNode): number;
     /** Mathematical grouping can round differently from a numeric atom read. */
     evaluateMath?(expression: ExpressionNode): number;
+    /** Resolve a reference expression, optionally at an instruction-relative address. */
     reference(expression: ReferenceExpressionNode, address?: number): ReferenceResolution;
+    /** Construct a stage-appropriate error for encoder failures. */
     error?(message: string): Error;
+    /** Current logical byte cursor observed by operand reads. */
     currentAddress(): number;
+    /** Active assembly stage for this evaluation frame. */
     stage(): AssemblyStageName;
     /** Identity changes on a new stage/session snapshot; callers cannot reuse a frame across it. */
     stageIdentity(): object;
 }
 /** Width intent and evaluated value remain separate, including signed and fractional values. */
 export type ResolvedOperandValue = {
+    /** Numeric value observed for the operand at the evaluation point. */
     readonly value: number;
+    /** Declared storage width for the operand slot. */
     readonly width: OperandScalar["width"];
+    /** Source span covering the operand token in the original line. */
     readonly span: OperandScalar["span"];
+    /** Encoder phase when the value was recorded. */
     readonly point: OperandEvaluationPoint;
+    /** Logical address active when the read occurred. */
     readonly address: number;
     /** Optional diagnostic/source-map spelling. It is never parsed or used to select a form. */
     readonly displayText?: string;
@@ -53,11 +70,17 @@ export type ResolvedOperandValue = {
 };
 /** A stage-owned receipt, not a cache of values for later assembly passes. */
 export type ResolvedInstruction = {
+    /** Assembly stage that produced the resolution snapshot. */
     readonly stage: AssemblyStageName;
+    /** Instruction-start logical address for the lowered form. */
     readonly address: number;
+    /** Selected encoder form identifier. */
     readonly form: string;
+    /** Total encoded byte size for the selected form. */
     readonly size: number;
+    /** Copied processor or encoder state at form selection time. */
     readonly state: SyntaxValue;
+    /** Operand values recorded during sizing and encoding for this form. */
     readonly values: readonly ResolvedOperandValue[];
 };
 /**
@@ -98,7 +121,9 @@ export declare class InstructionResolutionFrame {
     get bindingFailure(): OperandBindingFailure | undefined;
     /** Stage policy is observed through the frame rather than retained session capabilities. */
     get stageName(): AssemblyStageName;
+    /** Build an encoder error without releasing the resolution frame. */
     error(message: string): Error;
+    /** Logical address after opcode and operand writes within this frame. */
     currentAddress(): number;
     /** The invocation-start byte cursor is stable even after opcode writes advance the live cursor. */
     get instructionAddress(): number;
@@ -132,16 +157,23 @@ export interface TypedArchitectureEncoder {
     prepare?(frame: InstructionResolutionFrame): void;
     /** Reset processor-local state at the start of each pass. */
     beginPass?(): void;
+    /** Return the encoded byte length for the current frame without writing bytes. */
     estimate(frame: InstructionResolutionFrame): number;
+    /** Encode the selected form, returning false when the frame should try another form. */
     encode(frame: InstructionResolutionFrame, context: TypedEncoderContext): boolean;
 }
+/** Emission and diagnostic sinks passed into typed encoders during encode. */
 export interface TypedEncoderContext {
+    /** Byte emission callbacks bound to the active assembly session. */
     readonly emission: EncoderEmissionContext;
+    /** Diagnostic reporting hooks for encoder-selected messages. */
     readonly diagnostics: EncoderDiagnosticContext;
 }
 /** Versioned architecture-owned grammar, selected again when an `arch` directive changes the CPU. */
 export interface ArchitectureOperandGrammar {
+    /** Grammar revision bumped when tokenization or operand shapes change. */
     readonly version: string;
+    /** Parse raw operand text for a mnemonic into typed operand structures. */
     parse(mnemonic: string, operands: string): ParsedInstructionOperands;
 }
 //# sourceMappingURL=resolved-instruction.d.ts.map

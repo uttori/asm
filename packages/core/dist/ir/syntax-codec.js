@@ -1,13 +1,19 @@
 import { copySyntaxValue, immutableSyntaxValue, } from "./source-syntax.js";
+/** Accepts any string syntax payload field. */
 export const syntaxString = (value) => typeof value === "string";
+/** Accepts finite numeric syntax payload fields. */
 export const syntaxNumber = (value) => typeof value === "number" && Number.isFinite(value);
+/** Accepts boolean syntax payload fields. */
 export const syntaxBoolean = (value) => typeof value === "boolean";
+/** Builds a guard that accepts only one exact literal value. */
 export function syntaxLiteral(literal) {
     return (value) => value === literal;
 }
+/** Builds a guard that validates every array element with an element guard. */
 export function syntaxArray(guard) {
     return (value) => Array.isArray(value) && value.every(guard);
 }
+/** Builds a guard that accepts undefined or a value passing the inner guard. */
 export function syntaxOptional(guard) {
     return (value) => value === undefined || guard(value);
 }
@@ -26,6 +32,7 @@ export function syntaxRecord(shape) {
             Object.entries(shape).every(([key, guard]) => guard(fields[key])));
     };
 }
+/** Builds a guard that succeeds when any member guard accepts the value. */
 export function syntaxUnion(...guards) {
     return (value) => guards.some((guard) => guard(value));
 }
@@ -37,7 +44,9 @@ export const syntaxSpan = syntaxRecord({
     columnStart: syntaxOptional(syntaxNumber),
     columnEnd: syntaxOptional(syntaxNumber),
 });
+/** True when a syntax value is a bare identifier expression node. */
 const identifier = (value) => syntaxExpression(value) && value.type === "identifier";
+/** True when a syntax value is any reference-shaped expression node. */
 const reference = (value) => syntaxExpression(value) &&
     ["identifier", "defineReference", "relativeReference", "member", "index"].includes(value.type);
 const outcome = syntaxUnion(syntaxRecord({ kind: syntaxLiteral("native") }), syntaxRecord({

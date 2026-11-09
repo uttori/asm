@@ -6,8 +6,11 @@ import { bindFrameAtlasPalette, inspectFrameAtlas } from "./som-frame-atlas.js";
 import { planBodyFrameEdits, layoutStableFrameAtlas, renderStableFrameAtlas, } from "./som-frame-edit.js";
 import { planSpritePaletteWords } from "./som-palette-edit.js";
 import { spritePaletteColors } from "./som-sprite-palettes.js";
+/** Stable owner id for one atlas tile sheet image. */
 const tileId = (name) => `tiles:${name}`;
+/** Stable owner id for one pose's composed frame record. */
 const poseId = (frame) => `pose:${JSON.stringify(frame.id)}`;
+/** Stable owner id for one block within a pose frame. */
 const blockId = (frame, block) => `block:${JSON.stringify([frame.id, block])}`;
 const ORIGIN = 128;
 /** Export one uncompressed ordinary-body atlas. Unsupported codecs fail before opening the editor. */

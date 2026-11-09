@@ -4,20 +4,22 @@ import { convertBossImage } from "./som-boss-image.js";
 import { inspectFrameAtlas, encodeInspectedFrameSegment } from "./som-frame-atlas.js";
 import { validateFrameComposition } from "./som-frame-composition.js";
 import { spritePaletteBytes, spritePaletteColors, validateSpritePaletteAliases, } from "./som-sprite-palettes.js";
-/** A use is an identity tuple, not a display name or an ordering-dependent user entry.
- * @param {string} palette Catalogue palette id.
- * @param {string} atlas Atlas id.
- * @param {string} role `primary` or `runtime-variant`.
- * @param {readonly string[]} segments Segment names that use the palette.
- * @returns {string} Stable identity key.
+/**
+ * A use is an identity tuple, not a display name or an ordering-dependent user entry.
+ * @param palette Catalogue palette id.
+ * @param atlas Atlas id.
+ * @param role `primary` or `runtime-variant`.
+ * @param segments Segment names that use the palette.
+ * @returns Stable identity key.
  */
 function useKey(palette, atlas, role, segments) {
     return JSON.stringify([palette, atlas, role, [...segments].toSorted()]);
 }
-/** Cross-check all catalogue users against supplied layouts, independent of filesystem/bank names.
- * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
- * @param {readonly {id: string, layout: FrameLayout}[]} atlases Layouts to reconcile.
- * @returns {{errors: string[], uses: number}} Mismatches and the number of actual uses.
+/**
+ * Cross-check all catalogue users against supplied layouts, independent of filesystem/bank names.
+ * @param catalog Shared palette catalogue.
+ * @param atlases Layouts to reconcile.
+ * @returns Mismatches and the number of actual uses.
  */
 export function inspectSpritePaletteUsers(catalog, atlases) {
     const actual = new Set();
@@ -104,12 +106,13 @@ export function inspectSpritePaletteUsers(catalog, atlases) {
     }
     return { errors, uses: actual.size };
 }
-/** Check compressed graphics through the registered game policy, never infer storage from a filename.
- * @param {SpriteAtlasSource} atlas Atlas that declares native compression.
- * @param {AssetInput} source PNG bytes to convert.
- * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
- * @param {string} segment Segment name.
- * @returns {Uint8Array | undefined} Preserved native bytes, when this segment declares storage.
+/**
+ * Check compressed graphics through the registered game policy, never infer storage from a filename.
+ * @param atlas Atlas that declares native compression.
+ * @param source PNG bytes to convert.
+ * @param catalog Shared palette catalogue.
+ * @param segment Segment name.
+ * @returns Preserved native bytes, when this segment declares storage.
  */
 function nativeBytes(atlas, source, catalog, segment) {
     const options = atlas.nativeOptions?.[segment];
@@ -135,9 +138,9 @@ function nativeBytes(atlas, source, catalog, segment) {
  * Return explicitly validated native chunk names that an indexed PNG rewrite may retain.
  * Callers supply compression declarations from the include map. Unknown native chunks are
  * not retained implicitly, and an undeclared boss stream fails before authoring changes.
- * @param {SpriteAtlasSource} atlas Atlas PNG and layout.
- * @param {SpritePaletteCatalog} catalog Shared palette catalogue.
- * @returns {string[]} Private PNG chunk names safe to retain.
+ * @param atlas Atlas PNG and layout.
+ * @param catalog Shared palette catalogue.
+ * @returns Private PNG chunk names safe to retain.
  */
 export function frameAtlasPreservedChunks(atlas, catalog) {
     const bytes = atlas.source.bytes;
@@ -157,7 +160,8 @@ export function frameAtlasPreservedChunks(atlas, catalog) {
     }
     return names;
 }
-/** Plan physical palette-word changes without requiring or rewriting PNG display colors.
+/**
+ * Plan physical palette-word changes without requiring or rewriting PNG display colors.
  * Shared ROM aliases are updated together; native hidden bits and unedited words stay exact.
  */
 export function planSpritePaletteWords(catalog, edits) {
@@ -215,10 +219,10 @@ export function planSpritePaletteWords(catalog, edits) {
  * Plan exact RGB8 edits by catalogue slot. All atlases must be supplied so stale users fail.
  * Results are owned values; the host publishes them together. Variant-only users retain
  * their primary PNG palette. Unrepresentable colors fail instead of being quantized.
- * @param {object} catalog Current shared palette catalogue.
- * @param {Array} atlases Identified sources/layouts and optional native compression declarations.
- * @param {Array<{palette: string, index: number, rgb: number[]}>} edits Palette slot edits (index includes firstIndex).
- * @returns {{catalog: SpritePaletteCatalog, images: Map<string, Uint8Array>, palettes: string[]}} Updated catalogue and owned PNG bytes.
+ * @param catalog Current shared palette catalogue.
+ * @param atlases Identified sources/layouts and optional native compression declarations.
+ * @param edits Palette slot edits (index includes firstIndex).
+ * @returns Updated catalogue and owned PNG bytes.
  */
 export function planSpritePaletteEdits(catalog, atlases, edits) {
     validateSpritePaletteAliases(catalog);

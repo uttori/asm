@@ -1,15 +1,19 @@
 /** Editable room records with fixed ROM ownership and a native-data background preview. */
 import { invariant as assert, equal, fail } from "../validation.js";
 import { composeSomRoom, renderSomRoomComposition } from "./som-room-composition.js";
+/** Narrow JSON values to plain objects during room parsing. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Accept any object as a room entity pending field validation elsewhere. */
 function isRoomEntity(value) {
     return isRecord(value);
 }
+/** Accept any object as a room piece pending field validation elsewhere. */
 function isRoomPiece(value) {
     return isRecord(value);
 }
+/** Structural guard for a parsed room preview sidecar envelope. */
 function isRoomPreview(value) {
     return (isRecord(value) &&
         value.format === "som.room.preview" &&
@@ -17,6 +21,7 @@ function isRoomPreview(value) {
         isRecord(value.tilesets) &&
         isRecord(value.layouts));
 }
+/** Structural guard for room entities, pieces and triggers arrays. */
 function isRoomAsset(value) {
     return (isRecord(value) &&
         Array.isArray(value.entities) &&
@@ -26,11 +31,12 @@ function isRoomAsset(value) {
         Array.isArray(value.triggers) &&
         value.triggers.every((item) => typeof item === "number"));
 }
-/** Reject truncation rather than silently masking a user's edited field.
- * @param {unknown} value Field to check.
- * @param {number} maximum Inclusive upper bound.
- * @param {string} name Field name used in the error.
- * @returns {number} The validated integer.
+/**
+ * Reject truncation rather than silently masking a user's edited field.
+ * @param value Field to check.
+ * @param maximum Inclusive upper bound.
+ * @param name Field name used in the error.
+ * @returns The validated integer.
  */
 function integer(value, maximum, name) {
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > maximum) {
@@ -38,9 +44,10 @@ function integer(value, maximum, name) {
     }
     return value;
 }
-/** One room owns three discontiguous sections; shared layouts, graphics and palettes remain references.
- * @param {AssetInput} source JSON room records.
- * @returns {RoomAsset} Validated room.
+/**
+ * One room owns three discontiguous sections; shared layouts, graphics and palettes remain references.
+ * @param source JSON room records.
+ * @returns Validated room.
  */
 export function parseRoomAsset(source) {
     equal(source.mediaType, "application/json", "Room source must be JSON.");
@@ -63,9 +70,10 @@ export function parseRoomAsset(source) {
     }
     return parsed;
 }
-/** Parse a captured preview sidecar. Render still checks tileset and layout contents.
- * @param {Uint8Array} bytes JSON bytes for a `som.room.preview` document.
- * @returns {RoomPreview} Preview envelope with tileset and layout records.
+/**
+ * Parse a captured preview sidecar. Render still checks tileset and layout contents.
+ * @param bytes JSON bytes for a `som.room.preview` document.
+ * @returns Preview envelope with tileset and layout records.
  */
 export function parseRoomPreview(bytes) {
     const parsed = JSON.parse(new TextDecoder().decode(bytes));
@@ -79,9 +87,10 @@ export function parseRoomPreview(bytes) {
     }
     return parsed;
 }
-/** Encode whole-byte story predicates with packed inclusive nibbles, without changing their semantics.
- * @param {RoomCondition} record Story variable and inclusive nibble range.
- * @returns {number[]} Variable byte and packed minimum/maximum.
+/**
+ * Encode whole-byte story predicates with packed inclusive nibbles, without changing their semantics.
+ * @param record Story variable and inclusive nibble range.
+ * @returns Variable byte and packed minimum/maximum.
  */
 function condition(record) {
     const variable = integer(record.variable, 255, "story variable");
@@ -92,9 +101,9 @@ function condition(record) {
 /**
  * Repack one fixed section. Changing record counts or adding layer markers requires relocation,
  * so length changes fail instead of silently overwriting an adjacent room's records.
- * @param {RoomAsset} room Editable room records.
- * @param {string} section `objects`, `assembly`, or `triggers`.
- * @returns {Uint8Array} Native bytes for that fixed span.
+ * @param room Editable room records.
+ * @param section `objects`, `assembly`, or `triggers`.
+ * @returns Native bytes for that fixed span.
  */
 export function encodeRoomSection(room, section) {
     assert(["objects", "assembly", "triggers"].includes(section), "Room section must be objects, assembly or triggers.");
@@ -137,9 +146,9 @@ export function encodeRoomSection(room, section) {
 }
 /**
  * Validate every section, so an invalid edit cannot hide behind a different include.
- * @param {{mediaType: string, bytes: Uint8Array}} source Serialized editable room records.
- * @param {{section?: unknown}} options Selects one of the three fixed ROM spans.
- * @returns {{primaryOutput: string, outputs: Record<string, {bytes: Uint8Array}>}} Validated native bytes for all spans.
+ * @param source Serialized editable room records.
+ * @param options Selects one of the three fixed ROM spans.
+ * @returns Validated native bytes for all spans.
  */
 export function convertRoomAsset(source, options) {
     const room = parseRoomAsset(source);
@@ -151,12 +160,13 @@ export function convertRoomAsset(source, options) {
     assert(typeof selected === "string" && Object.hasOwn(outputs, selected), "Select a room section.");
     return { primaryOutput: selected, outputs };
 }
-/** Validate the selected captured tileset and compose current conditional placements at native scale.
- * @param {RoomAsset} room Editable room records.
- * @param {RoomPreview} preview Captured tilesets and layouts.
- * @param {unknown} [layer] Background layer 1, 2, or both when omitted.
- * @param {Readonly<Record<string, number>>} [story] Story-variable overrides.
- * @returns {{rgba: Uint8Array, width: number, height: number, tileset: string, activePieces: number[], limitation: string}} Native-scale preview.
+/**
+ * Validate the selected captured tileset and compose current conditional placements at native scale.
+ * @param room Editable room records.
+ * @param preview Captured tilesets and layouts.
+ * @param [layer] Background layer 1, 2, or both when omitted.
+ * @param [story] Story-variable overrides.
+ * @returns Native-scale preview.
  */
 export function renderRoomAsset(room, preview, { layer, story } = {}) {
     if (layer !== undefined && layer !== 1 && layer !== 2) {

@@ -1,6 +1,7 @@
 /** Own every consumed module input across passes, including virtual documents and converter resources. */
 export class ModuleFileProvider {
     provider;
+    /** Immutable byte snapshots retained for the current build pass. */
     snapshots = new Map();
     bytes = 0;
     constructor(provider) {
@@ -25,9 +26,11 @@ export class ModuleFileProvider {
         this.bytes += bytes.length - (previous?.length ?? 0);
         this.snapshots.set(filename, bytes.slice());
     }
+    /** Delegates path resolution to the wrapped provider without caching. */
     resolvePath(filename, options) {
         return this.provider.resolvePath(filename, options);
     }
+    /** Delegates file metadata queries to the wrapped provider. */
     stat(filename) {
         return this.provider.stat(filename);
     }
@@ -41,6 +44,7 @@ export class ModuleFileProvider {
         }
         return bytes.slice();
     }
+    /** Decodes a retained snapshot using the same copy-on-read boundary as binary reads. */
     readTextFile(filename, encoding = "utf8") {
         const bytes = this.readFile(filename);
         if (typeof Buffer !== "undefined") {

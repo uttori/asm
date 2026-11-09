@@ -16,12 +16,13 @@ export function inheritCoreDataHandler(original, wrapped) {
 }
 /**
  * Routes byte/word/long data directives through the runtime data handler.
- * @param {DataDirectiveContext} ctx The ROM-capable directive context.
- * @param {string[]} words The directive words.
+ * @param ctx The ROM-capable directive context.
+ * @param words The directive words.
  */
 export const handleDataDirective = ({ runtime }, words) => {
     runtime.handleDataDirective(words[0], words.slice(1));
 };
+/** Registers numeric and character data directives that delegate to the data runtime. */
 export const registerDataDirectives = (registry, context) => {
     const keywords = ["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"];
     registry.registerImmutableTyped(keywords, ({ text, words, source }) => {

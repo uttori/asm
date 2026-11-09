@@ -14,11 +14,11 @@ import { analysisProjectRevision, assertAnalysisProjectRevision, } from "./proje
  * ROM mismatch and conflicting stable IDs leave previously published facts and revision unchanged.
  * An explicit storage policy is saved separately before import. The input file is never moved or deleted.
  * A pointer-file error can reject after SQLite has committed. Reopen the project before retrying.
- * @param {string} file Native instruction trace path.
- * @param {string} directory Destination SQLite project root.
- * @param {RuntimeInstructionTraceImportContext} context Required ROM identity and requested indexing profile.
- * @param {RuntimeTraceProjectImportOptions} [options] Input budget, progress callbacks and cancellation signal.
- * @returns {Promise<RuntimeTraceProjectImportResult>} Committed counts, execution seeds, and maintenance warnings.
+ * @param file Native instruction trace path.
+ * @param directory Destination SQLite project root.
+ * @param context Required ROM identity and requested indexing profile.
+ * @param [options] Input budget, progress callbacks and cancellation signal.
+ * @returns Committed counts, execution seeds, and maintenance warnings.
  */
 export const importRuntimeTraceIntoProject = async (file, directory, context, options = {}) => {
     const source = await createRuntimeCaptureSource(file, options);
@@ -257,11 +257,12 @@ export async function importRuntimeTraceSourceIntoProject(source, directory, con
         }
     }
 }
-/** Publish a combined offline batch without expanding the destination runtime history.
- * @param {string} directory Existing SQL project root.
- * @param {AnalysisProjectRevision} expected Revision used to verify the import ROM/mapper.
- * @param {RuntimeEvidenceBatch} batch Validated importer output. Stable-ID conflicts roll back the entire batch.
- * @returns {object} Atomic import changes and counts.
+/**
+ * Publish a combined offline batch without expanding the destination runtime history.
+ * @param directory Existing SQL project root.
+ * @param expected Revision used to verify the import ROM/mapper.
+ * @param batch Validated importer output. Stable-ID conflicts roll back the entire batch.
+ * @returns Atomic import changes and counts.
  */
 export const commitRuntimeEvidenceBatch = (directory, expected, batch) => {
     const store = openAnalysisProjectStore(directory);

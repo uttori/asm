@@ -1,4 +1,5 @@
 import { canonicalEquals } from "@uttori/asm-core/canonical-json";
+/** Initialize per-shard merge counters to zero. */
 const emptyCounts = () => ({
     analysis: 0,
     annotations: 0,
@@ -9,8 +10,11 @@ const emptyCounts = () => ({
     evidence: 0,
     imports: 0,
 });
+/** Sort and deduplicate stable string ids for deterministic merge output. */
 const sortedUnique = (values) => [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
+/** Build a deterministic comparison key for runtime state values. */
 const stateValueKey = (value) => `${typeof value}:${String(value)}`;
+/** Derive deterministic CPU-state and execution conflicts from runtime records. */
 const conflictReport = (runtime) => {
     const observations = [];
     for (const record of runtime) {
@@ -103,6 +107,7 @@ const conflictReport = (runtime) => {
     }
     return conflicts.toSorted((left, right) => left.id.localeCompare(right.id));
 };
+/** Link runtime evidence to derived annotations and target overrides. */
 const explanationReport = (shards) => {
     const runtimeEvidence = new Set(shards.evidence.filter((record) => record.source === "runtime").map((record) => record.id));
     const explanations = [];
@@ -138,6 +143,7 @@ const explanationReport = (shards) => {
     }
     return explanations.toSorted((left, right) => left.recordId.localeCompare(right.recordId));
 };
+/** Merge one shard by stable id, counting adds, updates, and unchanged records. */
 const mergeRecords = (kind, prior, incoming, added, updated, existing, combine) => {
     // A PC-only import usually leaves the much larger CFG and annotation collections untouched.
     // Reuse their readonly arrays instead of indexing and copying every unrelated record.
@@ -179,9 +185,9 @@ const mergeRecords = (kind, prior, incoming, added, updated, existing, combine) 
  * and are surfaced through `conflicts`. Diagnostic getters are lazy. Reading or serializing
  * them can require substantially more memory than merging the facts alone.
  * Collections without incoming records retain their input arrays. Treat all shared records as readonly.
- * @param {AnalysisProjectShards} shards Valid native project shards with unique IDs in each collection.
- * @param {RuntimeEvidenceBatch} batch Normalized imported and derived records.
- * @returns {RuntimeEvidenceMergeResult} New shards plus deterministic merge diagnostics.
+ * @param shards Valid native project shards with unique IDs in each collection.
+ * @param batch Normalized imported and derived records.
+ * @returns New shards plus deterministic merge diagnostics.
  */
 export const mergeRuntimeEvidence = (shards, batch) => {
     // Historical Secret of Mana receipts may describe reduced facts. Reject incompatible batches
@@ -248,8 +254,8 @@ export const mergeRuntimeEvidence = (shards, batch) => {
 };
 /**
  * Recomputes conflict and provenance explanations for a previously merged project.
- * @param {AnalysisProjectShards} shards Native project shards to inspect.
- * @returns {Pick<RuntimeEvidenceMergeResult, "conflicts" | "explanations">} Stable diagnostics.
+ * @param shards Native project shards to inspect.
+ * @returns Stable diagnostics.
  */
 export const inspectRuntimeEvidence = (shards) => ({
     conflicts: conflictReport(shards.runtime),

@@ -3,16 +3,16 @@ export const SNES_SESSION_STATE_ID = "snes.session-state";
 /**
  * Attaches the compile-time session-state brand. The brand is not a runtime property;
  * a non-empty id is the only value `SessionStateStore` reads.
- * @param {{ readonly id: string }} value Key candidate.
- * @returns {boolean} True when the id can identify a session slot.
+ * @param value Key candidate.
+ * @returns True when the id can identify a session slot.
  */
 function isSessionStateKey(value) {
     return value.id.length > 0;
 }
 /**
  * Builds the branded SNES session slot key.
- * @param {string} id Plugin-owned slot id.
- * @returns {SessionStateKey<T>} Key for `SessionStateStore.get`.
+ * @param id Plugin-owned slot id.
+ * @returns Key for `SessionStateStore.get`.
  */
 function createSessionStateKey(id) {
     const key = { id };
@@ -26,8 +26,8 @@ export const snesSessionStateKey = createSessionStateKey(SNES_SESSION_STATE_ID);
 /**
  * Deep-clones mutable nested fields so parallel/pass clones cannot share banks
  * or an open SPC block.
- * @param {SnesSessionState} value The session state to clone.
- * @returns {SnesSessionState} A deep-cloned session state.
+ * @param value The session state to clone.
+ * @returns A deep-cloned session state.
  */
 export function cloneSnesSessionState(value) {
     return {

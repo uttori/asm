@@ -16,11 +16,17 @@ export declare class AsarModuleLayout {
     beginStage(): void;
     /** Each address transition opens a relocatable contribution; no fixed placement is stored in the object. */
     private open;
+    /** Opens a section with identical load and run addresses. */
     org(address: number): number;
+    /** Opens a section keeping the current load address and optional run address. */
     base(address?: number): number;
+    /** Saves the current section cursor on the PC stack. */
     pushPc(): void;
+    /** Restores the most recently pushed section cursor. */
     pullPc(): number;
+    /** Saves the current run address on the base stack. */
     pushBase(): void;
+    /** Reopens a section using the saved run address as the new base. */
     pullBase(): number;
     /** Numeric preview is for source encoding decisions only. Relocation expressions retain their section leaves. */
     currentAddress(kind: "load" | "run"): number;

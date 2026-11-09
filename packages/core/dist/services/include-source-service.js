@@ -4,7 +4,9 @@ import { incrementInternalCounter, measureInternalPhase, withSourceSyntax, } fro
  */
 export class IncludeSourceService {
     host;
+    /** Memoized include resolution keyed by active file, paths, and requested path. */
     resolvedPathCache = new Map();
+    /** Memoized text reads keyed by encoding and resolved path. */
     textCache = new Map();
     constructor(host) {
         this.host = host;
@@ -24,9 +26,9 @@ export class IncludeSourceService {
     }
     /**
      * Reads a source-relative binary or text file.
-     * @param {string} filePath The path to read.
-     * @param {BufferEncoding} [encoding] Optional text encoding.
-     * @returns {Uint8Array | string} The file contents.
+     * @param filePath The path to read.
+     * @param [encoding] Optional text encoding.
+     * @returns The file contents.
      */
     readFile(filePath, encoding) {
         try {
@@ -49,8 +51,8 @@ export class IncludeSourceService {
     }
     /**
      * Resolves a source include target.
-     * @param {string} filename The target filename.
-     * @returns {string} The resolved provider path.
+     * @param filename The target filename.
+     * @returns The resolved provider path.
      */
     resolveIncludePath(filename) {
         if (filename == null) {
@@ -64,7 +66,7 @@ export class IncludeSourceService {
     }
     /**
      * Marks and assembles an `include` target.
-     * @param {string} filename The target filename.
+     * @param filename The target filename.
      */
     includeFile(filename) {
         const resolvedPath = this.resolveIncludePath(filename);
@@ -95,7 +97,7 @@ export class IncludeSourceService {
     }
     /**
      * Resolves, parses, lowers, and executes one source file.
-     * @param {string} filename The target filename.
+     * @param filename The target filename.
      */
     assembleFile(filename) {
         const resolvedPath = this.resolveIncludePath(filename);
@@ -149,6 +151,7 @@ export class IncludeSourceService {
             this.host.currentFile = this.host.includeStack.pop() ?? "";
         }
     }
+    /** Snapshot of host path context used for include resolution cache keys. */
     get resolutionOptions() {
         return {
             currentFile: this.host.currentFile,
@@ -158,8 +161,8 @@ export class IncludeSourceService {
     }
     /**
      * Resolves a path once for the active source and include-path context.
-     * @param {string} filePath The source-relative path to resolve.
-     * @returns {string | undefined} The resolved provider path.
+     * @param filePath The source-relative path to resolve.
+     * @returns The resolved provider path.
      */
     resolvePath(filePath) {
         const options = this.resolutionOptions;
@@ -182,9 +185,9 @@ export class IncludeSourceService {
     }
     /**
      * Reads source text once per assembly snapshot.
-     * @param {string} resolvedPath The resolved provider path.
-     * @param {BufferEncoding} encoding The requested text encoding.
-     * @returns {string} The cached or newly read text.
+     * @param resolvedPath The resolved provider path.
+     * @param encoding The requested text encoding.
+     * @returns The cached or newly read text.
      */
     readTextFile(resolvedPath, encoding) {
         const key = `${encoding}\u0000${resolvedPath}`;
@@ -200,6 +203,7 @@ export class IncludeSourceService {
         return content;
     }
 }
+/** Best-effort JSON serialization for include failure diagnostics. */
 function stringifyCaught(value) {
     return JSON.stringify(value);
 }

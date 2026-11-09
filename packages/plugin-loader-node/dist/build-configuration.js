@@ -9,8 +9,11 @@ export function isModuleRecipeSelection(value) {
         isText(value.target) &&
         Object.keys(value).every((key) => key === "from" || key === "target"));
 }
+/** Accepts a plain JSON object; arrays and null are rejected. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Accepts a non-blank string without NUL bytes, usable as a path or identifier. */
 const isText = (value) => typeof value === "string" && value.trim().length > 0 && !value.includes("\0");
+/** Accepts at most 65536 path strings that each satisfy isText. */
 const isPaths = (value) => Array.isArray(value) && value.length <= 65536 && value.every(isText);
 /** Validate the host graph before loading plugins. The linker independently validates every recipe field. */
 function assertBuildManifest(value) {

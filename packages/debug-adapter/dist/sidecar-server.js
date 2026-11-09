@@ -1,27 +1,35 @@
 import { DEBUG_BACKEND_PROTOCOL_VERSION, } from "./contracts.js";
 import { DEFAULT_DEBUG_SIDECAR_LIMITS, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DebugSidecarMessageParser, DebugSidecarMessageQueue, assertDebugSidecarSessionToken, } from "./sidecar-protocol.js";
+/** Narrows step kind strings from sidecar command arguments. */
 const isStepKind = (value) => value === "instruction" || value === "over" || value === "in" || value === "out";
+/** Narrows unknown JSON to plain objects. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Validates and returns a JSON object with a contextual error path. */
 const record = (value, context) => {
     if (!isRecord(value)) {
         throw new Error(`${context} must be an object.`);
     }
     return value;
 };
+/** Validates and returns a bounded safe integer with a contextual error path. */
 const integer = (value, context, minimum = 0) => {
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
     }
     return value;
 };
+/** Validates a positive safe integer field. */
 const positiveInteger = (value, context) => integer(value, context, 1);
+/** Validates and returns a non-empty string with a contextual error path. */
 const string = (value, context) => {
     if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${context} must be a non-empty string.`);
     }
     return value;
 };
+/** Parses an optional positive integer field from sidecar JSON. */
 const optionalPositiveInteger = (value, context) => value === undefined ? undefined : positiveInteger(value, context);
+/** Parses a boolean field, applying a default when the property is absent. */
 const boolean = (value, context, defaultValue) => {
     if (value === undefined) {
         return defaultValue;
@@ -31,6 +39,7 @@ const boolean = (value, context, defaultValue) => {
     }
     return value;
 };
+/** Parses one architecture-qualified address from sidecar JSON. */
 const address = (value, context) => {
     const candidate = record(value, context);
     if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0) {
@@ -49,17 +58,20 @@ const address = (value, context) => {
         ...(outputOffset === undefined ? {} : { outputOffset }),
     };
 };
+/** Parses an address array from sidecar JSON. */
 const addresses = (value, context) => {
     if (!Array.isArray(value)) {
         throw new Error(`${context} must be an array.`);
     }
     return value.map((entry, index) => address(entry, `${context}[${index}]`));
 };
+/** Narrows command names to shutdown for the terminal server path. */
 function assertShutdownCommand(command) {
     if (command !== "shutdown") {
         throw new Error(`Unsupported command '${command}'.`);
     }
 }
+/** Normalizes unknown failures into Error instances. */
 const asError = (error) => error instanceof Error ? error : new Error(String(error));
 /** Authenticated, ordered server that exposes any `DebugBackend` over the neutral wire protocol. */
 export class DebugSidecarServer {
@@ -78,7 +90,7 @@ export class DebugSidecarServer {
     #closed = false;
     /**
      * Creates a server around an emulator-neutral backend implementation.
-     * @param {DebugSidecarServerOptions} options Identity, backend, transport, and safety bounds.
+     * @param options Identity, backend, transport, and safety bounds.
      */
     constructor(options) {
         if (typeof options.backend !== "string" || options.backend.length === 0) {
@@ -95,14 +107,17 @@ export class DebugSidecarServer {
         this.#outgoing = new DebugSidecarMessageQueue(limits);
         this.#eventSubscription = this.#implementation.onEvent((event) => this.#backendEvent(event));
     }
-    /** @returns {boolean} Whether the server has permanently closed. */
+    /**
+     * Whether the server has permanently closed.
+     * @returns True after shutdown or terminal protocol failure.
+     */
     get closed() {
         return this.#closed;
     }
     /**
      * Accepts the next transport chunk. Calls are serialized even when the stream producer overlaps them.
-     * @param {Uint8Array} data Framed protocol bytes from the client.
-     * @returns {Promise<void>} Completion after every request in this chunk has been dispatched.
+     * @param data Framed protocol bytes from the client.
+     * @returns Completion after every request in this chunk has been dispatched.
      */
     receive(data) {
         if (this.#closed) {
@@ -117,8 +132,8 @@ export class DebugSidecarServer {
     }
     /**
      * Flushes queued output and closes the server transport exactly once.
-     * @param {Error} error Optional terminal protocol or transport failure.
-     * @returns {Promise<void>} Completion of transport cleanup.
+     * @param error Optional terminal protocol or transport failure.
+     * @returns Completion of transport cleanup.
      */
     async close(error) {
         if (this.#closed) {

@@ -9,8 +9,8 @@ const HEADER_BYTES = 8;
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 /**
  * Keep small JSON as SQLite TEXT. Larger values use a checksummed, versioned BLOB only when worthwhile.
- * @param {string} json Serialized semantic record or variant payload.
- * @returns {string | Buffer} Raw text, or a BLOB saving at least 32 bytes and one eighth of the input.
+ * @param json Serialized semantic record or variant payload.
+ * @returns Raw text, or a BLOB saving at least 32 bytes and one eighth of the input.
  */
 export const encodeSqlitePayload = (json) => {
     const bytes = Buffer.byteLength(json);
@@ -42,8 +42,8 @@ export const encodeSqlitePayload = (json) => {
 };
 /**
  * Decode one bounded payload, rejecting unknown codecs, corrupt checksums, and invalid UTF-8.
- * @param {unknown} value SQLite TEXT or a versioned compressed/packed BLOB.
- * @returns {string} Lossless semantic JSON. Malformed storage throws without returning partial content.
+ * @param value SQLite TEXT or a versioned compressed/packed BLOB.
+ * @returns Lossless semantic JSON. Malformed storage throws without returning partial content.
  */
 export const decodeSqlitePayload = (value) => {
     if (typeof value === "string") {
@@ -84,10 +84,11 @@ export const decodeSqlitePayload = (value) => {
         throw new Error("Corrupt SQLite compressed payload.", { cause });
     }
 };
-/** Parse owned semantic data, bypassing JSON serialization for packed runtime snapshots.
+/**
+ * Parse owned semantic data, bypassing JSON serialization for packed runtime snapshots.
  * Callers validate the decoded value before use.
- * @param {unknown} value Stored TEXT or a supported versioned BLOB.
- * @returns {unknown} Decoded semantic data.
+ * @param value Stored TEXT or a supported versioned BLOB.
+ * @returns Decoded semantic data.
  */
 export const parseSqlitePayload = (value) => {
     if (types.isUint8Array(value) && isPackedRuntimePayload(value)) {
@@ -98,8 +99,8 @@ export const parseSqlitePayload = (value) => {
 };
 /**
  * Factor repeated capture prefixes without changing arbitrary caller-supplied IDs.
- * @param {string} id Complete stable semantic identifier.
- * @returns {SqliteRuntimeIdentity} Lossless prefix and typed suffix suitable for a composite unique key.
+ * @param id Complete stable semantic identifier.
+ * @returns Lossless prefix and typed suffix suitable for a composite unique key.
  */
 export const sqliteRuntimeIdentity = (id) => {
     const split = id.lastIndexOf(":") + 1;
@@ -111,9 +112,9 @@ export const sqliteRuntimeIdentity = (id) => {
 };
 /**
  * Reconstruct the original ID, preserving text case and non-hexadecimal suffixes.
- * @param {unknown} prefix Interned prefix text.
- * @param {unknown} suffix SQLite TEXT or a 32-byte hash BLOB.
- * @returns {string} Exact external ID. Invalid binary identities throw.
+ * @param prefix Interned prefix text.
+ * @param suffix SQLite TEXT or a 32-byte hash BLOB.
+ * @returns Exact external ID. Invalid binary identities throw.
  */
 export const decodeSqliteRuntimeIdentity = (prefix, suffix) => {
     if (typeof prefix !== "string") {

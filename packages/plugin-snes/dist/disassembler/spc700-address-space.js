@@ -10,12 +10,15 @@ export const SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
 });
 /** Immutable contiguous ARAM image used by standalone SPC700 analysis. */
 export class Spc700AramImage {
+    /** First 16-bit ARAM address represented by the image. */
     loadAddress;
+    /** Lowercase hex SHA-256 of the image bytes, fixed at construction. */
     contentSha256;
     #bytes;
     /**
-     * @param {ArrayLike<number>} bytes Contiguous bytes copied into the image.
-     * @param {number} [loadAddress] First 16-bit ARAM address represented by `bytes`.
+     * Copies the bytes and validates that they fit contiguously below `$10000`.
+     * @param bytes Contiguous bytes copied into the image.
+     * @param [loadAddress] First 16-bit ARAM address represented by `bytes`.
      */
     constructor(bytes, loadAddress = 0) {
         if (!Number.isInteger(loadAddress) || loadAddress < 0 || loadAddress > 0xffff) {
@@ -30,22 +33,22 @@ export class Spc700AramImage {
     }
     /**
      * Number of represented ARAM bytes.
-     * @returns {number} Backing-image length.
+     * @returns Backing-image length.
      */
     get length() {
         return this.#bytes.length;
     }
     /**
      * Returns a defensive copy of the represented bytes.
-     * @returns {Uint8Array} Copied image bytes.
+     * @returns Copied image bytes.
      */
     bytes() {
         return this.#bytes.slice();
     }
     /**
      * Reads one byte by 16-bit ARAM address.
-     * @param {number} address SPC700 memory address.
-     * @returns {number | undefined} Byte value, or `undefined` outside the image.
+     * @param address SPC700 memory address.
+     * @returns Byte value, or `undefined` outside the image.
      */
     readByte(address) {
         const identity = this.identifyAddress(address);
@@ -53,8 +56,8 @@ export class Spc700AramImage {
     }
     /**
      * Maps a represented ARAM address to its backing-image offset.
-     * @param {number} address SPC700 memory address.
-     * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
+     * @param address SPC700 memory address.
+     * @returns Address identity when represented.
      */
     identifyAddress(address) {
         if (!Number.isInteger(address) || address < this.loadAddress) {
@@ -68,8 +71,8 @@ export class Spc700AramImage {
     }
     /**
      * Maps a backing-image offset to its 16-bit ARAM address.
-     * @param {number} imageOffset Offset in the contiguous backing image.
-     * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
+     * @param imageOffset Offset in the contiguous backing image.
+     * @returns Address identity when represented.
      */
     identifyOffset(imageOffset) {
         if (!Number.isInteger(imageOffset) || imageOffset < 0 || imageOffset >= this.length) {

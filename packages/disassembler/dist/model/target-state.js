@@ -1,6 +1,8 @@
+/** Narrow parsed JSON to a plain object record. */
 function record(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Accept only boolean flags and bounded register widths for 65816 assumptions. */
 function is65816(value) {
     return Object.entries(value).every(([field, item]) => {
         if (["e", "m", "x", "carry"].includes(field)) {

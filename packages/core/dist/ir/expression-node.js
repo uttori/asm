@@ -6,9 +6,9 @@ import { binaryPrecedence } from "./expression-operators.js";
 import { getRawExpressionOutcome, setRawExpressionOutcome, } from "./expression-parse-state.js";
 /**
  * Ensures the root expression node keeps at least a coarse span.
- * @param {ExpressionNode} node The parsed expression node.
- * @param {string} text The source text that produced the node.
- * @returns {ExpressionNode} The same node with a root span.
+ * @param node The parsed expression node.
+ * @param text The source text that produced the node.
+ * @returns The same node with a root span.
  */
 function attachRootSpan(node, text, source) {
     node.span ??= source
@@ -18,8 +18,8 @@ function attachRootSpan(node, text, source) {
 }
 /**
  * Parses portable expression syntax without resolving values or activating diagnostics.
- * @param {string} input The expression source text.
- * @returns {ExpressionNode} The parsed expression node.
+ * @param input The expression source text.
+ * @returns The parsed expression node.
  */
 export function parseExpressionNode(input, source) {
     return parseExpressionAtSite(input, "public", source);
@@ -143,8 +143,8 @@ function parseExpressionInput(input, site, source) {
  * Parsed trees retain their explicit rounding boundaries. Constructed trees that
  * require new groups to express precedence must mark those rounding boundaries
  * themselves; keep transformed trees as nodes when evaluating rounded arithmetic.
- * @param {ExpressionNode} node The expression node to render.
- * @returns {string} The rendered expression text.
+ * @param node The expression node to render.
+ * @returns The rendered expression text.
  */
 export function renderExpressionNode(node) {
     const text = renderExpressionBody(node);
@@ -270,8 +270,8 @@ function detachExpressionSpans(node) {
 }
 /**
  * Checks whether an expression belongs to the reference-expression subtree.
- * @param {ExpressionNode} node The expression node to inspect.
- * @returns {boolean} `true` when the node is a reference expression.
+ * @param node The expression node to inspect.
+ * @returns `true` when the node is a reference expression.
  */
 export function isReferenceExpressionNode(node) {
     switch (node.type) {
@@ -300,9 +300,9 @@ export function isReferenceExpressionNode(node) {
  * Renders a canonical lookup key. Root/object grouping is intentionally omitted
  * for symbol lookup; numeric index expressions keep their grouping. Use
  * renderExpressionNode when rendering a reference as a numeric expression.
- * @param {ReferenceExpressionNode} node The reference node to render.
- * @param {RenderReferenceExpressionOptions} [options] Optional rendering overrides.
- * @returns {string} The rendered reference text.
+ * @param node The reference node to render.
+ * @param [options] Optional rendering overrides.
+ * @returns The rendered reference text.
  */
 export function renderReferenceExpressionNode(node, options = {}) {
     switch (node.type) {
@@ -326,8 +326,8 @@ export function renderReferenceExpressionNode(node, options = {}) {
 }
 /**
  * Parses a leading reference-expression prefix from a larger source string.
- * @param {string} input The source text to scan.
- * @returns {{ node: ReferenceExpressionNode; length: number } | undefined} The parsed node and consumed length.
+ * @param input The source text to scan.
+ * @returns The parsed node and consumed length.
  */
 export function parseLeadingReferenceExpression(input) {
     const prefixLength = scanReferenceExpressionPrefix(input);
@@ -350,8 +350,8 @@ export function parseLeadingReferenceExpression(input) {
 }
 /**
  * Finds a top-level `..` range operator while respecting nested calls and quotes.
- * @param {string} input The expression source text.
- * @returns {number} The index of the operator or `-1`.
+ * @param input The expression source text.
+ * @returns The index of the operator or `-1`.
  */
 function findTopLevelRange(input) {
     let depth = 0;
@@ -394,8 +394,8 @@ function findTopLevelRange(input) {
 }
 /**
  * Scans the source text for a leading reference-expression prefix.
- * @param {string} input The source text to inspect.
- * @returns {number} The number of consumed characters.
+ * @param input The source text to inspect.
+ * @returns The number of consumed characters.
  */
 function scanReferenceExpressionPrefix(input) {
     let index = 0;
@@ -434,9 +434,9 @@ function scanReferenceExpressionPrefix(input) {
 }
 /**
  * Scans the first segment of a reference expression.
- * @param {string} input The source text to inspect.
- * @param {number} start The starting offset.
- * @returns {number} The offset immediately after the root segment.
+ * @param input The source text to inspect.
+ * @param start The starting offset.
+ * @returns The offset immediately after the root segment.
  */
 function scanReferenceRoot(input, start) {
     if (input[start] === "!") {
@@ -451,9 +451,9 @@ function scanReferenceRoot(input, start) {
 }
 /**
  * Finds the closing bracket for a bracketed source fragment.
- * @param {string} input The source text to inspect.
- * @param {number} start The opening bracket offset.
- * @returns {number} The closing bracket offset or `-1`.
+ * @param input The source text to inspect.
+ * @param start The opening bracket offset.
+ * @returns The closing bracket offset or `-1`.
  */
 function findMatchingBracket(input, start) {
     let bracketDepth = 0;
@@ -491,9 +491,9 @@ function findMatchingBracket(input, start) {
 }
 /**
  * Skips leading whitespace.
- * @param {string} input The source text.
- * @param {number} index The current offset.
- * @returns {number} The next non-whitespace offset.
+ * @param input The source text.
+ * @param index The current offset.
+ * @returns The next non-whitespace offset.
  */
 function skipWhitespace(input, index) {
     let current = index;
@@ -502,6 +502,7 @@ function skipWhitespace(input, index) {
     }
     return current;
 }
+/** Narrows operator text to a prefix operator. */
 function isUnaryOperator(value) {
     return (value === "<:" ||
         value === "<" ||
@@ -511,6 +512,7 @@ function isUnaryOperator(value) {
         value === "-" ||
         value === "+");
 }
+/** Narrows a character to a supported string delimiter. */
 function isQuote(value) {
     return value === '"' || value === "'";
 }
@@ -538,8 +540,8 @@ const binaryOperators = [
 ];
 /**
  * Tokenizes an expression string into a list of tokens.
- * @param {string} input The expression source text.
- * @returns {Token[]} The list of tokens.
+ * @param input The expression source text.
+ * @returns The list of tokens.
  */
 function tokenizeExpression(input, source, site = "public") {
     const tokens = [];
@@ -839,9 +841,9 @@ function readCallSyntax(input, name, open, site, source) {
 }
 /**
  * Reads a quoted string literal from the source text.
- * @param {string} input The source text.
- * @param {number} start The starting offset.
- * @returns {{ value: string; nextIndex: number; quote: "\"" | "'" }} The quoted string value and next index.
+ * @param input The source text.
+ * @param start The starting offset.
+ * @returns The quoted string value and next index.
  */
 function readQuotedString(input, start) {
     const quote = input[start];
@@ -862,9 +864,9 @@ function readQuotedString(input, start) {
 }
 /**
  * Reads an identifier from the source text.
- * @param {string} input The source text.
- * @param {number} start The starting offset.
- * @returns {{ value: string; nextIndex: number }} The identifier value and next index.
+ * @param input The source text.
+ * @param start The starting offset.
+ * @returns The identifier value and next index.
  */
 function readIdentifier(input, start) {
     let index = start;
@@ -887,9 +889,9 @@ function readIdentifier(input, start) {
 /**
  * Reads a define reference from the source text.
  * Handles braced define references.
- * @param {string} input The source text.
- * @param {number} start The starting offset.
- * @returns {{ token: Extract<Token, { type: "defineReference" }>; nextIndex: number }} The define reference token and next index.
+ * @param input The source text.
+ * @param start The starting offset.
+ * @returns The define reference token and next index.
  */
 function readDefineReference(input, start) {
     if (input[start + 1] === "{") {
@@ -924,14 +926,21 @@ function readDefineReference(input, start) {
         nextIndex,
     };
 }
+/** Precedence-climbing parser over a pre-lexed token stream; throws `ExpressionSyntaxError` on malformed input. */
 class ExpressionParser {
     tokens;
     sourceText;
+    /** Position of the next unconsumed token. */
     index = 0;
     constructor(tokens, sourceText) {
         this.tokens = tokens;
         this.sourceText = sourceText;
     }
+    /**
+     * Parses a binary expression whose operators bind at least as tightly as `minPrecedence`.
+     * @param minPrecedence Lowest operator precedence this call may consume.
+     * @returns The parsed expression.
+     */
     parseExpression(minPrecedence = 0) {
         let left = this.parsePrefix();
         while (true) {
@@ -959,9 +968,11 @@ class ExpressionParser {
         }
         return left;
     }
+    /** Reports whether every token has been consumed. */
     isAtEnd() {
         return this.index >= this.tokens.length;
     }
+    /** Parses right-nested prefix operators followed by a primary with postfix accessors. */
     parsePrefix() {
         const token = this.peek();
         if (!token) {
@@ -977,6 +988,7 @@ class ExpressionParser {
         }
         return this.parsePostfix(this.parsePrimary());
     }
+    /** Parses one operand: dotted local name, literal, string, define reference, identifier or parenthesized group. */
     parsePrimary() {
         if (this.peek()?.type === "dot") {
             const firstSpan = this.peek()?.span;
@@ -1063,6 +1075,7 @@ class ExpressionParser {
         }
         throw new ExpressionSyntaxError({ kind: "invalid", reason: "operand" }, { message: `Invalid number: ${this.sourceText.slice(token.offset ?? 0)}` });
     }
+    /** Applies call, member and index postfixes; calls require identifiers and accessors require references. */
     parsePostfix(expression) {
         let current = expression;
         while (true) {
@@ -1112,6 +1125,7 @@ class ExpressionParser {
             return current;
         }
     }
+    /** Parses comma-separated arguments after `(` through the closing `)`. */
     parseCallArguments() {
         const args = [];
         if (this.match({ type: "rparen" })) {
@@ -1125,7 +1139,7 @@ class ExpressionParser {
     }
     /**
      * Expects a value.
-     * @param {Token["type"]} type The type.
+     * @param type The type.
      */
     expect(type) {
         const token = this.consume();
@@ -1135,6 +1149,7 @@ class ExpressionParser {
             });
         }
     }
+    /** Consumes the next token only when its type matches, reporting whether it did. */
     match(expected) {
         const token = this.peek();
         if (token && token.type === expected.type) {
@@ -1143,19 +1158,21 @@ class ExpressionParser {
         }
         return false;
     }
+    /** Returns the next token and advances; undefined past the end. */
     consume() {
         const token = this.tokens[this.index];
         this.index++;
         return token;
     }
+    /** Returns the next token without advancing; undefined past the end. */
     peek() {
         return this.tokens[this.index];
     }
 }
 /**
  * Checks whether an operator is a binary operator.
- * @param {UnaryOperator | BinaryOperator} value The operator to check.
- * @returns {boolean} `true` when the operator is a binary operator.
+ * @param value The operator to check.
+ * @returns `true` when the operator is a binary operator.
  */
 function isBinaryOperator(value) {
     return value in binaryPrecedence;

@@ -44,7 +44,6 @@ export class Arch65816 {
     /**
      * Resets M/X size flags at the start of each assembly stage.
      * `smartMode` is intentionally NOT reset so `.smart off` persists across stages.
-     * @returns {void}
      */
     beginPass() {
         this.m16 = false;
@@ -53,8 +52,7 @@ export class Arch65816 {
     /**
      * Sets the accumulator (M-flag) width hint.
      * Used by the ca65-compatible `.a8` and `.a16` directives.
-     * @param {boolean} is16 True for 16-bit accumulator, false for 8-bit.
-     * @returns {void}
+     * @param is16 True for 16-bit accumulator, false for 8-bit.
      */
     setAccumulatorWidth(is16) {
         this.m16 = is16;
@@ -62,8 +60,7 @@ export class Arch65816 {
     /**
      * Sets the index register (X-flag) width hint.
      * Used by the ca65-compatible `.i8` and `.i16` directives.
-     * @param {boolean} is16 True for 16-bit index registers, false for 8-bit.
-     * @returns {void}
+     * @param is16 True for 16-bit index registers, false for 8-bit.
      */
     setIndexWidth(is16) {
         this.x16 = is16;
@@ -71,8 +68,7 @@ export class Arch65816 {
     /**
      * Enables or disables automatic M/X tracking via `SEP`/`REP` instructions.
      * Used by the ca65-compatible `.smart` directive.
-     * @param {boolean} enabled True to enable smart mode (default), false to disable.
-     * @returns {void}
+     * @param enabled True to enable smart mode (default), false to disable.
      */
     setSmartMode(enabled) {
         this.smartMode = enabled;

@@ -14,7 +14,9 @@ export type ExpressionParseOutcome = {
 };
 /** Fixed call-site families keep metrics bounded and exclude source text. */
 export type ExpressionParseSite = "generated-expression" | "public" | "command" | "operand" | "statement" | "assembler" | "reference" | "include" | "compatibility-probe" | "math-cache" | "instrumentation";
+/** Raw-fallback call-site families counted separately from parse sites. */
 export type ExpressionFallbackSite = "numeric" | "call-argument";
+/** Metrics key: `native`, or `kind:reason` for every non-native outcome. */
 export type ExpressionOutcomeKey = "native" | `${Exclude<ExpressionParseOutcome, {
     kind: "native";
 }>["kind"]}:${Exclude<ExpressionParseOutcome, {

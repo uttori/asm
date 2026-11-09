@@ -5,17 +5,29 @@ import type { ContributionSyntax } from "../ir/source-syntax.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
 import { type SourcedCommand } from "./command-text-service.js";
 import { ProgramModelBuilder, type IncrementalProgramParseState } from "./program-model-builder.js";
+/** Session context for command preprocessing and program model construction. */
 export type AssemblyFrontEndHost = {
+    /** Active source file path for provenance on normalized commands. */
     currentFile: string;
+    /** Zero-based line number advanced as commands are processed. */
     currentLine: number;
+    /** Cached lowered program nodes reused across assembly passes. */
     passProgramCache: Map<string, ExecutableNode[]>;
+    /** Optional hook parsing plugin-owned directive syntax payloads. */
     parsePluginSyntax?(command: NormalizedCommand): ContributionSyntax | undefined;
+    /** Returns a grammar identity string for occurrence syntax caches. */
     grammarIdentity?(): string;
+    /** When true, records spans and provenance on normalized commands. */
     collectSourceMetadata: boolean;
+    /** True while expanding macro-generated source text. */
     inMacroExpansion: boolean;
+    /** True during the definition collection assembly stage. */
     isDefinitionCollectionStage: boolean;
+    /** Active dialect profile controlling tokenization and rewrites. */
     syntaxProfile: SyntaxProfile;
+    /** Expands variadic macro placeholders before tokenization. */
     resolveVariadicPlaceholders(command: string): string;
+    /** Resolves ca65-style endif/while pairing for structured control flow. */
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
 };
 /**
@@ -24,11 +36,13 @@ export type AssemblyFrontEndHost = {
  */
 export declare class AssemblyFrontEndService {
     readonly host: AssemblyFrontEndHost;
+    /** Partial command text retained for multiline structured statements. */
     commandBuffer: string;
     /** Source occurrences and grammar identity are part of syntax ownership, never invocation values. */
     private readonly fragmentCommands;
     private readonly fragmentExpressions;
     private readonly assemblyExpressions;
+    /** Drops occurrence-keyed syntax caches at assembly boundaries. */
     clearFragmentCache(): void;
     /** String entry adapters share immutable syntax; every caller still resolves current session bindings. */
     parseAssemblyExpression(text: string): ExpressionNode;
@@ -38,39 +52,40 @@ export declare class AssemblyFrontEndService {
     parseFragmentCommand(text: string, file: string, line: number): NormalizedCommand;
     /** Opening physical line when processCommand receives a structured statement one line at a time. */
     private statementBufferStart?;
+    /** Builds executable program trees from normalized commands. */
     readonly programModelBuilder: ProgramModelBuilder;
     constructor(host: AssemblyFrontEndHost);
     /**
      * Preprocesses raw source blocks while preserving continued-line buffering.
-     * @param {string} block The raw source block.
-     * @returns {string[]} The normalized commands.
+     * @param block The raw source block.
+     * @returns The normalized commands.
      */
     preprocessBlockCommands(block: string): string[];
     /**
      * Preprocesses raw source blocks, tagging each command with its original line.
-     * @param {string} block The raw source block.
-     * @returns {SourcedCommand[]} The normalized sourced commands.
+     * @param block The raw source block.
+     * @returns The normalized sourced commands.
      */
     preprocessSourcedBlockCommands(block: string): SourcedCommand[];
     /**
      * Splits statements according to the active target's source grammar.
-     * @param {string[]} commands Commands to split.
-     * @returns {string[]} Profile-aware command statements.
+     * @param commands Commands to split.
+     * @returns Profile-aware command statements.
      */
     splitInlineCommands(commands: string[]): string[];
     /**
      * Splits sourced statements according to the active target's source grammar.
-     * @param {SourcedCommand[]} commands Sourced commands to split.
-     * @returns {SourcedCommand[]} Profile-aware sourced command statements.
+     * @param commands Sourced commands to split.
+     * @returns Profile-aware sourced command statements.
      */
     splitSourcedInlineCommands(commands: SourcedCommand[]): SourcedCommand[];
     /**
      * Builds a normalized command from raw source text.
-     * @param {string} command The raw command text.
-     * @param {string} sourceFile The command source file.
-     * @param {number} sourceLine The source line number.
-     * @param {boolean} [allowEmpty] When true, empty commands still produce nodes.
-     * @returns {NormalizedCommand | null} The normalized command or null for empty input.
+     * @param command The raw command text.
+     * @param sourceFile The command source file.
+     * @param sourceLine The source line number.
+     * @param [allowEmpty] When true, empty commands still produce nodes.
+     * @returns The normalized command or null for empty input.
      */
     createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty?: boolean, physical?: string): NormalizedCommand | null;
     private grammarCache?;
@@ -88,10 +103,10 @@ export declare class AssemblyFrontEndService {
     parseCommandSyntax(command: NormalizedCommand): void;
     /**
      * Creates a loop-aware normalized command node for the typed parser.
-     * @param {string} command The raw command text.
-     * @param {string} [sourceFile] Optional source file.
-     * @param {number} [sourceLine] Optional source line.
-     * @returns {NormalizedCommand} The normalized node.
+     * @param command The raw command text.
+     * @param [sourceFile] Optional source file.
+     * @param [sourceLine] Optional source line.
+     * @returns The normalized node.
      */
     createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number, physical?: string): NormalizedCommand;
 }

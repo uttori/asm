@@ -1,10 +1,12 @@
 import { validateDebugMap } from "@uttori/asm-core/debug-map";
+/** Maps one debug-map range to a backend address, including optional output offset. */
 const addressFor = (range) => ({
     architecture: range.architecture,
     addressSpace: range.addressSpace,
     address: range.start,
     ...(range.outputStart === undefined ? {} : { outputOffset: range.outputStart }),
 });
+/** Builds one synthetic disassembly row from mapped output bytes. */
 const instructionFor = (range, output) => {
     const bytes = range.outputStart === undefined || range.outputEnd === undefined
         ? []
@@ -17,9 +19,9 @@ const instructionFor = (range, output) => {
 };
 /**
  * Creates a deterministic mock timeline directly from a valid debug map.
- * @param {DebugMap} map Fingerprinted debug map.
- * @param {Uint8Array} output Exact mapped binary.
- * @returns {ReplayScript} One snapshot per mapped source range.
+ * @param map Fingerprinted debug map.
+ * @param output Exact mapped binary.
+ * @returns One snapshot per mapped source range.
  */
 export const createDebugMapReplayScript = (map, output) => {
     const issues = validateDebugMap(map, output);

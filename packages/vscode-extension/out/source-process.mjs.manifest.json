@@ -4,7 +4,7 @@
   "source": "packages/vscode-extension/src/source/process.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/source-process.mjs.licenses.txt",
-  "sha256": "ae8b30a5463fb7fd9f2076fcf3d21652e74988c38dd8f29d03d385d274dcce49",
+  "sha256": "ceb8753ae7e72b30233a0f87f03c9fbfc8b7cd84d48f1248f8adcf3a08b43fed",
   "noticesSha256": "634e985851324a39d6021f81d5c6971eec1ab80441f5fe82d6a7e74206215a0d",
   "inputs": [
     {
@@ -233,7 +233,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "3357428093100ad6e3aff2fcf0bb8f676b43c875679a6c80895d80cefb584bfa"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",

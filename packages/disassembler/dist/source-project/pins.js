@@ -3,11 +3,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { acquireFileLease, durableReplace } from "../internal/durable-files.js";
 import { sourceGit } from "./git.js";
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Derive the stable pin-owner registry key from a linked worktree git directory. */
 const ownerId = (gitDirectory) => createHash("sha256").update(gitDirectory).digest("hex").slice(0, 24);
-/** Resolve shared administrative state through Git so linked worktrees share only the pin registry. */
+/**
+ * Resolve the shared pin-owner registry directory for this repository's Git common dir.
+ * @param repository Source checkout whose administrative refs are being managed.
+ */
 async function registry(repository) {
     const common = (await sourceGit(repository.root, ["rev-parse", "--path-format=absolute", "--git-common-dir"])).stdout
         .toString()

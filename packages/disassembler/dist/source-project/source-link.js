@@ -3,6 +3,7 @@ import { AddressToLineMapping, parseExpressionNode, } from "@uttori/asm-core";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { artifactHash, assertLinkRecipe, encodeObject, linkObjects, } from "@uttori/asm-core/linker";
 import { assertSourcePath } from "./git.js";
+/** Narrow parsed JSON to a plain object record. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /** Read the generated single-unit manifest through the caller's snapshot provider. Custom multi-unit builds use the ordinary build service. */
 export function readSourceLinkBuild(configuration, configFile, entrySource, read) {

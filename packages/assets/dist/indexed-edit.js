@@ -1,7 +1,8 @@
 import { ASSET_LIMITS, boundedSum, rasterArea } from "./limits.js";
 import { integer } from "./validation.js";
-/** Validate dimensions before allocating buffers or entering pixel loops.
- * @param {IndexedPixels} image Row-major index buffer whose dimensions must agree exactly.
+/**
+ * Validate dimensions before allocating buffers or entering pixel loops.
+ * @param image Row-major index buffer whose dimensions must agree exactly.
  */
 export function validateIndexedPixels(image) {
     const pixels = rasterArea(image.width, image.height, "Indexed");
@@ -9,16 +10,18 @@ export function validateIndexedPixels(image) {
         throw new RangeError("Indexed pixels are missing or exceed the four-megapixel limit.");
     }
 }
-/** Validate a viewport or extraction rectangle without assuming a console grid.
- * @param {PixelBounds} bounds Signed origin and positive dimensions, bounded before allocation.
+/**
+ * Validate a viewport or extraction rectangle without assuming a console grid.
+ * @param bounds Signed origin and positive dimensions, bounded before allocation.
  */
 function validateBounds(bounds) {
     integer(bounds.x, "Rectangle x", -(1 << 20), 1 << 20);
     integer(bounds.y, "Rectangle y", -(1 << 20), 1 << 20);
     rasterArea(bounds.width, bounds.height, "Rectangle");
 }
-/** Reject truthy non-booleans rather than silently mirroring malformed metadata.
- * @param {{ readonly flipX?: boolean; readonly flipY?: boolean }} value Optional orientation flags from a region or placement.
+/**
+ * Reject truthy non-booleans rather than silently mirroring malformed metadata.
+ * @param value Optional orientation flags from a region or placement.
  */
 function validateOrientation(value) {
     for (const flag of [value.flipX, value.flipY]) {
@@ -27,10 +30,11 @@ function validateOrientation(value) {
         }
     }
 }
-/** Apply an explicit index permutation without merging equal-colored slots.
- * @param {number} index Source palette slot.
- * @param {readonly (number | null)[]} map Optional mapping; missing/null entries reject encountered source indexes.
- * @returns {number} Destination palette slot in the byte range.
+/**
+ * Apply an explicit index permutation without merging equal-colored slots.
+ * @param index Source palette slot.
+ * @param map Optional mapping; missing/null entries reject encountered source indexes.
+ * @returns Destination palette slot in the byte range.
  */
 function mappedIndex(index, map) {
     if (!map) {
@@ -42,10 +46,11 @@ function mappedIndex(index, map) {
     }
     return integer(mappedSlot, "Mapped palette index", 0, 255);
 }
-/** Extract an owned index buffer and undo display flips; never changes the source image.
- * @param {IndexedPixels} image Current indexed pixels, independent of their display colors.
- * @param {IndexedRegion} region In-bounds source rectangle with optional flips and index mapping.
- * @returns {IndexedPixels} Owned pixels in the requested native orientation.
+/**
+ * Extract an owned index buffer and undo display flips; never changes the source image.
+ * @param image Current indexed pixels, independent of their display colors.
+ * @param region In-bounds source rectangle with optional flips and index mapping.
+ * @returns Owned pixels in the requested native orientation.
  */
 export function extractIndexedRegion(image, region) {
     validateIndexedPixels(image);
@@ -71,11 +76,11 @@ export function extractIndexedRegion(image, region) {
  * Compose identified sources in array order into an explicit viewport. Out-of-bounds
  * placements fail rather than clipping silently. Background, if supplied, is copied.
  * Source transparency is tested before palette mapping, independently of RGB/alpha.
- * @param {ReadonlyMap<string, IndexedPixels>} sources Caller-supplied identities mapped to current indexed pixels.
- * @param {readonly IndexedPlacement[]} placements Ordered draw occurrences; IDs must be unique.
- * @param {PixelBounds} viewport Canvas origin and dimensions in the placement coordinate system.
- * @param {Uint8Array} background Optional existing pixels; copied before composition.
- * @returns {IndexedPixels} Owned composited pixels with the viewport dimensions.
+ * @param sources Caller-supplied identities mapped to current indexed pixels.
+ * @param placements Ordered draw occurrences; IDs must be unique.
+ * @param viewport Canvas origin and dimensions in the placement coordinate system.
+ * @param background Optional existing pixels; copied before composition.
+ * @returns Owned composited pixels with the viewport dimensions.
  */
 export function renderIndexedPlacements(sources, placements, viewport, background) {
     validateBounds(viewport);
@@ -136,8 +141,8 @@ export function renderIndexedPlacements(sources, placements, viewport, backgroun
 /**
  * Expand a native grid into placements, reversing cell order and pixels together on flips.
  * Does not encode game frame bytes or infer grid size from the source image.
- * @param {IndexedGridBlock} block Ordered cells with explicit dimensions in pixels.
- * @returns {IndexedPlacement[]} Owned occurrences in native cell order, with stable block/cell IDs.
+ * @param block Ordered cells with explicit dimensions in pixels.
+ * @returns Owned occurrences in native cell order, with stable block/cell IDs.
  */
 export function expandIndexedGrid(block) {
     integer(block.columns, "Grid columns", 1, 65536);

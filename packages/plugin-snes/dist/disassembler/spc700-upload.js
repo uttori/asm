@@ -1,10 +1,21 @@
 import { SNES_FILE_ADDRESS_SPACE } from "./address-identities.js";
 import { SPC700_ARAM_ADDRESS_SPACE, Spc700AramImage } from "./spc700-address-space.js";
+/**
+ * Reads a little-endian 16-bit word.
+ * @param rom Headerless ROM view.
+ * @param offset Offset of the low byte.
+ * @returns Word value, or `undefined` when either byte is outside the ROM.
+ */
 const wordAt = (rom, offset) => {
     const low = rom.readByte(offset);
     const high = rom.readByte(offset + 1);
     return low === undefined || high === undefined ? undefined : low | (high << 8);
 };
+/**
+ * Rejects parse limits that are not positive safe integers.
+ * @param name Option name used in the thrown message.
+ * @param value Configured limit.
+ */
 const validatePositiveLimit = (name, value) => {
     if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${name} must be a positive safe integer.`);
@@ -14,10 +25,10 @@ const validatePositiveLimit = (name, value) => {
  * Parses an NSPC upload stream at an explicit headerless ROM offset.
  * No signature scan or format guess is performed. Every record is bounded by
  * both the immutable ROM image and caller-selectable deterministic limits.
- * @param {RomImage} rom Headerless ROM view containing the stream.
- * @param {number} startOffset Explicit headerless file offset of its first size word.
- * @param {Spc700UploadParseOptions} [options] Deterministic record and byte limits.
- * @returns {Spc700UploadStream} Parsed block locations and execute trailer.
+ * @param rom Headerless ROM view containing the stream.
+ * @param startOffset Explicit headerless file offset of its first size word.
+ * @param [options] Deterministic record and byte limits.
+ * @returns Parsed block locations and execute trailer.
  */
 export const parseSpc700UploadStream = (rom, startOffset, options = {}) => {
     if (!Number.isSafeInteger(startOffset) || startOffset < 0 || startOffset >= rom.length) {
@@ -74,13 +85,19 @@ export const parseSpc700UploadStream = (rom, startOffset, options = {}) => {
         offset = endOffset;
     }
 };
+/**
+ * Formats an unsigned value as uppercase hex digits without a prefix.
+ * @param value Unsigned value.
+ * @param width Minimum digit count, zero-padded.
+ * @returns Hex digits.
+ */
 const hex = (value, width) => value.toString(16).toUpperCase().padStart(width, "0");
 /**
  * Copies one upload block into one or two directly analyzable ARAM images.
  * A wrapping upload is split at `$10000`. Source ROM provenance remains on each segment.
- * @param {RomImage} rom ROM that was used to parse `block`.
- * @param {Spc700UploadBlock} block Parsed upload record.
- * @returns {readonly Spc700UploadAramSegment[]} Non-wrapping ARAM projections in load order.
+ * @param rom ROM that was used to parse `block`.
+ * @param block Parsed upload record.
+ * @returns Non-wrapping ARAM projections in load order.
  */
 export const materializeSpc700UploadBlock = (rom, block) => {
     const payload = rom.read(block.payloadOffset, block.size);
@@ -117,9 +134,9 @@ export const materializeSpc700UploadBlock = (rom, block) => {
 /**
  * Creates nested ROM stream/block/payload regions and cross-address-space ARAM projections.
  * Region attributes contain offsets, sizes, and load order only. ROM bytes are never serialized.
- * @param {RomImage} rom ROM that owns the stream, used only for stable evidence identity.
- * @param {Spc700UploadStream} stream Parsed upload stream.
- * @returns {Spc700UploadProjectRecords} Native project regions and detector evidence.
+ * @param rom ROM that owns the stream, used only for stable evidence identity.
+ * @param stream Parsed upload stream.
+ * @returns Native project regions and detector evidence.
  */
 export const spc700UploadProjectRecords = (rom, stream) => {
     const streamId = `spc-upload:${hex(stream.startOffset, 6)}`;

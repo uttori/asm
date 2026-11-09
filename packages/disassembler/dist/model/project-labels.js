@@ -1,6 +1,6 @@
 /**
  * Validate a portable global assembly identifier without changing the user's spelling.
- * @param {string} name Preferred assembly symbol.
+ * @param name Preferred assembly symbol.
  */
 export const validateSourceLabelName = (name) => {
     if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
@@ -9,16 +9,16 @@ export const validateSourceLabelName = (name) => {
 };
 /**
  * Legacy imported names retain their historical, deterministic export spelling.
- * @param {string} name Native imported label name.
- * @returns {string} Historical assembly spelling.
+ * @param name Native imported label name.
+ * @returns Historical assembly spelling.
  */
 export const legacySourceLabelName = (name) => `L_${name.replaceAll(/\W/g, "_").replaceAll(/_+/g, "_") || "unnamed"}`;
 /**
  * Allocate names once for definitions, references, and editor navigation. Explicit names never
  * silently acquire a suffix. Reserve target-provided hardware/RAM names before emitting source.
- * @param {readonly ProjectLabel[]} labels Persisted native labels.
- * @param {Iterable<string>} reserved Names already owned by the target/export.
- * @returns {ReadonlyMap<string, string>} Stable label ids mapped to unique assembly names.
+ * @param labels Persisted native labels.
+ * @param reserved Names already owned by the target/export.
+ * @returns Stable label ids mapped to unique assembly names.
  */
 export const projectSourceLabelNames = (labels, reserved = []) => {
     const names = new Map();

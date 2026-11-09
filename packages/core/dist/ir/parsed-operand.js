@@ -43,7 +43,7 @@ export function parseInstructionOperands(mnemonic, text, grammar) {
         const parts = operandParts(text, ",");
         for (let index = 0; index < parts.length; index++) {
             let part = parts[index];
-            const next = parts[index + 1];
+            const next = parts.at(index + 1);
             if (grammar.commaIndex && next && grammar.indexRegisters.includes(next.text.toLowerCase())) {
                 part = { text: text.slice(part.start, next.end), start: part.start, end: next.end };
                 index++;
@@ -149,6 +149,7 @@ function scalar(text, start, force) {
         span: { start, end: start + text.length },
     };
 }
+/** Classifies one comma-separated operand using the supplied target grammar. */
 function parseOperand(text, start, grammar) {
     const span = { start, end: start + text.length };
     if (!text) {
@@ -282,7 +283,9 @@ function parseOperand(text, start, grammar) {
 /** A failed generated-operand binding retains a structured reason for target-stage diagnostics. */
 export class OperandTemplateBindingError extends Error {
     reason;
-    constructor(reason, message) {
+    constructor(
+    /** Failure category distinguishing cycle, stall, and depth limit cases. */
+    reason, message) {
         super(message);
         this.reason = reason;
     }

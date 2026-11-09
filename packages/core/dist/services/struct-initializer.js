@@ -3,8 +3,8 @@ import { parseDirectiveExpression } from "../ir/directive-arguments.js";
  * Small, deliberately separate grammar for named records. Expressions remain
  * assembler expressions. This parser only recognizes their outer delimiters.
  * Do not use split(','): arrays and functions both contain their own commas.
- * @param {string} text Comma-separated fields or expressions.
- * @returns {string[]} Complete items with their nested expressions intact.
+ * @param text Comma-separated fields or expressions.
+ * @returns Complete items with their nested expressions intact.
  */
 export function splitInitializerList(text) {
     const entries = [];
@@ -82,8 +82,8 @@ export function structInitializerStart(text) {
 }
 /**
  * Parse field names and scalar/array shapes without evaluating assembler expressions.
- * @param {string} text One brace-delimited record literal.
- * @returns {Map<string, StructInitializerValue | StructInitializerValue[]>} Unique names and unevaluated values.
+ * @param text One brace-delimited record literal.
+ * @returns Unique names and unevaluated values.
  */
 export function parseStructInitializer(text) {
     return new Map(parseStructInitializerEntries(text).map((field) => [field.name, field.value]));
@@ -142,8 +142,8 @@ function parseInitializerValue(text) {
 }
 /**
  * Only named record statements gain implicit brace continuation, not legacy source.
- * @param {string} text Buffered command including the current physical line.
- * @returns {boolean} Whether another physical line is needed to close the literal.
+ * @param text Buffered command including the current physical line.
+ * @returns Whether another physical line is needed to close the literal.
  */
 export function isOpenStructInitializer(text) {
     if (!/^(?:datastruct\b|\[)/i.test(text.trimStart())) {

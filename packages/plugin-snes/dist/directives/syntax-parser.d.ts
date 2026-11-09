@@ -1,4 +1,5 @@
 import { type SyntaxParseInput } from "@uttori/asm-core/plugin";
+/** Typed union of every lowered SNES directive payload shape. */
 export declare const snesDirectiveSchema: import("@uttori/asm-core/plugin").SyntaxGuard<{
     operation: "mapper";
     mapper: string;
@@ -49,7 +50,9 @@ export declare const snesDirectiveSchema: import("@uttori/asm-core/plugin").Synt
     expression: import("@uttori/asm-core").ExpressionNode | undefined;
     error: string | undefined;
 }>;
+/** Infers the validated payload type from a syntax guard union. */
 type ExtractGuard<G> = G extends ((value: unknown) => value is infer T) ? T : never;
+/** Parsed SNES directive payload accepted by the execution handlers. */
 type Payload = ExtractGuard<typeof snesDirectiveSchema>;
 /** Select a target operation without invoking mapping, CPU changes, file reads or expression functions. */
 export declare function parseSnesDirective(id: string, { words }: Pick<SyntaxParseInput, "words">): Payload;

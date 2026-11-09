@@ -13,11 +13,13 @@ import { ProgramModelBuilder } from "./program-model-builder.js";
  */
 export class AssemblyFrontEndService {
     host;
+    /** Partial command text retained for multiline structured statements. */
     commandBuffer = "";
     /** Source occurrences and grammar identity are part of syntax ownership, never invocation values. */
     fragmentCommands = new OccurrenceSyntaxCache();
     fragmentExpressions = new OccurrenceSyntaxCache();
     assemblyExpressions = new Map();
+    /** Drops occurrence-keyed syntax caches at assembly boundaries. */
     clearFragmentCache() {
         this.fragmentCommands.clear();
         this.fragmentExpressions.clear();
@@ -57,6 +59,7 @@ export class AssemblyFrontEndService {
     }
     /** Opening physical line when processCommand receives a structured statement one line at a time. */
     statementBufferStart;
+    /** Builds executable program trees from normalized commands. */
     programModelBuilder;
     constructor(host) {
         this.host = host;
@@ -76,16 +79,16 @@ export class AssemblyFrontEndService {
     }
     /**
      * Preprocesses raw source blocks while preserving continued-line buffering.
-     * @param {string} block The raw source block.
-     * @returns {string[]} The normalized commands.
+     * @param block The raw source block.
+     * @returns The normalized commands.
      */
     preprocessBlockCommands(block) {
         return this.preprocessSourcedBlockCommands(block).map((command) => command.text);
     }
     /**
      * Preprocesses raw source blocks, tagging each command with its original line.
-     * @param {string} block The raw source block.
-     * @returns {SourcedCommand[]} The normalized sourced commands.
+     * @param block The raw source block.
+     * @returns The normalized sourced commands.
      */
     preprocessSourcedBlockCommands(block) {
         const opening = this.statementBufferStart;
@@ -116,27 +119,27 @@ export class AssemblyFrontEndService {
     }
     /**
      * Splits statements according to the active target's source grammar.
-     * @param {string[]} commands Commands to split.
-     * @returns {string[]} Profile-aware command statements.
+     * @param commands Commands to split.
+     * @returns Profile-aware command statements.
      */
     splitInlineCommands(commands) {
         return splitInlineCommands(commands, this.host.syntaxProfile);
     }
     /**
      * Splits sourced statements according to the active target's source grammar.
-     * @param {SourcedCommand[]} commands Sourced commands to split.
-     * @returns {SourcedCommand[]} Profile-aware sourced command statements.
+     * @param commands Sourced commands to split.
+     * @returns Profile-aware sourced command statements.
      */
     splitSourcedInlineCommands(commands) {
         return splitSourcedInlineCommands(commands, this.host.syntaxProfile);
     }
     /**
      * Builds a normalized command from raw source text.
-     * @param {string} command The raw command text.
-     * @param {string} sourceFile The command source file.
-     * @param {number} sourceLine The source line number.
-     * @param {boolean} [allowEmpty] When true, empty commands still produce nodes.
-     * @returns {NormalizedCommand | null} The normalized command or null for empty input.
+     * @param command The raw command text.
+     * @param sourceFile The command source file.
+     * @param sourceLine The source line number.
+     * @param [allowEmpty] When true, empty commands still produce nodes.
+     * @returns The normalized command or null for empty input.
      */
     createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false, physical) {
         let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
@@ -259,10 +262,10 @@ export class AssemblyFrontEndService {
     }
     /**
      * Creates a loop-aware normalized command node for the typed parser.
-     * @param {string} command The raw command text.
-     * @param {string} [sourceFile] Optional source file.
-     * @param {number} [sourceLine] Optional source line.
-     * @returns {NormalizedCommand} The normalized node.
+     * @param command The raw command text.
+     * @param [sourceFile] Optional source file.
+     * @param [sourceLine] Optional source line.
+     * @returns The normalized node.
      */
     createLoopCommandNode(command, sourceFile = this.host.currentFile, sourceLine = this.host.currentLine, physical) {
         return (this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true, physical) ??

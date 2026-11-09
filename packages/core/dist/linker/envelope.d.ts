@@ -1,3 +1,4 @@
+/** Hard cap on total encoded artifact size including header and JSON metadata. */
 export declare const MAX_ARTIFACT_BYTES: number;
 /** A versioned binary envelope keeps payloads raw and hashes the header and every stored byte. */
 export declare function encodeEnvelope(magic: string, metadata: unknown, payload: Uint8Array): Uint8Array;

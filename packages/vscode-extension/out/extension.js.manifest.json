@@ -4,7 +4,7 @@
   "source": "packages/vscode-extension/src/extension.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/extension.js.licenses.txt",
-  "sha256": "6b0d967e5c912509ae06bede6c4e6bdd07689cb5d96e4bfa2bae656fd68a935f",
+  "sha256": "a34dba77092c1945098a727811fcdcfee3eb61dec66d3ad15ffabbac7d038877",
   "noticesSha256": "225e568312d529f2d06bf5e71c3fbe5701f3c7296f1060675e437503978b395f",
   "inputs": [
     {
@@ -693,7 +693,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "3357428093100ad6e3aff2fcf0bb8f676b43c875679a6c80895d80cefb584bfa"
     },
     {
       "file": "packages/assets/src/image-conversion.ts",

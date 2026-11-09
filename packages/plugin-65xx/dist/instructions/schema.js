@@ -1,9 +1,9 @@
 /**
  * Returns whether `features` satisfy `expression`.
  *
- * @param {FeatureExpression} expression Required / forbidden feature sets.
- * @param {ReadonlySet<CpuFeature>} features CPU feature set.
- * @returns {boolean} True when the form is available on this CPU.
+ * @param expression Required / forbidden feature sets.
+ * @param features CPU feature set.
+ * @returns True when the form is available on this CPU.
  */
 export function matchesFeatures(expression, features) {
     if (expression.allOf?.some((feature) => !features.has(feature))) {
@@ -21,8 +21,8 @@ export function matchesFeatures(expression, features) {
  * Default codec for a mode. Immediate/zp/stack-relative collapse to `unsigned8`.
  * 24-bit `absoluteLongIndexedX` is the MEGA65/4510 long-x form.
  *
- * @param {AddressingMode} mode Addressing mode.
- * @returns {OperandCodecId} Operand codec id.
+ * @param mode Addressing mode.
+ * @returns Operand codec id.
  */
 export function getOperandCodec(mode) {
     switch (mode) {
@@ -78,8 +78,8 @@ export function getOperandCodec(mode) {
 /**
  * Operand field list for a codec. `zero-page-relative8` is BBR/BBS: zp then rel8.
  *
- * @param {OperandCodecId} codec Operand codec.
- * @returns {readonly OperandField[]} Field descriptors in emit order.
+ * @param codec Operand codec.
+ * @returns Field descriptors in emit order.
  */
 export function getOperandFields(codec) {
     switch (codec) {

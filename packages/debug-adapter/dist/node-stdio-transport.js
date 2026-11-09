@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { assertDebugSidecarSessionToken } from "./sidecar-protocol.js";
 /** Environment variable inherited by a native sidecar instead of exposing its token in argv. */
 export const DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
+/** Validates a positive safe integer option or throws. */
 const positiveInteger = (value, name) => {
     if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${name} must be a positive safe integer.`);
@@ -25,7 +26,7 @@ export class NodeStdioSidecarTransport {
     #closePromise;
     /**
      * Spawns one sidecar without a shell and authenticates it through inherited environment state.
-     * @param {NodeStdioSidecarTransportOptions} options Explicit executable and lifecycle bounds.
+     * @param options Explicit executable and lifecycle bounds.
      */
     constructor(options) {
         if (options.command.length === 0) {
@@ -61,18 +62,24 @@ export class NodeStdioSidecarTransport {
         this.#child.on("error", (error) => this.#notifyClosed(new Error(`Unable to run debug sidecar: ${error.message}`)));
         this.#child.on("close", (code, signal) => this.#handleExit(code, signal));
     }
-    /** @returns {number | undefined} Native child PID when process creation succeeded. */
+    /**
+     * Native child PID when process creation succeeded.
+     * @returns Process id or undefined before spawn completes.
+     */
     get pid() {
         return this.#child.pid;
     }
-    /** @returns {string} Bounded, token-redacted tail of native stderr. */
+    /**
+     * Bounded, token-redacted tail of native stderr.
+     * @returns Accumulated stderr text capped by maxStderrBytes.
+     */
     get stderr() {
         return this.#stderr.toString("utf8");
     }
     /**
      * Writes one complete or partial frame, resolving only after Node flushes it from its buffer.
-     * @param {Uint8Array} data Framed protocol bytes.
-     * @returns {Promise<void>} Completion of the native pipe write.
+     * @param data Framed protocol bytes.
+     * @returns Completion of the native pipe write.
      */
     write(data) {
         if (this.#notified || this.#exited) {
@@ -96,7 +103,7 @@ export class NodeStdioSidecarTransport {
     }
     /**
      * Ends stdin and escalates from SIGTERM to SIGKILL only when the child misses bounded deadlines.
-     * @returns {Promise<void>} Completion of child-process cleanup.
+     * @returns Completion of child-process cleanup.
      */
     close() {
         this.#closePromise ??= this.#closeProcess();

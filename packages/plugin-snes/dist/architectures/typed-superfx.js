@@ -5,15 +5,26 @@ import { hasOwn, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGIST
 import { superFxSyntax } from "./superfx-syntax.js";
 /** A byte-addressed RAM window; only automatic MOVE applies the selected dialect's byte conversion. */
 const shortRam = (value) => (value & 1) === 0 && value < 0x200;
+/** True when a 16-bit value fits the GSU signed-byte immediate range. */
 const signedByte = (value) => (value & 0xffff) < 0x80 || (value & 0xffff) >= 0xff80;
 /** Native GSU instruction selection. Values are invocation-local and never stored on syntax nodes. */
 export class TypedSuperFx {
     asarMoveShortAddress;
+    /** Relocatable object emission covers automatic MOVE and branch forms. */
     supportsRelocatable = true;
+    /** Operand binding failures surface at the final read, not during width collection. */
     deferOperandBindingErrors = true;
+    /**
+     * Creates a Super FX encoder with optional Asar short-RAM MOVE dialect.
+     * @param asarMoveShortAddress When true, auto-MOVE stores the raw RAM byte instead of `addr >> 1`.
+     */
     constructor(asarMoveShortAddress = () => false) {
         this.asarMoveShortAddress = asarMoveShortAddress;
     }
+    /**
+     * Records per-part width observations before whole-operand classification.
+     * @param frame Active resolution frame for the occurrence.
+     */
     prepare(frame) {
         if (frame.isRelocatable) {
             frame.choose("superfx-module-preparation", 0);
@@ -31,9 +42,20 @@ export class TypedSuperFx {
         }
         chooseOperandPreparation(frame, "superfx-preparation", parts);
     }
+    /**
+     * Returns the byte size chosen for the current instruction form.
+     * @param frame Active resolution frame for the occurrence.
+     * @returns Encoded instruction length in bytes.
+     */
     estimate(frame) {
         return this.run(frame);
     }
+    /**
+     * Emits opcode bytes when `context` is supplied; otherwise sizes only.
+     * @param frame Active resolution frame for the occurrence.
+     * @param context Emission sink and diagnostics for the emit pass.
+     * @returns True when a recognized form produced bytes.
+     */
     encode(frame, context) {
         return this.run(frame, context) > 0;
     }
@@ -140,7 +162,7 @@ export class TypedSuperFx {
             write(encoding.base + reg);
             return choose("register", encoding.prefix === undefined ? 1 : 2);
         };
-        const left = parts[0], right = parts[1];
+        const left = parts.at(0), right = parts.at(1);
         if (parts.length <= 1 && hasOwn(SHORT_BRANCH_OPCODES, op)) {
             if (emit && left) {
                 const value = read(left, true);
@@ -177,7 +199,7 @@ export class TypedSuperFx {
             }
             return choose("unknown", emit ? 0 : 1);
         }
-        if (parts.length !== 2) {
+        if (parts.length !== 2 || !left || !right) {
             return choose("unknown", emit ? 0 : 1);
         }
         const l = left.register, r = right.register, li = left.indirectRegister, ri = right.indirectRegister;

@@ -1,32 +1,40 @@
 import { DEBUG_BACKEND_PROTOCOL_VERSION, } from "./contracts.js";
 import { validateDebugTraceDetails } from "./trace-detail-validation.js";
+/** Narrows stop reason strings from sidecar events. */
 const isStopReason = (value) => value === "entry" ||
     value === "pause" ||
     value === "step" ||
     value === "breakpoint" ||
     value === "exception";
 const stepKindNames = new Set(["instruction", "over", "in", "out"]);
+/** Narrows step kind strings from sidecar command arguments. */
 const isStepKind = (value) => stepKindNames.has(value);
+/** Narrows output category strings from sidecar events. */
 const isOutputCategory = (value) => value === "console" || value === "stdout" || value === "stderr";
+/** Narrows unknown JSON to plain objects. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Validates and returns a JSON object with a contextual error path. */
 const record = (value, context) => {
     if (!isRecord(value)) {
         throw new Error(`${context} must be an object.`);
     }
     return value;
 };
+/** Validates and returns a JSON array with a contextual error path. */
 const array = (value, context) => {
     if (!Array.isArray(value)) {
         throw new Error(`${context} must be an array.`);
     }
     return value;
 };
+/** Validates and returns a non-empty string with a contextual error path. */
 const string = (value, context) => {
     if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${context} must be a non-empty string.`);
     }
     return value;
 };
+/** Parses and deduplicates step kind lists from sidecar JSON. */
 const readStepKinds = (value, context) => {
     const values = array(value, context).map((entry, index) => string(entry, `${context}[${index}]`));
     const kinds = [];
@@ -41,19 +49,23 @@ const readStepKinds = (value, context) => {
     }
     return kinds;
 };
+/** Validates and returns a boolean with a contextual error path. */
 const boolean = (value, context) => {
     if (typeof value !== "boolean") {
         throw new Error(`${context} must be boolean.`);
     }
     return value;
 };
+/** Validates and returns a bounded safe integer with a contextual error path. */
 const integer = (value, context, minimum = 0) => {
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
     }
     return value;
 };
+/** Validates a positive safe integer field. */
 const positiveInteger = (value, context) => integer(value, context, 1);
+/** Parses one architecture-qualified address from sidecar JSON. */
 const address = (value, context) => {
     const candidate = record(value, context);
     const outputOffset = candidate.outputOffset === undefined
@@ -66,10 +78,12 @@ const address = (value, context) => {
         ...(outputOffset === undefined ? {} : { outputOffset }),
     };
 };
+/** Compares addresses field-wise including optional output offsets. */
 const addressesEqual = (left, right) => left.architecture === right.architecture &&
     left.addressSpace === right.addressSpace &&
     left.address === right.address &&
     left.outputOffset === right.outputOffset;
+/** Parses one architecture capability object from initialize results. */
 const architectureCapabilities = (value, context) => {
     const candidate = record(value, context);
     const addressSpaces = array(candidate.addressSpaces, `${context}.addressSpaces`).map((entry, index) => string(entry, `${context}.addressSpaces[${index}]`));
@@ -144,6 +158,7 @@ const architectureCapabilities = (value, context) => {
         disassemble: boolean(candidate.disassemble, `${context}.disassemble`),
     };
 };
+/** Parses the top-level capability object from initialize results. */
 const backendCapabilities = (value, context) => {
     const candidate = record(value, context);
     const architectures = array(candidate.architectures, `${context}.architectures`)
@@ -180,7 +195,9 @@ const backendCapabilities = (value, context) => {
         }))),
     });
 };
+/** Stable JSON identity used to detect capability changes across reconnect. */
 const capabilityIdentity = (capabilities) => JSON.stringify(capabilities);
+/** Parses one thread record from sidecar JSON. */
 const thread = (value, context) => {
     const candidate = record(value, context);
     return {
@@ -189,6 +206,7 @@ const thread = (value, context) => {
         architecture: string(candidate.architecture, `${context}.architecture`),
     };
 };
+/** Parses one stack frame record from sidecar JSON. */
 const stackFrame = (value, context) => {
     const candidate = record(value, context);
     const currentOnly = candidate.currentOnly === undefined
@@ -202,6 +220,7 @@ const stackFrame = (value, context) => {
         ...(currentOnly === undefined ? {} : { currentOnly }),
     };
 };
+/** Parses one register record from sidecar JSON. */
 const register = (value, context) => {
     const candidate = record(value, context);
     const group = candidate.group === undefined ? undefined : string(candidate.group, `${context}.group`);
@@ -212,6 +231,7 @@ const register = (value, context) => {
         ...(group === undefined ? {} : { group }),
     };
 };
+/** Parses one breakpoint record from sidecar JSON. */
 const breakpoint = (value, context) => {
     const candidate = record(value, context);
     const message = candidate.message === undefined ? undefined : string(candidate.message, `${context}.message`);
@@ -222,6 +242,7 @@ const breakpoint = (value, context) => {
         ...(message === undefined ? {} : { message }),
     };
 };
+/** Parses one unsigned byte from sidecar JSON. */
 const byte = (value, context) => {
     const result = integer(value, context);
     if (result > 0xff) {
@@ -229,6 +250,7 @@ const byte = (value, context) => {
     }
     return result;
 };
+/** Parses one disassembly row from sidecar JSON. */
 const instruction = (value, context) => {
     const candidate = record(value, context);
     const symbol = candidate.symbol === undefined ? undefined : string(candidate.symbol, `${context}.symbol`);
@@ -239,6 +261,7 @@ const instruction = (value, context) => {
         ...(symbol === undefined ? {} : { symbol }),
     };
 };
+/** Parses one destructive trace pull from sidecar JSON. */
 const traceBatch = (value, context) => {
     const candidate = record(value, context);
     const addresses = array(candidate.addresses, `${context}.addresses`).map((entry, index) => integer(entry, `${context}.addresses[${index}]`));
@@ -259,6 +282,7 @@ const traceBatch = (value, context) => {
         active: boolean(candidate.active, `${context}.active`),
     };
 };
+/** Decodes canonical base64 memory payloads from sidecar JSON. */
 const base64Bytes = (value, context) => {
     if (typeof value !== "string") {
         throw new Error(`${context} must be canonical base64.`);
@@ -269,12 +293,14 @@ const base64Bytes = (value, context) => {
     }
     return new Uint8Array(bytes);
 };
+/** Ensures id-bearing sidecar arrays do not contain duplicates. */
 const uniqueIds = (values, context) => {
     if (new Set(values.map(({ id }) => id)).size !== values.length) {
         throw new Error(`${context} must use unique ids.`);
     }
     return values;
 };
+/** Maps validated sidecar events into neutral backend events. */
 const backendEvent = (message) => {
     const body = record(message.body, `Sidecar '${message.event}' event body`);
     if (message.event === "stopped") {
@@ -315,9 +341,11 @@ const backendEvent = (message) => {
 };
 /** Typed `DebugBackend` implementation over the authenticated sidecar client. */
 export class SidecarDebugBackend {
+    /** Fixed sidecar-backed protocol revision. */
     protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
     #capabilities;
     #configuredCapabilities;
+    /** Capabilities verified on initialize, which may refine configured expectations. */
     get capabilities() {
         return this.#capabilities;
     }
@@ -331,7 +359,7 @@ export class SidecarDebugBackend {
     #connected = false;
     /**
      * Creates a backend with capabilities declared before DAP initialization and verified on connect.
-     * @param {SidecarDebugBackendOptions} options Sidecar identity, capability manifest, and factory.
+     * @param options Sidecar identity, capability manifest, and factory.
      */
     constructor(options) {
         this.#backend = string(options.backend, "Sidecar backend name");
@@ -472,6 +500,7 @@ export class SidecarDebugBackend {
         validateCaptureRequest(request);
         return validateCaptureResult(await this.#requireConnected().request("capture", { ...request }));
     }
+    /** @inheritdoc */
     async startTrace(options) {
         const architecture = string(options.architecture, "Trace architecture");
         const addressSpace = string(options.addressSpace, "Trace address space");

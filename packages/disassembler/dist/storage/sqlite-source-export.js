@@ -1,10 +1,16 @@
 import { isRecord, isStringArray } from "../model/record-shape.js";
 import { parseSqlitePayload } from "./sqlite-payload.js";
 import { readQueryCache } from "./sqlite-query-cache.js";
+/**
+ * Narrow a decoded value to an array without validating its elements.
+ * @param value Decoded payload of unknown shape.
+ * @returns True when the value is an array.
+ */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
-/** Stream every authoritative projection in output order when no dependency-valid cache exists.
+/**
+ * Stream every authoritative projection in output order when no dependency-valid cache exists.
  * @yields {unknown} Decoded projection requiring address and provenance validation.
  */
 export function* uncachedSourceExportRecords(database) {
@@ -18,7 +24,8 @@ export function* uncachedSourceExportRecords(database) {
 }
 /** Layout includes the complete incoming state; targets still check every variant against ROM. */
 export const SOURCE_EXPORT_CACHE = { key: "source_export", signature: "1" };
-/** Build connection-local rows while rendering the same stream, without a second CFG pass.
+/**
+ * Build connection-local rows while rendering the same stream, without a second CFG pass.
  * @yields {readonly InstructionExportRecord[]} One complete validated instruction group.
  */
 export function* stageSourceExportGroups(database, groups, complete, signal) {
@@ -76,7 +83,8 @@ export function clearSourceExportStage(database) {
 export function sourceExportCacheReady(database) {
     return readQueryCache(database, SOURCE_EXPORT_CACHE.key, SOURCE_EXPORT_CACHE.signature) === true;
 }
-/** Stream detached values from the current read snapshot; callers validate address and provenance contracts.
+/**
+ * Stream detached values from the current read snapshot; callers validate address and provenance contracts.
  * @yields {unknown} Independent instruction record with its complete ordered provenance.
  */
 export function* sourceExportCacheRecords(database) {

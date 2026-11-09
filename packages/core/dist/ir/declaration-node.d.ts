@@ -53,8 +53,11 @@ export type DeclarationNode = {
 };
 /** The index is evaluated in the current pass, independently of the declaration's physical spelling. */
 export type RecordReference = {
+    /** Previously declared dataStruct record name. */
     name: string;
+    /** Unevaluated logical record index; undefined addresses record 0. */
     index?: ExpressionNode;
+    /** Reference spelling used in diagnostics. */
     text: string;
 };
 /** Parse candidates only. Diagnostics are inert until the declaration is selected for execution. */

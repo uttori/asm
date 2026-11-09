@@ -12,8 +12,8 @@ export const SNES_MAPPERS = [
 ];
 /**
  * Accepts a supported cartridge mapper id.
- * @param {string} value Candidate mapper name.
- * @returns {boolean} True when `value` is one of `SNES_MAPPERS`.
+ * @param value Candidate mapper name.
+ * @returns True when `value` is one of `SNES_MAPPERS`.
  */
 export function isSnesMapper(value) {
     return SNES_MAPPERS.some((mapper) => mapper === value);
@@ -158,23 +158,34 @@ const HEADER_OFFSETS = {
 };
 /**
  * Returns the standard headerless-ROM offset for one mapper.
- * @param {SnesMapper} mapper Cartridge mapping family.
- * @returns {number | undefined} Header offset, or undefined for an unmapped image.
+ * @param mapper Cartridge mapping family.
+ * @returns Header offset, or undefined for an unmapped image.
  */
 export const snesInternalHeaderOffset = (mapper) => HEADER_OFFSETS[mapper];
+/**
+ * Render header text fields with non-printable bytes escaped.
+ * @param bytes Raw title or code bytes from the cartridge.
+ */
 const asciiField = (bytes) => [...bytes]
     .map((byte) => byte >= 0x20 && byte <= 0x7e
     ? String.fromCharCode(byte)
     : `\\x${byte.toString(16).toUpperCase().padStart(2, "0")}`)
     .join("")
     .replaceAll(/(?: |\\x00)+$/g, "");
+/**
+ * Decode SNES header size exponent codes into byte counts.
+ * @param code Size field from the internal header.
+ * @param zeroMeansNone When true, code zero denotes no RAM rather than 1 KiB.
+ */
 const sizeBytes = (code, zeroMeansNone) => {
     if (zeroMeansNone && code === 0) {
         return 0;
     }
     return code < 0x20 ? 1024 * 2 ** code : undefined;
 };
+/** Map the low nibble of the map-mode byte to a cartridge family name. */
 const mapModeName = (value) => ({ 0x0: "LoROM", 0x1: "HiROM", 0x2: "S-DD1", 0x3: "SA-1", 0x5: "ExHiROM", 0xa: "SPC7110" })[value & 0x0f] ?? "Unknown";
+/** Translate the header region code into a marketing region label. */
 const regionName = (code) => ({
     0x00: "Japan",
     0x01: "North America",
@@ -198,6 +209,10 @@ const regionName = (code) => ({
     0x13: "Other variation Y",
     0x14: "Other variation Z",
 })[code] ?? "Unknown";
+/**
+ * Describe cartridge RAM presence and coprocessor type from the chipset byte.
+ * @param value Raw chipset byte from the internal header.
+ */
 const chipsetDescription = (value) => {
     const contents = {
         0x0: "ROM only",
@@ -226,9 +241,9 @@ const chipsetDescription = (value) => {
 /**
  * Parses the mapper-selected internal header, optional expanded header, and all
  * 16 vector words. The ROM view must already exclude a 512-byte copier header.
- * @param {RomImage} rom Immutable headerless ROM view.
- * @param {SnesMapper} mapper Selected cartridge mapping family.
- * @returns {SnesInternalRomHeader | undefined} Parsed structure when in range.
+ * @param rom Immutable headerless ROM view.
+ * @param mapper Selected cartridge mapping family.
+ * @returns Parsed structure when in range.
  */
 export const parseSnesInternalRomHeader = (rom, mapper) => {
     const offset = snesInternalHeaderOffset(mapper);
@@ -293,10 +308,19 @@ const HEADER_SPECS = [
     { mapper: "sfxrom", offset: 0x7fc0, mode: 0x0 },
     { mapper: "sa1rom", offset: 0x7fc0, mode: 0x3 },
 ];
+/**
+ * Build the default SA-1 bank list for a detected mapper.
+ * @param mapper Cartridge mapping family selected by detection.
+ */
 const defaultAddressContext = (mapper) => ({
     mapper,
     sa1banks: [0x000000, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000],
 });
+/**
+ * Score one header candidate against checksum, map mode, and size fields.
+ * @param rom Headerless ROM view used for evidence gathering.
+ * @param spec Mapper, file offset, and expected map-mode nibble.
+ */
 const scoreCandidate = (rom, spec) => {
     const header = rom.read(spec.offset, 0x40);
     if (!header) {
@@ -352,9 +376,9 @@ const scoreCandidate = (rom, spec) => {
  * for an override. Map-mode nibble, checksum complement, printable title, and
  * RESET vector plausibility are the main signals. `bigsa1rom` and `norom` are
  * never auto-detected.
- * @param {RomImage} rom Headerless immutable ROM view.
- * @param {SnesRomDetectionOptions} [options] Explicit mapper and header-size check.
- * @returns {SnesRomDetection} `detected`, `override`, or `ambiguous` with candidates.
+ * @param rom Headerless immutable ROM view.
+ * @param [options] Explicit mapper and header-size check.
+ * @returns `detected`, `override`, or `ambiguous` with candidates.
  */
 export const detectSnesRom = (rom, options = {}) => {
     if (options.headerSize !== undefined && options.headerSize !== rom.identity.headerSize) {

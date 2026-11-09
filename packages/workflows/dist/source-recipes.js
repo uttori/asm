@@ -1,7 +1,7 @@
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 /** Reuse one shared target configuration, or combine disjoint authored Asar contributions into a single gap-preserving layout. */
 export function mergeModuleRecipes(recipes) {
-    const first = recipes[0];
+    const first = recipes.at(0);
     if (!first) {
         throw new Error("Source modules did not provide a link recipe. Supply an explicit recipe.");
     }

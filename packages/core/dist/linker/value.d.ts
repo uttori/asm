@@ -10,9 +10,14 @@ export declare function restoreValue(value: unknown, depth?: number, budget?: {
 }): unknown;
 /** SHA-256 covers exact serialized bytes, including metadata, payloads, and ordering. */
 export declare function artifactHash(value: string | Uint8Array): string;
+/** Narrows JSON-like values to plain records for linker validation. */
 export declare function isRecord(value: unknown): value is Record<string, unknown>;
+/** Asserts a value is a record or throws with a caller-provided purpose label. */
 export declare function record(value: unknown, purpose: string): Record<string, unknown>;
+/** Asserts a bounded array or throws with a caller-provided purpose label. */
 export declare function list(value: unknown, purpose: string): unknown[];
+/** Asserts a non-empty trimmed string within linker text limits. */
 export declare function textValue(value: unknown, purpose: string): string;
+/** Asserts a safe integer within inclusive bounds for linker metadata fields. */
 export declare function integer(value: unknown, purpose: string, minimum?: number, maximum?: number): number;
 //# sourceMappingURL=value.d.ts.map

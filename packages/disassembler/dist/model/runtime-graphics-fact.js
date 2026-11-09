@@ -1,5 +1,20 @@
+/**
+ * Accept only non-null, non-array objects.
+ * @param value Candidate value.
+ * @returns Whether value is a plain record.
+ */
 const record = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/**
+ * Accept non-negative safe integers.
+ * @param value Candidate value.
+ * @returns Whether value is an unsigned integer.
+ */
 const unsigned = (value) => Number.isSafeInteger(value) && Number(value) >= 0;
+/**
+ * Accept identifiers of 1-64 characters starting with a letter.
+ * @param value Candidate value.
+ * @returns Whether value is a valid producer name.
+ */
 const name = (value) => typeof value === "string" && /^[A-Za-z][\w.-]{0,63}$/.test(value);
 /** Validate target-neutral storage facts at every import and decode boundary. */
 export function isRuntimeGraphicsFact(value) {

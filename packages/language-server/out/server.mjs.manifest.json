@@ -4,7 +4,7 @@
   "source": "packages/language-server/src/server.ts",
   "target": "node26",
   "notices": "packages/language-server/out/server.mjs.licenses.txt",
-  "sha256": "7ea8f78c77d207d7265c30072d6bcd3fa9dcefaadf37318239cc36353968fbdb",
+  "sha256": "c6210a4abbdd376e919638748283e09d7d707619381b339c73a6fcec14dcbdf1",
   "noticesSha256": "f7ddfc140011241d834940a655ec207f2fd01482313fb6b1eda1f24795804463",
   "inputs": [
     {
@@ -541,7 +541,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "d12cf70986ddc12dfb591ccc159ce5bddd82dade499d065290e6bbae92718c25"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",
@@ -1577,11 +1577,15 @@
     },
     {
       "file": "packages/game-secret-of-mana/src/assembly.ts",
-      "sha256": "bd2bb4a7c5b61068a3ede4f0b7c623258fbdbb7d0b66a7912709c90cb0667a14"
+      "sha256": "a898273d7beff487956aed1ea4c9965db6a5f0c137b77ad8426a158ce6c278de"
     },
     {
       "file": "packages/game-secret-of-mana/src/preview.ts",
-      "sha256": "78eb244023264e64fd2c50804c16941a1b922dc0d263a817a221058cb8283b3c"
+      "sha256": "369ee7ba0ef56051496ba6a8ac6f26b3ba6ac42edf03438ededf77658cc08b8c"
+    },
+    {
+      "file": "packages/game-secret-of-mana/src/world-overview.ts",
+      "sha256": "e4af6becc92bb50072de18159f217cb1f077b5c293d529269128a4266a686071"
     },
     {
       "file": "packages/language-server/esbuild.mjs",

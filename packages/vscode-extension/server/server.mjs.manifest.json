@@ -4,7 +4,7 @@
   "source": "packages/language-server/src/server.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/server/server.mjs.licenses.txt",
-  "sha256": "c6210a4abbdd376e919638748283e09d7d707619381b339c73a6fcec14dcbdf1",
+  "sha256": "e452e22a009572127cf59606cc39b96d21653a8d2299ba450cde00dfbc0ed446",
   "noticesSha256": "f7ddfc140011241d834940a655ec207f2fd01482313fb6b1eda1f24795804463",
   "inputs": [
     {
@@ -541,7 +541,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "3357428093100ad6e3aff2fcf0bb8f676b43c875679a6c80895d80cefb584bfa"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",

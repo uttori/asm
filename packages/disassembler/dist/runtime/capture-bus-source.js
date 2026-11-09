@@ -2,10 +2,11 @@ import { canonicalEquals } from "@uttori/asm-core/canonical-json";
 import { verifyRuntimeCaptureCompanion } from "./capture-companion.js";
 import { validateRuntimeBusTraceMetadata, } from "./runtime-bus-trace.js";
 import { DEFAULT_RUNTIME_TRACE_MAX_BYTES, } from "./runtime-trace-file.js";
-/** Decode checkpointed ACT2 bus chunks without an intermediate JSON file or instruction projection.
- * @param {string} file Complete lossless bus archive.
- * @param {RuntimeTraceFileOptions} options Byte budget, progress and cancellation.
- * @returns {Promise<RuntimeBusTraceSource>} Provisional stream. Read rejects torn tails or changed identity.
+/**
+ * Decode checkpointed ACT2 bus chunks without an intermediate JSON file or instruction projection.
+ * @param file Complete lossless bus archive.
+ * @param options Byte budget, progress and cancellation.
+ * @returns Provisional stream. Read rejects torn tails or changed identity.
  */
 export const createRuntimeBusCaptureSource = async (file, options = {}) => {
     const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-capture");

@@ -1,16 +1,20 @@
+/** Narrow parsed JSON to a plain object record. */
 function isEffectRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Accept only the supported SNES VRAM capacity constants. */
 function isVramBytes(value) {
     return value === 65536 || value === 131072;
 }
+/** Accept finite integers for address and byte value fields. */
 function isInteger(value) {
     return typeof value === "number" && Number.isInteger(value);
 }
-/** Validate a native effect independently of transport framing or stored JSON.
- * @param {unknown} effect Claimed physical writes and decision flags.
- * @param {object} access Completing bus operation.
- * @returns {RuntimePPUEffect} Fresh semantic value with canonical property order, excluding raster.
+/**
+ * Validate a native effect independently of transport framing or stored JSON.
+ * @param effect Claimed physical writes and decision flags.
+ * @param access Completing bus operation.
+ * @returns Fresh semantic value with canonical property order, excluding raster.
  */
 export const normalizeRuntimePPUEffect = (effect, access) => {
     const accessAddress = access.address;

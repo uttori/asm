@@ -39,9 +39,13 @@ export function readAssemblyBuildResult(value) {
     assertBuildResult(value);
     return structuredClone(value);
 }
+/** True for a plain object that can hold JSON object fields. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** True for a nonempty string that contains no NUL. */
 const isText = (value) => typeof value === "string" && value.trim().length > 0 && !value.includes("\0");
+/** True for a 64-character lowercase hex SHA-256 digest. */
 const isHash = (value) => typeof value === "string" && /^[\da-f]{64}$/.test(value);
+/** True for an array of nonempty path strings, capped at 65,536 entries. */
 const isPaths = (value) => Array.isArray(value) && value.length <= 65536 && value.every(isText);
 /** Fail closed at the process boundary; misspelled fields must never silently discard build policy. */
 function assertBuildOperation(value) {

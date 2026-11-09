@@ -1,3 +1,4 @@
+/** Stable ordering of built-in directive families registered by the core plugin. */
 export const CORE_DIRECTIVE_GROUPS = Object.freeze([
     "data",
     "memory",

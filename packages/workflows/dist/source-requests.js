@@ -19,8 +19,23 @@ const fields = {
     research: ["research"],
     import: ["capture", "captures", "recoverPartial"],
 };
+/**
+ * Narrow IPC payloads to plain objects before reading action fields.
+ * @param value Decoded request root.
+ * @returns Whether keyed fields can be read safely.
+ */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/**
+ * Confirm a string names a registered source workflow action.
+ * @param value Candidate action field.
+ * @returns Whether the action exists in the request map.
+ */
 const isAction = (value) => typeof value === "string" && Object.hasOwn(fields, value);
+/**
+ * Reject empty or NUL-terminated path and identity strings.
+ * @param value Candidate string field.
+ * @returns Whether the string is safe for filesystem use.
+ */
 const isText = (value) => typeof value === "string" && value.length > 0 && !value.includes("\0");
 /** Validate transport shape here; research values receive their complete domain validation before any edit is proposed. */
 function assertRequest(value) {

@@ -1,13 +1,16 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { canonicalJson } from "./canonical-json.js";
+/** Format discriminator written into every serialized debug map payload. */
 export const DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
+/** Schema version bumped when required debug-map fields change shape. */
 export const DEBUG_MAP_SCHEMA_VERSION = 1;
+/** Computes a lowercase hex SHA-256 digest for strings or byte payloads. */
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 /**
  * Creates a deterministic debug map whose fingerprint covers every field except itself.
- * @param {CreateDebugMapOptions} options Output and mapping inputs.
- * @returns {DebugMap} Fingerprinted debug map.
+ * @param options Output and mapping inputs.
+ * @returns Fingerprinted debug map.
  */
 export const createDebugMap = (options) => {
     const sourceRoot = path.resolve(options.sourceRoot ?? process.cwd());
@@ -87,9 +90,9 @@ export const createDebugMap = (options) => {
 };
 /**
  * Recomputes the content fingerprint and output hash for stale-map detection.
- * @param {UncheckedDebugMap} map Debug map to validate. Format fields are checked here.
- * @param {Uint8Array} output Optional exact output bytes.
- * @returns {readonly string[]} Validation issues.
+ * @param map Debug map to validate. Format fields are checked here.
+ * @param output Optional exact output bytes.
+ * @returns Validation issues.
  */
 export const validateDebugMap = (map, output) => {
     const { fingerprint, ...payload } = map;
@@ -116,11 +119,11 @@ export const validateDebugMap = (map, output) => {
 };
 /**
  * Resolves a logical runtime address, falling back to an output offset for mirrors.
- * @param {DebugMap} map Debug map.
- * @param {string} addressSpace Address-space id.
- * @param {number} address Logical address.
- * @param {{ readonly architecture?: string; readonly outputOffset?: number }} options Filters and mirror identity.
- * @returns {readonly DebugMapRange[]} Matching ranges.
+ * @param map Debug map.
+ * @param addressSpace Address-space id.
+ * @param address Logical address.
+ * @param options Filters and mirror identity.
+ * @returns Matching ranges.
  */
 export const debugMapRangesForAddress = (map, addressSpace, address, options = {}) => map.ranges.filter((range) => {
     // Drop other CPUs when the caller names one (e.g. 65816 vs SPC700).
@@ -141,11 +144,11 @@ export const debugMapRangesForAddress = (map, addressSpace, address, options = {
 });
 /**
  * Resolves one-based source lines to all matching logical ranges.
- * @param {DebugMap} map Debug map.
- * @param {string} sourcePath Source path.
- * @param {number} line One-based line.
- * @param {string} architecture Optional architecture filter.
- * @returns {readonly DebugMapRange[]} Matching logical ranges.
+ * @param map Debug map.
+ * @param sourcePath Source path.
+ * @param line One-based line.
+ * @param architecture Optional architecture filter.
+ * @returns Matching logical ranges.
  */
 export const debugMapRangesForSource = (map, sourcePath, line, architecture) => {
     const normalized = sourcePath.split(path.sep).join("/");

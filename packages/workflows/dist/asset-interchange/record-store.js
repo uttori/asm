@@ -95,6 +95,7 @@ export function readAssetFile(file, limit) {
         fs.closeSync(fd);
     }
 }
+/** Reject interchange keys that contain path separators or NUL. */
 function safeKey(key) {
     if (key === "__proto__" || key === "constructor" || key === "prototype") {
         throw new Error("Unsafe asset metadata key.");
@@ -200,6 +201,7 @@ function pack(value, signal) {
     }
     return { metadata, blobs };
 }
+/** True for a plain object that can hold JSON object fields. */
 function record(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
 }

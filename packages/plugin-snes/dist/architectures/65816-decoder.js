@@ -1,8 +1,8 @@
 import { conditionalBranches, cpu65816Specifications, } from "./65816-spec.js";
 /**
  * Returns the value of a 65816 flag.
- * @param {Cpu65816FlagState | undefined} value The flag value.
- * @returns {0 | 1 | "unknown"} The value of the flag.
+ * @param value The flag value.
+ * @returns The value of the flag.
  */
 const flagValue = (value) => {
     if (value === true || value === 1) {
@@ -15,9 +15,9 @@ const flagValue = (value) => {
 };
 /**
  * Resolves the width flag for a 65816 instruction.
- * @param {Cpu65816DecodeState} state The decoder state.
- * @param {Cpu65816WidthFlag} flag The width flag to resolve.
- * @returns {0 | 1 | "unknown"} The resolved width flag.
+ * @param state The decoder state.
+ * @param flag The width flag to resolve.
+ * @returns The resolved width flag.
  */
 const resolvedWidthFlag = (state, flag) => {
     const emulation = flagValue(state.e);
@@ -35,10 +35,10 @@ const resolvedWidthFlag = (state, flag) => {
 };
 /**
  * Reads a little-endian value from a byte array.
- * @param {Uint8Array} bytes The byte array.
- * @param {number} offset The offset to read from.
- * @param {number} width The width of the value to read.
- * @returns {number} The little-endian value.
+ * @param bytes The byte array.
+ * @param offset The offset to read from.
+ * @param width The width of the value to read.
+ * @returns The little-endian value.
  */
 const readLittleEndian = (bytes, offset, width) => {
     let value = 0;
@@ -53,9 +53,9 @@ function byteAt(bytes, index) {
 }
 /**
  * Converts a little-endian value to a signed value.
- * @param {number} value The little-endian value.
- * @param {number} width The width of the value.
- * @returns {number} The signed value.
+ * @param value The little-endian value.
+ * @param width The width of the value.
+ * @returns The signed value.
  */
 const signed = (value, width) => {
     const signBit = 1 << (width * 8 - 1);
@@ -64,17 +64,17 @@ const signed = (value, width) => {
 };
 /**
  * Calculates the bank-local target address for a 65816 instruction.
- * @param {number} logicalAddress The logical address.
- * @param {number} size The size of the instruction.
- * @param {number} displacement The displacement.
- * @returns {number} The bank-local target address.
+ * @param logicalAddress The logical address.
+ * @param size The size of the instruction.
+ * @param displacement The displacement.
+ * @returns The bank-local target address.
  */
 const bankLocalTarget = (logicalAddress, size, displacement) => (logicalAddress & 0xff0000) | ((logicalAddress + size + displacement) & 0xffff);
 /**
  * Creates an address operand for a 65816 instruction.
- * @param {number} value The value of the operand.
- * @param {number} width The width of the operand.
- * @returns {DecodedOperand} The address operand.
+ * @param value The value of the operand.
+ * @param width The width of the operand.
+ * @returns The address operand.
  */
 const addressOperand = (value, width) => ({
     kind: "address",
@@ -83,10 +83,10 @@ const addressOperand = (value, width) => ({
 });
 /**
  * Creates the operands for a 65816 instruction.
- * @param {Cpu65816InstructionSpecification} specification The instruction specification.
- * @param {Uint8Array} bytes The bytes of the instruction.
- * @param {number} logicalAddress The logical address of the instruction.
- * @returns {readonly DecodedOperand[]} The operands for the instruction.
+ * @param specification The instruction specification.
+ * @param bytes The bytes of the instruction.
+ * @param logicalAddress The logical address of the instruction.
+ * @returns The operands for the instruction.
  */
 const operandsFor = (specification, bytes, logicalAddress) => {
     const firstOperandByte = byteAt(bytes, 1);
@@ -167,11 +167,11 @@ const operandsFor = (specification, bytes, logicalAddress) => {
 };
 /**
  * Calculates the target address for a 65816 instruction.
- * @param {Cpu65816InstructionSpecification} specification The instruction specification.
- * @param {readonly DecodedOperand[]} operands The operands of the instruction.
- * @param {Cpu65816DecodeState} state The decoder state.
- * @param {number} logicalAddress The logical address of the instruction.
- * @returns {number | undefined} The target address, or undefined if the target is not a valid address.
+ * @param specification The instruction specification.
+ * @param operands The operands of the instruction.
+ * @param state The decoder state.
+ * @param logicalAddress The logical address of the instruction.
+ * @returns The target address, or undefined if the target is not a valid address.
  */
 const targetFor = (specification, operands, state, logicalAddress) => {
     const operand = operands.length > 0 ? operands[0] : undefined;
@@ -195,11 +195,11 @@ const targetFor = (specification, operands, state, logicalAddress) => {
 };
 /**
  * Calculates the references for a 65816 instruction.
- * @param {Cpu65816InstructionSpecification} specification The instruction specification.
- * @param {readonly DecodedOperand[]} operands The operands of the instruction.
- * @param {Cpu65816DecodeState} state The decoder state.
- * @param {number} logicalAddress The logical address of the instruction.
- * @returns {readonly DecodedReference[]} The references for the instruction.
+ * @param specification The instruction specification.
+ * @param operands The operands of the instruction.
+ * @param state The decoder state.
+ * @param logicalAddress The logical address of the instruction.
+ * @returns The references for the instruction.
  */
 const referencesFor = (specification, operands, state, logicalAddress) => {
     const { mnemonic, mode } = specification;
@@ -265,9 +265,9 @@ const referencesFor = (specification, operands, state, logicalAddress) => {
 };
 /**
  * Calculates the effects for a 65816 instruction.
- * @param {Cpu65816InstructionSpecification} specification The instruction specification.
- * @param {readonly DecodedOperand[]} operands The operands of the instruction.
- * @returns {readonly InstructionStateEffect[]} The effects for the instruction.
+ * @param specification The instruction specification.
+ * @param operands The operands of the instruction.
+ * @returns The effects for the instruction.
  */
 const effectsFor = (specification, operands) => {
     const mask = operands[0]?.value;
@@ -278,11 +278,11 @@ const effectsFor = (specification, operands) => {
 };
 /**
  * Builds a decoded instruction for a 65816 instruction.
- * @param {Cpu65816InstructionSpecification} specification The instruction specification.
- * @param {Uint8Array} bytes The bytes of the instruction.
- * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
- * @param {Cpu65816DecodeState} state The decoder state.
- * @returns {DecodedInstruction} The decoded instruction.
+ * @param specification The instruction specification.
+ * @param bytes The bytes of the instruction.
+ * @param context The decode context.
+ * @param state The decoder state.
+ * @returns The decoded instruction.
  */
 const buildInstruction = (specification, bytes, context, state) => {
     const operands = operandsFor(specification, bytes, context.logicalAddress);
@@ -308,8 +308,8 @@ const buildInstruction = (specification, bytes, context, state) => {
 export class Cpu65816Decoder {
     /**
      * Decodes a 65816 instruction.
-     * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
-     * @returns {ArchitectureDecodeResult} The decode result.
+     * @param context The decode context.
+     * @returns The decode result.
      */
     decode(context) {
         const availableBytes = Number.isInteger(context.offset) && context.offset >= 0
@@ -395,9 +395,9 @@ export class Cpu65816Decoder {
 }
 /**
  * Formats a value as a hexadecimal string.
- * @param {number} value The value to format.
- * @param {number} width The width of the value.
- * @returns {string} The hexadecimal string.
+ * @param value The value to format.
+ * @param width The width of the value.
+ * @returns The hexadecimal string.
  */
 const hex = (value, width) => `$${(value >>> 0)
     .toString(16)
@@ -406,8 +406,8 @@ const hex = (value, width) => `$${(value >>> 0)
     .slice(-width * 2)}`;
 /**
  * Formats one decoded instruction in this project's native source syntax.
- * @param {DecodedInstruction} instruction The decoded 65816 instruction.
- * @returns {string} Canonical native source text.
+ * @param instruction The decoded 65816 instruction.
+ * @returns Canonical native source text.
  */
 export function formatCpu65816Instruction(instruction) {
     if (instruction.architecture !== "snes.65816") {

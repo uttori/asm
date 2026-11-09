@@ -1,20 +1,24 @@
 import { ASSET_LIMITS } from "../limits.js";
 import { integer } from "../validation.js";
+/** Narrow JSON values to plain objects during observation parsing. */
 function isObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
 }
+/** Require a plain object wrapper for observation records. */
 function object(value) {
     if (!isObject(value)) {
         throw new Error("Invalid SoM observation record.");
     }
     return value;
 }
+/** Validate a bounded UTF-8 observation identity string. */
 function identity(value) {
     if (typeof value !== "string" || !value.length || value.length > 1024) {
         throw new Error("Invalid SoM observation identity.");
     }
     return value;
 }
+/** Validate a lowercase hexadecimal SHA-256 digest field. */
 function hash(value) {
     if (typeof value !== "string" || !/^[\da-f]{64}$/.test(value)) {
         throw new Error("Invalid SoM observation evidence hash.");

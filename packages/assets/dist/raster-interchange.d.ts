@@ -4,15 +4,21 @@ import { type IndexedOwnership } from "./indexed-ownership.js";
 import type { InterchangeCapabilities, InterchangeChanges, TilemapInterchangeBaseline } from "./interchange.js";
 /** Fixed raster rectangles identify views through private authority; file positions never identify native resources. */
 export interface RasterInterchangeBaseline {
+    /** Baseline discriminator for raster interchange. */
     readonly kind: "raster";
+    /** Decoded editor document trusted by the host baseline. */
     readonly document: AsepriteDocument;
+    /** Fixed native owner and view inventories for reconciliation. */
     readonly ownership: IndexedOwnership;
+    /** View identities positioned on the presentation canvas. */
     readonly placements: readonly {
         readonly view: string;
         readonly x: number;
         readonly y: number;
     }[];
+    /** Palette slots whose color edits may apply. */
     readonly editablePaletteSlots: readonly number[];
+    /** Intersected capability profile for this baseline. */
     readonly capabilities: InterchangeCapabilities;
 }
 /** Reuse the v1 raster file contract while retaining the structural codec's one normalized document value. */

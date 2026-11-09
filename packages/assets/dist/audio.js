@@ -3,11 +3,13 @@ import { decodeBrrPcm, encodeBrrPcm } from "./brr-codec.js";
 export { decodeBrrPcm, encodeBrrPcm } from "./brr-codec.js";
 const MAX_WAVE_BYTES = 16 * 1024 * 1024;
 const MAX_SAMPLES = 1024 * 1024;
+/** Narrow untrusted document payloads to plain objects. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const PCM_MODEL_ERROR = "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth.";
-/** Rebuild a PCM model from an importer or encoder document value.
- * @param {unknown} value Untrusted document payload.
- * @returns {PcmAudio} Owned field snapshot; the sample buffer is the validated array.
+/**
+ * Rebuild a PCM model from an importer or encoder document value.
+ * @param value Untrusted document payload.
+ * @returns Owned field snapshot; the sample buffer is the validated array.
  */
 export function readPcmAudio(value) {
     if (!isRecord(value)) {
@@ -42,16 +44,20 @@ export function readPcmAudio(value) {
         ...(loop === undefined ? {} : { loop }),
     };
 }
+/** Read one little-endian uint16 from a byte slice. */
 const u16le = (bytes, offset) => bytes[offset] | (bytes[offset + 1] << 8);
+/** Read one little-endian uint32 from a byte slice. */
 const u32le = (bytes, offset) => (bytes[offset] +
     bytes[offset + 1] * 256 +
     bytes[offset + 2] * 65536 +
     bytes[offset + 3] * 16777216) >>>
     0;
+/** Decode ASCII bytes without interpreting UTF-8 multibyte sequences. */
 const ascii = (bytes, offset, length) => String.fromCharCode(...bytes.subarray(offset, offset + length));
-/** Scan RIFF extents strictly before passing individual chunks to AudioWAV's model decoders.
- * @param {Uint8Array} bytes Borrowed complete WAVE container.
- * @returns {ReadonlyMap<string, RiffChunk>} The required and optional first-release chunks.
+/**
+ * Scan RIFF extents strictly before passing individual chunks to AudioWAV's model decoders.
+ * @param bytes Borrowed complete WAVE container.
+ * @returns The required and optional first-release chunks.
  */
 function scanWave(bytes) {
     if (bytes.length < 12 ||
@@ -175,10 +181,11 @@ export const waveImporter = Object.freeze({
         };
     },
 });
-/** Write review PCM16 WAVE without Node Buffer or a guessed BRR playback rate.
- * @param {Int16Array} samples Decoded signed PCM16 samples.
- * @param {number} sampleRate Explicit review playback rate in Hz.
- * @returns {Uint8Array} Headered mono PCM16 RIFF/WAVE bytes.
+/**
+ * Write review PCM16 WAVE without Node Buffer or a guessed BRR playback rate.
+ * @param samples Decoded signed PCM16 samples.
+ * @param sampleRate Explicit review playback rate in Hz.
+ * @returns Headered mono PCM16 RIFF/WAVE bytes.
  */
 export function writePcmWave(samples, sampleRate) {
     if (!Number.isSafeInteger(sampleRate) ||
@@ -252,9 +259,10 @@ export const resolveBrrAudioOptions = (raw, source) => {
     }
     return { padding, loop: { start: requested.start, end: requested.end } };
 };
-/** Extend the native `snes.brr` ID with its deliberate PCM-to-BRR lossy path.
- * @param {readonly AssetEncoder[]} native Native block model encoders.
- * @returns {readonly AssetEncoder[]} Combined format registrations.
+/**
+ * Extend the native `snes.brr` ID with its deliberate PCM-to-BRR lossy path.
+ * @param native Native block model encoders.
+ * @returns Combined format registrations.
  */
 export function withAudioEncoder(native) {
     return native.map((encoder) => {

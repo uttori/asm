@@ -1,4 +1,9 @@
 import fs from "node:fs";
+/**
+ * Read a Node system error code without trusting the thrown value's shape.
+ * @param error Any thrown value.
+ * @returns The string `code` property, or undefined when absent or not a string.
+ */
 function errorCode(error) {
     if (typeof error === "object" &&
         error !== null &&
@@ -29,23 +34,35 @@ export const CAPTURE_CATALOG_SCHEMA = `CREATE TABLE capture_catalog (
   imported_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL,
   observed_events INTEGER NOT NULL, dropped_events INTEGER NOT NULL DEFAULT 0
 ) WITHOUT ROWID;`;
+/**
+ * Narrow to a safe integer of any sign.
+ * @param value Decoded policy field.
+ * @returns True for a number satisfying `Number.isSafeInteger`.
+ */
 function isSafeInteger(value) {
     return typeof value === "number" && Number.isSafeInteger(value);
 }
+/**
+ * Narrow to a plain non-array object whose fields are validated individually.
+ * @param value Decoded policy value.
+ * @returns True for a non-null, non-array object.
+ */
 function isPolicyRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-/** Stored and displayed independently of semantic edit revisions. Invalid persisted limits fail closed.
- * @param {DatabaseSync} db Open project connection.
- * @returns {AnalysisStoragePolicy} Validated persisted limits merged with defaults.
+/**
+ * Stored and displayed independently of semantic edit revisions. Invalid persisted limits fail closed.
+ * @param db Open project connection.
+ * @returns Validated persisted limits merged with defaults.
  */
 export const readStoragePolicy = (db) => {
     const value = db.prepare("SELECT v FROM meta WHERE k='storage-policy'").get()?.v;
     return validateStoragePolicy(value ? JSON.parse(String(value)) : {});
 };
-/** Merge explicit overrides with defaults. All limits must be finite, nonnegative safe integers.
- * @param {unknown} value Explicit policy fields. Unknown fields are rejected.
- * @returns {AnalysisStoragePolicy} Complete validated byte limits.
+/**
+ * Merge explicit overrides with defaults. All limits must be finite, nonnegative safe integers.
+ * @param value Explicit policy fields. Unknown fields are rejected.
+ * @returns Complete validated byte limits.
  */
 export const validateStoragePolicy = (value) => {
     if (!isPolicyRecord(value)) {
@@ -67,10 +84,11 @@ export const validateStoragePolicy = (value) => {
     }
     return { cacheMaxBytes, databaseMaxBytes };
 };
-/** Read bounded SQL aggregates. File sizes include allocated WAL capacity, not additional retained evidence.
- * @param {DatabaseSync} db Project connection inside the owning read snapshot.
- * @param {string} file Absolute database path used for allocation accounting.
- * @returns {AnalysisStorageSnapshot} Physical allocation, deduplication and receipt totals.
+/**
+ * Read bounded SQL aggregates. File sizes include allocated WAL capacity, not additional retained evidence.
+ * @param db Project connection inside the owning read snapshot.
+ * @param file Absolute database path used for allocation accounting.
+ * @returns Physical allocation, deduplication and receipt totals.
  */
 export const storageSnapshot = (db, file) => {
     const size = Number(db.prepare("PRAGMA page_size").get().page_size);
@@ -101,8 +119,9 @@ export const storageSnapshot = (db, file) => {
         captures: Number(captures.n),
     };
 };
-/** Reject the owning publication before COMMIT. Retained facts are never truncated to meet a quota.
- * @param {DatabaseSync} db Writer transaction whose publication has not committed.
+/**
+ * Reject the owning publication before COMMIT. Retained facts are never truncated to meet a quota.
+ * @param db Writer transaction whose publication has not committed.
  */
 export const enforceDatabaseBudget = (db) => {
     const budget = readStoragePolicy(db).databaseMaxBytes;
@@ -136,9 +155,10 @@ const RETIRED_CACHES = [
     { key: "snes_roles", tables: [] },
     { key: "runtime_architectures", tables: ["query_runtime_architectures"] },
 ];
-/** Remove only known disposable product caches; never runs while merely opening a project.
- * @param {DatabaseSync} db Connection inside the caller's maintenance writer transaction.
- * @returns {string[]} Retired keys whose persisted state was removed.
+/**
+ * Remove only known disposable product caches; never runs while merely opening a project.
+ * @param db Connection inside the caller's maintenance writer transaction.
+ * @returns Retired keys whose persisted state was removed.
  */
 const retireStorageCaches = (db) => {
     const removed = [];
@@ -175,10 +195,11 @@ const retireStorageCaches = (db) => {
     }
     return removed;
 };
-/** Include secondary indexes when budgeting a disposable table.
- * @param {DatabaseSync} db Open project connection.
- * @param {string} table Internal table name from the fixed cache inventory.
- * @returns {number} Allocated SQLite bytes for the table and all its indexes.
+/**
+ * Include secondary indexes when budgeting a disposable table.
+ * @param db Open project connection.
+ * @param table Internal table name from the fixed cache inventory.
+ * @returns Allocated SQLite bytes for the table and all its indexes.
  */
 const cacheTableBytes = (db, table) => {
     const allocation = db.prepare("SELECT COALESCE(SUM(pgsize),0) AS bytes FROM dbstat WHERE name=?");
@@ -187,15 +208,17 @@ const cacheTableBytes = (db, table) => {
         .all(table)
         .reduce((bytes, row) => bytes + Number(allocation.get(row.name).bytes), 0);
 };
-/** Explicit accounting for optional caches. Editor/export indexes are excluded from this budget.
- * @param {DatabaseSync} db Open project connection.
- * @returns {number} Allocated bytes including projection indexes and cache result payloads.
+/**
+ * Explicit accounting for optional caches. Editor/export indexes are excluded from this budget.
+ * @param db Open project connection.
+ * @returns Allocated bytes including projection indexes and cache result payloads.
  */
 export const optionalCacheBytes = (db) => [...CACHES, ...RETIRED_CACHES].reduce((bytes, cache) => bytes + cache.tables.reduce((n, table) => n + cacheTableBytes(db, table), 0), cacheTableBytes(db, "query_cache"));
-/** Evict stale or over-budget optional projections under a writer lock, after an operation completes.
+/**
+ * Evict stale or over-budget optional projections under a writer lock, after an operation completes.
  * Cache tokens are removed with their tables' rows, forcing a complete rebuild on next demand.
- * @param {DatabaseSync} db Writer transaction after the consuming operation has finished.
- * @returns {object} Evicted projection keys and remaining optional cache allocation.
+ * @param db Writer transaction after the consuming operation has finished.
+ * @returns Evicted projection keys and remaining optional cache allocation.
  */
 export const maintainStorageCaches = (db) => {
     if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {

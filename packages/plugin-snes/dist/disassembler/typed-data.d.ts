@@ -1,8 +1,11 @@
 import { HalfOpenIntervalIndex, type EvidenceRecord, type IntervalAnnotation } from "@uttori/asm-disassembler";
 /** A typed declaration retains its original alignment even when labels split its emitted source. */
 export interface SnesTypedData {
+    /** Inclusive ROM file offset. */
     readonly start: number;
+    /** Exclusive ROM file offset. */
     readonly end: number;
+    /** Element width in bytes (1–4), derived from the data or pointer classification. */
     readonly width: number;
     /** Explicit human decisions supersede imported byte classifications. */
     readonly priority: number;

@@ -11,6 +11,7 @@ export class AssetSourceCodecRegistry {
     get revision() {
         return this.#revision;
     }
+    /** Register one codec; ambiguous extensions reject registration. */
     register(codec) {
         if (!codec.id ||
             this.#codecs.has(codec.id) ||
@@ -49,6 +50,7 @@ export class AssetSourceCodecRegistry {
         this.#revision++;
         return this;
     }
+    /** Resolve a registered codec by id. */
     get(id) {
         const codec = this.#codecs.get(id);
         if (!codec) {

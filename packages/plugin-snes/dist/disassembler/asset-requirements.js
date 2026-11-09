@@ -68,7 +68,7 @@ export function verifySnesAssetRequirements(requirements, entries, catalog) {
                 const option = entry.call?.options[key];
                 return option?.kind === "string" && option.value === value;
             }))
-            .sort((a, b) => a.start - b.start);
+            .toSorted((a, b) => a.start - b.start);
         // Coverage is a union, not a requirement for one particular palette slice or
         // room filename. Aliases retain their existing physical owner and source identity.
         for (const entry of matching) {

@@ -1,15 +1,26 @@
 /** Parsed legacy iNES cartridge. Byte access returns copies, preserving the original input identity. */
 export class NesCartridge {
     #bytes;
+    /** iNES mapper number derived from the header. */
     mapper;
+    /** Whether the header advertises battery-backed PRG RAM. */
     battery;
+    /** Nametable mirroring mode declared in the header. */
     mirroring;
+    /** Optional 512-byte trainer section immediately after the header. */
     trainer;
+    /** PRG ROM section layout within the image. */
     prg;
+    /** CHR ROM section layout within the image. */
     chr;
+    /** Bytes after PRG and CHR, when present in the supplied image. */
     trailing;
     /** Legacy zero means unspecified; mapper-specific defaults belong to the machine profile. */
     declaredPrgRamSize;
+    /**
+     * Parse a complete iNES image and freeze section layout derived from the header.
+     * @param input Full cartridge bytes including the 16-byte header.
+     */
     constructor(input) {
         this.#bytes = Uint8Array.from(input);
         const bytes = this.#bytes;
@@ -43,15 +54,29 @@ export class NesCartridge {
         }
         this.trailing = Object.freeze({ offset: end, size: bytes.length - end });
     }
+    /** Total byte length of the parsed cartridge image. */
     get size() {
         return this.#bytes.length;
     }
+    /**
+     * Copy the full cartridge image so callers cannot mutate the parsed original.
+     * @returns Defensive copy of all cartridge bytes.
+     */
     bytes() {
         return this.#bytes.slice();
     }
+    /**
+     * Copy the 16-byte iNES header prefix.
+     * @returns Header bytes independent of the internal buffer.
+     */
     header() {
         return this.#bytes.slice(0, 16);
     }
+    /**
+     * Copy one parsed section range from the cartridge image.
+     * @param section Offset and size describing a contiguous cartridge range.
+     * @returns Bytes for the requested section only.
+     */
     section(section) {
         return this.#bytes.slice(section.offset, section.offset + section.size);
     }

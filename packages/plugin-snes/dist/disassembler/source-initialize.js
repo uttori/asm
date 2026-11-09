@@ -5,6 +5,11 @@ import { canonicalJson } from "@uttori/asm-core/canonical-json";
 import { openAnalysisProjectStore, RESEARCH_COLLECTIONS, RomImage, } from "@uttori/asm-disassembler";
 import { openSourceProject, sourceGit, sourceRepository, sourceContentHash, retainSourceGeneration, createSourceInputSnapshot, SOURCE_GENERATION_FILE, synchronizeSourceResearch, sourceStatus, } from "@uttori/asm-disassembler/source-project";
 import { createSnesAnalysisProject, analyzeSnesProject, exportSnes65816Source, buildSnesSource, snesGenerationOptionsHash, SNES_MAPPERS, } from "@uttori/asm-plugin-snes/disassembler";
+/**
+ * Load one research table from the analysis store for Git import.
+ * @param store Open analysis project backing the staged export.
+ * @param collection Table name excluding runtime evidence.
+ */
 function importedResearchRecords(store, collection) {
     switch (collection) {
         case "labels":
@@ -23,6 +28,10 @@ function importedResearchRecords(store, collection) {
         }
     }
 }
+/**
+ * Bootstrap a SNES Git source tree from a private ROM and optional research import.
+ * @param options Destination path, ROM file, mapper hints and cancellation hook.
+ */
 export async function initializeSnesSourceProject(options) {
     const destination = path.resolve(options.directory);
     if (fs.existsSync(destination)) {

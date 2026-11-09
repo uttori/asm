@@ -1,3 +1,12 @@
+/**
+ * Builds a frozen mode definition with optional width-flag metadata.
+ * @param id Stable addressing mode id.
+ * @param syntax Operand placeholder spelling.
+ * @param minimumSize Minimum encoded size in bytes.
+ * @param maximumSize Maximum encoded size in bytes; defaults to minimumSize.
+ * @param widthFlag Optional M/X width flag for immediates.
+ * @returns Mode definition consumed by the opcode matrix.
+ */
 const mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
     id,
     syntax,
@@ -5,6 +14,7 @@ const mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => 
     maximumSize,
     ...(widthFlag ? { widthFlag } : {}),
 });
+/** Frozen 65816 addressing mode catalog keyed by encoder-internal mode ids. */
 export const cpu65816Modes = Object.freeze({
     imp: mode("implied", "", 1),
     acc: mode("accumulator", "", 1),
@@ -34,12 +44,15 @@ export const cpu65816Modes = Object.freeze({
     indlong: mode("absoluteIndirectLong", "[addr]", 3),
     block: mode("blockMove", "srcBank,destBank", 3),
 });
+/**
+ * Narrows a string to a known 65816 mode table key.
+ * @param value Candidate mode key from an opcode row cell.
+ * @returns True when `value` names a mode in cpu65816Modes.
+ */
 function isCpu65816ModeKey(value) {
     return Object.hasOwn(cpu65816Modes, value);
 }
-/**
- * The opcode rows for the 65816.
- */
+/** Opcode matrix rows transcribed from the 65816 instruction set layout. */
 const opcodeRows = [
     "BRK:sig ORA:dix COP:sig ORA:sr TSB:dp ORA:dp ASL:dp ORA:dil PHP:imp ORA:immM ASL:acc PHD:imp TSB:abs ORA:abs ASL:abs ORA:long",
     "BPL:rel8 ORA:diy ORA:dpi ORA:sriy TRB:dp ORA:dpx ASL:dpx ORA:dily CLC:imp ORA:aby INC:acc TCS:imp TRB:abs ORA:abx ASL:abx ORA:longx",
@@ -170,9 +183,9 @@ export const conditionalBranches = new Set([
 ]);
 /**
  * The flow for a 65816 instruction.
- * @param {string} mnemonic The mnemonic of the instruction.
- * @param {string} addressingMode The addressing mode of the instruction.
- * @returns {InstructionFlow} The flow for the instruction.
+ * @param mnemonic The mnemonic of the instruction.
+ * @param addressingMode The addressing mode of the instruction.
+ * @returns The flow for the instruction.
  */
 const flowFor = (mnemonic, addressingMode) => {
     if (conditionalBranches.has(mnemonic)) {
@@ -302,7 +315,7 @@ export const cpu65816Specifications = Object.freeze(entries.map((entry, opcode) 
 }));
 /**
  * Generates editor hover/completion data from the same 256-entry table used to decode.
- * @returns {InstructionDescriptor[]} Generated editor instruction descriptors.
+ * @returns Generated editor instruction descriptors.
  */
 export function buildCpu65816Catalog() {
     const grouped = new Map();

@@ -1,13 +1,13 @@
 /**
  * Convert an unknown error to an Error.
- * @param {unknown} error The error to convert.
- * @returns {Error} The converted error.
+ * @param error The error to convert.
+ * @returns The converted error.
  */
 const asError = (error) => error instanceof Error ? error : new Error(String(error));
 /**
  * Calculate the checksum of an RSP payload.
- * @param {Uint8Array} payload The payload to calculate the checksum for.
- * @returns {number} The checksum of the payload.
+ * @param payload The payload to calculate the checksum for.
+ * @returns The checksum of the payload.
  */
 const checksum = (payload) => {
     let value = 0;
@@ -20,8 +20,8 @@ const checksum = (payload) => {
 };
 /**
  * Encode RSP payload as a sequence of escaped bytes.
- * @param {string} payload The payload to escape.
- * @returns {Uint8Array} The escaped payload.
+ * @param payload The payload to escape.
+ * @returns The escaped payload.
  * @throws {Error} If the payload contains a control character.
  */
 const escapedPayload = (payload) => {
@@ -38,8 +38,8 @@ const escapedPayload = (payload) => {
 };
 /**
  * Decode wire escapes without allocating a number array for large hex capture replies.
- * @param {Buffer} payload Checked wire payload. This view is valid only during receive processing.
- * @returns {string} Owned ASCII response. Unescaped RLE or a truncated escape throws.
+ * @param payload Checked wire payload. This view is valid only during receive processing.
+ * @returns Owned ASCII response. Unescaped RLE or a truncated escape throws.
  */
 const unescapePayload = (payload) => {
     // Capture replies contain only hexadecimal ASCII. Decode that common case directly.
@@ -72,8 +72,8 @@ const unescapePayload = (payload) => {
 };
 /**
  * Parse exactly one ASCII checksum digit. Unlike parseInt, invalid suffixes cannot be ignored.
- * @param {number} byte Raw wire byte, without ASCII high-bit masking.
- * @returns {number} Nibble value, or -1 for any non-hexadecimal byte.
+ * @param byte Raw wire byte, without ASCII high-bit masking.
+ * @returns Nibble value, or -1 for any non-hexadecimal byte.
  */
 const hexDigit = (byte) => {
     if (byte >= 0x30 && byte <= 0x39) {
@@ -87,6 +87,11 @@ const hexDigit = (byte) => {
     }
     return -1;
 };
+/**
+ * Recognizes an `S` or `T` stop reply by its two-digit hex signal prefix.
+ * @param payload Unescaped packet payload.
+ * @returns Parsed stop, or undefined for any other packet.
+ */
 const stop = (payload) => {
     if (!/^[ST][\dA-Fa-f]{2}/.test(payload)) {
         return undefined;
@@ -114,7 +119,10 @@ export class GdbRspClient {
     #started = false;
     #closed = false;
     #closeError;
-    /** @param {GdbRspClientOptions} options Transport and protocol safety bounds. */
+    /**
+     * Validates bounds and subscribes to the transport. No bytes are sent until `start`.
+     * @param options Transport and protocol safety bounds.
+     */
     constructor(options) {
         this.#transport = options.transport;
         this.#requestTimeoutMs = options.requestTimeoutMs ?? 3_000;
@@ -135,11 +143,14 @@ export class GdbRspClient {
         this.#dataSubscription = this.#transport.onData((data) => this.#receive(data));
         this.#closeSubscription = this.#transport.onClose((error) => this.#fail(error ?? new Error("RSP transport closed."), false));
     }
-    /** @returns {boolean} Whether the client has permanently closed. */
+    /** Whether the client has permanently closed after a local close, transport loss, or protocol failure. */
     get closed() {
         return this.#closed;
     }
-    /** @returns {Promise<void>} Completion after writing the required initial acknowledgement byte. */
+    /**
+     * Sends the initial `+` acknowledgement. Must be called exactly once before any request.
+     * @returns Completion after writing the required initial acknowledgement byte.
+     */
     async start() {
         if (this.#closed) {
             throw new Error("RSP client is closed.");
@@ -152,8 +163,8 @@ export class GdbRspClient {
     }
     /**
      * Subscribes to asynchronous stop packets.
-     * @param {(event: GdbRspStop) => void} listener Stop-event consumer.
-     * @returns {DebugSubscription} Disposable subscription.
+     * @param listener Stop-event consumer.
+     * @returns Disposable subscription.
      */
     onStop(listener) {
         this.#stopListeners.add(listener);
@@ -161,8 +172,8 @@ export class GdbRspClient {
     }
     /**
      * Subscribes to terminal RSP transport or protocol failure.
-     * @param {(error: Error) => void} listener Close-error consumer.
-     * @returns {DebugSubscription} Disposable subscription.
+     * @param listener Close-error consumer.
+     * @returns Disposable subscription.
      */
     onClose(listener) {
         if (this.#closeError) {
@@ -174,29 +185,38 @@ export class GdbRspClient {
     }
     /**
      * Sends one packet and waits for its non-stop response.
-     * @param {string} command RSP command payload.
-     * @returns {Promise<string>} Response payload.
+     * @param command RSP command payload.
+     * @returns Response payload.
      */
     request(command) {
         return this.#request(command, false);
     }
     /**
      * Sends a handshake packet such as `?` whose response is itself a stop packet.
-     * @param {string} command RSP command payload.
-     * @returns {Promise<string>} Stop response payload.
+     * @param command RSP command payload.
+     * @returns Stop response payload.
      */
     requestStop(command) {
         return this.#request(command, true);
     }
-    /** @returns {Promise<void>} Completion after writing continue. */
+    /**
+     * Sends `c`. The eventual stop arrives through `onStop`, not as a response.
+     * @returns Completion after writing continue.
+     */
     continue() {
         return this.#sendExecutionCommand("c");
     }
-    /** @returns {Promise<void>} Completion after writing one-instruction step. */
+    /**
+     * Sends `s`. The resulting stop arrives through `onStop`, not as a response.
+     * @returns Completion after writing one-instruction step.
+     */
     step() {
         return this.#sendExecutionCommand("s");
     }
-    /** @returns {Promise<void>} Completion after writing the out-of-band interrupt byte. */
+    /**
+     * Sends raw `0x03` to halt a running target. Rejected while a request is pending.
+     * @returns Completion after writing the out-of-band interrupt byte.
+     */
     interrupt() {
         this.#assertReady();
         if (this.#pending) {
@@ -204,7 +224,10 @@ export class GdbRspClient {
         }
         return this.#write(Uint8Array.of(0x03));
     }
-    /** @returns {Promise<void>} Completion after closing the transport. */
+    /**
+     * Closes the transport and rejects any in-flight request.
+     * @returns Completion after closing the transport.
+     */
     async close() {
         if (this.#closed) {
             return;
@@ -305,9 +328,10 @@ export class GdbRspClient {
             this.#fail(asError(error));
         }
     }
-    /** Append one owned transport fragment without repeatedly copying its accumulated prefix.
-     * @param {Uint8Array} data Incoming bytes. The transport may reuse them after this call returns.
-     * @returns {void} Grows/compacts only when tail capacity is exhausted. Exceeding the bound throws.
+    /**
+     * Append one owned transport fragment without repeatedly copying its accumulated prefix.
+     * @param data Incoming bytes. The transport may reuse them after this call returns.
+     * @returns Grows/compacts only when tail capacity is exhausted. Exceeding the bound throws.
      */
     #append(data) {
         const used = this.#end - this.#start;

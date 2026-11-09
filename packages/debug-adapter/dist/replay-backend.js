@@ -3,6 +3,7 @@ import { DebugTraceBuffer } from "./trace-buffer.js";
 const REPLAY_TRACE_BUFFER_EVENTS = 65_536;
 const REPLAY_TRACE_BATCH_EVENTS = 4_096;
 const REPLAY_STEP_KINDS = ["instruction", "over", "in", "out"];
+/** Derives architecture capabilities from snapshot content when not explicitly supplied. */
 const replayArchitectureCapabilities = (script) => {
     const architectureNames = new Set();
     for (const snapshot of script.snapshots) {
@@ -63,13 +64,16 @@ const replayArchitectureCapabilities = (script) => {
         };
     });
 };
+/** Stable map key for breakpoint storage keyed by qualified address. */
 const addressKey = (address) => `${address.architecture}\u0000${address.addressSpace}\u0000${address.outputOffset === undefined
     ? `logical:${address.address}`
     : `output:${address.outputOffset}`}`;
+/** Compares addresses with optional output-offset equality for mirrored ROM. */
 const addressesEqual = (left, right) => left.architecture === right.architecture &&
     left.addressSpace === right.addressSpace &&
     (left.address === right.address ||
         (left.outputOffset !== undefined && left.outputOffset === right.outputOffset));
+/** Validates non-negative safe integer bounds for read and disassembly requests. */
 const assertCount = (count) => {
     if (!Number.isSafeInteger(count) || count < 0) {
         throw new Error("Count must be a non-negative integer.");
@@ -77,7 +81,9 @@ const assertCount = (count) => {
 };
 /** Deterministic in-memory backend used to prove protocol behavior without an emulator. */
 export class ReplayDebugBackend {
+    /** Fixed replay protocol revision. */
     protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
+    /** Capabilities derived from script content or explicit architecture declarations. */
     capabilities;
     #script;
     #listeners = new Set();
@@ -88,7 +94,7 @@ export class ReplayDebugBackend {
     #trace;
     /**
      * Creates a replay backend from at least one complete snapshot.
-     * @param {ReplayScript} script Replay timeline.
+     * @param script Replay timeline.
      */
     constructor(script) {
         if (script.snapshots.length === 0) {
@@ -124,14 +130,17 @@ export class ReplayDebugBackend {
             architectures: Object.freeze(architectures.map((capability) => Object.freeze(capability))),
         });
     }
-    /** @returns {number} Current zero-based replay position, exposed for deterministic tests. */
+    /**
+     * Current zero-based replay position, exposed for deterministic tests.
+     * @returns Index into the snapshot timeline.
+     */
     get position() {
         return this.#index;
     }
     /**
      * Connects and optionally resets the replay cursor.
-     * @param {DebugBackendConnectOptions} options Reset behavior.
-     * @returns {Promise<void>} A resolved promise after the entry event is emitted.
+     * @param options Reset behavior.
+     * @returns A resolved promise after the entry event is emitted.
      */
     connect(options = {}) {
         if (options.reset ?? true) {
@@ -145,8 +154,8 @@ export class ReplayDebugBackend {
     }
     /**
      * Disconnects while preserving cursor and breakpoints for an optional reconnect.
-     * @param {{ readonly terminate?: boolean }} options Termination event behavior.
-     * @returns {Promise<void>} A resolved promise after disconnection.
+     * @param options Termination event behavior.
+     * @returns A resolved promise after disconnection.
      */
     disconnect(options = {}) {
         this.#requireConnected();
@@ -159,8 +168,8 @@ export class ReplayDebugBackend {
     }
     /**
      * Emits a pause event at the current cursor.
-     * @param {number} threadId Thread to report as stopped.
-     * @returns {Promise<void>} A resolved promise after the event.
+     * @param threadId Thread to report as stopped.
+     * @returns A resolved promise after the event.
      */
     pause(threadId = this.#snapshot.threads[0]?.id ?? 0) {
         this.#requireConnected();
@@ -169,8 +178,8 @@ export class ReplayDebugBackend {
     }
     /**
      * Runs until the next configured breakpoint or terminates at the end of the script.
-     * @param {number} threadId Thread to continue.
-     * @returns {Promise<void>} A resolved promise after the next stop or termination.
+     * @param threadId Thread to continue.
+     * @returns A resolved promise after the next stop or termination.
      */
     continue(threadId = this.#snapshot.threads[0]?.id ?? 0) {
         this.#requireConnected();
@@ -190,9 +199,9 @@ export class ReplayDebugBackend {
     }
     /**
      * Advances exactly one scripted state or terminates when no state remains.
-     * @param {number} threadId Thread to step.
-     * @param {DebugStepKind} _kind Requested step granularity.
-     * @returns {Promise<void>} A resolved promise after the next stop or termination.
+     * @param threadId Thread to step.
+     * @param _kind Requested step granularity.
+     * @returns A resolved promise after the next stop or termination.
      */
     step(threadId, _kind) {
         this.#requireConnected();
@@ -206,15 +215,18 @@ export class ReplayDebugBackend {
         this.#emit({ type: "stopped", reason: "step", threadId });
         return Promise.resolve();
     }
-    /** @returns {Promise<readonly DebugThread[]>} Processors/threads in stable script order. */
+    /**
+     * Processors and threads in stable script order.
+     * @returns Copied thread list from the active snapshot.
+     */
     threads() {
         this.#requireConnected();
         return Promise.resolve(this.#snapshot.threads.map((thread) => ({ ...thread })));
     }
     /**
      * Lists stack frames for one thread.
-     * @param {number} threadId Thread to inspect.
-     * @returns {Promise<readonly DebugStackFrame[]>} Stable frame copies.
+     * @param threadId Thread to inspect.
+     * @returns Stable frame copies.
      */
     stackFrames(threadId) {
         this.#requireConnected();
@@ -224,8 +236,8 @@ export class ReplayDebugBackend {
     }
     /**
      * Lists registers associated with a frame.
-     * @param {number} frameId Frame to inspect.
-     * @returns {Promise<readonly DebugRegister[]>} Stable register copies.
+     * @param frameId Frame to inspect.
+     * @returns Stable register copies.
      */
     registers(frameId) {
         this.#requireConnected();
@@ -233,9 +245,9 @@ export class ReplayDebugBackend {
     }
     /**
      * Reads available bytes from the current snapshot without crossing address spaces.
-     * @param {DebugAddress} address First logical address.
-     * @param {number} count Number of bytes.
-     * @returns {Promise<DebugMemoryRead>} Bytes and an unreadable-byte count.
+     * @param address First logical address.
+     * @param count Number of bytes.
+     * @returns Bytes and an unreadable-byte count.
      */
     readMemory(address, count) {
         this.#requireConnected();
@@ -263,8 +275,8 @@ export class ReplayDebugBackend {
     }
     /**
      * Replaces all instruction breakpoints with stable ids sorted by qualified address.
-     * @param {readonly DebugAddress[]} addresses New qualified addresses.
-     * @returns {Promise<readonly DebugBreakpoint[]>} Breakpoint verification results.
+     * @param addresses New qualified addresses.
+     * @returns Breakpoint verification results.
      */
     setBreakpoints(addresses) {
         this.#requireConnected();
@@ -286,9 +298,9 @@ export class ReplayDebugBackend {
     }
     /**
      * Returns scripted instructions starting at or after an address.
-     * @param {DebugAddress} address First logical address.
-     * @param {number} count Maximum instruction count.
-     * @returns {Promise<readonly DebugInstruction[]>} Stable instruction copies.
+     * @param address First logical address.
+     * @param count Maximum instruction count.
+     * @returns Stable instruction copies.
      */
     disassemble(address, count) {
         this.#requireConnected();
@@ -353,8 +365,8 @@ export class ReplayDebugBackend {
     }
     /**
      * Subscribes to synchronously ordered backend events.
-     * @param {(event: DebugBackendEvent) => void} listener Event consumer.
-     * @returns {DebugSubscription} Disposable subscription.
+     * @param listener Event consumer.
+     * @returns Disposable subscription.
      */
     onEvent(listener) {
         this.#listeners.add(listener);

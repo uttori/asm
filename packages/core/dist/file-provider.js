@@ -24,7 +24,7 @@ const virtualPath = {
 const path = nodePath ?? virtualPath;
 /**
  * Fail explicitly if a host selects the Node provider in a browser runtime.
- * @returns {typeof import("node:fs")} Node's synchronous filesystem API.
+ * @returns Node's synchronous filesystem API.
  */
 const requireNodeFs = () => {
     if (!nodeFs) {
@@ -40,9 +40,9 @@ export class NodeAssemblyFileProvider {
     readFiles = new Set();
     /**
      * Find the first existing path: macro directory, current source directory, include paths, then cwd.
-     * @param {string} filename Include path token, optionally quoted.
-     * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
-     * @returns {string | undefined} First existing file identity, or undefined.
+     * @param filename Include path token, optionally quoted.
+     * @param [options] Source and include directories in search order.
+     * @returns First existing file identity, or undefined.
      */
     resolvePath(filename, options = {}) {
         requireNodeFs();
@@ -71,6 +71,7 @@ export class NodeAssemblyFileProvider {
         }
         return undefined;
     }
+    /** Probes disk metadata without recording the path as a consumed dependency. */
     stat(filePath) {
         const fs = requireNodeFs();
         let st;
@@ -88,11 +89,13 @@ export class NodeAssemblyFileProvider {
             return { exists: true, readable: false, mtimeMs: st.mtimeMs };
         }
     }
+    /** Reads disk bytes and records the path in the build dependency set. */
     readFile(filePath) {
         const fs = requireNodeFs();
         this.readFiles.add(filePath);
         return new Uint8Array(fs.readFileSync(filePath));
     }
+    /** Reads disk text and records the path in the build dependency set. */
     readTextFile(filePath, encoding = "utf8") {
         const fs = requireNodeFs();
         this.readFiles.add(filePath);
@@ -130,6 +133,7 @@ export class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
             this.#overlays.set(path.resolve(file), value === null ? null : Uint8Array.from(value));
         }
     }
+    /** Applies overlays and retained snapshots before falling back to disk stat. */
     stat(file) {
         const name = path.resolve(file);
         if (this.#overlays.has(name)) {
@@ -143,6 +147,7 @@ export class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
         }
         return super.stat(name);
     }
+    /** Returns immutable snapshot bytes, honoring overlays and the build byte budget. */
     readFile(file) {
         const name = path.resolve(file);
         let bytes = this.#snapshots.get(name);
@@ -167,6 +172,7 @@ export class NodeAssemblySnapshotProvider extends NodeAssemblyFileProvider {
         // Encoders and converters cannot mutate the input observed by later passes or receipts.
         return bytes.slice();
     }
+    /** Decodes snapshot bytes using the same copy-on-read path as binary reads. */
     readTextFile(file, encoding = "utf8") {
         return Buffer.from(this.readFile(file)).toString(encoding);
     }
@@ -202,9 +208,9 @@ export class MemoryAssemblyFileProvider {
     }
     /**
      * Match an exact virtual key, then search macro/source/include directories and workingDirectory.
-     * @param {string} filename Include path token, optionally quoted.
-     * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
-     * @returns {string | undefined} First existing file identity, or undefined.
+     * @param filename Include path token, optionally quoted.
+     * @param [options] Source and include directories in search order.
+     * @returns First existing file identity, or undefined.
      */
     resolvePath(filename, options = {}) {
         if (!filename) {
@@ -231,6 +237,7 @@ export class MemoryAssemblyFileProvider {
         }
         return undefined;
     }
+    /** Reports virtual document presence and encoded byte length. */
     stat(filePath) {
         const entry = this.files.get(filePath);
         if (entry === undefined) {
@@ -245,6 +252,7 @@ export class MemoryAssemblyFileProvider {
             size: typeof entry === "string" ? new TextEncoder().encode(entry).length : entry.length,
         };
     }
+    /** Returns a copy of virtual file bytes, encoding strings as UTF-8. */
     readFile(filePath) {
         const entry = this.files.get(filePath);
         if (entry === undefined) {
@@ -252,6 +260,7 @@ export class MemoryAssemblyFileProvider {
         }
         return typeof entry === "string" ? new TextEncoder().encode(entry) : new Uint8Array(entry);
     }
+    /** Returns stored string content or decodes binary virtual entries. */
     readTextFile(filePath, encoding = "utf8") {
         const entry = this.files.get(filePath);
         if (entry === undefined) {
@@ -268,8 +277,8 @@ export class MemoryAssemblyFileProvider {
 }
 /**
  * Removes matching wrapping quotes from a user-supplied file path token.
- * @param {string} filename The raw path token.
- * @returns {string} The unwrapped path.
+ * @param filename The raw path token.
+ * @returns The unwrapped path.
  */
 export function stripWrappingQuotes(filename) {
     if ((filename.startsWith('"') && filename.endsWith('"')) ||

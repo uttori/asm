@@ -12,6 +12,7 @@ export class AssemblyOutputBuffer {
     visible;
     used = 0;
     managed = true;
+    /** Visible byte count; spare capacity in managed storage is excluded. */
     get length() {
         return this.storage ? this.used : this.value.length;
     }

@@ -1,5 +1,6 @@
 import { decodeScalarArray, encodeScalarArray } from "./data-scalar.js";
 import { integer, unitCount } from "./validation.js";
+/** Reject overlapping fields and out-of-stride members before decode. */
 const validateLayout = (layout) => {
     integer(layout.stride, "Struct stride", 1, 1 << 20);
     if (layout.fields.length === 0) {
@@ -28,11 +29,13 @@ const validateLayout = (layout) => {
         spans.push({ name: field.name, start, end });
     });
 };
+/** Map one scalar struct member to array decode options. */
 const scalarOptions = (field) => ({
     width: field.width,
     endian: field.endian ?? "little",
     signed: field.signed ?? false,
 });
+/** Extract one LSB0 bitfield from a record slice. */
 const readBits = (bytes, base, bitOffset, bits, signed) => {
     let value = 0;
     for (let bit = 0; bit < bits; bit++) {
@@ -44,10 +47,11 @@ const readBits = (bytes, base, bitOffset, bits, signed) => {
     const modulus = 2 ** bits;
     return signed && value >= modulus / 2 ? value - modulus : value;
 };
-/** Decode records while retaining exact backing bytes for later edits.
- * @param {Uint8Array} bytes Borrowed complete record stream.
- * @param {StructLayout} layout Field locations and byte stride.
- * @returns {StructRecords} Decoded fields and an owned raw snapshot.
+/**
+ * Decode records while retaining exact backing bytes for later edits.
+ * @param bytes Borrowed complete record stream.
+ * @param layout Field locations and byte stride.
+ * @returns Decoded fields and an owned raw snapshot.
  */
 export function decodeStructRecords(bytes, layout) {
     validateLayout(layout);
@@ -67,12 +71,13 @@ export function decodeStructRecords(bytes, layout) {
     });
     return { records, raw: bytes.slice() };
 }
-/** Encode records while preserving unknown bits, or explicitly zero-fill new padding.
- * @param {Record<string, number>[]} records Field values in record order.
- * @param {StructLayout} layout Field locations and byte stride.
- * @param {Uint8Array} backing Original bytes; omit only with explicit zero padding.
- * @param {string} padding Required policy for newly authored records.
- * @returns {Uint8Array} Owned packed records.
+/**
+ * Encode records while preserving unknown bits, or explicitly zero-fill new padding.
+ * @param records Field values in record order.
+ * @param layout Field locations and byte stride.
+ * @param backing Original bytes; omit only with explicit zero padding.
+ * @param padding Required policy for newly authored records.
+ * @returns Owned packed records.
  */
 export function encodeStructRecords(records, layout, backing, padding) {
     validateLayout(layout);
@@ -126,10 +131,11 @@ export function encodeStructRecords(records, layout, backing, padding) {
     });
     return bytes;
 }
-/** Decode fixed-width pointers to absolute addresses.
- * @param {Uint8Array} bytes Borrowed packed pointer values.
- * @param {PointerTableOptions} options Width, endian order, base, scale and optional null sentinel.
- * @returns {(number|null)[]} Addresses or nulls in table order.
+/**
+ * Decode fixed-width pointers to absolute addresses.
+ * @param bytes Borrowed packed pointer values.
+ * @param options Width, endian order, base, scale and optional null sentinel.
+ * @returns Addresses or nulls in table order.
  */
 export function decodePointerTable(bytes, options) {
     integer(options.base, "Pointer base", 0, Number.MAX_SAFE_INTEGER);
@@ -142,10 +148,11 @@ export function decodePointerTable(bytes, options) {
         return integer(address, "Pointer address", 0, Number.MAX_SAFE_INTEGER);
     });
 }
-/** Encode exact representable pointer addresses without inventing ROM locations.
- * @param {(number|null)[]} addresses Absolute addresses or nulls.
- * @param {PointerTableOptions} options Width, endian order, base, scale and optional null sentinel.
- * @returns {Uint8Array} Owned packed pointer values.
+/**
+ * Encode exact representable pointer addresses without inventing ROM locations.
+ * @param addresses Absolute addresses or nulls.
+ * @param options Width, endian order, base, scale and optional null sentinel.
+ * @returns Owned packed pointer values.
  */
 export function encodePointerTable(addresses, options) {
     integer(options.base, "Pointer base", 0, Number.MAX_SAFE_INTEGER);
@@ -166,10 +173,11 @@ export function encodePointerTable(addresses, options) {
     });
     return encodeScalarArray(raw, { ...options, signed: false });
 }
-/** Decode semantic indexes without resolving game-specific target IDs.
- * @param {Uint8Array} bytes Borrowed packed index values.
- * @param {PointerTableOptions} options Width, endian order, base index and optional null sentinel.
- * @returns {(number|null)[]} Indexes or nulls in table order.
+/**
+ * Decode semantic indexes without resolving game-specific target IDs.
+ * @param bytes Borrowed packed index values.
+ * @param options Width, endian order, base index and optional null sentinel.
+ * @returns Indexes or nulls in table order.
  */
 export function decodeIndexTable(bytes, options) {
     integer(options.baseIndex, "Base index", 0, Number.MAX_SAFE_INTEGER);
@@ -177,10 +185,11 @@ export function decodeIndexTable(bytes, options) {
         ? null
         : integer(raw + options.baseIndex, "Index", 0, Number.MAX_SAFE_INTEGER));
 }
-/** Encode semantic indexes, rejecting nulls and values that do not fit storage.
- * @param {(number|null)[]} indexes Logical indexes or nulls.
- * @param {PointerTableOptions} options Width, endian order, base index and optional null sentinel.
- * @returns {Uint8Array} Owned packed index values.
+/**
+ * Encode semantic indexes, rejecting nulls and values that do not fit storage.
+ * @param indexes Logical indexes or nulls.
+ * @param options Width, endian order, base index and optional null sentinel.
+ * @returns Owned packed index values.
  */
 export function encodeIndexTable(indexes, options) {
     integer(options.baseIndex, "Base index", 0, Number.MAX_SAFE_INTEGER);

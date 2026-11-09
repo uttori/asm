@@ -1,6 +1,6 @@
 # Project Configuration
 
-Requires Node.js 26+ for CLI/library use or VS Code 1.140.0+ for the extension. Create
+Requires Node.js 26+ for CLI/library use or VS Code 1.145.0+ for the extension. Create
 `uttori-asm.config.json` in the project directory:
 
 ```json

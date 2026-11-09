@@ -1,8 +1,20 @@
+/**
+ * Rejects values that are not non-negative safe integers.
+ * @param value Candidate value.
+ * @param name Label used in the thrown message.
+ */
 const assertInteger = (value, name) => {
     if (!Number.isSafeInteger(value) || value < 0) {
         throw new Error(`${name} must be a non-negative safe integer.`);
     }
 };
+/**
+ * Reads an unsigned little-endian value, throwing when any byte is out of bounds.
+ * @param bytes Table bytes.
+ * @param offset First byte offset.
+ * @param width Value width in bytes.
+ * @returns Unsigned value.
+ */
 const readLittleEndian = (bytes, offset, width) => {
     if (!(bytes instanceof Uint8Array)) {
         throw new Error("Framework table bytes must be Uint8Array.");
@@ -18,9 +30,9 @@ const readLittleEndian = (bytes, offset, width) => {
 };
 /**
  * Decodes the Framework helper's table-base-relative 16-bit pointers.
- * @param {Uint8Array} bytes Complete relative-pointer table bytes.
- * @param {number} tableAddress Logical address of the table beginning.
- * @returns {readonly FrameworkRelativePointer[]} Decoded qualified targets.
+ * @param bytes Complete relative-pointer table bytes.
+ * @param tableAddress Logical address of the table beginning.
+ * @returns Decoded qualified targets.
  */
 export const decodeFrameworkRelativePointerTable = (bytes, tableAddress) => {
     assertInteger(tableAddress, "Framework relative-pointer tableAddress");
@@ -35,9 +47,9 @@ export const decodeFrameworkRelativePointerTable = (bytes, tableAddress) => {
 /**
  * Derives extraction ranges from an ordered 24-bit pointer list. The last
  * pointer is a terminal boundary and does not create an asset by itself.
- * @param {Uint8Array} pointerBytes Complete adjacent 24-bit pointer list.
- * @param {number} [headerSize] Bytes skipped at the start of each asset.
- * @returns {readonly FrameworkAssetExtractionRange[]} Half-open source ranges.
+ * @param pointerBytes Complete adjacent 24-bit pointer list.
+ * @param [headerSize] Bytes skipped at the start of each asset.
+ * @returns Half-open source ranges.
  */
 export const deriveFrameworkAssetExtractionRanges = (pointerBytes, headerSize = 4) => {
     assertInteger(headerSize, "Framework asset headerSize");
@@ -56,8 +68,8 @@ export const deriveFrameworkAssetExtractionRanges = (pointerBytes, headerSize = 
 };
 /**
  * Decodes four-byte `(start, loop)` sample-directory records.
- * @param {Uint8Array} bytes Complete sample pointer table bytes.
- * @returns {readonly FrameworkSamplePointer[]} Decoded directory records.
+ * @param bytes Complete sample pointer table bytes.
+ * @returns Decoded directory records.
  */
 export const decodeFrameworkSamplePointers = (bytes) => {
     if (bytes.length === 0 || bytes.length % 4 !== 0) {
@@ -94,11 +106,11 @@ export const decodeFrameworkSamplePointers = (bytes) => {
 /**
  * Groups duplicate sample pointers and projects ordered ARAM sample starts onto
  * half-open ROM ranges. The configured data end closes the final unique sample.
- * @param {readonly FrameworkSamplePointer[]} pointers Decoded sample directory.
- * @param {number} sourceDataStart ROM address corresponding to `aramDataBase`.
- * @param {number} sourceDataEnd Exclusive ROM end for the final sample.
- * @param {number} aramDataBase First ARAM address stored in the ROM payload.
- * @returns {readonly FrameworkSampleExtractionRange[]} Unique projected payload ranges.
+ * @param pointers Decoded sample directory.
+ * @param sourceDataStart ROM address corresponding to `aramDataBase`.
+ * @param sourceDataEnd Exclusive ROM end for the final sample.
+ * @param aramDataBase First ARAM address stored in the ROM payload.
+ * @returns Unique projected payload ranges.
  */
 export const deriveFrameworkSampleExtractionRanges = (pointers, sourceDataStart, sourceDataEnd, aramDataBase) => {
     assertInteger(sourceDataStart, "Framework sample sourceDataStart");

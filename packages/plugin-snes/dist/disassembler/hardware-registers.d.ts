@@ -1,3 +1,4 @@
+/** One exported MMIO constant emitted into generated SNES defines. */
 export interface SnesHardwareDefine {
     /** Conventional assembler symbol. */
     readonly symbol: string;
@@ -6,6 +7,7 @@ export interface SnesHardwareDefine {
     /** Human-readable hover documentation emitted as a trailing source comment. */
     readonly description: string;
 }
+/** Volatile MMIO identity returned for CPU I/O bank queries. */
 export interface SnesHardwareRegister {
     /** 24-bit CPU address that was queried (bank is preserved). */
     readonly address: number;
@@ -21,8 +23,8 @@ export interface SnesHardwareRegister {
  * ROM mirrors of those banks are never classified as I/O. DMA/HDMA channels
  * Documented DMA/HDMA fields in `$4300–$437F` use the SNESdev `DMAPn`…`NLTRn`
  * spelling, including both addresses of the shared unused byte.
- * @param {number} address 24-bit SNES CPU bus address.
- * @returns {SnesHardwareRegister | undefined} Volatile register identity, or `undefined` if not MMIO.
+ * @param address 24-bit SNES CPU bus address.
+ * @returns Volatile register identity, or `undefined` if not MMIO.
  */
 export declare const identifySnesHardwareRegister: (address: number) => SnesHardwareRegister | undefined;
 /** Architecture-neutral filename. The SNES exporter supplies the register definitions. */
@@ -31,18 +33,18 @@ export declare const SNES_HARDWARE_DEFINES_SOURCE = "defines.asm";
  * Returns the complete documented set of CPU-visible register constants used by generated source.
  * DMA channel registers are expanded so repeated `$43x0` access patterns remain obvious and every
  * emitted symbol has its own hover annotation.
- * @returns {readonly SnesHardwareDefine[]} Register definitions in ascending address order.
+ * @returns Register definitions in ascending address order.
  */
 export declare const snesHardwareDefineRecords: () => readonly SnesHardwareDefine[];
 /**
  * Returns the complete set of CPU-visible register symbol/address pairs used by generated source.
- * @returns {readonly [string, number][]} Symbol/address pairs in ascending address order.
+ * @returns Symbol/address pairs in ascending address order.
  */
 export declare const snesHardwareDefines: () => readonly (readonly [string, number])[];
 /**
  * Renders the built-in SNES register and bit-mask vocabulary included by generated source.
  * These are ordinary symbols, not assembler magic, so projects may add their own aliases.
- * @returns {string} Deterministic native assembly source.
+ * @returns Deterministic native assembly source.
  */
 export declare const renderSnesHardwareDefines: () => string;
 //# sourceMappingURL=hardware-registers.d.ts.map

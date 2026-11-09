@@ -10,8 +10,11 @@ export class Arch65xx {
     context;
     cpu;
     encoder;
+    /** Every form the CPU can assemble, shared by reference with the typed encoder. */
     forms;
+    /** Instruction descriptors exposed to tooling, shared with the typed encoder. */
     catalog;
+    /** Assemblable forms grouped by uppercase mnemonic. */
     formsByMnemonic;
     constructor(context, cpu) {
         this.context = context;
@@ -21,15 +24,29 @@ export class Arch65xx {
         this.catalog = this.encoder.catalog;
         this.formsByMnemonic = this.encoder.formsByMnemonic;
     }
+    /**
+     * Returns the typed encoder's instruction catalog without copying it.
+     * @returns The shared descriptor list.
+     */
     getInstructionCatalog() {
         return this.catalog;
     }
+    /**
+     * Estimates instruction size without emitting bytes.
+     * @param words Mnemonic followed by operand words; the operand words are rejoined with spaces before parsing.
+     * @returns Encoded size in bytes, or 0 for an empty line.
+     */
     estimateSize(words) {
         if (!words.length) {
             return 0;
         }
         return this.run(words[0], words.slice(1).join(" "), false);
     }
+    /**
+     * Encodes one instruction into the current emission.
+     * @param words Mnemonic followed by operand words; the operand words are rejoined with spaces before parsing.
+     * @returns True when the instruction was handled; an empty line is a successful no-op.
+     */
     encode(words) {
         if (!words.length) {
             return true;
@@ -48,9 +65,9 @@ export class Arch65xx {
 /**
  * Concatenates opcode/prefix bytes with already-encoded operand bytes.
  * Used by tests and tooling. The live encoder writes through `emission` instead.
- * @param {InstructionForm} form The instruction form.
- * @param {readonly number[]} operandBytes The operand bytes.
- * @returns {Uint8Array} The materialized opcode form.
+ * @param form The instruction form.
+ * @param operandBytes The operand bytes.
+ * @returns The materialized opcode form.
  */
 export function materializeOpcodeForm(form, operandBytes = []) {
     const expected = form.operands.reduce((size, operand) => size + operand.width, 0);

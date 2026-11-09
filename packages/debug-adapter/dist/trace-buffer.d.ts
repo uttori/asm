@@ -1,8 +1,11 @@
 import type { DebugTraceBatch } from "./contracts.js";
 /** Construction options for one architecture-qualified, fixed-capacity trace ring. */
 export interface DebugTraceBufferOptions {
+    /** Architecture whose PCs are stored in the ring. */
     readonly architecture: string;
+    /** Address space shared by every appended PC. */
     readonly addressSpace: string;
+    /** Maximum retained instruction addresses before oldest-first loss. */
     readonly capacity: number;
 }
 /**
@@ -11,14 +14,26 @@ export interface DebugTraceBufferOptions {
  */
 export declare class DebugTraceBuffer {
     #private;
+    /** Architecture recorded by every batch from this buffer. */
     readonly architecture: string;
+    /** Address space of every retained PC. */
     readonly addressSpace: string;
+    /** Fixed capacity before oldest-first loss. */
     readonly capacity: number;
-    /** @param {DebugTraceBufferOptions} options Trace identity and fixed producer capacity. */
+    /**
+     * Allocates an empty ring with the given identity and capacity.
+     * @param options Trace identity and fixed producer capacity.
+     */
     constructor(options: DebugTraceBufferOptions);
-    /** @returns {boolean} Whether new instruction addresses are currently accepted. */
+    /**
+     * Whether new instruction addresses are currently accepted.
+     * @returns True while recording is active.
+     */
     get active(): boolean;
-    /** @returns {number} Current retained event count, which never exceeds `capacity`. */
+    /**
+     * Current retained event count, which never exceeds capacity.
+     * @returns Number of addresses waiting to be pulled.
+     */
     get bufferedEvents(): number;
     /** Resets sequence/loss state and enables a new explicit recording. */
     start(): void;
@@ -26,13 +41,13 @@ export declare class DebugTraceBuffer {
     stop(): void;
     /**
      * Records one instruction address when active.
-     * @param {number} address Architecture-local logical instruction address.
+     * @param address Architecture-local logical instruction address.
      */
     append(address: number): void;
     /**
      * Destructively reads the oldest retained addresses.
-     * @param {number} maxEvents Positive consumer batch bound.
-     * @returns {DebugTraceBatch} Ordered addresses plus explicit cumulative loss state.
+     * @param maxEvents Positive consumer batch bound.
+     * @returns Ordered addresses plus explicit cumulative loss state.
      */
     read(maxEvents: number): DebugTraceBatch;
 }

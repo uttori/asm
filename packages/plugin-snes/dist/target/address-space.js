@@ -51,9 +51,9 @@ export const snesRomAddressSpace = {
      * CPU bus → ROM file offset. Returns `-1` for WRAM, SRAM, or unmapped holes.
      * Formulas match Asar's `snestopc` (not a hardware bus trace).
      *
-     * @param {number} address The address to convert.
-     * @param {AddressSpaceContext} context The address space context.
-     * @returns {number} The output offset.
+     * @param address The address to convert.
+     * @param context The address space context.
+     * @returns The output offset.
      */
     toOutputOffset(address, context) {
         if (address < 0 || address > 0xffffff) {
@@ -133,9 +133,9 @@ export const snesRomAddressSpace = {
      * Inverse of {@link snesRomAddressSpace.toOutputOffset}: file offset → a
      * canonical CPU address (usually the FastROM mirror). `-1` if the offset
      * cannot exist for this mapper.
-     * @param {number} offset The offset to convert.
-     * @param {AddressSpaceContext} context The address space context.
-     * @returns {number} The canonical CPU address.
+     * @param offset The offset to convert.
+     * @param context The address space context.
+     * @returns The canonical CPU address.
      */
     fromOutputOffset(offset, context) {
         if (offset < 0) {

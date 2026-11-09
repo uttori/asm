@@ -4,16 +4,16 @@
  * not milliseconds. Zero waits for fresh input from the talking actor's controller.
  * Unknown commands and selectors fail rather than becoming literal dialogue glyphs.
  */
-export function encodeSomDialogueCommand(token) {
+export function encodeSomDialogueCommand(text) {
     const names = ["${boy}", "${girl}", "${sprite}"];
-    const index = names.indexOf(token);
+    const index = names.indexOf(text);
     if (index >= 0) {
         return { family: "party-name", bytes: Uint8Array.of(0x57, index) };
     }
-    if (token === "${wait}") {
+    if (text === "${wait}") {
         return { family: "wait", bytes: Uint8Array.of(0x28, 0) };
     }
-    const wait = /^\${wait:(0|[1-9]\d*)}$/.exec(token);
+    const wait = /^\${wait:(0|[1-9]\d*)}$/.exec(text);
     if (wait) {
         const count = Number(wait[1]);
         if (!Number.isSafeInteger(count) || count > 255) {
@@ -26,10 +26,10 @@ export function encodeSomDialogueCommand(token) {
         ["${closeDialogue}", 0x51],
         ["${clearDialogue}", 0x52],
     ]);
-    const opcode = windows.get(token);
+    const opcode = windows.get(text);
     if (opcode !== undefined) {
         return { family: "text-window", bytes: Uint8Array.of(opcode) };
     }
-    throw new Error(`Unsupported dialogue command token ${token}.`);
+    throw new Error(`Unsupported dialogue command token ${text}.`);
 }
 //# sourceMappingURL=som-dialogue-command.js.map

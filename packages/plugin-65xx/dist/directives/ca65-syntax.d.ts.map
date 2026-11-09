@@ -1,1 +1,1 @@
-{"version":3,"file":"ca65-syntax.d.ts","sourceRoot":"","sources":["../../src/directives/ca65-syntax.ts"],"names":[],"mappings":"AAAA,OAAO,EAcL,KAAK,2BAA2B,EAEjC,MAAM,yBAAyB,CAAC;AA+WjC,uFAAuF;AACvF,wBAAgB,mBAAmB,CAAC,EAAE,EAAE,MAAM,GAAG,2BAA2B,CAc3E"}
+{"version":3,"file":"ca65-syntax.d.ts","sourceRoot":"","sources":["../../src/directives/ca65-syntax.ts"],"names":[],"mappings":"AAAA,OAAO,EAcL,KAAK,2BAA2B,EAEjC,MAAM,yBAAyB,CAAC;AAsXjC,uFAAuF;AACvF,wBAAgB,mBAAmB,CAAC,EAAE,EAAE,MAAM,GAAG,2BAA2B,CAc3E"}

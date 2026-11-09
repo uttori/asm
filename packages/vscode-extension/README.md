@@ -10,7 +10,7 @@ For native object/library/link commands and opt-in Build/Run/Debug manifests, se
 
 ## Requirements & Installation
 
-Use the latest stable VS Code release. The current extension API floor is 1.140.0;
+Use the latest stable VS Code release. The current extension API floor is 1.145.0;
 acceptance targets latest stable as it advances. The extension uses VS Code's bundled
 runtime. No separate Node.js installation is required. Live debugging needs a separately
 installed, manifest-matched emulator.

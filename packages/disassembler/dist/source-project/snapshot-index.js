@@ -184,6 +184,7 @@ export class SourceSnapshotIndex {
         assertSourceObjectId(tree);
         return tree;
     }
+    /** Release the private scratch index and any temporary Git state. */
     dispose() {
         this.#scratch.dispose();
     }

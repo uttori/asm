@@ -11,13 +11,21 @@ export type SourceResearchRequest = {
 };
 /** Compact picker/navigation data; original addresses remain valid after source relocation. */
 export interface SourceResearchSymbol {
+    /** Stable symbol identity that survives source relocation. */
     readonly id: string;
+    /** Primary symbol name written into research catalogs. */
     readonly name: string;
+    /** Source-relative or absolute file path. */
     readonly path: string;
+    /** Named address space the symbol occupies. */
     readonly addressSpace: string;
+    /** Logical bus or device address for the observation. */
     readonly address: number;
+    /** Additional names that resolve to the same symbol. */
     readonly aliases: readonly string[];
+    /** True when the symbol is hidden from generated source. */
     readonly suppressed: boolean;
+    /** True when static analysis should treat the address as an entry. */
     readonly entryPoint: boolean;
 }
 /** Exact before/after text supports both terminal review and one native workspace undo operation. */

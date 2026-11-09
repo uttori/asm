@@ -6,6 +6,11 @@ import { sourceFilePublicationEpoch, readSourceLinkBuild, sourceProjectLocalInpu
 import { buildSnesSource, inspectSnesSource, inspectSnesSourceModule, prepareSnesGeneration, snesGenerationOptionsHash, analyzeSnesProject, SNES_MAPPERS, prepareSnesSourceExpansion, prepareSnesSourceRelocation, createSnesAddressContext, } from "@uttori/asm-plugin-snes/disassembler";
 import { snesRomAddressSpace } from "@uttori/asm-plugin-snes/target";
 import { initializeSnesSourceProject } from "./source-initialize.js";
+/**
+ * Validate the on-disk SNES layout contract against the configured ROM hash.
+ * @param value Parsed JSON from the layout file.
+ * @param romSha256 Expected content hash of the linked ROM.
+ */
 function assertSourceLayout(value, romSha256) {
     if (typeof value !== "object" ||
         value === null ||
@@ -26,14 +31,19 @@ function assertSourceLayout(value, romSha256) {
         throw new Error("Invalid SNES source layout contract.");
     }
 }
+/** Narrow a string to a supported SNES cartridge mapper id. */
 function isSnesMapper(value) {
     return SNES_MAPPERS.some((mapper) => mapper === value);
 }
+/** True for mappers that support the ordinary LoROM/HiROM expansion workflow. */
 function isExpandableMapper(value) {
     return value === "lorom" || value === "hirom";
 }
+/** Accept plain JSON objects during contract parsing. */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** Accept JSON arrays whose element types are validated separately. */
 const isUnknownArray = (value) => Array.isArray(value);
+/** Accept JSON arrays containing only strings. */
 const isStringArray = (value) => Array.isArray(value) && value.every((item) => typeof item === "string");
 /** Read compact contracts with explicit size limits before parsing untrusted workspace JSON. */
 function readJson(file) {
@@ -205,6 +215,12 @@ async function inspectBuiltinProject(project, host, overlays, signal) {
         };
     });
 }
+/**
+ * Propose source and layout edits that grow ROM capacity under LoROM/HiROM rules.
+ * @param project Open Git source project being expanded.
+ * @param host Workflow host supplying build and inspection services.
+ * @param operation Target operation carrying size, signal and progress hooks.
+ */
 function expandSnesProject(project, host, operation) {
     const repository = project.repository;
     if (!Number.isSafeInteger(operation.expansionSize)) {
@@ -272,6 +288,12 @@ function expandSnesProject(project, host, operation) {
         return { ...result, edits };
     });
 }
+/**
+ * Plan an object move and emit reviewable source edits plus layout repairs.
+ * @param project Open Git source project being relocated.
+ * @param host Workflow host supplying build and inspection services.
+ * @param operation Target operation naming the object id and cancellation hooks.
+ */
 function relocateSnesProject(project, host, operation) {
     const repository = project.repository;
     if (!operation.objectId) {

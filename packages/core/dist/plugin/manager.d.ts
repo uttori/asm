@@ -2,14 +2,20 @@ import type { AssemblerPlugin, AssemblerPluginManifest, PluginDisposable, Plugin
 import { AssemblerEnvironment } from "./environment.js";
 /** In-memory plugin activation. Module text is diagnostic context, never imported by the manager. */
 export interface PluginActivationRequest {
+    /** Plugin instance whose activate hook will run. */
     readonly plugin: AssemblerPlugin;
+    /** Options validated by the plugin before activation. */
     readonly options?: unknown;
+    /** Optional module specifier recorded in activation diagnostics. */
     readonly pluginModule?: string;
 }
 /** Already-imported module namespace. Its default export must satisfy AssemblerPlugin. */
 export interface PluginModuleActivationRequest {
+    /** Imported module namespace object containing the default export. */
     readonly module: unknown;
+    /** Options validated by the plugin before activation. */
     readonly options?: unknown;
+    /** Module specifier used for diagnostics and manifest context. */
     readonly pluginModule: string;
 }
 /** Host services shared across all activations in this manager. */
@@ -26,12 +32,12 @@ export declare class PluginManager implements PluginDisposable {
     constructor(options?: PluginManagerOptions);
     /**
      * Inspect successfully activated plugins.
-     * @returns {readonly AssemblerPluginManifest[]} A new array of frozen manifests in activation order.
+     * @returns A new array of frozen manifests in activation order.
      */
     get activatedPlugins(): readonly AssemblerPluginManifest[];
     /**
      * Validate module default exports, then activate them with the same rules as activatePlugins.
-     * @param {readonly PluginModuleActivationRequest[]} requests Imported namespaces and the options supplied for each plugin.
+     * @param requests Imported namespaces and the options supplied for each plugin.
      */
     activateModules(requests: readonly PluginModuleActivationRequest[]): Promise<void>;
     /**
@@ -39,13 +45,13 @@ export declare class PluginManager implements PluginDisposable {
      * Each plugin commits independently: earlier successes remain active if a later one fails.
      * Throws PluginError for invalid input, dependency conflicts, or activation failure.
      * Activation is unavailable after freeze or disposal. Dispose the manager after a failed batch.
-     * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
+     * @param requests Plugins/options to activate, reordered only as dependencies require.
      */
     activatePlugins(requests: readonly PluginActivationRequest[]): Promise<void>;
     /**
      * Validate target references and aliases, then seal registration. Repeated calls return the
      * same environment. Throws PluginError for invalid graphs or a disposed manager.
-     * @returns {AssemblerEnvironment} The validated, shared contribution graph. Resources remain owned by this manager.
+     * @returns The validated, shared contribution graph. Resources remain owned by this manager.
      */
     freeze(): AssemblerEnvironment;
     /**

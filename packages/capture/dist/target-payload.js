@@ -77,9 +77,19 @@ export function readCaptureTargetPayload(codec, version, state) {
     return Object.freeze({ codec, version: 1, state: Object.freeze({ ...state }) });
 }
 // Register ranges and extra fields are checked above; these predicates establish the named fields.
+/**
+ * Confirm every SNES wire field is present after range validation.
+ * @param state Candidate register map.
+ * @returns Whether the map satisfies the SNES profile shape.
+ */
 function isSnesState(state) {
     return Object.keys(snesLimits).every((key) => typeof state[key] === "number");
 }
+/**
+ * Confirm every NES wire field is present after range validation.
+ * @param state Candidate register map.
+ * @returns Whether the map satisfies the NES profile shape.
+ */
 function isNesState(state) {
     return Object.keys(nesLimits).every((key) => typeof state[key] === "number");
 }

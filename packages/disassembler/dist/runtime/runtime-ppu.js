@@ -1,6 +1,7 @@
 import { normalizeRuntimePPUEffect } from "../model/runtime-ppu-effect.js";
-/** Count already validated effects with a fixed 64-example limit, regardless of archive length.
- * @returns {object} Single-pass accumulator. All effects contribute to the exact totals.
+/**
+ * Count already validated effects with a fixed 64-example limit, regardless of archive length.
+ * @returns Single-pass accumulator. All effects contribute to the exact totals.
  */
 export const createRuntimePPUAccumulator = () => {
     let portWrites = 0, written = 0, blocked = 0, latched = 0, byteWrites = 0, renderingRestricted = 0;

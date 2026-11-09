@@ -13,7 +13,7 @@
 - Famicom full machine contexts, controller input/screenshot companions and verified deterministic replay.
 - Relocatable objects, libraries and linked builds with Asar/ca65 source adapters and opt-in linked source generation.
 
-Requires VS Code 1.140.0 or newer. Bundled tools use the editor's runtime. Standalone npm tools
+Requires VS Code 1.145.0 or newer. Bundled tools use the editor's runtime. Standalone npm tools
 require Node.js 26 or newer. Live emulator support depends on a compatible external ares runtime.
 See the
 [guide](https://github.com/uttori/asm/blob/master/packages/vscode-extension/GUIDE.md) for setup and limitations.

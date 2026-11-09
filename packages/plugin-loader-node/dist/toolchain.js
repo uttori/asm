@@ -6,17 +6,17 @@ import { fileURLToPath } from "node:url";
 import { canonicalJson } from "@uttori/asm-core/canonical-json";
 /**
  * Accepts a JSON object. Arrays and null are not package manifests.
- * @param {unknown} value Parsed JSON.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Parsed JSON.
+ * @returns True when `value` is a non-array object.
  */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 /**
  * Reads a package.json dependency map. A missing map contributes no dependencies.
- * @param {unknown} value `dependencies` or `optionalDependencies`.
- * @param {string} root Package directory, used in the error.
- * @returns {Record<string, unknown>} Dependency names. Values are ignored except for object shape.
+ * @param value `dependencies` or `optionalDependencies`.
+ * @param root Package directory, used in the error.
+ * @returns Dependency names. Values are ignored except for object shape.
  */
 function dependencyMap(value, root) {
     if (value === undefined) {
@@ -39,6 +39,7 @@ function packageRoot(file) {
     }
     return fs.realpathSync(directory);
 }
+/** Hex SHA-256 digest; strings hash as UTF-8. */
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 /**
  * Hash owning packages and installed runtime dependencies, including dirty source, encoders and native

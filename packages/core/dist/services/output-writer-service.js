@@ -1,4 +1,5 @@
 import { normalizeAddressForWidth } from "../address-width.js";
+/** Writes bytes at the session cursor and maps them to output offsets. */
 export class OutputWriterService {
     host;
     constructor(host) {
@@ -6,7 +7,7 @@ export class OutputWriterService {
     }
     /**
      * Advances the logical write position.
-     * @param {number} num The number of bytes to step.
+     * @param num The number of bytes to step.
      */
     step(num) {
         if (num === 0) {
@@ -30,7 +31,7 @@ export class OutputWriterService {
     }
     /**
      * Writes a single byte at the current logical position.
-     * @param {number} num The value to write.
+     * @param num The value to write.
      */
     write1(num) {
         if (Number.isNaN(num)) {
@@ -87,7 +88,7 @@ export class OutputWriterService {
     }
     /**
      * Writes a 16-bit value to output.
-     * @param {number} num The value to write.
+     * @param num The value to write.
      */
     write2(num) {
         this.validateWrite(2);
@@ -96,7 +97,7 @@ export class OutputWriterService {
     }
     /**
      * Writes a 24-bit value to output.
-     * @param {number} num The value to write.
+     * @param num The value to write.
      */
     write3(num) {
         this.validateWrite(3);
@@ -106,7 +107,7 @@ export class OutputWriterService {
     }
     /**
      * Writes a 32-bit value to output.
-     * @param {number} num The value to write.
+     * @param num The value to write.
      */
     write4(num) {
         this.validateWrite(4);
@@ -118,9 +119,9 @@ export class OutputWriterService {
     /**
      * Writes the low 1–4 bytes of a safe integer, using two's complement for negatives.
      * Invalid arguments throw before lifecycle hooks, output, or the cursor change.
-     * @param {number} num Safe integer; high bits outside the selected width are discarded.
-     * @param {number} width Integral byte width from 1 through 4; use writeBytes for wider values.
-     * @param {"little" | "big"} endianness Byte order, defaulting to little-endian.
+     * @param num Safe integer; high bits outside the selected width are discarded.
+     * @param width Integral byte width from 1 through 4; use writeBytes for wider values.
+     * @param endianness Byte order, defaulting to little-endian.
      */
     writeValue(num, width, endianness = "little") {
         // JavaScript shifts wrap at 32 bits, so accepting a wider number would repeat low bytes.
@@ -141,7 +142,7 @@ export class OutputWriterService {
     }
     /**
      * Writes a sequence of already encoded bytes.
-     * @param {readonly number[]} values Bytes to write.
+     * @param values Bytes to write.
      */
     writeBytes(values) {
         this.validateWrite(values.length);
@@ -151,7 +152,7 @@ export class OutputWriterService {
     }
     /**
      * Runs active address-space and lifecycle validation for a write.
-     * @param {number} length The length of the value to write.
+     * @param length The length of the value to write.
      */
     validateWrite(length) {
         if (this.host.moduleAssembly) {
@@ -172,8 +173,8 @@ export class OutputWriterService {
     }
     /**
      * Converts a logical address to an output offset.
-     * @param {number} addr The logical address.
-     * @returns {number} The mapped output offset.
+     * @param addr The logical address.
+     * @returns The mapped output offset.
      */
     toOutputOffset(addr) {
         if (this.host.moduleAssembly) {
@@ -183,8 +184,8 @@ export class OutputWriterService {
     }
     /**
      * Converts an output offset to a logical address.
-     * @param {number} addr The output offset.
-     * @returns {number} The mapped logical address.
+     * @param addr The output offset.
+     * @returns The mapped logical address.
      */
     fromOutputOffset(addr) {
         return this.host.pluginAddressSpace.fromOutputOffset(addr);
@@ -199,9 +200,9 @@ export class OutputWriterService {
     }
     /**
      * Advances and normalizes a logical position.
-     * @param {number} inaddr The logical address to advance.
-     * @param {number} step The number of bytes to step.
-     * @returns {number} The fixed address.
+     * @param inaddr The logical address to advance.
+     * @param step The number of bytes to step.
+     * @returns The fixed address.
      */
     advanceLogicalAddress(inaddr, step = 0) {
         return this.host.pluginAddressSpace.advance(inaddr, step);

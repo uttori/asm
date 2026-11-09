@@ -4,7 +4,7 @@
   "source": "packages/vscode-extension/src/runtime/live-bus-analysis-process.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/out/live-bus-analysis-process.cjs.licenses.txt",
-  "sha256": "fd26bea1f74450bfbfdae360089dc036dccf022df431f7d07bac5d02eb1af78e",
+  "sha256": "3402cabe4f9a984754a6acfac12918d8b3588f84d92866c3c2b2d04f8e9e851c",
   "noticesSha256": "1acbcf4aef8332a02d171faa7e11453f231988c5aa2fcd2ef5df177c8c8a3851",
   "inputs": [
     {
@@ -13,7 +13,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "3357428093100ad6e3aff2fcf0bb8f676b43c875679a6c80895d80cefb584bfa"
     },
     {
       "file": "packages/capture/src/capture-compression.ts",

@@ -2,8 +2,8 @@
 export const PLUGIN_API_VERSION = 2;
 /**
  * Preserve the plugin's option type without runtime validation.
- * @param {AssemblerPlugin<Options>} plugin Definition to expose as the module's default export.
- * @returns {AssemblerPlugin<Options>} The same plugin object, retaining its option type.
+ * @param plugin Definition to expose as the module's default export.
+ * @returns The same plugin object, retaining its option type.
  */
 export function definePlugin(plugin) {
     return plugin;

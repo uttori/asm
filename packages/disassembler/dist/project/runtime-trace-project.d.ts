@@ -31,6 +31,7 @@ export interface RuntimeTraceProjectImportOptions extends RuntimeTraceFileOption
 }
 /** Compact import result. Complete runtime records remain in the SQLite working store. */
 export interface RuntimeTraceProjectImportResult extends Omit<RuntimeInstructionTraceImportResult, "batch"> {
+    /** Global storage accounting before and after publication, plus the post-commit WAL checkpoint state. */
     readonly storage: {
         readonly before: AnalysisStorageSnapshot;
         readonly after: AnalysisStorageSnapshot;
@@ -38,9 +39,13 @@ export interface RuntimeTraceProjectImportResult extends Omit<RuntimeInstruction
         readonly reusedFacts: number;
         readonly checkpointBusy: boolean;
     };
+    /** Post-commit maintenance, prefix-recovery and reduced-index notices; none indicate a failed import. */
     readonly warnings: readonly string[];
+    /** Execution records from this capture, sorted by address, for seeding analysis. */
     readonly execution: readonly RuntimeExecutionRecord[];
+    /** Whether runtime facts or provenance were published; false leaves the revision and pointer untouched. */
     readonly changed: boolean;
+    /** Runtime records and evidence entries new to the project in this import. */
     readonly added: {
         readonly runtime: number;
         readonly evidence: number;
@@ -52,11 +57,11 @@ export interface RuntimeTraceProjectImportResult extends Omit<RuntimeInstruction
  * ROM mismatch and conflicting stable IDs leave previously published facts and revision unchanged.
  * An explicit storage policy is saved separately before import. The input file is never moved or deleted.
  * A pointer-file error can reject after SQLite has committed. Reopen the project before retrying.
- * @param {string} file Native instruction trace path.
- * @param {string} directory Destination SQLite project root.
- * @param {RuntimeInstructionTraceImportContext} context Required ROM identity and requested indexing profile.
- * @param {RuntimeTraceProjectImportOptions} [options] Input budget, progress callbacks and cancellation signal.
- * @returns {Promise<RuntimeTraceProjectImportResult>} Committed counts, execution seeds, and maintenance warnings.
+ * @param file Native instruction trace path.
+ * @param directory Destination SQLite project root.
+ * @param context Required ROM identity and requested indexing profile.
+ * @param [options] Input budget, progress callbacks and cancellation signal.
+ * @returns Committed counts, execution seeds, and maintenance warnings.
  */
 export declare const importRuntimeTraceIntoProject: (file: string, directory: string, context: RuntimeInstructionTraceImportContext, options?: RuntimeTraceProjectImportOptions) => Promise<RuntimeTraceProjectImportResult>;
 /** Same committed evidence and exact per-import counts, without scanning all historical storage rows. */
@@ -68,11 +73,11 @@ type CompactRuntimeTraceProjectImportResult = Omit<RuntimeTraceProjectImportResu
  * Cancellation is cooperative at read/merge boundaries, not preemptive during synchronous finalization.
  * Storage-policy changes and post-commit pointer failures follow importRuntimeTraceIntoProject.
  * storageStatistics:false omits global storage accounting; validation and exact per-import counts remain.
- * @param {RuntimeTraceSource} source Ordered reader that verifies completion or supplies explicit prefix recovery metadata.
- * @param {string} directory Destination SQLite project root.
- * @param {RuntimeInstructionTraceImportContext} context Expected ROM, source name and index budget.
- * @param {RuntimeTraceProjectImportOptions} options Cancellation and progress. Byte limits belong to the source.
- * @returns {Promise} Committed facts and requested storage accounting. Reader failures publish nothing.
+ * @param source Ordered reader that verifies completion or supplies explicit prefix recovery metadata.
+ * @param directory Destination SQLite project root.
+ * @param context Expected ROM, source name and index budget.
+ * @param options Cancellation and progress. Byte limits belong to the source.
+ * @returns Committed facts and requested storage accounting. Reader failures publish nothing.
  */
 export declare function importRuntimeTraceSourceIntoProject(source: RuntimeTraceSource, directory: string, context: RuntimeInstructionTraceImportContext, options: RuntimeTraceProjectImportOptions & {
     readonly storageStatistics: false;
@@ -83,11 +88,12 @@ export declare function importRuntimeTraceSourceIntoProject(source: RuntimeTrace
 export declare function importRuntimeTraceSourceIntoProject(source: RuntimeTraceSource, directory: string, context: RuntimeInstructionTraceImportContext, options: RuntimeTraceProjectImportOptions & {
     readonly storageStatistics: boolean;
 }): Promise<RuntimeTraceProjectImportResult | CompactRuntimeTraceProjectImportResult>;
-/** Publish a combined offline batch without expanding the destination runtime history.
- * @param {string} directory Existing SQL project root.
- * @param {AnalysisProjectRevision} expected Revision used to verify the import ROM/mapper.
- * @param {RuntimeEvidenceBatch} batch Validated importer output. Stable-ID conflicts roll back the entire batch.
- * @returns {object} Atomic import changes and counts.
+/**
+ * Publish a combined offline batch without expanding the destination runtime history.
+ * @param directory Existing SQL project root.
+ * @param expected Revision used to verify the import ROM/mapper.
+ * @param batch Validated importer output. Stable-ID conflicts roll back the entire batch.
+ * @returns Atomic import changes and counts.
  */
 export declare const commitRuntimeEvidenceBatch: (directory: string, expected: AnalysisProjectRevision, batch: RuntimeEvidenceBatch) => {
     changed: boolean;

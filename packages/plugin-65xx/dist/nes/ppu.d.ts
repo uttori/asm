@@ -1,22 +1,34 @@
 import { type NesPPUState, type CaptureFileHeader, type CaptureNesBusAccessV2 } from "@uttori/asm-capture";
 /** NPP1 is a halted graphics view, not a save state or a rendered frame. */
 export declare const NES_PPU_SNAPSHOT_BYTES = 13056;
+/** Halted NPP1 graphics view: registers, mappings, and owned storage copies. */
 export interface NesPPUSnapshot {
     /** CPU master ticks since power/reset; interpret with clock, independently of any capture endpoint. */
     readonly cycle: string;
+    /** Program counter at the observation boundary. */
     readonly pc: number;
+    /** Physical PRG-ROM offset of PC, excluding header and trainer; null when unmapped. */
     readonly pcPrgOffset: number | null;
+    /** PPU dot (0–340) at the observation. */
     readonly dot: number;
+    /** PPU scanline at the observation. */
     readonly scanline: number;
+    /** Visible plus vblank scanline count for this PPU model. */
     readonly scanlines: number;
+    /** PPU-to-CPU clock ratio as a reduced numerator/denominator pair. */
     readonly clock: {
         readonly numerator: string;
         readonly denominator: string;
     };
+    /** Target-owned state snapshot at the boundary. */
     readonly state: NesPPUState;
+    /** Effective PPUCTRL, with nametable bits taken from t rather than the last $2000 write. */
     readonly control: number;
+    /** PPUMASK after the access. */
     readonly mask: number;
+    /** PPUSTATUS in the halted view. */
     readonly status: number;
+    /** Mapper number or register snapshot. */
     readonly mapper: readonly number[];
     /** Eight pattern and four nametable windows, each 1 KiB. Offsets are physical storage offsets. */
     readonly mappings: readonly {
@@ -26,9 +38,13 @@ export interface NesPPUSnapshot {
     }[];
     /** Owned mapped storage copies; callers may edit them to construct derived views. */
     readonly patterns: Uint8Array;
+    /** Copied CIRAM nametable bytes from the halted view. */
     readonly nametables: Uint8Array;
+    /** Copied CGRAM palette bytes from the halted view. */
     readonly palette: Uint8Array;
+    /** Copied primary OAM bytes from the halted view. */
     readonly oam: Uint8Array;
+    /** Copied secondary OAM bytes from the halted view. */
     readonly secondaryOam: Uint8Array;
     /** 64 RGB triplets from the active ares PPU model with current emphasis. */
     readonly colors: Uint8Array;
@@ -43,11 +59,17 @@ export declare function renderNesPPUViews(snapshot: NesPPUSnapshot): {
 };
 /** Bounded, complete-archive summary. It never treats bus observations as executable code. */
 export interface NesPPUCaptureSummary {
+    /** Parsed or declared header bytes. */
     readonly header: CaptureFileHeader;
+    /** SHA-256 of the complete capture archive summarized here. */
     readonly archiveSha256: string;
+    /** Number of decoded PPU-bus events in the archive. */
     readonly events: number;
+    /** Per-actor counts of bus accesses in the archive. */
     readonly actors: Readonly<Record<CaptureNesBusAccessV2["actor"], number>>;
+    /** Per-register access counts keyed by PPU I/O name. */
     readonly registerAccesses: Readonly<Record<string, number>>;
+    /** Sample of reconstructed physical writes, newest last. */
     readonly writes: readonly {
         readonly target: string;
         readonly offset: number;
@@ -58,6 +80,7 @@ export interface NesPPUCaptureSummary {
         readonly sequence: string;
         readonly cycle: string;
     }[];
+    /** Writes that targeted CHR-ROM or otherwise could not land. */
     readonly blockedWrites: number;
     /** Complete counts plus the last 1,024 IRQ-pin transitions, bounded independently of capture length. */
     readonly timeline: {

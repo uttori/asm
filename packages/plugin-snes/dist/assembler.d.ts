@@ -7,11 +7,14 @@ export declare const SNES_TARGET_ID = "snes.sfc";
  * Unknown keys are ignored. `checksumMode` is the only enum that throws.
  */
 export interface SnesTargetOptions extends Record<string, unknown> {
+    /** Header checksum algorithm when the ROM size is not a power of two. */
     readonly checksumMode: "asar" | "simple";
+    /** When false, finalization leaves the checksum word untouched. */
     readonly checksumEnabled: boolean;
     /** When true, Super FX auto-MOVE short RAM uses Asar's raw byte, not `addr >> 1`. */
     readonly asarSuperFxMoveShortAddress: boolean;
-    /** Optional diagnostic sink for unpublished layout measurement. Without it, a bank crossing throws.
+    /**
+     * Optional diagnostic sink for unpublished layout measurement. Without it, a bank crossing throws.
      * The caller must reject or reassemble the measured image before publishing; PC wrap rules are unchanged.
      */
     readonly onBankCrossing?: (address: number, width: number) => void;
@@ -25,7 +28,7 @@ declare const plugin: AssemblerPlugin<SnesTargetOptions>;
 export default plugin;
 /**
  * Activates the SNES plugin and freezes a reusable host environment.
- * @returns {Promise<AssemblerEnvironment>} Frozen SNES environment.
+ * @returns Frozen SNES environment.
  */
 export declare function createSnesAssemblerEnvironment(): Promise<AssemblerEnvironment>;
 //# sourceMappingURL=assembler.d.ts.map

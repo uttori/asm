@@ -1,7 +1,7 @@
 import { syntaxLiteral, syntaxRecord, syntaxString, syntaxUnion } from "../ir/syntax-codec.js";
 /**
  * Pushes the current namespace.
- * @param {NamespaceDirectiveContext} ctx The directive context.
+ * @param ctx The directive context.
  */
 export const handlePushNamespace = ({ session }) => {
     session.namespaceStack.push(session.currentNamespace);
@@ -12,7 +12,7 @@ export const handlePushNamespace = ({ session }) => {
 };
 /**
  * Restores the previous namespace.
- * @param {NamespaceDirectiveContext} ctx The directive context.
+ * @param ctx The directive context.
  */
 export const handlePullNamespace = ({ session }) => {
     if (session.namespaceStack.length === 0) {
@@ -35,16 +35,16 @@ export const handlePullNamespace = ({ session }) => {
  * @example
  * namespace "identifier"
  * namespace identifier
- * @param {NamespaceDirectiveContext} ctx The directive context.
- * @param {string[]} words The words of the namespace command.
+ * @param ctx The directive context.
+ * @param words The words of the namespace command.
  */
 export const handleNamespace = (ctx, words) => {
     executeNamespace(ctx, parseNamespace({ words }));
 };
 /**
  * Enters a namespace and records it as an outline container.
- * @param {NamespaceDirectiveContext["session"]} session The namespace session.
- * @param {string} name The namespace identifier being entered.
+ * @param session The namespace session.
+ * @param name The namespace identifier being entered.
  */
 function enterNamespace(session, name) {
     if (session.namespaceNestingEnabled) {
@@ -61,6 +61,7 @@ function enterNamespace(session, name) {
         containerName: parent || undefined,
     });
 }
+/** Registers namespace open, close, and push directives on the shared registry. */
 export const registerNamespaceDirectives = (registry, context) => {
     registry.registerImmutableTyped("namespace", parseNamespace, syntaxUnion(syntaxRecord({
         operation: syntaxUnion(syntaxLiteral("nest"), syntaxLiteral("unnest"), syntaxLiteral("clear"), syntaxLiteral("leave")),

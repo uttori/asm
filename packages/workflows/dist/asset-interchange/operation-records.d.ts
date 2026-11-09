@@ -29,6 +29,7 @@ export type AssetMaintenanceOperation = {
     readonly policy: string;
     readonly review?: string;
 };
+/** Union of editor/CLI asset interchange commands validated at the IPC boundary. */
 export type AssetOperation = AssetFileOperation | AssetMaintenanceOperation;
 /** Validate the lightweight IPC boundary before worker file reads; paths and draft metadata have separate bounded work. */
 export declare function readAssetOperation(value: unknown): AssetOperation;

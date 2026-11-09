@@ -2,11 +2,13 @@ import type { SnesLayoutDiagnostic } from "./check.js";
 import type { SnesMovableObject } from "./relocate.js";
 /** Explicit same-mapper capacity increase. All offsets and sizes are headerless ROM bytes. */
 export interface SnesRomExpansionPolicy {
+    /** Cartridge map that must stay unchanged across growth. */
     readonly mapper: "hirom" | "lorom";
     /** Power-of-two ceiling, at most 4 MiB. Mapper transitions require a different contract. */
     readonly maximumSize: number;
     /** Pristine value of every newly available byte, before declared object placement. */
     readonly fillByte: number;
+    /** Checksum pair must be recomputed over the full expanded image. */
     readonly checksum: "recalculate";
 }
 /** Return the cartridge header's file offset; expansion never relocates the header. */

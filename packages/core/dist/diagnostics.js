@@ -3,18 +3,22 @@ import { sourceSpanToRange } from "./source-location.js";
  * Error type that preserves assembler analysis metadata.
  */
 export class AssemblyError extends Error {
+    /** Stable diagnostic code mirrored in AssemblyDiagnostic records. */
     code;
+    /** Severity used when converting the error into a diagnostic. */
     severity;
+    /** Optional source location attached at throw site. */
     location;
+    /** Optional pipeline stage recorded for the failure. */
     stage;
     /**
      * Creates a new structured assembly error.
-     * @param {string} code Stable diagnostic code.
-     * @param {string} message Human-readable message.
-     * @param {{ severity?: AssemblyDiagnosticSeverity; location?: AssemblySourceLocation; stage?: string }} [options] Optional metadata.
-     * @param {AssemblyDiagnosticSeverity} [options.severity] Optional diagnostic severity.
-     * @param {AssemblySourceLocation} [options.location] Optional source location.
-     * @param {string} [options.stage] Optional pipeline stage.
+     * @param code Stable diagnostic code.
+     * @param message Human-readable message.
+     * @param [options] Optional metadata.
+     * @param [options.severity] Optional diagnostic severity.
+     * @param [options.location] Optional source location.
+     * @param [options.stage] Optional pipeline stage.
      */
     constructor(code, message, options = {}) {
         super(message);
@@ -27,10 +31,10 @@ export class AssemblyError extends Error {
 }
 /**
  * Creates a normalized source location object for diagnostics and tooling.
- * @param {string} file Source file path.
- * @param {number} line Zero-based source line.
- * @param {SourceSpan} [span] Optional precise source span.
- * @returns {AssemblySourceLocation} The normalized source location.
+ * @param file Source file path.
+ * @param line Zero-based source line.
+ * @param [span] Optional precise source span.
+ * @returns The normalized source location.
  */
 export function createAssemblySourceLocation(file, line, span, origin) {
     return {
@@ -49,6 +53,7 @@ export function rememberErrorSource(error, location) {
         errorSources.set(error, location);
     }
 }
+/** Walks Error.cause links to recover the innermost remembered source location. */
 function errorSource(error) {
     const visited = new Set();
     while (error instanceof Error && !visited.has(error)) {
@@ -63,10 +68,10 @@ function errorSource(error) {
 }
 /**
  * Converts an unknown error into a structured diagnostic.
- * @param {unknown} error The error to normalize.
- * @param {AssemblySourceLocation} fallbackLocation The fallback location when the error lacks one.
- * @param {string} [stage] Optional stage name.
- * @returns {AssemblyDiagnostic} The normalized diagnostic.
+ * @param error The error to normalize.
+ * @param fallbackLocation The fallback location when the error lacks one.
+ * @param [stage] Optional stage name.
+ * @returns The normalized diagnostic.
  */
 export function diagnosticFromError(error, fallbackLocation, stage) {
     fallbackLocation = errorSource(error) ?? fallbackLocation;

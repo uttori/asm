@@ -10,6 +10,7 @@ export declare class AssemblyOutputBuffer {
     private visible?;
     private used;
     private managed;
+    /** Visible byte count; spare capacity in managed storage is excluded. */
     get length(): number;
     /** Reacquire a typed view after growing writes; spare capacity never enters checksums or output. */
     get bytes(): number[] | Uint8Array;

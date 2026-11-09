@@ -1,4 +1,9 @@
 import { cpu65816Specifications } from "../../architectures/65816-spec.js";
+/**
+ * Compare propagated width flags at a control-flow join.
+ * @param a First E/M/X snapshot.
+ * @param b Second E/M/X snapshot.
+ */
 const sameState = (a, b) => a.e === b.e && a.m === b.m && a.x === b.x;
 /** Validate known flags before deriving instruction sizes or comparing control-flow joins. */
 function knownState(state) {

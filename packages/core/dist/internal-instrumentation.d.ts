@@ -1,17 +1,24 @@
 import { type ExpressionParseOutcome, type ExpressionParseSite, type ExpressionFallbackSite, type ExpressionOutcomeKey } from "./ir/expression-parse-state.js";
+/** Operand parser compatibility buckets counted separately from expression fallbacks. */
 type OperandSyntaxFallback = "empty-or-register" | "relative-label" | "macro-template" | "indirect-or-compound" | "expression-grammar" | "function-evaluation-order" | "unresolved-define" | "noncanonical-expanded-number" | "grouped-atom-resolution";
 /** Historical counter keys remain readable in pre-migration benchmark receipts. */
 export type PassthroughReason = "characterMapping" | "commentOrEmpty" | "dataDirective" | "defineCommand" | "functionDefinition" | "labelDefinition" | "macroDefinitionOrInvoke" | "bareMacroCandidate" | "macroPlaceholder" | "registeredPreprocessDirective" | "staticAssignment" | "structCommand" | "unknown";
 /** Run-scoped, bounded buckets. Keys never include source text or diagnostic messages. */
 export type ExpressionBoundaryMetrics = {
+    /** Successful parse attempts keyed by site and outcome. */
     parses: Partial<Record<`${ExpressionParseSite}:${ExpressionOutcomeKey}`, number>>;
+    /** Compatibility fallback parses keyed by site and outcome. */
     fallbacks: Partial<Record<`${ExpressionFallbackSite}:${ExpressionOutcomeKey}`, number>>;
+    /** Operand grammar compatibility fallbacks counted by reason. */
     operandFallbacks: Partial<Record<OperandSyntaxFallback, number>>;
+    /** Command dispatch passthrough reasons bypassing full parsing. */
     passthrough: Partial<Record<PassthroughReason, number>>;
 };
+/** Run-scoped internal metrics snapshot returned after instrumented work. */
 export type InternalInstrumentationSnapshot = {
     /** Actual source parsing and semantic conversions; independent of expression probes. */
     syntaxBoundaries: Partial<Record<SyntaxBoundary, number>>;
+    /** Scalar counters for caches, parses, and construction events. */
     counters: {
         passProgramCacheHits: number;
         passProgramCacheMisses: number;
@@ -65,17 +72,22 @@ export type InternalInstrumentationSnapshot = {
         /** Total bytes written to cache JSON files. */
         cacheWriteBytes: number;
     };
+    /** Aggregated expression parse and fallback boundary counts. */
     expressionBoundaries: ExpressionBoundaryMetrics;
+    /** Wall-clock milliseconds spent in named internal phases. */
     phasesMs: Record<string, number>;
+    /** Peak resident set size observed during the instrumented run. */
     peakRssBytes: number;
+    /** Peak V8 heap used observed during the instrumented run. */
     peakHeapUsedBytes: number;
 };
+/** Valid counter keys within the instrumentation snapshot. */
 type CounterName = keyof InternalInstrumentationSnapshot["counters"];
 /**
  * Runs synchronous work with opt-in, run-scoped internal instrumentation.
  * This module is intentionally not exported from the package entry point.
- * @param {() => T} callback The instrumented work.
- * @returns {{ value: T; metrics: InternalInstrumentationSnapshot }} The callback result and metrics.
+ * @param callback The instrumented work.
+ * @returns The callback result and metrics.
  */
 export declare function runWithInternalInstrumentation<T>(callback: () => T): {
     value: T;
@@ -83,26 +95,26 @@ export declare function runWithInternalInstrumentation<T>(callback: () => T): {
 };
 /**
  * Increments an internal counter when instrumentation is active.
- * @param {CounterName} name The counter to increment.
- * @param {number} [amount] The increment amount.
+ * @param name The counter to increment.
+ * @param [amount] The increment amount.
  */
 export declare function incrementInternalCounter(name: CounterName, amount?: number): void;
 /**
  * Reports whether run-scoped internal instrumentation is active.
- * @returns {boolean} Whether instrumentation is collecting metrics.
+ * @returns Whether instrumentation is collecting metrics.
  */
 export declare function isInternalInstrumentationActive(): boolean;
 /**
  * Records the largest observed value for an internal counter.
- * @param {CounterName} name The counter to update.
- * @param {number} value The candidate peak value.
+ * @param name The counter to update.
+ * @param value The candidate peak value.
  */
 export declare function recordInternalCounterPeak(name: CounterName, value: number): void;
 /**
  * Measures a synchronous wall-clock phase when instrumentation is active.
- * @param {string} name The stable phase name.
- * @param {() => T} callback The phase work.
- * @returns {T} The callback result.
+ * @param name The stable phase name.
+ * @param callback The phase work.
+ * @returns The callback result.
  */
 export declare function measureInternalPhase<T>(name: string, callback: () => T): T;
 /** Count completed parse attempts, including fallback results, at the actual parser boundary. */

@@ -58,6 +58,7 @@ function sourceFile(root, name) {
     });
     return file;
 }
+/** Parse a JSON array of path/hash pairs, rejecting malformed entries. */
 function fileHashes(value) {
     if (!Array.isArray(value) || value.length > 65536) {
         throw new Error("Invalid asset dependency inventory.");
@@ -73,6 +74,7 @@ function fileHashes(value) {
         return { path: name, sha256: digest(item.sha256) };
     });
 }
+/** Parse planned source-file replacements from untrusted review JSON. */
 function replacements(value) {
     if (!Array.isArray(value) || value.length > 65536) {
         throw new Error("Invalid asset replacement inventory.");
@@ -91,6 +93,7 @@ function replacements(value) {
         return { path: name, before, after };
     });
 }
+/** Parse planned native effects from untrusted review JSON. */
 function effects(value) {
     if (!Array.isArray(value) || value.length > 65536) {
         throw new Error("Invalid native effect inventory.");
@@ -111,11 +114,13 @@ function effects(value) {
         };
     });
 }
+/** Require a diagnostic-free inspection before interchange publication. */
 function cleanBuild(build) {
     if (build.diagnostics.length) {
         throw new Error(build.diagnostics.map((item) => item.message).join("\n"));
     }
 }
+/** Constant-time length-checked byte equality for review hashes. */
 function equal(a, b) {
     return Buffer.from(a).equals(b);
 }
@@ -150,6 +155,7 @@ function snapshots(build, dependencies) {
         .toSorted(([a], [b]) => a.localeCompare(b))
         .map(([name, sha256]) => ({ path: name, sha256 }));
 }
+/** Require each hashed file still matches on disk under `root`. */
 function assertFiles(root, files) {
     for (const file of files) {
         if (assetHash(readAssetFile(sourceFile(root, file.path), 256 * 1024 * 1024)) !== file.sha256) {
@@ -157,6 +163,7 @@ function assertFiles(root, files) {
         }
     }
 }
+/** Canonical identity string for an import review payload. */
 function reviewIdentity(value, summary) {
     return assetHash(canonicalJson({
         ...summary,

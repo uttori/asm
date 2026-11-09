@@ -11,12 +11,19 @@ interface SectionState extends Required<AssemblySectionOptions> {
 export declare class ModuleAssembly {
     readonly id: string;
     readonly defaultAddressSpace: string;
+    /** Mutable section byte cursors keyed by section name. */
     readonly sections: Map<string, SectionState>;
+    /** Module symbol table including imports, exports, and locals. */
     readonly symbols: Map<string, AssemblyModuleSymbol>;
+    /** Pending relocation sites recorded during emission. */
     readonly fixups: AssemblyFixup[];
+    /** Source ranges mapped to section offsets for debug metadata. */
     readonly ranges: AssemblyModuleRange[];
+    /** Typed field metadata attached to emitted data. */
     readonly fields: import("../relocatable.js").AssemblyModuleField[];
+    /** Asset emission records linked to module output. */
     readonly assets: import("../relocatable.js").AssemblyModuleAsset[];
+    /** Instruction metadata captured for link-time validation. */
     readonly instructions: import("../relocatable.js").AssemblyModuleInstruction[];
     private readonly definitions;
     private readonly exports;
@@ -37,9 +44,11 @@ export declare class ModuleAssembly {
     private get current();
     /** A detached byte position; numeric offsets never masquerade as final processor addresses. */
     position(offset?: number): SectionPosition;
+    /** Kind of the currently selected section. */
     get sectionKind(): AssemblySectionOptions["kind"];
     /** Local padding is only meaningful when the linker also aligns the section's starting address. */
     requireAlignment(alignment: number): number;
+    /** Builds a link expression pointing at the current module section offset. */
     location(offset?: number): LinkExpression;
     /** Numeric compatibility probes may advance a temporary cursor without touching section extents, bytes or fixups. */
     withPreviewCursor<T>(operation: (advance: (bytes: number) => void) => T): T;
@@ -53,6 +62,7 @@ export declare class ModuleAssembly {
     define(name: string, value: number, isStatic: boolean, source: RelocatableSource): void;
     /** Aliases retain unresolved external and cross-section dependencies without guessed addresses. */
     defineExpression(name: string, value: LinkExpression, source: RelocatableSource): void;
+    /** True when the symbol received a definition during the active stage. */
     isDefinedThisStage(name: string): boolean;
     /** Imports use external names; exports may precede their definitions. */
     declare(name: string, visibility: "import" | "export", source: RelocatableSource): void;

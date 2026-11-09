@@ -1,3 +1,4 @@
+/** Applies label and assignment statement semantics before command execution. */
 export class FrontEndCommandService {
     host;
     constructor(host) {

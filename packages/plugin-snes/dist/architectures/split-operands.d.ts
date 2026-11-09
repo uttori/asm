@@ -6,8 +6,8 @@
 /**
  * 65816 keeps the rest of the line as a single operand (`LDA $12,x` is one form,
  * not two arguments). Splitting on commas would break indexed modes.
- * @param {string} text Rest-of-line operand text.
- * @returns {string[]} One entry, or an empty list when `text` is empty.
+ * @param text Rest-of-line operand text.
+ * @returns One entry, or an empty list when `text` is empty.
  */
 export declare const splitSingleOperand: (text: string) => string[];
 /**
@@ -17,15 +17,15 @@ export declare const splitSingleOperand: (text: string) => string[];
 export declare function referenceExpressions65816(operand: string, depth?: number): string[];
 /**
  * Super FX `MOVE Rn, Rm` style: commas are always operand separators.
- * @param {string} text Rest-of-line operand text.
- * @returns {string[]} Trimmed operands. Empty input yields `[]`.
+ * @param text Rest-of-line operand text.
+ * @returns Trimmed operands. Empty input yields `[]`.
  */
 export declare const splitCommaOperands: (text: string) => string[];
 /**
  * SPC700 `MOV A,($12+X)` - commas inside parentheses are addressing syntax,
  * not argument splits. Bracket forms are rare here. Only `()` depth is tracked.
- * @param {string} text Rest-of-line operand text.
- * @returns {string[]} Top-level comma-separated operands.
+ * @param text Rest-of-line operand text.
+ * @returns Top-level comma-separated operands.
  */
 export declare const splitTopLevelCommaOperands: (text: string) => string[];
 //# sourceMappingURL=split-operands.d.ts.map

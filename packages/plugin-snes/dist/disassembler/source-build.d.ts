@@ -13,16 +13,25 @@ export interface BuildSnesSourceOptions {
         readonly path: string;
         readonly sha256: string;
     }[];
+    /** Absolute path to the Git source repository root. */
     readonly root: string;
+    /** Entry assembly file relative to root. */
     readonly entrySource: string;
+    /** Assembler host environment passed to every pass. */
     readonly environment: AssemblerEnvironment;
+    /** Additional include directories for the SNES target. */
     readonly includePaths?: readonly string[];
+    /** Target-specific encoder options snapshot. */
     readonly targetOptions?: Readonly<Record<string, unknown>>;
+    /** Declared headerless ROM capacity for layout checks. */
     readonly expectedSize: number;
     /** Explicit same-mapper growth; never used to change the identity of a pure generation. */
     readonly expansion?: SnesRomExpansionPolicy;
+    /** Explicit CPU width assumptions consumed by control-flow proof. */
     readonly states?: readonly SnesInstructionStateContract[];
+    /** Symbol-anchored fixed spans checked after assembly. */
     readonly extents?: readonly SnesFixedExtent[];
+    /** Saved relocation placements validated on every build. */
     readonly placements?: SnesPlacementContract;
     /** Exact headerless ROM bytes, supplied only when verifying a pristine generation. */
     readonly originalContent?: Uint8Array;
@@ -32,26 +41,35 @@ export interface BuildSnesSourceOptions {
         readonly original: Uint8Array;
         readonly blockSize: number;
     };
+    /** Directory receiving build outputs and verification receipts. */
     readonly outputDirectory: string;
+    /** Hash of the assembler toolchain used for this build. */
     readonly toolchainSha256: string;
     /** Hash of the complete saved configuration, including plugin and encoder options. */
     readonly configurationSha256: string;
+    /** Optional cancellation hook for long builds. */
     readonly signal?: AbortSignal;
 }
 /** Matching artifacts are published together only after all required checks pass. */
 export interface SnesSourceBuild {
+    /** Path to the emitted ROM artifact. */
     readonly outputFile: string;
+    /** Path to the published address-to-source debug map. */
     readonly debugMapFile: string;
+    /** Aggregate hash of consumed source inputs. */
     readonly inputSha256: string;
+    /** Optional source coverage metrics when linkage reporting is enabled. */
     readonly coverage?: SourceBuildCoverage;
     /** Exact consumed saved files, relative to the source root; timestamps and editor events are not input identities. */
     readonly inputs: readonly {
         readonly path: string;
         readonly sha256: string;
     }[];
+    /** Headerless ROM byte length of the successful build. */
     readonly outputSize: number;
     /** Debugger map identity differs from the SHA-256 of its serialized file. */
     readonly debugMapFingerprint: string;
+    /** Pristine-ROM and linkage checks recorded with the build receipt. */
     readonly verification: SourceBuildVerification;
     /** Counts make a successful build's semantic coverage explicit; empty declarations prove no CPU-state assumptions. */
     readonly contracts: {
@@ -70,11 +88,15 @@ export interface InspectSnesSourceOptions extends Omit<BuildSnesSourceOptions, "
 }
 /** Unpublished assembly evidence. Layout diagnostics do not make this a successful build. */
 export interface SnesSourceInspection {
+    /** In-memory ROM image from the inspection pass. */
     readonly output: Uint8Array;
+    /** Address-to-source map from the dry-run assembler pass. */
     readonly mapping: AddressToLineMapping;
+    /** Resolved global symbols needed by layout services. */
     readonly symbols: ReadonlyMap<string, number>;
     /** Absolute dependency paths and exact bytes consumed by every assembler pass. */
     readonly snapshots: ReadonlyMap<string, Uint8Array>;
+    /** Layout, placement and control-flow failures from the dry run. */
     readonly diagnostics: readonly SnesLayoutDiagnostic[];
 }
 /** Module production borrows the same snapshot/overlay provider as ordinary source inspection. */

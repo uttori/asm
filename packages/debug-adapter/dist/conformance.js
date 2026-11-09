@@ -10,6 +10,7 @@ export const DEBUG_BACKEND_CONFORMANCE_SCENARIOS = Object.freeze([
     "reconnect-without-reset",
     "request-bounds",
 ]);
+/** Throws an Error to abort a scenario with a readable message. */
 const fail = (message) => {
     throw new Error(message);
 };
@@ -20,10 +21,12 @@ const requireValue = (value, message) => {
     }
     return value;
 };
+/** Compares qualified addresses including optional output-offset equality. */
 const addressesMatch = (left, right) => left.architecture === right.architecture &&
     left.addressSpace === right.addressSpace &&
     (left.address === right.address ||
         (left.outputOffset !== undefined && left.outputOffset === right.outputOffset));
+/** Asserts two addresses match or fails the scenario with context. */
 const assertAddress = (actual, expected, context) => {
     if (!addressesMatch(actual, expected)) {
         fail(`${context}: expected ${expected.architecture}/${expected.addressSpace}/${expected.address.toString(16)}, received ${actual.architecture}/${actual.addressSpace}/${actual.address.toString(16)}.`);
@@ -39,6 +42,7 @@ const CAPABILITY_KEYS = [
     "breakpoints",
     "disassemble",
 ];
+/** Compares negotiated architecture capabilities against fixture expectations. */
 const assertCapability = (actual, expected) => {
     const spaces = [...actual.addressSpaces].toSorted();
     const expectedSpaces = [...expected.addressSpaces].toSorted();
@@ -59,15 +63,20 @@ const assertCapability = (actual, expected) => {
         }
     }
 };
+/** Records backend events for deterministic scenario assertions. */
 class EventLog {
+    /** Events appended in delivery order since construction. */
     events = [];
     #subscription;
+    /** Subscribes to backend events until dispose is called. */
     constructor(backend) {
         this.#subscription = backend.onEvent((event) => this.events.push(event));
     }
+    /** Stops recording backend events. */
     dispose() {
         this.#subscription.dispose();
     }
+    /** Polls recorded events until predicate matches or timeout elapses. */
     async waitFor(predicate, start, timeoutMs) {
         const existing = this.events.slice(start).find(predicate);
         if (existing) {
@@ -89,6 +98,7 @@ class EventLog {
         });
     }
 }
+/** Wraps an async operation with a bounded wall-clock timeout. */
 const withTimeout = async (operation, timeoutMs, context) => new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`${context} timed out after ${timeoutMs} ms.`)), timeoutMs);
     operation.then((value) => {
@@ -101,6 +111,7 @@ const withTimeout = async (operation, timeoutMs, context) => new Promise((resolv
         return;
     });
 });
+/** Runs one scenario with a fresh backend and guaranteed disconnect cleanup. */
 const withBackend = async (options, action) => {
     const timeoutMs = options.timeoutMs ?? 2_000;
     const backend = await withTimeout(Promise.resolve(options.createBackend()), timeoutMs, "Backend creation");
@@ -118,10 +129,13 @@ const withBackend = async (options, action) => {
         }
     }
 };
+/** Maps backend events to their type names for order assertions. */
 const eventTypes = (events) => events.map((event) => event.type);
+/** Returns the protocol version reported by a backend for comparison. */
 function reportedProtocol(version) {
     return version;
 }
+/** Frozen scenario implementations keyed by DEBUG_BACKEND_CONFORMANCE_SCENARIOS id. */
 const scenarios = {
     "protocol-and-capabilities": async (options) => withBackend(options, (backend) => {
         if (reportedProtocol(backend.protocolVersion) !== DEBUG_BACKEND_PROTOCOL_VERSION) {
@@ -227,8 +241,8 @@ const scenarios = {
 };
 /**
  * Runs the frozen backend contract with fresh instances so scenarios cannot leak emulator state.
- * @param {DebugBackendConformanceOptions} options Backend factory and known fixture state.
- * @returns {Promise<DebugBackendConformanceReport>} Deterministic pass/fail report.
+ * @param options Backend factory and known fixture state.
+ * @returns Deterministic pass/fail report.
  */
 export const runDebugBackendConformance = async (options) => {
     const results = [];

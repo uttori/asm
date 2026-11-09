@@ -2,14 +2,12 @@ import type { DirectiveRegistry, DirectiveRegistryContexts } from "./registry.js
 import type { AddressStackDirectiveContext, ArchitectureDirectiveContext } from "./types.js";
 /**
  * Pushes the current target address onto the push base stack.
- * @param {AddressStackDirectiveContext} ctx The directive context.
- * @returns {void}
+ * @param ctx The directive context.
  */
 export declare const handlePushBase: ({ session }: AddressStackDirectiveContext) => void;
 /**
  * Restores the target address saved by {@link handlePushBase}.
- * @param {AddressStackDirectiveContext} ctx The directive context.
- * @returns {void}
+ * @param ctx The directive context.
  * @throws {Error} If the base stack is empty.
  */
 export declare const handlePullBase: ({ session }: AddressStackDirectiveContext) => void;
@@ -17,18 +15,17 @@ export declare const handlePullBase: ({ session }: AddressStackDirectiveContext)
  * Selects the architecture named by `words[1]`.
  * Prefers {@link DirectiveArchitectureCapability.selectArchitecture} when present.
  * Otherwise writes `session.arch` after checking `availableArchitectures`.
- * @param {ArchitectureDirectiveContext} ctx The architecture-capable session.
- * @param {readonly string[]} words Tokenized line, keyword first.
- * @returns {void}
+ * @param ctx The architecture-capable session.
+ * @param words Tokenized line, keyword first.
  * @throws {Error} If the architecture name is missing, unknown, or not allowed on the target.
  */
 export declare const handleArch: ({ session }: ArchitectureDirectiveContext, words: readonly string[]) => void;
+/** Registers org, base, and related layout directives shared across targets. */
 export declare const registerGenericLayoutDirectives: (registry: DirectiveRegistry, context: DirectiveRegistryContexts["layout"]) => void;
 /**
  * Registers the core layout directive group.
- * @param {DirectiveRegistry} registry The directive registry.
- * @param {DirectiveRegistryContexts["layout"]} context Layout-capable sessions and runtime.
- * @returns {void}
+ * @param registry The directive registry.
+ * @param context Layout-capable sessions and runtime.
  */
 export declare const registerLayoutDirectives: (registry: DirectiveRegistry, context: DirectiveRegistryContexts["layout"]) => void;
 //# sourceMappingURL=layout.d.ts.map

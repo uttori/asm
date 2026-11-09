@@ -166,7 +166,8 @@ function inspectBoundSourceUncached(name, source, resources, codecs) {
     }
     return { binding, atlas, catalog, changes, slots };
 }
-/** Pure reconciliations are reused across palette/graphics declarations only when every authoritative byte agrees.
+/**
+ * Pure reconciliations are reused across palette/graphics declarations only when every authoritative byte agrees.
  * The registry scopes codec semantics and cache lifetime; four bounded entries retain at most 32 MiB of input snapshots.
  */
 const inspectionCaches = new WeakMap();

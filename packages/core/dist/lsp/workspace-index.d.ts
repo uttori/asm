@@ -43,38 +43,60 @@ export type WorkspaceIndexOptions = {
     /** Directory for persisted full-pass analysis artifacts. When omitted, caching is disabled. */
     cacheDir?: string;
 };
+/** Workspace index settings that can be reconfigured without replacing the environment handle. */
 export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environment" | "target">;
+/** Cached complete analysis artifact for one configured root file. */
 export type RootAnalysis = CachedRootAnalysis;
 /** Shared by worker producers, transport validation and snapshot hydration. */
 export declare const WORKSPACE_ANALYSIS_SNAPSHOT_VERSION: 5;
 /** Structured-clone payload from an isolated analyzer. It contains no plugin instances or file handles. */
 export interface WorkspaceAnalysisSnapshot {
+    /** Module options active when the snapshot was produced. */
     readonly module?: import("../relocatable.js").AssemblyModuleOptions;
+    /** Per-root module selections bound into the snapshot identity. */
     readonly moduleRoots?: WorkspaceIndexOptions["moduleRoots"];
     /** Revision 5 also binds source adapters so cached absolute/native interpretations cannot leak across selections. */
     readonly version: typeof WORKSPACE_ANALYSIS_SNAPSHOT_VERSION;
+    /** Target contribution identifier used for analysis. */
     readonly target: string;
+    /** Architecture contribution identifier used for analysis. */
     readonly architecture: string;
+    /** Root path to cached root analysis pairs merged in the index. */
     readonly roots: readonly (readonly [string, RootAnalysis])[];
+    /** Per-file analysis buckets keyed by absolute path. */
     readonly files: readonly (readonly [string, FileAnalysis])[];
+    /** Include graph edges merged across analyzed roots. */
     readonly includeEdges: readonly AssemblyIncludeEdge[];
+    /** Flattened symbol definitions across the workspace. */
     readonly symbols: readonly AssemblySymbolDefinition[];
+    /** Flattened symbol references across the workspace. */
     readonly references: readonly AssemblySymbolReference[];
+    /** Aggregate counts and timing metadata for UI surfaces. */
     readonly status: WorkspaceIndexStatus;
 }
 /**
  * Snapshot of workspace analysis used by the project panel and status bar.
  */
 export type WorkspaceIndexStatus = {
+    /** Number of distinct files with analysis buckets. */
     fileCount: number;
+    /** Total symbol definitions indexed across the workspace. */
     symbolCount: number;
+    /** Total symbol references indexed across the workspace. */
     referenceCount: number;
+    /** Count of error-severity diagnostics in the latest index. */
     errorCount: number;
+    /** Configured analysis entry point paths. */
     entryPoints: string[];
+    /** Include search paths handed to the assembler during analysis. */
     includePaths: string[];
+    /** Duration of the most recent reindex in milliseconds when recorded. */
     lastReindexDurationMs?: number;
+    /** Roots considered during the most recent reindex. */
     lastReindexRootCount: number;
+    /** Roots served from cache during the most recent reindex. */
     lastReindexCachedRoots: number;
+    /** Roots analyzed fresh during the most recent reindex. */
     lastReindexAnalyzedRoots: number;
 };
 /**
@@ -104,21 +126,33 @@ export declare class WorkspaceIndex {
     readonly dirtyFiles: Set<string>;
     /** Whether configuration changes require every root to be rebuilt. */
     fullReindexRequired: boolean;
+    /** Configured analysis entry points for root-anchored indexing. */
     entryPoints: string[];
+    /** Include search paths forwarded to analysis sessions. */
     includePaths: string[];
+    /** Selected architecture contribution identifier. */
     architecture: string;
+    /** Validated target options bound into analysis identity. */
     readonly targetOptions: Readonly<Record<string, unknown>>;
+    /** Default module options when roots do not override them. */
     module?: import("../relocatable.js").AssemblyModuleOptions;
     /** Owned per-root selections also participate in persistent cache and worker-snapshot identity. */
     moduleRoots: NonNullable<WorkspaceIndexOptions["moduleRoots"]>;
+    /** Frozen plugin environment shared by every analysis session. */
     readonly environment: AssemblerEnvironment;
+    /** Target contribution identifier for analysis and catalog lookup. */
     readonly target: string;
+    /** Tooling catalog derived from the active environment. */
     readonly toolingCatalog: ToolingCatalog;
+    /** Directive metadata exposed to completion and hover providers. */
     readonly directiveCatalog: readonly DirectiveDescriptor[];
+    /** Recognized directive prefix strings for incremental parsing helpers. */
     readonly directivePrefixes: readonly string[];
+    /** Optional timing logger for reindex diagnostics. */
     readonly logger?: {
         info(message: string): void;
     };
+    /** Optional on-disk cache for full root analysis artifacts. */
     readonly cache?: RootAnalysisCache;
     /** Duration of the most recent {@link reindex} call in milliseconds. */
     lastReindexDurationMs?: number;
@@ -132,7 +166,7 @@ export declare class WorkspaceIndex {
     lastRootServedFromCache: boolean;
     /**
      * Creates a workspace index.
-     * @param {WorkspaceIndexOptions} [options] Initial index configuration.
+     * @param [options] Initial index configuration.
      */
     constructor(options: WorkspaceIndexOptions);
     /** Capture an owned complete generation; later producer edits cannot mutate a published snapshot. */
@@ -145,116 +179,116 @@ export declare class WorkspaceIndex {
     static fromSnapshot(options: WorkspaceIndexOptions, snapshot: WorkspaceAnalysisSnapshot, overlays: ReadonlyMap<string, string>): WorkspaceIndex;
     /**
      * Updates index configuration and re-analyses the workspace.
-     * @param {WorkspaceIndexOptions} options The configuration to apply.
+     * @param options The configuration to apply.
      */
     configure(options: WorkspaceIndexConfiguration): void;
     /**
      * Adds or replaces an open editor buffer and re-analyses the workspace.
-     * @param {string} file The absolute path of the document.
-     * @param {string} content The current document text.
+     * @param file The absolute path of the document.
+     * @param content The current document text.
      */
     openDocument(file: string, content: string): void;
     /**
      * Updates the content of an already-open document without re-analysing.
      * Callers can debounce multiple edits before invoking {@link reindex}.
-     * @param {string} file The absolute path of the document.
-     * @param {string} content The new document text.
+     * @param file The absolute path of the document.
+     * @param content The new document text.
      */
     updateDocument(file: string, content: string): void;
     /**
      * Removes an open editor buffer (reverting to disk) and re-analyses.
-     * @param {string} file The absolute path of the document.
+     * @param file The absolute path of the document.
      */
     closeDocument(file: string): void;
     /**
      * Marks a disk-backed file as changed for the next debounced reindex.
-     * @param {string} file The changed absolute path.
+     * @param file The changed absolute path.
      */
     invalidateFile(file: string): void;
     /**
      * Returns the current text for a file, preferring the open buffer.
-     * @param {string} file The absolute path of the file.
-     * @returns {string | undefined} The file text, or undefined when unavailable.
+     * @param file The absolute path of the file.
+     * @returns The file text, or undefined when unavailable.
      */
     getText(file: string): string | undefined;
     /**
      * Returns the text for a file from the open buffer, falling back to disk.
      * Used by features that must compute precise ranges in files that may not be
      * open in the editor (for example, cross-file rename targets).
-     * @param {string} file The absolute path of the file.
-     * @returns {string | undefined} The file text, or undefined when unreadable.
+     * @param file The absolute path of the file.
+     * @returns The file text, or undefined when unreadable.
      */
     getFileText(file: string): string | undefined;
     /**
      * Returns the analysis bucket for a file, if it has been analysed.
-     * @param {string} file The absolute path of the file.
-     * @returns {FileAnalysis | undefined} The per-file analysis, or undefined.
+     * @param file The absolute path of the file.
+     * @returns The per-file analysis, or undefined.
      */
     getFileAnalysis(file: string): FileAnalysis | undefined;
     /**
      * Returns diagnostics for a file.
-     * @param {string} file The absolute path of the file.
-     * @returns {AssemblyDiagnostic[]} The diagnostics for the file.
+     * @param file The absolute path of the file.
+     * @returns The diagnostics for the file.
      */
     getDiagnostics(file: string): AssemblyDiagnostic[];
     /**
      * Returns symbol definitions declared in a file.
-     * @param {string} file The absolute path of the file.
-     * @returns {AssemblySymbolDefinition[]} The symbols defined in the file.
+     * @param file The absolute path of the file.
+     * @returns The symbols defined in the file.
      */
     getSymbols(file: string): AssemblySymbolDefinition[];
     /**
      * Returns symbol references that occur in a file.
-     * @param {string} file The absolute path of the file.
-     * @returns {AssemblySymbolReference[]} The references in the file.
+     * @param file The absolute path of the file.
+     * @returns The references in the file.
      */
     getReferences(file: string): AssemblySymbolReference[];
     /**
      * Returns every symbol definition known across the workspace.
-     * @returns {AssemblySymbolDefinition[]} All workspace symbol definitions.
+     * @returns All workspace symbol definitions.
      */
     getAllSymbols(): AssemblySymbolDefinition[];
     /**
      * Returns every symbol reference known across the workspace.
-     * @returns {AssemblySymbolReference[]} All workspace symbol references.
+     * @returns All workspace symbol references.
      */
     getAllReferences(): AssemblySymbolReference[];
     /**
      * Returns the merged include-graph edges.
-     * @returns {AssemblyIncludeEdge[]} The include edges across all roots.
+     * @returns The include edges across all roots.
      */
     getIncludeEdges(): AssemblyIncludeEdge[];
     /**
      * Returns the absolute paths of every file with analysis artifacts.
-     * @returns {string[]} The analysed file paths.
+     * @returns The analysed file paths.
      */
     getAnalyzedFiles(): string[];
     /**
      * Returns whether a file still needs a full-pass reindex.
      * True when the file is dirty, a full rebuild is pending, or no covering
      * full-pass analysis exists yet.
-     * @param {string} file The absolute path of the file.
-     * @returns {boolean} Whether callers should schedule {@link reindex}.
+     * @param file The absolute path of the file.
+     * @returns Whether callers should schedule {@link reindex}.
      */
     isFileDirtyOrUncovered(file: string): boolean;
     /**
      * Returns a snapshot of index size and last-reindex timing for the project panel.
-     * @returns {WorkspaceIndexStatus} The current status snapshot.
+     * @returns The current status snapshot.
      */
     getStatus(): WorkspaceIndexStatus;
     /**
      * True when a followIncludes analysis already owns this file as a root or include.
      * O(1) — uses the pre-computed {@link #coveredByFullPass} set.
-     * @param {string} file The absolute path of the file.
-     * @returns {boolean} Whether a covering full-pass analysis exists.
+     * @param file The absolute path of the file.
+     * @returns Whether a covering full-pass analysis exists.
      */
     isCoveredByFullPass(file: string): boolean;
     /**
      * True when a different full-pass root already includes this file.
      * Used to avoid analysing included files as standalone roots.
      * O(1) — uses the per-root coverage sets in {@link #coverageByRoot}.
-     * @param {string} file The absolute path of the file.
-     * @returns {boolean} Whether another covering full-pass root exists.
+     * @param file The absolute path of the file.
+     * @returns Whether another covering full-pass root exists.
      */
     isCoveredByOtherFullPassRoot(file: string): boolean;
     /**
@@ -265,16 +299,16 @@ export declare class WorkspaceIndex {
     reindex(): void;
     /**
      * Determines whether a cached root analysis contains a changed file.
-     * @param {string} root The root source file.
-     * @param {string} file The changed source file.
-     * @returns {boolean} Whether the root must be re-analysed.
+     * @param root The root source file.
+     * @param file The changed source file.
+     * @returns Whether the root must be re-analysed.
      */
     rootDependsOnFile(root: string, file: string): boolean;
     /**
      * Analyses one root using the current overlay snapshot.
-     * @param {string} root The root source file.
-     * @param {{ followIncludes?: boolean }} [options] Analysis options.
-     * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
+     * @param root The root source file.
+     * @param [options] Analysis options.
+     * @returns The completed artifacts, or undefined when unavailable.
      */
     analyzeRoot(root: string, options?: {
         followIncludes?: boolean;
@@ -292,44 +326,44 @@ export declare class WorkspaceIndex {
      * Include edges are always merged regardless of coverage (navigation must
      * work even before the full reindex completes).
      *
-     * @param {string[]} roots The active roots in deterministic order.
+     * @param roots The active roots in deterministic order.
      */
     rebuildMergedIndex(roots: string[]): void;
     /**
      * Buckets flat analysis artifacts into their owning files.
-     * @param {string} root The root file that produced these artifacts.
-     * @param {AssemblyDiagnostic[]} diagnostics The diagnostics to bucket.
-     * @param {AssemblySymbolDefinition[]} symbols The symbols to bucket.
-     * @param {AssemblySymbolReference[]} references The references to bucket.
+     * @param root The root file that produced these artifacts.
+     * @param diagnostics The diagnostics to bucket.
+     * @param symbols The symbols to bucket.
+     * @param references The references to bucket.
      */
     ingestArtifacts(root: string, diagnostics: AssemblyDiagnostic[], symbols: AssemblySymbolDefinition[], references: AssemblySymbolReference[]): void;
     /**
      * Returns (creating if needed) the analysis bucket for a file.
-     * @param {string} file The absolute path of the file.
-     * @returns {FileAnalysis} The mutable analysis bucket.
+     * @param file The absolute path of the file.
+     * @returns The mutable analysis bucket.
      */
     bucketFor(file: string): FileAnalysis;
     /**
      * Determines the set of root files to analyse.
-     * @returns {string[]} The absolute root paths.
+     * @returns The absolute root paths.
      */
     resolveRoots(): string[];
     /**
      * Reads a root file from disk when it is not open in the editor.
-     * @param {string} root The absolute root path.
-     * @returns {string | undefined} The file text, or undefined when unreadable.
+     * @param root The absolute root path.
+     * @returns The file text, or undefined when unreadable.
      */
     readDiskRoot(root: string): string | undefined;
     /**
      * Derives the include search paths for a root, always including its directory.
-     * @param {string} root The absolute root path.
-     * @returns {string[]} The include paths to hand to the assembler.
+     * @param root The absolute root path.
+     * @returns The include paths to hand to the assembler.
      */
     deriveIncludePaths(root: string): string[];
     /**
      * Assembler identity stored alongside cached analysis so a target or include-path
      * change cannot reuse stale artifacts.
-     * @returns {import("./root-analysis-cache.js").RootAnalysisCacheIdentity} The identity.
+     * @returns The identity.
      */
     cacheIdentity(): {
         target: string;
@@ -340,17 +374,16 @@ export declare class WorkspaceIndex {
     };
     /**
      * Hashes overlay or disk bytes for cache invalidation. Works for text and binary includes.
-     * @param {string} file Absolute path to hash.
-     * @returns {string | undefined} Hex digest, or undefined when unreadable.
+     * @param file Absolute path to hash.
+     * @returns Hex digest, or undefined when unreadable.
      */
     hashFile(file: string): string | undefined;
     /**
      * Collects content hashes and mtimes for a root and every file in its include graph.
-     * @param {string} root Absolute root path.
-     * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
-     * @param {Readonly<Record<string, "binary" | "resource">>} assetDependencies Resolved asset inputs.
-     * @returns {{ fileHashes: Record<string, string>; fileMtimes: Record<string, number> } | undefined}
-     *   Path-to-hash and path-to-mtime maps, or undefined when incomplete.
+     * @param root Absolute root path.
+     * @param includeEdges Include edges from the analysis.
+     * @param assetDependencies Resolved asset inputs.
+     * @returns Path-to-hash and path-to-mtime maps, or undefined when incomplete.
      */
     collectFileHashes(root: string, includeEdges: AssemblyIncludeEdge[], assetDependencies?: Readonly<Record<string, "binary" | "resource">>): {
         fileHashes: Record<string, string>;

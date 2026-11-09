@@ -1,5 +1,6 @@
 import { sourceFragment, fragmentText } from "../ir/source-fragment.js";
 import { assetSourceMediaType, resolveAssetResourceSnapshot } from "./asset-resource-snapshot.js";
+/** Narrows unknown JSON values to plain records for asset option validation. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -16,12 +17,15 @@ function isConstantExpression(node) {
     }
     return false;
 }
+/** Narrows unknown JSON values to arrays for asset metadata validation. */
 function isUnknownArray(value) {
     return Array.isArray(value);
 }
+/** Narrows unknown values to non-empty strings. */
 function isNonEmptyString(value) {
     return typeof value === "string" && value.length > 0;
 }
+/** Narrows unknown values to arrays of non-empty strings. */
 function isNonEmptyStringArray(value) {
     return isUnknownArray(value) && value.every(isNonEmptyString);
 }
@@ -37,6 +41,7 @@ export class AssetAssemblyService {
     session;
     /** A single asset stage may not allocate or emit more than this many bytes. */
     static MAX_STAGE_BYTES = 16 * 1024 * 1024;
+    /** Paths recorded as binary or resource dependencies during asset conversion. */
     dependencies = new Map();
     #files = new Map();
     #snapshotBytes = 0;
@@ -56,23 +61,26 @@ export class AssetAssemblyService {
         this.#emissions.clear();
         this.lastEmission = undefined;
     }
-    /** Return the exact bytes consumed by this build for dependency fingerprints.
-     * @param {string} path Provider identity.
-     * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
+    /**
+     * Return the exact bytes consumed by this build for dependency fingerprints.
+     * @param path Provider identity.
+     * @returns Owned snapshot copy, when the path was read.
      */
     snapshot(path) {
         return this.#files.get(path)?.slice();
     }
-    /** Resolve a string operand after define expansion.
-     * @param {Extract<AssetValueNode, { kind: "string" }>} node Quoted path or format operand.
-     * @returns {string} Expanded text.
+    /**
+     * Resolve a string operand after define expansion.
+     * @param node Quoted path or format operand.
+     * @returns Expanded text.
      */
     #text(node) {
         return this.session.defineEngine.resolveDefinesInStringLiteral(node.value);
     }
-    /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
-     * @param {AssetValueNode} node Typed source value.
-     * @returns {unknown} Plain value passed to a format or transform.
+    /**
+     * Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
+     * @param node Typed source value.
+     * @returns Plain value passed to a format or transform.
      */
     #value(node) {
         if (node.kind === "string") {
@@ -120,9 +128,10 @@ export class AssetAssemblyService {
         }
         return value;
     }
-    /** Resolve a provider path using the current source, macro and include search order.
-     * @param {string} path Source-relative path.
-     * @returns {string} Stable provider identity.
+    /**
+     * Resolve a provider path using the current source, macro and include search order.
+     * @param path Source-relative path.
+     * @returns Stable provider identity.
      */
     #resolve(path) {
         const resolved = this.session.fileProvider.resolvePath(path, this.session.includeSource.resolutionOptions);
@@ -131,10 +140,11 @@ export class AssetAssemblyService {
         }
         return resolved;
     }
-    /** Snapshot each dependency once, even if a provider changes during later passes.
-     * @param {string} path Provider identity.
-     * @param {"binary" | "resource"} kind Dependency role.
-     * @returns {Uint8Array} Build-owned bytes.
+    /**
+     * Snapshot each dependency once, even if a provider changes during later passes.
+     * @param path Provider identity.
+     * @param kind Dependency role.
+     * @returns Build-owned bytes.
      */
     #read(path, kind) {
         const cached = this.#files.get(path);
@@ -151,16 +161,18 @@ export class AssetAssemblyService {
         this.dependencies.set(path, kind);
         return bytes;
     }
-    /** Media type is inferred only from a declared, supported input extension.
-     * @param {string} path Provider identity.
-     * @returns {string} Portable media type.
+    /**
+     * Media type is inferred only from a declared, supported input extension.
+     * @param path Provider identity.
+     * @returns Portable media type.
      */
     #mediaType(path, format) {
         return assetSourceMediaType(path, format);
     }
-    /** Canonical serialization makes equivalent option objects share one conversion.
-     * @param {unknown} value JSON-compatible request value.
-     * @returns {string} Stable identity fragment.
+    /**
+     * Canonical serialization makes equivalent option objects share one conversion.
+     * @param value JSON-compatible request value.
+     * @returns Stable identity fragment.
      */
     #stable(value) {
         if (Array.isArray(value)) {
@@ -174,10 +186,11 @@ export class AssetAssemblyService {
         }
         return JSON.stringify(value);
     }
-    /** Apply a transform's closed scalar schema before it can read resources.
-     * @param {AssetTransformContribution} provider Registered transform.
-     * @param {Readonly<Record<string, unknown>>} options Source options.
-     * @returns {string[]} Resource-valued option paths.
+    /**
+     * Apply a transform's closed scalar schema before it can read resources.
+     * @param provider Registered transform.
+     * @param options Source options.
+     * @returns Resource-valued option paths.
      */
     #validateTransformOptions(provider, options) {
         const schema = provider.optionSchema;
@@ -237,8 +250,9 @@ export class AssetAssemblyService {
             mediaType: (path) => this.#mediaType(path, format),
         });
     }
-    /** Resolve input and declared resource paths for tooling without encoding bytes.
-     * @param {ParsedAssetCall} call Typed source directive.
+    /**
+     * Resolve input and declared resource paths for tooling without encoding bytes.
+     * @param call Typed source directive.
      */
     discoverDependencies(call) {
         const options = Object.fromEntries(Object.entries(call.options).map(([key, node]) => [key, this.#value(node)]));
@@ -291,9 +305,10 @@ export class AssetAssemblyService {
             }
         }
     }
-    /** Convert and select one complete byte stream before touching output state.
-     * @param {ParsedAssetCall} call Typed source directive.
-     * @returns {Uint8Array} Snapshot-owned bytes shared across assembly passes.
+    /**
+     * Convert and select one complete byte stream before touching output state.
+     * @param call Typed source directive.
+     * @returns Snapshot-owned bytes shared across assembly passes.
      */
     materialize(call) {
         const options = Object.fromEntries(Object.entries(call.options).map(([key, node]) => [key, this.#value(node)]));

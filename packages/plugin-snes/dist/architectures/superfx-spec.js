@@ -1,11 +1,16 @@
 /**
  * Accepts a GSU ALT value. Hardware ALT is a 2-bit field.
- * @param {number} value Candidate ALT state.
- * @returns {boolean} True when `value` is 0, 1, 2, or 3.
+ * @param value Candidate ALT state.
+ * @returns True when `value` is 0, 1, 2, or 3.
  */
 export function isSuperFxAltState(value) {
     return value === 0 || value === 1 || value === 2 || value === 3;
 }
+/**
+ * Maps an operand encoding id to its canonical placeholder syntax string.
+ * @param encoding Operand layout id for one GSU effective opcode.
+ * @returns Placeholder spelling used in specification summaries.
+ */
 const syntaxFor = (encoding) => {
     switch (encoding) {
         case "implied":
@@ -32,12 +37,14 @@ const syntaxFor = (encoding) => {
     }
     throw new Error("Unsupported SuperFX operand encoding.");
 };
+/** Builds a one-byte implied GSU definition row. */
 const implied = (mnemonic, writesDestination = false) => ({
     mnemonic,
     encoding: "implied",
     size: 1,
     ...(writesDestination ? { writesDestination: true } : {}),
 });
+/** Builds a register-indexed one-byte GSU definition row. */
 const register = (mnemonic, value, writesDestination = false) => ({
     mnemonic,
     encoding: "register",
@@ -45,6 +52,7 @@ const register = (mnemonic, value, writesDestination = false) => ({
     register: value,
     ...(writesDestination ? { writesDestination: true } : {}),
 });
+/** Builds a register-indirect one-byte GSU definition row. */
 const registerIndirect = (mnemonic, value, writesDestination = false) => ({
     mnemonic,
     encoding: "registerIndirect",
@@ -52,6 +60,7 @@ const registerIndirect = (mnemonic, value, writesDestination = false) => ({
     register: value,
     ...(writesDestination ? { writesDestination: true } : {}),
 });
+/** Builds an immediate-nibble one-byte GSU definition row. */
 const nibble = (mnemonic, value, writesDestination = false) => ({
     mnemonic,
     encoding: "immediateNibble",
@@ -59,6 +68,7 @@ const nibble = (mnemonic, value, writesDestination = false) => ({
     register: value,
     ...(writesDestination ? { writesDestination: true } : {}),
 });
+/** Resolves the unprefixed GSU mnemonic and operand layout for one opcode byte. */
 const baseDefinition = (opcode) => {
     if (opcode === 0x00) {
         return implied("STOP");
@@ -190,6 +200,7 @@ const baseDefinition = (opcode) => {
         register: opcode & 0x0f,
     };
 };
+/** Applies ALT1–ALT3 remapping on top of the unprefixed opcode interpretation. */
 const altDefinition = (alt, opcode) => {
     if (alt === 0) {
         return baseDefinition(opcode);
@@ -316,6 +327,7 @@ const altDefinition = (alt, opcode) => {
     }
     return baseDefinition(opcode);
 };
+/** Derives control-flow metadata from a resolved GSU definition row. */
 const flowFor = (definition, opcode) => {
     if (definition.mnemonic === "STOP") {
         return { kind: "stop", fallthrough: false };
@@ -334,6 +346,7 @@ const flowFor = (definition, opcode) => {
     }
     return { kind: "fallthrough", fallthrough: true };
 };
+/** Lists custom GSU state transitions such as ALT selection and register binding. */
 const effectsFor = (definition) => {
     if (definition.mnemonic === "ALT1" ||
         definition.mnemonic === "ALT2" ||
@@ -371,6 +384,7 @@ const effectsFor = (definition) => {
     }
     return [];
 };
+/** Human-readable summary line for hover and catalog tooling. */
 const summaryFor = (mnemonic) => {
     const summaries = {
         STOP: "Stop the GSU.",
@@ -398,6 +412,7 @@ const summaryFor = (mnemonic) => {
     };
     return summaries[mnemonic] ?? `${mnemonic} instruction.`;
 };
+/** Materializes one frozen architecture specification for an ALT state and opcode byte. */
 const specification = (alt, opcode) => {
     const definition = altDefinition(alt, opcode);
     const base = baseDefinition(opcode);
@@ -430,9 +445,11 @@ export const superFxSpecifications = Object.freeze([
     ...superFxBaseSpecifications,
     ...superFxOpcodeMatrix.slice(1).flatMap((row) => row.filter((entry) => entry.alteredByAlt)),
 ]);
+/** Control flow when a fused MOVE targets the program counter register R15. */
 const fusedFlow = (destinationRegister) => destinationRegister === 15
     ? { kind: "jump", fallthrough: false, indirect: true }
     : { kind: "fallthrough", fallthrough: true };
+/** Placeholder operand spelling for a fused MOVE addressing mode. */
 const fusedSyntax = (mode) => {
     if (mode === "registerRegister") {
         return "Rn,Rm";
@@ -442,6 +459,7 @@ const fusedSyntax = (mode) => {
     }
     return "(Rn),Rm";
 };
+/** Builds one frozen fused-instruction specification for the opcode matrix export. */
 const fused = (mnemonic, opcode, mode, destinationRegister, sourceRegister, pointerRegister) => Object.freeze({
     id: `snes.superfx.fused.${opcode.map((value) => value.toString(16).padStart(2, "0")).join("-")}`,
     architecture: "snes.superfx",
@@ -473,7 +491,7 @@ export const superFxFusedSpecifications = Object.freeze([
 ]);
 /**
  * Generates the editor catalog from the effective opcode matrix.
- * @returns {InstructionDescriptor[]} Native SuperFX instruction descriptors.
+ * @returns Native SuperFX instruction descriptors.
  */
 export function buildSuperFxCatalog() {
     const grouped = new Map();

@@ -13,9 +13,9 @@ import type { SnesSessionState } from "../session-state.js";
  *
  * `norom` has no cartridge map, so allocation is refused.
  *
- * @param {PluginSessionCapabilities} session Host assembler.
- * @param {SnesSessionState} state Mutable SNES session.
- * @param {readonly string[]} words Tokenized line (keyword used only in the SPC-block error).
+ * @param session Host assembler.
+ * @param state Mutable SNES session.
+ * @param words Tokenized line (keyword used only in the SPC-block error).
  */
 export declare function handleFreespace(session: PluginSessionCapabilities, state: SnesSessionState, words: readonly string[]): void;
 /** Allocate after validating the current mapper/block state; the keyword is diagnostic attribution. */
@@ -24,9 +24,9 @@ export declare function allocateFreespace(session: PluginSessionCapabilities, st
  * Sets the fill byte used when expanding output (`freespacebyte <value>`).
  * Mirrored onto the session so later `expandOutput` calls match Asar.
  *
- * @param {PluginSessionCapabilities} session Host assembler.
- * @param {SnesSessionState} state Mutable SNES session.
- * @param {readonly string[]} words Tokenized line.
+ * @param session Host assembler.
+ * @param state Mutable SNES session.
+ * @param words Tokenized line.
  */
 export declare function handleFreespaceByte(session: PluginSessionCapabilities, state: SnesSessionState, words: readonly string[]): void;
 /**
@@ -37,8 +37,8 @@ export declare function handleFreespaceByte(session: PluginSessionCapabilities, 
  * The length byte is `labelCount * 3` truncated to 8 bits - Asar's format has
  * no 16-bit count, so >85 labels wrap.
  *
- * @param {PluginSessionCapabilities} session Host assembler.
- * @param {readonly string[]} words Tokenized line. Labels after the keyword, comma-separated.
+ * @param session Host assembler.
+ * @param words Tokenized line. Labels after the keyword, comma-separated.
  */
 export declare function handleProt(session: PluginSessionCapabilities, words: readonly string[]): void;
 /** Emit the parsed label sequence in source order; unresolved labels retain the provisional zero value. */

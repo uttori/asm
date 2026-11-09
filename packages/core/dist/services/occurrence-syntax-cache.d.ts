@@ -9,7 +9,9 @@ export declare class OccurrenceSyntaxCache<T> {
     /** Intern grammar/file/family identities without hashing their contents into a lossy digest. */
     private atom;
     private scope;
+    /** Looks up parsed syntax cached for one physical occurrence and exact source text. */
     get(grammar: string, file: string, line: number, family: string, text: string): T | undefined;
+    /** Stores parsed syntax under the occurrence scope and original text key. */
     set(grammar: string, file: string, line: number, family: string, text: string, value: T): void;
     /** Release original text keys as well as values after successful or failed assembly disposal. */
     clear(): void;

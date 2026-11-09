@@ -6,12 +6,17 @@ export interface Spc700DecodeState {
 }
 /** Fixed-width, bounds-safe decoder for every SPC700 opcode. */
 export declare class Spc700Decoder implements ArchitectureDecoder<Spc700DecodeState> {
+    /**
+     * Decodes one SPC700 instruction using the fixed 256-entry opcode matrix.
+     * @param context Byte source, offset, and optional direct-page decode state.
+     * @returns A decoded instruction or a bounds/opcode error.
+     */
     decode(context: ArchitectureDecodeContext<Spc700DecodeState>): ArchitectureDecodeResult;
 }
 /**
  * Formats one decoded instruction in this project's native SPC700 syntax.
- * @param {DecodedInstruction} instruction Decoded SPC700 instruction.
- * @returns {string} Canonical native source text.
+ * @param instruction Decoded SPC700 instruction.
+ * @returns Canonical native source text.
  */
 export declare function formatSpc700Instruction(instruction: DecodedInstruction): string;
 //# sourceMappingURL=spc700-decoder.d.ts.map

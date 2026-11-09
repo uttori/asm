@@ -57,8 +57,8 @@ const addressingModes = {
 };
 /**
  * Accepts a classified 65xx addressing mode.
- * @param {string} value Operand mode string.
- * @returns {boolean} True when `value` is a known mode.
+ * @param value Operand mode string.
+ * @returns True when `value` is a known mode.
  */
 function isAddressingMode(value) {
     for (const mode of Object.keys(addressingModes)) {
@@ -70,9 +70,9 @@ function isAddressingMode(value) {
 }
 /**
  * Looks up a zp/absolute twin. Unknown mode strings have no twin.
- * @param {Readonly<Partial<Record<AddressingMode, AddressingMode>>>} table Width-promotion map.
- * @param {string | undefined} mode Classified mode, which may be outside the mode union.
- * @returns {AddressingMode | undefined} The paired mode, when one exists.
+ * @param table Width-promotion map.
+ * @param mode Classified mode, which may be outside the mode union.
+ * @returns The paired mode, when one exists.
  */
 function mappedAddressingMode(table, mode) {
     if (mode === undefined || !isAddressingMode(mode)) {
@@ -86,14 +86,20 @@ for (const form of nmos6502DecodeTable) {
         aliasToMnemonic.set(alias, form.mnemonic);
     }
 }
+/** Byte length of one instruction form: opcode plus operand widths. */
 const modeSize = (form) => form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
 /** All shipped 65xx forms use this selector for both layout and emission. */
 export class TypedArch65xx {
     cpu;
+    /** 65xx encodings can be emitted into relocatable objects. */
     supportsRelocatable = true;
+    /** Unbound operand templates stay errors at encode time, not parse time. */
     deferOperandBindingErrors = true;
+    /** Assembly forms enabled for this CPU's feature set. */
     forms;
+    /** Editor/LSP instruction catalog derived from `forms`. */
     catalog;
+    /** Lookup of enabled forms grouped by canonical mnemonic. */
     formsByMnemonic = new Map();
     constructor(cpu) {
         this.cpu = cpu;
@@ -161,6 +167,7 @@ export class TypedArch65xx {
         }
         return prepare65xx(this.syntax(frame), frame);
     }
+    /** Return encoded size for the resolved operand frame without emitting bytes. */
     estimate(frame) {
         const state = this.classification(frame);
         const form = this.resolveForm(frame, this.syntax(frame), state);

@@ -2,7 +2,9 @@ import { type ExpressionNode } from "./expression-node.js";
 import { type SourceFragment } from "./source-fragment.js";
 /** A data element owns its spelling for diagnostics; its expression supplies all value semantics. */
 export type DataOperand = {
+    /** Operand spelling as written, before `#` stripping or define binding. */
     text: string;
+    /** Parsed value; string operands keep their escapes undecoded. */
     expression: ExpressionNode;
 };
 /** Data strings preserve escapes for the character-table/define phase, unlike function string arguments. */

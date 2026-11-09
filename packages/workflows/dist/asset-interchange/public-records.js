@@ -1,21 +1,25 @@
 import { ASSET_LIMITS } from "@uttori/asm-assets/limits";
 import { assertSourcePath } from "@uttori/asm-disassembler/source-project";
 // Public metadata validation has no dependency on Node conversion/orchestration, so editor UI bundles can load it safely.
+/** True for a plain object that can hold JSON object fields. */
 function isObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
 }
+/** Require a plain JSON object, rejecting arrays and null. */
 export function object(value) {
     if (!isObject(value)) {
         throw new Error("Invalid asset record object.");
     }
     return value;
 }
+/** Require a nonempty string of at most 4,096 characters. */
 export function text(value) {
     if (typeof value !== "string" || !value.length || value.length > 4096) {
         throw new Error("Invalid asset record text.");
     }
     return value;
 }
+/** Require a 64-character lowercase hex SHA-256 digest. */
 export function digest(value) {
     const result = text(value);
     if (!/^[\da-f]{64}$/.test(result)) {
@@ -23,6 +27,7 @@ export function digest(value) {
     }
     return result;
 }
+/** Require a lowercase UUID used as an export locator. */
 export function locator(value) {
     const result = text(value);
     // Fixed groups bound matching work and enforce the complete lowercase export UUID.
@@ -32,24 +37,28 @@ export function locator(value) {
     }
     return result;
 }
+/** Require a nonnegative safe integer no greater than `maximum`. */
 export function number(value, maximum) {
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > maximum) {
         throw new Error("Invalid asset record integer.");
     }
     return value;
 }
+/** Require an array of text values, capped at `maximum` entries. */
 export function strings(value, maximum = 65536) {
     if (!Array.isArray(value) || value.length > maximum) {
         throw new Error("Invalid asset string inventory.");
     }
     return value.map(text);
 }
+/** Require a Uint8Array within the decoded-asset byte limit. */
 export function bytes(value) {
     if (!(value instanceof Uint8Array) || value.length > ASSET_LIMITS.decodedBytes) {
         throw new Error("Invalid asset record bytes.");
     }
     return value;
 }
+/** Require a complete interchange-capability flags object. */
 export function capabilities(value) {
     const input = object(value);
     if (typeof input.pixelEdits !== "boolean" ||
@@ -65,6 +74,7 @@ export function capabilities(value) {
         previewTimeline: input.previewTimeline,
     };
 }
+/** Read `{ id, version }` from untrusted adapter/codec JSON. */
 function contract(value) {
     const input = object(value);
     return { id: text(input.id), version: number(input.version, 65535) };

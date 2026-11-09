@@ -4,7 +4,7 @@
   "source": "packages/language-server/src/index-worker.ts",
   "target": "node24",
   "notices": "packages/vscode-extension/server/index-worker.mjs.licenses.txt",
-  "sha256": "725c7a1900d6ec708d346af0c493eb4fd8f700698883492aadbcf9e78846c1cd",
+  "sha256": "ba45fc9b1a66f184e9c6d1894aa8fa3ac31a9a171a25da49da74ba877f86d6f5",
   "noticesSha256": "7774c2c66c32b47aed894fedd8be0b9bf464b4eab0a5e0bbe06d7af9a807d318",
   "inputs": [
     {
@@ -261,7 +261,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "db0c0ba0b9b8d979747887cfc246d9180ce5be598ddc41fc2b9a66cd6a1e9ded"
+      "sha256": "3357428093100ad6e3aff2fcf0bb8f676b43c875679a6c80895d80cefb584bfa"
     },
     {
       "file": "packages/assets/node_modules/pako/dist/pako.mjs",

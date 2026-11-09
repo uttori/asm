@@ -5,7 +5,9 @@ import somPlugin from "./assembly.js";
 export const somSourceHost = createSourceWorkflowHost([
     ["@uttori/asm-game-secret-of-mana", somPlugin],
 ]);
+/** Run a source operation against the bundled SoM plugin host. */
 export const executeSourceOperation = (operation) => execute(operation, somSourceHost);
+/** Asset host that inspects SoM Git source projects through the bundled plugin. */
 export const somAssetSourceHost = {
     ...savedAssetSourceHost,
     inspect: (directory, overlays, signal) => inspect(directory, overlays, signal, somSourceHost),

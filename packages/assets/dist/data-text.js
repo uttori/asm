@@ -1,4 +1,5 @@
 import { integer } from "./validation.js";
+/** Parse table keys written as decimal, `$hex`, or `0xhex`. */
 const parseByteKey = (key) => {
     let value;
     if (/^\$[\da-f]+$/i.test(key)) {
@@ -15,6 +16,7 @@ const parseByteKey = (key) => {
     }
     return integer(value, `Text table byte '${key}'`, 0, 255);
 };
+/** Build prefix-free encode/decode tables from options. */
 const translation = (options) => {
     const byteToToken = new Map();
     if (options.ascii !== false) {
@@ -48,10 +50,11 @@ const translation = (options) => {
         tokenToByte: tokenToByte.toSorted(([a], [b]) => b.length - a.length || a.localeCompare(b)),
     };
 };
-/** Decode native single-byte text without replacing unknown values.
- * @param {Uint8Array} bytes Borrowed source bytes.
- * @param {SingleByteTextOptions} options Translation table and optional terminator.
- * @returns {SingleByteText} Visible text plus whether the final byte was a terminator.
+/**
+ * Decode native single-byte text without replacing unknown values.
+ * @param bytes Borrowed source bytes.
+ * @param options Translation table and optional terminator.
+ * @returns Visible text plus whether the final byte was a terminator.
  */
 export function decodeSingleByteText(bytes, options = {}) {
     const { byteToToken } = translation(options);
@@ -65,10 +68,11 @@ export function decodeSingleByteText(bytes, options = {}) {
         .join("");
     return { text, terminated };
 }
-/** Encode translated text, including explicit escapes and optional terminator.
- * @param {SingleByteText} value Visible text and termination state.
- * @param {SingleByteTextOptions} options Translation table and optional terminator.
- * @returns {Uint8Array} Owned native bytes.
+/**
+ * Encode translated text, including explicit escapes and optional terminator.
+ * @param value Visible text and termination state.
+ * @param options Translation table and optional terminator.
+ * @returns Owned native bytes.
  */
 export function encodeSingleByteText(value, options = {}) {
     const { tokenToByte } = translation(options);

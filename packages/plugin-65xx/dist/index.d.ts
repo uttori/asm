@@ -3,6 +3,7 @@ import type { AssemblerPlugin, PluginActivationContext } from "@uttori/asm-core/
 export declare const RAW_65XX_TARGET_ID = "65xx.raw";
 /** Identity map: logical address − origin = file offset. */
 export declare const FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
+/** Output format that writes the raw image with no header. */
 export declare const RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
 /** Resets PC to `origin` at the start of each assembly stage. */
 export declare const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
@@ -10,20 +11,23 @@ export declare const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
 export declare const CA65_RAW_65XX_TARGET_ID = "65xx.ca65-raw";
 /** ca65 directive set used by ca65-profile targets. */
 export declare const CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
+/** ca65 expression functions used by ca65-profile targets. */
 export declare const CA65_65XX_EXPRESSION_SET_ID = "65xx.ca65-expressions";
+/** Resets ca65 CPU, scope, and segment state at the start of each assembly stage. */
 export declare const CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
 /**
  * Raw-target options. `origin` is both the initial PC and file offset 0
  * (`{ origin: 32768 }` → `org $8000` with no 32 KiB prefix).
  */
 export interface Raw65xxTargetOptions extends Readonly<Record<string, unknown>> {
+    /** Initial PC and the logical address of file offset 0; integer in 0–65535. */
     readonly origin: number;
 }
 /**
  * Validates target options. Unknown keys throw. Omitted object → `{ origin: 0 }`.
  *
- * @param {unknown} configured Plugin/target options object.
- * @returns {Raw65xxTargetOptions} Normalized options.
+ * @param configured Plugin/target options object.
+ * @returns Normalized options.
  */
 export declare function createRaw65xxTargetOptions(configured: unknown): Raw65xxTargetOptions;
 /**
@@ -31,15 +35,15 @@ export declare function createRaw65xxTargetOptions(configured: unknown): Raw65xx
  * Used by the plugin `activate` hook and by tests that want contributions
  * without constructing a full plugin object.
  *
- * @param {PluginActivationContext} context Plugin activation context.
+ * @param context Plugin activation context.
  */
 export declare function register65xxContributions(context: PluginActivationContext): void;
 declare const plugin: AssemblerPlugin<Readonly<Record<string, unknown>>>;
 /**
  * Activates this plugin and freezes a reusable host environment.
  *
- * @param {unknown} options Raw-target options (`origin`, ...).
- * @returns {Promise<AssemblerEnvironment>} Frozen assembler environment.
+ * @param options Raw-target options (`origin`, ...).
+ * @returns Frozen assembler environment.
  */
 export declare function create65xxAssemblerEnvironment(options?: unknown): Promise<import("@uttori/asm-core").AssemblerEnvironment>;
 export default plugin;

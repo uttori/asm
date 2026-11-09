@@ -4,9 +4,9 @@ import { isRuntimeGraphicsFact } from "../model/runtime-graphics-fact.js";
 import { parseSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-payload.js";
 /**
  * Stable ordering for explicit runtime arrays, independent of insertion order in the working store.
- * @param {RuntimeEvidenceRecord} left First semantic record.
- * @param {RuntimeEvidenceRecord} right Second semantic record.
- * @returns {number} Lexical ID comparison. Streaming consumers deliberately do not use this sort.
+ * @param left First semantic record.
+ * @param right Second semantic record.
+ * @returns Lexical ID comparison. Streaming consumers deliberately do not use this sort.
  */
 export const compareRuntimeRecordIds = (left, right) => {
     if (left.id < right.id) {
@@ -22,8 +22,8 @@ export const compareRuntimeRecordIds = (left, right) => {
  * Unused coordinate columns stay null so one record kind cannot masquerade as another.
  * Canonicalize payloads here once: the writer reuses this exact text for hashing
  * and encoding, avoiding a JSON stringify/parse/canonicalize round trip per fact.
- * @param {RuntimeEvidenceRecord} record Validated semantic runtime fact.
- * @returns {object} Column bindings with canonical payload text. Absent variant fields remain omitted.
+ * @param record Validated semantic runtime fact.
+ * @returns Column bindings with canonical payload text. Absent variant fields remain omitted.
  */
 export const runtimeColumns = (record) => {
     switch (record.kind) {
@@ -194,33 +194,39 @@ export const runtimeColumns = (record) => {
     }
     throw new Error("Unsupported runtime evidence kind.");
 };
+/** Narrow a SQLite row object; arrays are rejected because rows are keyed by column name. */
 function isRowRecord(value) {
     return !Array.isArray(value);
 }
+/** Require a string column value; `label` names the field in the thrown error. */
 function requireString(value, label) {
     if (typeof value !== "string") {
         throw new Error(`Invalid runtime ${label}.`);
     }
     return value;
 }
+/** Require a finite number; `label` names the field in the thrown error. */
 function requireFinite(value, label) {
     if (!isFiniteNumber(value)) {
         throw new Error(`Invalid runtime ${label}.`);
     }
     return value;
 }
+/** Read an own finite-number field; undefined only when the key is absent, never when present but invalid. */
 function optionalFinite(record, key) {
     if (!Object.hasOwn(record, key)) {
         return undefined;
     }
     return requireFinite(record[key], key);
 }
+/** Require a decoded payload object; undefined means the stored payload was not an object. */
 function requirePayload(value) {
     if (!value) {
         throw new Error("Invalid runtime payload.");
     }
     return value;
 }
+/** Copy a finite-number byte list; the result is detached from the decoded payload. */
 function requireBytes(value) {
     if (!Array.isArray(value)) {
         throw new Error("Invalid runtime bytes.");
@@ -234,34 +240,40 @@ function requireBytes(value) {
     }
     return bytes;
 }
+/** Accept a register record whose values are strings, booleans or finite numbers. */
 function isRuntimeState(value) {
     return (isRecord(value) &&
         Object.values(value).every((entry) => typeof entry === "string" || typeof entry === "boolean" || isFiniteNumber(entry)));
 }
+/** Require a register record; the validated object is returned without copying. */
 function requireState(value) {
     if (!isRuntimeState(value)) {
         throw new Error("Invalid runtime state.");
     }
     return value;
 }
+/** Require the only CPU address space accepted for bus access facts. */
 function requireCpuSpace(value) {
     if (value === "snes.cpu") {
         return value;
     }
     throw new Error("Invalid runtime address space.");
 }
+/** Require a bus transfer direction. */
 function requireDirection(value) {
     if (value === "read" || value === "write") {
         return value;
     }
     throw new Error("Invalid runtime direction.");
 }
+/** Require the bus master that issued an access. */
 function requireBusActor(value) {
     if (value === "cpu" || value === "dma" || value === "hdma") {
         return value;
     }
     throw new Error("Invalid runtime actor.");
 }
+/** Require the bus phase; HDMA distinguishes table, indirect and transfer fetches. */
 function requirePhase(value) {
     if (value === "cpu" ||
         value === "dma" ||
@@ -272,6 +284,7 @@ function requirePhase(value) {
     }
     throw new Error("Invalid runtime phase.");
 }
+/** Require the CPU context an access was attributed to. */
 function requireContext(value) {
     if (value === "unattributed" ||
         value === "instruction" ||
@@ -282,27 +295,32 @@ function requireContext(value) {
     }
     throw new Error("Invalid runtime context.");
 }
+/** Require a finite number or null; null means the value was not observed. */
 function requireNullableFinite(value, label) {
     if (value === null) {
         return null;
     }
     return requireFinite(value, label);
 }
+/** Require a memory access mode; `unknown` is a persisted value, not a missing one. */
 function requireMemoryAccess(value) {
     if (value === "read" || value === "write" || value === "read-write" || value === "unknown") {
         return value;
     }
     throw new Error("Invalid runtime access.");
 }
+/** Require a coverage classification. */
 function requireCoverage(value) {
     if (value === "executed" || value === "operand" || value === "read" || value === "written") {
         return value;
     }
     throw new Error("Invalid runtime coverage.");
 }
+/** Accept one PPU byte effect with numeric address and value. */
 function isPpuByte(value) {
     return isRecord(value) && isFiniteNumber(value.address) && isFiniteNumber(value.value);
 }
+/** Validate and copy a PPU effect; VRAM size is 64 KiB, 128 KiB or null when unknown. */
 function requirePpu(value) {
     if (!isRecord(value) ||
         (value.target !== "vram" && value.target !== "cgram" && value.target !== "oam") ||
@@ -331,6 +349,7 @@ function requirePpu(value) {
         bytes,
     };
 }
+/** Decode a payload column; SQL NULL yields an empty object, a non-object yields undefined. */
 function readPayload(value) {
     if (value === null || value === undefined) {
         return {};
@@ -338,7 +357,8 @@ function readPayload(value) {
     const parsed = parseSqlitePayload(value);
     return isRecord(parsed) ? parsed : undefined;
 }
-/** Validate all captured registers before selecting decoder fields, including otherwise unused ones.
+/**
+ * Validate all captured registers before selecting decoder fields, including otherwise unused ones.
  * Bytes are detached; the validated state belongs to the caller's decoded payload.
  */
 export const runtimeInstructionFields = (value) => {
@@ -348,8 +368,8 @@ export const runtimeInstructionFields = (value) => {
 /**
  * Reconstruct a semantic fact without inventing absent optional fields. Stable-ID comparisons
  * depend on preserving the same payload across inserts and subsequent reads.
- * @param {object} row SQLite runtime row selected with all columns.
- * @returns {RuntimeEvidenceRecord} Decoded fact in its original discriminated shape.
+ * @param row SQLite runtime row selected with all columns.
+ * @returns Decoded fact in its original discriminated shape.
  */
 export const runtimeFromRow = (row) => {
     if (!isRowRecord(row)) {
@@ -501,12 +521,14 @@ export const runtimeFromRow = (row) => {
     }
     throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
 };
+/** Read an optional bus actor as a spreadable fragment; an absent key yields no `actor` field. */
 function optionalBusActor(record) {
     if (!Object.hasOwn(record, "actor")) {
         return {};
     }
     return { actor: requireBusActor(record.actor) };
 }
+/** Accept an absent optional field or a finite number. */
 function allowsFinite(value) {
     return value === undefined || isFiniteNumber(value);
 }
@@ -592,6 +614,7 @@ export function isRuntimeEvidenceRecord(value) {
             return false;
     }
 }
+/** Non-throwing counterpart of `requirePpu` for validating flat trace payloads. */
 function isBusPpu(value) {
     return (isRecord(value) &&
         (value.target === "vram" || value.target === "cgram" || value.target === "oam") &&
@@ -605,8 +628,8 @@ function isBusPpu(value) {
 }
 /**
  * Extract a point coordinate for persisted analysis metadata. Interval-only records have none.
- * @param {AnalysisRecord} record Semantic analysis variant.
- * @returns {object} Point or source coordinate, with null columns when no point is represented.
+ * @param record Semantic analysis variant.
+ * @returns Point or source coordinate, with null columns when no point is represented.
  */
 export const analysisAddress = (record) => {
     if ("addressSpace" in record && "address" in record) {

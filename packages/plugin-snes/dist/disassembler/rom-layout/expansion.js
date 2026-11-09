@@ -1,5 +1,9 @@
 /** Return the cartridge header's file offset; expansion never relocates the header. */
 export const expansionHeaderOffset = (policy) => policy.mapper === "lorom" ? 0x7fc0 : 0xffc0;
+/**
+ * Reject non-positive capacities that are not exact powers of two.
+ * @param value Candidate byte size.
+ */
 const powerOfTwo = (value) => Number.isSafeInteger(value) && value > 0 && Number.isInteger(Math.log2(value));
 /** Reject unsupported capacities before allocation, including accidental shrinkage and mapper changes. */
 export function assertSnesRomExpansion(original, size, policy) {

@@ -5,8 +5,8 @@ import { readCaptureTargetPayload } from "./target-payload.js";
 const maxU64 = (1n << 64n) - 1n;
 /**
  * Validate the explicit stream dictionary. Callers choose the instruction default only on omission.
- * @param {unknown} value Scope supplied by the caller or archive header.
- * @returns {CaptureScopeV2} Supported stream identity. Unknown values throw.
+ * @param value Scope supplied by the caller or archive header.
+ * @returns Supported stream identity. Unknown values throw.
  */
 export const captureScope = (value) => {
     if (value !== "nes.cpu-bus-ppu" &&
@@ -19,25 +19,50 @@ export const captureScope = (value) => {
     }
     return value;
 };
+/**
+ * Parse an exact counter without leading zeros or precision loss.
+ * @param value Canonical decimal string.
+ * @returns Counter in 0..2^64-1. Anything else throws.
+ */
 export const captureU64 = (value) => {
     if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64) {
         throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
     }
     return BigInt(value);
 };
+/**
+ * Validate a session identity.
+ * @param value Candidate identity.
+ * @returns The same 32-digit lowercase hex string. Anything else throws.
+ */
 export const captureSession = (value) => {
     if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value)) {
         throw new Error("Invalid capture session identity.");
     }
     return value;
 };
+/**
+ * Narrow to an indexable non-null object. Arrays pass; field checks reject them later.
+ * @param value Candidate wire value.
+ * @returns Whether fields can be read by key.
+ */
 function isFieldRecord(value) {
     return typeof value === "object" && value !== null;
 }
+/**
+ * Check a nonempty, NUL-free string against a UTF-8 byte budget.
+ * @param text Candidate string.
+ * @param max Maximum encoded length in bytes.
+ * @returns Whether the string fits.
+ */
 const bounded = (text, max) => typeof text === "string" &&
     text.length > 0 &&
     !text.includes("\0") &&
     new TextEncoder().encode(text).length <= max;
+/**
+ * Reject unknown operations, unknown fields and out-of-contract values before a request reaches a producer.
+ * @param value Candidate request from a caller or wire peer.
+ */
 export function validateCaptureRequest(value) {
     if (!isFieldRecord(value)) {
         throw new Error("Invalid capture request.");
@@ -184,9 +209,9 @@ export function validateCaptureRequest(value) {
 }
 /**
  * Require the requested scope and its reservation size. Never downgrade to a different stream.
- * @param {unknown} value Native capability reply.
- * @param {CaptureScopeV2} scope Requested stream, defaulting to instructions for older callers.
- * @returns {CaptureCapabilitiesV2} Verified lossless ownership and allocation contract.
+ * @param value Native capability reply.
+ * @param scope Requested stream, defaulting to instructions for older callers.
+ * @returns Verified lossless ownership and allocation contract.
  */
 export const validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
     captureScope(scope);
@@ -224,10 +249,10 @@ export const validateCaptureCapabilities = (value, scope = "snes.65816.instructi
 };
 /**
  * Scope is required and stable for the complete session.
- * @param {unknown} value Native status or archive terminal frame.
- * @param {string} session Expected identity when an active session is already known.
- * @param {CaptureScopeV2} scope Expected stream. Every position must explicitly confirm its own scope.
- * @returns {CapturePositionV2} Validated ownership boundaries and integrity state.
+ * @param value Native status or archive terminal frame.
+ * @param session Expected identity when an active session is already known.
+ * @param scope Expected stream. Every position must explicitly confirm its own scope.
+ * @returns Validated ownership boundaries and integrity state.
  */
 function assertCapturePosition(value, session, scope) {
     if (!isFieldRecord(value)) {
@@ -292,6 +317,13 @@ function assertCapturePosition(value, session, scope) {
         throw new Error("Capture terminal totals do not reconcile.");
     }
 }
+/**
+ * Validate a producer position and return it typed.
+ * @param value Native status or archive terminal frame.
+ * @param session Expected identity when an active session is already known.
+ * @param scope Expected stream, when known.
+ * @returns The same value after all boundary, clock and integrity checks.
+ */
 export const validateCapturePosition = (value, session, scope) => {
     assertCapturePosition(value, session, scope);
     return value;
@@ -300,8 +332,8 @@ export const validateCapturePosition = (value, session, scope) => {
  * Accept one wire result after the matching request validator has already run.
  * Capability replies are rebuilt from the negotiated contract; other results keep
  * their validated fields, including native file counters carried beside a position.
- * @param {unknown} value Sidecar or backend capture reply.
- * @returns {CaptureResultV2} A capabilities, position, hex, or context-state result.
+ * @param value Sidecar or backend capture reply.
+ * @returns A capabilities, position, hex, or context-state result.
  */
 export function validateCaptureResult(value) {
     if (!isFieldRecord(value)) {
@@ -325,15 +357,15 @@ export function validateCaptureResult(value) {
 }
 /**
  * CRC-32C of an ACT2 envelope or archive JSON frame, without changing caller storage.
- * @param {Uint8Array} bytes Byte view; checksum positions are relative to this view.
- * @param {boolean} zeroChecksum Treat ACT2 bytes 56–59 as zero. Defaults to false for JSON frames.
- * @returns {number} Unsigned Castagnoli checksum.
+ * @param bytes Byte view; checksum positions are relative to this view.
+ * @param zeroChecksum Treat ACT2 bytes 56–59 as zero. Defaults to false for JSON frames.
+ * @returns Unsigned Castagnoli checksum.
  */
 export const captureCrc32c = (bytes, zeroChecksum = false) => crc32cBytes(bytes, zeroChecksum);
 /**
  * Common ordering fields without converting bus accesses into instruction records.
- * @param {CaptureChunkV2} chunk Validated nonempty chunk.
- * @returns {readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2 | CaptureNesBusAccessV2)[]} Original ordered record array.
+ * @param chunk Validated nonempty chunk.
+ * @returns Original ordered record array.
  */
 export const captureChunkRecords = (chunk) => {
     if ("instructions" in chunk) {
@@ -490,12 +522,12 @@ export function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructi
 }
 /**
  * Decode 64-byte bus accesses and optional 80-byte boundaries after envelope, session and CRC validation.
- * @param {Buffer} b Complete validated envelope and payload.
- * @param {bigint} first First event sequence declared in the envelope.
- * @param {number} count Bounded, nonzero record count.
- * @param {boolean} transfers Whether the negotiated scope also permits boundary markers.
- * @param {boolean} ppu Require verified effects on every mapped graphics data-port write.
- * @returns {readonly (CaptureBusAccessV2 | CaptureTransferV2)[]} Decoded accesses and markers. Invalid fields reject the whole chunk.
+ * @param b Complete validated envelope and payload.
+ * @param first First event sequence declared in the envelope.
+ * @param count Bounded, nonzero record count.
+ * @param transfers Whether the negotiated scope also permits boundary markers.
+ * @param ppu Require verified effects on every mapped graphics data-port write.
+ * @returns Decoded accesses and markers. Invalid fields reject the whole chunk.
  */
 const decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
     if (!transfers && b.length !== 64 + count * 64) {
@@ -592,11 +624,12 @@ const decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
     }
     return accesses;
 };
-/** Decode a native boundary after envelope validation. Cross-record lifecycle validation belongs to analysis.
- * @param {Buffer} b Complete envelope and payload.
- * @param {number} offset Start of the 80-byte marker.
- * @param {bigint} event Expected global event sequence.
- * @returns {CaptureTransferV2} Exact marker with raw channel configuration.
+/**
+ * Decode a native boundary after envelope validation. Cross-record lifecycle validation belongs to analysis.
+ * @param b Complete envelope and payload.
+ * @param offset Start of the 80-byte marker.
+ * @param event Expected global event sequence.
+ * @returns Exact marker with raw channel configuration.
  */
 const decodeTransfer = (b, offset, event) => {
     if (offset + 80 > b.length ||
@@ -653,11 +686,12 @@ const decodeTransfer = (b, offset, event) => {
         },
     };
 };
-/** Decode the fixed 24-byte effect extension. Malformed results reject the whole chunk.
- * @param {Buffer} b Fully bounded record bytes.
- * @param {number} offset Beginning of the 88-byte bus record.
- * @param {number} port Mapped graphics data port, already checked against direction and bank.
- * @returns {CapturePPUEffectV2} Native decision and ordered physical byte writes.
+/**
+ * Decode the fixed 24-byte effect extension. Malformed results reject the whole chunk.
+ * @param b Fully bounded record bytes.
+ * @param offset Beginning of the 88-byte bus record.
+ * @param port Mapped graphics data port, already checked against direction and bank.
+ * @returns Native decision and ordered physical byte writes.
  */
 const decodePPUEffect = (b, offset, port) => {
     const target = b[offset + 64], outcome = b[offset + 65], count = b[offset + 66], flags = b[offset + 67];

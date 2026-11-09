@@ -10,6 +10,7 @@ import { registerSourcePinOwner } from "./pins.js";
 import { createSourceScratch } from "./scratch.js";
 /** Generated metadata describes the baseline, never a restriction on editing working files. */
 export const SOURCE_GENERATION_FILE = ".uttori/generation.json";
+/** Accept only the Git blob modes used for generation payload files. */
 function isGenerationFileMode(value) {
     return value === "100644" || value === "100755";
 }
@@ -88,12 +89,15 @@ export async function pinSourceCandidate(repository, commit, signal) {
         lease.release();
     }
 }
+/** Narrow parsed JSON to a plain object record. */
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+/** Accept lowercase hex SHA-256 digests. */
 function isSha256(value) {
     return typeof value === "string" && /^[\da-f]{64}$/.test(value);
 }
+/** Validate the compact generation input identity object. */
 function isGenerationInputs(value) {
     if (!isRecord(value)) {
         return false;

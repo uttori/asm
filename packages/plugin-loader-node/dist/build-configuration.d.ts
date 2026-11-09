@@ -1,14 +1,18 @@
 import type { AssemblyLinkRecipe } from "@uttori/asm-core";
 /** Resolve existing target/source layout after module production instead of duplicating it in the host manifest. */
 export interface ModuleRecipeSelection {
+    /** Discriminator selecting a recipe derived from the manifest's source modules. */
     readonly from: "modules";
+    /** Target ID whose layout derives the recipe. */
     readonly target: string;
 }
 /** Recognize the exact data-only selector before activating plugins or interpreting portable recipe fields. */
 export declare function isModuleRecipeSelection(value: unknown): value is ModuleRecipeSelection;
 /** Explicit opt-in build graph. All paths are relative to the manifest, including configuration and output. */
 export interface AssemblyBuildManifest {
+    /** Format discriminator; any other value is rejected. */
     readonly format: "uttori-build";
+    /** Manifest schema version; only 1 is accepted. */
     readonly version: 1;
     /** Optional plugin configuration; absent configuration uses the selected target's bundled defaults. */
     readonly config?: string;
@@ -18,7 +22,9 @@ export interface AssemblyBuildManifest {
         readonly source: string;
         readonly sourceAdapter?: "asar" | "ca65";
     }[];
+    /** Prebuilt serialized object files linked with the assembled modules. */
     readonly objects?: readonly string[];
+    /** Library files passed to the linker. */
     readonly libraries?: readonly string[];
     /** Portable recipe, config-derived module layout, or a recipe JSON path relative to this manifest. */
     readonly recipe: AssemblyLinkRecipe | ModuleRecipeSelection | string;

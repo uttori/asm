@@ -4,6 +4,11 @@ import { projectSourceLabelNames, validateSourceLabelName } from "../model/proje
 import { parseResearchDocument, validateResearchSnapshot, } from "./inputs.js";
 /** Runtime validation must not widen a readonly typed array to Array<any>. */
 const isArray = (value) => Array.isArray(value);
+/**
+ * Distinguish label records from other research records by their point-address shape.
+ * @param value Research record from a labels decision.
+ * @returns Whether value has a label's name and single address without interval or kind fields.
+ */
 function isProjectLabel(value) {
     return "name" in value && "address" in value && !("kind" in value) && !("start" in value);
 }

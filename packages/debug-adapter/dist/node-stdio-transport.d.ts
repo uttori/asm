@@ -6,10 +6,13 @@ export declare const DEBUG_SIDECAR_SESSION_ENV: "UTTORI_ASM_DEBUG_SESSION";
 export interface NodeStdioSidecarTransportOptions {
     /** Executable path or name resolved by spawn. Arguments are never interpreted by a shell. */
     readonly command: string;
+    /** argv passed directly to spawn without shell interpretation. */
     readonly args?: readonly string[];
+    /** Working directory for the child process. */
     readonly cwd?: string;
     /** Overrides inherited process.env. The session token below always takes precedence. */
     readonly env?: Readonly<Record<string, string | undefined>>;
+    /** One-session authentication token injected into the child environment. */
     readonly session: string;
     /** Positive milliseconds per graceful-close and SIGTERM wait, default 1000. */
     readonly shutdownTimeoutMs?: number;
@@ -23,22 +26,28 @@ export declare class NodeStdioSidecarTransport implements DebugSidecarTransport 
     #private;
     /**
      * Spawns one sidecar without a shell and authenticates it through inherited environment state.
-     * @param {NodeStdioSidecarTransportOptions} options Explicit executable and lifecycle bounds.
+     * @param options Explicit executable and lifecycle bounds.
      */
     constructor(options: NodeStdioSidecarTransportOptions);
-    /** @returns {number | undefined} Native child PID when process creation succeeded. */
+    /**
+     * Native child PID when process creation succeeded.
+     * @returns Process id or undefined before spawn completes.
+     */
     get pid(): number | undefined;
-    /** @returns {string} Bounded, token-redacted tail of native stderr. */
+    /**
+     * Bounded, token-redacted tail of native stderr.
+     * @returns Accumulated stderr text capped by maxStderrBytes.
+     */
     get stderr(): string;
     /**
      * Writes one complete or partial frame, resolving only after Node flushes it from its buffer.
-     * @param {Uint8Array} data Framed protocol bytes.
-     * @returns {Promise<void>} Completion of the native pipe write.
+     * @param data Framed protocol bytes.
+     * @returns Completion of the native pipe write.
      */
     write(data: Uint8Array): Promise<void>;
     /**
      * Ends stdin and escalates from SIGTERM to SIGKILL only when the child misses bounded deadlines.
-     * @returns {Promise<void>} Completion of child-process cleanup.
+     * @returns Completion of child-process cleanup.
      */
     close(): Promise<void>;
     /** @inheritdoc */

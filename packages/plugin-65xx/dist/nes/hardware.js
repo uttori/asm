@@ -99,7 +99,8 @@ export const NES_HARDWARE_SYMBOLS = [
         mapper: 4,
     })),
 ];
-/** Resolve direct data operands only. Mirror expressions retain the exact encoded address.
+/**
+ * Resolve direct data operands only. Mirror expressions retain the exact encoded address.
  * Indexed/pointer operands and RMW accesses remain numeric when their direction/port is ambiguous.
  * Reading PRG ROM must never acquire a write-only mapper-register name.
  */

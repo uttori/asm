@@ -1,16 +1,23 @@
 /** A six-byte rectangle in an FF boss frame; coordinates and dimensions use 8-pixel cells. */
 export interface BossBackgroundRectangle {
+    /** Left edge in 8-pixel cells within the frame. */
     x: number;
+    /** Top edge in 8-pixel cells within the frame. */
     y: number;
+    /** Horizontal span in 8-pixel cells. */
     width: number;
+    /** Vertical span in 8-pixel cells. */
     height: number;
     /** Near pointer in bank C1; it addresses a raw/masked stream header. */
     source: number;
 }
 /** The signed pixel origin precedes count-bounded rectangles; collision data is separate. */
 export interface BossBackgroundFrame {
+    /** Signed pixel origin applied before drawing rectangles. */
     originX: number;
+    /** Signed pixel origin applied before drawing rectangles. */
     originY: number;
+    /** Background rectangles emitted in native order. */
     rectangles: BossBackgroundRectangle[];
 }
 /** Decode only the FF pose prefix; `consumed` never absorbs the following collision records. */

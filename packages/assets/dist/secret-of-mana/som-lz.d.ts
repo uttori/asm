@@ -19,10 +19,10 @@ export declare const DISTANCE_MASKS: number[];
  * Header: mode byte 0..5, one unused byte, big-endian uint16 output size.
  * Returns the exact encoded extent, excluding the game's speculative next-token read at completion.
  * Throws on truncated input, references before output, or runs exceeding the declared size.
- * @param {Uint8Array} source Encoded boot or graphics stream.
- * @param {number} [offset] Index of the four-byte header.
- * @param {number} [maxOutputBytes] Maximum accepted decoded size.
- * @returns {{data: Uint8Array, mode: number, unusedHeaderByte: number, compressedBytes: number, end: number, literalRuns: number, copyRuns: number}} Decoded bytes and the consumed encoded extent.
+ * @param source Encoded boot or graphics stream.
+ * @param [offset] Index of the four-byte header.
+ * @param [maxOutputBytes] Maximum accepted decoded size.
+ * @returns Decoded bytes and the consumed encoded extent.
  */
 export declare function decompressSomLz(source: Uint8Array, offset?: number, maxOutputBytes?: number): {
     data: Uint8Array<ArrayBuffer>;
@@ -39,9 +39,9 @@ export declare function decompressSomLz(source: Uint8Array, offset?: number, max
  * nearer distances on equal cost; `auto` chooses the shortest stream, then lowest mode.
  * The unused header byte is explicit because original ROM headers may differ.
  * This does not preserve an original stream's token choices.
- * @param {Uint8Array} source Plain bytes to encode.
- * @param {unknown} [options] `mode` and `unusedHeaderByte`.
- * @returns {Uint8Array} Shortest accepted stream for the selected mode.
+ * @param source Plain bytes to encode.
+ * @param [options] `mode` and `unusedHeaderByte`.
+ * @returns Shortest accepted stream for the selected mode.
  */
 export declare function compressSomLz(source: Uint8Array, options?: unknown): Uint8Array<ArrayBufferLike>;
 //# sourceMappingURL=som-lz.d.ts.map

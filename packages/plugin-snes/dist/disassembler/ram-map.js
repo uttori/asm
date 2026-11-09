@@ -13,14 +13,14 @@ export const SNES_RAM_MAP_SCHEMA_SOURCE = "ram-map.schema.json";
 export const SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
 /**
  * Accepts a JSON object. Arrays and null are not RAM-map documents.
- * @param {unknown} value Candidate object.
- * @returns {boolean} True when `value` is a non-array object.
+ * @param value Candidate object.
+ * @returns True when `value` is a non-array object.
  */
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /**
  * Accepts one raw RAM-map variable. Extra JSON fields are left in place.
- * @param {unknown} value Candidate variable.
- * @returns {boolean} True when the fields `SnesRamMapVariableInput` reads have the right types.
+ * @param value Candidate variable.
+ * @returns True when the fields `SnesRamMapVariableInput` reads have the right types.
  */
 const isRamMapVariableInput = (value) => {
     if (!isRecord(value)) {
@@ -53,8 +53,8 @@ const isRamMapVariableInput = (value) => {
 };
 /**
  * Accepts a RAM-map document whose fields match `SnesRamMapFile`.
- * @param {unknown} value Parsed JSON.
- * @returns {boolean} True when format, schema, and variables have the expected types.
+ * @param value Parsed JSON.
+ * @returns True when format, schema, and variables have the expected types.
  */
 const isSnesRamMapFile = (value) => {
     if (!isRecord(value)) {
@@ -75,7 +75,13 @@ const isSnesRamMapFile = (value) => {
     }
     return Array.isArray(value.variables) && value.variables.every(isRamMapVariableInput);
 };
+/** Format bus addresses for RAM-map validation errors. */
 const hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+/**
+ * Collapse whitespace and reject empty user-authored strings.
+ * @param value Raw text from JSON.
+ * @param field Field name used in error messages.
+ */
 const cleanText = (value, field) => {
     const cleaned = value.replaceAll(/\s+/g, " ").trim();
     if (!cleaned) {
@@ -85,8 +91,8 @@ const cleanText = (value, field) => {
 };
 /**
  * Bounds a standard LoROM/HiROM SRAM bus window without assuming cartridge size or mirroring.
- * @param {number} address Validated 24-bit CPU address.
- * @returns {number | undefined} Exclusive window end, or undefined outside the supported windows.
+ * @param address Validated 24-bit CPU address.
+ * @returns Exclusive window end, or undefined outside the supported windows.
  */
 const sramWindowEnd = (address) => {
     const bank = address >>> 16;
@@ -100,9 +106,9 @@ const sramWindowEnd = (address) => {
 };
 /**
  * Parses a CPU address and enforces the selected RAM domain before ranges are indexed.
- * @param {string | number} value Hexadecimal string or integer CPU address.
- * @param {"wram" | "sram"} memory Explicit SRAM declaration, or the WRAM default.
- * @returns {number} Valid bus address. Throws for malformed or out-of-domain values.
+ * @param value Hexadecimal string or integer CPU address.
+ * @param memory Explicit SRAM declaration, or the WRAM default.
+ * @returns Valid bus address. Throws for malformed or out-of-domain values.
  */
 const parseAddress = (value, memory) => {
     let address;
@@ -136,8 +142,8 @@ const parseAddress = (value, memory) => {
 };
 /**
  * Validates and normalizes a RAM-map object without reading the filesystem.
- * @param {unknown} value Parsed JSON value.
- * @returns {readonly SnesRamMapVariable[]} Deterministically sorted variables.
+ * @param value Parsed JSON value.
+ * @returns Deterministically sorted variables.
  */
 export const validateSnesRamMap = (value) => {
     if (!isRecord(value)) {
@@ -248,7 +254,7 @@ export const validateSnesRamMap = (value) => {
 };
 /**
  * Returns the canonical empty RAM-map file created for new projects.
- * @returns {SnesRamMapFile} A versioned empty editable map.
+ * @returns A versioned empty editable map.
  */
 export const emptySnesRamMap = () => ({
     $schema: `./${SNES_RAM_MAP_SCHEMA_SOURCE}`,
@@ -259,8 +265,8 @@ export const emptySnesRamMap = () => ({
 });
 /**
  * Loads the user-owned RAM map, creating an empty editable map when absent.
- * @param {string} directory Generated-source root.
- * @returns {LoadedSnesRamMap} Validated variables and exact input bytes.
+ * @param directory Generated-source root.
+ * @returns Validated variables and exact input bytes.
  */
 export const loadSnesRamMap = (directory) => {
     const file = path.join(directory, SNES_RAM_MAP_SOURCE);
@@ -284,8 +290,8 @@ export const loadSnesRamMap = (directory) => {
 };
 /**
  * Maps WRAM mirrors in banks `$00–$3F`/`$80–$BF` to canonical `$7E0000–$7E1FFF`.
- * @param {number} address 24-bit CPU address.
- * @returns {number | undefined} Canonical WRAM address, or undefined outside WRAM.
+ * @param address 24-bit CPU address.
+ * @returns Canonical WRAM address, or undefined outside WRAM.
  */
 export const canonicalSnesWramAddress = (address) => {
     if (!Number.isInteger(address) || address < 0 || address > 0xffffff) {
@@ -303,16 +309,16 @@ export const canonicalSnesWramAddress = (address) => {
 };
 /**
  * Builds a range-aware address lookup for RAM-variable substitution.
- * @param {readonly SnesRamMapVariable[]} variables Validated, non-overlapping RAM variables.
- * @returns {ReadonlyMap<number, SnesRamMapVariable>} Every known byte address mapped to its variable.
+ * @param variables Validated, non-overlapping RAM variables.
+ * @returns Every known byte address mapped to its variable.
  */
 export const indexSnesRamMap = (variables) => new Map(variables.flatMap((variable) => Array.from({ length: variable.size }, (_, offset) => [variable.address + offset, variable])));
 /**
  * Recognizes standalone file citations used by older maps before the sources field existed.
  * A legacy note can combine a file citation and a named layout reference. These remain
  * provenance even when joined with a semicolon; explanatory sentences stay visible.
- * @param {string} note A normalized, single-line note.
- * @returns {boolean} Whether the entire note has a supported file or file/line citation form.
+ * @param note A normalized, single-line note.
+ * @returns Whether the entire note has a supported file or file/line citation form.
  */
 const isLegacySourceNote = (note) => {
     const parts = note.split(/;\s*/);
@@ -334,9 +340,9 @@ const isLegacySourceNote = (note) => {
 };
 /**
  * Renders a documented generated definition file from a validated RAM map.
- * @param {readonly SnesRamMapVariable[]} variables Validated RAM variables.
- * @param {Pick<SnesRamMapFile, "includeSourceInformation">} options Source citations are omitted by default; descriptive notes remain visible.
- * @returns {string} Generated assembler definitions with hover-ready comments.
+ * @param variables Validated RAM variables.
+ * @param options Source citations are omitted by default; descriptive notes remain visible.
+ * @returns Generated assembler definitions with hover-ready comments.
  */
 export const renderSnesRamDefines = (variables, options = {}) => {
     const lines = [
@@ -367,7 +373,7 @@ export const renderSnesRamDefines = (variables, options = {}) => {
 };
 /**
  * Renders the local JSON Schema included beside every RAM map.
- * @returns {string} Canonical JSON Schema text.
+ * @returns Canonical JSON Schema text.
  */
 export const renderSnesRamMapSchema = () => canonicalJson({
     $schema: "https://json-schema.org/draft/2020-12/schema",
